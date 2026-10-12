@@ -4,7 +4,10 @@
     "typecheck": "pnpm -r --parallel typecheck",
     "test": "vitest run",
     "dev:realtime": "pnpm --filter @thelever-app/realtime dev",
-    "dev:web": "pnpm --filter @thelever-app/web dev"
+    "dev:web": "pnpm --filter @thelever-app/web dev",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "license": "AGPL-3.0-only",
   "packageManager": "pnpm@10.34.5+sha512.a4ee05f2f73658255bd6a89859c065a45c28a57daefae2c893a168ee2b73168c37b91e83e57ea67654ad03f03031746430e8bce38e362e042605fb8abc80192e",
@@ -14,8 +17,14 @@
     "node": ">=24"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@thelever-app/config": "workspace:*",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9",
     "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.1",
     "vitest": "^5.0.2"
   }
 }
