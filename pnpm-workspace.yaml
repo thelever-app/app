@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Supply-chain guard: only install versions published at least 14 days ago.
+# A freshly published release can carry malicious code before anyone notices.
+minimumReleaseAge: 20160
+
+# esbuild (used by tsx) works without its install script: it ships the
+# native binary as an optional dependency. Keep install scripts blocked.
+ignoredBuiltDependencies:
+  - esbuild

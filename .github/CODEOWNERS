@@ -1,0 +1,11 @@
+# Default owners for everything in the repo.
+*                         @thelever-app/core
+
+# Research data: every change to consent or event capture needs a privacy review.
+/packages/consent/        @thelever-app/privacy
+/packages/events/         @thelever-app/privacy
+/docs/privacy/            @thelever-app/privacy
+
+# Game content: seed dilemmas and game design.
+/packages/db/seeds/       @thelever-app/content
+/docs/game-design/        @thelever-app/content

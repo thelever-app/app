@@ -1,0 +1,4 @@
+#!/bin/sh
+# Adds the DCO sign-off to every commit, so `git commit` behaves like `git commit -s`.
+ident=$(git var GIT_COMMITTER_IDENT | sed 's/>.*/>/')
+git interpret-trailers --in-place --if-exists doNothing --trailer "Signed-off-by: $ident" "$1"

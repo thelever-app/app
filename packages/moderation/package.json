@@ -1,0 +1,15 @@
+{
+  "name": "@thelever-app/moderation",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "devDependencies": {
+    "@thelever-app/config": "workspace:*"
+  }
+}
