@@ -1,0 +1,41 @@
+name: PR conventions
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+# These checks only read the event payload: no token permissions needed.
+permissions: {}
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check the title follows Conventional Commits
+        # Untrusted input goes through env, never interpolated into the script.
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|docs|chore|test|refactor|ci|perf|build|style|revert)(\([a-z0-9-]+\))?!?: .+$'
+          if [[ ! "$TITLE" =~ $pattern ]]; then
+            echo "::error title=PR title::Use Conventional Commits, for example 'feat(engine): add decision timer'."
+            exit 1
+          fi
+
+  branch-name:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check the branch follows type/tsk-N-description
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          if [[ "$BRANCH" == dependabot/* ]]; then
+            exit 0
+          fi
+          pattern='^(feat|fix|docs|chore|test|refactor|ci|perf|build|spike)/tsk-[0-9]+-[a-z0-9-]+$'
+          if [[ ! "$BRANCH" =~ $pattern ]]; then
+            echo "::error title=Branch name::Use type/tsk-N-description, for example 'feat/tsk-18-live-progress'."
+            exit 1
+          fi
