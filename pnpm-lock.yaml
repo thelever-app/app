@@ -82,6 +82,54 @@ importers:
 
   packages/config: {}
 
+  packages/consent:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
+  packages/db:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
+  packages/engine:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
+  packages/evals:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
+  packages/events:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
+  packages/moderation:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
+  packages/protocol:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
+  packages/ui:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
 packages:
 
   '@asamuzakjp/css-color@7.1.2':
