@@ -1,0 +1,21 @@
+{
+  "name": "@thelever-app/spike-tsk-4",
+  "scripts": {
+    "ws": "tsx watch ws-server.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "express": "^5.2.1",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@thelever-app/config": "workspace:*",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.23.15"
+  }
+}
