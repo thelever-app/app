@@ -9,7 +9,7 @@ group, debate the reveal. PWA.
 | --------------------- | ------------------------------------------------------- |
 | `apps/web`            | PWA game client (React + Vite)                          |
 | `apps/realtime`       | Room server (Express)                                   |
-| `packages/engine`     | Game state machine. Pure, no I/O                        |
+| `packages/game`       | Game state machine. Pure, no I/O                        |
 | `packages/protocol`   | Versioned client-server messages                        |
 | `packages/events`     | Versioned schema of game events with social context     |
 | `packages/consent`    | Consent registry, revocation and the research data gate |
