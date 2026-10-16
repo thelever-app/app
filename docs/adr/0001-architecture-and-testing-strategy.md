@@ -1,4 +1,4 @@
-# 0001: Architecture and testing strategy (DDD, hexagonal and BDD in two levels)
+# 0001. Architecture and testing strategy
 
 - Status: accepted
 - Date: 2026-10-15

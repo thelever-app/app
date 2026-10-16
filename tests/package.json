@@ -1,0 +1,14 @@
+{
+  "name": "@thelever-app/tests",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test:acceptance": "cucumber-js --profile acceptance"
+  },
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@cucumber/cucumber": "^13.2.1",
+    "@thelever-app/config": "workspace:*"
+  }
+}

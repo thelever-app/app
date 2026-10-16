@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/*
+  - tests
 
 # Supply-chain guard: only install versions published at least 14 days ago.
 # A freshly published release can carry malicious code before anyone notices.
