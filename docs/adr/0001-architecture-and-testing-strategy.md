@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-15
-- Notion: this entry in Decisiones
+- Notion: [ADR 0001: arquitectura y estrategia de tests (DDD, hexagonal y BDD en dos niveles)](https://app.notion.com/p/3fa95e6919c581bb8105c6c894a93074)
 
 ## Context
 
