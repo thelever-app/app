@@ -5,20 +5,20 @@ group, debate the reveal. PWA.
 
 ## Repository layout
 
-| Path                  | What lives there                                        |
-| --------------------- | ------------------------------------------------------- |
-| `apps/web`            | PWA game client (React + Vite)                          |
-| `apps/realtime`       | Room server (Express)                                   |
-| `packages/engine`     | Game state machine. Pure, no I/O                        |
-| `packages/protocol`   | Versioned client-server messages                        |
-| `packages/events`     | Versioned schema of game events with social context     |
-| `packages/consent`    | Consent registry, revocation and the research data gate |
-| `packages/db`         | Database schema, migrations and seeds                   |
-| `packages/moderation` | Moderation interface                                    |
-| `packages/evals`      | Evals for moderation and translation                    |
-| `packages/ui`         | Design system                                           |
-| `packages/config`     | Shared TypeScript, ESLint and Prettier config           |
-| `docs/adr`            | Architecture decision records                           |
+| Path                  | What lives there                                         |
+| --------------------- | -------------------------------------------------------- |
+| `apps/web`            | PWA game client (React + Vite)                           |
+| `apps/realtime`       | Room server (Express)                                    |
+| `packages/game`       | Game bounded context: domain and use cases. Pure, no I/O |
+| `packages/protocol`   | Versioned client-server messages                         |
+| `packages/events`     | Versioned schema of game events with social context      |
+| `packages/consent`    | Consent registry, revocation and the research data gate  |
+| `packages/db`         | Database schema, migrations and seeds                    |
+| `packages/moderation` | Moderation interface                                     |
+| `packages/evals`      | Evals for moderation and translation                     |
+| `packages/ui`         | Design system                                            |
+| `packages/config`     | Shared TypeScript, ESLint and Prettier config            |
+| `docs/adr`            | Architecture decision records                            |
 
 ## Getting started
 

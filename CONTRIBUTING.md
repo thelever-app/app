@@ -21,7 +21,7 @@ Signed-off-by: Jane Doe <jane@example.com>
 Git adds it for you with the `-s` flag:
 
 ```sh
-git commit -s -m "feat(engine): add decision phase timer"
+git commit -s -m "feat(game): add decision phase timer"
 ```
 
 Pull requests are checked automatically. If a commit is missing the sign-off,

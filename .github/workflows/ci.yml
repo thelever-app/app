@@ -47,3 +47,6 @@ jobs:
 
       - name: Build web
         run: pnpm --filter @thelever-app/web build
+
+      - name: Test acceptance
+        run: pnpm test:acceptance

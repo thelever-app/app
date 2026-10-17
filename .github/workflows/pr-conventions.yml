@@ -19,7 +19,7 @@ jobs:
         run: |
           pattern='^(feat|fix|docs|chore|test|refactor|ci|perf|build|style|revert)(\([a-z0-9-]+\))?!?: .+$'
           if [[ ! "$TITLE" =~ $pattern ]]; then
-            echo "::error title=PR title::Use Conventional Commits, for example 'feat(engine): add decision timer'."
+            echo "::error title=PR title::Use Conventional Commits, for example 'feat(game): add decision timer'."
             exit 1
           fi
 

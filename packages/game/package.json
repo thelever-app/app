@@ -1,10 +1,11 @@
 {
-  "name": "@thelever-app/engine",
+  "name": "@thelever-app/game",
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./in-memory": "./src/adapters/in-memory/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."
