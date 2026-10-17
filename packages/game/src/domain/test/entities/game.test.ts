@@ -7,27 +7,31 @@ import { DecisionPhaseNotStartedError } from '../../errors/decision-phase-not-st
 import { PlayerNotInGameError } from '../../errors/player-not-in-game.error.ts';
 import { DilemmaNotInGameError } from '../../errors/dilemma-not-in-game.error.ts';
 import { ProgressUpdatedEvent } from '../../events/progress-updated.event.ts';
+import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 
 const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'];
 
 function gameInDecisionPhase(): { game: Game; ana: Player; luis: Player } {
-  const ana = new Player('TestAnaId', 'Ana');
-  const luis = new Player('TestLuisId', 'Luis');
-  const game = new Game('TestId', 'TestRoomId', DILEMMAS);
+  const ana = Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId'));
+  const luis = Player.create({ nickname: 'Luis' }, new FixedIdGenerator('TestLuisId'));
+  const game = Game.create(
+    { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+    new FixedIdGenerator('TestId'),
+  );
   game.startDecisionPhase([ana, luis]);
   game.pullEvents();
   return { game, ana, luis };
 }
 
 describe('Game', () => {
-  describe('constructor', () => {
+  describe('create', () => {
     it('should have an id, its room id and its dilemmas', () => {
       // Arrange
       const id = 'TestId';
       const roomId = 'TestRoomId';
 
       // Act
-      const game = new Game(id, roomId, DILEMMAS);
+      const game = Game.create({ roomId, dilemmaIds: DILEMMAS }, new FixedIdGenerator(id));
 
       // Assert
       expect(game.id).toBe(id);
@@ -37,7 +41,10 @@ describe('Game', () => {
 
     it('should not be in the decision phase yet', () => {
       // Arrange & Act
-      const game = new Game('TestId', 'TestRoomId', DILEMMAS);
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        new FixedIdGenerator('TestId'),
+      );
 
       // Assert
       expect(game.isInDecisionPhase).toBe(false);
@@ -45,24 +52,33 @@ describe('Game', () => {
 
     it('should throw an error if the id is missing', () => {
       // Act & Assert
-      expect(() => new Game('', 'TestRoomId', DILEMMAS)).toThrow(IdMissingError);
+      expect(() =>
+        Game.create({ roomId: 'TestRoomId', dilemmaIds: DILEMMAS }, new FixedIdGenerator('')),
+      ).toThrow(IdMissingError);
     });
 
     it('should throw an error if the room id is missing', () => {
       // Act & Assert
-      expect(() => new Game('TestId', '', DILEMMAS)).toThrow(IdMissingError);
+      expect(() =>
+        Game.create({ roomId: '', dilemmaIds: DILEMMAS }, new FixedIdGenerator('TestId')),
+      ).toThrow(IdMissingError);
     });
 
     it('should throw an error if there are no dilemmas', () => {
       // Act & Assert
-      expect(() => new Game('TestId', 'TestRoomId', [])).toThrow(DilemmasMissingError);
+      expect(() =>
+        Game.create({ roomId: 'TestRoomId', dilemmaIds: [] }, new FixedIdGenerator('TestId')),
+      ).toThrow(DilemmasMissingError);
     });
   });
 
   describe('dilemmas', () => {
     it('should not let the dilemmas be changed from outside the game', () => {
       // Arrange
-      const game = new Game('TestId', 'TestRoomId', DILEMMAS);
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        new FixedIdGenerator('TestId'),
+      );
 
       // Act
       (game.dilemmas as string[]).push('TestIntruderDilemma');
@@ -75,10 +91,15 @@ describe('Game', () => {
   describe('startDecisionPhase', () => {
     it('should put the game in the decision phase', () => {
       // Arrange
-      const game = new Game('TestId', 'TestRoomId', DILEMMAS);
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        new FixedIdGenerator('TestId'),
+      );
 
       // Act
-      game.startDecisionPhase([new Player('TestAnaId', 'Ana')]);
+      game.startDecisionPhase([
+        Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId')),
+      ]);
 
       // Assert
       expect(game.isInDecisionPhase).toBe(true);
@@ -86,8 +107,11 @@ describe('Game', () => {
 
     it('should start every player with no progress', () => {
       // Arrange
-      const game = new Game('TestId', 'TestRoomId', DILEMMAS);
-      const ana = new Player('TestAnaId', 'Ana');
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        new FixedIdGenerator('TestId'),
+      );
+      const ana = Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId'));
 
       // Act
       game.startDecisionPhase([ana]);
@@ -177,7 +201,10 @@ describe('Game', () => {
 
     it('should throw an error if the game is not in the decision phase', () => {
       // Arrange
-      const game = new Game('TestId', 'TestRoomId', DILEMMAS);
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        new FixedIdGenerator('TestId'),
+      );
 
       // Act & Assert
       expect(() => game.answer('TestLuisId', 'TestDilemma1', 'TestOption')).toThrow(
@@ -227,6 +254,106 @@ describe('Game', () => {
 
       // Assert
       expect(game.pullEvents()).toEqual([]);
+    });
+  });
+
+  describe('playerIds', () => {
+    it('should be empty before the decision phase', () => {
+      // Arrange & Act
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        new FixedIdGenerator('TestId'),
+      );
+
+      // Assert
+      expect(game.playerIds).toEqual([]);
+    });
+
+    it('should list the players of the decision phase', () => {
+      // Arrange & Act
+      const { game, ana, luis } = gameInDecisionPhase();
+
+      // Assert
+      expect(game.playerIds).toEqual([ana.id, luis.id]);
+    });
+  });
+
+  describe('toSnapshot', () => {
+    it('should return its state as plain data', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+
+      // Act
+      const snapshot = game.toSnapshot();
+
+      // Assert
+      expect(snapshot).toEqual({
+        id: 'TestId',
+        roomId: 'TestRoomId',
+        dilemmas: DILEMMAS,
+        inDecisionPhase: true,
+        players: [
+          { id: 'TestAnaId', answers: [] },
+          { id: 'TestLuisId', answers: [{ dilemmaId: 'TestDilemma1', vote: 'TestOption' }] },
+        ],
+      });
+    });
+  });
+
+  describe('restore', () => {
+    it('should rebuild the game from its snapshot', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+      game.answer(luis.id, 'TestDilemma2', 'TestOption');
+
+      // Act
+      const restored = Game.restore(game.toSnapshot());
+
+      // Assert
+      expect(restored.toSnapshot()).toEqual(game.toSnapshot());
+      expect(restored.progressOf(luis.id)).toBe(2);
+    });
+
+    it('should rebuild a game that is not in the decision phase yet', () => {
+      // Arrange
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        new FixedIdGenerator('TestId'),
+      );
+
+      // Act
+      const restored = Game.restore(game.toSnapshot());
+
+      // Assert
+      expect(restored.isInDecisionPhase).toBe(false);
+      expect(restored.playerIds).toEqual([]);
+    });
+
+    it('should not record any event', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+
+      // Act
+      const restored = Game.restore(game.toSnapshot());
+
+      // Assert
+      expect(restored.pullEvents()).toEqual([]);
+    });
+
+    it('should go on from the restored progress', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+      const restored = Game.restore(game.toSnapshot());
+
+      // Act
+      restored.answer(luis.id, 'TestDilemma2', 'TestOption');
+
+      // Assert
+      expect(restored.pullEvents()).toEqual([new ProgressUpdatedEvent('TestId', luis.id, 2)]);
     });
   });
 });

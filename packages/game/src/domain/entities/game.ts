@@ -4,9 +4,21 @@ import { DilemmasMissingError } from '../errors/dilemmas-missing.error.ts';
 import { PlayerNotInGameError } from '../errors/player-not-in-game.error.ts';
 import type { DomainEvent } from '../events/domain-event.ts';
 import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
+import type { IdGenerator } from '../ports/id-generator.port.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { AnswerVO } from '../vos/answer.vo.ts';
 import { Player } from './player.ts';
+
+export interface GameSnapshot {
+  readonly id: string;
+  readonly roomId: string;
+  readonly dilemmas: readonly string[];
+  readonly inDecisionPhase: boolean;
+  readonly players: readonly {
+    readonly id: string;
+    readonly answers: readonly { readonly dilemmaId: string; readonly vote: string }[];
+  }[];
+}
 
 export class Game {
   readonly #id: IdVO;
@@ -16,12 +28,19 @@ export class Game {
   readonly #answers = new Map<string, Map<string, AnswerVO>>();
   #events: DomainEvent[] = [];
 
-  constructor(id: string, roomId: string, dilemmas: string[]) {
+  private constructor(id: string, roomId: string, dilemmas: readonly string[]) {
     if (dilemmas.length === 0) throw new DilemmasMissingError();
 
     this.#id = new IdVO(id);
     this.#roomId = new IdVO(roomId);
     this.#dilemmas = dilemmas.map((dilemma) => new IdVO(dilemma));
+  }
+
+  static create(
+    { roomId, dilemmaIds }: { readonly roomId: string; readonly dilemmaIds: readonly string[] },
+    idGenerator: IdGenerator,
+  ): Game {
+    return new Game(idGenerator.generate(), roomId, dilemmaIds);
   }
 
   get id(): string {
@@ -34,6 +53,10 @@ export class Game {
 
   get dilemmas(): readonly string[] {
     return this.#dilemmas.map((dilemma) => dilemma.value);
+  }
+
+  get playerIds(): readonly string[] {
+    return [...this.#answers.keys()];
   }
 
   get isInDecisionPhase(): boolean {
@@ -69,6 +92,31 @@ export class Game {
     const events = this.#events;
     this.#events = [];
     return events;
+  }
+
+  toSnapshot(): GameSnapshot {
+    return {
+      id: this.id,
+      roomId: this.roomId,
+      dilemmas: this.dilemmas,
+      inDecisionPhase: this.#inDecisionPhase,
+      players: [...this.#answers].map(([playerId, answers]) => ({
+        id: playerId,
+        answers: [...answers].map(([dilemmaId, answer]) => ({ dilemmaId, vote: answer.vote })),
+      })),
+    };
+  }
+
+  static restore(snapshot: GameSnapshot): Game {
+    const game = new Game(snapshot.id, snapshot.roomId, snapshot.dilemmas);
+    game.#inDecisionPhase = snapshot.inDecisionPhase;
+    for (const player of snapshot.players) {
+      const answers = player.answers.map(
+        ({ dilemmaId, vote }) => [dilemmaId, new AnswerVO(vote)] as const,
+      );
+      game.#answers.set(player.id, new Map(answers));
+    }
+    return game;
   }
 
   #answersOf(playerId: string): Map<string, AnswerVO> {
