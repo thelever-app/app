@@ -22,5 +22,18 @@ describe('VoteVO', () => {
       // Act & Assert
       expect(() => new VoteVO(option)).toThrow(VoteMissingError);
     });
+
+    it('should throw an error if the value is only whitespace', () => {
+      // Act & Assert
+      expect(() => new VoteVO('   ')).toThrow(VoteMissingError);
+    });
+
+    it('should trim the value', () => {
+      // Arrange & Act
+      const vo = new VoteVO('  TestOption  ');
+
+      // Assert
+      expect(vo.value).toBe('TestOption');
+    });
   });
 });

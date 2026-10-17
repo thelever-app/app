@@ -22,5 +22,18 @@ describe('NicknameVO', () => {
       // Act & Assert
       expect(() => new NicknameVO(nickname)).toThrow(NicknameMissingError);
     });
+
+    it('should throw an error if the value is only whitespace', () => {
+      // Act & Assert
+      expect(() => new NicknameVO('   ')).toThrow(NicknameMissingError);
+    });
+
+    it('should trim the value', () => {
+      // Arrange & Act
+      const vo = new NicknameVO('  Ana  ');
+
+      // Assert
+      expect(vo.value).toBe('Ana');
+    });
   });
 });

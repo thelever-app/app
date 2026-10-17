@@ -1,7 +1,10 @@
+import { DecisionPhaseAlreadyStartedError } from '../errors/decision-phase-already-started.error.ts';
 import { DecisionPhaseNotStartedError } from '../errors/decision-phase-not-started.error.ts';
 import { DilemmaNotInGameError } from '../errors/dilemma-not-in-game.error.ts';
 import { DilemmasMissingError } from '../errors/dilemmas-missing.error.ts';
+import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { PlayerNotInGameError } from '../errors/player-not-in-game.error.ts';
+import { PlayersMissingError } from '../errors/players-missing.error.ts';
 import type { DomainEvent } from '../events/domain-event.ts';
 import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
@@ -30,6 +33,8 @@ export class Game {
 
   private constructor(id: string, roomId: string, dilemmas: readonly string[]) {
     if (dilemmas.length === 0) throw new DilemmasMissingError();
+    const repeated = dilemmas.find((dilemma, index) => dilemmas.indexOf(dilemma) !== index);
+    if (repeated !== undefined) throw new DuplicateDilemmaError(repeated);
 
     this.#id = new IdVO(id);
     this.#roomId = new IdVO(roomId);
@@ -64,6 +69,9 @@ export class Game {
   }
 
   startDecisionPhase(players: readonly Player[]): void {
+    if (this.#inDecisionPhase) throw new DecisionPhaseAlreadyStartedError();
+    if (players.length === 0) throw new PlayersMissingError();
+
     for (const player of players) {
       this.#answers.set(player.id, new Map());
     }

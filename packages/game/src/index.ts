@@ -22,6 +22,9 @@ export { VoteMissingError } from './domain/errors/vote-missing.error.ts';
 export { DecisionPhaseNotStartedError } from './domain/errors/decision-phase-not-started.error.ts';
 export { PlayerNotInGameError } from './domain/errors/player-not-in-game.error.ts';
 export { DilemmaNotInGameError } from './domain/errors/dilemma-not-in-game.error.ts';
+export { DuplicateDilemmaError } from './domain/errors/duplicate-dilemma.error.ts';
+export { PlayersMissingError } from './domain/errors/players-missing.error.ts';
+export { DecisionPhaseAlreadyStartedError } from './domain/errors/decision-phase-already-started.error.ts';
 
 // Application
 export type { RoomRepository } from './application/ports/room-repository.port.ts';

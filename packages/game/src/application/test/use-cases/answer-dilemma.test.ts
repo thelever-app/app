@@ -9,12 +9,28 @@ import { InMemoryGameRepository } from '../../../adapters/in-memory/in-memory-ga
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
 import { ProgressUpdatedEvent } from '../../../domain/events/progress-updated.event.ts';
+import type { DomainEvent } from '../../../domain/events/domain-event.ts';
+import type { PlayerNotifier } from '../../ports/player-notifier.port.ts';
+
+/** Fails to deliver to one player, as a closed socket would, and delivers to the rest. */
+class UnreachablePlayerNotifier extends InMemoryPlayerNotifier {
+  readonly #unreachablePlayerId: string;
+
+  constructor(unreachablePlayerId: string) {
+    super();
+    this.#unreachablePlayerId = unreachablePlayerId;
+  }
+
+  override async notify(playerId: string, event: DomainEvent): Promise<void> {
+    if (playerId === this.#unreachablePlayerId) throw new Error('socket closed');
+    await super.notify(playerId, event);
+  }
+}
 
 /** Ana hosts a room with Luis and Marta, and the game is in the decision phase. */
-async function gameInDecisionPhase() {
+async function gameInDecisionPhase(notifier: PlayerNotifier = new InMemoryPlayerNotifier()) {
   const roomRepository = new InMemoryRoomRepository();
   const gameRepository = new InMemoryGameRepository();
-  const notifier = new InMemoryPlayerNotifier();
   const idGenerator = new SequentialIdGenerator();
   const joinRoom = new JoinRoomUseCase(roomRepository, idGenerator);
 
@@ -32,7 +48,7 @@ async function gameInDecisionPhase() {
 
   return {
     gameRepository,
-    notifier,
+    notifier: notifier as InMemoryPlayerNotifier,
     answerDilemma: new AnswerDilemmaUseCase(gameRepository, notifier),
     gameId,
     anaId,
@@ -93,6 +109,26 @@ describe('AnswerDilemmaUseCase', () => {
 
       // Assert
       expect(notifier.receivedBy(luisId)).toEqual([]);
+    });
+
+    it('should still notify the other players and succeed when one notification fails', async () => {
+      // Arrange
+      // Sequential ids: room id-1, Ana id-2, Luis id-3, Marta id-4.
+      const { notifier, answerDilemma, gameId, luisId, martaId } = await gameInDecisionPhase(
+        new UnreachablePlayerNotifier('id-2'),
+      );
+
+      // Act
+      const answering = answerDilemma.execute({
+        gameId,
+        playerId: luisId,
+        dilemmaId: 'TestDilemma1',
+        vote: 'TestOption',
+      });
+
+      // Assert
+      await expect(answering).resolves.toBeUndefined();
+      expect(notifier.receivedBy(martaId)).toEqual([new ProgressUpdatedEvent(gameId, luisId, 1)]);
     });
 
     it('should throw an error if the game does not exist', async () => {

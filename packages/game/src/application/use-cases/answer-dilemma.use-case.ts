@@ -27,11 +27,10 @@ export class AnswerDilemmaUseCase {
     const events = game.pullEvents();
     await this.#gameRepository.save(game);
 
+    // The answer is already saved: a player who cannot be reached must not undo it or stop the others.
     const otherPlayerIds = game.playerIds.filter((id) => id !== playerId);
-    for (const event of events) {
-      for (const otherPlayerId of otherPlayerIds) {
-        await this.#notifier.notify(otherPlayerId, event);
-      }
-    }
+    await Promise.allSettled(
+      events.flatMap((event) => otherPlayerIds.map((id) => this.#notifier.notify(id, event))),
+    );
   }
 }

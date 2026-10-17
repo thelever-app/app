@@ -13,7 +13,8 @@ export interface GameDriver {
   startDecisionPhase(): Promise<void>;
   answerDilemmas(player: string, count: number): Promise<void>;
   progressSeenBy(viewer: string, player: string): Promise<number | undefined>;
-  messagesAbout(player: string): Promise<object[]>;
+  /** Everything every other player received, of any kind and about anyone. */
+  messagesReceivedByOthers(player: string): Promise<object[]>;
   /** The votes the driver cast for `player`, to look for them where they must not be. */
   votesCastBy(player: string): Promise<string[]>;
 }

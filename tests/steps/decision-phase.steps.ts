@@ -34,9 +34,9 @@ Then(
 Then(
   'no other player receives what {string} answered',
   async function (this: GameWorld, player: string) {
-    const messages = await this.driver.messagesAbout(player);
+    const messages = await this.driver.messagesReceivedByOthers(player);
     const votes = await this.driver.votesCastBy(player);
-    assert.ok(messages.length > 0, `nobody received anything about ${player}`);
+    assert.ok(messages.length > 0, `nobody else received anything`);
     assert.ok(votes.length > 0, `${player} did not vote`);
 
     for (const message of messages) {

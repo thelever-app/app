@@ -6,7 +6,9 @@ export class InMemoryPlayerNotifier implements PlayerNotifier {
   readonly #received = new Map<string, DomainEvent[]>();
 
   async notify(playerId: string, event: DomainEvent): Promise<void> {
-    this.#received.set(playerId, [...this.receivedBy(playerId), event]);
+    const received = this.#received.get(playerId) ?? [];
+    received.push(event);
+    this.#received.set(playerId, received);
   }
 
   receivedBy(playerId: string): readonly DomainEvent[] {

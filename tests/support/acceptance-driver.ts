@@ -100,11 +100,11 @@ export class AcceptanceDriver implements GameDriver {
     return updates.at(-1)?.progress;
   }
 
-  /** Everything the other players received about `player`. */
-  async messagesAbout(player: string): Promise<object[]> {
+  /** Everything every other player received, of any kind and about anyone. */
+  async messagesReceivedByOthers(player: string): Promise<object[]> {
     const playerId = this.#playerIdOf(player);
     const otherPlayerIds = [...this.#playerIds.values()].filter((id) => id !== playerId);
-    return otherPlayerIds.flatMap((id) => this.#progressUpdatesAbout(player, id));
+    return otherPlayerIds.flatMap((id) => this.#notifier.receivedBy(id));
   }
 
   async votesCastBy(player: string): Promise<string[]> {

@@ -8,6 +8,9 @@ import { PlayerNotInGameError } from '../../errors/player-not-in-game.error.ts';
 import { DilemmaNotInGameError } from '../../errors/dilemma-not-in-game.error.ts';
 import { ProgressUpdatedEvent } from '../../events/progress-updated.event.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
+import { DuplicateDilemmaError } from '../../errors/duplicate-dilemma.error.ts';
+import { PlayersMissingError } from '../../errors/players-missing.error.ts';
+import { DecisionPhaseAlreadyStartedError } from '../../errors/decision-phase-already-started.error.ts';
 
 const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'];
 
@@ -354,6 +357,40 @@ describe('Game', () => {
 
       // Assert
       expect(restored.pullEvents()).toEqual([new ProgressUpdatedEvent('TestId', luis.id, 2)]);
+    });
+  });
+
+  describe('invariants', () => {
+    it('should throw an error if a dilemma is repeated', () => {
+      // Act & Assert
+      expect(() =>
+        Game.create(
+          { roomId: 'TestRoomId', dilemmaIds: ['TestDilemma1', 'TestDilemma1', 'TestDilemma2'] },
+          new FixedIdGenerator('TestId'),
+        ),
+      ).toThrow(DuplicateDilemmaError);
+    });
+
+    it('should throw an error if the decision phase starts without players', () => {
+      // Arrange
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        new FixedIdGenerator('TestId'),
+      );
+
+      // Act & Assert
+      expect(() => game.startDecisionPhase([])).toThrow(PlayersMissingError);
+      expect(game.isInDecisionPhase).toBe(false);
+    });
+
+    it('should throw an error if the decision phase starts twice, keeping the answers', () => {
+      // Arrange
+      const { game, ana, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+
+      // Act & Assert
+      expect(() => game.startDecisionPhase([ana, luis])).toThrow(DecisionPhaseAlreadyStartedError);
+      expect(game.progressOf(luis.id)).toBe(1);
     });
   });
 });

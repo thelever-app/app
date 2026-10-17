@@ -12,13 +12,13 @@ export interface RoomSnapshot {
 export class Room {
   readonly #id: IdVO;
   readonly #host: Player;
-  readonly #players: Player[] = [];
-  readonly #playersIds: Set<string> = new Set<string>();
+  /** In the order they joined, which decides who takes over as host. */
+  readonly #players: Player[];
 
-  private constructor(id: string, host: Player) {
+  private constructor(id: string, host: Player, players: readonly Player[]) {
     this.#id = new IdVO(id);
     this.#host = host;
-    this.addPlayer(host);
+    this.#players = [...players];
   }
 
   /** The room is born with its host, who is its first player. */
@@ -28,7 +28,7 @@ export class Room {
   ): Room {
     const id = idGenerator.generate();
     const host = Player.create({ nickname: hostNickname }, idGenerator);
-    return new Room(id, host);
+    return new Room(id, host, [host]);
   }
 
   get id(): string {
@@ -44,11 +44,10 @@ export class Room {
   }
 
   addPlayer(player: Player): void {
-    if (this.#playersIds.has(player.id)) {
+    if (this.#players.some((existing) => existing.id === player.id)) {
       return;
     }
     this.#players.push(player);
-    this.#playersIds.add(player.id);
   }
 
   toSnapshot(): RoomSnapshot {
@@ -64,11 +63,6 @@ export class Room {
     const host = players.find((player) => player.id === snapshot.hostId);
     if (!host) throw new HostMissingError();
 
-    const room = new Room(snapshot.id, host);
-    // The constructor puts the host first; the snapshot keeps the order in which players joined.
-    room.#players.splice(0);
-    room.#playersIds.clear();
-    for (const player of players) room.addPlayer(player);
-    return room;
+    return new Room(snapshot.id, host, players);
   }
 }
