@@ -9,6 +9,8 @@
   "private": true,
   "devDependencies": {
     "@cucumber/cucumber": "^13.2.1",
-    "@thelever-app/config": "workspace:*"
+    "@thelever-app/config": "workspace:*",
+    "@thelever-app/game": "workspace:*",
+    "@types/node": "^24.19.0"
   }
 }

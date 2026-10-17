@@ -1,4 +1,7 @@
 {
   "extends": "@thelever-app/config/tsconfig.base.json",
-  "include": ["features", "steps"]
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["support", "steps"]
 }

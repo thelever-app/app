@@ -6,8 +6,7 @@ Feature: Decision phase
   Rule: Any room
 
     Background:
-      Given a room with players "Ana", "Luis" and "Marta"
-      And "Ana" is the host
+      Given "Ana" hosts a room with "Luis" and "Marta"
       And the game is in the decision phase
 
     @todo
@@ -146,7 +145,7 @@ Feature: Decision phase
   Rule: Nominal room
 
     Background:
-      Given a nominal room with players "Ana", "Luis" and "Marta"
+      Given "Ana" hosts a nominal room with "Luis" and "Marta"
       And the game is in the decision phase
 
     @todo
@@ -215,7 +214,7 @@ Feature: Decision phase
   Rule: Anonymous room
 
     Background:
-      Given an anonymous room with players "Ana", "Luis" and "Marta"
+      Given "Ana" hosts an anonymous room with "Luis" and "Marta"
       And the game is in the decision phase
 
     @todo

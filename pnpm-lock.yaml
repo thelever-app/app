@@ -153,6 +153,12 @@ importers:
       '@thelever-app/config':
         specifier: workspace:*
         version: link:../packages/config
+      '@thelever-app/game':
+        specifier: workspace:*
+        version: link:../packages/game
+      '@types/node':
+        specifier: ^24.19.0
+        version: 24.19.0
 
 packages:
 
