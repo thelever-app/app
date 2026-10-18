@@ -23,4 +23,22 @@ export default defineConfig([
     languageOptions: { globals: globals.browser },
     extends: [reactHooks.configs.flat.recommended],
   },
+  {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    ignores: ['apps/web/src/room/simulated-room-connection.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@thelever-app/game', '@thelever-app/game/*'],
+              message:
+                'Only the simulated room may use the Game context. Use RoomConnection and @thelever-app/protocol.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
