@@ -95,6 +95,15 @@ export class Game {
     return this.#answersOf(playerId).size;
   }
 
+  /** The answers of one player, in the order of the dilemmas. Who may see them is up to the caller. */
+  answersOf(playerId: string): readonly { readonly dilemmaId: string; readonly vote: string }[] {
+    const answers = this.#answersOf(playerId);
+    return this.dilemmas.flatMap((dilemmaId) => {
+      const answer = answers.get(dilemmaId);
+      return answer ? [{ dilemmaId, vote: answer.vote }] : [];
+    });
+  }
+
   /** Returns the events recorded since the last call and forgets them. */
   pullEvents(): DomainEvent[] {
     const events = this.#events;

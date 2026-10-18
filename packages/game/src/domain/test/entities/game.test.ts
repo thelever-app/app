@@ -246,6 +246,63 @@ describe('Game', () => {
     });
   });
 
+  describe('answersOf', () => {
+    it('should be empty before the player answers', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+
+      // Act & Assert
+      expect(game.answersOf(luis.id)).toEqual([]);
+    });
+
+    it('should list the answers of the player in the order of the dilemmas', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma3', 'TestOption3');
+      game.answer(luis.id, 'TestDilemma1', 'TestOption1');
+
+      // Act
+      const answers = game.answersOf(luis.id);
+
+      // Assert
+      expect(answers).toEqual([
+        { dilemmaId: 'TestDilemma1', vote: 'TestOption1' },
+        { dilemmaId: 'TestDilemma3', vote: 'TestOption3' },
+      ]);
+    });
+
+    it('should list only the new vote of a changed answer', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+
+      // Act
+      game.answer(luis.id, 'TestDilemma1', 'TestOtherOption');
+
+      // Assert
+      expect(game.answersOf(luis.id)).toEqual([
+        { dilemmaId: 'TestDilemma1', vote: 'TestOtherOption' },
+      ]);
+    });
+
+    it('should not include the answers of the other players', () => {
+      // Arrange
+      const { game, ana, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+
+      // Act & Assert
+      expect(game.answersOf(ana.id)).toEqual([]);
+    });
+
+    it('should throw an error if the player is not in the game', () => {
+      // Arrange
+      const { game } = gameInDecisionPhase();
+
+      // Act & Assert
+      expect(() => game.answersOf('TestStrangerId')).toThrow(PlayerNotInGameError);
+    });
+  });
+
   describe('pullEvents', () => {
     it('should empty the recorded events', () => {
       // Arrange

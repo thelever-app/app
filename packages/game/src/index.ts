@@ -51,3 +51,8 @@ export {
   AnswerDilemmaUseCase,
   type AnswerDilemmaInput,
 } from './application/use-cases/answer-dilemma.use-case.ts';
+export {
+  GetGameStateUseCase,
+  type GetGameStateInput,
+  type GetGameStateOutput,
+} from './application/use-cases/get-game-state.use-case.ts';
