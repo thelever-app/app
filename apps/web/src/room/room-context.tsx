@@ -1,12 +1,12 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { RoomConnection } from './room-connection.ts';
 
-const RoomConnectionContext = createContext<RoomConnection | undefined>(undefined);
-
 interface RoomConnectionProviderProps {
   readonly connection: RoomConnection;
   readonly children: ReactNode;
 }
+
+const RoomConnectionContext = createContext<RoomConnection | undefined>(undefined);
 
 export function RoomConnectionProvider({ connection, children }: RoomConnectionProviderProps) {
   return <RoomConnectionContext value={connection}>{children}</RoomConnectionContext>;
