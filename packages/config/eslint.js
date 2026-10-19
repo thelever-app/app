@@ -9,6 +9,10 @@ export default defineConfig([
   js.configs.recommended,
   tseslint.configs.recommended,
   {
+    // A brace-less body must fit on the same line as its `if`, `for` or `while`.
+    rules: { curly: ['error', 'multi-line'] },
+  },
+  {
     files: [
       'apps/realtime/**/*.ts',
       'packages/**/*.{ts,js}',

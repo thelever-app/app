@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameStateDto, ProgressUpdatedDto } from '@thelever-app/protocol';
-import { roomReducer } from '../room-reducer.ts';
+import { roomReducer } from '../../src/room/room-reducer.ts';
 
 const GAME_STATE: GameStateDto = {
   type: 'game-state',

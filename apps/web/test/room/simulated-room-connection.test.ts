@@ -3,7 +3,7 @@ import type { GameStateDto, ServerMessageDto } from '@thelever-app/protocol';
 import {
   SimulatedRoomConnection,
   type SimulatedRoomOptions,
-} from '../simulated-room-connection.ts';
+} from '../../src/room/simulated-room-connection.ts';
 
 /** Luis answers a dilemma every second; the game has two. */
 const OPTIONS: SimulatedRoomOptions = {
