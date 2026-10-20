@@ -4,12 +4,15 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens.css"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "tokens": "node scripts/generate-tokens.ts"
   },
   "devDependencies": {
-    "@thelever-app/config": "workspace:*"
+    "@thelever-app/config": "workspace:*",
+    "@types/node": "^24.19.0"
   }
 }

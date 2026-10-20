@@ -176,6 +176,9 @@ importers:
       '@thelever-app/config':
         specifier: workspace:*
         version: link:../config
+      '@types/node':
+        specifier: ^24.19.0
+        version: 24.19.0
 
   tests:
     devDependencies:
