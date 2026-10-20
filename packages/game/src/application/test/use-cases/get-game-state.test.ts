@@ -13,8 +13,8 @@ import { InMemoryGameRepository } from '../../../adapters/in-memory/in-memory-ga
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
 import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
-
-const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'];
+import { DilemmaNotFoundError } from '../../errors/dilemma-not-found.error.ts';
+import { TEST_DILEMMA_IDS, TEST_OPTION_IDS, testCatalog } from '../support/test-catalog.ts';
 
 /** Ana hosts a room with Luis and Marta, and the game is in the decision phase. */
 async function gameInDecisionPhase() {
@@ -29,17 +29,19 @@ async function gameInDecisionPhase() {
   ).execute({ hostNickname: 'Ana' });
   const { playerId: luisId } = await joinRoom.execute({ roomId, nickname: 'Luis' });
   const { playerId: martaId } = await joinRoom.execute({ roomId, nickname: 'Marta' });
+  const catalog = testCatalog();
   const { gameId } = await new StartDecisionPhaseUseCase(
     roomRepository,
     gameRepository,
+    catalog,
     idGenerator,
-  ).execute({ roomId, dilemmaIds: DILEMMAS });
+  ).execute({ roomId, dilemmaIds: TEST_DILEMMA_IDS });
 
   return {
     gameRepository,
     roomRepository,
     answerDilemma: new AnswerDilemmaUseCase(gameRepository, new InMemoryPlayerNotifier()),
-    getGameState: new GetGameStateUseCase(roomRepository, gameRepository),
+    getGameState: new GetGameStateUseCase(roomRepository, gameRepository, catalog),
     gameId,
     anaId,
     luisId,
@@ -49,17 +51,23 @@ async function gameInDecisionPhase() {
 
 describe('GetGameStateUseCase', () => {
   describe('execute', () => {
-    it('should return the game, the player who asks and the dilemmas in order', async () => {
+    it('should return the game, the player who asks and the content of the dilemmas in order', async () => {
       // Arrange
       const { getGameState, gameId, luisId } = await gameInDecisionPhase();
 
       // Act
-      const state = await getGameState.execute({ gameId, playerId: luisId });
+      const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
 
       // Assert
       expect(state.gameId).toBe(gameId);
       expect(state.playerId).toBe(luisId);
-      expect(state.dilemmaIds).toEqual(DILEMMAS);
+      expect(state.dilemmas).toEqual(
+        TEST_DILEMMA_IDS.map((dilemmaId) => ({
+          dilemmaId,
+          text: `TextOf${dilemmaId}`,
+          options: TEST_OPTION_IDS.map((optionId) => ({ optionId, text: `TextOf${optionId}` })),
+        })),
+      );
     });
 
     it('should return every player with their nickname and progress', async () => {
@@ -80,7 +88,7 @@ describe('GetGameStateUseCase', () => {
       });
 
       // Act
-      const state = await getGameState.execute({ gameId, playerId: anaId });
+      const state = await getGameState.execute({ gameId, playerId: anaId, language: 'es' });
 
       // Assert
       expect(state.players).toEqual([
@@ -101,7 +109,7 @@ describe('GetGameStateUseCase', () => {
       });
 
       // Act
-      const state = await getGameState.execute({ gameId, playerId: luisId });
+      const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
 
       // Assert
       expect(state.answers).toEqual([{ dilemmaId: 'TestDilemma1', vote: 'TestOption' }]);
@@ -118,11 +126,13 @@ describe('GetGameStateUseCase', () => {
       });
 
       // Act
-      const state = await getGameState.execute({ gameId, playerId: anaId });
+      const state = await getGameState.execute({ gameId, playerId: anaId, language: 'es' });
 
       // Assert
       expect(state.answers).toEqual([]);
-      expect(JSON.stringify(state)).not.toContain('TestSecretOption');
+      for (const player of state.players) {
+        expect(Object.keys(player).sort()).toEqual(['nickname', 'playerId', 'progress']);
+      }
     });
 
     it('should throw an error if the game does not exist', async () => {
@@ -131,7 +141,7 @@ describe('GetGameStateUseCase', () => {
 
       // Act & Assert
       await expect(
-        getGameState.execute({ gameId: 'TestUnknownGameId', playerId: luisId }),
+        getGameState.execute({ gameId: 'TestUnknownGameId', playerId: luisId, language: 'es' }),
       ).rejects.toThrow(GameNotFoundError);
     });
 
@@ -140,24 +150,50 @@ describe('GetGameStateUseCase', () => {
       const { getGameState, gameId } = await gameInDecisionPhase();
 
       // Act & Assert
-      await expect(getGameState.execute({ gameId, playerId: 'TestStrangerId' })).rejects.toThrow(
-        PlayerNotInGameError,
+      await expect(
+        getGameState.execute({ gameId, playerId: 'TestStrangerId', language: 'es' }),
+      ).rejects.toThrow(PlayerNotInGameError);
+    });
+
+    it('should throw an error if a dilemma of the game is no longer in the catalog', async () => {
+      // Arrange
+      const { getGameState, gameRepository, roomRepository, luisId } = await gameInDecisionPhase();
+      const room = (await roomRepository.findById('id-1'))!;
+      const game = Game.create(
+        {
+          roomId: room.id,
+          dilemmas: [{ dilemmaId: 'TestGoneDilemma', optionIds: TEST_OPTION_IDS }],
+        },
+        new FixedIdGenerator('TestGoneGameId'),
       );
+      game.startDecisionPhase(room.players);
+      await gameRepository.save(game);
+
+      // Act & Assert
+      await expect(
+        getGameState.execute({ gameId: game.id, playerId: luisId, language: 'es' }),
+      ).rejects.toThrow(DilemmaNotFoundError);
     });
 
     it('should throw an error if the room of the game does not exist', async () => {
       // Arrange
       const { getGameState, gameRepository, luisId } = await gameInDecisionPhase();
       const orphan = Game.create(
-        { roomId: 'TestUnknownRoomId', dilemmaIds: DILEMMAS },
+        {
+          roomId: 'TestUnknownRoomId',
+          dilemmas: TEST_DILEMMA_IDS.map((dilemmaId) => ({
+            dilemmaId,
+            optionIds: TEST_OPTION_IDS,
+          })),
+        },
         new FixedIdGenerator('TestOrphanGameId'),
       );
       await gameRepository.save(orphan);
 
       // Act & Assert
-      await expect(getGameState.execute({ gameId: orphan.id, playerId: luisId })).rejects.toThrow(
-        RoomNotFoundError,
-      );
+      await expect(
+        getGameState.execute({ gameId: orphan.id, playerId: luisId, language: 'es' }),
+      ).rejects.toThrow(RoomNotFoundError);
     });
   });
 });

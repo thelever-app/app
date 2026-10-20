@@ -6,6 +6,7 @@ import {
   StartDecisionPhaseUseCase,
 } from '@thelever-app/game';
 import {
+  InMemoryDilemmaCatalog,
   InMemoryGameRepository,
   InMemoryPlayerNotifier,
   InMemoryRoomRepository,
@@ -17,6 +18,17 @@ import type { GameDriver } from './driver.ts';
 const DILEMMA_IDS = ['dilemma-1', 'dilemma-2', 'dilemma-3', 'dilemma-4', 'dilemma-5', 'dilemma-6'];
 /** Test data: the vote the driver casts when a step does not say which one. */
 const VOTE = 'option-1';
+/** Test data: every dilemma has two options, and VOTE is one of them. */
+const CATALOG = new InMemoryDilemmaCatalog(
+  DILEMMA_IDS.map((dilemmaId) => ({
+    dilemmaId,
+    text: `Text of ${dilemmaId}`,
+    options: [
+      { optionId: VOTE, text: 'Pull the lever' },
+      { optionId: 'option-2', text: 'Do nothing' },
+    ],
+  })),
+);
 
 /**
  * Drives the application layer of the Game context with in-memory adapters.
@@ -50,6 +62,7 @@ export class AcceptanceDriver implements GameDriver {
     this.#startDecisionPhase = new StartDecisionPhaseUseCase(
       roomRepository,
       gameRepository,
+      CATALOG,
       idGenerator,
     );
     this.#answerDilemma = new AnswerDilemmaUseCase(gameRepository, this.#notifier);
