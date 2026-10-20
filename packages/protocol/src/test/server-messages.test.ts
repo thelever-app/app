@@ -5,7 +5,25 @@ const gameState = {
   type: 'game-state',
   gameId: 'game-1',
   playerId: 'player-2',
-  dilemmaIds: ['dilemma-1', 'dilemma-2'],
+  dilemmas: [
+    {
+      dilemmaId: 'dilemma-1',
+      text: 'Text of the first dilemma',
+      options: [
+        { optionId: 'option-1', text: 'Pull the lever' },
+        { optionId: 'option-2', text: 'Do nothing' },
+      ],
+    },
+    {
+      dilemmaId: 'dilemma-2',
+      text: 'Text of the second dilemma',
+      options: [
+        { optionId: 'option-3', text: 'Save the child' },
+        { optionId: 'option-4', text: 'Save the doctor' },
+        { optionId: 'option-5', text: 'Save the athlete' },
+      ],
+    },
+  ],
   players: [
     { playerId: 'player-1', nickname: 'Ana', progress: 0 },
     { playerId: 'player-2', nickname: 'Luis', progress: 1 },
@@ -43,7 +61,34 @@ describe('GameStateDto', () => {
 
   it('should reject a game without dilemmas', () => {
     // Act & Assert
-    expect(GameStateDto.safeParse({ ...gameState, dilemmaIds: [] }).success).toBe(false);
+    expect(GameStateDto.safeParse({ ...gameState, dilemmas: [] }).success).toBe(false);
+  });
+
+  it('should reject a dilemma without text or without options', () => {
+    // Arrange
+    const [first] = gameState.dilemmas;
+    const withDilemma = (dilemma: object) => ({ ...gameState, dilemmas: [dilemma] });
+
+    // Act & Assert
+    expect(GameStateDto.safeParse(withDilemma({ ...first, text: '' })).success).toBe(false);
+    expect(GameStateDto.safeParse(withDilemma({ ...first, options: [] })).success).toBe(false);
+  });
+
+  it('should reject an option without text, or with extra keys', () => {
+    // Arrange
+    const [first] = gameState.dilemmas;
+    const withOption = (option: object) => ({
+      ...gameState,
+      dilemmas: [{ ...first, options: [option] }],
+    });
+
+    // Act & Assert
+    expect(GameStateDto.safeParse(withOption({ optionId: 'option-1', text: '' })).success).toBe(
+      false,
+    );
+    expect(
+      GameStateDto.safeParse(withOption({ optionId: 'option-1', text: 'Pull', votes: 3 })).success,
+    ).toBe(false);
   });
 
   it('should reject a game without players', () => {

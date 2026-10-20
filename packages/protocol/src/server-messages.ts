@@ -9,8 +9,19 @@ export const GameStateDto = z.strictObject({
   gameId: z.string().min(1),
   /** The player who receives the message. */
   playerId: z.string().min(1),
-  /** In the order every player gets them. */
-  dilemmaIds: z.array(z.string().min(1)).min(1),
+  /** In the order every player gets them, in the language of the player. */
+  dilemmas: z
+    .array(
+      z.strictObject({
+        dilemmaId: z.string().min(1),
+        text: z.string().min(1),
+        /** A vote is the optionId of one of them. */
+        options: z
+          .array(z.strictObject({ optionId: z.string().min(1), text: z.string().min(1) }))
+          .min(1),
+      }),
+    )
+    .min(1),
   players: z
     .array(
       z.strictObject({
