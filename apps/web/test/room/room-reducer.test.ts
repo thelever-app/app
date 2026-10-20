@@ -6,7 +6,24 @@ const GAME_STATE: GameStateDto = {
   type: 'game-state',
   gameId: 'TestGameId',
   playerId: 'TestAnaId',
-  dilemmaIds: ['TestDilemma1', 'TestDilemma2'],
+  dilemmas: [
+    {
+      dilemmaId: 'TestDilemma1',
+      text: 'TestText1',
+      options: [
+        { optionId: 'TestOptionA', text: 'TestOptionTextA' },
+        { optionId: 'TestOptionB', text: 'TestOptionTextB' },
+      ],
+    },
+    {
+      dilemmaId: 'TestDilemma2',
+      text: 'TestText2',
+      options: [
+        { optionId: 'TestOptionC', text: 'TestOptionTextC' },
+        { optionId: 'TestOptionD', text: 'TestOptionTextD' },
+      ],
+    },
+  ],
   players: [
     { playerId: 'TestAnaId', nickname: 'Ana', progress: 0 },
     { playerId: 'TestLuisId', nickname: 'Luis', progress: 0 },

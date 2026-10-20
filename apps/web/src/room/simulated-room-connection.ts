@@ -1,3 +1,8 @@
+import { Dilemma, GetDilemmasUseCase } from '@thelever-app/dilemmas';
+import {
+  InMemoryDilemmaRepository,
+  SequentialIdGenerator as SequentialDilemmaIdGenerator,
+} from '@thelever-app/dilemmas/in-memory';
 import {
   AnswerDilemmaUseCase,
   CreateRoomUseCase,
@@ -5,11 +10,14 @@ import {
   JoinRoomUseCase,
   ProgressUpdatedEvent,
   StartDecisionPhaseUseCase,
+  type DilemmaCatalog,
   type DomainEvent,
+  type GameDilemma,
   type GameRepository,
   type PlayerNotifier,
   type RoomRepository,
 } from '@thelever-app/game';
+import { DilemmasContextCatalog } from '@thelever-app/game/dilemmas';
 import {
   InMemoryGameRepository,
   InMemoryRoomRepository,
@@ -21,12 +29,12 @@ import type { RoomConnection, ServerMessageListener } from './room-connection.ts
 export interface SimulatedRoomOptions {
   /** The nickname of the player using the screen, who hosts the room. */
   readonly nickname: string;
+  /** The language the dilemmas are written in, and the one the player reads them in. */
+  readonly language: string;
   /** Fake players: each one answers the next dilemma every `answerEveryMs`. */
   readonly others: readonly { readonly nickname: string; readonly answerEveryMs: number }[];
-  /** In the order every player gets them. */
-  readonly dilemmaIds: readonly string[];
-  /** The vote every fake player casts. */
-  readonly vote: string;
+  /** The content of the dilemmas of the game, in the order every player gets them. */
+  readonly dilemmas: readonly { readonly text: string; readonly options: readonly string[] }[];
 }
 
 /** Hands every event the use cases deliver to a callback, as a socket would push it. */
@@ -43,35 +51,58 @@ class CallbackPlayerNotifier implements PlayerNotifier {
 }
 
 /**
- * A room that runs in the browser: the use cases of `@thelever-app/game` with in-memory adapters,
- * and fake players that answer on timers. It speaks the same messages as the room server (TSK-24),
- * so the screen cannot tell them apart. Never for production.
+ * A room that runs in the browser: the use cases of `@thelever-app/game` and `@thelever-app/dilemmas`
+ * with in-memory adapters, and fake players that answer on timers. It speaks the same messages as the
+ * room server (TSK-24), so the screen cannot tell them apart. Never for production.
  */
 export class SimulatedRoomConnection implements RoomConnection {
   readonly #getGameState: GetGameStateUseCase;
   readonly #answerDilemma: AnswerDilemmaUseCase;
   readonly #gameId: string;
   readonly #playerId: string;
+  readonly #language: string;
   readonly #listeners = new Set<ServerMessageListener>();
   readonly #timers: ReturnType<typeof setInterval>[] = [];
 
   private constructor(
-    roomRepository: RoomRepository,
-    gameRepository: GameRepository,
+    repositories: {
+      readonly room: RoomRepository;
+      readonly game: GameRepository;
+      readonly catalog: DilemmaCatalog;
+    },
     gameId: string,
     playerId: string,
+    language: string,
   ) {
-    this.#getGameState = new GetGameStateUseCase(roomRepository, gameRepository);
+    this.#getGameState = new GetGameStateUseCase(
+      repositories.room,
+      repositories.game,
+      repositories.catalog,
+    );
     this.#answerDilemma = new AnswerDilemmaUseCase(
-      gameRepository,
+      repositories.game,
       new CallbackPlayerNotifier((to, event) => this.#onEvent(to, event)),
     );
     this.#gameId = gameId;
     this.#playerId = playerId;
+    this.#language = language;
   }
 
-  /** Composition root: sets up the room, starts the decision phase and the fake players. */
+  /** Composition root: stores the dilemmas, sets up the room, starts the decision phase and the fake players. */
   static async open(options: SimulatedRoomOptions): Promise<SimulatedRoomConnection> {
+    const dilemmaRepository = new InMemoryDilemmaRepository();
+    const dilemmaIdGenerator = new SequentialDilemmaIdGenerator('dilemma');
+    const dilemmaIds: string[] = [];
+    for (const { text, options: dilemmaOptions } of options.dilemmas) {
+      const dilemma = Dilemma.create(
+        { text, language: options.language, options: dilemmaOptions },
+        dilemmaIdGenerator,
+      );
+      await dilemmaRepository.save(dilemma);
+      dilemmaIds.push(dilemma.id);
+    }
+    const catalog = new DilemmasContextCatalog(new GetDilemmasUseCase(dilemmaRepository));
+
     const roomRepository = new InMemoryRoomRepository();
     const gameRepository = new InMemoryGameRepository();
     const idGenerator = new SequentialIdGenerator();
@@ -88,12 +119,19 @@ export class SimulatedRoomConnection implements RoomConnection {
     const { gameId } = await new StartDecisionPhaseUseCase(
       roomRepository,
       gameRepository,
+      catalog,
       idGenerator,
-    ).execute({ roomId, dilemmaIds: options.dilemmaIds });
+    ).execute({ roomId, dilemmaIds });
 
-    const connection = new SimulatedRoomConnection(roomRepository, gameRepository, gameId, hostId);
+    const connection = new SimulatedRoomConnection(
+      { room: roomRepository, game: gameRepository, catalog },
+      gameId,
+      hostId,
+      options.language,
+    );
+    const dilemmas = await catalog.findOptionIds(dilemmaIds);
     options.others.forEach(({ answerEveryMs }, index) => {
-      connection.#startFakePlayer(otherIds[index]!, answerEveryMs, options);
+      connection.#startFakePlayer(otherIds[index]!, index, answerEveryMs, dilemmas);
     });
     return connection;
   }
@@ -122,21 +160,24 @@ export class SimulatedRoomConnection implements RoomConnection {
     this.#listeners.clear();
   }
 
+  /** Fake player number `position` answers in order, each one with a different option so votes vary. */
   #startFakePlayer(
     playerId: string,
+    position: number,
     answerEveryMs: number,
-    { dilemmaIds, vote }: SimulatedRoomOptions,
+    dilemmas: readonly GameDilemma[],
   ): void {
     let next = 0;
     const timer = setInterval(() => {
-      const dilemmaId = dilemmaIds[next];
-      if (dilemmaId === undefined) {
+      const dilemma = dilemmas[next];
+      if (dilemma === undefined) {
         clearInterval(timer);
         return;
       }
       next += 1;
+      const vote = dilemma.optionIds[position % dilemma.optionIds.length]!;
       this.#answerDilemma
-        .execute({ gameId: this.#gameId, playerId, dilemmaId, vote })
+        .execute({ gameId: this.#gameId, playerId, dilemmaId: dilemma.dilemmaId, vote })
         .catch(console.error);
     }, answerEveryMs);
     this.#timers.push(timer);
@@ -147,6 +188,7 @@ export class SimulatedRoomConnection implements RoomConnection {
     const state = await this.#getGameState.execute({
       gameId: this.#gameId,
       playerId: this.#playerId,
+      language: this.#language,
     });
     this.#emit(ServerMessageDto.parse({ type: 'game-state', ...state }), listener);
   }

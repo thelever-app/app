@@ -11,7 +11,16 @@ const GAME_STATE: GameStateDto = {
   type: 'game-state',
   gameId: 'test-game-id',
   playerId: 'test-player-id-0',
-  dilemmaIds: ['test-dilemma-id'],
+  dilemmas: [
+    {
+      dilemmaId: 'test-dilemma-id',
+      text: 'TestText1',
+      options: [
+        { optionId: 'TestOptionA', text: 'TestOptionTextA' },
+        { optionId: 'TestOptionB', text: 'TestOptionTextB' },
+      ],
+    },
+  ],
   players: [
     {
       playerId: 'test-player-id-0',
@@ -180,9 +189,12 @@ describe('useRoom', () => {
     vi.useFakeTimers();
     const connection = await SimulatedRoomConnection.open({
       nickname: 'Ana',
+      language: 'es',
       others: [{ nickname: 'Luis', answerEveryMs: 1000 }],
-      dilemmaIds: ['TestDilemma1', 'TestDilemma2'],
-      vote: 'TestOption',
+      dilemmas: [
+        { text: 'TestText1', options: ['TestOptionA', 'TestOptionB'] },
+        { text: 'TestText2', options: ['TestOptionC', 'TestOptionD'] },
+      ],
     });
     const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(connection) });
     await act(() => vi.advanceTimersByTimeAsync(0));

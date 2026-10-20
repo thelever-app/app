@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
+    "@thelever-app/dilemmas": "workspace:*",
     "@thelever-app/game": "workspace:*",
     "@thelever-app/protocol": "workspace:*",
     "react": "^19.2.8",

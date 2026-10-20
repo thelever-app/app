@@ -36,9 +36,14 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ['@thelever-app/game', '@thelever-app/game/*'],
+              group: [
+                '@thelever-app/game',
+                '@thelever-app/game/*',
+                '@thelever-app/dilemmas',
+                '@thelever-app/dilemmas/*',
+              ],
               message:
-                'Only the simulated room may use the Game context. Use RoomConnection and @thelever-app/protocol.',
+                'Only the simulated room may use the domain contexts. Use RoomConnection and @thelever-app/protocol.',
             },
           ],
         },
