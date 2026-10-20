@@ -1,0 +1,16 @@
+{
+  "name": "@thelever-app/dilemmas",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./in-memory": "./src/adapters/in-memory/index.ts"
+  },
+  "devDependencies": {
+    "@thelever-app/config": "workspace:*"
+  }
+}

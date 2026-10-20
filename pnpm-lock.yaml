@@ -63,6 +63,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@thelever-app/dilemmas':
+        specifier: workspace:*
+        version: link:../../packages/dilemmas
       '@thelever-app/game':
         specifier: workspace:*
         version: link:../../packages/game
@@ -115,6 +118,12 @@ importers:
         specifier: workspace:*
         version: link:../config
 
+  packages/dilemmas:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
   packages/evals:
     devDependencies:
       '@thelever-app/config':
@@ -128,6 +137,10 @@ importers:
         version: link:../config
 
   packages/game:
+    dependencies:
+      '@thelever-app/dilemmas':
+        specifier: workspace:*
+        version: link:../dilemmas
     devDependencies:
       '@thelever-app/config':
         specifier: workspace:*
