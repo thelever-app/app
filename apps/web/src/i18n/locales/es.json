@@ -1,0 +1,43 @@
+{
+  "app": {
+    "connecting": "Conectando…",
+    "unavailable": "Sala no disponible todavía."
+  },
+  "playerList": {
+    "you": "Tú",
+    "pending_one": "Falta · {{count}}",
+    "pending_many": "Faltan · {{count, number}}",
+    "pending_other": "Faltan · {{count, number}}",
+    "done_one": "Ha terminado · {{count}}",
+    "done_many": "Han terminado · {{count, number}}",
+    "done_other": "Han terminado · {{count, number}}",
+    "progressOf": "Progreso de {{name}}",
+    "progressCount": "{{progress, number}}/{{total, number}}",
+    "finished": "ha terminado"
+  },
+  "progressStrip": {
+    "position": "Dilema {{position, number}} de {{total, number}}",
+    "group": "Progreso del grupo",
+    "more": "+{{count, number}}",
+    "showAll": "Ver todos"
+  },
+  "groupSheet": {
+    "title": "El grupo",
+    "summary_one": "{{count}} jugador · nadie ve qué ha respondido nadie",
+    "summary_many": "{{count, number}} jugadores · nadie ve qué ha respondido nadie",
+    "summary_other": "{{count, number}} jugadores · nadie ve qué ha respondido nadie",
+    "close": "Cerrar"
+  },
+  "dilemma": {
+    "privacy": "Nadie del grupo verá tu voto hasta el reveal. Puedes cambiarlo mientras tanto.",
+    "back": "Volver al dilema anterior",
+    "choose": "Elige una opción",
+    "continue": "Continuar"
+  },
+  "waiting": {
+    "finished": "Has terminado · {{progress, number}} de {{total, number}}",
+    "title": "Esperando a los demás",
+    "subtitle": "Cuando terminen todos, llega el reveal. Mientras tanto, puedes repasar o cambiar tus respuestas.",
+    "review": "Repasar mis respuestas"
+  }
+}

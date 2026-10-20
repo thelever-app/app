@@ -12,8 +12,11 @@
     "@thelever-app/dilemmas": "workspace:*",
     "@thelever-app/game": "workspace:*",
     "@thelever-app/protocol": "workspace:*",
+    "i18next": "^26.4.2",
+    "i18next-browser-languagedetector": "^8.2.1",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.15"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
