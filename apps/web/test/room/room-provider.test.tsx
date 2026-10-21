@@ -1,10 +1,11 @@
-import type { GameStateDto, ServerMessageDto } from '@thelever-app/protocol';
+import type { GameStateDto } from '@thelever-app/protocol';
 import { act, render, renderHook, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { RoomConnection, ServerMessageListener } from '../../src/room/room-connection.ts';
+import type { RoomConnection } from '../../src/room/room-connection.ts';
 import { RoomProvider, useRoom } from '../../src/room/room-provider.tsx';
 import { SimulatedRoomConnection } from '../../src/room/simulated-room-connection.ts';
+import { fakeConnection } from '../support/fake-connection.ts';
 
 const GAME_STATE: GameStateDto = {
   type: 'game-state',
@@ -39,23 +40,6 @@ const GAME_STATE: GameStateDto = {
   ],
   answers: [],
 };
-
-function fakeConnection() {
-  const listeners = new Set<ServerMessageListener>();
-  const connection = {
-    send: vi.fn(),
-    subscribe: vi.fn((listener: ServerMessageListener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    }),
-    close: vi.fn(),
-  } satisfies RoomConnection;
-
-  const deliver = (message: ServerMessageDto) => listeners.forEach((listener) => listener(message));
-  return { connection, deliver, listeners };
-}
 
 function wrapperFor(connection: RoomConnection) {
   return ({ children }: { readonly children: ReactNode }) => {
