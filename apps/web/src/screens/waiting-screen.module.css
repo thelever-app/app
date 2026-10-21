@@ -1,0 +1,70 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  background: var(--color-surface);
+}
+
+.position {
+  composes: signage from '../styles/typography.module.css';
+  color: var(--color-ink-muted);
+}
+
+.main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-4) var(--space-4);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.title {
+  composes: title from '../styles/typography.module.css';
+}
+
+.mascot {
+  flex: none;
+  border-radius: var(--radius-full);
+}
+
+/* Its black body disappears on the asphalt of dark mode, so there it sits on a ticket-cream disc. */
+@media (prefers-color-scheme: dark) {
+  .mascot {
+    background: #fbf6ec;
+  }
+}
+
+.subtitle {
+  color: var(--color-ink-muted);
+}
+
+.review {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
