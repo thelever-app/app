@@ -1,6 +1,8 @@
 import type { GameStateDto } from '@thelever-app/protocol';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from './icon.tsx';
+import styles from './player-list.module.css';
 
 type Player = GameStateDto['players'][number];
 
@@ -15,32 +17,34 @@ export function PlayerList({ players, dilemmaCount, selfPlayerId }: PlayerListPr
   const pendingId = useId();
   const doneId = useId();
 
-  const nameOf = (player: Player) => {
-    if (player.playerId === selfPlayerId) return t('playerList.you');
-    return player.nickname;
-  };
+  const nameOf = (player: Player) =>
+    player.playerId === selfPlayerId ? t('playerList.you') : player.nickname;
   const pending = players
     .filter(({ progress }) => progress < dilemmaCount)
     .toSorted((a, b) => a.progress - b.progress);
   const done = players.filter(({ progress }) => progress >= dilemmaCount);
 
   return (
-    <div>
+    <div className={styles.list}>
       {pending.length > 0 && (
-        <section aria-labelledby={pendingId}>
-          <h2 id={pendingId}>{t('playerList.pending', { count: pending.length })}</h2>
-
-          <ul>
+        <section className={styles.section} aria-labelledby={pendingId}>
+          <h2 id={pendingId} className={styles.heading}>
+            {t('playerList.pending', { count: pending.length })}
+          </h2>
+          <ul className={styles.pending}>
             {pending.map((player) => (
-              <li key={player.playerId}>
-                <span>{nameOf(player)}</span>
-                <span>
-                  {t('playerList.progressCount', {
-                    progress: player.progress,
-                    total: dilemmaCount,
-                  })}
-                </span>
+              <li key={player.playerId} className={styles.pendingPlayer}>
+                <div className={styles.pendingLine}>
+                  <span className={styles.name}>{nameOf(player)}</span>
+                  <span className={styles.count}>
+                    {t('playerList.progressCount', {
+                      progress: player.progress,
+                      total: dilemmaCount,
+                    })}
+                  </span>
+                </div>
                 <progress
+                  className={styles.bar}
                   max={dilemmaCount}
                   value={player.progress}
                   aria-label={t('playerList.progressOf', { name: nameOf(player) })}
@@ -50,12 +54,17 @@ export function PlayerList({ players, dilemmaCount, selfPlayerId }: PlayerListPr
           </ul>
         </section>
       )}
-      <section aria-labelledby={doneId}>
-        <h2 id={doneId}>{t('playerList.done', { count: done.length })}</h2>
-        <ul>
+      <section className={styles.section} aria-labelledby={doneId}>
+        <h2 id={doneId} className={styles.heading}>
+          {t('playerList.done', { count: done.length })}
+        </h2>
+        <ul className={styles.done}>
           {done.map((player) => (
-            <li key={player.playerId}>
-              {nameOf(player)} <span aria-label={t('playerList.finished')}>✓</span>
+            <li key={player.playerId} className={styles.donePlayer}>
+              {nameOf(player)}
+              <span role="img" aria-label={t('playerList.finished')} className={styles.finished}>
+                <Icon name="checkCircle" size={18} />
+              </span>
             </li>
           ))}
         </ul>

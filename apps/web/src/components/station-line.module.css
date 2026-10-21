@@ -1,0 +1,43 @@
+.line {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 20px;
+}
+
+/* The rail, behind the stations: border-strong while the trip goes on, ink once it is complete. */
+.line::before {
+  content: '';
+  position: absolute;
+  inset: 9px 6px auto;
+  height: 2px;
+  background: var(--color-border-strong);
+}
+
+.line[data-complete='true']::before {
+  background: var(--color-ink);
+}
+
+.station {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+}
+
+.station[data-station='passed'] {
+  background: var(--color-ink);
+}
+
+.station[data-station='current'] {
+  width: 18px;
+  height: 18px;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-on-primary);
+}
+
+.station[data-station='next'] {
+  border: 2px solid var(--color-border-strong);
+  background: var(--color-surface);
+}

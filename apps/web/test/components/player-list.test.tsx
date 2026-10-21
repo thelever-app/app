@@ -1,20 +1,13 @@
-import { renderWithProviders } from '../support/render.tsx';
-import { PlayerList } from '../../src/components/player-list.tsx';
-import { describe, it, expect } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { PlayerList } from '../../src/components/player-list.tsx';
+import { renderWithProviders } from '../support/render.tsx';
 
+/** Ana is the player using the screen; Luis has finished; Marta goes last. */
 const PLAYERS = [
   { playerId: 'test-ana-id', nickname: 'Ana', progress: 2 },
-  {
-    playerId: 'test-luis-id',
-    nickname: 'Luis',
-    progress: 6,
-  },
-  {
-    playerId: 'test-marta-id',
-    nickname: 'Marta',
-    progress: 1,
-  },
+  { playerId: 'test-luis-id', nickname: 'Luis', progress: 6 },
+  { playerId: 'test-marta-id', nickname: 'Marta', progress: 1 },
 ];
 
 function renderList(players = PLAYERS) {
@@ -25,15 +18,16 @@ function renderList(players = PLAYERS) {
 
 describe('PlayerList', () => {
   it('should list who has not finished, the least advanced first', async () => {
-    // Arrange & Act
+    // Act
     const { t } = await renderList();
 
     // Assert
     const pending = screen.getByRole('region', { name: t('playerList.pending', { count: 2 }) });
-    const textContents = within(pending)
-      .getAllByRole('listitem')
-      .map((item) => item.textContent);
-    expect(textContents).toEqual([
+    expect(
+      within(pending)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
       `Marta${t('playerList.progressCount', { progress: 1, total: 6 })}`,
       `${t('playerList.you')}${t('playerList.progressCount', { progress: 2, total: 6 })}`,
     ]);
@@ -57,7 +51,7 @@ describe('PlayerList', () => {
     // Assert
     const done = screen.getByRole('region', { name: t('playerList.done', { count: 1 }) });
     expect(within(done).getByRole('listitem').textContent).toContain('Luis');
-    expect(within(done).getByLabelText(t('playerList.finished'))).toBeDefined();
+    expect(within(done).getByRole('img', { name: t('playerList.finished') })).toBeDefined();
   });
 
   it('should call the player by the word for "you", not by their nickname', async () => {
