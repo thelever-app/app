@@ -17,6 +17,31 @@ When('{string} answers his third dilemma', async function (this: GameWorld, play
   await this.driver.answerDilemmas(player, 3);
 });
 
+Given(
+  '{string} has answered the first two dilemmas',
+  async function (this: GameWorld, player: string) {
+    await this.driver.answerDilemmas(player, 2);
+  },
+);
+
+When(
+  '{string} goes back to the first dilemma and changes his vote',
+  async function (this: GameWorld, player: string) {
+    await this.driver.changeVote(player, 1);
+    this.changedAnswer = { player, position: 1 };
+  },
+);
+
+Then('only his new vote counts for that dilemma', async function (this: GameWorld) {
+  assert.ok(this.changedAnswer, 'no step changed an answer before');
+  const { player, position } = this.changedAnswer;
+  const [previous, current] = await this.driver.votesCastFor(player, position);
+  const recorded = await this.driver.voteRecordedFor(player, position);
+
+  assert.equal(recorded, current);
+  assert.notEqual(recorded, previous);
+});
+
 Then(
   '{string} and {string} see that {string} has answered {int} dilemmas',
   async function (

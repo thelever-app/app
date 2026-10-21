@@ -6,7 +6,8 @@ import type { GameDriver } from './driver.ts';
 export class GameWorld extends World {
   readonly driver: GameDriver;
 
-  // TODO: scenario state the steps need to share, if any.
+  /** The answer a step changed, so a later step can refer to it as "that dilemma". */
+  changedAnswer: { readonly player: string; readonly position: number } | undefined;
 
   constructor(options: IWorldOptions) {
     super(options);
