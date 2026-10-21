@@ -22,7 +22,7 @@ async function renderScreen(game: GameStateDto = aGame(), initialPosition?: numb
 const answeredFirst = aGame({ answers: [{ dilemmaId: 'test-dilemma-1', vote: 'test-option-1b' }] });
 
 function option(name: string) {
-  return screen.getByRole('button', { name });
+  return screen.getByRole('radio', { name });
 }
 
 describe('DilemmaScreen', () => {
@@ -46,6 +46,15 @@ describe('DilemmaScreen', () => {
     );
   });
 
+  it('should offer the options as a group named by the dilemma, of which only one can be chosen', async () => {
+    // Act
+    await renderScreen();
+
+    // Assert
+    const group = screen.getByRole('radiogroup', { name: 'Texto del dilema 1' });
+    expect(group.querySelectorAll('[role="radio"]')).toHaveLength(2);
+  });
+
   it('should mark the chosen option', async () => {
     // Arrange
     await renderScreen();
@@ -54,8 +63,8 @@ describe('DilemmaScreen', () => {
     fireEvent.click(option('Opción 1A'));
 
     // Assert
-    expect(option('Opción 1A').getAttribute('aria-pressed')).toBe('true');
-    expect(option('Opción 1B').getAttribute('aria-pressed')).toBe('false');
+    expect(option('Opción 1A').getAttribute('aria-checked')).toBe('true');
+    expect(option('Opción 1B').getAttribute('aria-checked')).toBe('false');
   });
 
   it('should send the answer and show the next dilemma when the player continues', async () => {
@@ -81,7 +90,7 @@ describe('DilemmaScreen', () => {
 
     // Assert
     expect(screen.getByRole('heading', { name: 'Texto del dilema 1' })).toBeDefined();
-    expect(option('Opción 1B').getAttribute('aria-pressed')).toBe('true');
+    expect(option('Opción 1B').getAttribute('aria-checked')).toBe('true');
   });
 
   it('should send the new vote when the player changes an answer', async () => {
@@ -114,6 +123,44 @@ describe('DilemmaScreen', () => {
 
     // Assert
     expect(screen.getByRole('button', { name: t('dilemma.back') })).toHaveProperty(
+      'disabled',
+      true,
+    );
+  });
+
+  it('should show the vote once the room confirms it, even if the player went back before', async () => {
+    // Arrange
+    const { rerender, t } = await renderScreen();
+    fireEvent.click(option('Opción 1A'));
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.back') }));
+
+    // Act
+    rerender(
+      <DilemmaScreen
+        game={aGame({ answers: [{ dilemmaId: 'test-dilemma-1', vote: 'test-option-1a' }] })}
+        onAnswer={vi.fn()}
+        onDone={vi.fn()}
+      />,
+    );
+
+    // Assert
+    expect(screen.getByRole('heading', { name: 'Texto del dilema 1' })).toBeDefined();
+    expect(option('Opción 1A').getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('should not let the player send the last answer twice while the room confirms it', async () => {
+    // Arrange
+    const { onAnswer, t } = await renderScreen(aGame(), 2);
+    fireEvent.click(option('Opción 3A'));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
+
+    // Assert
+    expect(onAnswer).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: t('dilemma.continue') })).toHaveProperty(
       'disabled',
       true,
     );

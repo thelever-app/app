@@ -21,6 +21,7 @@ export function DilemmaScreen({ game, initialPosition, onAnswer, onDone }: Dilem
   const [position, setPosition] = useState(
     () => initialPosition ?? (firstUnanswered === -1 ? lastPosition : firstUnanswered),
   );
+  const [isSendingLast, setIsSendingLast] = useState(false);
 
   const dilemma = game.dilemmas[position]!;
   const savedVote = votes.get(dilemma.dilemmaId);
@@ -34,15 +35,22 @@ export function DilemmaScreen({ game, initialPosition, onAnswer, onDone }: Dilem
         selfPlayerId={game.playerId}
       />
       <DilemmaCard
-        key={dilemma.dilemmaId}
+        // A new card when the dilemma changes, and again when the room confirms its vote.
+        key={`${dilemma.dilemmaId}:${savedVote ?? ''}`}
         dilemma={dilemma}
         savedVote={savedVote}
         canGoBack={position > 0}
+        isSending={position === lastPosition && isSendingLast}
         onBack={() => setPosition(position - 1)}
         onContinue={(vote) => {
           if (vote !== savedVote) onAnswer(dilemma.dilemmaId, vote);
-          if (position < lastPosition) setPosition(position + 1);
-          else onDone();
+          if (position < lastPosition) {
+            setPosition(position + 1);
+            return;
+          }
+          // The waiting screen comes with the state the room sends back; until then, no second send.
+          if (vote !== savedVote) setIsSendingLast(true);
+          onDone();
         }}
       />
     </div>

@@ -1,14 +1,17 @@
 import type { GameStateDto } from '@thelever-app/protocol';
-import { useState } from 'react';
+import { RadioGroup } from 'radix-ui';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
 import styles from './dilemma-card.module.css';
 
 interface DilemmaCardProps {
   readonly dilemma: GameStateDto['dilemmas'][number];
-  /** The vote the player already gave to this dilemma, if any. */
+  /** The vote the room has recorded for this dilemma, if any. */
   readonly savedVote: string | undefined;
   readonly canGoBack: boolean;
+  /** The answer is on its way to the room: the player cannot send it again meanwhile. */
+  readonly isSending: boolean;
   readonly onBack: () => void;
   readonly onContinue: (vote: string) => void;
 }
@@ -18,37 +21,40 @@ export function DilemmaCard({
   dilemma,
   savedVote,
   canGoBack,
+  isSending,
   onBack,
   onContinue,
 }: DilemmaCardProps) {
   const { t } = useTranslation();
+  const textId = useId();
   const [chosen, setChosen] = useState(savedVote);
 
   return (
     <>
       <main className={styles.main}>
-        <h1 className={styles.text}>{dilemma.text}</h1>
-        <div
+        <h1 id={textId} className={styles.text}>
+          {dilemma.text}
+        </h1>
+        <RadioGroup.Root
           className={styles.options}
           data-layout={dilemma.options.length === 2 ? 'pair' : 'list'}
+          aria-labelledby={textId}
+          value={chosen ?? ''}
+          onValueChange={setChosen}
         >
           {dilemma.options.map((option) => (
-            <button
+            <RadioGroup.Item
               key={option.optionId}
-              type="button"
+              value={option.optionId}
               className={styles.option}
-              aria-pressed={chosen === option.optionId}
-              onClick={() => setChosen(option.optionId)}
             >
               {option.text}
-              {chosen === option.optionId && (
-                <span className={styles.check}>
-                  <Icon name="checkCircle" size={20} />
-                </span>
-              )}
-            </button>
+              <RadioGroup.Indicator className={styles.check}>
+                <Icon name="checkCircle" size={20} />
+              </RadioGroup.Indicator>
+            </RadioGroup.Item>
           ))}
-        </div>
+        </RadioGroup.Root>
         <p className={styles.privacy}>{t('dilemma.privacy')}</p>
       </main>
       <footer className={styles.footer}>
@@ -64,7 +70,7 @@ export function DilemmaCard({
         <button
           type="button"
           className={styles.continue}
-          disabled={chosen === undefined}
+          disabled={chosen === undefined || isSending}
           onClick={() => {
             if (chosen !== undefined) onContinue(chosen);
           }}
