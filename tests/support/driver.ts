@@ -17,4 +17,10 @@ export interface GameDriver {
   messagesReceivedByOthers(player: string): Promise<object[]>;
   /** The votes the driver cast for `player`, to look for them where they must not be. */
   votesCastBy(player: string): Promise<string[]>;
+  /** `player` answers again the dilemma in that position (from 1), with a different vote. */
+  changeVote(player: string, position: number): Promise<void>;
+  /** Every vote the driver cast for `player` in the dilemma in that position (from 1), in order. */
+  votesCastFor(player: string, position: number): Promise<string[]>;
+  /** The vote that counts for `player` in the dilemma in that position (from 1), as the game keeps it. */
+  voteRecordedFor(player: string, position: number): Promise<string | undefined>;
 }

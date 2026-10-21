@@ -22,7 +22,6 @@ Feature: Decision phase
       Then it includes the number of new dilemmas set for games of 8 dilemmas
       And the rest come from the catalog
 
-    @todo
     Scenario: A player goes back and changes an answer
       Given "Luis" has answered the first two dilemmas
       When "Luis" goes back to the first dilemma and changes his vote

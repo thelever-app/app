@@ -7,3 +7,4 @@ export { InMemoryRoomRepository } from './in-memory-room-repository.ts';
 export { InMemoryGameRepository } from './in-memory-game-repository.ts';
 export { InMemoryPlayerNotifier } from './in-memory-player-notifier.ts';
 export { SequentialIdGenerator } from './sequential-id-generator.ts';
+export { InMemoryDilemmaCatalog } from './in-memory-dilemma-catalog.ts';

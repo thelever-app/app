@@ -11,14 +11,21 @@ import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 import { DuplicateDilemmaError } from '../../errors/duplicate-dilemma.error.ts';
 import { PlayersMissingError } from '../../errors/players-missing.error.ts';
 import { DecisionPhaseAlreadyStartedError } from '../../errors/decision-phase-already-started.error.ts';
+import { OptionNotInDilemmaError } from '../../errors/option-not-in-dilemma.error.ts';
+import { DilemmaNotReachedError } from '../../errors/dilemma-not-reached.error.ts';
+import { OptionsMissingError } from '../../errors/options-missing.error.ts';
 
-const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'];
+const OPTION_IDS = ['TestOption', 'TestOtherOption', 'TestSecretOption'];
+const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId) => ({
+  dilemmaId,
+  optionIds: OPTION_IDS,
+}));
 
 function gameInDecisionPhase(): { game: Game; ana: Player; luis: Player } {
   const ana = Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId'));
   const luis = Player.create({ nickname: 'Luis' }, new FixedIdGenerator('TestLuisId'));
   const game = Game.create(
-    { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+    { roomId: 'TestRoomId', dilemmas: DILEMMAS },
     new FixedIdGenerator('TestId'),
   );
   game.startDecisionPhase([ana, luis]);
@@ -34,7 +41,7 @@ describe('Game', () => {
       const roomId = 'TestRoomId';
 
       // Act
-      const game = Game.create({ roomId, dilemmaIds: DILEMMAS }, new FixedIdGenerator(id));
+      const game = Game.create({ roomId, dilemmas: DILEMMAS }, new FixedIdGenerator(id));
 
       // Assert
       expect(game.id).toBe(id);
@@ -45,7 +52,7 @@ describe('Game', () => {
     it('should not be in the decision phase yet', () => {
       // Arrange & Act
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -56,21 +63,21 @@ describe('Game', () => {
     it('should throw an error if the id is missing', () => {
       // Act & Assert
       expect(() =>
-        Game.create({ roomId: 'TestRoomId', dilemmaIds: DILEMMAS }, new FixedIdGenerator('')),
+        Game.create({ roomId: 'TestRoomId', dilemmas: DILEMMAS }, new FixedIdGenerator('')),
       ).toThrow(IdMissingError);
     });
 
     it('should throw an error if the room id is missing', () => {
       // Act & Assert
       expect(() =>
-        Game.create({ roomId: '', dilemmaIds: DILEMMAS }, new FixedIdGenerator('TestId')),
+        Game.create({ roomId: '', dilemmas: DILEMMAS }, new FixedIdGenerator('TestId')),
       ).toThrow(IdMissingError);
     });
 
     it('should throw an error if there are no dilemmas', () => {
       // Act & Assert
       expect(() =>
-        Game.create({ roomId: 'TestRoomId', dilemmaIds: [] }, new FixedIdGenerator('TestId')),
+        Game.create({ roomId: 'TestRoomId', dilemmas: [] }, new FixedIdGenerator('TestId')),
       ).toThrow(DilemmasMissingError);
     });
   });
@@ -79,12 +86,15 @@ describe('Game', () => {
     it('should not let the dilemmas be changed from outside the game', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
         new FixedIdGenerator('TestId'),
       );
 
       // Act
-      (game.dilemmas as string[]).push('TestIntruderDilemma');
+      (game.dilemmas as { dilemmaId: string; optionIds: string[] }[]).push({
+        dilemmaId: 'TestIntruderDilemma',
+        optionIds: OPTION_IDS,
+      });
 
       // Assert
       expect(game.dilemmas).toEqual(DILEMMAS);
@@ -95,7 +105,7 @@ describe('Game', () => {
     it('should put the game in the decision phase', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -111,7 +121,7 @@ describe('Game', () => {
     it('should start every player with no progress', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
         new FixedIdGenerator('TestId'),
       );
       const ana = Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId'));
@@ -205,7 +215,7 @@ describe('Game', () => {
     it('should throw an error if the game is not in the decision phase', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -234,6 +244,46 @@ describe('Game', () => {
         DilemmaNotInGameError,
       );
     });
+
+    it('should throw an error if the vote is not one of the options of the dilemma', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+
+      // Act & Assert
+      expect(() => game.answer(luis.id, 'TestDilemma1', 'TestUnknownOption')).toThrow(
+        OptionNotInDilemmaError,
+      );
+      expect(game.progressOf(luis.id)).toBe(0);
+    });
+
+    it('should throw an error if the player skips a dilemma they have not answered', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+
+      // Act & Assert
+      expect(() => game.answer(luis.id, 'TestDilemma3', 'TestOption')).toThrow(
+        DilemmaNotReachedError,
+      );
+      expect(game.progressOf(luis.id)).toBe(1);
+    });
+
+    it('should let the player go back and change an earlier answer', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+      game.answer(luis.id, 'TestDilemma2', 'TestOption');
+
+      // Act
+      game.answer(luis.id, 'TestDilemma1', 'TestOtherOption');
+
+      // Assert
+      expect(game.answersOf(luis.id)[0]).toEqual({
+        dilemmaId: 'TestDilemma1',
+        vote: 'TestOtherOption',
+      });
+      expect(game.progressOf(luis.id)).toBe(2);
+    });
   });
 
   describe('progressOf', () => {
@@ -243,6 +293,64 @@ describe('Game', () => {
 
       // Act & Assert
       expect(() => game.progressOf('TestStrangerId')).toThrow(PlayerNotInGameError);
+    });
+  });
+
+  describe('answersOf', () => {
+    it('should be empty before the player answers', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+
+      // Act & Assert
+      expect(game.answersOf(luis.id)).toEqual([]);
+    });
+
+    it('should list the answers of the player in the order of the dilemmas', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+      game.answer(luis.id, 'TestDilemma2', 'TestOtherOption');
+      game.answer(luis.id, 'TestDilemma1', 'TestSecretOption');
+
+      // Act
+      const answers = game.answersOf(luis.id);
+
+      // Assert
+      expect(answers).toEqual([
+        { dilemmaId: 'TestDilemma1', vote: 'TestSecretOption' },
+        { dilemmaId: 'TestDilemma2', vote: 'TestOtherOption' },
+      ]);
+    });
+
+    it('should list only the new vote of a changed answer', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+
+      // Act
+      game.answer(luis.id, 'TestDilemma1', 'TestOtherOption');
+
+      // Assert
+      expect(game.answersOf(luis.id)).toEqual([
+        { dilemmaId: 'TestDilemma1', vote: 'TestOtherOption' },
+      ]);
+    });
+
+    it('should not include the answers of the other players', () => {
+      // Arrange
+      const { game, ana, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+
+      // Act & Assert
+      expect(game.answersOf(ana.id)).toEqual([]);
+    });
+
+    it('should throw an error if the player is not in the game', () => {
+      // Arrange
+      const { game } = gameInDecisionPhase();
+
+      // Act & Assert
+      expect(() => game.answersOf('TestStrangerId')).toThrow(PlayerNotInGameError);
     });
   });
 
@@ -264,7 +372,7 @@ describe('Game', () => {
     it('should be empty before the decision phase', () => {
       // Arrange & Act
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -322,7 +430,7 @@ describe('Game', () => {
     it('should rebuild a game that is not in the decision phase yet', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -361,11 +469,27 @@ describe('Game', () => {
   });
 
   describe('invariants', () => {
+    it('should throw an error if a dilemma has no options', () => {
+      // Act & Assert
+      expect(() =>
+        Game.create(
+          { roomId: 'TestRoomId', dilemmas: [{ dilemmaId: 'TestDilemma1', optionIds: [] }] },
+          new FixedIdGenerator('TestId'),
+        ),
+      ).toThrow(OptionsMissingError);
+    });
+
     it('should throw an error if a dilemma is repeated', () => {
       // Act & Assert
       expect(() =>
         Game.create(
-          { roomId: 'TestRoomId', dilemmaIds: ['TestDilemma1', 'TestDilemma1', 'TestDilemma2'] },
+          {
+            roomId: 'TestRoomId',
+            dilemmas: ['TestDilemma1', 'TestDilemma1', 'TestDilemma2'].map((dilemmaId) => ({
+              dilemmaId,
+              optionIds: OPTION_IDS,
+            })),
+          },
           new FixedIdGenerator('TestId'),
         ),
       ).toThrow(DuplicateDilemmaError);
@@ -374,7 +498,7 @@ describe('Game', () => {
     it('should throw an error if the decision phase starts without players', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmaIds: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
         new FixedIdGenerator('TestId'),
       );
 

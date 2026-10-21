@@ -9,8 +9,19 @@
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@material-symbols/svg-500": "^0.47.6",
+    "@thelever-app/dilemmas": "workspace:*",
+    "@thelever-app/game": "workspace:*",
+    "@thelever-app/protocol": "workspace:*",
+    "@thelever-app/ui": "workspace:*",
+    "i18next": "^26.4.2",
+    "i18next-browser-languagedetector": "^8.2.1",
+    "radix-ui": "^1.7.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.15"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",

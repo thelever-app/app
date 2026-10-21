@@ -1,8 +1,10 @@
 import { DecisionPhaseAlreadyStartedError } from '../errors/decision-phase-already-started.error.ts';
 import { DecisionPhaseNotStartedError } from '../errors/decision-phase-not-started.error.ts';
 import { DilemmaNotInGameError } from '../errors/dilemma-not-in-game.error.ts';
+import { DilemmaNotReachedError } from '../errors/dilemma-not-reached.error.ts';
 import { DilemmasMissingError } from '../errors/dilemmas-missing.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
+import { OptionNotInDilemmaError } from '../errors/option-not-in-dilemma.error.ts';
 import { PlayerNotInGameError } from '../errors/player-not-in-game.error.ts';
 import { PlayersMissingError } from '../errors/players-missing.error.ts';
 import type { DomainEvent } from '../events/domain-event.ts';
@@ -10,12 +12,19 @@ import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { AnswerVO } from '../vos/answer.vo.ts';
+import { DilemmaVO } from '../vos/dilemma.vo.ts';
 import { Player } from './player.ts';
+
+/** A dilemma of the game: its id and the ids of its options. */
+export interface GameDilemma {
+  readonly dilemmaId: string;
+  readonly optionIds: readonly string[];
+}
 
 export interface GameSnapshot {
   readonly id: string;
   readonly roomId: string;
-  readonly dilemmas: readonly string[];
+  readonly dilemmas: readonly GameDilemma[];
   readonly inDecisionPhase: boolean;
   readonly players: readonly {
     readonly id: string;
@@ -26,26 +35,29 @@ export interface GameSnapshot {
 export class Game {
   readonly #id: IdVO;
   readonly #roomId: IdVO;
-  readonly #dilemmas: IdVO[];
+  readonly #dilemmas: readonly DilemmaVO[];
   #inDecisionPhase = false;
   readonly #answers = new Map<string, Map<string, AnswerVO>>();
   #events: DomainEvent[] = [];
 
-  private constructor(id: string, roomId: string, dilemmas: readonly string[]) {
+  private constructor(id: string, roomId: string, dilemmas: readonly GameDilemma[]) {
     if (dilemmas.length === 0) throw new DilemmasMissingError();
-    const repeated = dilemmas.find((dilemma, index) => dilemmas.indexOf(dilemma) !== index);
+    const ids = dilemmas.map(({ dilemmaId }) => dilemmaId);
+    const repeated = ids.find((dilemmaId, index) => ids.indexOf(dilemmaId) !== index);
     if (repeated !== undefined) throw new DuplicateDilemmaError(repeated);
 
     this.#id = new IdVO(id);
     this.#roomId = new IdVO(roomId);
-    this.#dilemmas = dilemmas.map((dilemma) => new IdVO(dilemma));
+    this.#dilemmas = dilemmas.map(
+      ({ dilemmaId, optionIds }) => new DilemmaVO(dilemmaId, optionIds),
+    );
   }
 
   static create(
-    { roomId, dilemmaIds }: { readonly roomId: string; readonly dilemmaIds: readonly string[] },
+    { roomId, dilemmas }: { readonly roomId: string; readonly dilemmas: readonly GameDilemma[] },
     idGenerator: IdGenerator,
   ): Game {
-    return new Game(idGenerator.generate(), roomId, dilemmaIds);
+    return new Game(idGenerator.generate(), roomId, dilemmas);
   }
 
   get id(): string {
@@ -56,8 +68,9 @@ export class Game {
     return this.#roomId.value;
   }
 
-  get dilemmas(): readonly string[] {
-    return this.#dilemmas.map((dilemma) => dilemma.value);
+  /** In the order every player gets them. */
+  get dilemmas(): readonly GameDilemma[] {
+    return this.#dilemmas.map(({ dilemmaId, optionIds }) => ({ dilemmaId, optionIds }));
   }
 
   get playerIds(): readonly string[] {
@@ -81,7 +94,12 @@ export class Game {
   answer(playerId: string, dilemmaId: string, vote: string): void {
     if (!this.#inDecisionPhase) throw new DecisionPhaseNotStartedError();
     const answers = this.#answersOf(playerId);
-    if (!this.dilemmas.includes(dilemmaId)) throw new DilemmaNotInGameError(dilemmaId);
+    const dilemma = this.#dilemmas.find((candidate) => candidate.dilemmaId === dilemmaId);
+    if (!dilemma) throw new DilemmaNotInGameError(dilemmaId);
+    if (!dilemma.hasOption(vote)) throw new OptionNotInDilemmaError(vote, dilemmaId);
+    // Dilemmas are answered in order: the next one, or one already answered to change it.
+    const next = this.#dilemmas.find((candidate) => !answers.has(candidate.dilemmaId));
+    if (!answers.has(dilemmaId) && dilemma !== next) throw new DilemmaNotReachedError(dilemmaId);
 
     const progressBefore = answers.size;
     answers.set(dilemmaId, new AnswerVO(vote));
@@ -93,6 +111,15 @@ export class Game {
 
   progressOf(playerId: string): number {
     return this.#answersOf(playerId).size;
+  }
+
+  /** The answers of one player, in the order of the dilemmas. Who may see them is up to the caller. */
+  answersOf(playerId: string): readonly { readonly dilemmaId: string; readonly vote: string }[] {
+    const answers = this.#answersOf(playerId);
+    return this.#dilemmas.flatMap(({ dilemmaId }) => {
+      const answer = answers.get(dilemmaId);
+      return answer ? [{ dilemmaId, vote: answer.vote }] : [];
+    });
   }
 
   /** Returns the events recorded since the last call and forgets them. */

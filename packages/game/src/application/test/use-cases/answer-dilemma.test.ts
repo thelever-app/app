@@ -11,6 +11,7 @@ import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id
 import { ProgressUpdatedEvent } from '../../../domain/events/progress-updated.event.ts';
 import type { DomainEvent } from '../../../domain/events/domain-event.ts';
 import type { PlayerNotifier } from '../../ports/player-notifier.port.ts';
+import { TEST_DILEMMA_IDS, testCatalog } from '../support/test-catalog.ts';
 
 /** Fails to deliver to one player, as a closed socket would, and delivers to the rest. */
 class UnreachablePlayerNotifier extends InMemoryPlayerNotifier {
@@ -43,8 +44,9 @@ async function gameInDecisionPhase(notifier: PlayerNotifier = new InMemoryPlayer
   const { gameId } = await new StartDecisionPhaseUseCase(
     roomRepository,
     gameRepository,
+    testCatalog(),
     idGenerator,
-  ).execute({ roomId, dilemmaIds: ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'] });
+  ).execute({ roomId, dilemmaIds: TEST_DILEMMA_IDS });
 
   return {
     gameRepository,

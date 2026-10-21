@@ -1,0 +1,6 @@
+/* Every screen fills the visible height: header, content that grows, and the actions at the bottom. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}

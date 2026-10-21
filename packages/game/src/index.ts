@@ -9,7 +9,7 @@
 // Domain
 export { Player, type PlayerSnapshot } from './domain/entities/player.ts';
 export { Room, type RoomSnapshot } from './domain/entities/room.ts';
-export { Game, type GameSnapshot } from './domain/entities/game.ts';
+export { Game, type GameDilemma, type GameSnapshot } from './domain/entities/game.ts';
 export type { DomainEvent } from './domain/events/domain-event.ts';
 export { ProgressUpdatedEvent } from './domain/events/progress-updated.event.ts';
 export type { IdGenerator } from './domain/ports/id-generator.port.ts';
@@ -25,13 +25,18 @@ export { DilemmaNotInGameError } from './domain/errors/dilemma-not-in-game.error
 export { DuplicateDilemmaError } from './domain/errors/duplicate-dilemma.error.ts';
 export { PlayersMissingError } from './domain/errors/players-missing.error.ts';
 export { DecisionPhaseAlreadyStartedError } from './domain/errors/decision-phase-already-started.error.ts';
+export { OptionsMissingError } from './domain/errors/options-missing.error.ts';
+export { OptionNotInDilemmaError } from './domain/errors/option-not-in-dilemma.error.ts';
+export { DilemmaNotReachedError } from './domain/errors/dilemma-not-reached.error.ts';
 
 // Application
 export type { RoomRepository } from './application/ports/room-repository.port.ts';
 export type { GameRepository } from './application/ports/game-repository.port.ts';
 export type { PlayerNotifier } from './application/ports/player-notifier.port.ts';
+export type { DilemmaCatalog, DilemmaContent } from './application/ports/dilemma-catalog.port.ts';
 export { RoomNotFoundError } from './application/errors/room-not-found.error.ts';
 export { GameNotFoundError } from './application/errors/game-not-found.error.ts';
+export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
 export {
   CreateRoomUseCase,
   type CreateRoomInput,
@@ -51,3 +56,8 @@ export {
   AnswerDilemmaUseCase,
   type AnswerDilemmaInput,
 } from './application/use-cases/answer-dilemma.use-case.ts';
+export {
+  GetGameStateUseCase,
+  type GetGameStateInput,
+  type GetGameStateOutput,
+} from './application/use-cases/get-game-state.use-case.ts';

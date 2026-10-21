@@ -1,0 +1,9 @@
+/* The SVG is a mask filled with the current colour, so an icon follows the text in both themes. */
+.icon {
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  background-color: currentColor;
+  mask: var(--icon) center / contain no-repeat;
+}

@@ -10,7 +10,10 @@ describe('InMemoryGameRepository', () => {
       // Arrange
       const repository = new InMemoryGameRepository();
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmaIds: ['TestDilemma1'] },
+        {
+          roomId: 'TestRoomId',
+          dilemmas: [{ dilemmaId: 'TestDilemma1', optionIds: ['TestOption'] }],
+        },
         new FixedIdGenerator('TestId'),
       );
       await repository.save(game);
@@ -37,7 +40,10 @@ describe('InMemoryGameRepository', () => {
       // Arrange
       const repository = new InMemoryGameRepository();
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmaIds: ['TestDilemma1'] },
+        {
+          roomId: 'TestRoomId',
+          dilemmas: [{ dilemmaId: 'TestDilemma1', optionIds: ['TestOption'] }],
+        },
         new FixedIdGenerator('TestId'),
       );
       await repository.save(game);
