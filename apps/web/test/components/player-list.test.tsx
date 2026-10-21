@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { PlayerList } from '../../src/components/player-list.tsx';
+import { aGame } from '../support/game.ts';
 import { renderWithProviders } from '../support/render.tsx';
 
 /** Ana is the player using the screen; Luis has finished; Marta goes last. */
@@ -11,9 +12,9 @@ const PLAYERS = [
 ];
 
 function renderList(players = PLAYERS) {
-  return renderWithProviders(
-    <PlayerList players={players} dilemmaCount={6} selfPlayerId="test-ana-id" />,
-  );
+  return renderWithProviders(<PlayerList players={players} dilemmaCount={6} />, {
+    game: aGame({ playerId: 'test-ana-id' }),
+  });
 }
 
 describe('PlayerList', () => {

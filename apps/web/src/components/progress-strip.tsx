@@ -1,7 +1,7 @@
 import type { GameStateDto } from '@thelever-app/protocol';
 import { useTranslation } from 'react-i18next';
 import { GroupProgressSheet } from './group-progress-sheet.tsx';
-import { hasFinished, usePlayerName } from './players.ts';
+import { hasFinished, usePlayerName, useSelfPlayerId } from './players.ts';
 import { StationLine } from './station-line.tsx';
 import styles from './progress-strip.module.css';
 
@@ -13,17 +13,12 @@ interface ProgressStripProps {
   readonly position: number;
   readonly players: GameStateDto['players'];
   readonly dilemmaCount: number;
-  readonly selfPlayerId: string;
 }
 
-export function ProgressStrip({
-  position,
-  players,
-  dilemmaCount,
-  selfPlayerId,
-}: ProgressStripProps) {
+export function ProgressStrip({ position, players, dilemmaCount }: ProgressStripProps) {
   const { t } = useTranslation();
-  const nameOf = usePlayerName(selfPlayerId);
+  const selfPlayerId = useSelfPlayerId();
+  const nameOf = usePlayerName();
   const ordered = [
     ...players.filter(({ playerId }) => playerId === selfPlayerId),
     ...players.filter(({ playerId }) => playerId !== selfPlayerId),
@@ -52,11 +47,7 @@ export function ProgressStrip({
           <span className={styles.more}>{t('progressStrip.more', { count: hidden })}</span>
         )}
         <span className={styles.showAll}>
-          <GroupProgressSheet
-            players={players}
-            dilemmaCount={dilemmaCount}
-            selfPlayerId={selfPlayerId}
-          />
+          <GroupProgressSheet players={players} dilemmaCount={dilemmaCount} />
         </span>
       </section>
     </header>

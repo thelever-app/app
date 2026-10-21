@@ -5,9 +5,10 @@ import { renderWithProviders } from '../support/render.tsx';
 import { aGame } from '../support/game.ts';
 
 async function renderSheet() {
-  const { players, dilemmas, playerId } = aGame();
+  const game = aGame();
   const result = await renderWithProviders(
-    <GroupProgressSheet players={players} dilemmaCount={dilemmas.length} selfPlayerId={playerId} />,
+    <GroupProgressSheet players={game.players} dilemmaCount={game.dilemmas.length} />,
+    { game },
   );
   const trigger = screen.getByRole('button', { name: result.t('progressStrip.showAll') });
   return { ...result, trigger };

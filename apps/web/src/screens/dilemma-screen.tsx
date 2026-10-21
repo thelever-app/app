@@ -7,7 +7,7 @@ import styles from './screen.module.css';
 interface DilemmaScreenProps {
   readonly game: GameStateDto;
   /** Where to start; by default, the first dilemma the player has not answered. */
-  readonly initialPosition?: number;
+  readonly initialPosition?: number | undefined;
   readonly onAnswer: (dilemmaId: string, vote: string) => void;
   /** The player moved on from the last dilemma. */
   readonly onDone: () => void;
@@ -32,7 +32,6 @@ export function DilemmaScreen({ game, initialPosition, onAnswer, onDone }: Dilem
         position={position}
         players={game.players}
         dilemmaCount={game.dilemmas.length}
-        selfPlayerId={game.playerId}
       />
       <DilemmaCard
         // A new card when the dilemma changes, and again when the room confirms its vote.

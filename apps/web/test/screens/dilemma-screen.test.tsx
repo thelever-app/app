@@ -11,10 +11,11 @@ async function renderScreen(game: GameStateDto = aGame(), initialPosition?: numb
   const result = await renderWithProviders(
     <DilemmaScreen
       game={game}
-      {...(initialPosition === undefined ? {} : { initialPosition })}
+      initialPosition={initialPosition}
       onAnswer={onAnswer}
       onDone={onDone}
     />,
+    { game },
   );
   return { onAnswer, onDone, ...result };
 }

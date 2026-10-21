@@ -10,15 +10,14 @@ type Player = GameStateDto['players'][number];
 interface PlayerListProps {
   readonly players: readonly Player[];
   readonly dilemmaCount: number;
-  readonly selfPlayerId: string;
 }
 
-export function PlayerList({ players, dilemmaCount, selfPlayerId }: PlayerListProps) {
+export function PlayerList({ players, dilemmaCount }: PlayerListProps) {
   const { t } = useTranslation();
   const pendingId = useId();
   const doneId = useId();
 
-  const nameOf = usePlayerName(selfPlayerId);
+  const nameOf = usePlayerName();
   const pending = players
     .filter((player) => !hasFinished(player, dilemmaCount))
     .toSorted((a, b) => a.progress - b.progress);
