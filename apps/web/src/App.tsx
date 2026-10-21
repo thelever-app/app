@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { hasFinished } from './components/players.ts';
 import { useRoom } from './room/use-room.ts';
 import { DilemmaScreen } from './screens/dilemma-screen.tsx';
 import { WaitingScreen } from './screens/waiting-screen.tsx';
@@ -11,7 +12,8 @@ export function App() {
 
   if (!game) return <p>{t('app.connecting')}</p>;
 
-  const hasAnsweredAll = game.answers.length === game.dilemmas.length;
+  const self = game.players.find(({ playerId }) => playerId === game.playerId);
+  const hasAnsweredAll = self !== undefined && hasFinished(self, game.dilemmas.length);
   if (hasAnsweredAll && !isReviewing) {
     return <WaitingScreen game={game} onReview={() => setIsReviewing(true)} />;
   }

@@ -2,6 +2,7 @@ import type { GameStateDto } from '@thelever-app/protocol';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './icon.tsx';
+import { hasFinished, usePlayerName } from './players.ts';
 import styles from './player-list.module.css';
 
 type Player = GameStateDto['players'][number];
@@ -17,12 +18,11 @@ export function PlayerList({ players, dilemmaCount, selfPlayerId }: PlayerListPr
   const pendingId = useId();
   const doneId = useId();
 
-  const nameOf = (player: Player) =>
-    player.playerId === selfPlayerId ? t('playerList.you') : player.nickname;
+  const nameOf = usePlayerName(selfPlayerId);
   const pending = players
-    .filter(({ progress }) => progress < dilemmaCount)
+    .filter((player) => !hasFinished(player, dilemmaCount))
     .toSorted((a, b) => a.progress - b.progress);
-  const done = players.filter(({ progress }) => progress >= dilemmaCount);
+  const done = players.filter((player) => hasFinished(player, dilemmaCount));
 
   return (
     <div className={styles.list}>

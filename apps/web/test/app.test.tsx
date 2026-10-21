@@ -24,8 +24,13 @@ function fakeConnection() {
   return { connection, deliver };
 }
 
+/** As the server sends it once Ana has answered all three: her answers and her progress. */
 const allAnswered: GameStateDto = aGame({
   answers: [1, 2, 3].map((n) => ({ dilemmaId: `test-dilemma-${n}`, vote: `test-option-${n}a` })),
+  players: [
+    { playerId: 'test-ana-id', nickname: 'Ana', progress: 3 },
+    { playerId: 'test-luis-id', nickname: 'Luis', progress: 1 },
+  ],
 });
 
 async function renderApp() {
@@ -58,7 +63,7 @@ describe('App', () => {
     // Arrange
     const { connection, deliver, t } = await renderApp();
     act(() => deliver(aGame()));
-    fireEvent.click(screen.getByRole('button', { name: 'Opción 1A' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Opción 1A' }));
 
     // Act
     fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));

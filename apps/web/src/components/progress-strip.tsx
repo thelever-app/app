@@ -1,6 +1,7 @@
 import type { GameStateDto } from '@thelever-app/protocol';
 import { useTranslation } from 'react-i18next';
 import { GroupProgressSheet } from './group-progress-sheet.tsx';
+import { hasFinished, usePlayerName } from './players.ts';
 import { StationLine } from './station-line.tsx';
 import styles from './progress-strip.module.css';
 
@@ -22,6 +23,7 @@ export function ProgressStrip({
   selfPlayerId,
 }: ProgressStripProps) {
   const { t } = useTranslation();
+  const nameOf = usePlayerName(selfPlayerId);
   const ordered = [
     ...players.filter(({ playerId }) => playerId === selfPlayerId),
     ...players.filter(({ playerId }) => playerId !== selfPlayerId),
@@ -39,10 +41,8 @@ export function ProgressStrip({
         <ul className={styles.players}>
           {visible.map((player) => (
             <li key={player.playerId} className={styles.player}>
-              <span className={styles.name}>
-                {player.playerId === selfPlayerId ? t('playerList.you') : player.nickname}
-              </span>{' '}
-              <span className={styles.count} data-finished={player.progress >= dilemmaCount}>
+              <span className={styles.name}>{nameOf(player)}</span>{' '}
+              <span className={styles.count} data-finished={hasFinished(player, dilemmaCount)}>
                 {t('playerList.progressCount', { progress: player.progress, total: dilemmaCount })}
               </span>
             </li>
