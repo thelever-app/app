@@ -1,0 +1,55 @@
+/* The text styles of the design system, to compose from each component: `composes: title from …`. */
+
+.display {
+  font-family: var(--type-display-family);
+  font-size: var(--type-display-size);
+  line-height: var(--type-display-line-height);
+  font-weight: var(--type-display-weight);
+}
+
+.dilemma {
+  font-family: var(--type-dilemma-family);
+  font-size: var(--type-dilemma-size);
+  line-height: var(--type-dilemma-line-height);
+  font-weight: var(--type-dilemma-weight);
+}
+
+.title {
+  font-family: var(--type-title-family);
+  font-size: var(--type-title-size);
+  line-height: var(--type-title-line-height);
+  font-weight: var(--type-title-weight);
+}
+
+.body {
+  font-family: var(--type-body-family);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: var(--type-body-weight);
+}
+
+.label {
+  font-family: var(--type-label-family);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: var(--type-label-weight);
+}
+
+/* Counters, time and distributions use tabular numbers so they do not jump. */
+.caption {
+  font-family: var(--type-caption-family);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: var(--type-caption-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Station signs: spaced capitals, as on railway signage. */
+.signage {
+  font-family: var(--type-signage-family);
+  font-size: var(--type-signage-size);
+  line-height: var(--type-signage-line-height);
+  font-weight: var(--type-signage-weight);
+  letter-spacing: var(--type-signage-letter-spacing);
+  text-transform: uppercase;
+}
