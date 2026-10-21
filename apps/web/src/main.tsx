@@ -6,7 +6,7 @@ import { App } from './App.tsx';
 import { createI18n } from './i18n/i18n.ts';
 import source from './i18n/locales/es.json';
 import { connectRoom } from './room/connect-room.ts';
-import { RoomConnectionProvider } from './room/room-context.tsx';
+import { RoomProvider } from './room/room-provider.tsx';
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Missing #root element in index.html');
@@ -19,9 +19,9 @@ async function start(): Promise<void> {
     root.render(
       <StrictMode>
         <I18nextProvider i18n={i18n}>
-          <RoomConnectionProvider connection={connection}>
+          <RoomProvider connection={connection} fallback={<p>{i18n.t('app.connecting')}</p>}>
             <App />
-          </RoomConnectionProvider>
+          </RoomProvider>
         </I18nextProvider>
       </StrictMode>,
     );

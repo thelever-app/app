@@ -40,14 +40,6 @@ async function renderApp() {
 }
 
 describe('App', () => {
-  it('should say it is connecting until the game arrives', async () => {
-    // Act
-    const { t } = await renderApp();
-
-    // Assert
-    expect(screen.getByText(t('app.connecting'))).toBeDefined();
-  });
-
   it('should show the next dilemma while the player has dilemmas to answer', async () => {
     // Arrange
     const { deliver } = await renderApp();

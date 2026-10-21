@@ -1,11 +1,10 @@
 import type { GameStateDto, ServerMessageDto } from '@thelever-app/protocol';
-import type { RoomConnection, ServerMessageListener } from '../../src/room/room-connection.ts';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, render, renderHook, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { RoomConnectionProvider } from '../../src/room/room-context.tsx';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { RoomConnection, ServerMessageListener } from '../../src/room/room-connection.ts';
+import { RoomProvider, useRoom } from '../../src/room/room-provider.tsx';
 import { SimulatedRoomConnection } from '../../src/room/simulated-room-connection.ts';
-import { renderHook, act } from '@testing-library/react';
-import { useRoom } from '../../src/room/use-room.ts';
 
 const GAME_STATE: GameStateDto = {
   type: 'game-state',
@@ -60,24 +59,57 @@ function fakeConnection() {
 
 function wrapperFor(connection: RoomConnection) {
   return ({ children }: { readonly children: ReactNode }) => {
-    return <RoomConnectionProvider connection={connection}>{children}</RoomConnectionProvider>;
+    return (
+      <RoomProvider connection={connection} fallback={null}>
+        {children}
+      </RoomProvider>
+    );
   };
 }
+
+describe('RoomProvider', () => {
+  it('should show the fallback until the first game state arrives', () => {
+    // Arrange
+    const fake = fakeConnection();
+
+    // Act
+    render(
+      <RoomProvider connection={fake.connection} fallback={<p>TestConnecting</p>}>
+        <p>TestScreen</p>
+      </RoomProvider>,
+    );
+
+    // Assert
+    expect(screen.getByText('TestConnecting')).toBeDefined();
+    expect(screen.queryByText('TestScreen')).toBeNull();
+  });
+
+  it('should show its children instead of the fallback once the game state arrives', () => {
+    // Arrange
+    const fake = fakeConnection();
+    render(
+      <RoomProvider connection={fake.connection} fallback={<p>TestConnecting</p>}>
+        <p>TestScreen</p>
+      </RoomProvider>,
+    );
+
+    // Act
+    act(() => fake.deliver(GAME_STATE));
+
+    // Assert
+    expect(screen.getByText('TestScreen')).toBeDefined();
+    expect(screen.queryByText('TestConnecting')).toBeNull();
+  });
+});
 
 describe('useRoom', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('should have no game before the first message arrives', () => {
-    // Arrange
-    const fake = fakeConnection();
-
-    // Act
-    const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(fake.connection) });
-
-    // Assert
-    expect(result.current.game).toBeUndefined();
+  it('should throw an error if called outside a RoomProvider', () => {
+    // Act & Assert
+    expect(() => renderHook(() => useRoom())).toThrow('useRoom must be called inside RoomProvider');
   });
 
   it('should show the game state when it arrives', () => {
@@ -104,7 +136,7 @@ describe('useRoom', () => {
     );
 
     // Assert
-    expect(result.current.game?.players.map(({ progress }) => progress)).toEqual([0, 1, 0]);
+    expect(result.current.game.players.map(({ progress }) => progress)).toEqual([0, 1, 0]);
   });
 
   it('should subscribe once, however many times it renders', () => {
@@ -113,6 +145,7 @@ describe('useRoom', () => {
     const { rerender } = renderHook(() => useRoom(), {
       wrapper: wrapperFor(fake.connection),
     });
+    act(() => fake.deliver(GAME_STATE));
 
     // Act
     rerender();
@@ -157,6 +190,7 @@ describe('useRoom', () => {
     // Arrange
     const fake = fakeConnection();
     const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(fake.connection) });
+    act(() => fake.deliver(GAME_STATE));
 
     // Act
     result.current.answerDilemma('TestDilemma1', 'TestOption');
@@ -175,6 +209,7 @@ describe('useRoom', () => {
     const { result, rerender } = renderHook(() => useRoom(), {
       wrapper: wrapperFor(fake.connection),
     });
+    act(() => fake.deliver(GAME_STATE));
     const first = result.current.answerDilemma;
 
     // Act
@@ -203,7 +238,7 @@ describe('useRoom', () => {
     await act(() => vi.advanceTimersByTimeAsync(1000));
 
     // Assert
-    expect(result.current.game?.players.map(({ progress }) => progress)).toEqual([0, 1]);
+    expect(result.current.game.players.map(({ progress }) => progress)).toEqual([0, 1]);
     connection.close();
   });
 });

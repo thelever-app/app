@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { createI18n } from '../../src/i18n/i18n.ts';
 import type { RoomConnection } from '../../src/room/room-connection.ts';
-import { RoomConnectionProvider } from '../../src/room/room-context.tsx';
+import { RoomProvider } from '../../src/room/room-provider.tsx';
 
 interface ProvidersOptions {
   readonly connection?: RoomConnection;
@@ -14,7 +14,9 @@ export async function providersFor({ connection }: ProvidersOptions = {}) {
   const i18n = await createI18n('es');
   function Providers({ children }: { readonly children: ReactNode }) {
     const content = connection ? (
-      <RoomConnectionProvider connection={connection}>{children}</RoomConnectionProvider>
+      <RoomProvider connection={connection} fallback={null}>
+        {children}
+      </RoomProvider>
     ) : (
       children
     );
