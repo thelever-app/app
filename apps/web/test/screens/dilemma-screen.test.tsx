@@ -15,6 +15,7 @@ async function renderScreen(game: GameStateDto = aGame(), initialPosition?: numb
       onAnswer={onAnswer}
       onDone={onDone}
     />,
+    { game },
   );
   return { onAnswer, onDone, ...result };
 }

@@ -6,7 +6,10 @@ import { aGame } from '../support/game.ts';
 
 async function renderWaiting() {
   const onReview = vi.fn();
-  const { t } = await renderWithProviders(<WaitingScreen game={aGame()} onReview={onReview} />);
+  const game = aGame();
+  const { t } = await renderWithProviders(<WaitingScreen game={game} onReview={onReview} />, {
+    game,
+  });
   return { onReview, t };
 }
 

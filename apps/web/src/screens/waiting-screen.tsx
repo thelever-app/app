@@ -35,7 +35,7 @@ export function WaitingScreen({ game, onReview }: WaitingScreenProps) {
             {t('waiting.review')}
           </button>
         </div>
-        <PlayerList players={game.players} dilemmaCount={total} selfPlayerId={game.playerId} />
+        <PlayerList players={game.players} dilemmaCount={total} />
       </main>
     </div>
   );

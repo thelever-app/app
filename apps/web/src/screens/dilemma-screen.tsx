@@ -32,7 +32,6 @@ export function DilemmaScreen({ game, initialPosition, onAnswer, onDone }: Dilem
         position={position}
         players={game.players}
         dilemmaCount={game.dilemmas.length}
-        selfPlayerId={game.playerId}
       />
       <DilemmaCard
         // A new card when the dilemma changes, and again when the room confirms its vote.

@@ -8,15 +8,10 @@ import styles from './group-progress-sheet.module.css';
 interface GroupProgressSheetProps {
   readonly players: GameStateDto['players'];
   readonly dilemmaCount: number;
-  readonly selfPlayerId: string;
 }
 
 /** «Ver todos» and the sheet it opens: everyone's progress, never what they answered. */
-export function GroupProgressSheet({
-  players,
-  dilemmaCount,
-  selfPlayerId,
-}: GroupProgressSheetProps) {
+export function GroupProgressSheet({ players, dilemmaCount }: GroupProgressSheetProps) {
   const { t } = useTranslation();
 
   return (
@@ -43,7 +38,7 @@ export function GroupProgressSheet({
             </Dialog.Close>
           </div>
           <div className={styles.content}>
-            <PlayerList players={players} dilemmaCount={dilemmaCount} selfPlayerId={selfPlayerId} />
+            <PlayerList players={players} dilemmaCount={dilemmaCount} />
           </div>
         </Dialog.Content>
       </Dialog.Portal>

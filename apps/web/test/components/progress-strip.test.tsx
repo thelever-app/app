@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ProgressStrip } from '../../src/components/progress-strip.tsx';
+import { aGame } from '../support/game.ts';
 import { renderWithProviders } from '../support/render.tsx';
 
 const PLAYERS = ['Luis', 'Ana', 'Marta', 'Pablo', 'Sara', 'Nico'].map((nickname, index) => ({
@@ -10,9 +11,9 @@ const PLAYERS = ['Luis', 'Ana', 'Marta', 'Pablo', 'Sara', 'Nico'].map((nickname,
 }));
 
 function renderStrip() {
-  return renderWithProviders(
-    <ProgressStrip position={1} players={PLAYERS} dilemmaCount={6} selfPlayerId="test-ana-id" />,
-  );
+  return renderWithProviders(<ProgressStrip position={1} players={PLAYERS} dilemmaCount={6} />, {
+    game: aGame({ playerId: 'test-ana-id' }),
+  });
 }
 
 describe('ProgressStrip', () => {
