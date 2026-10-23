@@ -1,0 +1,14 @@
+# gcloud builds submit --config apps/realtime/cloudbuild.yaml .
+# The build context is the repository root, because the image needs the workspace manifests.
+substitutions:
+  _REGION: europe-southwest1
+  _TAG: latest
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=apps/realtime/Dockerfile
+      - --tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/thelever-app/realtime:${_TAG}
+      - .
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/thelever-app/realtime:${_TAG}

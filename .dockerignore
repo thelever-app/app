@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/coverage
+**/*.test.ts
+**/*.test.tsx
+**/test
+.git
+.env
+.env.*
+*.log
