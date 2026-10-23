@@ -1,6 +1,6 @@
 # 0003. Real time and hosting
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-10-23
 - Notion: [ADR 0003: tiempo real y hosting (ws en Cloud Run, Dockerfile propio, Cloud SQL y LISTEN/NOTIFY entre instancias)](https://app.notion.com/p/40295e6919c581dc86aad593a70a5756)
 
