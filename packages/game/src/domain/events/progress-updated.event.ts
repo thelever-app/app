@@ -9,10 +9,13 @@ export class ProgressUpdatedEvent implements DomainEvent {
   readonly gameId: string;
   readonly playerId: string;
   readonly progress: number;
+  /** The version of the game after this answer, so the clients can order what they receive. */
+  readonly gameVersion: number;
 
-  constructor(gameId: string, playerId: string, progress: number) {
+  constructor(gameId: string, playerId: string, progress: number, gameVersion: number) {
     this.gameId = gameId;
     this.playerId = playerId;
     this.progress = progress;
+    this.gameVersion = gameVersion;
   }
 }

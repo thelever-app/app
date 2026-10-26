@@ -4,6 +4,8 @@ import { Player } from '../../entities/player.ts';
 import { IdMissingError } from '../../errors/id-missing.error.ts';
 import { HostMissingError } from '../../errors/host-missing.error.ts';
 import { NicknameMissingError } from '../../errors/nickname-missing.error.ts';
+import { PlayerNotInRoomError } from '../../errors/player-not-in-room.error.ts';
+import { ConnectionChangedEvent } from '../../events/connection-changed.event.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 
 function player(id: string, nickname: string): Player {
@@ -113,7 +115,172 @@ describe('Room', () => {
     });
   });
 
+  describe('connect', () => {
+    it('should start with nobody connected and version 0', () => {
+      // Arrange & Act
+      const room = roomHostedByAna();
+
+      // Assert
+      expect(room.isConnected('TestHostId')).toBe(false);
+      expect(room.version).toBe(0);
+    });
+
+    it('should connect the player and raise the version', () => {
+      // Arrange
+      const room = roomHostedByAna();
+
+      // Act
+      room.connect('TestHostId', 'TestConnectionId');
+
+      // Assert
+      expect(room.isConnected('TestHostId')).toBe(true);
+      expect(room.version).toBe(1);
+    });
+
+    it('should record a connection changed event with the new version', () => {
+      // Arrange
+      const room = roomHostedByAna();
+
+      // Act
+      room.connect('TestHostId', 'TestConnectionId');
+
+      // Assert
+      expect(room.pullEvents()).toEqual([
+        new ConnectionChangedEvent('TestId', 'TestHostId', true, 1),
+      ]);
+    });
+
+    it('should replace the connection of a player who is already connected, without any event', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.connect('TestHostId', 'TestOldConnectionId');
+      room.pullEvents();
+
+      // Act
+      room.connect('TestHostId', 'TestNewConnectionId');
+
+      // Assert
+      expect(room.isConnected('TestHostId')).toBe(true);
+      expect(room.version).toBe(1);
+      expect(room.pullEvents()).toEqual([]);
+    });
+
+    it('should throw an error if the player is not in the room', () => {
+      // Arrange
+      const room = roomHostedByAna();
+
+      // Act & Assert
+      expect(() => room.connect('TestUnknownId', 'TestConnectionId')).toThrow(PlayerNotInRoomError);
+    });
+
+    it('should throw an error if the connection id is missing', () => {
+      // Arrange
+      const room = roomHostedByAna();
+
+      // Act & Assert
+      expect(() => room.connect('TestHostId', '')).toThrow(IdMissingError);
+    });
+  });
+
+  describe('disconnect', () => {
+    it('should disconnect the player and raise the version', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.connect('TestHostId', 'TestConnectionId');
+
+      // Act
+      room.disconnect('TestHostId', 'TestConnectionId');
+
+      // Assert
+      expect(room.isConnected('TestHostId')).toBe(false);
+      expect(room.version).toBe(2);
+    });
+
+    it('should record a connection changed event with the new version', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.connect('TestHostId', 'TestConnectionId');
+      room.pullEvents();
+
+      // Act
+      room.disconnect('TestHostId', 'TestConnectionId');
+
+      // Assert
+      expect(room.pullEvents()).toEqual([
+        new ConnectionChangedEvent('TestId', 'TestHostId', false, 2),
+      ]);
+    });
+
+    it('should ignore the late close of a connection the player already replaced', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.connect('TestHostId', 'TestOldConnectionId');
+      room.connect('TestHostId', 'TestNewConnectionId');
+      room.pullEvents();
+
+      // Act
+      room.disconnect('TestHostId', 'TestOldConnectionId');
+
+      // Assert
+      expect(room.isConnected('TestHostId')).toBe(true);
+      expect(room.version).toBe(1);
+      expect(room.pullEvents()).toEqual([]);
+    });
+
+    it('should ignore a player who is not connected', () => {
+      // Arrange
+      const room = roomHostedByAna();
+
+      // Act
+      room.disconnect('TestHostId', 'TestConnectionId');
+
+      // Assert
+      expect(room.version).toBe(0);
+      expect(room.pullEvents()).toEqual([]);
+    });
+
+    it('should connect again after a disconnection', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.connect('TestHostId', 'TestConnectionId');
+      room.disconnect('TestHostId', 'TestConnectionId');
+
+      // Act
+      room.connect('TestHostId', 'TestOtherConnectionId');
+
+      // Assert
+      expect(room.isConnected('TestHostId')).toBe(true);
+      expect(room.version).toBe(3);
+    });
+  });
+
+  describe('isConnected', () => {
+    it('should throw an error if the player is not in the room', () => {
+      // Arrange
+      const room = roomHostedByAna();
+
+      // Act & Assert
+      expect(() => room.isConnected('TestUnknownId')).toThrow(PlayerNotInRoomError);
+    });
+  });
+
   describe('toSnapshot', () => {
+    it('should include the version and the open connection of each connected player', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.addPlayer(player('TestLuisId', 'Luis'));
+      room.connect('TestLuisId', 'TestConnectionId');
+
+      // Act
+      const snapshot = room.toSnapshot();
+
+      // Assert
+      expect(snapshot.version).toBe(1);
+      expect(snapshot.connections).toEqual([
+        { playerId: 'TestLuisId', connectionId: 'TestConnectionId' },
+      ]);
+    });
+
     it('should return its id, its host id and its players in the order they joined', () => {
       // Arrange
       const room = roomHostedByAna();
@@ -132,11 +299,41 @@ describe('Room', () => {
           { id: 'TestLuisId', nickname: 'Luis' },
           { id: 'TestMartaId', nickname: 'Marta' },
         ],
+        version: 0,
+        connections: [],
       });
     });
   });
 
   describe('restore', () => {
+    it('should rebuild the connections and the version without recording any event', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.connect('TestHostId', 'TestConnectionId');
+
+      // Act
+      const restored = Room.restore(room.toSnapshot());
+
+      // Assert
+      expect(restored.isConnected('TestHostId')).toBe(true);
+      expect(restored.version).toBe(1);
+      expect(restored.pullEvents()).toEqual([]);
+    });
+
+    it('should still ignore the late close of a replaced connection after being restored', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.connect('TestHostId', 'TestOldConnectionId');
+      room.connect('TestHostId', 'TestNewConnectionId');
+      const restored = Room.restore(room.toSnapshot());
+
+      // Act
+      restored.disconnect('TestHostId', 'TestOldConnectionId');
+
+      // Assert
+      expect(restored.isConnected('TestHostId')).toBe(true);
+    });
+
     it('should rebuild the room from its snapshot', () => {
       // Arrange
       const room = roomHostedByAna();
@@ -159,6 +356,8 @@ describe('Room', () => {
           { id: 'TestAnaId', nickname: 'Ana' },
           { id: 'TestLuisId', nickname: 'Luis' },
         ],
+        version: 0,
+        connections: [],
       };
 
       // Act
@@ -174,6 +373,8 @@ describe('Room', () => {
         id: 'TestId',
         hostId: 'TestUnknownId',
         players: [{ id: 'TestLuisId', nickname: 'Luis' }],
+        version: 0,
+        connections: [],
       };
 
       // Act & Assert

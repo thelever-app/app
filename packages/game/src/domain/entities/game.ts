@@ -26,6 +26,7 @@ export interface GameSnapshot {
   readonly roomId: string;
   readonly dilemmas: readonly GameDilemma[];
   readonly inDecisionPhase: boolean;
+  readonly version: number;
   readonly players: readonly {
     readonly id: string;
     readonly answers: readonly { readonly dilemmaId: string; readonly vote: string }[];
@@ -37,6 +38,8 @@ export class Game {
   readonly #roomId: IdVO;
   readonly #dilemmas: readonly DilemmaVO[];
   #inDecisionPhase = false;
+  /** Goes up with every change, so the clients can drop what is older than what they hold. */
+  #version = 0;
   readonly #answers = new Map<string, Map<string, AnswerVO>>();
   #events: DomainEvent[] = [];
 
@@ -81,6 +84,10 @@ export class Game {
     return this.#inDecisionPhase;
   }
 
+  get version(): number {
+    return this.#version;
+  }
+
   startDecisionPhase(players: readonly Player[]): void {
     if (this.#inDecisionPhase) throw new DecisionPhaseAlreadyStartedError();
     if (players.length === 0) throw new PlayersMissingError();
@@ -89,6 +96,7 @@ export class Game {
       this.#answers.set(player.id, new Map());
     }
     this.#inDecisionPhase = true;
+    this.#version += 1;
   }
 
   answer(playerId: string, dilemmaId: string, vote: string): void {
@@ -103,9 +111,10 @@ export class Game {
 
     const progressBefore = answers.size;
     answers.set(dilemmaId, new AnswerVO(vote));
+    this.#version += 1;
 
     if (answers.size > progressBefore) {
-      this.#events.push(new ProgressUpdatedEvent(this.id, playerId, answers.size));
+      this.#events.push(new ProgressUpdatedEvent(this.id, playerId, answers.size, this.#version));
     }
   }
 
@@ -135,6 +144,7 @@ export class Game {
       roomId: this.roomId,
       dilemmas: this.dilemmas,
       inDecisionPhase: this.#inDecisionPhase,
+      version: this.#version,
       players: [...this.#answers].map(([playerId, answers]) => ({
         id: playerId,
         answers: [...answers].map(([dilemmaId, answer]) => ({ dilemmaId, vote: answer.vote })),
@@ -145,6 +155,7 @@ export class Game {
   static restore(snapshot: GameSnapshot): Game {
     const game = new Game(snapshot.id, snapshot.roomId, snapshot.dilemmas);
     game.#inDecisionPhase = snapshot.inDecisionPhase;
+    game.#version = snapshot.version;
     for (const player of snapshot.players) {
       const answers = player.answers.map(
         ({ dilemmaId, vote }) => [dilemmaId, new AnswerVO(vote)] as const,

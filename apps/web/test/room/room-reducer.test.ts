@@ -5,6 +5,8 @@ import { roomReducer } from '../../src/room/room-reducer.ts';
 const GAME_STATE: GameStateDto = {
   type: 'game-state',
   gameId: 'TestGameId',
+  gameVersion: 1,
+  roomVersion: 2,
   playerId: 'TestAnaId',
   dilemmas: [
     {
@@ -25,8 +27,8 @@ const GAME_STATE: GameStateDto = {
     },
   ],
   players: [
-    { playerId: 'TestAnaId', nickname: 'Ana', progress: 0 },
-    { playerId: 'TestLuisId', nickname: 'Luis', progress: 0 },
+    { playerId: 'TestAnaId', nickname: 'Ana', progress: 0, connected: true },
+    { playerId: 'TestLuisId', nickname: 'Luis', progress: 0, connected: true },
   ],
   answers: [],
 };
@@ -46,8 +48,8 @@ describe('roomReducer', () => {
       const newer: GameStateDto = {
         ...GAME_STATE,
         players: [
-          { playerId: 'TestAnaId', nickname: 'Ana', progress: 1 },
-          { playerId: 'TestLuisId', nickname: 'Luis', progress: 2 },
+          { playerId: 'TestAnaId', nickname: 'Ana', progress: 1, connected: true },
+          { playerId: 'TestLuisId', nickname: 'Luis', progress: 2, connected: true },
         ],
         answers: [{ dilemmaId: 'TestDilemma1', vote: 'TestOption' }],
       };
@@ -63,6 +65,7 @@ describe('roomReducer', () => {
   describe('progress-updated', () => {
     const luisAnswered: ProgressUpdatedDto = {
       type: 'progress-updated',
+      gameVersion: 2,
       playerId: 'TestLuisId',
       progress: 1,
     };
@@ -73,8 +76,8 @@ describe('roomReducer', () => {
 
       // Assert
       expect(game?.players).toEqual([
-        { playerId: 'TestAnaId', nickname: 'Ana', progress: 0 },
-        { playerId: 'TestLuisId', nickname: 'Luis', progress: 1 },
+        { playerId: 'TestAnaId', nickname: 'Ana', progress: 0, connected: true },
+        { playerId: 'TestLuisId', nickname: 'Luis', progress: 1, connected: true },
       ]);
     });
 

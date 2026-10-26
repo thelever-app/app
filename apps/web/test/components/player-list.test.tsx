@@ -6,9 +6,9 @@ import { renderWithProviders } from '../support/render.tsx';
 
 /** Ana is the player using the screen; Luis has finished; Marta goes last. */
 const PLAYERS = [
-  { playerId: 'test-ana-id', nickname: 'Ana', progress: 2 },
-  { playerId: 'test-luis-id', nickname: 'Luis', progress: 6 },
-  { playerId: 'test-marta-id', nickname: 'Marta', progress: 1 },
+  { playerId: 'test-ana-id', nickname: 'Ana', progress: 2, connected: true },
+  { playerId: 'test-luis-id', nickname: 'Luis', progress: 6, connected: true },
+  { playerId: 'test-marta-id', nickname: 'Marta', progress: 1, connected: true },
 ];
 
 function renderList(players = PLAYERS) {
@@ -66,7 +66,9 @@ describe('PlayerList', () => {
 
   it('should not show who is missing when everyone has finished', async () => {
     // Act
-    const { t } = await renderList(PLAYERS.map((player) => ({ ...player, progress: 6 })));
+    const { t } = await renderList(
+      PLAYERS.map((player) => ({ ...player, progress: 6, connected: true })),
+    );
 
     // Assert
     expect(screen.getAllByRole('region')).toHaveLength(1);

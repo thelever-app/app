@@ -8,6 +8,7 @@ const PLAYERS = ['Luis', 'Ana', 'Marta', 'Pablo', 'Sara', 'Nico'].map((nickname,
   playerId: `test-${nickname.toLowerCase()}-id`,
   nickname,
   progress: index,
+  connected: true,
 }));
 
 function renderStrip() {

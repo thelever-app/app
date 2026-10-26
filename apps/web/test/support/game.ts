@@ -5,6 +5,8 @@ export function aGame(overrides: Partial<GameStateDto> = {}): GameStateDto {
   return {
     type: 'game-state',
     gameId: 'test-game-id',
+    gameVersion: 1,
+    roomVersion: 2,
     playerId: 'test-ana-id',
     dilemmas: [1, 2, 3].map((n) => ({
       dilemmaId: `test-dilemma-${n}`,
@@ -15,8 +17,8 @@ export function aGame(overrides: Partial<GameStateDto> = {}): GameStateDto {
       ],
     })),
     players: [
-      { playerId: 'test-ana-id', nickname: 'Ana', progress: 0 },
-      { playerId: 'test-luis-id', nickname: 'Luis', progress: 1 },
+      { playerId: 'test-ana-id', nickname: 'Ana', progress: 0, connected: true },
+      { playerId: 'test-luis-id', nickname: 'Luis', progress: 1, connected: true },
     ],
     answers: [],
     ...overrides,

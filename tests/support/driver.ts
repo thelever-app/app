@@ -23,4 +23,15 @@ export interface GameDriver {
   votesCastFor(player: string, position: number): Promise<string[]>;
   /** The vote that counts for `player` in the dilemma in that position (from 1), as the game keeps it. */
   voteRecordedFor(player: string, position: number): Promise<string | undefined>;
+  /** The votes that count for `player`, in the order of the dilemmas, as the game keeps them. */
+  votesRecordedFor(player: string): Promise<string[]>;
+
+  /** The connection of `player` closes, as when the network drops. */
+  disconnect(player: string): Promise<void>;
+  /** `player` opens a new connection from the same device. */
+  reconnect(player: string): Promise<void>;
+  /** The position (from 1) of the dilemma `player` gets now: the first one they have not answered. */
+  dilemmaShownTo(player: string): Promise<number>;
+  /** Whether `viewer` sees `player` as connected, from what `viewer` received. */
+  connectionSeenBy(viewer: string, player: string): Promise<boolean | undefined>;
 }

@@ -10,8 +10,8 @@ import { renderWithProviders } from '../support/render.tsx';
 const allAnswered: GameStateDto = aGame({
   answers: [1, 2, 3].map((n) => ({ dilemmaId: `test-dilemma-${n}`, vote: `test-option-${n}a` })),
   players: [
-    { playerId: 'test-ana-id', nickname: 'Ana', progress: 3 },
-    { playerId: 'test-luis-id', nickname: 'Luis', progress: 1 },
+    { playerId: 'test-ana-id', nickname: 'Ana', progress: 3, connected: true },
+    { playerId: 'test-luis-id', nickname: 'Luis', progress: 1, connected: true },
   ],
 });
 

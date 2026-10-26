@@ -5,6 +5,7 @@ import {
 } from '@thelever-app/dilemmas/in-memory';
 import {
   AnswerDilemmaUseCase,
+  ConnectPlayerUseCase,
   CreateRoomUseCase,
   GetGameStateUseCase,
   JoinRoomUseCase,
@@ -122,6 +123,16 @@ export class SimulatedRoomConnection implements RoomConnection {
       catalog,
       idGenerator,
     ).execute({ roomId, dilemmaIds });
+    // Everyone has the game open, so everyone is connected; nobody is listening yet to be told.
+    const connectPlayer = new ConnectPlayerUseCase(
+      roomRepository,
+      gameRepository,
+      new CallbackPlayerNotifier(() => {}),
+      idGenerator,
+    );
+    for (const playerId of [hostId, ...otherIds]) {
+      await connectPlayer.execute({ gameId, playerId });
+    }
 
     const connection = new SimulatedRoomConnection(
       { room: roomRepository, game: gameRepository, catalog },
@@ -137,7 +148,10 @@ export class SimulatedRoomConnection implements RoomConnection {
   }
 
   send(message: ClientMessageDto): void {
-    const { dilemmaId, vote } = ClientMessageDto.parse(message);
+    const parsed = ClientMessageDto.parse(message);
+    // The simulated room is open from the start: there is nothing to connect to.
+    if (parsed.type === 'connect') return;
+    const { dilemmaId, vote } = parsed;
     // Who answers and in which game come from the connection, never from the message.
     this.#answerDilemma
       .execute({ gameId: this.#gameId, playerId: this.#playerId, dilemmaId, vote })
@@ -198,6 +212,7 @@ export class SimulatedRoomConnection implements RoomConnection {
     this.#emit(
       ServerMessageDto.parse({
         type: 'progress-updated',
+        gameVersion: event.gameVersion,
         playerId: event.playerId,
         progress: event.progress,
       }),

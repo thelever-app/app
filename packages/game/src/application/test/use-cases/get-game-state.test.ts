@@ -14,6 +14,7 @@ import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-pl
 import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
 import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
 import { DilemmaNotFoundError } from '../../errors/dilemma-not-found.error.ts';
+import { ConnectPlayerUseCase } from '../../use-cases/connect-player.use-case.ts';
 import { TEST_DILEMMA_IDS, TEST_OPTION_IDS, testCatalog } from '../support/test-catalog.ts';
 
 /** Ana hosts a room with Luis and Marta, and the game is in the decision phase. */
@@ -92,10 +93,56 @@ describe('GetGameStateUseCase', () => {
 
       // Assert
       expect(state.players).toEqual([
-        { playerId: anaId, nickname: 'Ana', progress: 0 },
-        { playerId: luisId, nickname: 'Luis', progress: 2 },
-        { playerId: martaId, nickname: 'Marta', progress: 0 },
+        { playerId: anaId, nickname: 'Ana', progress: 0, connected: false },
+        { playerId: luisId, nickname: 'Luis', progress: 2, connected: false },
+        { playerId: martaId, nickname: 'Marta', progress: 0, connected: false },
       ]);
+    });
+
+    it('should return whether each player is connected', async () => {
+      // Arrange
+      const { getGameState, gameRepository, roomRepository, gameId, anaId, luisId } =
+        await gameInDecisionPhase();
+      const connectPlayer = new ConnectPlayerUseCase(
+        roomRepository,
+        gameRepository,
+        new InMemoryPlayerNotifier(),
+        new FixedIdGenerator('TestConnectionId'),
+      );
+      await connectPlayer.execute({ gameId, playerId: luisId });
+
+      // Act
+      const state = await getGameState.execute({ gameId, playerId: anaId, language: 'es' });
+
+      // Assert
+      const connected = state.players.map(({ playerId, connected }) => ({ playerId, connected }));
+      expect(connected).toContainEqual({ playerId: luisId, connected: true });
+      expect(connected).toContainEqual({ playerId: anaId, connected: false });
+    });
+
+    it('should return the version of the game and of the room it was computed from', async () => {
+      // Arrange
+      const { getGameState, answerDilemma, gameRepository, roomRepository, gameId, luisId } =
+        await gameInDecisionPhase();
+      await answerDilemma.execute({
+        gameId,
+        playerId: luisId,
+        dilemmaId: 'TestDilemma1',
+        vote: 'TestOption',
+      });
+      await new ConnectPlayerUseCase(
+        roomRepository,
+        gameRepository,
+        new InMemoryPlayerNotifier(),
+        new FixedIdGenerator('TestConnectionId'),
+      ).execute({ gameId, playerId: luisId });
+
+      // Act
+      const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
+
+      // Assert
+      expect(state.gameVersion).toBe(2);
+      expect(state.roomVersion).toBe(1);
     });
 
     it('should return the answers of the player who asks', async () => {
@@ -131,7 +178,12 @@ describe('GetGameStateUseCase', () => {
       // Assert
       expect(state.answers).toEqual([]);
       for (const player of state.players) {
-        expect(Object.keys(player).sort()).toEqual(['nickname', 'playerId', 'progress']);
+        expect(Object.keys(player).sort()).toEqual([
+          'connected',
+          'nickname',
+          'playerId',
+          'progress',
+        ]);
       }
     });
 

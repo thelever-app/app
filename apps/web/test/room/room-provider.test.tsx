@@ -10,6 +10,8 @@ import { fakeConnection } from '../support/fake-connection.ts';
 const GAME_STATE: GameStateDto = {
   type: 'game-state',
   gameId: 'test-game-id',
+  gameVersion: 1,
+  roomVersion: 3,
   playerId: 'test-player-id-0',
   dilemmas: [
     {
@@ -26,16 +28,19 @@ const GAME_STATE: GameStateDto = {
       playerId: 'test-player-id-0',
       nickname: 'Ana',
       progress: 0,
+      connected: true,
     },
     {
       playerId: 'test-player-id-1',
       nickname: 'Luis',
       progress: 0,
+      connected: true,
     },
     {
       playerId: 'test-player-id-2',
       nickname: 'Natalia',
       progress: 0,
+      connected: true,
     },
   ],
   answers: [],
@@ -116,7 +121,12 @@ describe('useRoom', () => {
 
     // Act
     act(() =>
-      fake.deliver({ type: 'progress-updated', playerId: 'test-player-id-1', progress: 1 }),
+      fake.deliver({
+        type: 'progress-updated',
+        gameVersion: 2,
+        playerId: 'test-player-id-1',
+        progress: 1,
+      }),
     );
 
     // Assert

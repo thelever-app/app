@@ -92,7 +92,7 @@ describe('AnswerDilemmaUseCase', () => {
       });
 
       // Assert
-      const expected = [new ProgressUpdatedEvent(gameId, luisId, 1)];
+      const expected = [new ProgressUpdatedEvent(gameId, luisId, 1, 2)];
       expect(notifier.receivedBy(anaId)).toEqual(expected);
       expect(notifier.receivedBy(martaId)).toEqual(expected);
     });
@@ -130,7 +130,9 @@ describe('AnswerDilemmaUseCase', () => {
 
       // Assert
       await expect(answering).resolves.toBeUndefined();
-      expect(notifier.receivedBy(martaId)).toEqual([new ProgressUpdatedEvent(gameId, luisId, 1)]);
+      expect(notifier.receivedBy(martaId)).toEqual([
+        new ProgressUpdatedEvent(gameId, luisId, 1, 2),
+      ]);
     });
 
     it('should throw an error if the game does not exist', async () => {

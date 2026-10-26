@@ -1,6 +1,9 @@
 import {
   AnswerDilemmaUseCase,
+  ConnectionChangedEvent,
+  ConnectPlayerUseCase,
   CreateRoomUseCase,
+  DisconnectPlayerUseCase,
   GetGameStateUseCase,
   JoinRoomUseCase,
   ProgressUpdatedEvent,
@@ -46,6 +49,8 @@ export class AcceptanceDriver implements GameDriver {
   readonly #startDecisionPhase: StartDecisionPhaseUseCase;
   readonly #answerDilemma: AnswerDilemmaUseCase;
   readonly #getGameState: GetGameStateUseCase;
+  readonly #connectPlayer: ConnectPlayerUseCase;
+  readonly #disconnectPlayer: DisconnectPlayerUseCase;
   /** Kept with its concrete type to read what each player received. */
   readonly #notifier = new InMemoryPlayerNotifier();
 
@@ -53,6 +58,8 @@ export class AcceptanceDriver implements GameDriver {
   readonly #playerIds = new Map<string, string>();
   /** The votes each player cast, in order, to look for them where they must not be. */
   readonly #votes = new Map<string, { readonly dilemmaId: string; readonly vote: string }[]>();
+  /** The open connection of each player, as a socket of the room server would hold it. */
+  readonly #connectionIds = new Map<string, string>();
   #roomId: string | undefined;
   #gameId: string | undefined;
 
@@ -71,6 +78,17 @@ export class AcceptanceDriver implements GameDriver {
     );
     this.#answerDilemma = new AnswerDilemmaUseCase(gameRepository, this.#notifier);
     this.#getGameState = new GetGameStateUseCase(roomRepository, gameRepository, CATALOG);
+    this.#connectPlayer = new ConnectPlayerUseCase(
+      roomRepository,
+      gameRepository,
+      this.#notifier,
+      idGenerator,
+    );
+    this.#disconnectPlayer = new DisconnectPlayerUseCase(
+      roomRepository,
+      gameRepository,
+      this.#notifier,
+    );
   }
 
   async start(): Promise<void> {
@@ -100,6 +118,11 @@ export class AcceptanceDriver implements GameDriver {
       dilemmaIds: DILEMMA_IDS,
     });
     this.#gameId = gameId;
+
+    // Every player has the game open, as their device would after the phase starts.
+    for (const player of this.#playerIds.keys()) {
+      await this.reconnect(player);
+    }
   }
 
   /** Answers the first `count` dilemmas of the game, in order. */
@@ -131,6 +154,46 @@ export class AcceptanceDriver implements GameDriver {
     });
     return answers.find(({ dilemmaId }) => dilemmaId === this.#dilemmaIdAt(position))?.vote;
   }
+  async votesRecordedFor(player: string): Promise<string[]> {
+    const { answers } = await this.#stateOf(player);
+    return answers.map(({ vote }) => vote);
+  }
+
+  async disconnect(player: string): Promise<void> {
+    const connectionId = this.#connectionIds.get(player);
+    if (!connectionId) throw new Error(`The scenario disconnects ${player}, who is not connected`);
+    await this.#disconnectPlayer.execute({
+      gameId: this.#currentGameId(),
+      playerId: this.#playerIdOf(player),
+      connectionId,
+    });
+    this.#connectionIds.delete(player);
+  }
+
+  async reconnect(player: string): Promise<void> {
+    const { connectionId } = await this.#connectPlayer.execute({
+      gameId: this.#currentGameId(),
+      playerId: this.#playerIdOf(player),
+    });
+    this.#connectionIds.set(player, connectionId);
+  }
+
+  async dilemmaShownTo(player: string): Promise<number> {
+    const { dilemmas, answers } = await this.#stateOf(player);
+    const answered = new Set(answers.map(({ dilemmaId }) => dilemmaId));
+    return dilemmas.findIndex(({ dilemmaId }) => !answered.has(dilemmaId)) + 1;
+  }
+
+  /** What `viewer` knows about the connection of `player`: the last change they received. */
+  async connectionSeenBy(viewer: string, player: string): Promise<boolean | undefined> {
+    const playerId = this.#playerIdOf(player);
+    const changes = this.#notifier
+      .receivedBy(this.#playerIdOf(viewer))
+      .filter((event) => event instanceof ConnectionChangedEvent)
+      .filter((event) => event.playerId === playerId);
+    return changes.at(-1)?.connected;
+  }
+
   /** What `viewer` knows about the progress of `player`: the last update they received. */
   async progressSeenBy(viewer: string, player: string): Promise<number | undefined> {
     const updates = this.#progressUpdatesAbout(player, this.#playerIdOf(viewer));
@@ -153,6 +216,19 @@ export class AcceptanceDriver implements GameDriver {
     const playerId = this.#playerIdOf(player);
     await this.#answerDilemma.execute({ gameId: this.#gameId, playerId, dilemmaId, vote });
     this.#votes.set(player, [...(this.#votes.get(player) ?? []), { dilemmaId, vote }]);
+  }
+
+  async #stateOf(player: string) {
+    return this.#getGameState.execute({
+      gameId: this.#currentGameId(),
+      playerId: this.#playerIdOf(player),
+      language: 'en',
+    });
+  }
+
+  #currentGameId(): string {
+    if (!this.#gameId) throw new Error('The scenario uses the game before the decision phase');
+    return this.#gameId;
   }
 
   /** The scenario counts dilemmas from 1, as people do. */

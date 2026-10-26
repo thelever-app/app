@@ -128,7 +128,7 @@ Feature: Decision phase
       When "Marta" answers her last dilemma
       Then the game moves to the reveal
 
-    @ui @todo
+    @ui
     Scenario: A disconnected player gets back to where they were
       Given "Luis" has answered 3 dilemmas
       And "Luis" disconnects
@@ -136,7 +136,7 @@ Feature: Decision phase
       Then "Luis" is on his fourth dilemma
       And keeps his answers
 
-    @ui @todo
+    @ui
     Scenario: Players see who is disconnected
       Given "Luis" has answered 3 dilemmas
       When "Luis" disconnects

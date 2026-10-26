@@ -9,6 +9,12 @@ export class GameWorld extends World {
   /** The answer a step changed, so a later step can refer to it as "that dilemma". */
   changedAnswer: { readonly player: string; readonly position: number } | undefined;
 
+  /** The player who reconnected, so a later step can refer to them as "his". */
+  reconnectedPlayer: string | undefined;
+
+  /** The players a step looked through, so a later step can refer to them as "they". */
+  viewers: readonly string[] = [];
+
   constructor(options: IWorldOptions) {
     super(options);
     const { driver } = options.parameters;

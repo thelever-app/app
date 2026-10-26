@@ -14,6 +14,10 @@ export interface GetGameStateInput {
 
 export interface GetGameStateOutput {
   readonly gameId: string;
+  /** The version of the game this state was computed from. */
+  readonly gameVersion: number;
+  /** The version of the connections of the room this state was computed from. */
+  readonly roomVersion: number;
   readonly playerId: string;
   /** Their content, in the order every player gets them. */
   readonly dilemmas: readonly DilemmaContent[];
@@ -21,12 +25,13 @@ export interface GetGameStateOutput {
     readonly playerId: string;
     readonly nickname: string;
     readonly progress: number;
+    readonly connected: boolean;
   }[];
   /** Only the answers of the player who asks, never anybody else's. */
   readonly answers: readonly { readonly dilemmaId: string; readonly vote: string }[];
 }
 
-/** What a player may know about a game: everyone's progress and their own answers. */
+/** What a player may know about a game: everyone's progress and connection, and their own answers. */
 export class GetGameStateUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #gameRepository: GameRepository;
@@ -58,6 +63,7 @@ export class GetGameStateUseCase {
         playerId: player.id,
         nickname: player.nickname,
         progress: game.progressOf(player.id),
+        connected: room.isConnected(player.id),
       }));
 
     const dilemmas = await this.#dilemmaCatalog.findContents(
@@ -65,6 +71,14 @@ export class GetGameStateUseCase {
       language,
     );
 
-    return { gameId: game.id, playerId, dilemmas, players, answers };
+    return {
+      gameId: game.id,
+      gameVersion: game.version,
+      roomVersion: room.version,
+      playerId,
+      dilemmas,
+      players,
+      answers,
+    };
   }
 }
