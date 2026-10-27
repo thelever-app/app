@@ -84,6 +84,19 @@ describe('SimulatedRoomConnection', () => {
       expect(state.players.map(({ connected }) => connected)).toEqual([true, true]);
     });
 
+    it('should always be connected, because it runs in the browser', async () => {
+      // Arrange
+      const opened = await openAndSubscribe();
+      connection = opened.connection;
+      const statuses: string[] = [];
+
+      // Act
+      opened.connection.subscribeStatus((status) => statuses.push(status));
+
+      // Assert
+      expect(statuses).toEqual(['connected']);
+    });
+
     it('should stop sending messages to a listener after it unsubscribes', async () => {
       // Arrange
       const opened = await openAndSubscribe();

@@ -13,6 +13,7 @@ export function fakeConnection() {
         listeners.delete(listener);
       };
     }),
+    subscribeStatus: vi.fn(() => () => {}),
     close: vi.fn(),
   } satisfies RoomConnection;
   const deliver = (message: ServerMessageDto) => {

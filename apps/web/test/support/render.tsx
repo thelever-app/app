@@ -19,6 +19,10 @@ function roomThatSent(game: GameStateDto): RoomConnection {
       listener(game);
       return () => {};
     },
+    subscribeStatus: (listener) => {
+      listener('connected');
+      return () => {};
+    },
     close: () => {},
   };
 }

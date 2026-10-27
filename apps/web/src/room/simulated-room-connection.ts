@@ -26,7 +26,11 @@ import {
   SequentialIdGenerator,
 } from '@thelever-app/game/in-memory';
 import { ClientMessageDto, ServerMessageDto } from '@thelever-app/protocol';
-import type { RoomConnection, ServerMessageListener } from './room-connection.ts';
+import type {
+  RoomConnection,
+  RoomConnectionStatusListener,
+  ServerMessageListener,
+} from './room-connection.ts';
 
 export interface SimulatedRoomOptions {
   /** The nickname of the player using the screen, who hosts the room. */
@@ -191,6 +195,12 @@ export class SimulatedRoomConnection implements RoomConnection {
     return () => {
       this.#listeners.delete(listener);
     };
+  }
+
+  /** The simulated room runs in the browser: it is connected from the start and never drops. */
+  subscribeStatus(listener: RoomConnectionStatusListener): () => void {
+    listener('connected');
+    return () => {};
   }
 
   close(): void {
