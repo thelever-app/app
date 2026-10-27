@@ -133,6 +133,24 @@ describe('useRoom', () => {
     expect(result.current.game.players.map(({ progress }) => progress)).toEqual([0, 1, 0]);
   });
 
+  it('should show what the server rejected until the player dismisses it', () => {
+    // Arrange
+    const fake = fakeConnection();
+    const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(fake.connection) });
+    act(() => fake.deliver(GAME_STATE));
+
+    // Act
+    act(() =>
+      fake.deliver({ type: 'error', command: 'answer-dilemma', code: 'dilemma-not-reached' }),
+    );
+    const shown = result.current.rejection;
+    act(() => result.current.dismissRejection());
+
+    // Assert
+    expect(shown?.code).toBe('dilemma-not-reached');
+    expect(result.current.rejection).toBeUndefined();
+  });
+
   it('should subscribe once, however many times it renders', () => {
     // Arrange
     const fake = fakeConnection();

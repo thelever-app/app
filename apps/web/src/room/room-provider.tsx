@@ -1,4 +1,4 @@
-import type { GameStateDto } from '@thelever-app/protocol';
+import type { ErrorDto, GameStateDto } from '@thelever-app/protocol';
 import {
   createContext,
   useCallback,
@@ -9,11 +9,14 @@ import {
   type ReactNode,
 } from 'react';
 import type { RoomConnection } from './room-connection.ts';
-import { roomReducer } from './room-reducer.ts';
+import { INITIAL_ROOM_STATE, roomReducer } from './room-reducer.ts';
 
 interface Room {
   readonly game: GameStateDto;
+  /** The last message the server rejected, until the next state or until the player dismisses it. */
+  readonly rejection: ErrorDto | undefined;
   readonly answerDilemma: (dilemmaId: string, vote: string) => void;
+  readonly dismissRejection: () => void;
 }
 
 interface RoomProviderProps {
@@ -27,7 +30,7 @@ const RoomContext = createContext<Room | undefined>(undefined);
 
 /** Follows the room once for the whole app and shares its state with every screen below. */
 export function RoomProvider({ connection, fallback, children }: RoomProviderProps) {
-  const [game, dispatch] = useReducer(roomReducer, undefined);
+  const [{ game, rejection }, dispatch] = useReducer(roomReducer, INITIAL_ROOM_STATE);
 
   useEffect(() => connection.subscribe(dispatch), [connection]);
 
@@ -38,7 +41,14 @@ export function RoomProvider({ connection, fallback, children }: RoomProviderPro
     [connection],
   );
 
-  const room = useMemo(() => game && { game, answerDilemma }, [game, answerDilemma]);
+  const dismissRejection = useCallback(() => {
+    dispatch({ type: 'rejection-dismissed' });
+  }, []);
+
+  const room = useMemo(
+    () => game && { game, rejection, answerDilemma, dismissRejection },
+    [game, rejection, answerDilemma, dismissRejection],
+  );
 
   if (!room) return fallback;
   return <RoomContext value={room}>{children}</RoomContext>;
