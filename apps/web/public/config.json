@@ -1,1 +1,10 @@
-{ "realtimeUrl": "ws://localhost:3000" }
+{
+  "realtimeUrl": "ws://localhost:3000",
+  "firebase": {
+    "apiKey": "demo-api-key",
+    "authDomain": "demo-thelever.firebaseapp.com",
+    "projectId": "demo-thelever",
+    "appId": "demo-app-id"
+  },
+  "authEmulatorUrl": "http://127.0.0.1:9099"
+}

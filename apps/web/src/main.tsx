@@ -5,6 +5,7 @@ import { I18nextProvider } from 'react-i18next';
 import { LanguageDto } from '@thelever-app/protocol';
 import { App } from './App.tsx';
 import { loadWebConfig } from './config/web-config.ts';
+import { signInAnonymousPlayer } from './identity/anonymous-player.ts';
 import { createI18n, SOURCE_LANGUAGE } from './i18n/i18n.ts';
 import source from './i18n/locales/es.json';
 import { connectRoom } from './room/connect-room.ts';
@@ -23,10 +24,7 @@ async function start(): Promise<void> {
       language,
       development: import.meta.env.DEV,
       loadConfig: () => loadWebConfig(),
-      // Firebase Auth is not wired yet: until it is, the room server refuses every connection.
-      getToken: async () => {
-        throw new Error('There is no way to sign the player in yet');
-      },
+      signIn: signInAnonymousPlayer,
       createSocket: (url) => new WebSocket(url),
     });
     root.render(

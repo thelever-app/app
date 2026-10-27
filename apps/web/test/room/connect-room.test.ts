@@ -4,15 +4,23 @@ import { SimulatedRoomConnection } from '../../src/room/simulated-room-connectio
 import { WebSocketRoomConnection } from '../../src/room/websocket-room-connection.ts';
 import { FakeSocket } from '../support/fake-socket.ts';
 
-/** Options whose config, token and sockets the test controls. */
+/** Options whose config, player and sockets the test controls. */
 function options(overrides: Partial<ConnectRoomOptions> = {}) {
   const sockets: FakeSocket[] = [];
   const all: ConnectRoomOptions = {
     pathname: '/games/test-game-id',
     language: 'es',
     development: false,
-    loadConfig: async () => ({ realtimeUrl: 'wss://realtime.test' }),
-    getToken: async () => 'test-token',
+    loadConfig: async () => ({
+      realtimeUrl: 'wss://realtime.test',
+      firebase: {
+        apiKey: 'test-api-key',
+        authDomain: 'test.firebaseapp.com',
+        projectId: 'test-project',
+        appId: 'test-app-id',
+      },
+    }),
+    signIn: async () => ({ getToken: async () => 'test-token' }),
     createSocket: (url) => {
       const socket = new FakeSocket(url);
       sockets.push(socket);
@@ -37,7 +45,12 @@ describe('connectRoom', () => {
     expect(connection).toBeInstanceOf(WebSocketRoomConnection);
     expect(sockets.map(({ url }) => url)).toEqual(['wss://realtime.test']);
     expect(sockets[0]!.sentMessages()).toEqual([
-      expect.objectContaining({ type: 'connect', gameId: 'test-game-id', language: 'es' }),
+      expect.objectContaining({
+        type: 'connect',
+        token: 'test-token',
+        gameId: 'test-game-id',
+        language: 'es',
+      }),
     ]);
     connection.close();
   });
@@ -56,15 +69,24 @@ describe('connectRoom', () => {
     connection.close();
   });
 
-  it('should open the simulated room in development when the address names no game', async () => {
+  it('should open the simulated room in development when the address names no game, without signing in', async () => {
     // Arrange
-    const { all } = options({ pathname: '/', development: true });
+    let signedIn = false;
+    const { all } = options({
+      pathname: '/',
+      development: true,
+      signIn: async () => {
+        signedIn = true;
+        return { getToken: async () => 'test-token' };
+      },
+    });
 
     // Act
     const connection = await connectRoom(all);
 
     // Assert
     expect(connection).toBeInstanceOf(SimulatedRoomConnection);
+    expect(signedIn).toBe(false);
     connection.close();
   });
 

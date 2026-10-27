@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "FIREBASE_PROJECT_ID=demo-thelever FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 tsx watch src/server.ts",
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
@@ -12,6 +12,7 @@
     "@thelever-app/game": "workspace:*",
     "@thelever-app/protocol": "workspace:*",
     "express": "^5.2.1",
+    "firebase-admin": "^14.5.0",
     "ws": "^8.22.0"
   },
   "devDependencies": {

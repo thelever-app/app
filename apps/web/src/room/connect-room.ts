@@ -1,5 +1,6 @@
 import type { LanguageDto } from '@thelever-app/protocol';
 import type { WebConfig } from '../config/web-config.ts';
+import type { PlayerIdentity } from '../identity/anonymous-player.ts';
 import type { RoomConnection } from './room-connection.ts';
 import { WebSocketRoomConnection, type WebSocketLike } from './websocket-room-connection.ts';
 
@@ -10,7 +11,8 @@ export interface ConnectRoomOptions {
   /** In development, an address without a game opens the simulated room. */
   readonly development: boolean;
   readonly loadConfig: () => Promise<WebConfig>;
-  readonly getToken: () => Promise<string>;
+  /** Only for a real game: the simulated room needs nobody signed in. */
+  readonly signIn: (config: WebConfig) => Promise<PlayerIdentity>;
   readonly createSocket: (url: string) => WebSocketLike;
 }
 
@@ -25,7 +27,7 @@ export async function connectRoom({
   language,
   development,
   loadConfig,
-  getToken,
+  signIn,
   createSocket,
 }: ConnectRoomOptions): Promise<RoomConnection> {
   const gameId = GAME_PATH.exec(pathname)?.[1];
@@ -39,12 +41,13 @@ export async function connectRoom({
     return SimulatedRoomConnection.open(DEMO_ROOM);
   }
 
-  const { realtimeUrl } = await loadConfig();
+  const config = await loadConfig();
+  const player = await signIn(config);
   return WebSocketRoomConnection.open({
-    url: realtimeUrl,
+    url: config.realtimeUrl,
     gameId: decodeURIComponent(gameId),
     language,
-    getToken,
+    getToken: () => player.getToken(),
     createSocket,
     schedule: (callback, ms) => {
       const timer = setTimeout(callback, ms);
