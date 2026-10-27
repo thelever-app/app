@@ -8,12 +8,19 @@ import { PlayerNotInRoomError } from '../../errors/player-not-in-room.error.ts';
 import { ConnectionChangedEvent } from '../../events/connection-changed.event.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 
+/** Each test player has its own identity, derived from its id: TestLuisId is TestLuisIdentity. */
 function player(id: string, nickname: string): Player {
-  return Player.create({ nickname }, new FixedIdGenerator(id));
+  return Player.create(
+    { nickname, identity: id.replace(/Id$/, 'Identity') },
+    new FixedIdGenerator(id),
+  );
 }
 
 function roomHostedByAna(): Room {
-  return Room.create({ hostNickname: 'Ana' }, new FixedIdGenerator('TestId', 'TestHostId'));
+  return Room.create(
+    { hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' },
+    new FixedIdGenerator('TestId', 'TestHostId'),
+  );
 }
 
 describe('Room', () => {
@@ -29,7 +36,7 @@ describe('Room', () => {
     it('should have an id and a host with that nickname', () => {
       // Arrange & Act
       const room = Room.create(
-        { hostNickname: 'Ana' },
+        { hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' },
         new FixedIdGenerator('TestId', 'TestHostId'),
       );
 
@@ -42,14 +49,20 @@ describe('Room', () => {
     it('should throw an error if the id is missing', () => {
       // Act & Assert
       expect(() =>
-        Room.create({ hostNickname: 'Ana' }, new FixedIdGenerator('', 'TestHostId')),
+        Room.create(
+          { hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' },
+          new FixedIdGenerator('', 'TestHostId'),
+        ),
       ).toThrow(IdMissingError);
     });
 
     it('should throw an error if the host nickname is missing', () => {
       // Act & Assert
       expect(() =>
-        Room.create({ hostNickname: '' }, new FixedIdGenerator('TestId', 'TestHostId')),
+        Room.create(
+          { hostNickname: '', hostIdentity: 'TestHostIdentity' },
+          new FixedIdGenerator('TestId', 'TestHostId'),
+        ),
       ).toThrow(NicknameMissingError);
     });
   });
@@ -112,6 +125,38 @@ describe('Room', () => {
 
       // Assert
       expect(room.players).toHaveLength(2);
+    });
+  });
+
+  describe('playerWith', () => {
+    it('should find a player by their identity', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      const luis = player('TestLuisId', 'Luis');
+      room.addPlayer(luis);
+
+      // Act & Assert
+      expect(room.playerWith('TestLuisIdentity')).toBe(luis);
+      expect(room.playerWith('TestStrangerIdentity')).toBeUndefined();
+    });
+  });
+
+  describe('addPlayer with an identity already in the room', () => {
+    it('should not add a second player with the same identity', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.addPlayer(player('TestLuisId', 'Luis'));
+
+      // Act
+      room.addPlayer(
+        Player.create(
+          { nickname: 'Luis again', identity: 'TestLuisIdentity' },
+          new FixedIdGenerator('TestOtherLuisId'),
+        ),
+      );
+
+      // Assert
+      expect(room.players.map(({ id }) => id)).toEqual(['TestHostId', 'TestLuisId']);
     });
   });
 
@@ -295,9 +340,9 @@ describe('Room', () => {
         id: 'TestId',
         hostId: 'TestHostId',
         players: [
-          { id: 'TestHostId', nickname: 'Ana' },
-          { id: 'TestLuisId', nickname: 'Luis' },
-          { id: 'TestMartaId', nickname: 'Marta' },
+          { id: 'TestHostId', nickname: 'Ana', identity: 'TestAnaIdentity' },
+          { id: 'TestLuisId', nickname: 'Luis', identity: 'TestLuisIdentity' },
+          { id: 'TestMartaId', nickname: 'Marta', identity: 'TestMartaIdentity' },
         ],
         version: 0,
         connections: [],
@@ -353,8 +398,8 @@ describe('Room', () => {
         id: 'TestId',
         hostId: 'TestLuisId',
         players: [
-          { id: 'TestAnaId', nickname: 'Ana' },
-          { id: 'TestLuisId', nickname: 'Luis' },
+          { id: 'TestAnaId', nickname: 'Ana', identity: 'TestAnaIdentity' },
+          { id: 'TestLuisId', nickname: 'Luis', identity: 'TestLuisIdentity' },
         ],
         version: 0,
         connections: [],
@@ -372,7 +417,7 @@ describe('Room', () => {
       const snapshot = {
         id: 'TestId',
         hostId: 'TestUnknownId',
-        players: [{ id: 'TestLuisId', nickname: 'Luis' }],
+        players: [{ id: 'TestLuisId', nickname: 'Luis', identity: 'TestLuisIdentity' }],
         version: 0,
         connections: [],
       };

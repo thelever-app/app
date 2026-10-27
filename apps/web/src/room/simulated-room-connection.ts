@@ -3,6 +3,7 @@ import {
   InMemoryDilemmaRepository,
   SequentialIdGenerator as SequentialDilemmaIdGenerator,
 } from '@thelever-app/dilemmas/in-memory';
+import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
 import {
   AnswerDilemmaUseCase,
   ConnectPlayerUseCase,
@@ -34,8 +35,8 @@ export interface SimulatedRoomOptions {
   readonly language: string;
   /** Fake players: each one answers the next dilemma every `answerEveryMs`. */
   readonly others: readonly { readonly nickname: string; readonly answerEveryMs: number }[];
-  /** The content of the dilemmas of the game, in the order every player gets them. */
-  readonly dilemmas: readonly { readonly text: string; readonly options: readonly string[] }[];
+  /** The content of the dilemmas of the game, in the order every player gets them; the seed ones if absent. */
+  readonly dilemmas?: readonly { readonly text: string; readonly options: readonly string[] }[];
 }
 
 /** Hands every event the use cases deliver to a callback, as a socket would push it. */
@@ -54,7 +55,7 @@ class CallbackPlayerNotifier implements PlayerNotifier {
 /**
  * A room that runs in the browser: the use cases of `@thelever-app/game` and `@thelever-app/dilemmas`
  * with in-memory adapters, and fake players that answer on timers. It speaks the same messages as the
- * room server (TSK-24), so the screen cannot tell them apart. Never for production.
+ * room server, so the screen cannot tell them apart. Never for production.
  */
 export class SimulatedRoomConnection implements RoomConnection {
   readonly #getGameState: GetGameStateUseCase;
@@ -92,16 +93,13 @@ export class SimulatedRoomConnection implements RoomConnection {
   /** Composition root: stores the dilemmas, sets up the room, starts the decision phase and the fake players. */
   static async open(options: SimulatedRoomOptions): Promise<SimulatedRoomConnection> {
     const dilemmaRepository = new InMemoryDilemmaRepository();
-    const dilemmaIdGenerator = new SequentialDilemmaIdGenerator('dilemma');
-    const dilemmaIds: string[] = [];
-    for (const { text, options: dilemmaOptions } of options.dilemmas) {
-      const dilemma = Dilemma.create(
-        { text, language: options.language, options: dilemmaOptions },
-        dilemmaIdGenerator,
-      );
-      await dilemmaRepository.save(dilemma);
-      dilemmaIds.push(dilemma.id);
-    }
+    const dilemmaIds = options.dilemmas
+      ? await SimulatedRoomConnection.#saveDilemmas(
+          dilemmaRepository,
+          options.dilemmas,
+          options.language,
+        )
+      : await loadSeedDilemmas(dilemmaRepository);
     const catalog = new DilemmasContextCatalog(new GetDilemmasUseCase(dilemmaRepository));
 
     const roomRepository = new InMemoryRoomRepository();
@@ -109,12 +107,22 @@ export class SimulatedRoomConnection implements RoomConnection {
     const idGenerator = new SequentialIdGenerator();
     const joinRoom = new JoinRoomUseCase(roomRepository, idGenerator);
 
+    // Every player of the simulation uses the app with an identity of their own.
+    const identities = [
+      'simulated-0',
+      ...options.others.map((_, index) => `simulated-${index + 1}`),
+    ];
     const { roomId, hostId } = await new CreateRoomUseCase(roomRepository, idGenerator).execute({
       hostNickname: options.nickname,
+      hostIdentity: identities[0]!,
     });
     const otherIds: string[] = [];
-    for (const { nickname } of options.others) {
-      const { playerId } = await joinRoom.execute({ roomId, nickname });
+    for (const [index, { nickname }] of options.others.entries()) {
+      const { playerId } = await joinRoom.execute({
+        roomId,
+        nickname,
+        identity: identities[index + 1]!,
+      });
       otherIds.push(playerId);
     }
     const { gameId } = await new StartDecisionPhaseUseCase(
@@ -130,8 +138,8 @@ export class SimulatedRoomConnection implements RoomConnection {
       new CallbackPlayerNotifier(() => {}),
       idGenerator,
     );
-    for (const playerId of [hostId, ...otherIds]) {
-      await connectPlayer.execute({ gameId, playerId });
+    for (const identity of identities) {
+      await connectPlayer.execute({ gameId, identity });
     }
 
     const connection = new SimulatedRoomConnection(
@@ -145,6 +153,22 @@ export class SimulatedRoomConnection implements RoomConnection {
       connection.#startFakePlayer(otherIds[index]!, index, answerEveryMs, dilemmas);
     });
     return connection;
+  }
+
+  /** Stores the given dilemmas, written in that language, and returns their ids in order. */
+  static async #saveDilemmas(
+    repository: InMemoryDilemmaRepository,
+    dilemmas: NonNullable<SimulatedRoomOptions['dilemmas']>,
+    language: string,
+  ): Promise<readonly string[]> {
+    const idGenerator = new SequentialDilemmaIdGenerator('dilemma');
+    const ids: string[] = [];
+    for (const { text, options } of dilemmas) {
+      const dilemma = Dilemma.create({ text, language, options }, idGenerator);
+      await repository.save(dilemma);
+      ids.push(dilemma.id);
+    }
+    return ids;
   }
 
   send(message: ClientMessageDto): void {

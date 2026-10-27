@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ConnectPlayerUseCase } from '../../use-cases/connect-player.use-case.ts';
 import { GameNotFoundError } from '../../errors/game-not-found.error.ts';
-import { PlayerNotInGameError } from '../../../domain/errors/player-not-in-game.error.ts';
+import { IdentityNotInGameError } from '../../errors/identity-not-in-game.error.ts';
 import { ConnectionChangedEvent } from '../../../domain/events/connection-changed.event.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { gameInDecisionPhase } from '../support/game-in-decision-phase.ts';
@@ -25,20 +25,31 @@ describe('ConnectPlayerUseCase', () => {
       const { connectPlayer, roomRepository, roomId, gameId, luisId } = await arrange();
 
       // Act
-      await connectPlayer.execute({ gameId, playerId: luisId });
+      await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
 
       // Assert
       const room = await roomRepository.findById(roomId);
       expect(room?.isConnected(luisId)).toBe(true);
     });
 
-    it('should return a new connection id for each connection', async () => {
+    it('should return the player behind that identity', async () => {
       // Arrange
       const { connectPlayer, gameId, luisId } = await arrange();
 
       // Act
-      const first = await connectPlayer.execute({ gameId, playerId: luisId });
-      const second = await connectPlayer.execute({ gameId, playerId: luisId });
+      const { playerId } = await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
+
+      // Assert
+      expect(playerId).toBe(luisId);
+    });
+
+    it('should return a new connection id for each connection', async () => {
+      // Arrange
+      const { connectPlayer, gameId } = await arrange();
+
+      // Act
+      const first = await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
+      const second = await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
 
       // Assert
       expect(first.connectionId).toBeTruthy();
@@ -50,7 +61,7 @@ describe('ConnectPlayerUseCase', () => {
       const { connectPlayer, notifier, roomId, gameId, anaId, luisId, martaId } = await arrange();
 
       // Act
-      await connectPlayer.execute({ gameId, playerId: luisId });
+      await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
 
       // Assert
       const expected = [new ConnectionChangedEvent(roomId, luisId, true, 1)];
@@ -61,11 +72,11 @@ describe('ConnectPlayerUseCase', () => {
 
     it('should not tell anybody when the player only replaces their connection', async () => {
       // Arrange
-      const { connectPlayer, notifier, gameId, anaId, luisId } = await arrange();
-      await connectPlayer.execute({ gameId, playerId: luisId });
+      const { connectPlayer, notifier, gameId, anaId } = await arrange();
+      await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
 
       // Act
-      await connectPlayer.execute({ gameId, playerId: luisId });
+      await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
 
       // Assert
       expect(notifier.receivedBy(anaId)).toHaveLength(1);
@@ -73,22 +84,22 @@ describe('ConnectPlayerUseCase', () => {
 
     it('should throw an error if the game does not exist', async () => {
       // Arrange
-      const { connectPlayer, luisId } = await arrange();
+      const { connectPlayer } = await arrange();
 
       // Act & Assert
       await expect(
-        connectPlayer.execute({ gameId: 'TestUnknownGameId', playerId: luisId }),
+        connectPlayer.execute({ gameId: 'TestUnknownGameId', identity: 'TestLuisIdentity' }),
       ).rejects.toThrow(GameNotFoundError);
     });
 
-    it('should throw an error if the player is not in the game', async () => {
+    it('should throw an error if no player of the game has that identity', async () => {
       // Arrange
       const { connectPlayer, gameId } = await arrange();
 
       // Act & Assert
-      await expect(connectPlayer.execute({ gameId, playerId: 'TestStrangerId' })).rejects.toThrow(
-        PlayerNotInGameError,
-      );
+      await expect(
+        connectPlayer.execute({ gameId, identity: 'TestStrangerIdentity' }),
+      ).rejects.toThrow(IdentityNotInGameError);
     });
   });
 });

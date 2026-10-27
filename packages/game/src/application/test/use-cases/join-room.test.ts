@@ -13,16 +13,49 @@ describe('JoinRoomUseCase', () => {
       const idGenerator = new SequentialIdGenerator();
       const { roomId } = await new CreateRoomUseCase(roomRepository, idGenerator).execute({
         hostNickname: 'Ana',
+        hostIdentity: 'TestAnaIdentity',
       });
       const joinRoom = new JoinRoomUseCase(roomRepository, idGenerator);
 
       // Act
-      const { playerId } = await joinRoom.execute({ roomId, nickname: 'Luis' });
+      const { playerId } = await joinRoom.execute({
+        roomId,
+        nickname: 'Luis',
+        identity: 'TestLuisIdentity',
+      });
 
       // Assert
       const room = await roomRepository.findById(roomId);
       const player = room?.players.find((candidate) => candidate.id === playerId);
       expect(player?.nickname).toBe('Luis');
+    });
+
+    it('should return the same player when the same identity joins again', async () => {
+      // Arrange
+      const roomRepository = new InMemoryRoomRepository();
+      const idGenerator = new SequentialIdGenerator();
+      const { roomId } = await new CreateRoomUseCase(roomRepository, idGenerator).execute({
+        hostNickname: 'Ana',
+        hostIdentity: 'TestAnaIdentity',
+      });
+      const joinRoom = new JoinRoomUseCase(roomRepository, idGenerator);
+      const first = await joinRoom.execute({
+        roomId,
+        nickname: 'Luis',
+        identity: 'TestLuisIdentity',
+      });
+
+      // Act
+      const second = await joinRoom.execute({
+        roomId,
+        nickname: 'Luis',
+        identity: 'TestLuisIdentity',
+      });
+
+      // Assert
+      expect(second.playerId).toBe(first.playerId);
+      const room = await roomRepository.findById(roomId);
+      expect(room?.players).toHaveLength(2);
     });
 
     it('should throw an error if the room does not exist', async () => {
@@ -33,9 +66,13 @@ describe('JoinRoomUseCase', () => {
       );
 
       // Act & Assert
-      await expect(joinRoom.execute({ roomId: 'TestUnknownId', nickname: 'Luis' })).rejects.toThrow(
-        RoomNotFoundError,
-      );
+      await expect(
+        joinRoom.execute({
+          roomId: 'TestUnknownId',
+          nickname: 'Luis',
+          identity: 'TestLuisIdentity',
+        }),
+      ).rejects.toThrow(RoomNotFoundError);
     });
   });
 });

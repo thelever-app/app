@@ -16,9 +16,17 @@ export async function gameInDecisionPhase() {
   const { roomId, hostId: anaId } = await new CreateRoomUseCase(
     roomRepository,
     idGenerator,
-  ).execute({ hostNickname: 'Ana' });
-  const { playerId: luisId } = await joinRoom.execute({ roomId, nickname: 'Luis' });
-  const { playerId: martaId } = await joinRoom.execute({ roomId, nickname: 'Marta' });
+  ).execute({ hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' });
+  const { playerId: luisId } = await joinRoom.execute({
+    roomId,
+    nickname: 'Luis',
+    identity: 'TestLuisIdentity',
+  });
+  const { playerId: martaId } = await joinRoom.execute({
+    roomId,
+    nickname: 'Marta',
+    identity: 'TestMartaIdentity',
+  });
   const catalog = testCatalog();
   const { gameId } = await new StartDecisionPhaseUseCase(
     roomRepository,

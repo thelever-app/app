@@ -78,13 +78,16 @@ export const ConnectionChangedDto = z.strictObject({
 export const ErrorCodeDto = z.enum([
   'invalid-message',
   'unsupported-contract-version',
+  'not-connected',
   'invalid-token',
+  'room-not-found',
   'game-not-found',
   'player-not-in-game',
   'decision-phase-not-started',
   'dilemma-not-in-game',
   'dilemma-not-reached',
   'option-not-in-dilemma',
+  'dilemma-not-found',
 ]);
 
 /** The answer to a rejected message, on the same connection. */

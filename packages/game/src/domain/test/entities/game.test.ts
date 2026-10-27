@@ -22,8 +22,14 @@ const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId
 }));
 
 function gameInDecisionPhase(): { game: Game; ana: Player; luis: Player } {
-  const ana = Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId'));
-  const luis = Player.create({ nickname: 'Luis' }, new FixedIdGenerator('TestLuisId'));
+  const ana = Player.create(
+    { nickname: 'Ana', identity: 'TestAnaIdentity' },
+    new FixedIdGenerator('TestAnaId'),
+  );
+  const luis = Player.create(
+    { nickname: 'Luis', identity: 'TestLuisIdentity' },
+    new FixedIdGenerator('TestLuisId'),
+  );
   const game = Game.create(
     { roomId: 'TestRoomId', dilemmas: DILEMMAS },
     new FixedIdGenerator('TestId'),
@@ -111,7 +117,10 @@ describe('Game', () => {
 
       // Act
       game.startDecisionPhase([
-        Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId')),
+        Player.create(
+          { nickname: 'Ana', identity: 'TestAnaIdentity' },
+          new FixedIdGenerator('TestAnaId'),
+        ),
       ]);
 
       // Assert
@@ -124,7 +133,10 @@ describe('Game', () => {
         { roomId: 'TestRoomId', dilemmas: DILEMMAS },
         new FixedIdGenerator('TestId'),
       );
-      const ana = Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId'));
+      const ana = Player.create(
+        { nickname: 'Ana', identity: 'TestAnaIdentity' },
+        new FixedIdGenerator('TestAnaId'),
+      );
 
       // Act
       game.startDecisionPhase([ana]);
@@ -375,7 +387,10 @@ describe('Game', () => {
 
       // Act
       game.startDecisionPhase([
-        Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId')),
+        Player.create(
+          { nickname: 'Ana', identity: 'TestAnaIdentity' },
+          new FixedIdGenerator('TestAnaId'),
+        ),
       ]);
 
       // Assert

@@ -1,6 +1,6 @@
 import type { RoomConnection } from './room-connection.ts';
 
-/** In development, a simulated room in the browser; the room server arrives with TSK-24. */
+/** In development, a simulated room in the browser; the screen is not connected to the room server yet. */
 export async function connectRoom(): Promise<RoomConnection> {
   if (import.meta.env.DEV) {
     const [{ SimulatedRoomConnection }, { DEMO_ROOM }] = await Promise.all([
@@ -9,5 +9,5 @@ export async function connectRoom(): Promise<RoomConnection> {
     ]);
     return SimulatedRoomConnection.open(DEMO_ROOM);
   }
-  throw new Error('The room server arrives with TSK-24');
+  throw new Error('The screen is not connected to the room server yet');
 }

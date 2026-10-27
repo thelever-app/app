@@ -4,6 +4,8 @@ import type { RoomRepository } from '../ports/room-repository.port.ts';
 
 export interface CreateRoomInput {
   readonly hostNickname: string;
+  /** Who creates the room, from their verified token. */
+  readonly hostIdentity: string;
 }
 
 export interface CreateRoomOutput {
@@ -21,8 +23,8 @@ export class CreateRoomUseCase {
     this.#idGenerator = idGenerator;
   }
 
-  async execute({ hostNickname }: CreateRoomInput): Promise<CreateRoomOutput> {
-    const room = Room.create({ hostNickname }, this.#idGenerator);
+  async execute({ hostNickname, hostIdentity }: CreateRoomInput): Promise<CreateRoomOutput> {
+    const room = Room.create({ hostNickname, hostIdentity }, this.#idGenerator);
 
     await this.#roomRepository.save(room);
 

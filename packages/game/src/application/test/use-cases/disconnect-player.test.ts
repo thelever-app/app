@@ -23,7 +23,7 @@ async function arrange() {
   );
   const { connectionId } = await connectPlayer.execute({
     gameId: game.gameId,
-    playerId: game.luisId,
+    identity: 'TestLuisIdentity',
   });
   return { ...game, notifier, connectPlayer, disconnectPlayer, connectionId };
 }
@@ -70,7 +70,7 @@ describe('DisconnectPlayerUseCase', () => {
         luisId,
         connectionId,
       } = await arrange();
-      await connectPlayer.execute({ gameId, playerId: luisId });
+      await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
 
       // Act
       await disconnectPlayer.execute({ gameId, playerId: luisId, connectionId });

@@ -39,6 +39,7 @@ export type { DilemmaCatalog, DilemmaContent } from './application/ports/dilemma
 export { RoomNotFoundError } from './application/errors/room-not-found.error.ts';
 export { GameNotFoundError } from './application/errors/game-not-found.error.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
+export { IdentityNotInGameError } from './application/errors/identity-not-in-game.error.ts';
 export {
   CreateRoomUseCase,
   type CreateRoomInput,

@@ -1,5 +1,5 @@
 // The acceptance profile runs every scenario not tagged @todo against the application layer (ADR 0001).
-// The e2e profile, with Playwright against the real system, arrives with the room server in TSK-24.
+// The e2e profile, with Playwright against the real system, is not set up yet.
 
 export default {};
 

@@ -50,7 +50,10 @@ describe('InMemoryGameRepository', () => {
 
       // Act
       game.startDecisionPhase([
-        Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId')),
+        Player.create(
+          { nickname: 'Ana', identity: 'TestAnaIdentity' },
+          new FixedIdGenerator('TestAnaId'),
+        ),
       ]);
 
       // Assert

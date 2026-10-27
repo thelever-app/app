@@ -18,7 +18,7 @@ import {
 } from '@thelever-app/game/in-memory';
 import type { GameDriver } from './driver.ts';
 
-/** Test data: enough dilemmas for any scenario of CU-04 that counts answers. */
+/** Test data: enough dilemmas for any scenario of the decision phase that counts answers. */
 const DILEMMA_IDS = ['dilemma-1', 'dilemma-2', 'dilemma-3', 'dilemma-4', 'dilemma-5', 'dilemma-6'];
 /** Test data: the vote the driver casts when a step does not say which one. */
 const VOTE = 'option-1';
@@ -35,6 +35,11 @@ const CATALOG = new InMemoryDilemmaCatalog(
     ],
   })),
 );
+
+/** Test data: each player of a scenario uses the app with an identity of their own. */
+function identityOf(nickname: string): string {
+  return `identity-of-${nickname}`;
+}
 
 /**
  * Drives the application layer of the Game context with in-memory adapters.
@@ -100,12 +105,19 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async hostRoom(host: string, players: string[]): Promise<void> {
-    const { roomId, hostId } = await this.#createRoom.execute({ hostNickname: host });
+    const { roomId, hostId } = await this.#createRoom.execute({
+      hostNickname: host,
+      hostIdentity: identityOf(host),
+    });
     this.#roomId = roomId;
     this.#playerIds.set(host, hostId);
 
     for (const nickname of players) {
-      const { playerId } = await this.#joinRoom.execute({ roomId, nickname });
+      const { playerId } = await this.#joinRoom.execute({
+        roomId,
+        nickname,
+        identity: identityOf(nickname),
+      });
       this.#playerIds.set(nickname, playerId);
     }
   }
@@ -173,7 +185,7 @@ export class AcceptanceDriver implements GameDriver {
   async reconnect(player: string): Promise<void> {
     const { connectionId } = await this.#connectPlayer.execute({
       gameId: this.#currentGameId(),
-      playerId: this.#playerIdOf(player),
+      identity: identityOf(player),
     });
     this.#connectionIds.set(player, connectionId);
   }

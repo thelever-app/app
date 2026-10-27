@@ -20,3 +20,7 @@ export {
   ConnectDto,
   LanguageDto,
 } from './client-messages.ts';
+export { CreateRoomRequestDto, CreateRoomResponseDto } from './http/create-room.ts';
+export { JoinRoomRequestDto, JoinRoomResponseDto } from './http/join-room.ts';
+export { StartGameRequestDto, StartGameResponseDto } from './http/start-game.ts';
+export { HttpErrorDto } from './http/http-error.ts';

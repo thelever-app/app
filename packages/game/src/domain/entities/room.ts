@@ -34,11 +34,14 @@ export class Room {
 
   /** The room is born with its host, who is its first player. */
   static create(
-    { hostNickname }: { readonly hostNickname: string },
+    {
+      hostNickname,
+      hostIdentity,
+    }: { readonly hostNickname: string; readonly hostIdentity: string },
     idGenerator: IdGenerator,
   ): Room {
     const id = idGenerator.generate();
-    const host = Player.create({ nickname: hostNickname }, idGenerator);
+    const host = Player.create({ nickname: hostNickname, identity: hostIdentity }, idGenerator);
     return new Room(id, host, [host]);
   }
 
@@ -58,11 +61,21 @@ export class Room {
     return this.#version;
   }
 
+  /** A player already in the room, by id or by identity, is not added again. */
   addPlayer(player: Player): void {
-    if (this.#players.some((existing) => existing.id === player.id)) {
+    if (
+      this.#players.some(
+        (existing) => existing.id === player.id || existing.identity === player.identity,
+      )
+    ) {
       return;
     }
     this.#players.push(player);
+  }
+
+  /** The player of the room behind that identity, if any. */
+  playerWith(identity: string): Player | undefined {
+    return this.#players.find((player) => player.identity === identity);
   }
 
   /** The player opens a connection. A new one replaces the one they had, which is closing or lost. */

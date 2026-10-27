@@ -3,12 +3,12 @@ import { z } from 'zod';
 /** The version of this contract. Client and server agree on it once, when the connection opens. */
 export const CONTRACT_VERSION = 1;
 
-/** The languages a player can read the dilemmas in (DEC-56). */
+/** The languages a player can read the dilemmas in. */
 export const LanguageDto = z.enum(['es', 'en', 'fr', 'de', 'it', 'pt', 'ca']);
 
 /**
  * The first message on every connection, and again after each reconnection.
- * Nothing travels in the URL, so the token never ends up in the request logs (RES-70).
+ * Nothing travels in the URL, so the token never ends up in the request logs.
  */
 export const ConnectDto = z.strictObject({
   type: z.literal('connect'),
