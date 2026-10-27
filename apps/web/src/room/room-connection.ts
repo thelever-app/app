@@ -14,5 +14,7 @@ export interface RoomConnection {
   subscribe(listener: ServerMessageListener): () => void;
   /** Tells the listener the current status at once and every change after it; returns the function that unsubscribes it. */
   subscribeStatus(listener: RoomConnectionStatusListener): () => void;
+  /** The current status, read without side effects. */
+  getStatus(): RoomConnectionStatus;
   close(): void;
 }

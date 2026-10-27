@@ -151,6 +151,21 @@ describe('useRoom', () => {
     expect(result.current.rejection).toBeUndefined();
   });
 
+  it('should share how the link to the room is doing, and every change of it', () => {
+    // Arrange
+    const fake = fakeConnection('connecting');
+    const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(fake.connection) });
+    act(() => fake.deliver(GAME_STATE));
+    const first = result.current.status;
+
+    // Act
+    act(() => fake.changeStatus('reconnecting'));
+
+    // Assert
+    expect(first).toBe('connecting');
+    expect(result.current.status).toBe('reconnecting');
+  });
+
   it('should subscribe once, however many times it renders', () => {
     // Arrange
     const fake = fakeConnection();

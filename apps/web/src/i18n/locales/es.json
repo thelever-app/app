@@ -13,7 +13,8 @@
     "done_other": "Han terminado · {{count, number}}",
     "progressOf": "Progreso de {{name}}",
     "progressCount": "{{progress, number}}/{{total, number}}",
-    "finished": "ha terminado"
+    "finished": "ha terminado",
+    "disconnected": "desconectado"
   },
   "progressStrip": {
     "position": "Dilema {{position, number}} de {{total, number}}",
@@ -39,5 +40,10 @@
     "title": "Esperando a los demás",
     "subtitle": "Cuando terminen todos, llega el reveal. Mientras tanto, puedes repasar o cambiar tus respuestas.",
     "review": "Repasar mis respuestas"
+  },
+  "notices": {
+    "reconnecting": "Reconectando… tus respuestas están guardadas",
+    "answerNotSaved": "No se ha guardado tu última respuesta. Elígela otra vez.",
+    "dismiss": "Cerrar aviso"
   }
 }

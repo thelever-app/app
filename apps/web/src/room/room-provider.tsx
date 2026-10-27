@@ -6,13 +6,16 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import type { RoomConnection } from './room-connection.ts';
+import type { RoomConnection, RoomConnectionStatus } from './room-connection.ts';
 import { INITIAL_ROOM_STATE, roomReducer } from './room-reducer.ts';
 
 interface Room {
   readonly game: GameStateDto;
+  /** How the link to the room is doing, as the browser sees it. */
+  readonly status: RoomConnectionStatus;
   /** The last message the server rejected, until the next state or until the player dismisses it. */
   readonly rejection: ErrorDto | undefined;
   readonly answerDilemma: (dilemmaId: string, vote: string) => void;
@@ -34,6 +37,14 @@ export function RoomProvider({ connection, fallback, children }: RoomProviderPro
 
   useEffect(() => connection.subscribe(dispatch), [connection]);
 
+  // The status lives in the connection, not in React: React reads it as it renders, so it is never stale.
+  const subscribeStatus = useCallback(
+    (onChange: () => void) => connection.subscribeStatus(onChange),
+    [connection],
+  );
+  const getStatus = useCallback(() => connection.getStatus(), [connection]);
+  const status = useSyncExternalStore(subscribeStatus, getStatus);
+
   const answerDilemma = useCallback(
     (dilemmaId: string, vote: string) => {
       connection.send({ type: 'answer-dilemma', dilemmaId, vote });
@@ -46,8 +57,8 @@ export function RoomProvider({ connection, fallback, children }: RoomProviderPro
   }, []);
 
   const room = useMemo(
-    () => game && { game, rejection, answerDilemma, dismissRejection },
-    [game, rejection, answerDilemma, dismissRejection],
+    () => game && { game, status, rejection, answerDilemma, dismissRejection },
+    [game, status, rejection, answerDilemma, dismissRejection],
   );
 
   if (!room) return fallback;

@@ -28,6 +28,7 @@ import {
 import { ClientMessageDto, ServerMessageDto } from '@thelever-app/protocol';
 import type {
   RoomConnection,
+  RoomConnectionStatus,
   RoomConnectionStatusListener,
   ServerMessageListener,
 } from './room-connection.ts';
@@ -201,6 +202,10 @@ export class SimulatedRoomConnection implements RoomConnection {
   subscribeStatus(listener: RoomConnectionStatusListener): () => void {
     listener('connected');
     return () => {};
+  }
+
+  getStatus(): RoomConnectionStatus {
+    return 'connected';
   }
 
   close(): void {

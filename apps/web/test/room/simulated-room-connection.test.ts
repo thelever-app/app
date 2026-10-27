@@ -95,6 +95,7 @@ describe('SimulatedRoomConnection', () => {
 
       // Assert
       expect(statuses).toEqual(['connected']);
+      expect(opened.connection.getStatus()).toBe('connected');
     });
 
     it('should stop sending messages to a listener after it unsubscribes', async () => {

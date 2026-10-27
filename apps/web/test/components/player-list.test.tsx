@@ -34,6 +34,22 @@ describe('PlayerList', () => {
     ]);
   });
 
+  it('should say who has not finished and is disconnected, after their name', async () => {
+    // Arrange
+    const players = PLAYERS.map((player) =>
+      player.nickname === 'Marta' ? { ...player, connected: false } : player,
+    );
+
+    // Act
+    const { t } = await renderList(players);
+
+    // Assert
+    const pending = screen.getByRole('region', { name: t('playerList.pending', { count: 2 }) });
+    const [marta, ana] = within(pending).getAllByRole('listitem');
+    expect(marta?.textContent).toContain(`Marta · ${t('playerList.disconnected')}`);
+    expect(ana?.textContent).not.toContain(t('playerList.disconnected'));
+  });
+
   it('should show the progress of each one as a bar', async () => {
     // Act
     const { t } = await renderList();

@@ -92,6 +92,10 @@ export class WebSocketRoomConnection implements RoomConnection {
     };
   }
 
+  getStatus(): RoomConnectionStatus {
+    return this.#status;
+  }
+
   close(): void {
     this.#closed = true;
     this.#cancelWait?.();

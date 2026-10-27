@@ -90,6 +90,20 @@ describe('WebSocketRoomConnection', () => {
       ]);
     });
 
+    it('should tell its current status when asked, without waiting for a change', async () => {
+      // Arrange
+      const { connection, current } = open();
+      const beforeState = connection.getStatus();
+      await accept(current());
+
+      // Act
+      current().receive(GAME_STATE);
+
+      // Assert
+      expect(beforeState).toBe('connecting');
+      expect(connection.getStatus()).toBe('connected');
+    });
+
     it('should be connecting until the first game state arrives, then connected', async () => {
       // Arrange
       const { current, statuses } = open();
