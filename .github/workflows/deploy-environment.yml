@@ -1,0 +1,74 @@
+name: Deploy to an environment
+
+# The same steps for dev and for prod: only the environment changes, and with it the project,
+# the deployer that may act there and, for prod, Mario's approval before the job starts.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: dev or prod
+        required: true
+        type: string
+      image:
+        description: The image of the room server, by digest
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+    env:
+      PROJECT: thelever-app-${{ inputs.environment }}
+      WORKLOAD_IDENTITY_PROVIDER: projects/236232367578/locations/global/workloadIdentityPools/github/providers/thelever-app-app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Sign in to Google Cloud as the deployer of the environment
+        env:
+          SERVICE_ACCOUNT: deployer@${{ env.PROJECT }}.iam.gserviceaccount.com
+        run: .github/scripts/gcp-auth.sh
+
+      # Until rooms live in PostgreSQL, one instance holds every room: two would split the players.
+      - name: Deploy the room server
+        env:
+          IMAGE: ${{ inputs.image }}
+        run: |
+          gcloud run deploy realtime --project "$PROJECT" --region europe-southwest1 \
+            --image "$IMAGE" \
+            --service-account "realtime@$PROJECT.iam.gserviceaccount.com" \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT" \
+            --timeout 3600 --session-affinity --min-instances 0 --max-instances 1 \
+            --quiet
+
+      - name: Check the room server answers
+        run: |
+          url=$(gcloud run services describe realtime --project "$PROJECT" --region europe-southwest1 --format 'value(status.url)')
+          curl --silent --show-error --fail --retry 5 --retry-all-errors "$url/health"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web
+          path: apps/web/dist
+
+      - name: Put the config of the environment next to the web
+        run: cp "apps/web/config/${{ inputs.environment }}.json" apps/web/dist/config.json
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Publish the web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec firebase deploy --only hosting --project "$PROJECT" --non-interactive

@@ -1,17 +1,18 @@
 name: CI
 
+# On main the checks run inside the deployment, which calls this workflow before building anything:
+# the same checks guard a pull request and a deployment.
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
 
-# A new push to the same PR cancels the run that is still going.
+# A new push to the same PR, or to main, cancels the checks that are still going.
 concurrency:
-  group: ci-${{ github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-checks-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
