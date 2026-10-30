@@ -1,0 +1,31 @@
+name: Deploy to prod
+
+# Promotes to prod what a run of Deploy built and deployed to dev, once Mario approves the prod
+# environment. Apart from Deploy, so a commit waiting for that approval never holds back dev.
+on:
+  workflow_run:
+    workflows: [Deploy]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+# One commit waits for approval at a time; a newer one waits behind it and replaces any commit
+# that was already waiting there, so after deciding on the first, the latest is the one offered.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  prod:
+    if: github.event.workflow_run.conclusion == 'success'
+    uses: ./.github/workflows/deploy-environment.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    with:
+      environment: prod
+      commit: ${{ github.event.workflow_run.head_sha }}
+      run-id: ${{ github.event.workflow_run.id }}

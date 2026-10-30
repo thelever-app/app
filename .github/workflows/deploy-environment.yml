@@ -1,7 +1,8 @@
 name: Deploy to an environment
 
 # The same steps for dev and for prod: only the environment changes, and with it the project,
-# the deployer that may act there and, for prod, Mario's approval before the job starts.
+# the deployer that may act there and, for prod, Mario's approval before the job starts. Both
+# deploy what one run of Deploy built: its commit, its image and its web.
 on:
   workflow_call:
     inputs:
@@ -9,12 +10,17 @@ on:
         description: dev or prod
         required: true
         type: string
-      image:
-        description: The image of the room server, by digest
+      commit:
+        description: The commit that run of Deploy built
+        required: true
+        type: string
+      run-id:
+        description: The run of Deploy that built the image and the web
         required: true
         type: string
 
 permissions:
+  actions: read
   contents: read
   id-token: write
 
@@ -29,7 +35,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.commit }}
           persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: image
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ github.token }}
 
       - name: Sign in to Google Cloud as the deployer of the environment
         env:
@@ -38,11 +51,9 @@ jobs:
 
       # Until rooms live in PostgreSQL, one instance holds every room: two would split the players.
       - name: Deploy the room server
-        env:
-          IMAGE: ${{ inputs.image }}
         run: |
           gcloud run deploy realtime --project "$PROJECT" --region europe-southwest1 \
-            --image "$IMAGE" \
+            --image "$(cat image.txt)" \
             --service-account "realtime@$PROJECT.iam.gserviceaccount.com" \
             --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT" \
             --timeout 3600 --session-affinity --min-instances 0 --max-instances 1 \
@@ -57,6 +68,8 @@ jobs:
         with:
           name: web
           path: apps/web/dist
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ github.token }}
 
       - name: Put the config of the environment next to the web
         run: cp "apps/web/config/${{ inputs.environment }}.json" apps/web/dist/config.json

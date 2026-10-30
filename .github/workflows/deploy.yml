@@ -1,7 +1,7 @@
 name: Deploy
 
-# Trunk-based delivery (ADR 0003): every push to main is checked, built once, deployed to dev and,
-# after Mario approves the prod environment, the same image and the same web are promoted to prod.
+# Trunk-based delivery (ADR 0003): every push to main is checked, built once and deployed to dev.
+# Deploy to prod then promotes the same image and the same web, after Mario approves the prod environment.
 on:
   push:
     branches: [main]
@@ -9,9 +9,9 @@ on:
 permissions:
   contents: read
 
-# Deployments go one after another, never two at once against the same environments.
+# Pushes reach dev one after another and in order: an older commit never overwrites a newer one.
 concurrency:
-  group: deploy
+  group: deploy-dev
   cancel-in-progress: false
 
 env:
@@ -28,8 +28,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    outputs:
-      image: ${{ steps.image.outputs.image }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -47,11 +45,18 @@ jobs:
             --gcs-source-staging-dir gs://thelever-app-shared-build-sources/source .
 
       - name: Pin the image by its digest
-        id: image
         run: |
           name="europe-southwest1-docker.pkg.dev/thelever-app-shared/thelever-app/realtime"
           digest=$(gcloud artifacts docker images describe "$name:$GITHUB_SHA" --format 'value(image_summary.digest)')
-          echo "image=$name@$digest" >>"$GITHUB_OUTPUT"
+          echo "$name@$digest" >image.txt
+
+      # The image and the web are kept as long as an approval of prod can wait, so prod promotes them as they are.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image
+          path: image.txt
+          if-no-files-found: error
+          retention-days: 30
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -70,24 +75,16 @@ jobs:
           name: web
           path: apps/web/dist
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
   dev:
     needs: build
     uses: ./.github/workflows/deploy-environment.yml
     permissions:
+      actions: read
       contents: read
       id-token: write
     with:
       environment: dev
-      image: ${{ needs.build.outputs.image }}
-
-  prod:
-    needs: [build, dev]
-    uses: ./.github/workflows/deploy-environment.yml
-    permissions:
-      contents: read
-      id-token: write
-    with:
-      environment: prod
-      image: ${{ needs.build.outputs.image }}
+      commit: ${{ github.sha }}
+      run-id: ${{ github.run_id }}
