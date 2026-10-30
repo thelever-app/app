@@ -4,8 +4,8 @@ import type { WebConfig } from '../config/web-config.ts';
 
 /** Who uses the screen, as the room server will check it. */
 export interface PlayerIdentity {
-  /** A token the server accepts: Firebase renews it when it is about to expire. */
-  getToken(): Promise<string>;
+  /** A token the server accepts: Firebase renews it when it is about to expire, or at once with `forceRefresh`. */
+  getToken(forceRefresh: boolean): Promise<string>;
 }
 
 /**
@@ -21,5 +21,5 @@ export async function signInAnonymousPlayer({
 
   await auth.authStateReady();
   const user = auth.currentUser ?? (await signInAnonymously(auth)).user;
-  return { getToken: () => user.getIdToken() };
+  return { getToken: (forceRefresh) => user.getIdToken(forceRefresh) };
 }

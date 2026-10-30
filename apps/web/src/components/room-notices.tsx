@@ -7,6 +7,8 @@ export function RoomNotices() {
   const { status, rejection, dismissRejection } = useRoom();
 
   if (status === 'reconnecting') return <ReconnectingBar />;
-  if (rejection) return <AnswerNotSaved onDismiss={dismissRejection} />;
+  if (rejection?.command === 'answer-dilemma') {
+    return <AnswerNotSaved onDismiss={dismissRejection} />;
+  }
   return null;
 }

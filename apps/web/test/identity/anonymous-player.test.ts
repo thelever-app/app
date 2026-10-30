@@ -4,8 +4,11 @@ import { signInAnonymousPlayer } from '../../src/identity/anonymous-player.ts';
 
 /** The Firebase SDK, as the test drives it: a browser that may already keep a session. */
 const firebase = vi.hoisted(() => ({
-  keptUser: undefined as { getIdToken: () => Promise<string> } | undefined,
-  newUser: { getIdToken: async () => 'token-of-new-user' },
+  keptUser: undefined as { getIdToken: (forceRefresh?: boolean) => Promise<string> } | undefined,
+  newUser: {
+    getIdToken: async (forceRefresh?: boolean) =>
+      forceRefresh ? 'fresh-token-of-new-user' : 'token-of-new-user',
+  },
   signInAnonymously: vi.fn(),
   connectAuthEmulator: vi.fn(),
   initializeApp: vi.fn(),
@@ -47,7 +50,18 @@ describe('signInAnonymousPlayer', () => {
     // Assert
     expect(firebase.initializeApp).toHaveBeenCalledWith(CONFIG.firebase);
     expect(firebase.signInAnonymously).toHaveBeenCalledOnce();
-    expect(await player.getToken()).toBe('token-of-new-user');
+    expect(await player.getToken(false)).toBe('token-of-new-user');
+  });
+
+  it('should ask Firebase for a new token when asked to refresh it', async () => {
+    // Arrange
+    const player = await signInAnonymousPlayer(CONFIG);
+
+    // Act
+    const token = await player.getToken(true);
+
+    // Assert
+    expect(token).toBe('fresh-token-of-new-user');
   });
 
   it('should keep the session the browser already had, so the player stays the same', async () => {
@@ -59,7 +73,7 @@ describe('signInAnonymousPlayer', () => {
 
     // Assert
     expect(firebase.signInAnonymously).not.toHaveBeenCalled();
-    expect(await player.getToken()).toBe('token-of-kept-user');
+    expect(await player.getToken(false)).toBe('token-of-kept-user');
   });
 
   it('should sign in against the Auth emulator only when the config names one', async () => {

@@ -8,6 +8,7 @@ import {
 } from '@thelever-app/protocol';
 import WebSocket from 'ws';
 import { composeRealtimeServer } from '../../composition.ts';
+import type { TokenVerifier } from '../../identity/token-verifier.ts';
 import { FakeTokenVerifier, tokenOf } from './fake-token-verifier.ts';
 
 /** The HTTP server of the room server, as the composition root builds it but with the fake token verifier. */
@@ -25,17 +26,19 @@ export function bearer(identity: string): string {
 }
 
 /** The room server, as the composition root builds it but with the fake token verifier, on a free port. */
-export async function startRoomServer({ pingIntervalMs = 30_000 } = {}) {
-  const { http: server, sockets } = await composeRealtimeServer({
-    tokenVerifier: new FakeTokenVerifier(),
-    pingIntervalMs,
-  });
+export async function startRoomServer({
+  pingIntervalMs = 30_000,
+  tokenVerifier = new FakeTokenVerifier() as TokenVerifier,
+} = {}) {
+  const { http: server, sockets } = await composeRealtimeServer({ tokenVerifier, pingIntervalMs });
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;
 
   return {
     url: `ws://localhost:${port}`,
     http: `http://localhost:${port}`,
+    /** How many sockets the server still has open: a socket leaves as soon as the server handles its close. */
+    openSockets: () => sockets.clients.size,
     async stop() {
       for (const client of sockets.clients) client.terminate();
       await new Promise((resolve) => sockets.close(resolve));

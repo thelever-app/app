@@ -195,14 +195,14 @@ describe('Room', () => {
       ]);
     });
 
-    it('should replace the connection of a player who is already connected, without any event', () => {
+    it('should keep a player who is already connected connected through another connection, without any event', () => {
       // Arrange
       const room = roomHostedByAna();
-      room.connect('TestHostId', 'TestOldConnectionId');
+      room.connect('TestHostId', 'TestFirstConnectionId');
       room.pullEvents();
 
       // Act
-      room.connect('TestHostId', 'TestNewConnectionId');
+      room.connect('TestHostId', 'TestSecondConnectionId');
 
       // Assert
       expect(room.isConnected('TestHostId')).toBe(true);
@@ -256,7 +256,7 @@ describe('Room', () => {
       ]);
     });
 
-    it('should ignore the late close of a connection the player already replaced', () => {
+    it('should ignore the late close of a connection the player already reopened', () => {
       // Arrange
       const room = roomHostedByAna();
       room.connect('TestHostId', 'TestOldConnectionId');
@@ -265,6 +265,56 @@ describe('Room', () => {
 
       // Act
       room.disconnect('TestHostId', 'TestOldConnectionId');
+
+      // Assert
+      expect(room.isConnected('TestHostId')).toBe(true);
+      expect(room.version).toBe(1);
+      expect(room.pullEvents()).toEqual([]);
+    });
+
+    it('should keep the player connected while an older connection is still open', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.connect('TestHostId', 'TestFirstConnectionId');
+      room.connect('TestHostId', 'TestSecondConnectionId');
+      room.pullEvents();
+
+      // Act
+      room.disconnect('TestHostId', 'TestSecondConnectionId');
+
+      // Assert
+      expect(room.isConnected('TestHostId')).toBe(true);
+      expect(room.version).toBe(1);
+      expect(room.pullEvents()).toEqual([]);
+    });
+
+    it('should disconnect the player when their last open connection closes', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.connect('TestHostId', 'TestFirstConnectionId');
+      room.connect('TestHostId', 'TestSecondConnectionId');
+      room.disconnect('TestHostId', 'TestSecondConnectionId');
+      room.pullEvents();
+
+      // Act
+      room.disconnect('TestHostId', 'TestFirstConnectionId');
+
+      // Assert
+      expect(room.isConnected('TestHostId')).toBe(false);
+      expect(room.version).toBe(2);
+      expect(room.pullEvents()).toEqual([
+        new ConnectionChangedEvent('TestId', 'TestHostId', false, 2),
+      ]);
+    });
+
+    it('should ignore a connection of the player that is not open', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.connect('TestHostId', 'TestConnectionId');
+      room.pullEvents();
+
+      // Act
+      room.disconnect('TestHostId', 'TestUnknownConnectionId');
 
       // Assert
       expect(room.isConnected('TestHostId')).toBe(true);
@@ -310,11 +360,12 @@ describe('Room', () => {
   });
 
   describe('toSnapshot', () => {
-    it('should include the version and the open connection of each connected player', () => {
+    it('should include the version and every open connection of each connected player', () => {
       // Arrange
       const room = roomHostedByAna();
       room.addPlayer(player('TestLuisId', 'Luis'));
-      room.connect('TestLuisId', 'TestConnectionId');
+      room.connect('TestLuisId', 'TestFirstConnectionId');
+      room.connect('TestLuisId', 'TestSecondConnectionId');
 
       // Act
       const snapshot = room.toSnapshot();
@@ -322,7 +373,8 @@ describe('Room', () => {
       // Assert
       expect(snapshot.version).toBe(1);
       expect(snapshot.connections).toEqual([
-        { playerId: 'TestLuisId', connectionId: 'TestConnectionId' },
+        { playerId: 'TestLuisId', connectionId: 'TestFirstConnectionId' },
+        { playerId: 'TestLuisId', connectionId: 'TestSecondConnectionId' },
       ]);
     });
 
@@ -365,15 +417,15 @@ describe('Room', () => {
       expect(restored.pullEvents()).toEqual([]);
     });
 
-    it('should still ignore the late close of a replaced connection after being restored', () => {
+    it('should keep every open connection of a player after being restored', () => {
       // Arrange
       const room = roomHostedByAna();
-      room.connect('TestHostId', 'TestOldConnectionId');
-      room.connect('TestHostId', 'TestNewConnectionId');
+      room.connect('TestHostId', 'TestFirstConnectionId');
+      room.connect('TestHostId', 'TestSecondConnectionId');
       const restored = Room.restore(room.toSnapshot());
 
       // Act
-      restored.disconnect('TestHostId', 'TestOldConnectionId');
+      restored.disconnect('TestHostId', 'TestSecondConnectionId');
 
       // Assert
       expect(restored.isConnected('TestHostId')).toBe(true);

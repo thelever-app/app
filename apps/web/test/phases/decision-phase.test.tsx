@@ -88,4 +88,76 @@ describe('DecisionPhase', () => {
     expect(screen.getByRole('heading', { name: t('waiting.title') })).toBeDefined();
     expect(connection.send).not.toHaveBeenCalled();
   });
+
+  describe('when the room rejects an answer', () => {
+    /** Ana picks that option of the dilemma on screen and goes on with the button of that label. */
+    function answer(option: string, continueLabel: string) {
+      fireEvent.click(screen.getByRole('radio', { name: option }));
+      fireEvent.click(screen.getByRole('button', { name: continueLabel }));
+    }
+
+    it('should show again the first dilemma the player has not answered', async () => {
+      // Arrange
+      const { deliver, t } = await renderPhase();
+      act(() => deliver(aGame()));
+      answer('Opción 1A', t('dilemma.continue'));
+
+      // Act
+      act(() => deliver({ type: 'error', command: 'answer-dilemma', code: 'dilemma-not-reached' }));
+
+      // Assert
+      expect(screen.getByRole('heading', { name: 'Texto del dilema 1' })).toBeDefined();
+    });
+
+    it('should let the player send the last answer again', async () => {
+      // Arrange
+      const { connection, deliver, t } = await renderPhase();
+      act(() =>
+        deliver(
+          aGame({
+            answers: [1, 2].map((n) => ({
+              dilemmaId: `test-dilemma-${n}`,
+              vote: `test-option-${n}a`,
+            })),
+          }),
+        ),
+      );
+      answer('Opción 3A', t('dilemma.continue'));
+
+      // Act
+      act(() =>
+        deliver({ type: 'error', command: 'answer-dilemma', code: 'option-not-in-dilemma' }),
+      );
+      answer('Opción 3B', t('dilemma.continue'));
+
+      // Assert
+      expect(connection.send).toHaveBeenLastCalledWith({
+        type: 'answer-dilemma',
+        dilemmaId: 'test-dilemma-3',
+        vote: 'test-option-3b',
+      });
+    });
+
+    it('should not move the player once the room saves the answer sent again', async () => {
+      // Arrange
+      const { deliver, t } = await renderPhase();
+      act(() => deliver(aGame()));
+      answer('Opción 1A', t('dilemma.continue'));
+      act(() => deliver({ type: 'error', command: 'answer-dilemma', code: 'dilemma-not-reached' }));
+      answer('Opción 1A', t('dilemma.continue'));
+
+      // Act
+      act(() =>
+        deliver(
+          aGame({
+            gameVersion: 2,
+            answers: [{ dilemmaId: 'test-dilemma-1', vote: 'test-option-1a' }],
+          }),
+        ),
+      );
+
+      // Assert
+      expect(screen.getByRole('heading', { name: 'Texto del dilema 2' })).toBeDefined();
+    });
+  });
 });

@@ -2,6 +2,7 @@ import {
   CONTRACT_VERSION,
   ServerMessageDto,
   type ClientMessageDto,
+  type ErrorDto,
   type LanguageDto,
 } from '@thelever-app/protocol';
 import type {
@@ -28,8 +29,11 @@ export interface WebSocketRoomOptions {
   readonly gameId: string;
   /** The language the player reads the dilemmas in. */
   readonly language: LanguageDto;
-  /** The token of the player, asked for on every connection because it expires. */
-  readonly getToken: () => Promise<string>;
+  /**
+   * The token of the player, asked for on every connection because it expires; with
+   * `forceRefresh`, a new one even if the one it has has not expired yet.
+   */
+  readonly getToken: (forceRefresh: boolean) => Promise<string>;
   readonly createSocket: (url: string) => WebSocketLike;
   readonly schedule: Schedule;
   /** A number in [0, 1), for the random part of each wait. */
@@ -45,6 +49,8 @@ const LONGEST_WAIT_MS = 10_000;
  * The screen's link to the room server. It opens a socket, says who connects with `connect`, and
  * hands every message of the server to the screen. When the socket drops for any reason, the
  * server's hourly cut too, it waits and connects again; the server answers with a fresh state.
+ * If the server rejects the token, it tries once more with a fresh one; if it rejects anything
+ * else, or the fresh token too, it gives up for good.
  */
 export class WebSocketRoomConnection implements RoomConnection {
   readonly #options: WebSocketRoomOptions;
@@ -57,6 +63,8 @@ export class WebSocketRoomConnection implements RoomConnection {
   #failedAttempts = 0;
   #cancelWait: (() => void) | undefined;
   #closed = false;
+  /** Whether the token of this attempt to connect was already a fresh one. */
+  #triedFreshToken = false;
 
   private constructor(options: WebSocketRoomOptions) {
     this.#options = options;
@@ -108,14 +116,14 @@ export class WebSocketRoomConnection implements RoomConnection {
     const socket = this.#options.createSocket(this.#options.url);
     this.#socket = socket;
     socket.addEventListener('open', () => {
-      this.#sayWhoConnects(socket).catch(() => socket.close());
+      this.#sayWhoConnects(socket, false).catch(() => socket.close());
     });
     socket.addEventListener('message', ({ data }) => this.#receive(data));
     socket.addEventListener('close', () => this.#onDrop(socket));
   }
 
-  async #sayWhoConnects(socket: WebSocketLike): Promise<void> {
-    const token = await this.#options.getToken();
+  async #sayWhoConnects(socket: WebSocketLike, forceRefresh: boolean): Promise<void> {
+    const token = await this.#options.getToken(forceRefresh);
     // The socket may have dropped, or been replaced, while the token was coming.
     if (socket !== this.#socket || socket.readyState !== OPEN) return;
     socket.send(
@@ -133,12 +141,37 @@ export class WebSocketRoomConnection implements RoomConnection {
     const message = parse(data);
     if (!message) return;
 
+    if (message.type === 'error' && message.command === 'connect') {
+      this.#onRejectedConnect(message);
+      return;
+    }
     if (message.type === 'game-state' && this.#status !== 'connected') {
       this.#failedAttempts = 0;
+      this.#triedFreshToken = false;
       this.#setStatus('connected');
       this.#sendPending();
     }
+    this.#deliver(message);
+  }
+
+  #deliver(message: ServerMessageDto): void {
     for (const listener of this.#listeners) listener(message);
+  }
+
+  /**
+   * A token may have expired just as it was sent: worth one more try. Anything else is for good,
+   * and the screen gets the rejection before the status, so it knows why when it shows it.
+   */
+  #onRejectedConnect(rejection: ErrorDto): void {
+    const socket = this.#socket;
+    if (rejection.code === 'invalid-token' && !this.#triedFreshToken && socket) {
+      this.#triedFreshToken = true;
+      this.#sayWhoConnects(socket, true).catch(() => socket.close());
+      return;
+    }
+    this.#deliver(rejection);
+    this.#setStatus('rejected');
+    socket?.close();
   }
 
   #sendPending(): void {
@@ -146,7 +179,7 @@ export class WebSocketRoomConnection implements RoomConnection {
   }
 
   #onDrop(socket: WebSocketLike): void {
-    if (this.#closed || socket !== this.#socket) return;
+    if (this.#closed || this.#status === 'rejected' || socket !== this.#socket) return;
 
     const backoff = Math.min(LONGEST_WAIT_MS, SHORTEST_WAIT_MS * 2 ** this.#failedAttempts);
     this.#failedAttempts += 1;

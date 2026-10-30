@@ -3,8 +3,10 @@ import {
   DilemmaNotFoundError,
   DilemmaNotInGameError,
   DilemmaNotReachedError,
+  DuplicateDilemmaError,
   GameNotFoundError,
   IdentityNotInGameError,
+  NicknameMissingError,
   OptionNotInDilemmaError,
   PlayerNotInGameError,
   RoomNotFoundError,
@@ -24,6 +26,8 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [DilemmaNotReachedError, 'dilemma-not-reached'],
   [OptionNotInDilemmaError, 'option-not-in-dilemma'],
   [DilemmaNotFoundError, 'dilemma-not-found'],
+  [NicknameMissingError, 'nickname-missing'],
+  [DuplicateDilemmaError, 'duplicate-dilemma'],
 ];
 
 /** The code to answer with, or undefined if the error is not one a client can cause. */

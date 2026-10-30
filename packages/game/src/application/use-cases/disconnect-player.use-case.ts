@@ -11,7 +11,7 @@ export interface DisconnectPlayerInput {
   readonly connectionId: string;
 }
 
-/** A connection of a player closes; if it was their current one, the others see them disconnected. */
+/** A connection of a player closes; if it was the last one they had open, the others see them disconnected. */
 export class DisconnectPlayerUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #gameRepository: GameRepository;

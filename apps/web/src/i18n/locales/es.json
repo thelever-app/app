@@ -45,5 +45,25 @@
     "reconnecting": "Reconectando… tus respuestas están guardadas",
     "answerNotSaved": "No se ha guardado tu última respuesta. Elígela otra vez.",
     "dismiss": "Cerrar aviso"
+  },
+  "noReturn": {
+    "gone": {
+      "title": "Esta partida ya no está",
+      "text": "Ha terminado o se ha cerrado. Si el grupo sigue jugando, pide que te pasen el enlace nuevo."
+    },
+    "device": {
+      "title": "Este dispositivo no está en la partida",
+      "text": "Si te uniste desde otro, sigue jugando en ese. Si no, pide al grupo un enlace nuevo."
+    },
+    "update": {
+      "title": "Hay una versión nueva de TheLever",
+      "text": "Recarga para seguir jugando con la última.",
+      "action": "Recargar"
+    },
+    "identity": {
+      "title": "No hemos podido reconocerte",
+      "text": "Suele ser algo pasajero. Vuelve a intentarlo en un momento.",
+      "action": "Volver a intentarlo"
+    }
   }
 }

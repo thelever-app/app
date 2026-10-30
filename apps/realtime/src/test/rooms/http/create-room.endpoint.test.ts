@@ -44,4 +44,29 @@ describe('POST /rooms', () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({ code: 'invalid-message' });
   });
+
+  it('should answer nickname-missing to a nickname of only spaces', async () => {
+    // Act
+    const response = await request(await composedHttpServer())
+      .post('/rooms')
+      .set('Authorization', bearer('ana'))
+      .send({ nickname: '   ' });
+
+    // Assert
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ code: 'nickname-missing' });
+  });
+
+  it('should answer invalid-message to a body that is not JSON', async () => {
+    // Act
+    const response = await request(await composedHttpServer())
+      .post('/rooms')
+      .set('Authorization', bearer('ana'))
+      .set('Content-Type', 'application/json')
+      .send('{"nickname":');
+
+    // Assert
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ code: 'invalid-message' });
+  });
 });

@@ -1,4 +1,9 @@
-import { CONTRACT_VERSION, type GameStateDto, type ServerMessageDto } from '@thelever-app/protocol';
+import {
+  CONTRACT_VERSION,
+  type ErrorDto,
+  type GameStateDto,
+  type ServerMessageDto,
+} from '@thelever-app/protocol';
 import { describe, expect, it } from 'vitest';
 import type { RoomConnectionStatus } from '../../src/room/room-connection.ts';
 import { WebSocketRoomConnection } from '../../src/room/websocket-room-connection.ts';
@@ -38,7 +43,8 @@ function open(random = () => 1) {
     url: 'wss://realtime.test',
     gameId: 'test-game-id',
     language: 'es',
-    getToken: async () => tokens.shift() ?? 'test-token-last',
+    getToken: async (forceRefresh) =>
+      forceRefresh ? 'test-fresh-token' : (tokens.shift() ?? 'test-token-last'),
     createSocket: (url) => {
       const socket = new FakeSocket(url);
       sockets.push(socket);
@@ -282,6 +288,140 @@ describe('WebSocketRoomConnection', () => {
 
       // Assert
       expect(socket.sent).toEqual([]);
+    });
+  });
+
+  describe('rejected connect', () => {
+    function rejection(code: ErrorDto['code']): ErrorDto {
+      return { type: 'error', command: 'connect', code };
+    }
+
+    it('should send connect again on the same socket with a fresh token when the server rejects the token', async () => {
+      // Arrange
+      const { current, sockets, statuses, received } = open();
+      await accept(current());
+
+      // Act
+      current().receive(rejection('invalid-token'));
+      await settle();
+
+      // Assert
+      expect(current().sentMessages()).toEqual([
+        expect.objectContaining({ type: 'connect', token: 'test-token-1' }),
+        expect.objectContaining({ type: 'connect', token: 'test-fresh-token' }),
+      ]);
+      expect(sockets).toHaveLength(1);
+      expect(statuses).toEqual(['connecting']);
+      expect(received).toEqual([]);
+    });
+
+    it('should give up when the server rejects the fresh token too', async () => {
+      // Arrange
+      const { current, scheduler, statuses, received } = open();
+      await accept(current());
+      current().receive(rejection('invalid-token'));
+      await settle();
+
+      // Act
+      current().receive(rejection('invalid-token'));
+      current().drop();
+
+      // Assert
+      expect(statuses.at(-1)).toBe('rejected');
+      expect(current().closedByClient).toBe(true);
+      expect(scheduler.waits).toEqual([]);
+      expect(received).toEqual([rejection('invalid-token')]);
+    });
+
+    it('should ask for a fresh token again after a good connection', async () => {
+      // Arrange
+      const { current, scheduler, statuses } = open();
+      await accept(current());
+      current().receive(rejection('invalid-token'));
+      await settle();
+      current().receive(GAME_STATE);
+      current().drop();
+      scheduler.runLast();
+      await accept(current());
+
+      // Act
+      current().receive(rejection('invalid-token'));
+      await settle();
+
+      // Assert
+      expect(statuses.at(-1)).toBe('reconnecting');
+      expect(current().sentMessages().at(-1)).toEqual(
+        expect.objectContaining({ type: 'connect', token: 'test-fresh-token' }),
+      );
+    });
+
+    it.each(['game-not-found', 'player-not-in-game', 'unsupported-contract-version'] as const)(
+      'should give up for good when the server rejects connect with %s',
+      async (code) => {
+        // Arrange
+        const { current, sockets, scheduler, statuses, received } = open();
+        await accept(current());
+
+        // Act
+        current().receive(rejection(code));
+        current().drop();
+
+        // Assert
+        expect(statuses).toEqual(['connecting', 'rejected']);
+        expect(current().closedByClient).toBe(true);
+        expect(scheduler.waits).toEqual([]);
+        expect(sockets).toHaveLength(1);
+        expect(received).toEqual([rejection(code)]);
+      },
+    );
+
+    it('should hand the rejection to the screen before it says it gave up, so the screen knows why', async () => {
+      // Arrange
+      const { connection, current, received } = open();
+      await accept(current());
+      const receivedWhenRejected: ServerMessageDto[] = [];
+      connection.subscribeStatus((status) => {
+        if (status === 'rejected') receivedWhenRejected.push(...received);
+      });
+
+      // Act
+      current().receive(rejection('game-not-found'));
+
+      // Assert
+      expect(receivedWhenRejected).toEqual([rejection('game-not-found')]);
+    });
+
+    it('should give up when a reconnection finds that the game is gone', async () => {
+      // Arrange
+      const { current, scheduler, statuses } = open();
+      await accept(current());
+      current().receive(GAME_STATE);
+      current().drop();
+      scheduler.runLast();
+      await accept(current());
+
+      // Act
+      current().receive(rejection('game-not-found'));
+
+      // Assert
+      expect(statuses).toEqual(['connecting', 'connected', 'reconnecting', 'rejected']);
+    });
+
+    it('should keep what the screen sends after giving up, and never send it', async () => {
+      // Arrange
+      const { connection, current } = open();
+      await accept(current());
+      current().receive(rejection('game-not-found'));
+
+      // Act
+      connection.send({
+        type: 'answer-dilemma',
+        dilemmaId: 'test-dilemma-1',
+        vote: 'test-option-a',
+      });
+
+      // Assert
+      expect(current().sentMessages()).toEqual([expect.objectContaining({ type: 'connect' })]);
     });
   });
 

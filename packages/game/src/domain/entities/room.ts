@@ -11,7 +11,7 @@ export interface RoomSnapshot {
   readonly hostId: string;
   readonly players: readonly PlayerSnapshot[];
   readonly version: number;
-  /** The open connection of each connected player. */
+  /** Every open connection of each connected player. */
   readonly connections: readonly { readonly playerId: string; readonly connectionId: string }[];
 }
 
@@ -22,8 +22,8 @@ export class Room {
   readonly #players: Player[];
   /** Goes up every time a player connects or disconnects, apart from the version of the game. */
   #version = 0;
-  /** The open connection of each connected player; a player without one is disconnected. */
-  readonly #connections = new Map<string, IdVO>();
+  /** The ids of the open connections of each player; a player without any is disconnected. */
+  readonly #connections = new Map<string, Set<string>>();
   #events: DomainEvent[] = [];
 
   private constructor(id: string, host: Player, players: readonly Player[]) {
@@ -78,18 +78,25 @@ export class Room {
     return this.#players.find((player) => player.identity === identity);
   }
 
-  /** The player opens a connection. A new one replaces the one they had, which is closing or lost. */
+  /** The player opens a connection, on top of any others they have open, such as another tab. */
   connect(playerId: string, connectionId: string): void {
     const connection = new IdVO(connectionId);
     const wasConnected = this.isConnected(playerId);
 
-    this.#connections.set(playerId, connection);
+    const open = this.#connections.get(playerId) ?? new Set();
+    open.add(connection.value);
+    this.#connections.set(playerId, open);
     if (!wasConnected) this.#changeConnection(playerId, true);
   }
 
-  /** A connection closes. If the player already opened a newer one, it comes too late and changes nothing. */
+  /**
+   * A connection closes. The player stays connected while another of theirs is open, so a close
+   * that comes after they connected again changes nothing.
+   */
   disconnect(playerId: string, connectionId: string): void {
-    if (this.#connections.get(playerId)?.value !== connectionId) return;
+    const open = this.#connections.get(playerId);
+    if (!open?.delete(connectionId)) return;
+    if (open.size > 0) return;
 
     this.#connections.delete(playerId);
     this.#changeConnection(playerId, false);
@@ -115,10 +122,9 @@ export class Room {
       hostId: this.#host.id,
       players: this.#players.map((player) => player.toSnapshot()),
       version: this.#version,
-      connections: [...this.#connections].map(([playerId, connection]) => ({
-        playerId,
-        connectionId: connection.value,
-      })),
+      connections: [...this.#connections].flatMap(([playerId, open]) =>
+        [...open].map((connectionId) => ({ playerId, connectionId })),
+      ),
     };
   }
 
@@ -130,7 +136,9 @@ export class Room {
     const room = new Room(snapshot.id, host, players);
     room.#version = snapshot.version;
     for (const { playerId, connectionId } of snapshot.connections) {
-      room.#connections.set(playerId, new IdVO(connectionId));
+      const open = room.#connections.get(playerId) ?? new Set();
+      open.add(new IdVO(connectionId).value);
+      room.#connections.set(playerId, open);
     }
     return room;
   }

@@ -1,4 +1,4 @@
-import type { ErrorDto, GameStateDto } from '@thelever-app/protocol';
+import type { ErrorCodeDto, ErrorDto, GameStateDto } from '@thelever-app/protocol';
 import {
   createContext,
   useCallback,
@@ -26,13 +26,15 @@ interface RoomProviderProps {
   readonly connection: RoomConnection;
   /** What the screen shows until the room sends its first state. */
   readonly fallback: ReactNode;
+  /** What the screen shows, with or without a game, once the room will not take the player back. */
+  readonly rejected: (code: ErrorCodeDto | undefined) => ReactNode;
   readonly children: ReactNode;
 }
 
 const RoomContext = createContext<Room | undefined>(undefined);
 
 /** Follows the room once for the whole app and shares its state with every screen below. */
-export function RoomProvider({ connection, fallback, children }: RoomProviderProps) {
+export function RoomProvider({ connection, fallback, rejected, children }: RoomProviderProps) {
   const [{ game, rejection }, dispatch] = useReducer(roomReducer, INITIAL_ROOM_STATE);
 
   useEffect(() => connection.subscribe(dispatch), [connection]);
@@ -61,6 +63,8 @@ export function RoomProvider({ connection, fallback, children }: RoomProviderPro
     [game, status, rejection, answerDilemma, dismissRejection],
   );
 
+  // The connection hands over why before it gives up, so the code is already here.
+  if (status === 'rejected') return rejected(rejection?.code);
   if (!room) return fallback;
   return <RoomContext value={room}>{children}</RoomContext>;
 }

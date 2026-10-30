@@ -85,6 +85,11 @@ export async function composeRealtimeServer({
   const stateSender = new GameStateSender(
     new GetGameStateUseCase(roomRepository, gameRepository, catalog),
   );
+  const disconnectHandler = new DisconnectHandler(
+    new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier),
+    notifier,
+    gameLock,
+  );
   const roomSockets = new RoomSocketServer(
     [
       new ConnectHandler(
@@ -93,6 +98,7 @@ export async function composeRealtimeServer({
         notifier,
         gameLock,
         stateSender,
+        disconnectHandler,
       ),
       new AnswerDilemmaHandler(
         new AnswerDilemmaUseCase(gameRepository, notifier),
@@ -100,11 +106,7 @@ export async function composeRealtimeServer({
         stateSender,
       ),
     ],
-    new DisconnectHandler(
-      new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier),
-      notifier,
-      gameLock,
-    ),
+    disconnectHandler,
     errorCodeOf,
     pingIntervalMs,
   );

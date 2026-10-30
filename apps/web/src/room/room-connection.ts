@@ -2,8 +2,11 @@ import type { ClientMessageDto, ServerMessageDto } from '@thelever-app/protocol'
 
 export type ServerMessageListener = (message: ServerMessageDto) => void;
 
-/** How the link to the room is doing, as the browser sees it; the server never sends it. */
-export type RoomConnectionStatus = 'connecting' | 'connected' | 'reconnecting';
+/**
+ * How the link to the room is doing, as the browser sees it; the server never sends it. Rejected
+ * is for good: the server will not take the player back, and the error it sent says why.
+ */
+export type RoomConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'rejected';
 
 export type RoomConnectionStatusListener = (status: RoomConnectionStatus) => void;
 

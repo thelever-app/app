@@ -15,7 +15,7 @@ export interface ConnectPlayerInput {
 export interface ConnectPlayerOutput {
   /** The player of the game behind that identity. */
   readonly playerId: string;
-  /** Identifies this connection, to tell its close apart from the close of an older one. */
+  /** Identifies this connection, to tell its close apart from the close of the others of the player. */
   readonly connectionId: string;
 }
 

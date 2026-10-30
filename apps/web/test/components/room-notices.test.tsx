@@ -50,4 +50,15 @@ describe('RoomNotices', () => {
     expect(shown).toContain(t('notices.answerNotSaved'));
     expect(screen.queryByRole('alert')).toBeNull();
   });
+
+  it('should not say an answer was not saved when what the room rejected was the connection', async () => {
+    // Arrange
+    const { deliver } = await renderNotices();
+
+    // Act
+    act(() => deliver({ type: 'error', command: 'connect', code: 'invalid-token' }));
+
+    // Assert
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
 });

@@ -49,11 +49,24 @@ const GAME_STATE: GameStateDto = {
 function wrapperFor(connection: RoomConnection) {
   return ({ children }: { readonly children: ReactNode }) => {
     return (
-      <RoomProvider connection={connection} fallback={null}>
+      <RoomProvider connection={connection} fallback={null} rejected={() => null}>
         {children}
       </RoomProvider>
     );
   };
+}
+
+/** The provider with a fallback, a screen and what it shows when the room rejects the player. */
+function renderProvider(connection: RoomConnection) {
+  return render(
+    <RoomProvider
+      connection={connection}
+      fallback={<p>TestConnecting</p>}
+      rejected={(code) => <p>TestRejected {code}</p>}
+    >
+      <p>TestScreen</p>
+    </RoomProvider>,
+  );
 }
 
 describe('RoomProvider', () => {
@@ -62,11 +75,7 @@ describe('RoomProvider', () => {
     const fake = fakeConnection();
 
     // Act
-    render(
-      <RoomProvider connection={fake.connection} fallback={<p>TestConnecting</p>}>
-        <p>TestScreen</p>
-      </RoomProvider>,
-    );
+    renderProvider(fake.connection);
 
     // Assert
     expect(screen.getByText('TestConnecting')).toBeDefined();
@@ -76,11 +85,7 @@ describe('RoomProvider', () => {
   it('should show its children instead of the fallback once the game state arrives', () => {
     // Arrange
     const fake = fakeConnection();
-    render(
-      <RoomProvider connection={fake.connection} fallback={<p>TestConnecting</p>}>
-        <p>TestScreen</p>
-      </RoomProvider>,
-    );
+    renderProvider(fake.connection);
 
     // Act
     act(() => fake.deliver(GAME_STATE));
@@ -88,6 +93,39 @@ describe('RoomProvider', () => {
     // Assert
     expect(screen.getByText('TestScreen')).toBeDefined();
     expect(screen.queryByText('TestConnecting')).toBeNull();
+  });
+
+  it('should show why the room rejected the player instead of the fallback, before any game', () => {
+    // Arrange
+    const fake = fakeConnection('connecting');
+    renderProvider(fake.connection);
+
+    // Act
+    act(() => {
+      fake.deliver({ type: 'error', command: 'connect', code: 'game-not-found' });
+      fake.changeStatus('rejected');
+    });
+
+    // Assert
+    expect(screen.getByText('TestRejected game-not-found')).toBeDefined();
+    expect(screen.queryByText('TestConnecting')).toBeNull();
+  });
+
+  it('should leave the screen for why the room rejected the player when it happens while playing', () => {
+    // Arrange
+    const fake = fakeConnection();
+    renderProvider(fake.connection);
+    act(() => fake.deliver(GAME_STATE));
+
+    // Act
+    act(() => {
+      fake.deliver({ type: 'error', command: 'connect', code: 'game-not-found' });
+      fake.changeStatus('rejected');
+    });
+
+    // Assert
+    expect(screen.getByText('TestRejected game-not-found')).toBeDefined();
+    expect(screen.queryByText('TestScreen')).toBeNull();
   });
 });
 

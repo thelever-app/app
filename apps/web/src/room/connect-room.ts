@@ -47,7 +47,7 @@ export async function connectRoom({
     url: config.realtimeUrl,
     gameId: decodeURIComponent(gameId),
     language,
-    getToken: () => player.getToken(),
+    getToken: (forceRefresh) => player.getToken(forceRefresh),
     createSocket,
     schedule: (callback, ms) => {
       const timer = setTimeout(callback, ms);

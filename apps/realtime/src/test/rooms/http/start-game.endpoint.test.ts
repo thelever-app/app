@@ -44,4 +44,21 @@ describe('POST /rooms/:roomId/games', () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ code: 'dilemma-not-found' });
   });
+
+  it('should answer duplicate-dilemma to a dilemma asked for twice', async () => {
+    // Arrange
+    const server = await composedHttpServer();
+    const { roomId } = await roomOfAna(server);
+    const [first] = SEED_DILEMMAS;
+
+    // Act
+    const response = await request(server)
+      .post(`/rooms/${roomId}/games`)
+      .set('Authorization', bearer('ana'))
+      .send({ dilemmaIds: [first!.id, first!.id] });
+
+    // Assert
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ code: 'duplicate-dilemma' });
+  });
 });

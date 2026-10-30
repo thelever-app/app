@@ -1,7 +1,8 @@
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
 import { CONTRACT_VERSION } from '@thelever-app/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
-import { tokenOf } from '../../support/fake-token-verifier.ts';
+import type { TokenVerifier } from '../../../identity/token-verifier.ts';
+import { FakeTokenVerifier, tokenOf } from '../../support/fake-token-verifier.ts';
 import { gameInDecisionPhase, startRoomServer, TestClient } from '../../support/room-server.ts';
 
 const [FIRST, SECOND, THIRD] = SEED_DILEMMAS;
@@ -14,6 +15,49 @@ function connectMessage(identity: string, gameId: string) {
     gameId,
     language: 'es',
   };
+}
+
+/** The fake verifier, but while held it keeps every token waiting until it is let go. */
+class HeldTokenVerifier implements TokenVerifier {
+  readonly #fake = new FakeTokenVerifier();
+  #held: Promise<void> | undefined;
+  #letGo: () => void = () => {};
+  #startVerifying: () => void = () => {};
+  readonly #verifying = new Promise<void>((resolve) => {
+    this.#startVerifying = resolve;
+  });
+
+  hold(): void {
+    this.#held = new Promise((resolve) => {
+      this.#letGo = resolve;
+    });
+  }
+
+  letGo(): void {
+    this.#letGo();
+    this.#held = undefined;
+  }
+
+  /** Resolves once a token is waiting. */
+  async verifying(): Promise<void> {
+    await this.#verifying;
+  }
+
+  async verify(token: string): Promise<string> {
+    if (this.#held) {
+      this.#startVerifying();
+      await this.#held;
+    }
+    return this.#fake.verify(token);
+  }
+}
+
+async function until(check: () => boolean): Promise<void> {
+  const deadline = Date.now() + 2000;
+  while (!check()) {
+    if (Date.now() > deadline) throw new Error('the condition never held');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
 }
 
 describe('RoomSocketServer', () => {
@@ -93,6 +137,24 @@ describe('RoomSocketServer', () => {
 
       // Assert
       expect(await luis.next('error')).toEqual({ type: 'error', command: 'connect', code });
+    });
+
+    it('should end the previous session of a socket that connects to another game', async () => {
+      // Arrange
+      server = await startRoomServer();
+      const first = await gameInDecisionPhase(server.http);
+      const second = await gameInDecisionPhase(server.http);
+      const ana = await TestClient.connected(server.url, 'ana', first.gameId);
+      const luis = await TestClient.connected(server.url, 'luis', first.gameId);
+      await ana.next('connection-changed');
+
+      // Act
+      luis.send(connectMessage('luis', second.gameId));
+
+      // Assert
+      await luis.next('game-state');
+      const change = await ana.next('connection-changed');
+      expect(change.connected).toBe(false);
     });
 
     it('should reject an identity that does not play the game', async () => {
@@ -204,6 +266,27 @@ describe('RoomSocketServer', () => {
       // Assert
       const change = await ana.next('connection-changed');
       expect(change.connected).toBe(false);
+    });
+
+    it('should disconnect a player whose socket closes while they connect', async () => {
+      // Arrange
+      const tokenVerifier = new HeldTokenVerifier();
+      server = await startRoomServer({ tokenVerifier });
+      const { gameId } = await gameInDecisionPhase(server.http);
+      const ana = await TestClient.connected(server.url, 'ana', gameId);
+      const luis = await TestClient.open(server.url);
+      tokenVerifier.hold();
+      luis.send(connectMessage('luis', gameId));
+      await tokenVerifier.verifying();
+      luis.socket.close();
+      await until(() => server!.openSockets() === 1);
+
+      // Act
+      tokenVerifier.letGo();
+
+      // Assert
+      expect((await ana.next('connection-changed')).connected).toBe(true);
+      expect((await ana.next('connection-changed')).connected).toBe(false);
     });
 
     it('should end a socket that stops answering the pings, and tell the others', async () => {

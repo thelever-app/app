@@ -88,6 +88,8 @@ export const ErrorCodeDto = z.enum([
   'dilemma-not-reached',
   'option-not-in-dilemma',
   'dilemma-not-found',
+  'nickname-missing',
+  'duplicate-dilemma',
 ]);
 
 /** The answer to a rejected message, on the same connection. */

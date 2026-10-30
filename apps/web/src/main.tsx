@@ -10,6 +10,7 @@ import { createI18n, SOURCE_LANGUAGE } from './i18n/i18n.ts';
 import source from './i18n/locales/es.json';
 import { connectRoom } from './room/connect-room.ts';
 import { RoomProvider } from './room/room-provider.tsx';
+import { NoReturnScreen } from './screens/no-return-screen.tsx';
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Missing #root element in index.html');
@@ -30,7 +31,13 @@ async function start(): Promise<void> {
     root.render(
       <StrictMode>
         <I18nextProvider i18n={i18n}>
-          <RoomProvider connection={connection} fallback={<p>{i18n.t('app.connecting')}</p>}>
+          <RoomProvider
+            connection={connection}
+            fallback={<p>{i18n.t('app.connecting')}</p>}
+            rejected={(code) => (
+              <NoReturnScreen code={code} onReload={() => window.location.reload()} />
+            )}
+          >
             <App />
           </RoomProvider>
         </I18nextProvider>
