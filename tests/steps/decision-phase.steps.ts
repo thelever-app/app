@@ -71,3 +71,53 @@ Then(
     }
   },
 );
+
+Given(
+  '{string} has answered {int} dilemmas',
+  async function (this: GameWorld, player: string, count: number) {
+    await this.driver.answerDilemmas(player, count);
+  },
+);
+
+When('{string} disconnects', async function (this: GameWorld, player: string) {
+  await this.driver.disconnect(player);
+});
+
+When(
+  '{string} reconnects during the decision phase',
+  async function (this: GameWorld, player: string) {
+    await this.driver.reconnect(player);
+    this.reconnectedPlayer = player;
+  },
+);
+
+Then('{string} is on his fourth dilemma', async function (this: GameWorld, player: string) {
+  assert.equal(await this.driver.dilemmaShownTo(player), 4);
+});
+
+Then('keeps his answers', async function (this: GameWorld) {
+  assert.ok(this.reconnectedPlayer, 'no step reconnected a player before');
+  const cast = await this.driver.votesCastBy(this.reconnectedPlayer);
+  assert.ok(cast.length > 0, `${this.reconnectedPlayer} did not vote`);
+
+  assert.deepEqual(await this.driver.votesRecordedFor(this.reconnectedPlayer), cast);
+});
+
+Then(
+  '{string} and {string} see {string} as disconnected',
+  async function (this: GameWorld, firstViewer: string, secondViewer: string, player: string) {
+    assert.equal(await this.driver.connectionSeenBy(firstViewer, player), false);
+    assert.equal(await this.driver.connectionSeenBy(secondViewer, player), false);
+    this.viewers = [firstViewer, secondViewer];
+  },
+);
+
+Then(
+  'they still see that {string} has answered {int} dilemmas',
+  async function (this: GameWorld, player: string, answered: number) {
+    assert.ok(this.viewers.length > 0, 'no step said who is looking');
+    for (const viewer of this.viewers) {
+      assert.equal(await this.driver.progressSeenBy(viewer, player), answered);
+    }
+  },
+);

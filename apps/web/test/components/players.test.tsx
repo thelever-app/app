@@ -4,8 +4,8 @@ import { hasFinished, usePlayerName } from '../../src/components/players.ts';
 import { aGame } from '../support/game.ts';
 import { providersFor } from '../support/render.tsx';
 
-const ANA = { playerId: 'test-ana-id', nickname: 'Ana', progress: 2 };
-const LUIS = { playerId: 'test-luis-id', nickname: 'Luis', progress: 3 };
+const ANA = { playerId: 'test-ana-id', nickname: 'Ana', progress: 2, connected: true };
+const LUIS = { playerId: 'test-luis-id', nickname: 'Luis', progress: 3, connected: true };
 
 describe('hasFinished', () => {
   it('should be true once the progress reaches every dilemma, and false before', () => {

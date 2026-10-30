@@ -4,7 +4,7 @@ import { DEMO_ROOM } from '../../src/room/demo-room.ts';
 import { SimulatedRoomConnection } from '../../src/room/simulated-room-connection.ts';
 
 describe('DEMO_ROOM', () => {
-  it('should open a room with every demo dilemma and every player', async () => {
+  it('should open a room with the six seed dilemmas and every player', async () => {
     // Arrange
     const connection = await SimulatedRoomConnection.open(DEMO_ROOM);
     const received: ServerMessageDto[] = [];
@@ -16,7 +16,7 @@ describe('DEMO_ROOM', () => {
 
     // Assert
     const [state] = received;
-    expect(state?.type === 'game-state' && state.dilemmas.length).toBe(DEMO_ROOM.dilemmas.length);
+    expect(state?.type === 'game-state' && state.dilemmas.length).toBe(6);
     expect(state?.type === 'game-state' && state.players.length).toBe(DEMO_ROOM.others.length + 1);
   });
 });

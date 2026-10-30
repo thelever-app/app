@@ -1,0 +1,71 @@
+/* A bar over the top of the screen, inside the centred column, that never moves the content below. */
+.bar {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 10;
+  max-width: 480px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 500;
+}
+
+/* The link is down: ink on the screen, as a station sign at night. */
+.dark {
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+/* Something to act on: the signal yellow of the main action, with ink text and border. */
+.signal {
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-bottom: 2px solid var(--color-on-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.mascot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+}
+
+.text {
+  flex: 1;
+}
+
+.dark .text {
+  flex: none;
+}
+
+.dismiss {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.dismiss:focus-visible {
+  outline: 2px solid var(--color-on-primary);
+  outline-offset: -2px;
+}

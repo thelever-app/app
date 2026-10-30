@@ -6,9 +6,9 @@ import { renderWithProviders } from '../support/render.tsx';
 
 /** Ana is the player using the screen; Luis has finished; Marta goes last. */
 const PLAYERS = [
-  { playerId: 'test-ana-id', nickname: 'Ana', progress: 2 },
-  { playerId: 'test-luis-id', nickname: 'Luis', progress: 6 },
-  { playerId: 'test-marta-id', nickname: 'Marta', progress: 1 },
+  { playerId: 'test-ana-id', nickname: 'Ana', progress: 2, connected: true },
+  { playerId: 'test-luis-id', nickname: 'Luis', progress: 6, connected: true },
+  { playerId: 'test-marta-id', nickname: 'Marta', progress: 1, connected: true },
 ];
 
 function renderList(players = PLAYERS) {
@@ -32,6 +32,22 @@ describe('PlayerList', () => {
       `Marta${t('playerList.progressCount', { progress: 1, total: 6 })}`,
       `${t('playerList.you')}${t('playerList.progressCount', { progress: 2, total: 6 })}`,
     ]);
+  });
+
+  it('should say who has not finished and is disconnected, after their name', async () => {
+    // Arrange
+    const players = PLAYERS.map((player) =>
+      player.nickname === 'Marta' ? { ...player, connected: false } : player,
+    );
+
+    // Act
+    const { t } = await renderList(players);
+
+    // Assert
+    const pending = screen.getByRole('region', { name: t('playerList.pending', { count: 2 }) });
+    const [marta, ana] = within(pending).getAllByRole('listitem');
+    expect(marta?.textContent).toContain(`Marta · ${t('playerList.disconnected')}`);
+    expect(ana?.textContent).not.toContain(t('playerList.disconnected'));
   });
 
   it('should show the progress of each one as a bar', async () => {
@@ -66,7 +82,9 @@ describe('PlayerList', () => {
 
   it('should not show who is missing when everyone has finished', async () => {
     // Act
-    const { t } = await renderList(PLAYERS.map((player) => ({ ...player, progress: 6 })));
+    const { t } = await renderList(
+      PLAYERS.map((player) => ({ ...player, progress: 6, connected: true })),
+    );
 
     // Assert
     expect(screen.getAllByRole('region')).toHaveLength(1);

@@ -1,0 +1,90 @@
+name: Deploy
+
+# Trunk-based delivery (ADR 0003): every push to main is checked, built once and deployed to dev.
+# Deploy to prod then promotes the same image and the same web, after Mario approves the prod environment.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Pushes reach dev one after another and in order: an older commit never overwrites a newer one.
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+env:
+  WORKLOAD_IDENTITY_PROVIDER: projects/236232367578/locations/global/workloadIdentityPools/github/providers/thelever-app-app
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Sign in to Google Cloud as the builder
+        env:
+          SERVICE_ACCOUNT: builder@thelever-app-shared.iam.gserviceaccount.com
+        run: .github/scripts/gcp-auth.sh
+
+      - name: Build the image of the room server once, tagged with the commit
+        run: |
+          gcloud builds submit --project thelever-app-shared --region europe-southwest1 \
+            --config apps/realtime/cloudbuild.yaml --substitutions "_TAG=$GITHUB_SHA" \
+            --gcs-source-staging-dir gs://thelever-app-shared-build-sources/source .
+
+      - name: Pin the image by its digest
+        run: |
+          name="europe-southwest1-docker.pkg.dev/thelever-app-shared/thelever-app/realtime"
+          digest=$(gcloud artifacts docker images describe "$name:$GITHUB_SHA" --format 'value(image_summary.digest)')
+          echo "$name@$digest" >image.txt
+
+      # The image and the web are kept as long as an approval of prod can wait, so prod promotes them as they are.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image
+          path: image.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Build the web once
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @thelever-app/web build
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: 30
+
+  dev:
+    needs: build
+    uses: ./.github/workflows/deploy-environment.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    with:
+      environment: dev
+      commit: ${{ github.sha }}
+      run-id: ${{ github.run_id }}

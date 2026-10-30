@@ -12,7 +12,10 @@ describe('CreateRoomUseCase', () => {
       const createRoom = new CreateRoomUseCase(roomRepository, new SequentialIdGenerator());
 
       // Act
-      const { roomId, hostId } = await createRoom.execute({ hostNickname: 'Ana' });
+      const { roomId, hostId } = await createRoom.execute({
+        hostNickname: 'Ana',
+        hostIdentity: 'TestAnaIdentity',
+      });
 
       // Assert
       const room = await roomRepository.findById(roomId);
@@ -28,7 +31,9 @@ describe('CreateRoomUseCase', () => {
       );
 
       // Act & Assert
-      await expect(createRoom.execute({ hostNickname: '' })).rejects.toThrow(NicknameMissingError);
+      await expect(
+        createRoom.execute({ hostNickname: '', hostIdentity: 'TestHostIdentity' }),
+      ).rejects.toThrow(NicknameMissingError);
     });
   });
 });

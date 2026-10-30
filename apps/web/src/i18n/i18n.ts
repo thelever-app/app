@@ -1,11 +1,12 @@
 import i18next, { type BackendModule, type i18n } from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import { LanguageDto } from '@thelever-app/protocol';
 import { initReactI18next } from 'react-i18next';
 
-/** The languages of the interface (DEC-56). */
-export const SUPPORTED_LANGUAGES = ['es', 'en', 'fr', 'de', 'it', 'pt', 'ca'] as const;
+/** The languages of the interface, the same a player can read the dilemmas in. */
+export const SUPPORTED_LANGUAGES = LanguageDto.options;
 /** The language the catalogs are written in, and the one used when a catalog is missing. */
-export const SOURCE_LANGUAGE = 'es';
+export const SOURCE_LANGUAGE: LanguageDto = 'es';
 
 const catalogs = import.meta.glob<{ default: object }>('./locales/*.json');
 

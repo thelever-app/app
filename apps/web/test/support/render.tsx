@@ -19,6 +19,11 @@ function roomThatSent(game: GameStateDto): RoomConnection {
       listener(game);
       return () => {};
     },
+    subscribeStatus: (listener) => {
+      listener('connected');
+      return () => {};
+    },
+    getStatus: () => 'connected',
     close: () => {},
   };
 }
@@ -29,7 +34,7 @@ export async function providersFor({ game, ...options }: ProvidersOptions = {}) 
   const connection = game ? roomThatSent(game) : options.connection;
   function Providers({ children }: { readonly children: ReactNode }) {
     const content = connection ? (
-      <RoomProvider connection={connection} fallback={null}>
+      <RoomProvider connection={connection} fallback={null} rejected={() => null}>
         {children}
       </RoomProvider>
     ) : (

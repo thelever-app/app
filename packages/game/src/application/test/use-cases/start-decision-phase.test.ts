@@ -18,10 +18,12 @@ describe('StartDecisionPhaseUseCase', () => {
       const idGenerator = new SequentialIdGenerator();
       const { roomId, hostId } = await new CreateRoomUseCase(roomRepository, idGenerator).execute({
         hostNickname: 'Ana',
+        hostIdentity: 'TestAnaIdentity',
       });
       const { playerId } = await new JoinRoomUseCase(roomRepository, idGenerator).execute({
         roomId,
         nickname: 'Luis',
+        identity: 'TestLuisIdentity',
       });
       const startDecisionPhase = new StartDecisionPhaseUseCase(
         roomRepository,
@@ -68,6 +70,7 @@ describe('StartDecisionPhaseUseCase', () => {
       const idGenerator = new SequentialIdGenerator();
       const { roomId } = await new CreateRoomUseCase(roomRepository, idGenerator).execute({
         hostNickname: 'Ana',
+        hostIdentity: 'TestAnaIdentity',
       });
       const startDecisionPhase = new StartDecisionPhaseUseCase(
         roomRepository,

@@ -34,7 +34,15 @@ export function PlayerList({ players, dilemmaCount }: PlayerListProps) {
             {pending.map((player) => (
               <li key={player.playerId} className={styles.pendingPlayer}>
                 <div className={styles.pendingLine}>
-                  <span className={styles.name}>{nameOf(player)}</span>
+                  <span className={styles.name}>
+                    {nameOf(player)}
+                    {!player.connected && (
+                      <span className={styles.disconnected}>
+                        {' · '}
+                        {t('playerList.disconnected')}
+                      </span>
+                    )}
+                  </span>
                   <span className={styles.count}>
                     {t('playerList.progressCount', {
                       progress: player.progress,

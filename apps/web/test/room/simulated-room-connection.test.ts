@@ -74,6 +74,30 @@ describe('SimulatedRoomConnection', () => {
       expect(state.answers).toEqual([]);
     });
 
+    it('should have every player connected, as in a room where everyone has the game open', async () => {
+      // Arrange & Act
+      const opened = await openAndSubscribe();
+      connection = opened.connection;
+
+      // Assert
+      const state = lastGameState(opened.received);
+      expect(state.players.map(({ connected }) => connected)).toEqual([true, true]);
+    });
+
+    it('should always be connected, because it runs in the browser', async () => {
+      // Arrange
+      const opened = await openAndSubscribe();
+      connection = opened.connection;
+      const statuses: string[] = [];
+
+      // Act
+      opened.connection.subscribeStatus((status) => statuses.push(status));
+
+      // Assert
+      expect(statuses).toEqual(['connected']);
+      expect(opened.connection.getStatus()).toBe('connected');
+    });
+
     it('should stop sending messages to a listener after it unsubscribes', async () => {
       // Arrange
       const opened = await openAndSubscribe();
@@ -100,8 +124,8 @@ describe('SimulatedRoomConnection', () => {
 
       // Assert
       expect(opened.received.slice(1)).toEqual([
-        { type: 'progress-updated', playerId: luisId, progress: 1 },
-        { type: 'progress-updated', playerId: luisId, progress: 2 },
+        { type: 'progress-updated', gameVersion: 2, playerId: luisId, progress: 1 },
+        { type: 'progress-updated', gameVersion: 3, playerId: luisId, progress: 2 },
       ]);
     });
 
@@ -123,7 +147,12 @@ describe('SimulatedRoomConnection', () => {
             message.answers.length === 0 ? [] : [{ dilemmaId, vote: optionIds[0] }],
           );
         } else {
-          expect(Object.keys(message).sort()).toEqual(['playerId', 'progress', 'type']);
+          expect(Object.keys(message).sort()).toEqual([
+            'gameVersion',
+            'playerId',
+            'progress',
+            'type',
+          ]);
         }
       }
     });

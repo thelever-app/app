@@ -2,12 +2,14 @@ import type { CSSProperties } from 'react';
 import arrowBack from '@material-symbols/svg-500/rounded/arrow_back-fill.svg?url';
 import checkCircle from '@material-symbols/svg-500/rounded/check_circle-fill.svg?url';
 import close from '@material-symbols/svg-500/rounded/close-fill.svg?url';
+import error from '@material-symbols/svg-500/rounded/error.svg?url';
 import expandMore from '@material-symbols/svg-500/rounded/keyboard_arrow_down-fill.svg?url';
+import refresh from '@material-symbols/svg-500/rounded/refresh-fill.svg?url';
 import undo from '@material-symbols/svg-500/rounded/undo-fill.svg?url';
 import styles from './icon.module.css';
 
 /** The Material Symbols the screens use, hosted with the app: never loaded from Google. */
-const ICONS = { arrowBack, checkCircle, close, expandMore, undo } as const;
+const ICONS = { arrowBack, checkCircle, close, error, expandMore, refresh, undo } as const;
 
 export type IconName = keyof typeof ICONS;
 

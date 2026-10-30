@@ -41,6 +41,11 @@
   font-weight: 500;
 }
 
+.disconnected {
+  font-weight: 400;
+  color: var(--color-ink-muted);
+}
+
 .count {
   font-size: var(--type-label-size);
   line-height: var(--type-label-line-height);

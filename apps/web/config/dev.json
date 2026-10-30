@@ -1,0 +1,9 @@
+{
+  "realtimeUrl": "wss://realtime-682671162997.europe-southwest1.run.app",
+  "firebase": {
+    "apiKey": "AIzaSyAzew2OY2r2vyI-o0oLQsCl8oKRht0ShwI",
+    "authDomain": "thelever-app-dev.firebaseapp.com",
+    "projectId": "thelever-app-dev",
+    "appId": "1:682671162997:web:f9a1988cbcf072fab21a3c"
+  }
+}

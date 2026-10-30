@@ -12,6 +12,7 @@ export { Room, type RoomSnapshot } from './domain/entities/room.ts';
 export { Game, type GameDilemma, type GameSnapshot } from './domain/entities/game.ts';
 export type { DomainEvent } from './domain/events/domain-event.ts';
 export { ProgressUpdatedEvent } from './domain/events/progress-updated.event.ts';
+export { ConnectionChangedEvent } from './domain/events/connection-changed.event.ts';
 export type { IdGenerator } from './domain/ports/id-generator.port.ts';
 export { MissingArgumentError } from './domain/errors/missing-argument.error.ts';
 export { IdMissingError } from './domain/errors/id-missing.error.ts';
@@ -21,6 +22,7 @@ export { DilemmasMissingError } from './domain/errors/dilemmas-missing.error.ts'
 export { VoteMissingError } from './domain/errors/vote-missing.error.ts';
 export { DecisionPhaseNotStartedError } from './domain/errors/decision-phase-not-started.error.ts';
 export { PlayerNotInGameError } from './domain/errors/player-not-in-game.error.ts';
+export { PlayerNotInRoomError } from './domain/errors/player-not-in-room.error.ts';
 export { DilemmaNotInGameError } from './domain/errors/dilemma-not-in-game.error.ts';
 export { DuplicateDilemmaError } from './domain/errors/duplicate-dilemma.error.ts';
 export { PlayersMissingError } from './domain/errors/players-missing.error.ts';
@@ -37,6 +39,7 @@ export type { DilemmaCatalog, DilemmaContent } from './application/ports/dilemma
 export { RoomNotFoundError } from './application/errors/room-not-found.error.ts';
 export { GameNotFoundError } from './application/errors/game-not-found.error.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
+export { IdentityNotInGameError } from './application/errors/identity-not-in-game.error.ts';
 export {
   CreateRoomUseCase,
   type CreateRoomInput,
@@ -56,6 +59,15 @@ export {
   AnswerDilemmaUseCase,
   type AnswerDilemmaInput,
 } from './application/use-cases/answer-dilemma.use-case.ts';
+export {
+  ConnectPlayerUseCase,
+  type ConnectPlayerInput,
+  type ConnectPlayerOutput,
+} from './application/use-cases/connect-player.use-case.ts';
+export {
+  DisconnectPlayerUseCase,
+  type DisconnectPlayerInput,
+} from './application/use-cases/disconnect-player.use-case.ts';
 export {
   GetGameStateUseCase,
   type GetGameStateInput,

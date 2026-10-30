@@ -22,8 +22,14 @@ const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId
 }));
 
 function gameInDecisionPhase(): { game: Game; ana: Player; luis: Player } {
-  const ana = Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId'));
-  const luis = Player.create({ nickname: 'Luis' }, new FixedIdGenerator('TestLuisId'));
+  const ana = Player.create(
+    { nickname: 'Ana', identity: 'TestAnaIdentity' },
+    new FixedIdGenerator('TestAnaId'),
+  );
+  const luis = Player.create(
+    { nickname: 'Luis', identity: 'TestLuisIdentity' },
+    new FixedIdGenerator('TestLuisId'),
+  );
   const game = Game.create(
     { roomId: 'TestRoomId', dilemmas: DILEMMAS },
     new FixedIdGenerator('TestId'),
@@ -111,7 +117,10 @@ describe('Game', () => {
 
       // Act
       game.startDecisionPhase([
-        Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId')),
+        Player.create(
+          { nickname: 'Ana', identity: 'TestAnaIdentity' },
+          new FixedIdGenerator('TestAnaId'),
+        ),
       ]);
 
       // Assert
@@ -124,7 +133,10 @@ describe('Game', () => {
         { roomId: 'TestRoomId', dilemmas: DILEMMAS },
         new FixedIdGenerator('TestId'),
       );
-      const ana = Player.create({ nickname: 'Ana' }, new FixedIdGenerator('TestAnaId'));
+      const ana = Player.create(
+        { nickname: 'Ana', identity: 'TestAnaIdentity' },
+        new FixedIdGenerator('TestAnaId'),
+      );
 
       // Act
       game.startDecisionPhase([ana]);
@@ -181,8 +193,8 @@ describe('Game', () => {
 
       // Assert
       expect(game.pullEvents()).toEqual([
-        new ProgressUpdatedEvent(game.id, luis.id, 1),
-        new ProgressUpdatedEvent(game.id, luis.id, 2),
+        new ProgressUpdatedEvent(game.id, luis.id, 1, 2),
+        new ProgressUpdatedEvent(game.id, luis.id, 2, 3),
       ]);
     });
 
@@ -354,6 +366,88 @@ describe('Game', () => {
     });
   });
 
+  describe('version', () => {
+    it('should start at 0', () => {
+      // Arrange & Act
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        new FixedIdGenerator('TestId'),
+      );
+
+      // Assert
+      expect(game.version).toBe(0);
+    });
+
+    it('should go up when the decision phase starts', () => {
+      // Arrange
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        new FixedIdGenerator('TestId'),
+      );
+
+      // Act
+      game.startDecisionPhase([
+        Player.create(
+          { nickname: 'Ana', identity: 'TestAnaIdentity' },
+          new FixedIdGenerator('TestAnaId'),
+        ),
+      ]);
+
+      // Assert
+      expect(game.version).toBe(1);
+    });
+
+    it('should go up with every answer, also when the player changes one', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+
+      // Act
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+      game.answer(luis.id, 'TestDilemma1', 'TestOtherOption');
+
+      // Assert
+      expect(game.version).toBe(3);
+    });
+
+    it('should not go up when an answer is rejected', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+
+      // Act
+      expect(() => game.answer(luis.id, 'TestDilemma2', 'TestOption')).toThrow(
+        DilemmaNotReachedError,
+      );
+
+      // Assert
+      expect(game.version).toBe(1);
+    });
+
+    it('should be the version the progress updated event carries', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+
+      // Act
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+
+      // Assert
+      const [event] = game.pullEvents();
+      expect(event).toBeInstanceOf(ProgressUpdatedEvent);
+      expect((event as ProgressUpdatedEvent).gameVersion).toBe(game.version);
+    });
+
+    it('should be kept when the game is restored', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', 'TestOption');
+
+      // Act
+      const restored = Game.restore(game.toSnapshot());
+
+      // Assert
+      expect(restored.version).toBe(2);
+    });
+  });
+
   describe('pullEvents', () => {
     it('should empty the recorded events', () => {
       // Arrange
@@ -404,6 +498,7 @@ describe('Game', () => {
         roomId: 'TestRoomId',
         dilemmas: DILEMMAS,
         inDecisionPhase: true,
+        version: 2,
         players: [
           { id: 'TestAnaId', answers: [] },
           { id: 'TestLuisId', answers: [{ dilemmaId: 'TestDilemma1', vote: 'TestOption' }] },
@@ -464,7 +559,7 @@ describe('Game', () => {
       restored.answer(luis.id, 'TestDilemma2', 'TestOption');
 
       // Assert
-      expect(restored.pullEvents()).toEqual([new ProgressUpdatedEvent('TestId', luis.id, 2)]);
+      expect(restored.pullEvents()).toEqual([new ProgressUpdatedEvent('TestId', luis.id, 2, 3)]);
     });
   });
 

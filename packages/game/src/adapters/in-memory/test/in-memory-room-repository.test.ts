@@ -10,7 +10,7 @@ describe('InMemoryRoomRepository', () => {
       // Arrange
       const repository = new InMemoryRoomRepository();
       const room = Room.create(
-        { hostNickname: 'Ana' },
+        { hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' },
         new FixedIdGenerator('TestId', 'TestHostId'),
       );
       await repository.save(room);
@@ -37,13 +37,18 @@ describe('InMemoryRoomRepository', () => {
       // Arrange
       const repository = new InMemoryRoomRepository();
       const room = Room.create(
-        { hostNickname: 'Ana' },
+        { hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' },
         new FixedIdGenerator('TestId', 'TestHostId'),
       );
       await repository.save(room);
 
       // Act
-      room.addPlayer(Player.create({ nickname: 'Luis' }, new FixedIdGenerator('TestLuisId')));
+      room.addPlayer(
+        Player.create(
+          { nickname: 'Luis', identity: 'TestLuisIdentity' },
+          new FixedIdGenerator('TestLuisId'),
+        ),
+      );
 
       // Assert
       const found = await repository.findById('TestId');

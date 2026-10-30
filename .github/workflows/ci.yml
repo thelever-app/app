@@ -1,17 +1,18 @@
 name: CI
 
+# On main the checks run inside the deployment, which calls this workflow before building anything:
+# the same checks guard a pull request and a deployment.
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
 
-# A new push to the same PR cancels the run that is still going.
+# A new push to the same PR, or to main, cancels the checks that are still going.
 concurrency:
-  group: ci-${{ github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-checks-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -50,3 +51,29 @@ jobs:
 
       - name: Test acceptance
         run: pnpm test:acceptance
+
+  # The scenarios tagged @ui in Chromium, against the room server, the built web and the Auth
+  # emulator, all of them on the runner. The Auth emulator runs on Node: no Java needed.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm --filter @thelever-app/tests exec playwright install --with-deps chromium
+
+      - name: Test e2e
+        run: pnpm test:e2e

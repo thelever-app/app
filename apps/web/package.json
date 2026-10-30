@@ -16,6 +16,7 @@
     "@thelever-app/game": "workspace:*",
     "@thelever-app/protocol": "workspace:*",
     "@thelever-app/ui": "workspace:*",
+    "firebase": "^13.0.0",
     "i18next": "^26.4.2",
     "i18next-browser-languagedetector": "^8.2.1",
     "radix-ui": "^1.7.0",

@@ -32,6 +32,12 @@ Requires Node 24 and pnpm via Corepack.
 Before opening a pull request:
 
     pnpm lint && pnpm typecheck && pnpm test && pnpm format:check
+    pnpm test:acceptance
+    pnpm test:e2e       # builds the web; starts the Auth emulator, the room server and Chromium
+
+The first time, install the browser of the e2e tests:
+
+    pnpm --filter @thelever-app/tests exec playwright install chromium
 
 ## Contributing
 
