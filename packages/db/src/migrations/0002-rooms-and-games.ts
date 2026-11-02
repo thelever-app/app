@@ -57,6 +57,18 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     )
     .addColumn('instance_id', 'text', (column) => column.notNull().references('instances.id'))
     .execute();
+  // PostgreSQL indexes no foreign key by itself: without these, each cascade and each check of a
+  // deleted row would read the whole table.
+  await db.schema
+    .createIndex('room_connections_by_instance')
+    .on('room_connections')
+    .column('instance_id')
+    .execute();
+  await db.schema
+    .createIndex('room_connections_by_player')
+    .on('room_connections')
+    .column('player_id')
+    .execute();
 
   await db.schema
     .createTable('games')
@@ -67,6 +79,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('in_decision_phase', 'boolean', (column) => column.notNull())
     .addColumn('version', 'integer', (column) => column.notNull())
     .execute();
+  await db.schema.createIndex('games_by_room').on('games').column('room_id').execute();
 
   await db.schema
     .createTable('game_dilemmas')
@@ -100,6 +113,11 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('position', 'integer', (column) => column.notNull())
     .addPrimaryKeyConstraint('game_players_pkey', ['game_id', 'player_id'])
     .addUniqueConstraint('game_players_position', ['game_id', 'position'])
+    .execute();
+  await db.schema
+    .createIndex('game_players_by_player')
+    .on('game_players')
+    .column('player_id')
     .execute();
 
   await db.schema
