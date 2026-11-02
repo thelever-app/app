@@ -12,7 +12,11 @@ import {
   StartDecisionPhaseUseCase,
 } from '@thelever-app/game';
 import { DilemmasContextCatalog } from '@thelever-app/game/dilemmas';
-import { InMemoryGameRepository, InMemoryRoomRepository } from '@thelever-app/game/in-memory';
+import {
+  InMemoryGameRepository,
+  InMemoryRoomRepository,
+  InMemorySealProvider,
+} from '@thelever-app/game/in-memory';
 import type { WebSocketServer } from 'ws';
 import { createApp } from './app.ts';
 import { KeyedLock } from './concurrency/keyed-lock.ts';
@@ -101,7 +105,13 @@ export async function composeRealtimeServer({
         disconnectHandler,
       ),
       new AnswerDilemmaHandler(
-        new AnswerDilemmaUseCase(gameRepository, notifier),
+        // Until the first access exists, every answer carries the seal of before it.
+        new AnswerDilemmaUseCase(
+          roomRepository,
+          gameRepository,
+          notifier,
+          new InMemorySealProvider(),
+        ),
         gameLock,
         stateSender,
       ),

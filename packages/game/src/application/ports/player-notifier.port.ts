@@ -1,6 +1,6 @@
 import type { DomainEvent } from '../../domain/events/domain-event.ts';
 
-/** Delivers an event to one player. Who receives what is decided by the use cases. */
+/** Delivers an event to some players at once. Who receives what is decided by the use cases. */
 export interface PlayerNotifier {
-  notify(playerId: string, event: DomainEvent): Promise<void>;
+  notify(playerIds: readonly string[], event: DomainEvent): Promise<void>;
 }

@@ -10,6 +10,7 @@ import { PlayerNotInGameError } from '../../../domain/errors/player-not-in-game.
 import { Game } from '../../../domain/entities/game.ts';
 import { InMemoryRoomRepository } from '../../../adapters/in-memory/in-memory-room-repository.ts';
 import { InMemoryGameRepository } from '../../../adapters/in-memory/in-memory-game-repository.ts';
+import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
 import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
@@ -49,7 +50,12 @@ async function gameInDecisionPhase() {
   return {
     gameRepository,
     roomRepository,
-    answerDilemma: new AnswerDilemmaUseCase(gameRepository, new InMemoryPlayerNotifier()),
+    answerDilemma: new AnswerDilemmaUseCase(
+      roomRepository,
+      gameRepository,
+      new InMemoryPlayerNotifier(),
+      new InMemorySealProvider(),
+    ),
     getGameState: new GetGameStateUseCase(roomRepository, gameRepository, catalog),
     gameId,
     anaId,

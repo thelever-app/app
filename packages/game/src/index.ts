@@ -10,6 +10,7 @@
 export { Player, type PlayerSnapshot } from './domain/entities/player.ts';
 export { Room, type RoomSnapshot } from './domain/entities/room.ts';
 export { Game, type GameDilemma, type GameSnapshot } from './domain/entities/game.ts';
+export type { Seal } from './domain/vos/answer.vo.ts';
 export type { DomainEvent } from './domain/events/domain-event.ts';
 export { ProgressUpdatedEvent } from './domain/events/progress-updated.event.ts';
 export { ConnectionChangedEvent } from './domain/events/connection-changed.event.ts';
@@ -36,6 +37,7 @@ export { DilemmaNotReachedError } from './domain/errors/dilemma-not-reached.erro
 export type { RoomRepository } from './application/ports/room-repository.port.ts';
 export type { GameRepository } from './application/ports/game-repository.port.ts';
 export type { PlayerNotifier } from './application/ports/player-notifier.port.ts';
+export type { SealProvider } from './application/ports/seal-provider.port.ts';
 export type { DilemmaCatalog, DilemmaContent } from './application/ports/dilemma-catalog.port.ts';
 export { RoomNotFoundError } from './application/errors/room-not-found.error.ts';
 export { GameNotFoundError } from './application/errors/game-not-found.error.ts';
@@ -69,6 +71,10 @@ export {
   DisconnectPlayerUseCase,
   type DisconnectPlayerInput,
 } from './application/use-cases/disconnect-player.use-case.ts';
+export {
+  DisconnectConnectionsUseCase,
+  type DisconnectConnectionsInput,
+} from './application/use-cases/disconnect-connections.use-case.ts';
 export {
   GetGameStateUseCase,
   type GetGameStateInput,

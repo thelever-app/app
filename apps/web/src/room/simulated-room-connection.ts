@@ -23,6 +23,7 @@ import { DilemmasContextCatalog } from '@thelever-app/game/dilemmas';
 import {
   InMemoryGameRepository,
   InMemoryRoomRepository,
+  InMemorySealProvider,
   SequentialIdGenerator,
 } from '@thelever-app/game/in-memory';
 import { ClientMessageDto, ServerMessageDto } from '@thelever-app/protocol';
@@ -55,8 +56,8 @@ class CallbackPlayerNotifier implements PlayerNotifier {
     this.#onEvent = onEvent;
   }
 
-  async notify(playerId: string, event: DomainEvent): Promise<void> {
-    this.#onEvent(playerId, event);
+  async notify(playerIds: readonly string[], event: DomainEvent): Promise<void> {
+    for (const playerId of playerIds) this.#onEvent(playerId, event);
   }
 }
 
@@ -90,8 +91,10 @@ export class SimulatedRoomConnection implements RoomConnection {
       repositories.catalog,
     );
     this.#answerDilemma = new AnswerDilemmaUseCase(
+      repositories.room,
       repositories.game,
       new CallbackPlayerNotifier((to, event) => this.#onEvent(to, event)),
+      new InMemorySealProvider(),
     );
     this.#gameId = gameId;
     this.#playerId = playerId;

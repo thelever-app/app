@@ -6,6 +6,20 @@ import { Player } from '../../domain/entities/player.ts';
 import { Room } from '../../domain/entities/room.ts';
 import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.ts';
 
+/** Two different seals, so a repository that mixes them up fails. */
+const ANA_SEAL = {
+  gameConsentVersion: 'TestGameConsentVersion2',
+  researchConsentVersion: 'TestResearchConsentVersion1',
+  commercialLicenceConsentVersion: 'TestCommercialLicenceConsentVersion1',
+  underEighteen: false,
+};
+const LUIS_SEAL = {
+  gameConsentVersion: 'TestGameConsentVersion1',
+  researchConsentVersion: null,
+  commercialLicenceConsentVersion: null,
+  underEighteen: true,
+};
+
 /**
  * What every GameRepository must do, in memory or in PostgreSQL (ADR 0002).
  * `create` returns repositories with no rooms and no games, after storing CONTRACT_DILEMMAS
@@ -54,9 +68,9 @@ export function describeGameRepositoryContract(
         // Arrange
         const { games, room, game, first, second } = await arrange();
         game.startDecisionPhase(room.players);
-        game.answer('TestAnaId', first.dilemmaId, first.optionIds[0]);
-        game.answer('TestAnaId', second.dilemmaId, second.optionIds[2]);
-        game.answer('TestLuisId', first.dilemmaId, first.optionIds[1]);
+        game.answer('TestAnaId', first.dilemmaId, first.optionIds[0], ANA_SEAL);
+        game.answer('TestAnaId', second.dilemmaId, second.optionIds[2], ANA_SEAL);
+        game.answer('TestLuisId', first.dilemmaId, first.optionIds[1], LUIS_SEAL);
         await games.save(game);
 
         // Act
@@ -108,10 +122,10 @@ export function describeGameRepositoryContract(
         // Arrange
         const { games, room, game, first } = await arrange();
         game.startDecisionPhase(room.players);
-        game.answer('TestAnaId', first.dilemmaId, first.optionIds[0]);
+        game.answer('TestAnaId', first.dilemmaId, first.optionIds[0], ANA_SEAL);
         await games.save(game);
-        game.answer('TestAnaId', first.dilemmaId, first.optionIds[1]);
-        game.answer('TestLuisId', first.dilemmaId, first.optionIds[0]);
+        game.answer('TestAnaId', first.dilemmaId, first.optionIds[1], ANA_SEAL);
+        game.answer('TestLuisId', first.dilemmaId, first.optionIds[0], LUIS_SEAL);
 
         // Act
         await games.save(game);
