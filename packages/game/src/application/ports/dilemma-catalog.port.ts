@@ -9,11 +9,17 @@ export interface DilemmaContent {
 
 /**
  * How the Game context asks the Dilemmas context for the dilemmas of a game.
- * Both methods keep the order asked for and throw DilemmaNotFoundError if a dilemma does not exist.
+ * Both methods keep the order asked for and throw DilemmaNotFoundError if a dilemma, or that version of it, does not exist.
  */
 export interface DilemmaCatalog {
-  /** The structure the rules of the game need: the ids of the options of each dilemma. */
+  /** The structure the rules of the game need: the current version of each dilemma and the ids of its options. */
   findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]>;
-  /** The content, in the language asked for or in the original one while there is no translation. */
-  findContents(dilemmaIds: readonly string[], language: string): Promise<readonly DilemmaContent[]>;
+  /**
+   * The content of the versions played, in the language asked for or in the original one while there is
+   * no translation; a game shows what it plays even if a dilemma gets a new version meanwhile.
+   */
+  findContents(
+    dilemmas: readonly { readonly dilemmaId: string; readonly version: number }[],
+    language: string,
+  ): Promise<readonly DilemmaContent[]>;
 }

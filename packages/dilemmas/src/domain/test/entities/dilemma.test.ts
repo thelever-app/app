@@ -1,20 +1,51 @@
 import { describe, expect, it } from 'vitest';
-import { Dilemma } from '../../entities/dilemma.ts';
+import { Dilemma, type DilemmaSnapshot } from '../../entities/dilemma.ts';
 import { DuplicateOptionError } from '../../errors/duplicate-option.error.ts';
+import { DuplicateTagError } from '../../errors/duplicate-tag.error.ts';
 import { IdMissingError } from '../../errors/id-missing.error.ts';
 import { InvalidLanguageError } from '../../errors/invalid-language.error.ts';
+import { InvalidMinimumAgeError } from '../../errors/invalid-minimum-age.error.ts';
 import { OptionCountError } from '../../errors/option-count.error.ts';
+import { TagCountError } from '../../errors/tag-count.error.ts';
 import { TextMissingError } from '../../errors/text-missing.error.ts';
+import { UnknownCategoryError } from '../../errors/unknown-category.error.ts';
+import { UnknownOptionError } from '../../errors/unknown-option.error.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 
 const DATA = {
   text: 'TestDilemmaText',
   language: 'es',
   options: ['TestOption1', 'TestOption2'],
+  category: 'honesty',
+  tags: ['testtag'],
+  minimumAge: 16,
+};
+
+/** The content of the first version of the dilemma created from DATA, as `revise` takes it. */
+const CONTENT = {
+  text: 'TestDilemmaText',
+  options: [
+    { id: 'TestOptionId1', text: 'TestOption1' },
+    { id: 'TestOptionId2', text: 'TestOption2' },
+  ],
+  category: 'honesty',
+  tags: ['testtag'],
+  minimumAge: 16,
 };
 
 function ids() {
   return new FixedIdGenerator('TestDilemmaId', 'TestOptionId1', 'TestOptionId2', 'TestOptionId3');
+}
+
+/** A dilemma of a player, which only the snapshot can build until players create dilemmas. */
+function dilemmaOfAPlayer(): Dilemma {
+  const snapshot = Dilemma.create(DATA, ids()).toSnapshot();
+  return Dilemma.restore({
+    ...snapshot,
+    creator: { type: 'player', identity: 'TestAnaIdentity' },
+    visibility: 'private',
+    version: { ...snapshot.version, status: 'approved' },
+  });
 }
 
 describe('Dilemma', () => {
@@ -31,6 +62,27 @@ describe('Dilemma', () => {
         { id: 'TestOptionId1', text: 'TestOption1' },
         { id: 'TestOptionId2', text: 'TestOption2' },
       ]);
+    });
+
+    it('should have its category, its tags and its minimum age', () => {
+      // Act
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Assert
+      expect(dilemma.category).toBe('honesty');
+      expect(dilemma.tags).toEqual(['testtag']);
+      expect(dilemma.minimumAge).toBe(16);
+    });
+
+    it('should be the first version, by the curation team, public and straight in the catalog', () => {
+      // Act
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Assert
+      expect(dilemma.version).toBe(1);
+      expect(dilemma.creator).toEqual({ type: 'curation-team' });
+      expect(dilemma.visibility).toBe('public');
+      expect(dilemma.status).toBe('in-catalog');
     });
 
     it('should accept up to 4 options', () => {
@@ -106,6 +158,207 @@ describe('Dilemma', () => {
         IdMissingError,
       );
     });
+
+    it('should throw an error if the category is not in the list', () => {
+      // Act & Assert
+      expect(() => Dilemma.create({ ...DATA, category: 'family' }, ids())).toThrow(
+        UnknownCategoryError,
+      );
+    });
+
+    it('should tell whether a player under 18 may get it', () => {
+      // Act & Assert
+      expect(Dilemma.create(DATA, ids()).isSuitableForMinors()).toBe(true);
+      expect(Dilemma.create({ ...DATA, minimumAge: 18 }, ids()).isSuitableForMinors()).toBe(false);
+    });
+
+    it('should throw an error if the minimum age is not 16 or 18', () => {
+      // Act & Assert
+      expect(() => Dilemma.create({ ...DATA, minimumAge: 12 }, ids())).toThrow(
+        InvalidMinimumAgeError,
+      );
+    });
+
+    it('should accept no tags and up to 5', () => {
+      // Act & Assert
+      expect(Dilemma.create({ ...DATA, tags: [] }, ids()).tags).toEqual([]);
+      expect(
+        Dilemma.create({ ...DATA, tags: ['t1', 't2', 't3', 't4', 't5'] }, ids()).tags,
+      ).toHaveLength(5);
+    });
+
+    it('should throw an error if it has more than 5 tags', () => {
+      // Act & Assert
+      expect(() =>
+        Dilemma.create({ ...DATA, tags: ['t1', 't2', 't3', 't4', 't5', 't6'] }, ids()),
+      ).toThrow(TagCountError);
+    });
+
+    it('should throw an error if a tag is repeated, whatever its case', () => {
+      // Act & Assert
+      expect(() => Dilemma.create({ ...DATA, tags: ['familia', ' Familia'] }, ids())).toThrow(
+        DuplicateTagError,
+      );
+    });
+  });
+
+  describe('revise', () => {
+    it('should create the next version with the new content', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act
+      dilemma.revise(
+        {
+          ...CONTENT,
+          text: 'TestRevisedText',
+          category: 'loyalty',
+          tags: ['testothertag'],
+          minimumAge: 18,
+        },
+        new FixedIdGenerator(),
+      );
+
+      // Assert
+      expect(dilemma.version).toBe(2);
+      expect(dilemma.text).toBe('TestRevisedText');
+      expect(dilemma.category).toBe('loyalty');
+      expect(dilemma.tags).toEqual(['testothertag']);
+      expect(dilemma.minimumAge).toBe(18);
+    });
+
+    it('should keep the ids of the options it keeps and give new ids to the new ones', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act
+      dilemma.revise(
+        {
+          ...CONTENT,
+          options: [{ id: 'TestOptionId2', text: 'TestOption2' }, { text: 'TestOption3' }],
+        },
+        new FixedIdGenerator('TestOptionId3'),
+      );
+
+      // Assert
+      expect(dilemma.options).toEqual([
+        { id: 'TestOptionId2', text: 'TestOption2' },
+        { id: 'TestOptionId3', text: 'TestOption3' },
+      ]);
+    });
+
+    it('should keep the id of an option whose text changes', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act
+      dilemma.revise(
+        {
+          ...CONTENT,
+          options: [
+            { id: 'TestOptionId1', text: 'TestOption1 fixed' },
+            { id: 'TestOptionId2', text: 'TestOption2' },
+          ],
+        },
+        new FixedIdGenerator(),
+      );
+
+      // Assert
+      expect(dilemma.version).toBe(2);
+      expect(dilemma.options[0]).toEqual({ id: 'TestOptionId1', text: 'TestOption1 fixed' });
+    });
+
+    it('should change nothing if the content is the same', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act
+      dilemma.revise(
+        { ...CONTENT, text: ' TestDilemmaText ', tags: ['TestTag'] },
+        new FixedIdGenerator(),
+      );
+
+      // Assert
+      expect(dilemma.version).toBe(1);
+    });
+
+    it('should leave a new version of the curation team straight in the catalog', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act
+      dilemma.revise({ ...CONTENT, text: 'TestRevisedText' }, new FixedIdGenerator());
+
+      // Assert
+      expect(dilemma.status).toBe('in-catalog');
+    });
+
+    it('should leave a new version of a player in review', () => {
+      // Arrange
+      const dilemma = dilemmaOfAPlayer();
+
+      // Act
+      dilemma.revise({ ...CONTENT, text: 'TestRevisedText' }, new FixedIdGenerator());
+
+      // Assert
+      expect(dilemma.status).toBe('in-review');
+      expect(dilemma.visibility).toBe('private');
+    });
+
+    it('should throw an error if it keeps an option the dilemma does not have', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act & Assert
+      expect(() =>
+        dilemma.revise(
+          {
+            ...CONTENT,
+            options: [
+              { id: 'TestOptionId1', text: 'TestOption1' },
+              { id: 'TestUnknownOptionId', text: 'TestOption2' },
+            ],
+          },
+          new FixedIdGenerator(),
+        ),
+      ).toThrow(UnknownOptionError);
+    });
+
+    it('should throw an error if it keeps the same option twice', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act & Assert
+      expect(() =>
+        dilemma.revise(
+          {
+            ...CONTENT,
+            options: [
+              { id: 'TestOptionId1', text: 'TestOption1' },
+              { id: 'TestOptionId1', text: 'TestOption2' },
+            ],
+          },
+          new FixedIdGenerator(),
+        ),
+      ).toThrow(DuplicateOptionError);
+    });
+
+    it('should leave the dilemma as it was when the new content is not valid', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+      const before = dilemma.toSnapshot();
+
+      // Act
+      expect(() =>
+        dilemma.revise(
+          { ...CONTENT, text: 'TestRevisedText', options: [{ text: 'TestOption3' }] },
+          new FixedIdGenerator('TestOptionId3'),
+        ),
+      ).toThrow(OptionCountError);
+
+      // Assert
+      expect(dilemma.toSnapshot()).toEqual(before);
+    });
   });
 
   describe('options', () => {
@@ -170,13 +423,36 @@ describe('Dilemma', () => {
       // Assert
       expect(restored.toSnapshot()).toEqual({
         id: 'TestDilemmaId',
-        text: 'TestDilemmaText',
         language: 'es',
-        options: [
-          { id: 'TestOptionId1', text: 'TestOption1' },
-          { id: 'TestOptionId2', text: 'TestOption2' },
-        ],
-      });
+        creator: { type: 'curation-team' },
+        visibility: 'public',
+        version: {
+          number: 1,
+          text: 'TestDilemmaText',
+          options: [
+            { id: 'TestOptionId1', text: 'TestOption1' },
+            { id: 'TestOptionId2', text: 'TestOption2' },
+          ],
+          category: 'honesty',
+          tags: ['testtag'],
+          minimumAge: 16,
+          status: 'in-catalog',
+        },
+      } satisfies DilemmaSnapshot);
+    });
+
+    it('should rebuild a dilemma of a player at a later version', () => {
+      // Arrange
+      const dilemma = dilemmaOfAPlayer();
+      dilemma.revise({ ...CONTENT, text: 'TestRevisedText' }, new FixedIdGenerator());
+
+      // Act
+      const restored = Dilemma.restore(dilemma.toSnapshot());
+
+      // Assert
+      expect(restored.toSnapshot()).toEqual(dilemma.toSnapshot());
+      expect(restored.creator).toEqual({ type: 'player', identity: 'TestAnaIdentity' });
+      expect(restored.version).toBe(2);
     });
   });
 });

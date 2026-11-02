@@ -14,10 +14,12 @@ import { DecisionPhaseAlreadyStartedError } from '../../errors/decision-phase-al
 import { OptionNotInDilemmaError } from '../../errors/option-not-in-dilemma.error.ts';
 import { DilemmaNotReachedError } from '../../errors/dilemma-not-reached.error.ts';
 import { OptionsMissingError } from '../../errors/options-missing.error.ts';
+import { InvalidDilemmaVersionError } from '../../errors/invalid-dilemma-version.error.ts';
 
 const OPTION_IDS = ['TestOption', 'TestOtherOption', 'TestSecretOption'];
-const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId) => ({
+const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId, index) => ({
   dilemmaId,
+  version: index + 1,
   optionIds: OPTION_IDS,
 }));
 
@@ -41,7 +43,7 @@ function gameInDecisionPhase(): { game: Game; ana: Player; luis: Player } {
 
 describe('Game', () => {
   describe('create', () => {
-    it('should have an id, its room id and its dilemmas', () => {
+    it('should have an id, its room id and its dilemmas, each at the version played', () => {
       // Arrange
       const id = 'TestId';
       const roomId = 'TestRoomId';
@@ -97,8 +99,9 @@ describe('Game', () => {
       );
 
       // Act
-      (game.dilemmas as { dilemmaId: string; optionIds: string[] }[]).push({
+      (game.dilemmas as { dilemmaId: string; version: number; optionIds: string[] }[]).push({
         dilemmaId: 'TestIntruderDilemma',
+        version: 1,
         optionIds: OPTION_IDS,
       });
 
@@ -568,10 +571,28 @@ describe('Game', () => {
       // Act & Assert
       expect(() =>
         Game.create(
-          { roomId: 'TestRoomId', dilemmas: [{ dilemmaId: 'TestDilemma1', optionIds: [] }] },
+          {
+            roomId: 'TestRoomId',
+            dilemmas: [{ dilemmaId: 'TestDilemma1', version: 1, optionIds: [] }],
+          },
           new FixedIdGenerator('TestId'),
         ),
       ).toThrow(OptionsMissingError);
+    });
+
+    it('should throw an error if the version of a dilemma is not a whole number from 1', () => {
+      // Act & Assert
+      for (const version of [0, 1.5]) {
+        expect(() =>
+          Game.create(
+            {
+              roomId: 'TestRoomId',
+              dilemmas: [{ dilemmaId: 'TestDilemma1', version, optionIds: OPTION_IDS }],
+            },
+            new FixedIdGenerator('TestId'),
+          ),
+        ).toThrow(InvalidDilemmaVersionError);
+      }
     });
 
     it('should throw an error if a dilemma is repeated', () => {
@@ -582,6 +603,7 @@ describe('Game', () => {
             roomId: 'TestRoomId',
             dilemmas: ['TestDilemma1', 'TestDilemma1', 'TestDilemma2'].map((dilemmaId) => ({
               dilemmaId,
+              version: 1,
               optionIds: OPTION_IDS,
             })),
           },

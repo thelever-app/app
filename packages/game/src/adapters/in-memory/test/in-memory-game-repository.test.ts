@@ -8,6 +8,7 @@ describeGameRepositoryContract('InMemoryGameRepository', async () => ({
   rooms: new InMemoryRoomRepository(),
   dilemmas: CONTRACT_DILEMMAS.map(({ options }, index) => ({
     dilemmaId: `TestDilemma${index + 1}`,
+    version: 1,
     optionIds: options.map((_, optionIndex) => `TestDilemma${index + 1}Option${optionIndex + 1}`),
   })),
 }));

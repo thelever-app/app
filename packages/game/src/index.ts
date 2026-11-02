@@ -28,6 +28,7 @@ export { DuplicateDilemmaError } from './domain/errors/duplicate-dilemma.error.t
 export { PlayersMissingError } from './domain/errors/players-missing.error.ts';
 export { DecisionPhaseAlreadyStartedError } from './domain/errors/decision-phase-already-started.error.ts';
 export { OptionsMissingError } from './domain/errors/options-missing.error.ts';
+export { InvalidDilemmaVersionError } from './domain/errors/invalid-dilemma-version.error.ts';
 export { OptionNotInDilemmaError } from './domain/errors/option-not-in-dilemma.error.ts';
 export { DilemmaNotReachedError } from './domain/errors/dilemma-not-reached.error.ts';
 

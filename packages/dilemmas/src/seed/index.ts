@@ -3,4 +3,4 @@
  *
  * The dilemmas every environment starts with.
  */
-export { loadSeedDilemmas, SEED_DILEMMAS } from './seed-dilemmas.ts';
+export { loadSeedDilemmas, SEED_DILEMMAS, type SeedDilemma } from './seed-dilemmas.ts';

@@ -44,6 +44,9 @@ export interface SimulatedRoomOptions {
   readonly dilemmas?: readonly { readonly text: string; readonly options: readonly string[] }[];
 }
 
+/** The simulation plays the dilemmas it is given without classifying them: any category and age fit. */
+const CLASSIFICATION = { category: 'life-and-death', tags: [], minimumAge: 16 } as const;
+
 /** Hands every event the use cases deliver to a callback, as a socket would push it. */
 class CallbackPlayerNotifier implements PlayerNotifier {
   readonly #onEvent: (playerId: string, event: DomainEvent) => void;
@@ -169,7 +172,7 @@ export class SimulatedRoomConnection implements RoomConnection {
     const idGenerator = new SequentialDilemmaIdGenerator('dilemma');
     const ids: string[] = [];
     for (const { text, options } of dilemmas) {
-      const dilemma = Dilemma.create({ text, language, options }, idGenerator);
+      const dilemma = Dilemma.create({ ...CLASSIFICATION, text, language, options }, idGenerator);
       await repository.save(dilemma);
       ids.push(dilemma.id);
     }

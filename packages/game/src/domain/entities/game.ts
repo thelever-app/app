@@ -15,9 +15,10 @@ import { AnswerVO } from '../vos/answer.vo.ts';
 import { DilemmaVO } from '../vos/dilemma.vo.ts';
 import { Player } from './player.ts';
 
-/** A dilemma of the game: its id and the ids of its options. */
+/** A dilemma of the game: its id, the version played and the ids of its options. */
 export interface GameDilemma {
   readonly dilemmaId: string;
+  readonly version: number;
   readonly optionIds: readonly string[];
 }
 
@@ -52,7 +53,7 @@ export class Game {
     this.#id = new IdVO(id);
     this.#roomId = new IdVO(roomId);
     this.#dilemmas = dilemmas.map(
-      ({ dilemmaId, optionIds }) => new DilemmaVO(dilemmaId, optionIds),
+      ({ dilemmaId, version, optionIds }) => new DilemmaVO(dilemmaId, version, optionIds),
     );
   }
 
@@ -73,7 +74,11 @@ export class Game {
 
   /** In the order every player gets them. */
   get dilemmas(): readonly GameDilemma[] {
-    return this.#dilemmas.map(({ dilemmaId, optionIds }) => ({ dilemmaId, optionIds }));
+    return this.#dilemmas.map(({ dilemmaId, version, optionIds }) => ({
+      dilemmaId,
+      version,
+      optionIds,
+    }));
   }
 
   get playerIds(): readonly string[] {
