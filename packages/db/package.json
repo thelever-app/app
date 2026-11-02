@@ -10,6 +10,12 @@
     "typecheck": "tsc --noEmit -p ."
   },
   "devDependencies": {
-    "@thelever-app/config": "workspace:*"
+    "@thelever-app/config": "workspace:*",
+    "@types/pg": "^8.23.1"
+  },
+  "dependencies": {
+    "@google-cloud/cloud-sql-connector": "^1.12.1",
+    "kysely": "^0.29.7",
+    "pg": "^8.23.1"
   }
 }
