@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@google-cloud/cloud-sql-connector": "^1.12.1",
+    "@thelever-app/dilemmas": "workspace:*",
+    "@thelever-app/game": "workspace:*",
     "kysely": "^0.29.7",
     "pg": "^8.23.1"
   }

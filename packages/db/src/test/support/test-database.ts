@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import type { Kysely } from 'kysely';
+import { type Kysely, sql } from 'kysely';
 import pg from 'pg';
 import { afterAll, beforeAll } from 'vitest';
 import { openDatabase } from '../../connection.ts';
+import type { Database } from '../../schema.ts';
 
 /** Migrated once per run; every test file copies it. */
 export const TEMPLATE_DATABASE = 'thelever_test_template';
@@ -63,4 +64,9 @@ export function useTestDatabase<DB = unknown>(): {
     },
     url: () => urlOf(name),
   };
+}
+
+/** Leaves every table empty, as the contracts expect each repository they get to be. */
+export async function emptyTables(db: Kysely<Database>): Promise<void> {
+  await sql`truncate table dilemmas, rooms, instances cascade`.execute(db);
 }
