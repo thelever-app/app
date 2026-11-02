@@ -1,5 +1,5 @@
 import type { Category, DilemmaStatus, MinimumAge, Visibility } from '@thelever-app/dilemmas';
-import type { Generated } from 'kysely';
+import type { Generated, Kysely } from 'kysely';
 
 /** The tables, as the migrations leave them; the checks of the database guarantee the unions. */
 export interface Database {
@@ -84,3 +84,6 @@ export interface Database {
     voter_in_the_gap: boolean;
   };
 }
+
+/** The database as the adapters and the room server get it. */
+export type DatabaseClient = Kysely<Database>;

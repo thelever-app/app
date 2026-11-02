@@ -7,7 +7,7 @@ import {
   type ServerMessageDto as ServerMessage,
 } from '@thelever-app/protocol';
 import WebSocket from 'ws';
-import { composeRealtimeServer } from '../../composition.ts';
+import { composeRealtimeServer, type Storage } from '../../composition.ts';
 import type { TokenVerifier } from '../../identity/token-verifier.ts';
 import { FakeTokenVerifier, tokenOf } from './fake-token-verifier.ts';
 
@@ -16,6 +16,7 @@ export async function composedHttpServer() {
   const { http } = await composeRealtimeServer({
     tokenVerifier: new FakeTokenVerifier(),
     pingIntervalMs: 30_000,
+    storage: { kind: 'memory' },
   });
   return http;
 }
@@ -25,12 +26,17 @@ export function bearer(identity: string): string {
   return `Bearer ${tokenOf(identity)}`;
 }
 
-/** The room server, as the composition root builds it but with the fake token verifier, on a free port. */
+/**
+ * The room server, as the composition root builds it but with the fake token verifier, on a free port;
+ * in memory unless it is given another storage.
+ */
 export async function startRoomServer({
   pingIntervalMs = 30_000,
   tokenVerifier = new FakeTokenVerifier() as TokenVerifier,
+  storage = { kind: 'memory' } as Storage,
 } = {}) {
-  const { http: server, sockets } = await composeRealtimeServer({ tokenVerifier, pingIntervalMs });
+  const composed = await composeRealtimeServer({ tokenVerifier, pingIntervalMs, storage });
+  const { http: server, sockets } = composed;
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;
 
@@ -44,6 +50,10 @@ export async function startRoomServer({
       await new Promise((resolve) => sockets.close(resolve));
       await new Promise((resolve) => server.close(resolve));
     },
+    /** Leaves as on SIGTERM. */
+    shutdown: () => composed.shutdown(),
+    /** Stops at once, as a process that dies would. */
+    close: () => composed.close(),
   };
 }
 

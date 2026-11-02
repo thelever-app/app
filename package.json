@@ -13,7 +13,7 @@
     "emulators": "firebase emulators:start --only auth --project demo-thelever",
     "test:e2e": "pnpm --filter @thelever-app/web build && firebase emulators:exec --only auth --project demo-thelever 'pnpm --filter @thelever-app/tests test:e2e'",
     "db:migrate": "node --env-file-if-exists=.env packages/db/src/migrate.ts",
-    "test:db": "pnpm --filter @thelever-app/db test",
+    "test:db": "pnpm --filter @thelever-app/db test && pnpm --filter @thelever-app/realtime test:db",
     "db:seed": "node --env-file-if-exists=.env packages/db/seeds/load.ts"
   },
   "license": "AGPL-3.0-only",

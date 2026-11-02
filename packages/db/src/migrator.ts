@@ -10,7 +10,7 @@ const MIGRATIONS = path.join(import.meta.dirname, 'migrations');
  * Only forward, with no `down`: each one must also work with the revision of the server that is
  * still serving while it runs. Kysely takes a lock, so two runs at once do not clash.
  */
-export async function migrateToLatest(db: Kysely<unknown>): Promise<readonly string[]> {
+export async function migrateToLatest<DB>(db: Kysely<DB>): Promise<readonly string[]> {
   const migrator = new Migrator({
     db,
     provider: new FileMigrationProvider({ fs, path, migrationFolder: MIGRATIONS }),

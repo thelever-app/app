@@ -1,5 +1,15 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import {
+  type Database,
+  migrateToLatest,
+  openDatabase,
+  PostgresDilemmaRepository,
+} from '@thelever-app/db';
+import { onServer, urlOf } from '@thelever-app/db/test';
+import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
 import { chromium, type Browser } from 'playwright';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -7,6 +17,8 @@ const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const REALTIME_PORT = 3000;
 const WEB_PORT = 4173;
 const READY_TIMEOUT_MS = 30_000;
+/** Locally, DATABASE_URL comes from the .env of the repo; in CI, from the workflow. */
+const ENV_FILE = `${ROOT}.env`;
 
 /**
  * The system the e2e scenarios play against, all of it on this machine: the room server, the
@@ -20,7 +32,35 @@ export interface E2eStack {
   readonly webUrl: string;
 }
 
-let running: { readonly stack: E2eStack; readonly processes: readonly ChildProcess[] } | undefined;
+let running:
+  | {
+      readonly stack: E2eStack;
+      readonly processes: readonly ChildProcess[];
+      readonly database: string;
+    }
+  | undefined;
+
+/** A database of its own for the run, migrated and with the seed dilemmas, as the migrate job leaves one. */
+async function createE2eDatabase(): Promise<string> {
+  if (existsSync(ENV_FILE)) process.loadEnvFile(ENV_FILE);
+  const name = `thelever_e2e_${randomUUID().replaceAll('-', '')}`;
+  await onServer((quote) => `CREATE DATABASE ${quote(name)}`);
+  const { db, close } = await openDatabase<Database>(
+    { kind: 'url', url: urlOf(name) },
+    { maxConnections: 1 },
+  );
+  try {
+    await migrateToLatest(db);
+    await loadSeedDilemmas(new PostgresDilemmaRepository(db));
+  } finally {
+    await close();
+  }
+  return name;
+}
+
+async function dropE2eDatabase(name: string): Promise<void> {
+  await onServer((quote) => `DROP DATABASE IF EXISTS ${quote(name)} WITH (FORCE)`);
+}
 
 export async function startE2eStack(): Promise<void> {
   const authEmulator = process.env.FIREBASE_AUTH_EMULATOR_HOST;
@@ -28,11 +68,13 @@ export async function startE2eStack(): Promise<void> {
 
   const realtimeUrl = `http://localhost:${REALTIME_PORT}`;
   const webUrl = `http://localhost:${WEB_PORT}`;
+  const database = await createE2eDatabase();
   const processes = [
     start('node', ['apps/realtime/src/server.ts'], {
       PORT: String(REALTIME_PORT),
       FIREBASE_PROJECT_ID: 'demo-thelever',
       FIREBASE_AUTH_EMULATOR_HOST: authEmulator,
+      DATABASE_URL: urlOf(database),
     }),
     start('pnpm', [
       '--filter',
@@ -48,19 +90,21 @@ export async function startE2eStack(): Promise<void> {
   try {
     await Promise.all([ready(`${realtimeUrl}/health`), ready(webUrl)]);
     const browser = await chromium.launch();
-    running = { stack: { browser, realtimeUrl, webUrl }, processes };
+    running = { stack: { browser, realtimeUrl, webUrl }, processes, database };
   } catch (error) {
-    for (const child of processes) stop(child);
+    await Promise.all(processes.map(stop));
+    await dropE2eDatabase(database);
     throw error;
   }
 }
 
 export async function stopE2eStack(): Promise<void> {
   if (!running) return;
-  const { stack, processes } = running;
+  const { stack, processes, database } = running;
   running = undefined;
   await stack.browser.close();
-  for (const child of processes) stop(child);
+  await Promise.all(processes.map(stop));
+  await dropE2eDatabase(database);
 }
 
 /** The stack a scenario plays against, once the test run has started it. */
@@ -79,9 +123,12 @@ function start(command: string, args: string[], env: Record<string, string> = {}
   });
 }
 
-function stop(child: ChildProcess): void {
+/** Sends SIGTERM to the group and waits until the process exits, as the room server first leaves cleanly. */
+async function stop(child: ChildProcess): Promise<void> {
   if (child.pid === undefined || child.exitCode !== null) return;
+  const exited = new Promise((resolve) => child.once('exit', resolve));
   process.kill(-child.pid, 'SIGTERM');
+  await exited;
 }
 
 async function ready(url: string): Promise<void> {

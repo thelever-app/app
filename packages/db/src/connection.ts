@@ -45,9 +45,10 @@ export async function openDatabase<DB>(
   { maxConnections }: { readonly maxConnections: number },
 ): Promise<{ readonly db: Kysely<DB>; readonly close: () => Promise<void> }> {
   const { options, release } = await clientOptions(config);
-  const db = new Kysely<DB>({
-    dialect: new PostgresDialect({ pool: new pg.Pool({ ...options, max: maxConnections }) }),
-  });
+  const pool = new pg.Pool({ ...options, max: maxConnections });
+  // The database may end an idle connection (a restart, maintenance): the pool drops it and opens another.
+  pool.on('error', (error) => console.error(error));
+  const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
   return {
     db,
     close: async () => {

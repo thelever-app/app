@@ -9,8 +9,12 @@ export {
   openListenClient,
   type DatabaseConfig,
 } from './connection.ts';
-export type { Database } from './schema.ts';
+export type { Database, DatabaseClient } from './schema.ts';
+export { migrateToLatest } from './migrator.ts';
 export { inTransaction } from './transaction.ts';
 export { PostgresDilemmaRepository } from './dilemmas/postgres-dilemma-repository.ts';
 export { PostgresRoomRepository } from './game/postgres-room-repository.ts';
 export { PostgresGameRepository } from './game/postgres-game-repository.ts';
+export { PostgresPlayerNotifier, GAME_EVENTS_CHANNEL } from './game/postgres-player-notifier.ts';
+export { GameEventsListener } from './game/game-events-listener.ts';
+export { PostgresInstances } from './game/postgres-instances.ts';

@@ -3,6 +3,7 @@ import { type Kysely, sql } from 'kysely';
 import pg from 'pg';
 import { afterAll, beforeAll } from 'vitest';
 import { openDatabase } from '../../connection.ts';
+import { LISTENER_APPLICATION_NAME } from '../../game/game-events-listener.ts';
 import type { Database } from '../../schema.ts';
 
 /** Migrated once per run; every test file copies it. */
@@ -69,4 +70,12 @@ export function useTestDatabase<DB = unknown>(): {
 /** Leaves every table empty, as the contracts expect each repository they get to be. */
 export async function emptyTables(db: Kysely<Database>): Promise<void> {
   await sql`truncate table dilemmas, rooms, instances cascade`.execute(db);
+}
+
+/** Ends every connection that listens to the events of the instances, as a restart of the database would. */
+export async function endListeningConnections(db: Kysely<Database>): Promise<void> {
+  await sql`
+    select pg_terminate_backend(pid) from pg_stat_activity
+    where datname = current_database() and application_name = ${LISTENER_APPLICATION_NAME}
+  `.execute(db);
 }

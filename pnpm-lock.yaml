@@ -41,6 +41,9 @@ importers:
 
   apps/realtime:
     dependencies:
+      '@thelever-app/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@thelever-app/dilemmas':
         specifier: workspace:*
         version: link:../../packages/dilemmas
@@ -239,6 +242,10 @@ importers:
         version: 24.19.0
 
   tests:
+    dependencies:
+      '@thelever-app/db':
+        specifier: workspace:*
+        version: link:../packages/db
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.13.0
