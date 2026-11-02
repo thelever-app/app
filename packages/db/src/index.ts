@@ -3,4 +3,9 @@
  *
  * Database schema, migrations and seeds.
  */
-export {};
+export {
+  databaseConfigFrom,
+  openDatabase,
+  openListenClient,
+  type DatabaseConfig,
+} from './connection.ts';
