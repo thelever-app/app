@@ -27,12 +27,13 @@ afterEach(async () => {
 async function instance({ silentAfterMs = 300 } = {}) {
   const url = database.url();
   const opened = await openDatabase<Database>({ kind: 'url', url }, { maxConnections: 5 });
+  const instanceId = randomUUID();
   const server = await startRoomServer({
     storage: {
       kind: 'postgres',
       db: opened.db,
       openListenClient: () => openListenClient({ kind: 'url', url }),
-      instanceId: randomUUID(),
+      instanceId,
       beatEveryMs: 100,
       silentAfterMs,
     },
@@ -46,6 +47,7 @@ async function instance({ silentAfterMs = 300 } = {}) {
   });
   return {
     ...server,
+    instanceId,
     async close() {
       stopped = true;
       await server.close();
@@ -137,6 +139,29 @@ describe('the room server on several instances', () => {
       connected: false,
     });
     expect(await closeCode).toBe(1012);
+  });
+
+  it('should make the players of an instance taken for dead while alive connect again', async () => {
+    // Arrange
+    const a = await instance({ silentAfterMs: 60_000 });
+    const { gameId } = await gameInDecisionPhase(a.http);
+    const ana = await connect(a.url, 'ana', gameId);
+    const closeCode = new Promise<number>((resolve, reject) => {
+      ana.client.socket.once('close', resolve);
+      setTimeout(() => reject(new Error('the socket stayed open')), 2000);
+    });
+
+    // Act: another instance took it for dead, closed its connections and forgot it.
+    await database
+      .db()
+      .deleteFrom('room_connections')
+      .where('instance_id', '=', a.instanceId)
+      .execute();
+    await database.db().deleteFrom('instances').where('id', '=', a.instanceId).execute();
+
+    // Assert
+    expect(await closeCode).toBe(1012);
+    expect((await connect(a.url, 'ana', gameId)).playerId).toBe(ana.playerId);
   });
 
   it('should send a fresh state to every socket after losing the connection that listens', async () => {

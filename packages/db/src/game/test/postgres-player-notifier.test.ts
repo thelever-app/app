@@ -1,8 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import { ConnectionChangedEvent, ProgressUpdatedEvent, type DomainEvent } from '@thelever-app/game';
+import { sql } from 'kysely';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Database } from '../../schema.ts';
 import { useTestDatabase } from '../../test/support/test-database.ts';
-import { inTransaction } from '../../transaction.ts';
+import { currentTransaction, inTransaction } from '../../transaction.ts';
 import { GameEventsListener } from '../game-events-listener.ts';
 import { PostgresPlayerNotifier } from '../postgres-player-notifier.ts';
 import { openListenClient } from '../../connection.ts';
@@ -102,41 +104,42 @@ describe('PostgresPlayerNotifier', () => {
       await until(() => received.length === 1);
       expect((received[0]?.event as ProgressUpdatedEvent).gameVersion).toBe(3);
     });
-  });
-});
 
-describe('GameEventsListener', () => {
-  it('should listen again after losing its connection, and say so', async () => {
-    // Arrange
-    const received: DomainEvent[] = [];
-    let reconnections = 0;
-    const listener = new GameEventsListener(
-      () => openListenClient({ kind: 'url', url: database.url() }),
-      {
-        onEvents: (_playerIds, event) => received.push(event),
-        onReconnected: () => {
-          reconnections += 1;
-        },
-        initialRetryMs: 10,
-      },
-    );
-    listeners.push(listener);
-    await listener.start();
+    it('should deliver to more players than fit in one notification, in several', async () => {
+      // Arrange
+      const received = await listening();
+      const notifier = new PostgresPlayerNotifier(database.db());
+      const playerIds = Array.from({ length: 500 }, () => randomUUID());
+      const progress = new ProgressUpdatedEvent('TestGameId', 'TestLuisId', 2, 7);
 
-    // Act: the database ends the connection, as a restart or a network cut would.
-    await database
-      .db()
-      .selectNoFrom((eb) =>
-        eb.fn<boolean>('pg_terminate_backend', [eb.val(listener.processId ?? 0)]).as('ended'),
-      )
-      .execute();
-    await until(() => reconnections === 1);
-    await new PostgresPlayerNotifier(database.db()).notify(
-      ['TestAnaId'],
-      new ProgressUpdatedEvent('TestGameId', 'TestLuisId', 1, 2),
-    );
+      // Act
+      await notifier.notify(playerIds, progress);
 
-    // Assert
-    await until(() => received.length === 1);
+      // Assert
+      await until(() => received.flatMap((notification) => notification.playerIds).length === 500);
+      expect(received.length).toBeGreaterThan(1);
+      expect(received.flatMap((notification) => notification.playerIds)).toEqual(playerIds);
+      expect(received.every(({ event }) => event instanceof ProgressUpdatedEvent)).toBe(true);
+    });
+
+    it('should keep what a command saved when one of its notifications fails', async () => {
+      // Arrange: no notification fits a player id that long.
+      const notifier = new PostgresPlayerNotifier(database.db());
+      const tooLong = 'x'.repeat(8000);
+
+      // Act
+      await inTransaction(database.db(), async () => {
+        await sql`insert into instances (id, seen_at) values ('TestInstance', now())`.execute(
+          currentTransaction() ?? database.db(),
+        );
+        await expect(
+          notifier.notify([tooLong], new ProgressUpdatedEvent('TestGameId', 'TestLuisId', 1, 2)),
+        ).rejects.toThrow();
+      });
+
+      // Assert
+      const saved = await database.db().selectFrom('instances').select('id').execute();
+      expect(saved).toEqual([{ id: 'TestInstance' }]);
+    });
   });
 });

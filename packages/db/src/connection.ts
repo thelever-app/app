@@ -63,13 +63,26 @@ export async function openListenClient(
   config: DatabaseConfig,
 ): Promise<{ readonly client: pg.Client; readonly close: () => Promise<void> }> {
   const { options, release } = await clientOptions(config);
-  const client = new pg.Client(options);
-  await client.connect();
+  // It is idle for long stretches: without keepalive, a cut connection could stay open for hours.
+  const client = new pg.Client({
+    ...options,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
+  });
+  try {
+    await client.connect();
+  } catch (error) {
+    release();
+    throw error;
+  }
   return {
     client,
     close: async () => {
-      await client.end();
-      release();
+      try {
+        await client.end();
+      } finally {
+        release();
+      }
     },
   };
 }

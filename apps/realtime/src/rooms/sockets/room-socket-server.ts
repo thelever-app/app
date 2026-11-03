@@ -88,6 +88,11 @@ export class RoomSocketServer {
    */
   leave(code: number, reason: string): void {
     this.#leaving = true;
+    this.closeAll(code, reason);
+  }
+
+  /** Closes every socket with that code, and keeps serving: each player disconnects as usual. */
+  closeAll(code: number, reason: string): void {
     for (const connection of this.#connections) connection.socket.close(code, reason);
   }
 

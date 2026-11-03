@@ -36,6 +36,38 @@ async function lastSeenAgo(id: string, seconds: number): Promise<void> {
 }
 
 describe('PostgresInstances', () => {
+  describe('beat', () => {
+    it('should say the instance was not registered on its first sign, and was on the next', async () => {
+      // Arrange
+      await emptyTables(database.db());
+      const instances = new PostgresInstances(database.db());
+
+      // Act
+      const first = await instances.beat('TestInstanceA');
+      const next = await instances.beat('TestInstanceA');
+
+      // Assert
+      expect([first, next]).toEqual([false, true]);
+    });
+
+    it('should say the instance was not registered once the others forgot it', async () => {
+      // Arrange
+      await emptyTables(database.db());
+      const instances = new PostgresInstances(database.db());
+      await instances.beat('TestInstanceA');
+      await instances.remove('TestInstanceA');
+
+      // Act
+      const registered = await instances.beat('TestInstanceA');
+
+      // Assert
+      expect(registered).toBe(false);
+      expect(await instances.findSilent({ forMs: 0, except: 'TestInstanceB' })).toEqual([
+        'TestInstanceA',
+      ]);
+    });
+  });
+
   describe('findSilent', () => {
     it('should find the instances with no sign for longer than asked, but never this one', async () => {
       // Arrange
@@ -90,24 +122,30 @@ describe('PostgresInstances', () => {
   });
 
   describe('remove', () => {
-    it('should refuse to remove an instance that still serves connections', async () => {
+    it('should keep an instance that still serves connections, and say so', async () => {
       // Arrange
       const { instances } = await roomsOfTwoInstances();
 
-      // Act & Assert
-      await expect(instances.remove('TestInstanceA')).rejects.toThrow();
+      // Act
+      const removed = await instances.remove('TestInstanceA');
+
+      // Assert
+      expect(removed).toBe(false);
+      const ids = await database.db().selectFrom('instances').select('id').orderBy('id').execute();
+      expect(ids).toEqual([{ id: 'TestInstanceA' }, { id: 'TestInstanceB' }]);
     });
 
-    it('should remove an instance with no connections left', async () => {
+    it('should remove an instance with no connections left, and say so', async () => {
       // Arrange
       const { instances, first } = await roomsOfTwoInstances();
       first.disconnect(first.players[1]!.id, 'TestLuisConnection');
       await new PostgresRoomRepository(database.db(), 'TestInstanceA').save(first);
 
       // Act
-      await instances.remove('TestInstanceB');
+      const removed = await instances.remove('TestInstanceB');
 
       // Assert
+      expect(removed).toBe(true);
       const ids = await database.db().selectFrom('instances').select('id').orderBy('id').execute();
       expect(ids).toEqual([{ id: 'TestInstanceA' }]);
     });

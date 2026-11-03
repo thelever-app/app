@@ -61,10 +61,53 @@ export class PostgresPlayerNotifier implements PlayerNotifier {
   }
 
   async notify(playerIds: readonly string[], event: DomainEvent): Promise<void> {
-    if (playerIds.length === 0) return;
-    const payload = JSON.stringify({ playerIds, event } satisfies Notification);
-    await sql`select pg_notify(${GAME_EVENTS_CHANNEL}, ${payload})`.execute(
-      currentTransaction() ?? this.#db,
-    );
+    for (const payload of payloadsOf(playerIds, event)) await this.#publish(payload);
   }
+
+  async #publish(payload: string): Promise<void> {
+    const transaction = currentTransaction();
+    const notify = sql`select pg_notify(${GAME_EVENTS_CHANNEL}, ${payload})`;
+    if (!transaction) {
+      await notify.execute(this.#db);
+      return;
+    }
+    // A statement that fails aborts the whole transaction, and its commit would then undo the
+    // command without an error: the savepoint makes a failed notification lose only itself.
+    await sql`savepoint notify`.execute(transaction);
+    try {
+      await notify.execute(transaction);
+    } catch (error) {
+      await sql`rollback to savepoint notify`.execute(transaction);
+      throw error;
+    }
+    await sql`release savepoint notify`.execute(transaction);
+  }
+}
+
+/** PostgreSQL refuses a payload of 8000 bytes or more. */
+const MAX_PAYLOAD_BYTES = 7999;
+
+/** The payloads that carry the event to those players: as few as fit them, each below the limit. */
+function payloadsOf(playerIds: readonly string[], event: DomainEvent): readonly string[] {
+  const payloads: string[] = [];
+  let batch: string[] = [];
+  let bytes = 0;
+  const emptyBytes = Buffer.byteLength(payloadOf([], event));
+  for (const playerId of playerIds) {
+    // Its quotes and the comma before it.
+    const idBytes = Buffer.byteLength(JSON.stringify(playerId)) + 1;
+    if (batch.length > 0 && emptyBytes + bytes + idBytes > MAX_PAYLOAD_BYTES) {
+      payloads.push(payloadOf(batch, event));
+      batch = [];
+      bytes = 0;
+    }
+    batch.push(playerId);
+    bytes += idBytes;
+  }
+  if (batch.length > 0) payloads.push(payloadOf(batch, event));
+  return payloads;
+}
+
+function payloadOf(playerIds: readonly string[], event: DomainEvent): string {
+  return JSON.stringify({ playerIds, event } satisfies Notification);
 }

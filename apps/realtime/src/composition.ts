@@ -228,7 +228,13 @@ async function sharedLifecycle(
     new PostgresInstances(storage.db),
     new DisconnectConnectionsUseCase(parts.roomRepository, parts.notifier),
     parts.runCommand,
-    storage,
+    {
+      instanceId: storage.instanceId,
+      beatEveryMs: storage.beatEveryMs,
+      silentAfterMs: storage.silentAfterMs,
+      // The clients come back and connect again, now that the instance is registered again.
+      onForgotten: () => roomSockets.closeAll(1012, 'service restart'),
+    },
   );
   await keeper.start();
 

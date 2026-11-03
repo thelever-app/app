@@ -1,5 +1,9 @@
 import { type Kysely, sql } from 'kysely';
+import pg from 'pg';
 import type { Database } from '../schema.ts';
+
+/** What PostgreSQL answers when a row is still referenced: here, by the connections of the instance. */
+const FOREIGN_KEY_VIOLATION = '23503';
 
 /**
  * The instances of the room server and the connections each one serves. The times are those of the
@@ -12,13 +16,22 @@ export class PostgresInstances {
     this.#db = db;
   }
 
-  /** The instance is alive now: its first sign registers it. */
-  async beat(id: string): Promise<void> {
+  /**
+   * The instance is alive now. Says whether it was registered: not on its first sign, and not once the
+   * others took it for dead and forgot it, after closing its connections for everyone.
+   */
+  async beat(id: string): Promise<boolean> {
+    const { numUpdatedRows } = await this.#db
+      .updateTable('instances')
+      .set({ seen_at: sql<Date>`now()` })
+      .where('id', '=', id)
+      .executeTakeFirst();
+    if (numUpdatedRows > 0n) return true;
     await this.#db
       .insertInto('instances')
       .values({ id, seen_at: sql<Date>`now()` })
-      .onConflict((conflict) => conflict.column('id').doUpdateSet({ seen_at: sql<Date>`now()` }))
       .execute();
+    return false;
   }
 
   /** The other instances with no sign for longer than that, which are taken for dead. */
@@ -65,8 +78,14 @@ export class PostgresInstances {
     return [...rooms].map(([roomId, connections]) => ({ roomId, connections }));
   }
 
-  /** Forgets the instance; the database refuses while it still has connections. */
-  async remove(id: string): Promise<void> {
-    await this.#db.deleteFrom('instances').where('id', '=', id).execute();
+  /** Forgets the instance, unless it still has connections: says whether it did. */
+  async remove(id: string): Promise<boolean> {
+    try {
+      await this.#db.deleteFrom('instances').where('id', '=', id).execute();
+      return true;
+    } catch (error) {
+      if (error instanceof pg.DatabaseError && error.code === FOREIGN_KEY_VIOLATION) return false;
+      throw error;
+    }
   }
 }

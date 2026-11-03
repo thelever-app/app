@@ -26,11 +26,12 @@ Each notification already carries its recipients and the event (ids, counters an
 Option 3: a single channel, `game_events`.
 
 - Each notification is `{ playerIds, event }`, published with `pg_notify` inside the transaction of the command, so it leaves only if the command commits.
+- PostgreSQL refuses a payload of 8000 bytes or more, so the notifier splits the recipients into as many notifications as needed. Each `pg_notify` runs in a savepoint: a statement that fails aborts the whole transaction, and its commit would undo the command without an error; with the savepoint, a failed notification loses only itself.
 - One dedicated connection per instance listens to it, never taken from a pool, and shows up as `game_events_listener` in `pg_stat_activity`.
-- If that connection is lost, the instance connects again with a growing wait and sends a fresh `GameStateDto` to each of its sockets, since what was published meanwhile is lost.
+- If that connection is lost, or stops answering a periodic `select 1` (a network cut may never end it; it also has TCP keepalive), the instance closes it, connects again with a growing wait and sends a fresh `GameStateDto` to each of its sockets, since what was published meanwhile is lost.
 
 ## Consequences
 
 - Easier: no `LISTEN`/`UNLISTEN` per game, a single channel to listen again to after a cut, no lookup to publish an event of a room.
 - Harder: every instance reads every notification. With at most 3 instances and payloads of a few kilobytes, it costs nothing; it is revisited if the number of instances grows by an order of magnitude.
-- Watch: payloads stay below 8000 bytes (about 2 KB with 50 recipients); the measurement of a room spread across instances checks it on Cloud Run.
+- Watch: a room of 50 players fits in one notification of about 2 KB; a larger one takes several. The measurement of a room spread across instances checks it on Cloud Run.
