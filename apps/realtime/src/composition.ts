@@ -1,30 +1,54 @@
 import { createServer, type Server } from 'node:http';
-import { GetDilemmasUseCase } from '@thelever-app/dilemmas';
+import {
+  type DatabaseClient,
+  GameEventsListener,
+  inTransaction,
+  PostgresDilemmaRepository,
+  PostgresGameRepository,
+  PostgresInstances,
+  PostgresPlayerNotifier,
+  PostgresRoomRepository,
+  type openListenClient,
+} from '@thelever-app/db';
+import { type DilemmaRepository, GetDilemmasUseCase } from '@thelever-app/dilemmas';
 import { InMemoryDilemmaRepository } from '@thelever-app/dilemmas/in-memory';
 import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
 import {
   AnswerDilemmaUseCase,
   ConnectPlayerUseCase,
   CreateRoomUseCase,
+  DisconnectConnectionsUseCase,
   DisconnectPlayerUseCase,
+  type GameRepository,
   GetGameStateUseCase,
   JoinRoomUseCase,
+  type PlayerNotifier,
+  type DilemmaCatalog,
+  type IdGenerator,
+  type RoomRepository,
   StartDecisionPhaseUseCase,
 } from '@thelever-app/game';
 import { DilemmasContextCatalog } from '@thelever-app/game/dilemmas';
-import { InMemoryGameRepository, InMemoryRoomRepository } from '@thelever-app/game/in-memory';
+import {
+  InMemoryGameRepository,
+  InMemoryRoomRepository,
+  InMemorySealProvider,
+} from '@thelever-app/game/in-memory';
 import type { WebSocketServer } from 'ws';
 import { createApp } from './app.ts';
 import { KeyedLock } from './concurrency/keyed-lock.ts';
 import { authentication } from './http/authentication.ts';
 import { httpErrorHandler } from './http/error-handler.ts';
 import { HealthEndpoint } from './http/health.endpoint.ts';
+import type { HttpEndpoint } from './http/http-endpoint.ts';
 import type { TokenVerifier } from './identity/token-verifier.ts';
 import { errorCodeOf } from './rooms/error-codes.ts';
 import { CreateRoomEndpoint } from './rooms/http/create-room.endpoint.ts';
 import { JoinRoomEndpoint } from './rooms/http/join-room.endpoint.ts';
 import { StartGameEndpoint } from './rooms/http/start-game.endpoint.ts';
+import { InstanceKeeper } from './rooms/instance-keeper.ts';
 import { RandomIdGenerator } from './rooms/random-id-generator.ts';
+import type { RunCommand } from './rooms/run-command.ts';
 import { AnswerDilemmaHandler } from './rooms/sockets/answer-dilemma.handler.ts';
 import { ConnectHandler } from './rooms/sockets/connect.handler.ts';
 import { DisconnectHandler } from './rooms/sockets/disconnect.handler.ts';
@@ -32,85 +56,245 @@ import { GameStateSender } from './rooms/sockets/game-state-sender.ts';
 import { RoomSocketServer } from './rooms/sockets/room-socket-server.ts';
 import { SocketNotifier } from './rooms/sockets/socket-notifier.ts';
 
+/** Where rooms, games and dilemmas live. */
+export type Storage =
+  /** In the memory of this instance, with the seed dilemmas: for the tests that need no database. */
+  | { readonly kind: 'memory' }
+  /** In PostgreSQL, shared by every instance, which tell each other what happens (ADR 0003). */
+  | {
+      readonly kind: 'postgres';
+      readonly db: DatabaseClient;
+      readonly openListenClient: () => ReturnType<typeof openListenClient>;
+      readonly instanceId: string;
+      /** How often this instance gives a sign of life and looks for instances that died. */
+      readonly beatEveryMs: number;
+      /** How long without a sign before an instance is taken for dead and its connections closed. */
+      readonly silentAfterMs: number;
+    };
+
 /** What changes between production and the tests. */
 export interface RealtimeConfiguration {
   readonly tokenVerifier: TokenVerifier;
   readonly pingIntervalMs: number;
+  readonly storage: Storage;
 }
 
 /** The HTTP server, not listening yet, and the room sockets attached to it. */
 export interface RealtimeServer {
   readonly http: Server;
   readonly sockets: WebSocketServer;
+  /** For SIGTERM: leaves cleanly, with the connections of this instance closed for everyone. */
+  readonly shutdown: () => Promise<void>;
+  /** Stops at once, as a process that dies would, without telling anyone. */
+  readonly close: () => Promise<void>;
+}
+
+/** The adapters behind the ports, and how a command runs, for each storage. */
+interface Adapters {
+  readonly dilemmaRepository: DilemmaRepository;
+  readonly roomRepository: RoomRepository;
+  readonly gameRepository: GameRepository;
+  /** The notifier the use cases get: the sockets of this instance, or every instance through PostgreSQL. */
+  readonly notifier: PlayerNotifier;
+  readonly runCommand: RunCommand;
+}
+
+/** What the HTTP routes and the sockets are both built from. */
+interface Parts extends Adapters {
+  readonly catalog: DilemmaCatalog;
+  readonly idGenerator: IdGenerator;
+  readonly tokenVerifier: TokenVerifier;
+  /** Delivers to the sockets of this instance. */
+  readonly socketNotifier: SocketNotifier;
+  readonly stateSender: GameStateSender;
+}
+
+/** How the server stops, the same for every storage. */
+type Lifecycle = Pick<RealtimeServer, 'shutdown' | 'close'>;
+
+/** Stops serving: closes every socket with that code, without disconnecting anyone, and the HTTP server. */
+type StopServing = (code: number, reason: string) => Promise<void>;
+
+async function adaptersFor(storage: Storage, sockets: SocketNotifier): Promise<Adapters> {
+  if (storage.kind === 'memory') {
+    const dilemmaRepository = new InMemoryDilemmaRepository();
+    await loadSeedDilemmas(dilemmaRepository);
+    return {
+      dilemmaRepository,
+      roomRepository: new InMemoryRoomRepository(),
+      gameRepository: new InMemoryGameRepository(),
+      notifier: sockets,
+      runCommand: (command) => command(),
+    };
+  }
+  // The dilemmas are loaded by the migrate job, not by each instance.
+  const { db, instanceId } = storage;
+  return {
+    dilemmaRepository: new PostgresDilemmaRepository(db),
+    roomRepository: new PostgresRoomRepository(db, instanceId),
+    gameRepository: new PostgresGameRepository(db),
+    notifier: new PostgresPlayerNotifier(db),
+    runCommand: (command) => inTransaction(db, command),
+  };
+}
+
+function httpEndpoints({
+  roomRepository,
+  gameRepository,
+  catalog,
+  idGenerator,
+  runCommand,
+}: Parts): HttpEndpoint[] {
+  return [
+    new HealthEndpoint(),
+    new CreateRoomEndpoint(new CreateRoomUseCase(roomRepository, idGenerator), runCommand),
+    new JoinRoomEndpoint(new JoinRoomUseCase(roomRepository, idGenerator), runCommand),
+    new StartGameEndpoint(
+      new StartDecisionPhaseUseCase(roomRepository, gameRepository, catalog, idGenerator),
+      runCommand,
+    ),
+  ];
+}
+
+function roomSocketServer(parts: Parts, pingIntervalMs: number): RoomSocketServer {
+  const { roomRepository, gameRepository, notifier, socketNotifier, stateSender, runCommand } =
+    parts;
+  // One holder per game at a time, so its commands never interleave in this instance.
+  const gameLock = new KeyedLock();
+  const disconnectHandler = new DisconnectHandler(
+    new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier),
+    socketNotifier,
+    gameLock,
+    runCommand,
+  );
+  const handlers = [
+    new ConnectHandler(
+      new ConnectPlayerUseCase(roomRepository, gameRepository, notifier, parts.idGenerator),
+      parts.tokenVerifier,
+      socketNotifier,
+      gameLock,
+      stateSender,
+      disconnectHandler,
+      runCommand,
+    ),
+    new AnswerDilemmaHandler(
+      // Until the first access exists, every answer carries the seal of before it.
+      new AnswerDilemmaUseCase(
+        roomRepository,
+        gameRepository,
+        notifier,
+        new InMemorySealProvider(),
+      ),
+      gameLock,
+      stateSender,
+      runCommand,
+    ),
+  ];
+  return new RoomSocketServer(handlers, disconnectHandler, errorCodeOf, pingIntervalMs);
+}
+
+/** In memory there is nobody to tell: leaving cleanly is stopping. */
+function aloneLifecycle(stopServing: StopServing): Lifecycle {
+  const close = () => stopServing(1001, 'going away');
+  return { shutdown: close, close };
+}
+
+/**
+ * Joins the other instances: delivers to its own sockets what they publish, keeps itself seen alive
+ * and cleans after the ones that die.
+ */
+async function sharedLifecycle(
+  storage: Extract<Storage, { kind: 'postgres' }>,
+  parts: Parts,
+  roomSockets: RoomSocketServer,
+  stopServing: StopServing,
+): Promise<Lifecycle> {
+  const { socketNotifier, stateSender } = parts;
+  const listener = new GameEventsListener(storage.openListenClient, {
+    onEvents: (playerIds, event) => {
+      socketNotifier.notify(playerIds, event).catch(console.error);
+    },
+    // Whatever was published while it was not listening is lost: a fresh state makes up for it.
+    onReconnected: () => {
+      for (const connection of roomSockets.connected()) {
+        if (connection.session) {
+          stateSender.send(connection, connection.session).catch(console.error);
+        }
+      }
+    },
+  });
+  await listener.start();
+  const keeper = new InstanceKeeper(
+    new PostgresInstances(storage.db),
+    new DisconnectConnectionsUseCase(parts.roomRepository, parts.notifier),
+    parts.runCommand,
+    {
+      instanceId: storage.instanceId,
+      beatEveryMs: storage.beatEveryMs,
+      silentAfterMs: storage.silentAfterMs,
+      // The clients come back and connect again, now that the instance is registered again.
+      onForgotten: () => roomSockets.closeAll(1012, 'service restart'),
+    },
+  );
+  await keeper.start();
+
+  return {
+    close: async () => {
+      keeper.stop();
+      await listener.stop();
+      await stopServing(1001, 'going away');
+    },
+    shutdown: async () => {
+      keeper.stop();
+      // The clients come back on another instance: 1012 is "service restart".
+      const stopping = stopServing(1012, 'service restart');
+      await keeper.leave();
+      await listener.stop();
+      await stopping;
+    },
+  };
 }
 
 /**
  * Composition root of the room server: the only place that decides which adapter sits behind
- * each port and what each adapter receives. Rooms, games and dilemmas live in the memory of this
- * instance; the dilemmas are the seed ones.
+ * each port and what each adapter receives.
  */
 export async function composeRealtimeServer({
   tokenVerifier,
   pingIntervalMs,
+  storage,
 }: RealtimeConfiguration): Promise<RealtimeServer> {
-  // Dilemmas
-  const dilemmaRepository = new InMemoryDilemmaRepository();
-  await loadSeedDilemmas(dilemmaRepository);
-  const catalog = new DilemmasContextCatalog(new GetDilemmasUseCase(dilemmaRepository));
-
-  // Game
-  const roomRepository = new InMemoryRoomRepository();
-  const gameRepository = new InMemoryGameRepository();
-  const idGenerator = new RandomIdGenerator();
-  const notifier = new SocketNotifier();
-
-  // HTTP
-  const endpoints = [
-    new HealthEndpoint(),
-    new CreateRoomEndpoint(new CreateRoomUseCase(roomRepository, idGenerator)),
-    new JoinRoomEndpoint(new JoinRoomUseCase(roomRepository, idGenerator)),
-    new StartGameEndpoint(
-      new StartDecisionPhaseUseCase(roomRepository, gameRepository, catalog, idGenerator),
+  const socketNotifier = new SocketNotifier();
+  const adapters = await adaptersFor(storage, socketNotifier);
+  const catalog = new DilemmasContextCatalog(new GetDilemmasUseCase(adapters.dilemmaRepository));
+  const parts: Parts = {
+    ...adapters,
+    catalog,
+    idGenerator: new RandomIdGenerator(),
+    tokenVerifier,
+    socketNotifier,
+    stateSender: new GameStateSender(
+      new GetGameStateUseCase(adapters.roomRepository, adapters.gameRepository, catalog),
     ),
-  ];
+  };
+
   const http = createServer(
-    createApp(endpoints, {
+    createApp(httpEndpoints(parts), {
       authenticate: authentication(tokenVerifier),
       errorHandler: httpErrorHandler(errorCodeOf),
     }),
   );
-
-  // Sockets
-  const gameLock = new KeyedLock();
-  const stateSender = new GameStateSender(
-    new GetGameStateUseCase(roomRepository, gameRepository, catalog),
-  );
-  const disconnectHandler = new DisconnectHandler(
-    new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier),
-    notifier,
-    gameLock,
-  );
-  const roomSockets = new RoomSocketServer(
-    [
-      new ConnectHandler(
-        new ConnectPlayerUseCase(roomRepository, gameRepository, notifier, idGenerator),
-        tokenVerifier,
-        notifier,
-        gameLock,
-        stateSender,
-        disconnectHandler,
-      ),
-      new AnswerDilemmaHandler(
-        new AnswerDilemmaUseCase(gameRepository, notifier),
-        gameLock,
-        stateSender,
-      ),
-    ],
-    disconnectHandler,
-    errorCodeOf,
-    pingIntervalMs,
-  );
+  const roomSockets = roomSocketServer(parts, pingIntervalMs);
   const sockets = roomSockets.attach(http);
+  const stopServing: StopServing = async (code, reason) => {
+    roomSockets.leave(code, reason);
+    await new Promise((resolve) => sockets.close(resolve));
+    await new Promise((resolve) => http.close(resolve));
+  };
 
-  return { http, sockets };
+  const lifecycle =
+    storage.kind === 'memory'
+      ? aloneLifecycle(stopServing)
+      : await sharedLifecycle(storage, parts, roomSockets, stopServing);
+  return { http, sockets, ...lifecycle };
 }

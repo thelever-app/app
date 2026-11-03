@@ -10,6 +10,7 @@ import { PlayerNotInGameError } from '../../../domain/errors/player-not-in-game.
 import { Game } from '../../../domain/entities/game.ts';
 import { InMemoryRoomRepository } from '../../../adapters/in-memory/in-memory-room-repository.ts';
 import { InMemoryGameRepository } from '../../../adapters/in-memory/in-memory-game-repository.ts';
+import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
 import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
@@ -49,7 +50,12 @@ async function gameInDecisionPhase() {
   return {
     gameRepository,
     roomRepository,
-    answerDilemma: new AnswerDilemmaUseCase(gameRepository, new InMemoryPlayerNotifier()),
+    answerDilemma: new AnswerDilemmaUseCase(
+      roomRepository,
+      gameRepository,
+      new InMemoryPlayerNotifier(),
+      new InMemorySealProvider(),
+    ),
     getGameState: new GetGameStateUseCase(roomRepository, gameRepository, catalog),
     gameId,
     anaId,
@@ -222,7 +228,7 @@ describe('GetGameStateUseCase', () => {
       const game = Game.create(
         {
           roomId: room.id,
-          dilemmas: [{ dilemmaId: 'TestGoneDilemma', optionIds: TEST_OPTION_IDS }],
+          dilemmas: [{ dilemmaId: 'TestGoneDilemma', version: 1, optionIds: TEST_OPTION_IDS }],
         },
         new FixedIdGenerator('TestGoneGameId'),
       );
@@ -230,6 +236,27 @@ describe('GetGameStateUseCase', () => {
       await gameRepository.save(game);
 
       // Act & Assert
+      await expect(
+        getGameState.execute({ gameId: game.id, playerId: luisId, language: 'es' }),
+      ).rejects.toThrow(DilemmaNotFoundError);
+    });
+
+    it('should ask the catalog for the version of each dilemma the game plays', async () => {
+      // Arrange
+      const { getGameState, gameRepository, roomRepository, luisId } = await gameInDecisionPhase();
+      const room = (await roomRepository.findById('id-1'))!;
+      const [dilemmaId] = TEST_DILEMMA_IDS;
+      const game = Game.create(
+        {
+          roomId: room.id,
+          dilemmas: [{ dilemmaId: dilemmaId!, version: 2, optionIds: TEST_OPTION_IDS }],
+        },
+        new FixedIdGenerator('TestLaterVersionGameId'),
+      );
+      game.startDecisionPhase(room.players);
+      await gameRepository.save(game);
+
+      // Act & Assert: the test catalog only has the first version of its dilemmas.
       await expect(
         getGameState.execute({ gameId: game.id, playerId: luisId, language: 'es' }),
       ).rejects.toThrow(DilemmaNotFoundError);
@@ -243,6 +270,7 @@ describe('GetGameStateUseCase', () => {
           roomId: 'TestUnknownRoomId',
           dilemmas: TEST_DILEMMA_IDS.map((dilemmaId) => ({
             dilemmaId,
+            version: 1,
             optionIds: TEST_OPTION_IDS,
           })),
         },

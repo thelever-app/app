@@ -11,13 +11,14 @@ import type { DomainEvent } from '../events/domain-event.ts';
 import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import { IdVO } from '../vos/id.vo.ts';
-import { AnswerVO } from '../vos/answer.vo.ts';
+import { AnswerVO, type Seal } from '../vos/answer.vo.ts';
 import { DilemmaVO } from '../vos/dilemma.vo.ts';
 import { Player } from './player.ts';
 
-/** A dilemma of the game: its id and the ids of its options. */
+/** A dilemma of the game: its id, the version played and the ids of its options. */
 export interface GameDilemma {
   readonly dilemmaId: string;
+  readonly version: number;
   readonly optionIds: readonly string[];
 }
 
@@ -29,7 +30,12 @@ export interface GameSnapshot {
   readonly version: number;
   readonly players: readonly {
     readonly id: string;
-    readonly answers: readonly { readonly dilemmaId: string; readonly vote: string }[];
+    readonly answers: readonly {
+      readonly dilemmaId: string;
+      readonly vote: string;
+      readonly seal: Seal;
+      readonly voterInTheGap: boolean;
+    }[];
   }[];
 }
 
@@ -52,7 +58,7 @@ export class Game {
     this.#id = new IdVO(id);
     this.#roomId = new IdVO(roomId);
     this.#dilemmas = dilemmas.map(
-      ({ dilemmaId, optionIds }) => new DilemmaVO(dilemmaId, optionIds),
+      ({ dilemmaId, version, optionIds }) => new DilemmaVO(dilemmaId, version, optionIds),
     );
   }
 
@@ -73,7 +79,11 @@ export class Game {
 
   /** In the order every player gets them. */
   get dilemmas(): readonly GameDilemma[] {
-    return this.#dilemmas.map(({ dilemmaId, optionIds }) => ({ dilemmaId, optionIds }));
+    return this.#dilemmas.map(({ dilemmaId, version, optionIds }) => ({
+      dilemmaId,
+      version,
+      optionIds,
+    }));
   }
 
   get playerIds(): readonly string[] {
@@ -99,7 +109,8 @@ export class Game {
     this.#version += 1;
   }
 
-  answer(playerId: string, dilemmaId: string, vote: string): void {
+  /** The seal is the one in force now, also when the player changes an answer. */
+  answer(playerId: string, dilemmaId: string, vote: string, seal: Seal): void {
     if (!this.#inDecisionPhase) throw new DecisionPhaseNotStartedError();
     const answers = this.#answersOf(playerId);
     const dilemma = this.#dilemmas.find((candidate) => candidate.dilemmaId === dilemmaId);
@@ -110,7 +121,8 @@ export class Game {
     if (!answers.has(dilemmaId) && dilemma !== next) throw new DilemmaNotReachedError(dilemmaId);
 
     const progressBefore = answers.size;
-    answers.set(dilemmaId, new AnswerVO(vote));
+    // No dilemma has the gap "someone in the group" yet, so the voter is never the person in it.
+    answers.set(dilemmaId, new AnswerVO(vote, seal, false));
     this.#version += 1;
 
     if (answers.size > progressBefore) {
@@ -147,7 +159,12 @@ export class Game {
       version: this.#version,
       players: [...this.#answers].map(([playerId, answers]) => ({
         id: playerId,
-        answers: [...answers].map(([dilemmaId, answer]) => ({ dilemmaId, vote: answer.vote })),
+        answers: [...answers].map(([dilemmaId, answer]) => ({
+          dilemmaId,
+          vote: answer.vote,
+          seal: answer.seal,
+          voterInTheGap: answer.voterInTheGap,
+        })),
       })),
     };
   }
@@ -158,7 +175,8 @@ export class Game {
     game.#version = snapshot.version;
     for (const player of snapshot.players) {
       const answers = player.answers.map(
-        ({ dilemmaId, vote }) => [dilemmaId, new AnswerVO(vote)] as const,
+        ({ dilemmaId, vote, seal, voterInTheGap }) =>
+          [dilemmaId, new AnswerVO(vote, seal, voterInTheGap)] as const,
       );
       game.#answers.set(player.id, new Map(answers));
     }

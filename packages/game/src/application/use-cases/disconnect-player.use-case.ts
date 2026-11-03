@@ -33,14 +33,12 @@ export class DisconnectPlayerUseCase {
     const room = await this.#roomRepository.findById(game.roomId);
     if (!room) throw new RoomNotFoundError(game.roomId);
 
+    // Saved even without an event: a connection that closes while another one stays open must not come back.
     room.disconnect(playerId, connectionId);
     const events = room.pullEvents();
-    if (events.length === 0) return;
     await this.#roomRepository.save(room);
 
     const otherPlayerIds = game.playerIds.filter((id) => id !== playerId);
-    await Promise.allSettled(
-      events.flatMap((event) => otherPlayerIds.map((id) => this.#notifier.notify(id, event))),
-    );
+    await Promise.allSettled(events.map((event) => this.#notifier.notify(otherPlayerIds, event)));
   }
 }

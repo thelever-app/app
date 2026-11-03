@@ -5,10 +5,12 @@ import type { DomainEvent } from '../../domain/events/domain-event.ts';
 export class InMemoryPlayerNotifier implements PlayerNotifier {
   readonly #received = new Map<string, DomainEvent[]>();
 
-  async notify(playerId: string, event: DomainEvent): Promise<void> {
-    const received = this.#received.get(playerId) ?? [];
-    received.push(event);
-    this.#received.set(playerId, received);
+  async notify(playerIds: readonly string[], event: DomainEvent): Promise<void> {
+    for (const playerId of playerIds) {
+      const received = this.#received.get(playerId) ?? [];
+      received.push(event);
+      this.#received.set(playerId, received);
+    }
   }
 
   receivedBy(playerId: string): readonly DomainEvent[] {

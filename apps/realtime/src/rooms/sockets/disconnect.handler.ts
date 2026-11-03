@@ -1,5 +1,6 @@
 import type { DisconnectPlayerUseCase } from '@thelever-app/game';
 import type { KeyedLock } from '../../concurrency/keyed-lock.ts';
+import type { RunCommand } from '../run-command.ts';
 import type { RoomConnection, Session } from './room-connection.ts';
 import type { SocketNotifier } from './socket-notifier.ts';
 
@@ -9,15 +10,18 @@ export class DisconnectHandler {
   readonly #notifier: SocketNotifier;
   /** One holder per game at a time, so its commands never interleave in this instance. */
   readonly #gameLock: KeyedLock;
+  readonly #runCommand: RunCommand;
 
   constructor(
     disconnectPlayer: DisconnectPlayerUseCase,
     notifier: SocketNotifier,
     gameLock: KeyedLock,
+    runCommand: RunCommand,
   ) {
     this.#disconnectPlayer = disconnectPlayer;
     this.#notifier = notifier;
     this.#gameLock = gameLock;
+    this.#runCommand = runCommand;
   }
 
   async handle(connection: RoomConnection): Promise<void> {
@@ -32,11 +36,13 @@ export class DisconnectHandler {
   async end(session: Session): Promise<void> {
     const release = await this.#gameLock.acquire(session.gameId);
     try {
-      await this.#disconnectPlayer.execute({
-        gameId: session.gameId,
-        playerId: session.playerId,
-        connectionId: session.connectionId,
-      });
+      await this.#runCommand(() =>
+        this.#disconnectPlayer.execute({
+          gameId: session.gameId,
+          playerId: session.playerId,
+          connectionId: session.connectionId,
+        }),
+      );
     } finally {
       release();
     }

@@ -14,6 +14,7 @@ import {
   InMemoryGameRepository,
   InMemoryPlayerNotifier,
   InMemoryRoomRepository,
+  InMemorySealProvider,
   SequentialIdGenerator,
 } from '@thelever-app/game/in-memory';
 import type { GameDriver } from './driver.ts';
@@ -81,7 +82,12 @@ export class AcceptanceDriver implements GameDriver {
       CATALOG,
       idGenerator,
     );
-    this.#answerDilemma = new AnswerDilemmaUseCase(gameRepository, this.#notifier);
+    this.#answerDilemma = new AnswerDilemmaUseCase(
+      roomRepository,
+      gameRepository,
+      this.#notifier,
+      new InMemorySealProvider(),
+    );
     this.#getGameState = new GetGameStateUseCase(roomRepository, gameRepository, CATALOG);
     this.#connectPlayer = new ConnectPlayerUseCase(
       roomRepository,

@@ -1,6 +1,7 @@
 import {
   DilemmaNotFoundError as DilemmasContextNotFoundError,
   type GetDilemmasInput,
+  type GetDilemmasOutput,
   type GetDilemmasUseCase,
 } from '@thelever-app/dilemmas';
 import { DilemmaNotFoundError } from '../../application/errors/dilemma-not-found.error.ts';
@@ -20,21 +21,23 @@ export class DilemmasContextCatalog implements DilemmaCatalog {
 
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
     // The structure does not depend on the language: ask for the original content.
-    const contents = await this.#find({ dilemmaIds });
-    return contents.map(({ dilemmaId, options }) => ({
+    const found = await this.#find({ dilemmas: dilemmaIds.map((dilemmaId) => ({ dilemmaId })) });
+    return found.map(({ dilemmaId, version, options }) => ({
       dilemmaId,
+      version,
       optionIds: options.map(({ optionId }) => optionId),
     }));
   }
 
   async findContents(
-    dilemmaIds: readonly string[],
+    dilemmas: readonly { readonly dilemmaId: string; readonly version: number }[],
     language: string,
   ): Promise<readonly DilemmaContent[]> {
-    return this.#find({ dilemmaIds, language });
+    const found = await this.#find({ dilemmas, language });
+    return found.map(({ dilemmaId, text, options }) => ({ dilemmaId, text, options }));
   }
 
-  async #find(input: GetDilemmasInput): Promise<readonly DilemmaContent[]> {
+  async #find(input: GetDilemmasInput): Promise<GetDilemmasOutput['dilemmas']> {
     try {
       const { dilemmas } = await this.#getDilemmas.execute(input);
       return dilemmas;

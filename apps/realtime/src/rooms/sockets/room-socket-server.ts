@@ -33,6 +33,10 @@ export class RoomSocketServer {
   readonly #codeOf: (error: unknown) => ErrorCodeDto | undefined;
   /** How often the server checks that each socket is still alive (ADR 0003). */
   readonly #pingIntervalMs: number;
+  /** The connections of this instance whose socket is open. */
+  readonly #connections = new Set<RoomConnection>();
+  /** Once the instance leaves, a closing socket no longer disconnects its player: whoever cleans after it does. */
+  #leaving = false;
 
   constructor(
     handlers: readonly SocketMessageHandler[],
@@ -73,7 +77,27 @@ export class RoomSocketServer {
     return sockets;
   }
 
+  /** The connections of this instance with a player connected. */
+  connected(): readonly RoomConnection[] {
+    return [...this.#connections].filter((connection) => connection.session !== undefined);
+  }
+
+  /**
+   * Closes every socket with that code, for an instance that leaves, without disconnecting their
+   * players: their connections are closed in the database by whoever cleans after the instance.
+   */
+  leave(code: number, reason: string): void {
+    this.#leaving = true;
+    this.closeAll(code, reason);
+  }
+
+  /** Closes every socket with that code, and keeps serving: each player disconnects as usual. */
+  closeAll(code: number, reason: string): void {
+    for (const connection of this.#connections) connection.socket.close(code, reason);
+  }
+
   #serve(connection: RoomConnection): void {
+    this.#connections.add(connection);
     connection.socket.on('message', (data) => {
       const { command, message } = read(String(data));
       this.#dispatch(message, connection).catch((error: unknown) => {
@@ -88,6 +112,8 @@ export class RoomSocketServer {
     });
 
     connection.socket.on('close', () => {
+      this.#connections.delete(connection);
+      if (this.#leaving) return;
       this.#disconnect.handle(connection).catch(console.error);
     });
   }

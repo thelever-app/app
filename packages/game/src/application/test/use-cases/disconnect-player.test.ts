@@ -81,6 +81,37 @@ describe('DisconnectPlayerUseCase', () => {
       expect(notifier.receivedBy(anaId)).toHaveLength(1);
     });
 
+    it('should disconnect the player when their last connection closes after another one', async () => {
+      // Arrange
+      const {
+        connectPlayer,
+        disconnectPlayer,
+        notifier,
+        roomRepository,
+        roomId,
+        gameId,
+        anaId,
+        luisId,
+        connectionId,
+      } = await arrange();
+      const second = await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
+      await disconnectPlayer.execute({ gameId, playerId: luisId, connectionId });
+
+      // Act
+      await disconnectPlayer.execute({
+        gameId,
+        playerId: luisId,
+        connectionId: second.connectionId,
+      });
+
+      // Assert
+      const room = await roomRepository.findById(roomId);
+      expect(room?.isConnected(luisId)).toBe(false);
+      expect(notifier.receivedBy(anaId).at(-1)).toEqual(
+        new ConnectionChangedEvent(roomId, luisId, false, 2),
+      );
+    });
+
     it('should throw an error if the game does not exist', async () => {
       // Arrange
       const { disconnectPlayer, luisId, connectionId } = await arrange();

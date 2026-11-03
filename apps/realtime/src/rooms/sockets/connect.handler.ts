@@ -3,6 +3,7 @@ import { CONTRACT_VERSION, type ConnectDto } from '@thelever-app/protocol';
 import { WebSocket } from 'ws';
 import type { TokenVerifier } from '../../identity/token-verifier.ts';
 import type { KeyedLock } from '../../concurrency/keyed-lock.ts';
+import type { RunCommand } from '../run-command.ts';
 import type { DisconnectHandler } from './disconnect.handler.ts';
 import type { GameStateSender } from './game-state-sender.ts';
 import { Rejection } from './rejection.ts';
@@ -20,6 +21,7 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
   readonly #gameLock: KeyedLock;
   readonly #stateSender: GameStateSender;
   readonly #disconnect: DisconnectHandler;
+  readonly #runCommand: RunCommand;
 
   constructor(
     connectPlayer: ConnectPlayerUseCase,
@@ -28,6 +30,7 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
     gameLock: KeyedLock,
     stateSender: GameStateSender,
     disconnect: DisconnectHandler,
+    runCommand: RunCommand,
   ) {
     this.#connectPlayer = connectPlayer;
     this.#tokenVerifier = tokenVerifier;
@@ -35,6 +38,7 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
     this.#gameLock = gameLock;
     this.#stateSender = stateSender;
     this.#disconnect = disconnect;
+    this.#runCommand = runCommand;
   }
 
   async handle(
@@ -48,7 +52,9 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
     let session: Session;
     const release = await this.#gameLock.acquire(gameId);
     try {
-      const { playerId, connectionId } = await this.#connectPlayer.execute({ gameId, identity });
+      const { playerId, connectionId } = await this.#runCommand(() =>
+        this.#connectPlayer.execute({ gameId, identity }),
+      );
       // A socket that connects again, to another game or as another player, stops receiving for the previous one.
       if (previous) this.#notifier.unregister(previous.playerId, connection.socket);
       session = { gameId, playerId, connectionId, language };

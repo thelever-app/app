@@ -23,6 +23,7 @@ import { DilemmasContextCatalog } from '@thelever-app/game/dilemmas';
 import {
   InMemoryGameRepository,
   InMemoryRoomRepository,
+  InMemorySealProvider,
   SequentialIdGenerator,
 } from '@thelever-app/game/in-memory';
 import { ClientMessageDto, ServerMessageDto } from '@thelever-app/protocol';
@@ -44,6 +45,9 @@ export interface SimulatedRoomOptions {
   readonly dilemmas?: readonly { readonly text: string; readonly options: readonly string[] }[];
 }
 
+/** The simulation plays the dilemmas it is given without classifying them: any category and age fit. */
+const CLASSIFICATION = { category: 'life-and-death', tags: [], minimumAge: 16 } as const;
+
 /** Hands every event the use cases deliver to a callback, as a socket would push it. */
 class CallbackPlayerNotifier implements PlayerNotifier {
   readonly #onEvent: (playerId: string, event: DomainEvent) => void;
@@ -52,8 +56,8 @@ class CallbackPlayerNotifier implements PlayerNotifier {
     this.#onEvent = onEvent;
   }
 
-  async notify(playerId: string, event: DomainEvent): Promise<void> {
-    this.#onEvent(playerId, event);
+  async notify(playerIds: readonly string[], event: DomainEvent): Promise<void> {
+    for (const playerId of playerIds) this.#onEvent(playerId, event);
   }
 }
 
@@ -87,8 +91,10 @@ export class SimulatedRoomConnection implements RoomConnection {
       repositories.catalog,
     );
     this.#answerDilemma = new AnswerDilemmaUseCase(
+      repositories.room,
       repositories.game,
       new CallbackPlayerNotifier((to, event) => this.#onEvent(to, event)),
+      new InMemorySealProvider(),
     );
     this.#gameId = gameId;
     this.#playerId = playerId;
@@ -169,7 +175,7 @@ export class SimulatedRoomConnection implements RoomConnection {
     const idGenerator = new SequentialDilemmaIdGenerator('dilemma');
     const ids: string[] = [];
     for (const { text, options } of dilemmas) {
-      const dilemma = Dilemma.create({ text, language, options }, idGenerator);
+      const dilemma = Dilemma.create({ ...CLASSIFICATION, text, language, options }, idGenerator);
       await repository.save(dilemma);
       ids.push(dilemma.id);
     }

@@ -53,9 +53,7 @@ export class ConnectPlayerUseCase {
 
     // The connection is already saved: a player who cannot be reached must not undo it.
     const otherPlayerIds = game.playerIds.filter((id) => id !== playerId);
-    await Promise.allSettled(
-      events.flatMap((event) => otherPlayerIds.map((id) => this.#notifier.notify(id, event))),
-    );
+    await Promise.allSettled(events.map((event) => this.#notifier.notify(otherPlayerIds, event)));
 
     return { playerId, connectionId };
   }

@@ -42,7 +42,11 @@ describe('StartDecisionPhaseUseCase', () => {
       const game = await gameRepository.findById(gameId);
       expect(game?.roomId).toBe(roomId);
       expect(game?.dilemmas).toEqual(
-        TEST_DILEMMA_IDS.map((dilemmaId) => ({ dilemmaId, optionIds: TEST_OPTION_IDS })),
+        TEST_DILEMMA_IDS.map((dilemmaId) => ({
+          dilemmaId,
+          version: 1,
+          optionIds: TEST_OPTION_IDS,
+        })),
       );
       expect(game?.isInDecisionPhase).toBe(true);
       expect(game?.playerIds).toEqual([hostId, playerId]);

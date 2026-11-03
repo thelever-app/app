@@ -66,8 +66,9 @@ export class GetGameStateUseCase {
         connected: room.isConnected(player.id),
       }));
 
+    // The versions the game plays, even if a dilemma got a new one since it started.
     const dilemmas = await this.#dilemmaCatalog.findContents(
-      game.dilemmas.map(({ dilemmaId }) => dilemmaId),
+      game.dilemmas.map(({ dilemmaId, version }) => ({ dilemmaId, version })),
       language,
     );
 

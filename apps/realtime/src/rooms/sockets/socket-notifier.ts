@@ -46,10 +46,12 @@ export class SocketNotifier implements PlayerNotifier {
     if (sockets?.size === 0) this.#sockets.delete(playerId);
   }
 
-  async notify(playerId: string, event: DomainEvent): Promise<void> {
+  async notify(playerIds: readonly string[], event: DomainEvent): Promise<void> {
     const message = messageFor(event);
     if (!message) return;
     const data = JSON.stringify(ServerMessageDto.parse(message));
-    for (const socket of this.#sockets.get(playerId) ?? []) socket.send(data);
+    for (const playerId of playerIds) {
+      for (const socket of this.#sockets.get(playerId) ?? []) socket.send(data);
+    }
   }
 }

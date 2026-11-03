@@ -1,0 +1,33 @@
+name: Start the database of dev
+
+# The database of dev stops each night and starts with every deploy. This starts it on a day with no
+# deploy, to play in dev. It runs from main, the only branch the dev environment accepts.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: dev
+    env:
+      PROJECT: thelever-app-dev
+      WORKLOAD_IDENTITY_PROVIDER: projects/236232367578/locations/global/workloadIdentityPools/github/providers/thelever-app-app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Sign in to Google Cloud as the deployer of dev
+        env:
+          SERVICE_ACCOUNT: deployer@thelever-app-dev.iam.gserviceaccount.com
+        run: .github/scripts/gcp-auth.sh
+
+      - name: Start the database
+        run: |
+          gcloud sql instances patch thelever --project "$PROJECT" \
+            --activation-policy ALWAYS --quiet

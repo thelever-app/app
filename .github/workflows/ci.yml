@@ -19,6 +19,21 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The same PostgreSQL as compose.yaml, pinned by the same digest, for `pnpm test:db`.
+    services:
+      postgres:
+        image: postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: thelever
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d thelever"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -46,6 +61,11 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Test database
+        run: pnpm test:db
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/thelever
+
       - name: Build web
         run: pnpm --filter @thelever-app/web build
 
@@ -57,6 +77,21 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The room server keeps the games in PostgreSQL: the same one as the checks.
+    services:
+      postgres:
+        image: postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: thelever
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d thelever"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -77,3 +112,5 @@ jobs:
 
       - name: Test e2e
         run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/thelever

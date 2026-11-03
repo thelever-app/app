@@ -1,6 +1,7 @@
 import type { AnswerDilemmaUseCase } from '@thelever-app/game';
 import type { AnswerDilemmaDto } from '@thelever-app/protocol';
 import type { KeyedLock } from '../../concurrency/keyed-lock.ts';
+import type { RunCommand } from '../run-command.ts';
 import type { GameStateSender } from './game-state-sender.ts';
 import { Rejection } from './rejection.ts';
 import type { RoomConnection } from './room-connection.ts';
@@ -13,15 +14,18 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
   /** One holder per game at a time, so its commands never interleave in this instance. */
   readonly #gameLock: KeyedLock;
   readonly #stateSender: GameStateSender;
+  readonly #runCommand: RunCommand;
 
   constructor(
     answerDilemma: AnswerDilemmaUseCase,
     gameLock: KeyedLock,
     stateSender: GameStateSender,
+    runCommand: RunCommand,
   ) {
     this.#answerDilemma = answerDilemma;
     this.#gameLock = gameLock;
     this.#stateSender = stateSender;
+    this.#runCommand = runCommand;
   }
 
   async handle({ dilemmaId, vote }: AnswerDilemmaDto, connection: RoomConnection): Promise<void> {
@@ -30,13 +34,15 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
 
     const release = await this.#gameLock.acquire(session.gameId);
     try {
-      await this.#answerDilemma.execute({
-        gameId: session.gameId,
-        playerId: session.playerId,
-        dilemmaId,
-        vote,
-      });
-      // The use case only tells the others: the player learns their own progress from a fresh state.
+      await this.#runCommand(() =>
+        this.#answerDilemma.execute({
+          gameId: session.gameId,
+          playerId: session.playerId,
+          dilemmaId,
+          vote,
+        }),
+      );
+      // Once committed. The use case only tells the others: the player learns their own progress from a fresh state.
       await this.#stateSender.send(connection, session);
     } finally {
       release();

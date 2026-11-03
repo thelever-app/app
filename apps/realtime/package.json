@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "FIREBASE_PROJECT_ID=demo-thelever FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 tsx watch src/server.ts",
-    "typecheck": "tsc --noEmit -p ."
+    "dev": "FIREBASE_PROJECT_ID=demo-thelever FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 tsx watch --env-file-if-exists=../../.env src/server.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "test:db": "vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
+    "@thelever-app/db": "workspace:*",
     "@thelever-app/dilemmas": "workspace:*",
     "@thelever-app/game": "workspace:*",
     "@thelever-app/protocol": "workspace:*",

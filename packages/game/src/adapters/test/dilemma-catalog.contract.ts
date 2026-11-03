@@ -13,7 +13,7 @@ export const CONTRACT_DILEMMAS = [
 
 /**
  * What every DilemmaCatalog must do, in memory or backed by the Dilemmas context (ADR 0001).
- * `create` stores CONTRACT_DILEMMAS and returns the catalog with their content as stored.
+ * `create` stores CONTRACT_DILEMMAS, each at its first version, and returns the catalog with their content as stored.
  */
 export function describeDilemmaCatalogContract(
   name: string,
@@ -21,7 +21,7 @@ export function describeDilemmaCatalogContract(
 ): void {
   describe(`${name} (DilemmaCatalog contract)`, () => {
     describe('findOptionIds', () => {
-      it('should return the ids of the options of each dilemma, in the order asked for', async () => {
+      it('should return the current version and the ids of the options of each dilemma, in the order asked for', async () => {
         // Arrange
         const { catalog, stored } = await create();
         const [first, second] = stored as [DilemmaContent, DilemmaContent];
@@ -33,9 +33,14 @@ export function describeDilemmaCatalogContract(
         expect(dilemmas).toEqual([
           {
             dilemmaId: second.dilemmaId,
+            version: 1,
             optionIds: second.options.map(({ optionId }) => optionId),
           },
-          { dilemmaId: first.dilemmaId, optionIds: first.options.map(({ optionId }) => optionId) },
+          {
+            dilemmaId: first.dilemmaId,
+            version: 1,
+            optionIds: first.options.map(({ optionId }) => optionId),
+          },
         ]);
       });
 
@@ -51,13 +56,19 @@ export function describeDilemmaCatalogContract(
     });
 
     describe('findContents', () => {
-      it('should return the text and the options of each dilemma, in the order asked for', async () => {
+      it('should return the text and the options of each version asked for, in the order asked for', async () => {
         // Arrange
         const { catalog, stored } = await create();
         const [first, second] = stored as [DilemmaContent, DilemmaContent];
 
         // Act
-        const contents = await catalog.findContents([second.dilemmaId, first.dilemmaId], 'es');
+        const contents = await catalog.findContents(
+          [
+            { dilemmaId: second.dilemmaId, version: 1 },
+            { dilemmaId: first.dilemmaId, version: 1 },
+          ],
+          'es',
+        );
 
         // Assert
         expect(contents).toEqual([second, first]);
@@ -70,9 +81,20 @@ export function describeDilemmaCatalogContract(
         const { catalog } = await create();
 
         // Act & Assert
-        await expect(catalog.findContents(['TestUnknownId'], 'es')).rejects.toThrow(
-          DilemmaNotFoundError,
-        );
+        await expect(
+          catalog.findContents([{ dilemmaId: 'TestUnknownId', version: 1 }], 'es'),
+        ).rejects.toThrow(DilemmaNotFoundError);
+      });
+
+      it('should throw an error if the version of a dilemma does not exist', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+        const [first] = stored as [DilemmaContent];
+
+        // Act & Assert
+        await expect(
+          catalog.findContents([{ dilemmaId: first.dilemmaId, version: 2 }], 'es'),
+        ).rejects.toThrow(DilemmaNotFoundError);
       });
     });
   });

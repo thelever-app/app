@@ -4,29 +4,33 @@ import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
 import { StartDecisionPhaseUseCase } from '../../use-cases/start-decision-phase.use-case.ts';
 import { AnswerDilemmaUseCase } from '../../use-cases/answer-dilemma.use-case.ts';
 import { GameNotFoundError } from '../../errors/game-not-found.error.ts';
+import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
+import { PlayerNotInGameError } from '../../../domain/errors/player-not-in-game.error.ts';
+import { Game } from '../../../domain/entities/game.ts';
+import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
 import { InMemoryRoomRepository } from '../../../adapters/in-memory/in-memory-room-repository.ts';
 import { InMemoryGameRepository } from '../../../adapters/in-memory/in-memory-game-repository.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
+import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { ProgressUpdatedEvent } from '../../../domain/events/progress-updated.event.ts';
-import type { DomainEvent } from '../../../domain/events/domain-event.ts';
 import type { PlayerNotifier } from '../../ports/player-notifier.port.ts';
 import { TEST_DILEMMA_IDS, testCatalog } from '../support/test-catalog.ts';
 
-/** Fails to deliver to one player, as a closed socket would, and delivers to the rest. */
+/** Fails to deliver anything, as a notifier that lost its connection would. */
 class UnreachablePlayerNotifier extends InMemoryPlayerNotifier {
-  readonly #unreachablePlayerId: string;
-
-  constructor(unreachablePlayerId: string) {
-    super();
-    this.#unreachablePlayerId = unreachablePlayerId;
-  }
-
-  override async notify(playerId: string, event: DomainEvent): Promise<void> {
-    if (playerId === this.#unreachablePlayerId) throw new Error('socket closed');
-    await super.notify(playerId, event);
+  override async notify(): Promise<void> {
+    throw new Error('connection lost');
   }
 }
+
+/** The seal Luis has in these tests: an adult with the research consent. */
+const LUIS_SEAL = {
+  gameConsentVersion: 'TestGameConsentVersion',
+  researchConsentVersion: 'TestResearchConsentVersion',
+  commercialLicenceConsentVersion: null,
+  underEighteen: false,
+};
 
 /** Ana hosts a room with Luis and Marta, and the game is in the decision phase. */
 async function gameInDecisionPhase(notifier: PlayerNotifier = new InMemoryPlayerNotifier()) {
@@ -57,9 +61,16 @@ async function gameInDecisionPhase(notifier: PlayerNotifier = new InMemoryPlayer
   ).execute({ roomId, dilemmaIds: TEST_DILEMMA_IDS });
 
   return {
+    roomRepository,
     gameRepository,
     notifier: notifier as InMemoryPlayerNotifier,
-    answerDilemma: new AnswerDilemmaUseCase(gameRepository, notifier),
+    answerDilemma: new AnswerDilemmaUseCase(
+      roomRepository,
+      gameRepository,
+      notifier,
+      new InMemorySealProvider(new Map([['TestLuisIdentity', LUIS_SEAL]])),
+    ),
+    roomId,
     gameId,
     anaId,
     luisId,
@@ -121,11 +132,10 @@ describe('AnswerDilemmaUseCase', () => {
       expect(notifier.receivedBy(luisId)).toEqual([]);
     });
 
-    it('should still notify the other players and succeed when one notification fails', async () => {
+    it('should keep the answer and succeed when the notification fails', async () => {
       // Arrange
-      // Sequential ids: room id-1, Ana id-2, Luis id-3, Marta id-4.
-      const { notifier, answerDilemma, gameId, luisId, martaId } = await gameInDecisionPhase(
-        new UnreachablePlayerNotifier('id-2'),
+      const { answerDilemma, gameRepository, gameId, luisId } = await gameInDecisionPhase(
+        new UnreachablePlayerNotifier(),
       );
 
       // Act
@@ -138,9 +148,64 @@ describe('AnswerDilemmaUseCase', () => {
 
       // Assert
       await expect(answering).resolves.toBeUndefined();
-      expect(notifier.receivedBy(martaId)).toEqual([
-        new ProgressUpdatedEvent(gameId, luisId, 1, 2),
-      ]);
+      expect((await gameRepository.findById(gameId))?.progressOf(luisId)).toBe(1);
+    });
+
+    it('should seal the answer with the seal of the player who answers', async () => {
+      // Arrange
+      const { gameRepository, answerDilemma, gameId, luisId } = await gameInDecisionPhase();
+
+      // Act
+      await answerDilemma.execute({
+        gameId,
+        playerId: luisId,
+        dilemmaId: 'TestDilemma1',
+        vote: 'TestOption',
+      });
+
+      // Assert
+      const luis = (await gameRepository.findById(gameId))
+        ?.toSnapshot()
+        .players.find(({ id }) => id === luisId);
+      expect(luis?.answers[0]?.seal).toEqual(LUIS_SEAL);
+    });
+
+    it('should throw an error if the player is not in the room of the game', async () => {
+      // Arrange
+      const { answerDilemma, gameId } = await gameInDecisionPhase();
+
+      // Act & Assert
+      await expect(
+        answerDilemma.execute({
+          gameId,
+          playerId: 'TestStrangerId',
+          dilemmaId: 'TestDilemma1',
+          vote: 'TestOption',
+        }),
+      ).rejects.toThrow(PlayerNotInGameError);
+    });
+
+    it('should throw an error if the room of the game does not exist', async () => {
+      // Arrange
+      const { answerDilemma, gameRepository, luisId } = await gameInDecisionPhase();
+      const orphan = Game.create(
+        {
+          roomId: 'TestUnknownRoomId',
+          dilemmas: [{ dilemmaId: 'TestDilemma1', version: 1, optionIds: ['TestOption'] }],
+        },
+        new FixedIdGenerator('TestOrphanGameId'),
+      );
+      await gameRepository.save(orphan);
+
+      // Act & Assert
+      await expect(
+        answerDilemma.execute({
+          gameId: orphan.id,
+          playerId: luisId,
+          dilemmaId: 'TestDilemma1',
+          vote: 'TestOption',
+        }),
+      ).rejects.toThrow(RoomNotFoundError);
     });
 
     it('should throw an error if the game does not exist', async () => {

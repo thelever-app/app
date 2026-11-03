@@ -49,14 +49,37 @@ jobs:
           SERVICE_ACCOUNT: deployer@${{ env.PROJECT }}.iam.gserviceaccount.com
         run: .github/scripts/gcp-auth.sh
 
-      # Until rooms live in PostgreSQL, one instance holds every room: two would split the players.
+      # The database of dev stops when unused: every deploy starts it, and it stops again each night.
+      - name: Start the database of dev
+        if: inputs.environment == 'dev'
+        run: |
+          gcloud sql instances patch thelever --project "$PROJECT" \
+            --activation-policy ALWAYS --quiet
+
+      # From the same image as the room server, before its new revision serves anyone: each
+      # migration must also work with the revision still serving. A failure stops the deploy.
+      - name: Migrate the database and load the seed
+        run: |
+          gcloud run jobs deploy migrate --project "$PROJECT" --region europe-southwest1 \
+            --image "$(cat image.txt)" \
+            --service-account "migrator@$PROJECT.iam.gserviceaccount.com" \
+            --command sh \
+            --args=-c,"node packages/db/src/migrate.ts && node packages/db/seeds/load.ts" \
+            --set-env-vars "CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=migrator@$PROJECT.iam,DB_APP_USER=realtime@$PROJECT.iam" \
+            --max-retries 0 --task-timeout 10m \
+            --quiet
+          gcloud run jobs execute migrate --project "$PROJECT" --region europe-southwest1 \
+            --wait --quiet
+
+      # The rooms live in PostgreSQL, so several instances share them. At most 3, with a pool of 5
+      # and the LISTEN connection each: 18 connections, within the 25 of the micro instance.
       - name: Deploy the room server
         run: |
           gcloud run deploy realtime --project "$PROJECT" --region europe-southwest1 \
             --image "$(cat image.txt)" \
             --service-account "realtime@$PROJECT.iam.gserviceaccount.com" \
-            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT" \
-            --timeout 3600 --session-affinity --min-instances 0 --max-instances 1 \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=realtime@$PROJECT.iam,DB_POOL_SIZE=5" \
+            --timeout 3600 --session-affinity --min-instances 0 --max-instances 3 \
             --quiet
 
       - name: Check the room server answers
