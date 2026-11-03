@@ -33,5 +33,6 @@ Option 3: a single channel, `game_events`.
 ## Consequences
 
 - Easier: no `LISTEN`/`UNLISTEN` per game, a single channel to listen again to after a cut, no lookup to publish an event of a room.
-- Harder: every instance reads every notification. With at most 3 instances and payloads of a few kilobytes, it costs nothing; it is revisited if the number of instances grows by an order of magnitude.
-- Watch: a room of 50 players fits in one notification of about 2 KB; a larger one takes several. The measurement of a room spread across instances checks it on Cloud Run.
+- Harder: every instance reads every notification. With at most 2 instances per revision, two revisions side by side during a deploy and payloads of a few kilobytes, it costs nothing; it is revisited if the number of instances grows by an order of magnitude.
+- Harder: after a deploy, the previous revision keeps its sockets until they close, up to the request timeout (measured on 2026-11-03: still open 10 minutes after the roll-out, with no `SIGTERM`), and keeps listening to `game_events`. Every notification must be readable by the previous revision too: a field is added before it is used and removed only once no revision reads it, as with the migrations.
+- Watch: a room spread across two instances works on Cloud Run (measured on 2026-11-03). A room of 50 players fits in one notification of about 2 KB; a larger one takes several, which the tests cover but no measurement on Cloud Run yet.
