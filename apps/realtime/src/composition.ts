@@ -44,6 +44,7 @@ import { authentication } from './http/authentication.ts';
 import { httpErrorHandler } from './http/error-handler.ts';
 import { HealthEndpoint } from './http/health.endpoint.ts';
 import type { HttpEndpoint } from './http/http-endpoint.ts';
+import type { AppCheckVerifier } from './identity/app-check-verifier.ts';
 import type { TokenVerifier } from './identity/token-verifier.ts';
 import { errorCodeOf } from './rooms/error-codes.ts';
 import { CreateRoomEndpoint } from './rooms/http/create-room.endpoint.ts';
@@ -81,6 +82,8 @@ export type Storage =
 /** What changes between production and the tests. */
 export interface RealtimeConfiguration {
   readonly tokenVerifier: TokenVerifier;
+  /** Whether a call must prove it comes from the app: in dev and prod, not locally. */
+  readonly appCheckVerifier: AppCheckVerifier;
   readonly pingIntervalMs: number;
   readonly storage: Storage;
   readonly logger: Logger;
@@ -111,6 +114,7 @@ interface Parts extends Adapters {
   readonly catalog: DilemmaCatalog;
   readonly idGenerator: IdGenerator;
   readonly tokenVerifier: TokenVerifier;
+  readonly appCheckVerifier: AppCheckVerifier;
   /** Delivers to the sockets of this instance. */
   readonly socketNotifier: SocketNotifier;
   readonly stateSender: GameStateSender;
@@ -179,6 +183,7 @@ function roomSocketServer(parts: Parts, pingIntervalMs: number): RoomSocketServe
     new ConnectHandler(
       new ConnectPlayerUseCase(roomRepository, gameRepository, notifier, parts.idGenerator),
       parts.tokenVerifier,
+      parts.appCheckVerifier,
       socketNotifier,
       gameLock,
       stateSender,
@@ -303,6 +308,7 @@ async function sharedLifecycle(
  */
 export async function composeRealtimeServer({
   tokenVerifier,
+  appCheckVerifier,
   pingIntervalMs,
   storage,
   logger,
@@ -315,6 +321,7 @@ export async function composeRealtimeServer({
     catalog,
     idGenerator: new RandomIdGenerator(),
     tokenVerifier,
+    appCheckVerifier,
     socketNotifier,
     logger,
     stateSender: new GameStateSender(
@@ -324,7 +331,7 @@ export async function composeRealtimeServer({
 
   const http = createServer(
     createApp(httpEndpoints(parts), {
-      authenticate: authentication(tokenVerifier),
+      authenticate: authentication(tokenVerifier, appCheckVerifier),
       errorHandler: httpErrorHandler(errorCodeOf),
     }),
   );

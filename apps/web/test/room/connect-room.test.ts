@@ -21,7 +21,10 @@ function options(overrides: Partial<ConnectRoomOptions> = {}) {
         appId: 'test-app-id',
       },
     }),
-    signIn: async () => ({ getToken: async () => 'test-token' }),
+    signIn: async () => ({
+      getToken: async () => 'test-token',
+      getAppCheckToken: async () => undefined,
+    }),
     createSocket: (url) => {
       const socket = new FakeSocket(url);
       sockets.push(socket);
@@ -79,7 +82,7 @@ describe('connectRoom', () => {
       development: true,
       signIn: async () => {
         signedIn = true;
-        return { getToken: async () => 'test-token' };
+        return { getToken: async () => 'test-token', getAppCheckToken: async () => undefined };
       },
     });
 

@@ -30,6 +30,19 @@ describe('ConnectDto', () => {
     expect(result.data).toEqual(connect);
   });
 
+  it('should accept the App Check token of the device, when it has one', () => {
+    // Act
+    const result = ConnectDto.safeParse({ ...connect, appCheckToken: 'app-check-token' });
+
+    // Assert
+    expect(result.data?.appCheckToken).toBe('app-check-token');
+  });
+
+  it('should reject an empty App Check token', () => {
+    // Act & Assert
+    expect(ConnectDto.safeParse({ ...connect, appCheckToken: '' }).success).toBe(false);
+  });
+
   it('should reject a contract version that is not a positive integer', () => {
     // Act & Assert
     expect(ConnectDto.safeParse({ ...connect, contractVersion: 0 }).success).toBe(false);

@@ -21,6 +21,8 @@ export const ConnectDto = z.strictObject({
   contractVersion: z.number().int().positive(),
   /** The Firebase ID token of the player. The server takes the player from it. */
   token: z.string().min(1),
+  /** The Firebase App Check token of the device, the proof that it is the app; none locally. */
+  appCheckToken: z.string().min(1).optional(),
   gameId: z.string().min(1),
   language: LanguageDto,
   traceparent: TraceparentDto.optional(),

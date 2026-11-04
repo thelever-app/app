@@ -9,6 +9,7 @@ import {
 } from '@thelever-app/protocol';
 import WebSocket from 'ws';
 import { composeRealtimeServer, type Storage } from '../../composition.ts';
+import { type AppCheckVerifier, UncheckedAppCheck } from '../../identity/app-check-verifier.ts';
 import type { TokenVerifier } from '../../identity/token-verifier.ts';
 import { FakeTokenVerifier, tokenOf } from './fake-token-verifier.ts';
 
@@ -16,6 +17,7 @@ import { FakeTokenVerifier, tokenOf } from './fake-token-verifier.ts';
 export async function composedHttpServer() {
   const { http } = await composeRealtimeServer({
     tokenVerifier: new FakeTokenVerifier(),
+    appCheckVerifier: new UncheckedAppCheck(),
     pingIntervalMs: 30_000,
     storage: { kind: 'memory' },
     logger: new ConsoleLogger(),
@@ -35,10 +37,17 @@ export function bearer(identity: string): string {
 export async function startRoomServer({
   pingIntervalMs = 30_000,
   tokenVerifier = new FakeTokenVerifier() as TokenVerifier,
+  appCheckVerifier = new UncheckedAppCheck() as AppCheckVerifier,
   storage = { kind: 'memory' } as Storage,
   logger = new ConsoleLogger() as Logger,
 } = {}) {
-  const composed = await composeRealtimeServer({ tokenVerifier, pingIntervalMs, storage, logger });
+  const composed = await composeRealtimeServer({
+    tokenVerifier,
+    appCheckVerifier,
+    pingIntervalMs,
+    storage,
+    logger,
+  });
   const { http: server, sockets } = composed;
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;

@@ -40,6 +40,11 @@ export interface WebSocketRoomOptions {
   readonly random: () => number;
   /** A new trace context, so the trace of each command starts here (see `newTraceparent`). */
   readonly newTraceparent: () => string;
+  /**
+   * The App Check token of the device, asked for on every connection; with `forceRefresh`, a new
+   * one. None where the environment does not ask for App Check.
+   */
+  readonly getAppCheckToken: (forceRefresh: boolean) => Promise<string | undefined>;
 }
 
 const OPEN = 1;
@@ -67,6 +72,8 @@ export class WebSocketRoomConnection implements RoomConnection {
   #closed = false;
   /** Whether the token of this attempt to connect was already a fresh one. */
   #triedFreshToken = false;
+  /** Whether the App Check token of this attempt to connect was already a fresh one. */
+  #triedFreshAppCheck = false;
   /** Closed while nobody uses the page; it connects again on resume. */
   #paused = false;
 
@@ -144,14 +151,20 @@ export class WebSocketRoomConnection implements RoomConnection {
     const socket = this.#options.createSocket(this.#options.url);
     this.#socket = socket;
     socket.addEventListener('open', () => {
-      this.#sayWhoConnects(socket, false).catch(() => socket.close());
+      this.#sayWhoConnects(socket).catch(() => socket.close());
     });
     socket.addEventListener('message', ({ data }) => this.#receive(data));
     socket.addEventListener('close', () => this.#onDrop(socket));
   }
 
-  async #sayWhoConnects(socket: WebSocketLike, forceRefresh: boolean): Promise<void> {
-    const token = await this.#options.getToken(forceRefresh);
+  async #sayWhoConnects(
+    socket: WebSocketLike,
+    { freshToken = false, freshAppCheck = false } = {},
+  ): Promise<void> {
+    const [token, appCheckToken] = await Promise.all([
+      this.#options.getToken(freshToken),
+      this.#options.getAppCheckToken(freshAppCheck),
+    ]);
     // The socket may have dropped, or been replaced, while the token was coming.
     if (socket !== this.#socket || socket.readyState !== OPEN) return;
     socket.send(
@@ -159,6 +172,7 @@ export class WebSocketRoomConnection implements RoomConnection {
         type: 'connect',
         contractVersion: CONTRACT_VERSION,
         token,
+        ...(appCheckToken === undefined ? {} : { appCheckToken }),
         gameId: this.#options.gameId,
         language: this.#options.language,
         traceparent: this.#options.newTraceparent(),
@@ -177,6 +191,7 @@ export class WebSocketRoomConnection implements RoomConnection {
     if (message.type === 'game-state' && this.#status !== 'connected') {
       this.#failedAttempts = 0;
       this.#triedFreshToken = false;
+      this.#triedFreshAppCheck = false;
       this.#setStatus('connected');
       this.#sendPending();
     }
@@ -195,7 +210,12 @@ export class WebSocketRoomConnection implements RoomConnection {
     const socket = this.#socket;
     if (rejection.code === 'invalid-token' && !this.#triedFreshToken && socket) {
       this.#triedFreshToken = true;
-      this.#sayWhoConnects(socket, true).catch(() => socket.close());
+      this.#sayWhoConnects(socket, { freshToken: true }).catch(() => socket.close());
+      return;
+    }
+    if (rejection.code === 'invalid-app-check' && !this.#triedFreshAppCheck && socket) {
+      this.#triedFreshAppCheck = true;
+      this.#sayWhoConnects(socket, { freshAppCheck: true }).catch(() => socket.close());
       return;
     }
     this.#deliver(rejection);

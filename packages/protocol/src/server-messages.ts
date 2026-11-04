@@ -80,6 +80,7 @@ export const ErrorCodeDto = z.enum([
   'unsupported-contract-version',
   'not-connected',
   'invalid-token',
+  'invalid-app-check',
   'room-not-found',
   'game-not-found',
   'player-not-in-game',

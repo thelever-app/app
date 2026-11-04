@@ -12,9 +12,19 @@ const firebase = vi.hoisted(() => ({
   signInAnonymously: vi.fn(),
   connectAuthEmulator: vi.fn(),
   initializeApp: vi.fn(),
+  initializeAppCheck: vi.fn(() => ({ type: 'test-app-check' })),
+  getAppCheckToken: vi.fn(async (_appCheck: unknown, forceRefresh?: boolean) => ({
+    token: forceRefresh ? 'fresh-app-check-token' : 'app-check-token',
+  })),
+  ReCaptchaEnterpriseProvider: vi.fn(),
 }));
 
 vi.mock('firebase/app', () => ({ initializeApp: firebase.initializeApp }));
+vi.mock('firebase/app-check', () => ({
+  initializeAppCheck: firebase.initializeAppCheck,
+  getToken: firebase.getAppCheckToken,
+  ReCaptchaEnterpriseProvider: firebase.ReCaptchaEnterpriseProvider,
+}));
 vi.mock('firebase/auth', () => ({
   getAuth: () => ({
     get currentUser() {
@@ -88,5 +98,31 @@ describe('signInAnonymousPlayer', () => {
       'http://127.0.0.1:9099',
       expect.anything(),
     );
+  });
+
+  it('should prove with App Check that it is the app, when the environment has a key', async () => {
+    // Act
+    const player = await signInAnonymousPlayer({ ...CONFIG, appCheckSiteKey: 'test-site-key' });
+
+    // Assert
+    expect(firebase.ReCaptchaEnterpriseProvider).toHaveBeenCalledWith('test-site-key');
+    expect(firebase.initializeAppCheck).toHaveBeenCalledWith(
+      firebase.initializeApp.mock.results[0]?.value,
+      {
+        provider: expect.any(firebase.ReCaptchaEnterpriseProvider),
+        isTokenAutoRefreshEnabled: true,
+      },
+    );
+    expect(await player.getAppCheckToken(false)).toBe('app-check-token');
+    expect(await player.getAppCheckToken(true)).toBe('fresh-app-check-token');
+  });
+
+  it('should have no App Check token where the environment has no key, as locally', async () => {
+    // Act
+    const player = await signInAnonymousPlayer(CONFIG);
+
+    // Assert
+    expect(firebase.initializeAppCheck).not.toHaveBeenCalled();
+    expect(await player.getAppCheckToken(false)).toBeUndefined();
   });
 });

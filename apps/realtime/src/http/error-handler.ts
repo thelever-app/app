@@ -8,6 +8,7 @@ const STATUS: Partial<Record<ErrorCodeDto, number>> = {
   'nickname-missing': 400,
   'duplicate-dilemma': 400,
   'invalid-token': 401,
+  'invalid-app-check': 401,
   'room-not-found': 404,
   'dilemma-not-found': 404,
 };

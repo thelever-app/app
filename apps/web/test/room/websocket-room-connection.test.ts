@@ -40,7 +40,11 @@ async function settle(): Promise<void> {
  * Opens a connection whose sockets, waits, randomness and trace contexts the test controls;
  * `random` is 1 by default, and every command gets the same trace context unless told otherwise.
  */
-function open(random = () => 1, newTraceparent = () => TEST_TRACEPARENT) {
+function open(
+  random = () => 1,
+  newTraceparent = () => TEST_TRACEPARENT,
+  getAppCheckToken: (forceRefresh: boolean) => Promise<string | undefined> = async () => undefined,
+) {
   const sockets: FakeSocket[] = [];
   const scheduler = new FakeScheduler();
   const tokens = ['test-token-1', 'test-token-2', 'test-token-3', 'test-token-4'];
@@ -58,6 +62,7 @@ function open(random = () => 1, newTraceparent = () => TEST_TRACEPARENT) {
     schedule: scheduler.schedule,
     random,
     newTraceparent,
+    getAppCheckToken,
   });
   const received: ServerMessageDto[] = [];
   const statuses: RoomConnectionStatus[] = [];
@@ -325,6 +330,59 @@ describe('WebSocketRoomConnection', () => {
 
       // Assert
       expect(socket.sent).toEqual([]);
+    });
+  });
+
+  describe('App Check', () => {
+    it('should send the App Check token of the device with connect', async () => {
+      // Arrange
+      const { current } = open(undefined, undefined, async () => 'test-app-check');
+
+      // Act
+      await accept(current());
+
+      // Assert
+      expect(current().sentMessages()).toEqual([
+        expect.objectContaining({ type: 'connect', appCheckToken: 'test-app-check' }),
+      ]);
+    });
+
+    it('should send connect again with a fresh App Check token when the server rejects it', async () => {
+      // Arrange
+      const { current, statuses } = open(undefined, undefined, async (forceRefresh) =>
+        forceRefresh ? 'test-fresh-app-check' : 'test-app-check',
+      );
+      await accept(current());
+
+      // Act
+      current().receive({ type: 'error', command: 'connect', code: 'invalid-app-check' });
+      await settle();
+
+      // Assert
+      expect(current().sentMessages()).toEqual([
+        expect.objectContaining({ appCheckToken: 'test-app-check' }),
+        expect.objectContaining({ appCheckToken: 'test-fresh-app-check' }),
+      ]);
+      expect(statuses).toEqual(['connecting']);
+    });
+
+    it('should give up when the server rejects the fresh App Check token too', async () => {
+      // Arrange
+      const { current, statuses, received } = open(
+        undefined,
+        undefined,
+        async () => 'test-app-check',
+      );
+      await accept(current());
+      current().receive({ type: 'error', command: 'connect', code: 'invalid-app-check' });
+      await settle();
+
+      // Act
+      current().receive({ type: 'error', command: 'connect', code: 'invalid-app-check' });
+
+      // Assert
+      expect(statuses).toEqual(['connecting', 'rejected']);
+      expect(received).toEqual([{ type: 'error', command: 'connect', code: 'invalid-app-check' }]);
     });
   });
 

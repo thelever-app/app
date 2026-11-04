@@ -75,7 +75,7 @@ jobs:
           gcloud run deploy realtime --project "$PROJECT" --region europe-southwest1 \
             --image "$(cat image.txt)" \
             --service-account "realtime@$PROJECT.iam.gserviceaccount.com" \
-            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=realtime@$PROJECT.iam,DB_POOL_SIZE=3" \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=realtime@$PROJECT.iam,DB_POOL_SIZE=3,APP_CHECK=required" \
             --timeout 3600 --session-affinity --min-instances 0 --max-instances 2 --no-cpu-throttling \
             --quiet
 

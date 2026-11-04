@@ -12,11 +12,13 @@ import {
   RoomNotFoundError,
 } from '@thelever-app/game';
 import type { ErrorCodeDto } from '@thelever-app/protocol';
+import { InvalidAppCheckError } from '../identity/app-check-verifier.ts';
 import { InvalidTokenError } from '../identity/token-verifier.ts';
 
 /** Each error a client can cause, with its stable code. Anything else is a fault of the server. */
 const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])[] = [
   [InvalidTokenError, 'invalid-token'],
+  [InvalidAppCheckError, 'invalid-app-check'],
   [RoomNotFoundError, 'room-not-found'],
   [GameNotFoundError, 'game-not-found'],
   [IdentityNotInGameError, 'player-not-in-game'],

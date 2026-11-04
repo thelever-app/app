@@ -6,11 +6,14 @@ import {
   openListenClient,
 } from '@thelever-app/db';
 import { initializeApp } from 'firebase-admin/app';
+import { getAppCheck } from 'firebase-admin/app-check';
 import { getAuth } from 'firebase-admin/auth';
 import { composeRealtimeServer } from './composition.ts';
+import { UncheckedAppCheck } from './identity/app-check-verifier.ts';
+import { FirebaseAppCheckVerifier } from './identity/firebase-app-check-verifier.ts';
+import { FirebaseTokenVerifier } from './identity/firebase-token-verifier.ts';
 import { CloudLoggingLogger } from './telemetry/cloud-logging-logger.ts';
 import { shutdownTelemetry } from './telemetry/register.ts';
-import { FirebaseTokenVerifier } from './identity/firebase-token-verifier.ts';
 
 const port = Number(process.env.PORT ?? 3000);
 const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -22,6 +25,11 @@ const logger = new CloudLoggingLogger({ projectId });
 // With FIREBASE_AUTH_EMULATOR_HOST set, Firebase Admin trusts the tokens of the local emulator instead.
 const firebase = initializeApp({ projectId });
 const tokenVerifier = new FirebaseTokenVerifier(getAuth(firebase));
+// The deployment of dev and prod asks for App Check; locally and in the e2e there is none.
+const appCheckVerifier =
+  process.env.APP_CHECK === 'required'
+    ? new FirebaseAppCheckVerifier(getAppCheck(firebase))
+    : new UncheckedAppCheck();
 
 // DATABASE_URL locally and in CI; CLOUD_SQL_INSTANCE and DB_USER in Cloud Run.
 const databaseConfig = databaseConfigFrom(process.env);
@@ -32,6 +40,7 @@ const database = await openDatabase<Database>(databaseConfig, {
 
 const server = await composeRealtimeServer({
   tokenVerifier,
+  appCheckVerifier,
   pingIntervalMs: 30_000,
   logger,
   storage: {

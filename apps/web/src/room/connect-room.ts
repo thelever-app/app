@@ -61,6 +61,7 @@ export async function connectRoom({
     gameId: decodeURIComponent(gameId),
     language,
     getToken: (forceRefresh) => player.getToken(forceRefresh),
+    getAppCheckToken: (forceRefresh) => player.getAppCheckToken(forceRefresh),
     createSocket,
     schedule,
     random: Math.random,
