@@ -1,0 +1,28 @@
+{
+  "displayName": "Room server: slow delivery of game events",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "For 10 minutes, 1 game event in 20 took more than 500 ms from being published to reaching the sockets of an instance: the progress of a player is late on the other devices. Look at the database (Cloud SQL CPU and connections) and at the instances of the room server."
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "p95 of the delivery above 500 ms for 10 minutes",
+      "conditionThreshold": {
+        "filter": "metric.type=\"prometheus.googleapis.com/thelever.game.event.delay/histogram\" AND resource.type=\"prometheus_target\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "600s",
+            "perSeriesAligner": "ALIGN_DELTA",
+            "crossSeriesReducer": "REDUCE_PERCENTILE_95"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 500,
+        "duration": "0s",
+        "trigger": { "count": 1 }
+      }
+    }
+  ],
+  "alertStrategy": { "autoClose": "1800s" }
+}

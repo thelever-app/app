@@ -68,13 +68,15 @@ jobs:
       # revision keeps its sockets for up to an hour, so two revisions may run side by side: at most
       # 2 instances each, with a pool of 3 and the LISTEN connection, are 16 connections, within the
       # 19 the micro instance leaves to the app users (25, minus 3 for superusers and 3 Cloud SQL uses).
+      # The CPU stays with the instance between requests: its beat, the check of LISTEN, the cleaning
+      # of dead instances and the export of telemetry run on timers, with no request open.
       - name: Deploy the room server
         run: |
           gcloud run deploy realtime --project "$PROJECT" --region europe-southwest1 \
             --image "$(cat image.txt)" \
             --service-account "realtime@$PROJECT.iam.gserviceaccount.com" \
             --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=realtime@$PROJECT.iam,DB_POOL_SIZE=3" \
-            --timeout 3600 --session-affinity --min-instances 0 --max-instances 2 \
+            --timeout 3600 --session-affinity --min-instances 0 --max-instances 2 --no-cpu-throttling \
             --quiet
 
       - name: Check the room server answers

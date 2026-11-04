@@ -57,7 +57,10 @@ export function startTelemetry({ projectId, sampleRatio, logger }: TelemetryOpti
     {
       // A fixed message, so the errors of the SDK count as one kind; what failed goes as its cause.
       error: (message, ...args) => logger.error('telemetry failed', args[0] ?? message),
-      warn: (message) => logger.warn(`telemetry: ${message}`),
+      warn: (message, ...args) =>
+        logger.warn(`telemetry: ${message}`, {
+          ...(args.length > 0 ? { detail: JSON.stringify(args).slice(0, 2000) } : {}),
+        }),
       info: () => {},
       debug: () => {},
       verbose: () => {},
