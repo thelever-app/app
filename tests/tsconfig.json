@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["support", "steps"]
+  "include": ["support", "steps", "load"]
 }

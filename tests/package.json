@@ -3,7 +3,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
     "test:acceptance": "cucumber-js --profile acceptance",
-    "test:e2e": "cucumber-js --profile e2e"
+    "test:e2e": "cucumber-js --profile e2e",
+    "load": "node --env-file-if-exists=../.env load/run.ts"
   },
   "license": "AGPL-3.0-only",
   "type": "module",
