@@ -280,6 +280,18 @@ describe('ErrorDto', () => {
     expect(result.data).toEqual(error);
   });
 
+  it('should tell a connect turned down because the device did not prove it is the app', () => {
+    // Act
+    const result = ErrorDto.safeParse({
+      type: 'error',
+      command: 'connect',
+      code: 'invalid-app-check',
+    });
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
   it('should accept no command when the message could not be read', () => {
     // Act & Assert
     expect(

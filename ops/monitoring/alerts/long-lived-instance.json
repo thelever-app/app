@@ -1,0 +1,28 @@
+{
+  "displayName": "Room server: an instance alive for 6 hours",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "The room server has kept at least one instance for 6 hours in a row. An instance lives while a socket is open, and is paid for the whole time: look for a tab left open, or a client that reconnects without end."
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "Instances of the room server above 0 for 6 hours",
+      "conditionThreshold": {
+        "filter": "metric.type=\"run.googleapis.com/container/instance_count\" AND resource.type=\"cloud_run_revision\" AND resource.label.service_name=\"realtime\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "300s",
+            "perSeriesAligner": "ALIGN_MAX",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "21600s",
+        "trigger": { "count": 1 }
+      }
+    }
+  ],
+  "alertStrategy": { "autoClose": "1800s" }
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { connectRoom, type ConnectRoomOptions } from '../../src/room/connect-room.ts';
 import { SimulatedRoomConnection } from '../../src/room/simulated-room-connection.ts';
 import { WebSocketRoomConnection } from '../../src/room/websocket-room-connection.ts';
+import { FakePageActivity } from '../support/fake-page-activity.ts';
 import { FakeSocket } from '../support/fake-socket.ts';
 
 /** Options whose config, player and sockets the test controls. */
@@ -20,12 +21,16 @@ function options(overrides: Partial<ConnectRoomOptions> = {}) {
         appId: 'test-app-id',
       },
     }),
-    signIn: async () => ({ getToken: async () => 'test-token' }),
+    signIn: async () => ({
+      getToken: async () => 'test-token',
+      getAppCheckToken: async () => undefined,
+    }),
     createSocket: (url) => {
       const socket = new FakeSocket(url);
       sockets.push(socket);
       return socket;
     },
+    pageActivity: new FakePageActivity(),
     ...overrides,
   };
   return { all, sockets };
@@ -77,7 +82,7 @@ describe('connectRoom', () => {
       development: true,
       signIn: async () => {
         signedIn = true;
-        return { getToken: async () => 'test-token' };
+        return { getToken: async () => 'test-token', getAppCheckToken: async () => undefined };
       },
     });
 

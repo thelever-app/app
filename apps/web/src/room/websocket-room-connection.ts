@@ -38,6 +38,13 @@ export interface WebSocketRoomOptions {
   readonly schedule: Schedule;
   /** A number in [0, 1), for the random part of each wait. */
   readonly random: () => number;
+  /** A new trace context, so the trace of each command starts here (see `newTraceparent`). */
+  readonly newTraceparent: () => string;
+  /**
+   * The App Check token of the device, asked for on every connection; with `forceRefresh`, a new
+   * one. None where the environment does not ask for App Check.
+   */
+  readonly getAppCheckToken: (forceRefresh: boolean) => Promise<string | undefined>;
 }
 
 const OPEN = 1;
@@ -65,6 +72,10 @@ export class WebSocketRoomConnection implements RoomConnection {
   #closed = false;
   /** Whether the token of this attempt to connect was already a fresh one. */
   #triedFreshToken = false;
+  /** Whether the App Check token of this attempt to connect was already a fresh one. */
+  #triedFreshAppCheck = false;
+  /** Closed while nobody uses the page; it connects again on resume. */
+  #paused = false;
 
   private constructor(options: WebSocketRoomOptions) {
     this.#options = options;
@@ -79,7 +90,9 @@ export class WebSocketRoomConnection implements RoomConnection {
 
   send(message: ClientMessageDto): void {
     if (this.#status === 'connected' && this.#socket?.readyState === OPEN) {
-      this.#socket.send(JSON.stringify(message));
+      this.#socket.send(
+        JSON.stringify({ ...message, traceparent: this.#options.newTraceparent() }),
+      );
       return;
     }
     this.#pending.push(message);
@@ -104,6 +117,28 @@ export class WebSocketRoomConnection implements RoomConnection {
     return this.#status;
   }
 
+  /**
+   * Closes the socket while nobody uses the page, without trying again, so the room server can
+   * let its instance go. What the screen sends meanwhile waits for `resume`.
+   */
+  pause(): void {
+    if (this.#closed || this.#paused || this.#status === 'rejected') return;
+    this.#paused = true;
+    this.#cancelWait?.();
+    this.#cancelWait = undefined;
+    this.#socket?.close();
+    this.#setStatus('paused');
+  }
+
+  /** Connects again after a pause: the server sends a fresh state, as on any reconnection. */
+  resume(): void {
+    if (this.#closed || !this.#paused) return;
+    this.#paused = false;
+    this.#failedAttempts = 0;
+    this.#setStatus('reconnecting');
+    this.#connect();
+  }
+
   close(): void {
     this.#closed = true;
     this.#cancelWait?.();
@@ -116,14 +151,20 @@ export class WebSocketRoomConnection implements RoomConnection {
     const socket = this.#options.createSocket(this.#options.url);
     this.#socket = socket;
     socket.addEventListener('open', () => {
-      this.#sayWhoConnects(socket, false).catch(() => socket.close());
+      this.#sayWhoConnects(socket).catch(() => socket.close());
     });
     socket.addEventListener('message', ({ data }) => this.#receive(data));
     socket.addEventListener('close', () => this.#onDrop(socket));
   }
 
-  async #sayWhoConnects(socket: WebSocketLike, forceRefresh: boolean): Promise<void> {
-    const token = await this.#options.getToken(forceRefresh);
+  async #sayWhoConnects(
+    socket: WebSocketLike,
+    { freshToken = false, freshAppCheck = false } = {},
+  ): Promise<void> {
+    const [token, appCheckToken] = await Promise.all([
+      this.#options.getToken(freshToken),
+      this.#options.getAppCheckToken(freshAppCheck),
+    ]);
     // The socket may have dropped, or been replaced, while the token was coming.
     if (socket !== this.#socket || socket.readyState !== OPEN) return;
     socket.send(
@@ -131,8 +172,10 @@ export class WebSocketRoomConnection implements RoomConnection {
         type: 'connect',
         contractVersion: CONTRACT_VERSION,
         token,
+        ...(appCheckToken === undefined ? {} : { appCheckToken }),
         gameId: this.#options.gameId,
         language: this.#options.language,
+        traceparent: this.#options.newTraceparent(),
       } satisfies ClientMessageDto),
     );
   }
@@ -148,6 +191,7 @@ export class WebSocketRoomConnection implements RoomConnection {
     if (message.type === 'game-state' && this.#status !== 'connected') {
       this.#failedAttempts = 0;
       this.#triedFreshToken = false;
+      this.#triedFreshAppCheck = false;
       this.#setStatus('connected');
       this.#sendPending();
     }
@@ -166,7 +210,12 @@ export class WebSocketRoomConnection implements RoomConnection {
     const socket = this.#socket;
     if (rejection.code === 'invalid-token' && !this.#triedFreshToken && socket) {
       this.#triedFreshToken = true;
-      this.#sayWhoConnects(socket, true).catch(() => socket.close());
+      this.#sayWhoConnects(socket, { freshToken: true }).catch(() => socket.close());
+      return;
+    }
+    if (rejection.code === 'invalid-app-check' && !this.#triedFreshAppCheck && socket) {
+      this.#triedFreshAppCheck = true;
+      this.#sayWhoConnects(socket, { freshAppCheck: true }).catch(() => socket.close());
       return;
     }
     this.#deliver(rejection);
@@ -179,7 +228,9 @@ export class WebSocketRoomConnection implements RoomConnection {
   }
 
   #onDrop(socket: WebSocketLike): void {
-    if (this.#closed || this.#status === 'rejected' || socket !== this.#socket) return;
+    if (this.#closed || this.#paused || this.#status === 'rejected' || socket !== this.#socket) {
+      return;
+    }
 
     const backoff = Math.min(LONGEST_WAIT_MS, SHORTEST_WAIT_MS * 2 ** this.#failedAttempts);
     this.#failedAttempts += 1;

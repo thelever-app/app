@@ -13,6 +13,8 @@ export interface WebConfig {
   readonly firebase: FirebaseWebConfig;
   /** Only in local development: the Auth emulator the player signs in against. */
   readonly authEmulatorUrl?: string;
+  /** The reCAPTCHA key App Check proves the app with, in dev and prod; none locally. */
+  readonly appCheckSiteKey?: string;
 }
 
 const FIREBASE_KEYS = ['apiKey', 'authDomain', 'projectId', 'appId'] as const;
@@ -28,10 +30,23 @@ export async function loadWebConfig(fetchConfig: typeof fetch = fetch): Promise<
   const raw = (await response.json()) as Record<string, unknown>;
   const realtimeUrl = urlWithProtocol(raw.realtimeUrl, ['ws:', 'wss:'], 'realtimeUrl');
   const firebase = firebaseConfig(raw.firebase);
-  if (raw.authEmulatorUrl === undefined) return { realtimeUrl, firebase };
+  return {
+    realtimeUrl,
+    firebase,
+    ...(raw.authEmulatorUrl === undefined
+      ? {}
+      : { authEmulatorUrl: urlWithProtocol(raw.authEmulatorUrl, ['http:'], 'authEmulatorUrl') }),
+    ...(raw.appCheckSiteKey === undefined
+      ? {}
+      : { appCheckSiteKey: nonEmpty(raw.appCheckSiteKey, 'appCheckSiteKey') }),
+  };
+}
 
-  const authEmulatorUrl = urlWithProtocol(raw.authEmulatorUrl, ['http:'], 'authEmulatorUrl');
-  return { realtimeUrl, firebase, authEmulatorUrl };
+function nonEmpty(value: unknown, name: string): string {
+  if (typeof value !== 'string' || value === '') {
+    throw new Error(`/config.json has no valid ${name}`);
+  }
+  return value;
 }
 
 function urlWithProtocol(value: unknown, protocols: readonly string[], name: string): string {

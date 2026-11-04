@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { openDatabase } from '../../connection.ts';
+import { ConsoleLogger } from '../../console-logger.ts';
 import { migrateToLatest } from '../../migrator.ts';
 import { onServer, TEMPLATE_DATABASE, urlOf } from './test-database.ts';
 
@@ -18,7 +19,7 @@ export default async function setup(): Promise<() => Promise<void>> {
   // A database with an open connection cannot be copied: close it before the files copy it.
   const { db, close } = await openDatabase<unknown>(
     { kind: 'url', url: urlOf(TEMPLATE_DATABASE) },
-    { maxConnections: 1 },
+    { maxConnections: 1, logger: new ConsoleLogger() },
   );
   try {
     await migrateToLatest(db);

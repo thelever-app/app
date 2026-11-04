@@ -1,11 +1,21 @@
+import { context, propagation, ROOT_CONTEXT } from '@opentelemetry/api';
 import type { DomainEvent } from '@thelever-app/game';
 import type pg from 'pg';
+import type { Logger } from '../logger.ts';
 import { GAME_EVENTS_CHANNEL, readNotification } from './postgres-player-notifier.ts';
 
 const MAX_RETRY_MS = 30_000;
 
 /** How the listening connection shows up in pg_stat_activity. */
 export const LISTENER_APPLICATION_NAME = 'game_events_listener';
+
+/** What an instance does with each event it hears: deliver it to those of its players. */
+type OnEvents = (
+  playerIds: readonly string[],
+  event: DomainEvent,
+  /** When it was published, in milliseconds since the epoch, if the publisher said. */
+  publishedAt: number | undefined,
+) => void;
 
 interface Opened {
   readonly client: pg.Client;
@@ -19,8 +29,9 @@ interface Opened {
  */
 export class GameEventsListener {
   readonly #open: () => Promise<Opened>;
-  readonly #onEvents: (playerIds: readonly string[], event: DomainEvent) => void;
+  readonly #onEvents: OnEvents;
   readonly #onReconnected: () => void;
+  readonly #logger: Logger;
   readonly #initialRetryMs: number;
   /** How often it checks that the connection still answers: a network cut may never end it. */
   readonly #probeEveryMs: number;
@@ -37,12 +48,14 @@ export class GameEventsListener {
     {
       onEvents,
       onReconnected = () => {},
+      logger,
       initialRetryMs = 500,
       probeEveryMs = 30_000,
       probeTimeoutMs = 10_000,
     }: {
-      readonly onEvents: (playerIds: readonly string[], event: DomainEvent) => void;
+      readonly onEvents: OnEvents;
       readonly onReconnected?: () => void;
+      readonly logger: Logger;
       readonly initialRetryMs?: number;
       readonly probeEveryMs?: number;
       readonly probeTimeoutMs?: number;
@@ -51,6 +64,7 @@ export class GameEventsListener {
     this.#open = open;
     this.#onEvents = onEvents;
     this.#onReconnected = onReconnected;
+    this.#logger = logger;
     this.#initialRetryMs = initialRetryMs;
     this.#probeEveryMs = probeEveryMs;
     this.#probeTimeoutMs = probeTimeoutMs;
@@ -87,10 +101,13 @@ export class GameEventsListener {
     client.on('notification', ({ channel, payload }) => {
       if (channel !== GAME_EVENTS_CHANNEL || payload === undefined) return;
       try {
-        const { playerIds, event } = readNotification(payload);
-        this.#onEvents(playerIds, event);
+        const { playerIds, event, trace, publishedAt } = readNotification(payload);
+        // Delivering continues the trace of the command that published, on whichever instance.
+        context.with(propagation.extract(ROOT_CONTEXT, trace), () =>
+          this.#onEvents(playerIds, event, publishedAt),
+        );
       } catch (error) {
-        console.error(error);
+        this.#logger.error('unreadable game event notification', error);
       }
     });
     let processId: number | undefined;
@@ -100,7 +117,9 @@ export class GameEventsListener {
       const { rows } = await client.query<{ pid: number }>('select pg_backend_pid() as pid');
       processId = rows[0]?.pid;
     } catch (error) {
-      await opened.close().catch(console.error);
+      await opened.close().catch((error: unknown) => {
+        this.#logger.error('closing a listen connection that failed to listen failed', error);
+      });
       throw error;
     }
     if (this.#stopped) {
@@ -119,7 +138,10 @@ export class GameEventsListener {
     if (this.#current !== opened) return;
     this.#current = undefined;
     this.#processId = undefined;
-    opened.close().catch(console.error);
+    this.#logger.warn('listen connection lost');
+    opened.close().catch((error: unknown) => {
+      this.#logger.error('closing a lost listen connection failed', error);
+    });
     if (!this.#stopped) this.#reconnect(this.#initialRetryMs);
   }
 
@@ -130,8 +152,9 @@ export class GameEventsListener {
           if (!this.#stopped) this.#onReconnected();
         },
         (error: unknown) => {
-          console.error(error);
-          if (!this.#stopped) this.#reconnect(Math.min(delayMs * 2, MAX_RETRY_MS));
+          const nextDelayMs = Math.min(delayMs * 2, MAX_RETRY_MS);
+          this.#logger.error('listening again failed', error, { retryInMs: nextDelayMs });
+          if (!this.#stopped) this.#reconnect(nextDelayMs);
         },
       );
     }, delayMs);
@@ -139,9 +162,14 @@ export class GameEventsListener {
 
   #scheduleProbe(): void {
     this.#probe = setTimeout(() => {
-      this.#check().then(() => {
-        if (!this.#stopped) this.#scheduleProbe();
-      }, console.error);
+      this.#check().then(
+        () => {
+          if (!this.#stopped) this.#scheduleProbe();
+        },
+        (error: unknown) => {
+          this.#logger.error('checking the listen connection failed', error);
+        },
+      );
     }, this.#probeEveryMs);
   }
 

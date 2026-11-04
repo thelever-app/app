@@ -1,0 +1,29 @@
+{
+  "displayName": "Room server: errors",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "The room server logged an error. Open Error Reporting, or Logs Explorer with `severity>=ERROR` on the `realtime` service, and follow its trace."
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "An error logged in the last 5 minutes",
+      "conditionThreshold": {
+        "filter": "metric.type=\"prometheus.googleapis.com/thelever.errors/counter\" AND resource.type=\"prometheus_target\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "300s",
+            "perSeriesAligner": "ALIGN_DELTA",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "groupByFields": ["metric.label.message"]
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "0s",
+        "trigger": { "count": 1 }
+      }
+    }
+  ],
+  "alertStrategy": { "autoClose": "1800s" }
+}

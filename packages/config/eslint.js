@@ -18,6 +18,7 @@ export default defineConfig([
       'packages/**/*.{ts,js}',
       'tests/**/*.ts',
       '.github/**/*.ts',
+      'ops/**/*.ts',
       '*.{js,ts}',
     ],
     languageOptions: { globals: globals.node },

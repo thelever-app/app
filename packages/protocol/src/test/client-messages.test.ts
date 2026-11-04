@@ -30,6 +30,19 @@ describe('ConnectDto', () => {
     expect(result.data).toEqual(connect);
   });
 
+  it('should accept the App Check token of the device, when it has one', () => {
+    // Act
+    const result = ConnectDto.safeParse({ ...connect, appCheckToken: 'app-check-token' });
+
+    // Assert
+    expect(result.data?.appCheckToken).toBe('app-check-token');
+  });
+
+  it('should reject an empty App Check token', () => {
+    // Act & Assert
+    expect(ConnectDto.safeParse({ ...connect, appCheckToken: '' }).success).toBe(false);
+  });
+
   it('should reject a contract version that is not a positive integer', () => {
     // Act & Assert
     expect(ConnectDto.safeParse({ ...connect, contractVersion: 0 }).success).toBe(false);
@@ -87,6 +100,42 @@ describe('AnswerDilemmaDto', () => {
       false,
     );
     expect(AnswerDilemmaDto.safeParse({ ...answerDilemma, gameId: 'game-1' }).success).toBe(false);
+  });
+});
+
+describe('the trace context of a command', () => {
+  const traceparent = '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01';
+
+  it('should accept a W3C trace context on each command', () => {
+    // Arrange
+    const messages = [
+      { ...connect, traceparent },
+      { ...answerDilemma, traceparent },
+    ];
+
+    // Act
+    const results = messages.map((message) => ClientMessageDto.safeParse(message));
+
+    // Assert
+    expect(results.map(({ success }) => success)).toEqual([true, true]);
+    expect(results.map(({ data }) => data?.traceparent)).toEqual([traceparent, traceparent]);
+  });
+
+  it('should reject anything else in its place, so nothing else about the device travels', () => {
+    // Arrange
+    const malformed = [
+      '00-not-a-trace',
+      `${traceparent}-extra`,
+      '00-0AF7651916CD43DD8448EB211C80319C-B7AD6B7169203331-01',
+    ];
+
+    // Act
+    const results = malformed.map((value) =>
+      AnswerDilemmaDto.safeParse({ ...answerDilemma, traceparent: value }),
+    );
+
+    // Assert
+    expect(results.map(({ success }) => success)).toEqual([false, false, false]);
   });
 });
 

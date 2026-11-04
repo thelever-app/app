@@ -34,8 +34,17 @@ describe('loadWebConfig', () => {
     expect(config.authEmulatorUrl).toBe('http://127.0.0.1:9099');
   });
 
+  it('should read the App Check key of the environment when there is one', async () => {
+    // Act
+    const config = await loadWebConfig(answering({ ...CONFIG, appCheckSiteKey: 'test-site-key' }));
+
+    // Assert
+    expect(config.appCheckSiteKey).toBe('test-site-key');
+  });
+
   it.each([
     ['a missing file', answering({}, 404)],
+    ['an empty App Check key', answering({ ...CONFIG, appCheckSiteKey: '' })],
     ['a config without the URL', answering({ firebase: FIREBASE })],
     [
       'a URL that is not a WebSocket one',

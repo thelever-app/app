@@ -43,6 +43,7 @@
   },
   "notices": {
     "reconnecting": "Reconectando… tus respuestas están guardadas",
+    "paused": "En pausa. Toca para volver",
     "answerNotSaved": "No se ha guardado tu última respuesta. Elígela otra vez.",
     "dismiss": "Cerrar aviso"
   },

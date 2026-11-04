@@ -10,6 +10,8 @@ export {
   type DatabaseConfig,
 } from './connection.ts';
 export type { Database, DatabaseClient } from './schema.ts';
+export type { Logger, LogFields } from './logger.ts';
+export { ConsoleLogger } from './console-logger.ts';
 export { migrateToLatest } from './migrator.ts';
 export { inTransaction } from './transaction.ts';
 export { PostgresDilemmaRepository } from './dilemmas/postgres-dilemma-repository.ts';

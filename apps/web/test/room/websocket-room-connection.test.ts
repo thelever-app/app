@@ -29,13 +29,22 @@ const GAME_STATE: GameStateDto = {
   answers: [],
 };
 
+const TEST_TRACEPARENT = '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01';
+
 /** Lets the pending promises run, such as the one that asks for the token. */
 async function settle(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-/** Opens a connection whose sockets, waits and randomness the test controls; `random` is 1 by default. */
-function open(random = () => 1) {
+/**
+ * Opens a connection whose sockets, waits, randomness and trace contexts the test controls;
+ * `random` is 1 by default, and every command gets the same trace context unless told otherwise.
+ */
+function open(
+  random = () => 1,
+  newTraceparent = () => TEST_TRACEPARENT,
+  getAppCheckToken: (forceRefresh: boolean) => Promise<string | undefined> = async () => undefined,
+) {
   const sockets: FakeSocket[] = [];
   const scheduler = new FakeScheduler();
   const tokens = ['test-token-1', 'test-token-2', 'test-token-3', 'test-token-4'];
@@ -52,6 +61,8 @@ function open(random = () => 1) {
     },
     schedule: scheduler.schedule,
     random,
+    newTraceparent,
+    getAppCheckToken,
   });
   const received: ServerMessageDto[] = [];
   const statuses: RoomConnectionStatus[] = [];
@@ -59,6 +70,11 @@ function open(random = () => 1) {
   connection.subscribeStatus((status) => statuses.push(status));
   const current = () => sockets.at(-1)!;
   return { connection, sockets, current, scheduler, received, statuses };
+}
+
+/** The server turning down `connect` with that code. */
+function rejection(code: ErrorDto['code']): ErrorDto {
+  return { type: 'error', command: 'connect', code };
 }
 
 /** Opens the current socket and lets the connection send `connect`. */
@@ -92,7 +108,32 @@ describe('WebSocketRoomConnection', () => {
           token: 'test-token-1',
           gameId: 'test-game-id',
           language: 'es',
+          traceparent: TEST_TRACEPARENT,
         },
+      ]);
+    });
+
+    it('should start a trace of its own for each command it sends', async () => {
+      // Arrange
+      const traceparents = ['TestTraceOfConnect', 'TestTraceOfAnswer'];
+      const { connection, current } = open(
+        () => 1,
+        () => traceparents.shift()!,
+      );
+      await accept(current());
+      current().receive(GAME_STATE);
+
+      // Act
+      connection.send({
+        type: 'answer-dilemma',
+        dilemmaId: 'test-dilemma-1',
+        vote: 'test-option-a',
+      });
+
+      // Assert
+      expect(current().sentMessages()).toEqual([
+        expect.objectContaining({ type: 'connect', traceparent: 'TestTraceOfConnect' }),
+        expect.objectContaining({ type: 'answer-dilemma', traceparent: 'TestTraceOfAnswer' }),
       ]);
     });
 
@@ -167,6 +208,7 @@ describe('WebSocketRoomConnection', () => {
         type: 'answer-dilemma',
         dilemmaId: 'test-dilemma-1',
         vote: 'test-option-a',
+        traceparent: TEST_TRACEPARENT,
       });
     });
 
@@ -291,11 +333,60 @@ describe('WebSocketRoomConnection', () => {
     });
   });
 
-  describe('rejected connect', () => {
-    function rejection(code: ErrorDto['code']): ErrorDto {
-      return { type: 'error', command: 'connect', code };
-    }
+  describe('App Check', () => {
+    it('should send the App Check token of the device with connect', async () => {
+      // Arrange
+      const { current } = open(undefined, undefined, async () => 'test-app-check');
 
+      // Act
+      await accept(current());
+
+      // Assert
+      expect(current().sentMessages()).toEqual([
+        expect.objectContaining({ type: 'connect', appCheckToken: 'test-app-check' }),
+      ]);
+    });
+
+    it('should send connect again with a fresh App Check token when the server rejects it', async () => {
+      // Arrange
+      const { current, statuses } = open(undefined, undefined, async (forceRefresh) =>
+        forceRefresh ? 'test-fresh-app-check' : 'test-app-check',
+      );
+      await accept(current());
+
+      // Act
+      current().receive({ type: 'error', command: 'connect', code: 'invalid-app-check' });
+      await settle();
+
+      // Assert
+      expect(current().sentMessages()).toEqual([
+        expect.objectContaining({ appCheckToken: 'test-app-check' }),
+        expect.objectContaining({ appCheckToken: 'test-fresh-app-check' }),
+      ]);
+      expect(statuses).toEqual(['connecting']);
+    });
+
+    it('should give up when the server rejects the fresh App Check token too', async () => {
+      // Arrange
+      const { current, statuses, received } = open(
+        undefined,
+        undefined,
+        async () => 'test-app-check',
+      );
+      await accept(current());
+      current().receive({ type: 'error', command: 'connect', code: 'invalid-app-check' });
+      await settle();
+
+      // Act
+      current().receive({ type: 'error', command: 'connect', code: 'invalid-app-check' });
+
+      // Assert
+      expect(statuses).toEqual(['connecting', 'rejected']);
+      expect(received).toEqual([{ type: 'error', command: 'connect', code: 'invalid-app-check' }]);
+    });
+  });
+
+  describe('rejected connect', () => {
     it('should send connect again on the same socket with a fresh token when the server rejects the token', async () => {
       // Arrange
       const { current, sockets, statuses, received } = open();
@@ -422,6 +513,90 @@ describe('WebSocketRoomConnection', () => {
 
       // Assert
       expect(current().sentMessages()).toEqual([expect.objectContaining({ type: 'connect' })]);
+    });
+  });
+
+  describe('pause', () => {
+    it('should close its socket without trying again and say it is paused', async () => {
+      // Arrange
+      const { connection, current, scheduler, statuses } = open();
+      await accept(current());
+      current().receive(GAME_STATE);
+
+      // Act
+      connection.pause();
+      current().drop();
+
+      // Assert
+      expect(current().closedByClient).toBe(true);
+      expect(scheduler.waits).toEqual([]);
+      expect(statuses).toEqual(['connecting', 'connected', 'paused']);
+    });
+
+    it('should stop waiting to connect again when paused meanwhile', async () => {
+      // Arrange
+      const { connection, current, scheduler } = open();
+      await accept(current());
+      current().drop();
+
+      // Act
+      connection.pause();
+
+      // Assert
+      expect(scheduler.waits.map(({ cancelled }) => cancelled)).toEqual([true]);
+    });
+
+    it('should leave a connection the server rejected as it is', async () => {
+      // Arrange
+      const { connection, current, statuses } = open();
+      await accept(current());
+      current().receive(rejection('game-not-found'));
+
+      // Act
+      connection.pause();
+
+      // Assert
+      expect(statuses).toEqual(['connecting', 'rejected']);
+    });
+  });
+
+  describe('resume', () => {
+    it('should connect again, and send what the screen sent while paused', async () => {
+      // Arrange
+      const { connection, sockets, current, statuses } = open();
+      await accept(current());
+      current().receive(GAME_STATE);
+      connection.pause();
+      connection.send({
+        type: 'answer-dilemma',
+        dilemmaId: 'test-dilemma-1',
+        vote: 'test-option-a',
+      });
+
+      // Act
+      connection.resume();
+      await accept(current());
+      current().receive(GAME_STATE);
+
+      // Assert
+      expect(sockets).toHaveLength(2);
+      expect(statuses).toEqual(['connecting', 'connected', 'paused', 'reconnecting', 'connected']);
+      expect(current().sentMessages()).toEqual([
+        expect.objectContaining({ type: 'connect' }),
+        expect.objectContaining({ type: 'answer-dilemma', dilemmaId: 'test-dilemma-1' }),
+      ]);
+    });
+
+    it('should do nothing when it is not paused', async () => {
+      // Arrange
+      const { connection, sockets, current } = open();
+      await accept(current());
+
+      // Act
+      connection.resume();
+
+      // Assert
+      expect(sockets).toHaveLength(1);
     });
   });
 

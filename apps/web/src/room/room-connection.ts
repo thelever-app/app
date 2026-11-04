@@ -4,9 +4,11 @@ export type ServerMessageListener = (message: ServerMessageDto) => void;
 
 /**
  * How the link to the room is doing, as the browser sees it; the server never sends it. Rejected
- * is for good: the server will not take the player back, and the error it sent says why.
+ * is for good: the server will not take the player back, and the error it sent says why. Paused
+ * is while nobody uses the page: the connection is closed until the player comes back.
  */
-export type RoomConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'rejected';
+export type RoomConnectionStatus =
+  'connecting' | 'connected' | 'reconnecting' | 'paused' | 'rejected';
 
 export type RoomConnectionStatusListener = (status: RoomConnectionStatus) => void;
 

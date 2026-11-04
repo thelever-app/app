@@ -13,11 +13,14 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@opentelemetry/context-async-hooks": "^3.0.0",
+    "@opentelemetry/core": "^3.0.0",
     "@thelever-app/config": "workspace:*",
     "@types/pg": "^8.23.1"
   },
   "dependencies": {
     "@google-cloud/cloud-sql-connector": "^1.12.1",
+    "@opentelemetry/api": "^1.10.0",
     "@thelever-app/dilemmas": "workspace:*",
     "@thelever-app/game": "workspace:*",
     "kysely": "^0.29.7",

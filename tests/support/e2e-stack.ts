@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
+  ConsoleLogger,
   type Database,
   migrateToLatest,
   openDatabase,
@@ -47,7 +48,7 @@ async function createE2eDatabase(): Promise<string> {
   await onServer((quote) => `CREATE DATABASE ${quote(name)}`);
   const { db, close } = await openDatabase<Database>(
     { kind: 'url', url: urlOf(name) },
-    { maxConnections: 1 },
+    { maxConnections: 1, logger: new ConsoleLogger() },
   );
   try {
     await migrateToLatest(db);

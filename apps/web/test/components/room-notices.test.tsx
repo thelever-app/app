@@ -37,6 +37,20 @@ describe('RoomNotices', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
+  it('should show the paused bar while nobody uses the page, and hide it on resuming', async () => {
+    // Arrange
+    const { changeStatus, t } = await renderNotices();
+
+    // Act
+    act(() => changeStatus('paused'));
+    const whilePaused = screen.queryByRole('status')?.textContent;
+    act(() => changeStatus('connected'));
+
+    // Assert
+    expect(whilePaused).toBe(t('notices.paused'));
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('should show that the answer was not saved until the player dismisses it', async () => {
     // Arrange
     const { deliver, t } = await renderNotices();

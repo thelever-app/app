@@ -1,4 +1,4 @@
-import type { PostgresInstances } from '@thelever-app/db';
+import type { Logger, PostgresInstances } from '@thelever-app/db';
 import type { DisconnectConnectionsUseCase } from '@thelever-app/game';
 import type { RunCommand } from './run-command.ts';
 
@@ -21,6 +21,7 @@ export class InstanceKeeper {
   readonly #silentAfterMs: number;
   /** For when the others took this instance for dead, alive: its connections are closed for everyone. */
   readonly #onForgotten: () => void;
+  readonly #logger: Logger;
   #timer: ReturnType<typeof setInterval> | undefined;
 
   constructor(
@@ -32,11 +33,13 @@ export class InstanceKeeper {
       beatEveryMs,
       silentAfterMs,
       onForgotten,
+      logger,
     }: {
       readonly instanceId: string;
       readonly beatEveryMs: number;
       readonly silentAfterMs: number;
       readonly onForgotten: () => void;
+      readonly logger: Logger;
     },
   ) {
     this.#instances = instances;
@@ -46,13 +49,16 @@ export class InstanceKeeper {
     this.#beatEveryMs = beatEveryMs;
     this.#silentAfterMs = silentAfterMs;
     this.#onForgotten = onForgotten;
+    this.#logger = logger;
   }
 
   /** Registers the instance before it serves anyone, and starts giving signs. */
   async start(): Promise<void> {
     await this.#instances.beat(this.#instanceId);
     this.#timer = setInterval(() => {
-      this.#tick().catch(console.error);
+      this.#tick().catch((error: unknown) => {
+        this.#logger.error('instance beat failed', error);
+      });
     }, this.#beatEveryMs);
   }
 

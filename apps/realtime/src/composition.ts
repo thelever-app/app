@@ -1,7 +1,9 @@
 import { createServer, type Server } from 'node:http';
+import { type Attributes, SpanKind } from '@opentelemetry/api';
 import {
   type DatabaseClient,
   GameEventsListener,
+  type Logger,
   inTransaction,
   PostgresDilemmaRepository,
   PostgresGameRepository,
@@ -19,6 +21,7 @@ import {
   CreateRoomUseCase,
   DisconnectConnectionsUseCase,
   DisconnectPlayerUseCase,
+  type DomainEvent,
   type GameRepository,
   GetGameStateUseCase,
   JoinRoomUseCase,
@@ -41,6 +44,7 @@ import { authentication } from './http/authentication.ts';
 import { httpErrorHandler } from './http/error-handler.ts';
 import { HealthEndpoint } from './http/health.endpoint.ts';
 import type { HttpEndpoint } from './http/http-endpoint.ts';
+import type { AppCheckVerifier } from './identity/app-check-verifier.ts';
 import type { TokenVerifier } from './identity/token-verifier.ts';
 import { errorCodeOf } from './rooms/error-codes.ts';
 import { CreateRoomEndpoint } from './rooms/http/create-room.endpoint.ts';
@@ -55,6 +59,9 @@ import { DisconnectHandler } from './rooms/sockets/disconnect.handler.ts';
 import { GameStateSender } from './rooms/sockets/game-state-sender.ts';
 import { RoomSocketServer } from './rooms/sockets/room-socket-server.ts';
 import { SocketNotifier } from './rooms/sockets/socket-notifier.ts';
+import { GAME_ID } from './telemetry/game-sampler.ts';
+import { instruments } from './telemetry/instruments.ts';
+import { inSpan } from './telemetry/tracing.ts';
 
 /** Where rooms, games and dilemmas live. */
 export type Storage =
@@ -75,8 +82,11 @@ export type Storage =
 /** What changes between production and the tests. */
 export interface RealtimeConfiguration {
   readonly tokenVerifier: TokenVerifier;
+  /** Whether a call must prove it comes from the app: in dev and prod, not locally. */
+  readonly appCheckVerifier: AppCheckVerifier;
   readonly pingIntervalMs: number;
   readonly storage: Storage;
+  readonly logger: Logger;
 }
 
 /** The HTTP server, not listening yet, and the room sockets attached to it. */
@@ -104,9 +114,11 @@ interface Parts extends Adapters {
   readonly catalog: DilemmaCatalog;
   readonly idGenerator: IdGenerator;
   readonly tokenVerifier: TokenVerifier;
+  readonly appCheckVerifier: AppCheckVerifier;
   /** Delivers to the sockets of this instance. */
   readonly socketNotifier: SocketNotifier;
   readonly stateSender: GameStateSender;
+  readonly logger: Logger;
 }
 
 /** How the server stops, the same for every storage. */
@@ -171,6 +183,7 @@ function roomSocketServer(parts: Parts, pingIntervalMs: number): RoomSocketServe
     new ConnectHandler(
       new ConnectPlayerUseCase(roomRepository, gameRepository, notifier, parts.idGenerator),
       parts.tokenVerifier,
+      parts.appCheckVerifier,
       socketNotifier,
       gameLock,
       stateSender,
@@ -190,7 +203,23 @@ function roomSocketServer(parts: Parts, pingIntervalMs: number): RoomSocketServe
       runCommand,
     ),
   ];
-  return new RoomSocketServer(handlers, disconnectHandler, errorCodeOf, pingIntervalMs);
+  return new RoomSocketServer(
+    handlers,
+    disconnectHandler,
+    errorCodeOf,
+    pingIntervalMs,
+    parts.logger,
+  );
+}
+
+/** What a delivery span says: the event, its game or room, and how many players it is for. */
+function deliveryAttributes(playerIds: readonly string[], event: DomainEvent): Attributes {
+  return {
+    'event.type': event.type,
+    'event.recipients': playerIds.length,
+    [GAME_ID]: 'gameId' in event ? String(event.gameId) : undefined,
+    'room.id': 'roomId' in event ? String(event.roomId) : undefined,
+  };
 }
 
 /** In memory there is nobody to tell: leaving cleanly is stopping. */
@@ -209,19 +238,36 @@ async function sharedLifecycle(
   roomSockets: RoomSocketServer,
   stopServing: StopServing,
 ): Promise<Lifecycle> {
-  const { socketNotifier, stateSender } = parts;
+  const { socketNotifier, stateSender, logger } = parts;
   const listener = new GameEventsListener(storage.openListenClient, {
-    onEvents: (playerIds, event) => {
-      socketNotifier.notify(playerIds, event).catch(console.error);
+    // One span per instance that delivers, not per player: a room of 50 would make 50 spans.
+    onEvents: (playerIds, event, publishedAt) => {
+      inSpan(
+        'deliver game event',
+        deliveryAttributes(playerIds, event),
+        () => socketNotifier.notify(playerIds, event),
+        { kind: SpanKind.CONSUMER },
+      ).then(
+        () => {
+          if (publishedAt === undefined) return;
+          instruments().eventDelay.record(Date.now() - publishedAt, { 'event.type': event.type });
+        },
+        (error: unknown) => {
+          logger.error('delivering a game event failed', error, { event: event.type });
+        },
+      );
     },
     // Whatever was published while it was not listening is lost: a fresh state makes up for it.
     onReconnected: () => {
       for (const connection of roomSockets.connected()) {
         if (connection.session) {
-          stateSender.send(connection, connection.session).catch(console.error);
+          stateSender.send(connection, connection.session).catch((error: unknown) => {
+            logger.error('sending the game state after listening again failed', error);
+          });
         }
       }
     },
+    logger,
   });
   await listener.start();
   const keeper = new InstanceKeeper(
@@ -234,6 +280,7 @@ async function sharedLifecycle(
       silentAfterMs: storage.silentAfterMs,
       // The clients come back and connect again, now that the instance is registered again.
       onForgotten: () => roomSockets.closeAll(1012, 'service restart'),
+      logger,
     },
   );
   await keeper.start();
@@ -261,8 +308,10 @@ async function sharedLifecycle(
  */
 export async function composeRealtimeServer({
   tokenVerifier,
+  appCheckVerifier,
   pingIntervalMs,
   storage,
+  logger,
 }: RealtimeConfiguration): Promise<RealtimeServer> {
   const socketNotifier = new SocketNotifier();
   const adapters = await adaptersFor(storage, socketNotifier);
@@ -272,7 +321,9 @@ export async function composeRealtimeServer({
     catalog,
     idGenerator: new RandomIdGenerator(),
     tokenVerifier,
+    appCheckVerifier,
     socketNotifier,
+    logger,
     stateSender: new GameStateSender(
       new GetGameStateUseCase(adapters.roomRepository, adapters.gameRepository, catalog),
     ),
@@ -280,7 +331,7 @@ export async function composeRealtimeServer({
 
   const http = createServer(
     createApp(httpEndpoints(parts), {
-      authenticate: authentication(tokenVerifier),
+      authenticate: authentication(tokenVerifier, appCheckVerifier),
       errorHandler: httpErrorHandler(errorCodeOf),
     }),
   );

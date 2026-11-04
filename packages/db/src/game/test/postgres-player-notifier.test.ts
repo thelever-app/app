@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
+import { W3CTraceContextPropagator } from '@opentelemetry/core';
+import { context, propagation, trace, TraceFlags } from '@opentelemetry/api';
 import { ConnectionChangedEvent, ProgressUpdatedEvent, type DomainEvent } from '@thelever-app/game';
 import { sql } from 'kysely';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { ConsoleLogger } from '../../console-logger.ts';
 import type { Database } from '../../schema.ts';
 import { useTestDatabase } from '../../test/support/test-database.ts';
 import { currentTransaction, inTransaction } from '../../transaction.ts';
@@ -17,7 +21,10 @@ async function listening() {
   const received: { playerIds: readonly string[]; event: DomainEvent }[] = [];
   const listener = new GameEventsListener(
     () => openListenClient({ kind: 'url', url: database.url() }),
-    { onEvents: (playerIds, event) => received.push({ playerIds, event }) },
+    {
+      onEvents: (playerIds, event) => received.push({ playerIds, event }),
+      logger: new ConsoleLogger(),
+    },
   );
   listeners.push(listener);
   await listener.start();
@@ -34,6 +41,17 @@ async function until(condition: () => boolean, timeoutMs = 2000): Promise<void> 
 
 afterEach(async () => {
   for (const listener of listeners.splice(0)) await listener.stop();
+});
+
+// What the SDK sets up in production: a context that follows async calls and W3C trace headers.
+beforeAll(() => {
+  context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+  propagation.setGlobalPropagator(new W3CTraceContextPropagator());
+});
+
+afterAll(() => {
+  context.disable();
+  propagation.disable();
 });
 
 describe('PostgresPlayerNotifier', () => {
@@ -140,6 +158,63 @@ describe('PostgresPlayerNotifier', () => {
       // Assert
       const saved = await database.db().selectFrom('instances').select('id').execute();
       expect(saved).toEqual([{ id: 'TestInstance' }]);
+    });
+
+    it('should tell each listener when the event was published', async () => {
+      // Arrange
+      const published: (number | undefined)[] = [];
+      const listener = new GameEventsListener(
+        () => openListenClient({ kind: 'url', url: database.url() }),
+        {
+          onEvents: (_playerIds, _event, publishedAt) => published.push(publishedAt),
+          logger: new ConsoleLogger(),
+        },
+      );
+      listeners.push(listener);
+      await listener.start();
+      const before = Date.now();
+
+      // Act
+      await new PostgresPlayerNotifier(database.db()).notify(
+        ['TestAnaId'],
+        new ProgressUpdatedEvent('TestGameId', 'TestLuisId', 1, 2),
+      );
+
+      // Assert
+      await until(() => published.length === 1);
+      expect(published[0]).toBeGreaterThanOrEqual(before);
+      expect(published[0]).toBeLessThanOrEqual(Date.now());
+    });
+
+    it('should hand each listener the trace of the command that notified', async () => {
+      // Arrange
+      const traceIds: (string | undefined)[] = [];
+      const listener = new GameEventsListener(
+        () => openListenClient({ kind: 'url', url: database.url() }),
+        {
+          onEvents: () => traceIds.push(trace.getSpanContext(context.active())?.traceId),
+          logger: new ConsoleLogger(),
+        },
+      );
+      listeners.push(listener);
+      await listener.start();
+      const command = trace.setSpanContext(context.active(), {
+        traceId: '0af7651916cd43dd8448eb211c80319c',
+        spanId: 'b7ad6b7169203331',
+        traceFlags: TraceFlags.SAMPLED,
+      });
+
+      // Act
+      await context.with(command, () =>
+        new PostgresPlayerNotifier(database.db()).notify(
+          ['TestAnaId'],
+          new ProgressUpdatedEvent('TestGameId', 'TestLuisId', 1, 2),
+        ),
+      );
+
+      // Assert
+      await until(() => traceIds.length === 1);
+      expect(traceIds).toEqual(['0af7651916cd43dd8448eb211c80319c']);
     });
   });
 });

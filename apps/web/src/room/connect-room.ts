@@ -2,7 +2,13 @@ import type { LanguageDto } from '@thelever-app/protocol';
 import type { WebConfig } from '../config/web-config.ts';
 import type { PlayerIdentity } from '../identity/anonymous-player.ts';
 import type { RoomConnection } from './room-connection.ts';
-import { WebSocketRoomConnection, type WebSocketLike } from './websocket-room-connection.ts';
+import { type PageActivity, watchForPauses } from './pause-watcher.ts';
+import { newTraceparent } from './traceparent.ts';
+import {
+  type Schedule,
+  WebSocketRoomConnection,
+  type WebSocketLike,
+} from './websocket-room-connection.ts';
 
 export interface ConnectRoomOptions {
   /** The path of the address, which names the game: /games/:gameId. */
@@ -14,6 +20,8 @@ export interface ConnectRoomOptions {
   /** Only for a real game: the simulated room needs nobody signed in. */
   readonly signIn: (config: WebConfig) => Promise<PlayerIdentity>;
   readonly createSocket: (url: string) => WebSocketLike;
+  /** Whether someone uses the page, to pause the connection while nobody does. */
+  readonly pageActivity: PageActivity;
 }
 
 const GAME_PATH = /^\/games\/([^/]+)\/?$/;
@@ -29,6 +37,7 @@ export async function connectRoom({
   loadConfig,
   signIn,
   createSocket,
+  pageActivity,
 }: ConnectRoomOptions): Promise<RoomConnection> {
   const gameId = GAME_PATH.exec(pathname)?.[1];
 
@@ -43,16 +52,22 @@ export async function connectRoom({
 
   const config = await loadConfig();
   const player = await signIn(config);
-  return WebSocketRoomConnection.open({
+  const schedule: Schedule = (callback, ms) => {
+    const timer = setTimeout(callback, ms);
+    return () => clearTimeout(timer);
+  };
+  const connection = WebSocketRoomConnection.open({
     url: config.realtimeUrl,
     gameId: decodeURIComponent(gameId),
     language,
     getToken: (forceRefresh) => player.getToken(forceRefresh),
+    getAppCheckToken: (forceRefresh) => player.getAppCheckToken(forceRefresh),
     createSocket,
-    schedule: (callback, ms) => {
-      const timer = setTimeout(callback, ms);
-      return () => clearTimeout(timer);
-    },
+    schedule,
     random: Math.random,
+    newTraceparent,
   });
+  // As long as the page, like the connection: the screen never closes it.
+  watchForPauses(connection, { pageActivity, schedule });
+  return connection;
 }

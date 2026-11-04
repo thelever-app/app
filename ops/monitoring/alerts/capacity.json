@@ -1,0 +1,28 @@
+{
+  "displayName": "Room server: near its socket capacity",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "More than 80 % of the sockets the room server can hold are open: concurrency per instance times the maximum number of instances, as `deploy-environment.yml` sets them. Raise one of them, within the connections the database allows, and this threshold with them."
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "Open sockets above 80 % of 80 per instance × 2 instances",
+      "conditionThreshold": {
+        "filter": "metric.type=\"prometheus.googleapis.com/thelever.ws.connections/gauge\" AND resource.type=\"prometheus_target\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "60s",
+            "perSeriesAligner": "ALIGN_MAX",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 128,
+        "duration": "0s",
+        "trigger": { "count": 1 }
+      }
+    }
+  ],
+  "alertStrategy": { "autoClose": "1800s" }
+}

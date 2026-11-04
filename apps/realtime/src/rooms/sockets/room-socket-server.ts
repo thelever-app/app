@@ -1,6 +1,11 @@
 import type { Server } from 'node:http';
+import { propagation, ROOT_CONTEXT } from '@opentelemetry/api';
+import type { Logger } from '@thelever-app/db';
 import { ClientMessageDto, ClientMessageTypeDto, type ErrorCodeDto } from '@thelever-app/protocol';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { GAME_ID } from '../../telemetry/game-sampler.ts';
+import { instruments } from '../../telemetry/instruments.ts';
+import { inSpan, markFailed } from '../../telemetry/tracing.ts';
 import type { DisconnectHandler } from './disconnect.handler.ts';
 import { Rejection } from './rejection.ts';
 import { RoomConnection } from './room-connection.ts';
@@ -33,6 +38,7 @@ export class RoomSocketServer {
   readonly #codeOf: (error: unknown) => ErrorCodeDto | undefined;
   /** How often the server checks that each socket is still alive (ADR 0003). */
   readonly #pingIntervalMs: number;
+  readonly #logger: Logger;
   /** The connections of this instance whose socket is open. */
   readonly #connections = new Set<RoomConnection>();
   /** Once the instance leaves, a closing socket no longer disconnects its player: whoever cleans after it does. */
@@ -43,11 +49,13 @@ export class RoomSocketServer {
     disconnect: DisconnectHandler,
     codeOf: (error: unknown) => ErrorCodeDto | undefined,
     pingIntervalMs: number,
+    logger: Logger,
   ) {
     this.#handlers = new Map(handlers.map((handler) => [handler.type, handler]));
     this.#disconnect = disconnect;
     this.#codeOf = codeOf;
     this.#pingIntervalMs = pingIntervalMs;
+    this.#logger = logger;
   }
 
   /** Serves the sockets on that HTTP server and starts checking that they are alive. */
@@ -98,23 +106,57 @@ export class RoomSocketServer {
 
   #serve(connection: RoomConnection): void {
     this.#connections.add(connection);
+    instruments().openSockets.add(1);
     connection.socket.on('message', (data) => {
       const { command, message } = read(String(data));
-      this.#dispatch(message, connection).catch((error: unknown) => {
-        const code = error instanceof Rejection ? error.code : this.#codeOf(error);
-        if (code) {
-          connection.send({ type: 'error', command, code });
-          return;
-        }
-        console.error(error);
-        connection.socket.close(1011, 'internal error');
-      });
+      const gameId =
+        connection.session?.gameId ?? (message?.type === 'connect' ? message.gameId : undefined);
+      // The trace of the command starts on the device that sent it, when it says which.
+      const parent = message?.traceparent
+        ? propagation.extract(ROOT_CONTEXT, { traceparent: message.traceparent })
+        : ROOT_CONTEXT;
+      const started = performance.now();
+      return inSpan(
+        `ws ${command ?? 'unknown'}`,
+        { 'message.type': command ?? 'unknown', [GAME_ID]: gameId },
+        (span) =>
+          this.#dispatch(message, connection)
+            .then(() => 'ok' as const)
+            .catch((error: unknown) => {
+              const code = error instanceof Rejection ? error.code : this.#codeOf(error);
+              if (code) {
+                // The rules turning a command down is an answer, not a failure of the server.
+                span.setAttribute('rejection.code', code);
+                this.#logger.info('command rejected', { command: command ?? 'unknown', code });
+                connection.send({ type: 'error', command, code });
+                return 'rejected' as const;
+              }
+              markFailed(span, error);
+              this.#logger.error('socket message failed', error, {
+                command: command ?? 'unknown',
+              });
+              connection.socket.close(1011, 'internal error');
+              return 'error' as const;
+            })
+            .then((outcome) => {
+              instruments().messageDuration.record(performance.now() - started, {
+                'message.type': command ?? 'unknown',
+                outcome,
+              });
+            }),
+        { parent },
+      );
     });
 
     connection.socket.on('close', () => {
       this.#connections.delete(connection);
+      instruments().openSockets.add(-1);
       if (this.#leaving) return;
-      this.#disconnect.handle(connection).catch(console.error);
+      inSpan('ws disconnect', { [GAME_ID]: connection.session?.gameId }, () =>
+        this.#disconnect.handle(connection),
+      ).catch((error: unknown) => {
+        this.#logger.error('disconnecting a closed socket failed', error);
+      });
     });
   }
 

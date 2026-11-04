@@ -1,10 +1,12 @@
 import { databaseConfigFrom, openDatabase } from './connection.ts';
+import { ConsoleLogger } from './console-logger.ts';
 import { grantRowAccess } from './grants.ts';
 import { migrateToLatest } from './migrator.ts';
 
 // `pnpm db:migrate` locally; in each environment, the migrate job runs it before every deploy.
 const { db, close } = await openDatabase<unknown>(databaseConfigFrom(process.env), {
   maxConnections: 1,
+  logger: new ConsoleLogger(),
 });
 try {
   const applied = await migrateToLatest(db);

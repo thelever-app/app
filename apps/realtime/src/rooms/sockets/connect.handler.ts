@@ -1,6 +1,7 @@
 import type { ConnectPlayerUseCase } from '@thelever-app/game';
 import { CONTRACT_VERSION, type ConnectDto } from '@thelever-app/protocol';
 import { WebSocket } from 'ws';
+import type { AppCheckVerifier } from '../../identity/app-check-verifier.ts';
 import type { TokenVerifier } from '../../identity/token-verifier.ts';
 import type { KeyedLock } from '../../concurrency/keyed-lock.ts';
 import type { RunCommand } from '../run-command.ts';
@@ -16,6 +17,7 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
   readonly type = 'connect';
   readonly #connectPlayer: ConnectPlayerUseCase;
   readonly #tokenVerifier: TokenVerifier;
+  readonly #appCheckVerifier: AppCheckVerifier;
   readonly #notifier: SocketNotifier;
   /** One holder per game at a time, so its commands never interleave in this instance. */
   readonly #gameLock: KeyedLock;
@@ -26,6 +28,7 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
   constructor(
     connectPlayer: ConnectPlayerUseCase,
     tokenVerifier: TokenVerifier,
+    appCheckVerifier: AppCheckVerifier,
     notifier: SocketNotifier,
     gameLock: KeyedLock,
     stateSender: GameStateSender,
@@ -34,6 +37,7 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
   ) {
     this.#connectPlayer = connectPlayer;
     this.#tokenVerifier = tokenVerifier;
+    this.#appCheckVerifier = appCheckVerifier;
     this.#notifier = notifier;
     this.#gameLock = gameLock;
     this.#stateSender = stateSender;
@@ -42,10 +46,11 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
   }
 
   async handle(
-    { contractVersion, token, gameId, language }: ConnectDto,
+    { contractVersion, token, appCheckToken, gameId, language }: ConnectDto,
     connection: RoomConnection,
   ): Promise<void> {
     if (contractVersion !== CONTRACT_VERSION) throw new Rejection('unsupported-contract-version');
+    await this.#appCheckVerifier.verify(appCheckToken);
     const identity = await this.#tokenVerifier.verify(token);
 
     const previous = connection.session;

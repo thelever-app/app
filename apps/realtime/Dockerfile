@@ -36,4 +36,5 @@ COPY packages/db/package.json packages/db/
 COPY packages/db/src packages/db/src
 COPY packages/db/seeds packages/db/seeds
 USER node
-CMD ["node", "apps/realtime/src/server.ts"]
+# The telemetry loads first, so its instrumentations see every module the server loads.
+CMD ["node", "--import", "./apps/realtime/src/telemetry/register.ts", "apps/realtime/src/server.ts"]
