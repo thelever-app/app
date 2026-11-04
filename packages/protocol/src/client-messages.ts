@@ -7,6 +7,12 @@ export const CONTRACT_VERSION = 1;
 export const LanguageDto = z.enum(['es', 'en', 'fr', 'de', 'it', 'pt', 'ca']);
 
 /**
+ * The W3C trace context of a command, so its trace starts on the device that sent it. Only ids
+ * and the sampled flag: nothing else about the device travels with it.
+ */
+export const TraceparentDto = z.string().regex(/^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$/);
+
+/**
  * The first message on every connection, and again after each reconnection.
  * Nothing travels in the URL, so the token never ends up in the request logs.
  */
@@ -17,6 +23,7 @@ export const ConnectDto = z.strictObject({
   token: z.string().min(1),
   gameId: z.string().min(1),
   language: LanguageDto,
+  traceparent: TraceparentDto.optional(),
 });
 
 /**
@@ -27,6 +34,7 @@ export const AnswerDilemmaDto = z.strictObject({
   type: z.literal('answer-dilemma'),
   dilemmaId: z.string().min(1),
   vote: z.string().min(1),
+  traceparent: TraceparentDto.optional(),
 });
 
 /** Every message a player sends to the room server. */

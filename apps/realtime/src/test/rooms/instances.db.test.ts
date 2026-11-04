@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
+  ConsoleLogger,
   type Database,
   openDatabase,
   openListenClient,
@@ -26,7 +27,13 @@ afterEach(async () => {
 /** An instance of the room server on the test database, with its own pool and short intervals. */
 async function instance({ silentAfterMs = 300 } = {}) {
   const url = database.url();
-  const opened = await openDatabase<Database>({ kind: 'url', url }, { maxConnections: 5 });
+  const opened = await openDatabase<Database>(
+    { kind: 'url', url },
+    {
+      maxConnections: 5,
+      logger: new ConsoleLogger(),
+    },
+  );
   const instanceId = randomUUID();
   const server = await startRoomServer({
     storage: {

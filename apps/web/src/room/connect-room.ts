@@ -2,6 +2,7 @@ import type { LanguageDto } from '@thelever-app/protocol';
 import type { WebConfig } from '../config/web-config.ts';
 import type { PlayerIdentity } from '../identity/anonymous-player.ts';
 import type { RoomConnection } from './room-connection.ts';
+import { newTraceparent } from './traceparent.ts';
 import { WebSocketRoomConnection, type WebSocketLike } from './websocket-room-connection.ts';
 
 export interface ConnectRoomOptions {
@@ -54,5 +55,6 @@ export async function connectRoom({
       return () => clearTimeout(timer);
     },
     random: Math.random,
+    newTraceparent,
   });
 }

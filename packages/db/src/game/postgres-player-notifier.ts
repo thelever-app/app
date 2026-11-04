@@ -1,3 +1,4 @@
+import { context, propagation } from '@opentelemetry/api';
 import {
   ConnectionChangedEvent,
   type DomainEvent,
@@ -15,18 +16,34 @@ export const GAME_EVENTS_CHANNEL = 'game_events';
 interface Notification {
   readonly playerIds: readonly string[];
   readonly event: DomainEvent;
+  /** The trace of the command that published it, as W3C headers, so the delivery continues it. */
+  readonly trace: Readonly<Record<string, string>>;
+  /**
+   * When it was published, in milliseconds since the epoch, to measure how long delivering takes.
+   * A revision still serving from before it existed publishes without it.
+   */
+  readonly publishedAt: number | undefined;
 }
 
 /** The event and who receives it, rebuilt from what an instance published. */
 export function readNotification(payload: string): Notification {
-  const { playerIds, event } = JSON.parse(payload) as {
+  const {
+    playerIds,
+    event,
+    trace = {},
+    publishedAt,
+  } = JSON.parse(payload) as {
     playerIds: string[];
     event: Record<string, unknown>;
+    trace?: Record<string, string>;
+    publishedAt?: number;
   };
   switch (event.type) {
     case 'ProgressUpdated':
       return {
         playerIds,
+        trace,
+        publishedAt,
         event: new ProgressUpdatedEvent(
           String(event.gameId),
           String(event.playerId),
@@ -37,6 +54,8 @@ export function readNotification(payload: string): Notification {
     case 'ConnectionChanged':
       return {
         playerIds,
+        trace,
+        publishedAt,
         event: new ConnectionChangedEvent(
           String(event.roomId),
           String(event.playerId),
@@ -61,7 +80,12 @@ export class PostgresPlayerNotifier implements PlayerNotifier {
   }
 
   async notify(playerIds: readonly string[], event: DomainEvent): Promise<void> {
-    for (const payload of payloadsOf(playerIds, event)) await this.#publish(payload);
+    const trace: Record<string, string> = {};
+    propagation.inject(context.active(), trace);
+    const publishedAt = Date.now();
+    for (const payload of payloadsOf(playerIds, event, { trace, publishedAt })) {
+      await this.#publish(payload);
+    }
   }
 
   async #publish(payload: string): Promise<void> {
@@ -88,26 +112,33 @@ export class PostgresPlayerNotifier implements PlayerNotifier {
 const MAX_PAYLOAD_BYTES = 7999;
 
 /** The payloads that carry the event to those players: as few as fit them, each below the limit. */
-function payloadsOf(playerIds: readonly string[], event: DomainEvent): readonly string[] {
+/** What every payload of one notification carries besides the players. */
+type Stamp = Pick<Notification, 'trace' | 'publishedAt'>;
+
+function payloadsOf(
+  playerIds: readonly string[],
+  event: DomainEvent,
+  stamp: Stamp,
+): readonly string[] {
   const payloads: string[] = [];
   let batch: string[] = [];
   let bytes = 0;
-  const emptyBytes = Buffer.byteLength(payloadOf([], event));
+  const emptyBytes = Buffer.byteLength(payloadOf([], event, stamp));
   for (const playerId of playerIds) {
     // Its quotes and the comma before it.
     const idBytes = Buffer.byteLength(JSON.stringify(playerId)) + 1;
     if (batch.length > 0 && emptyBytes + bytes + idBytes > MAX_PAYLOAD_BYTES) {
-      payloads.push(payloadOf(batch, event));
+      payloads.push(payloadOf(batch, event, stamp));
       batch = [];
       bytes = 0;
     }
     batch.push(playerId);
     bytes += idBytes;
   }
-  if (batch.length > 0) payloads.push(payloadOf(batch, event));
+  if (batch.length > 0) payloads.push(payloadOf(batch, event, stamp));
   return payloads;
 }
 
-function payloadOf(playerIds: readonly string[], event: DomainEvent): string {
-  return JSON.stringify({ playerIds, event } satisfies Notification);
+function payloadOf(playerIds: readonly string[], event: DomainEvent, stamp: Stamp): string {
+  return JSON.stringify({ playerIds, event, ...stamp } satisfies Notification);
 }

@@ -1,4 +1,5 @@
 import {
+  ConsoleLogger,
   type Database,
   type DatabaseClient,
   inTransaction,
@@ -57,6 +58,7 @@ describe('InstanceKeeper', () => {
           beatEveryMs: 60_000,
           silentAfterMs: 60_000,
           onForgotten: () => {},
+          logger: new ConsoleLogger(),
         },
       );
       await keeper.start();

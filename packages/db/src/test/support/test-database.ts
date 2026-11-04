@@ -3,6 +3,7 @@ import { type Kysely, sql } from 'kysely';
 import pg from 'pg';
 import { afterAll, beforeAll } from 'vitest';
 import { openDatabase } from '../../connection.ts';
+import { ConsoleLogger } from '../../console-logger.ts';
 import { LISTENER_APPLICATION_NAME } from '../../game/game-events-listener.ts';
 import type { Database } from '../../schema.ts';
 
@@ -50,7 +51,13 @@ export function useTestDatabase<DB = unknown>(): {
     await onServer(
       (quote) => `CREATE DATABASE ${quote(name)} TEMPLATE ${quote(TEMPLATE_DATABASE)}`,
     );
-    opened = await openDatabase<DB>({ kind: 'url', url: urlOf(name) }, { maxConnections: 5 });
+    opened = await openDatabase<DB>(
+      { kind: 'url', url: urlOf(name) },
+      {
+        maxConnections: 5,
+        logger: new ConsoleLogger(),
+      },
+    );
   });
 
   afterAll(async () => {

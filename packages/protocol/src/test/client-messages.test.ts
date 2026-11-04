@@ -90,6 +90,42 @@ describe('AnswerDilemmaDto', () => {
   });
 });
 
+describe('the trace context of a command', () => {
+  const traceparent = '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01';
+
+  it('should accept a W3C trace context on each command', () => {
+    // Arrange
+    const messages = [
+      { ...connect, traceparent },
+      { ...answerDilemma, traceparent },
+    ];
+
+    // Act
+    const results = messages.map((message) => ClientMessageDto.safeParse(message));
+
+    // Assert
+    expect(results.map(({ success }) => success)).toEqual([true, true]);
+    expect(results.map(({ data }) => data?.traceparent)).toEqual([traceparent, traceparent]);
+  });
+
+  it('should reject anything else in its place, so nothing else about the device travels', () => {
+    // Arrange
+    const malformed = [
+      '00-not-a-trace',
+      `${traceparent}-extra`,
+      '00-0AF7651916CD43DD8448EB211C80319C-B7AD6B7169203331-01',
+    ];
+
+    // Act
+    const results = malformed.map((value) =>
+      AnswerDilemmaDto.safeParse({ ...answerDilemma, traceparent: value }),
+    );
+
+    // Assert
+    expect(results.map(({ success }) => success)).toEqual([false, false, false]);
+  });
+});
+
 describe('ClientMessageDto', () => {
   it('should tell the messages apart by their type', () => {
     // Act & Assert

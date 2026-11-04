@@ -19,6 +19,7 @@ export {
   CONTRACT_VERSION,
   ConnectDto,
   LanguageDto,
+  TraceparentDto,
 } from './client-messages.ts';
 export { CreateRoomRequestDto, CreateRoomResponseDto } from './http/create-room.ts';
 export { JoinRoomRequestDto, JoinRoomResponseDto } from './http/join-room.ts';

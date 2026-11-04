@@ -49,13 +49,6 @@ jobs:
           SERVICE_ACCOUNT: deployer@${{ env.PROJECT }}.iam.gserviceaccount.com
         run: .github/scripts/gcp-auth.sh
 
-      # The database of dev stops when unused: every deploy starts it, and it stops again each night.
-      - name: Start the database of dev
-        if: inputs.environment == 'dev'
-        run: |
-          gcloud sql instances patch thelever --project "$PROJECT" \
-            --activation-policy ALWAYS --quiet
-
       # From the same image as the room server, before its new revision serves anyone: each
       # migration must also work with the revision still serving. A failure stops the deploy.
       - name: Migrate the database and load the seed
@@ -106,8 +99,8 @@ jobs:
       - name: Enable pnpm
         run: corepack enable
 
-      # The token GitHub signed at the first sign-in lasts minutes, and starting the database of dev
-      # alone may take longer. gcloud keeps going on what it already traded the token for; the
+      # The token GitHub signed at the first sign-in lasts minutes, and migrating and deploying the
+      # room server may take longer. gcloud keeps going on what it already traded the token for; the
       # Firebase CLI trades it again, so it needs a fresh one.
       - name: Sign in to Google Cloud again, for the Firebase CLI
         env:

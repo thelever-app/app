@@ -1,4 +1,5 @@
 import type { AddressInfo } from 'node:net';
+import { ConsoleLogger, type Logger } from '@thelever-app/db';
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
 import {
   CONTRACT_VERSION,
@@ -17,6 +18,7 @@ export async function composedHttpServer() {
     tokenVerifier: new FakeTokenVerifier(),
     pingIntervalMs: 30_000,
     storage: { kind: 'memory' },
+    logger: new ConsoleLogger(),
   });
   return http;
 }
@@ -34,8 +36,9 @@ export async function startRoomServer({
   pingIntervalMs = 30_000,
   tokenVerifier = new FakeTokenVerifier() as TokenVerifier,
   storage = { kind: 'memory' } as Storage,
+  logger = new ConsoleLogger() as Logger,
 } = {}) {
-  const composed = await composeRealtimeServer({ tokenVerifier, pingIntervalMs, storage });
+  const composed = await composeRealtimeServer({ tokenVerifier, pingIntervalMs, storage, logger });
   const { http: server, sockets } = composed;
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;

@@ -29,13 +29,18 @@ const GAME_STATE: GameStateDto = {
   answers: [],
 };
 
+const TEST_TRACEPARENT = '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01';
+
 /** Lets the pending promises run, such as the one that asks for the token. */
 async function settle(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-/** Opens a connection whose sockets, waits and randomness the test controls; `random` is 1 by default. */
-function open(random = () => 1) {
+/**
+ * Opens a connection whose sockets, waits, randomness and trace contexts the test controls;
+ * `random` is 1 by default, and every command gets the same trace context unless told otherwise.
+ */
+function open(random = () => 1, newTraceparent = () => TEST_TRACEPARENT) {
   const sockets: FakeSocket[] = [];
   const scheduler = new FakeScheduler();
   const tokens = ['test-token-1', 'test-token-2', 'test-token-3', 'test-token-4'];
@@ -52,6 +57,7 @@ function open(random = () => 1) {
     },
     schedule: scheduler.schedule,
     random,
+    newTraceparent,
   });
   const received: ServerMessageDto[] = [];
   const statuses: RoomConnectionStatus[] = [];
@@ -92,7 +98,32 @@ describe('WebSocketRoomConnection', () => {
           token: 'test-token-1',
           gameId: 'test-game-id',
           language: 'es',
+          traceparent: TEST_TRACEPARENT,
         },
+      ]);
+    });
+
+    it('should start a trace of its own for each command it sends', async () => {
+      // Arrange
+      const traceparents = ['TestTraceOfConnect', 'TestTraceOfAnswer'];
+      const { connection, current } = open(
+        () => 1,
+        () => traceparents.shift()!,
+      );
+      await accept(current());
+      current().receive(GAME_STATE);
+
+      // Act
+      connection.send({
+        type: 'answer-dilemma',
+        dilemmaId: 'test-dilemma-1',
+        vote: 'test-option-a',
+      });
+
+      // Assert
+      expect(current().sentMessages()).toEqual([
+        expect.objectContaining({ type: 'connect', traceparent: 'TestTraceOfConnect' }),
+        expect.objectContaining({ type: 'answer-dilemma', traceparent: 'TestTraceOfAnswer' }),
       ]);
     });
 
@@ -167,6 +198,7 @@ describe('WebSocketRoomConnection', () => {
         type: 'answer-dilemma',
         dilemmaId: 'test-dilemma-1',
         vote: 'test-option-a',
+        traceparent: TEST_TRACEPARENT,
       });
     });
 

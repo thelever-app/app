@@ -4,6 +4,7 @@ import { ProgressUpdatedEvent, type DomainEvent } from '@thelever-app/game';
 import type pg from 'pg';
 import { afterEach, describe, expect, it } from 'vitest';
 import { openListenClient } from '../../connection.ts';
+import { ConsoleLogger } from '../../console-logger.ts';
 import type { Database } from '../../schema.ts';
 import { endListeningConnections, useTestDatabase } from '../../test/support/test-database.ts';
 import { GameEventsListener } from '../game-events-listener.ts';
@@ -109,6 +110,7 @@ function listenerOf(
       reconnections += 1;
     },
     initialRetryMs: 10,
+    logger: new ConsoleLogger(),
     ...options,
   });
   cleanups.push(() => listener.stop());

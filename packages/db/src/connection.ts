@@ -1,6 +1,7 @@
 import { AuthTypes, Connector, IpAddressTypes } from '@google-cloud/cloud-sql-connector';
 import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
+import type { Logger } from './logger.ts';
 
 /** Where the database is: a URL locally and in CI; the Cloud SQL instance and an IAM user in Cloud Run. */
 export type DatabaseConfig =
@@ -42,12 +43,14 @@ async function clientOptions(
 
 export async function openDatabase<DB>(
   config: DatabaseConfig,
-  { maxConnections }: { readonly maxConnections: number },
+  { maxConnections, logger }: { readonly maxConnections: number; readonly logger: Logger },
 ): Promise<{ readonly db: Kysely<DB>; readonly close: () => Promise<void> }> {
   const { options, release } = await clientOptions(config);
   const pool = new pg.Pool({ ...options, max: maxConnections });
   // The database may end an idle connection (a restart, maintenance): the pool drops it and opens another.
-  pool.on('error', (error) => console.error(error));
+  pool.on('error', (error) =>
+    logger.warn('idle database connection ended', { cause: error.message }),
+  );
   const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
   return {
     db,

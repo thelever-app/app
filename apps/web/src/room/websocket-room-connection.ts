@@ -38,6 +38,8 @@ export interface WebSocketRoomOptions {
   readonly schedule: Schedule;
   /** A number in [0, 1), for the random part of each wait. */
   readonly random: () => number;
+  /** A new trace context, so the trace of each command starts here (see `newTraceparent`). */
+  readonly newTraceparent: () => string;
 }
 
 const OPEN = 1;
@@ -79,7 +81,9 @@ export class WebSocketRoomConnection implements RoomConnection {
 
   send(message: ClientMessageDto): void {
     if (this.#status === 'connected' && this.#socket?.readyState === OPEN) {
-      this.#socket.send(JSON.stringify(message));
+      this.#socket.send(
+        JSON.stringify({ ...message, traceparent: this.#options.newTraceparent() }),
+      );
       return;
     }
     this.#pending.push(message);
@@ -133,6 +137,7 @@ export class WebSocketRoomConnection implements RoomConnection {
         token,
         gameId: this.#options.gameId,
         language: this.#options.language,
+        traceparent: this.#options.newTraceparent(),
       } satisfies ClientMessageDto),
     );
   }
