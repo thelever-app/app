@@ -9,6 +9,7 @@ import { signInAnonymousPlayer } from './identity/anonymous-player.ts';
 import { createI18n, SOURCE_LANGUAGE } from './i18n/i18n.ts';
 import source from './i18n/locales/es.json';
 import { connectRoom } from './room/connect-room.ts';
+import { documentActivity } from './room/document-activity.ts';
 import { RoomProvider } from './room/room-provider.tsx';
 import { NoReturnScreen } from './screens/no-return-screen.tsx';
 
@@ -27,6 +28,7 @@ async function start(): Promise<void> {
       loadConfig: () => loadWebConfig(),
       signIn: signInAnonymousPlayer,
       createSocket: (url) => new WebSocket(url),
+      pageActivity: documentActivity(document),
     });
     root.render(
       <StrictMode>

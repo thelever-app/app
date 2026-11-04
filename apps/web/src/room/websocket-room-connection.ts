@@ -67,6 +67,8 @@ export class WebSocketRoomConnection implements RoomConnection {
   #closed = false;
   /** Whether the token of this attempt to connect was already a fresh one. */
   #triedFreshToken = false;
+  /** Closed while nobody uses the page; it connects again on resume. */
+  #paused = false;
 
   private constructor(options: WebSocketRoomOptions) {
     this.#options = options;
@@ -106,6 +108,28 @@ export class WebSocketRoomConnection implements RoomConnection {
 
   getStatus(): RoomConnectionStatus {
     return this.#status;
+  }
+
+  /**
+   * Closes the socket while nobody uses the page, without trying again, so the room server can
+   * let its instance go. What the screen sends meanwhile waits for `resume`.
+   */
+  pause(): void {
+    if (this.#closed || this.#paused || this.#status === 'rejected') return;
+    this.#paused = true;
+    this.#cancelWait?.();
+    this.#cancelWait = undefined;
+    this.#socket?.close();
+    this.#setStatus('paused');
+  }
+
+  /** Connects again after a pause: the server sends a fresh state, as on any reconnection. */
+  resume(): void {
+    if (this.#closed || !this.#paused) return;
+    this.#paused = false;
+    this.#failedAttempts = 0;
+    this.#setStatus('reconnecting');
+    this.#connect();
   }
 
   close(): void {
@@ -184,7 +208,9 @@ export class WebSocketRoomConnection implements RoomConnection {
   }
 
   #onDrop(socket: WebSocketLike): void {
-    if (this.#closed || this.#status === 'rejected' || socket !== this.#socket) return;
+    if (this.#closed || this.#paused || this.#status === 'rejected' || socket !== this.#socket) {
+      return;
+    }
 
     const backoff = Math.min(LONGEST_WAIT_MS, SHORTEST_WAIT_MS * 2 ** this.#failedAttempts);
     this.#failedAttempts += 1;

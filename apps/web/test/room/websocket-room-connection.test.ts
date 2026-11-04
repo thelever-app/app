@@ -67,6 +67,11 @@ function open(random = () => 1, newTraceparent = () => TEST_TRACEPARENT) {
   return { connection, sockets, current, scheduler, received, statuses };
 }
 
+/** The server turning down `connect` with that code. */
+function rejection(code: ErrorDto['code']): ErrorDto {
+  return { type: 'error', command: 'connect', code };
+}
+
 /** Opens the current socket and lets the connection send `connect`. */
 async function accept(socket: FakeSocket): Promise<void> {
   socket.open();
@@ -324,10 +329,6 @@ describe('WebSocketRoomConnection', () => {
   });
 
   describe('rejected connect', () => {
-    function rejection(code: ErrorDto['code']): ErrorDto {
-      return { type: 'error', command: 'connect', code };
-    }
-
     it('should send connect again on the same socket with a fresh token when the server rejects the token', async () => {
       // Arrange
       const { current, sockets, statuses, received } = open();
@@ -454,6 +455,90 @@ describe('WebSocketRoomConnection', () => {
 
       // Assert
       expect(current().sentMessages()).toEqual([expect.objectContaining({ type: 'connect' })]);
+    });
+  });
+
+  describe('pause', () => {
+    it('should close its socket without trying again and say it is paused', async () => {
+      // Arrange
+      const { connection, current, scheduler, statuses } = open();
+      await accept(current());
+      current().receive(GAME_STATE);
+
+      // Act
+      connection.pause();
+      current().drop();
+
+      // Assert
+      expect(current().closedByClient).toBe(true);
+      expect(scheduler.waits).toEqual([]);
+      expect(statuses).toEqual(['connecting', 'connected', 'paused']);
+    });
+
+    it('should stop waiting to connect again when paused meanwhile', async () => {
+      // Arrange
+      const { connection, current, scheduler } = open();
+      await accept(current());
+      current().drop();
+
+      // Act
+      connection.pause();
+
+      // Assert
+      expect(scheduler.waits.map(({ cancelled }) => cancelled)).toEqual([true]);
+    });
+
+    it('should leave a connection the server rejected as it is', async () => {
+      // Arrange
+      const { connection, current, statuses } = open();
+      await accept(current());
+      current().receive(rejection('game-not-found'));
+
+      // Act
+      connection.pause();
+
+      // Assert
+      expect(statuses).toEqual(['connecting', 'rejected']);
+    });
+  });
+
+  describe('resume', () => {
+    it('should connect again, and send what the screen sent while paused', async () => {
+      // Arrange
+      const { connection, sockets, current, statuses } = open();
+      await accept(current());
+      current().receive(GAME_STATE);
+      connection.pause();
+      connection.send({
+        type: 'answer-dilemma',
+        dilemmaId: 'test-dilemma-1',
+        vote: 'test-option-a',
+      });
+
+      // Act
+      connection.resume();
+      await accept(current());
+      current().receive(GAME_STATE);
+
+      // Assert
+      expect(sockets).toHaveLength(2);
+      expect(statuses).toEqual(['connecting', 'connected', 'paused', 'reconnecting', 'connected']);
+      expect(current().sentMessages()).toEqual([
+        expect.objectContaining({ type: 'connect' }),
+        expect.objectContaining({ type: 'answer-dilemma', dilemmaId: 'test-dilemma-1' }),
+      ]);
+    });
+
+    it('should do nothing when it is not paused', async () => {
+      // Arrange
+      const { connection, sockets, current } = open();
+      await accept(current());
+
+      // Act
+      connection.resume();
+
+      // Assert
+      expect(sockets).toHaveLength(1);
     });
   });
 

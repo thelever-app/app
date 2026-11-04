@@ -1,6 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AnswerNotSaved } from '../../src/components/answer-not-saved.tsx';
+import { PausedBar } from '../../src/components/paused-bar.tsx';
 import { ReconnectingBar } from '../../src/components/reconnecting-bar.tsx';
 import { renderWithProviders } from '../support/render.tsx';
 
@@ -11,6 +12,16 @@ describe('ReconnectingBar', () => {
 
     // Assert
     expect(screen.getByRole('status').textContent).toBe(t('notices.reconnecting'));
+  });
+});
+
+describe('PausedBar', () => {
+  it('should tell that the link is paused and that a touch brings it back', async () => {
+    // Act
+    const { t } = await renderWithProviders(<PausedBar />);
+
+    // Assert
+    expect(screen.getByRole('status').textContent).toBe(t('notices.paused'));
   });
 });
 
