@@ -17,6 +17,8 @@ import { GameSampler } from './game-sampler.ts';
 /** Where the room server runs, and where its telemetry is taken in and kept (ADR 0005). */
 const REGION = 'europe-southwest1';
 const TELEMETRY_ENDPOINT = `https://telemetry.${REGION}.rep.googleapis.com`;
+/** How long sending what is still buffered may take when the instance leaves. */
+const SHUTDOWN_TIMEOUT_MS = 2000;
 
 /**
  * The address of the player and their browser never reach a span: the hook runs after the
@@ -28,6 +30,16 @@ const WITHOUT_THE_CLIENT: Attributes = {
   'network.peer.port': undefined,
   'user_agent.original': undefined,
 };
+
+/** HTTP, without the client in its spans and without the health check of Cloud Run. */
+export function httpInstrumentation(): HttpInstrumentation {
+  return new HttpInstrumentation({
+    ignoreIncomingRequestHook: (request) => request.url === '/health',
+    startIncomingSpanHook: () => WITHOUT_THE_CLIENT,
+    // Calls nobody asked for (token keys, the Cloud SQL connector) are not traces of their own.
+    requireParentforOutgoingSpans: true,
+  });
+}
 
 /** What the telemetry of the process needs to know about its environment. */
 export interface TelemetryOptions {
@@ -56,7 +68,12 @@ export function startTelemetry({ projectId, sampleRatio, logger }: TelemetryOpti
   diag.setLogger(
     {
       // A fixed message, so the errors of the SDK count as one kind; what failed goes as its cause.
-      error: (message, ...args) => logger.error('telemetry failed', args[0] ?? message),
+      // The SDK puts the name of its component first, then a text, then the error, if any.
+      error: (message, ...args) =>
+        logger.error(
+          'telemetry failed',
+          args.find((arg) => arg instanceof Error) ?? [message, ...args].join(' '),
+        ),
       warn: (message, ...args) =>
         logger.warn(`telemetry: ${message}`, {
           ...(args.length > 0 ? { detail: JSON.stringify(args).slice(0, 2000) } : {}),
@@ -98,17 +115,19 @@ export function startTelemetry({ projectId, sampleRatio, logger }: TelemetryOpti
     // Without processors the SDK would send logs to an OTLP endpoint on localhost.
     logRecordProcessors: [],
     instrumentations: [
-      new HttpInstrumentation({
-        ignoreIncomingRequestHook: (request) => request.url === '/health',
-        startIncomingSpanHook: () => WITHOUT_THE_CLIENT,
-        // Calls nobody asked for (token keys, the Cloud SQL connector) are not traces of their own.
-        requireParentforOutgoingSpans: true,
-      }),
+      httpInstrumentation(),
       new ExpressInstrumentation(),
       // The beat, LISTEN and the cleaning of dead instances query on their own, every few seconds.
       new PgInstrumentation({ requireParentSpan: true }),
     ],
   });
   sdk.start();
-  return { shutdown: () => sdk.shutdown() };
+  return {
+    // Cloud Run waits 10 s after SIGTERM: what is still buffered gets 2 of them, and no more.
+    shutdown: () =>
+      Promise.race([
+        sdk.shutdown(),
+        new Promise<void>((resolve) => setTimeout(resolve, SHUTDOWN_TIMEOUT_MS).unref()),
+      ]),
+  };
 }

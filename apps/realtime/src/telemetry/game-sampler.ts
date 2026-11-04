@@ -1,4 +1,11 @@
-import type { Attributes, Context, SpanKind } from '@opentelemetry/api';
+import {
+  type Attributes,
+  type Context,
+  isSpanContextValid,
+  type SpanKind,
+  trace,
+  TraceFlags,
+} from '@opentelemetry/api';
 import {
   type Sampler,
   SamplingDecision,
@@ -11,7 +18,8 @@ export const GAME_ID = 'game.id';
 
 /**
  * Keeps a whole game or none of it: decides by the game, not by the trace, so every command of a
- * kept game can be followed from start to end. A span of no game is decided by its trace.
+ * kept game can be followed from start to end. A span of no game follows its parent from another
+ * process, which was decided by its game, or else is decided by its trace.
  */
 export class GameSampler implements Sampler {
   readonly #ratio: number;
@@ -31,6 +39,15 @@ export class GameSampler implements Sampler {
   ): SamplingResult {
     const gameId = attributes[GAME_ID];
     if (typeof gameId !== 'string') {
+      const parent = trace.getSpanContext(context);
+      if (parent?.isRemote && isSpanContextValid(parent)) {
+        return {
+          decision:
+            (parent.traceFlags & TraceFlags.SAMPLED) !== 0
+              ? SamplingDecision.RECORD_AND_SAMPLED
+              : SamplingDecision.NOT_RECORD,
+        };
+      }
       return this.#byTrace.shouldSample(context, traceId);
     }
     return {

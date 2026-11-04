@@ -64,9 +64,10 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
       .shutdown()
       .catch((error: unknown) => logger.error('leaving cleanly failed', error))
       .finally(() => {
-        // Last, so the spans of leaving are sent too.
+        // Last, so the spans of leaving are sent too, even when closing the database failed.
         database
           .close()
+          .catch((error: unknown) => logger.error('closing the database failed', error))
           .then(shutdownTelemetry)
           .finally(() => process.exit(0));
       });

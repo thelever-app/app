@@ -30,7 +30,8 @@ export async function signInAnonymousPlayer({
       ? undefined
       : initializeAppCheck(app, {
           provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
-          isTokenAutoRefreshEnabled: true,
+          // The room server only reads it on connect: renewing it in the background spends assessments.
+          isTokenAutoRefreshEnabled: false,
         });
   const auth = getAuth(app);
   if (authEmulatorUrl) connectAuthEmulator(auth, authEmulatorUrl, { disableWarnings: true });
@@ -39,7 +40,14 @@ export async function signInAnonymousPlayer({
   const user = auth.currentUser ?? (await signInAnonymously(auth)).user;
   return {
     getToken: (forceRefresh) => user.getIdToken(forceRefresh),
-    getAppCheckToken: async (forceRefresh) =>
-      appCheck && (await getToken(appCheck, forceRefresh)).token,
+    getAppCheckToken: async (forceRefresh) => {
+      if (!appCheck) return undefined;
+      // A blocked or throttled reCAPTCHA: without a token the server turns the player down and
+      // says why, instead of the connection trying again and again.
+      return getToken(appCheck, forceRefresh).then(
+        ({ token }) => token,
+        () => undefined,
+      );
+    },
   };
 }

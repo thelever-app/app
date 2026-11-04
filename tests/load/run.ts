@@ -7,6 +7,7 @@ import {
   type GameStateDto,
   ServerMessageDto,
   StartGameResponseDto,
+  type ServerMessageDto as ServerMessage,
 } from '@thelever-app/protocol';
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
 
@@ -24,7 +25,11 @@ interface Target {
   readonly appCheckToken: () => Promise<string | undefined>;
 }
 
-const ROOMS = Number(process.env.LOAD_ROOMS ?? 50);
+/**
+ * 3 rooms of 50 by default, 150 sockets, within the 160 dev takes today; LOAD_ROOMS=50 for the
+ * whole of the requirement, once the room server is sized for it.
+ */
+const ROOMS = Number(process.env.LOAD_ROOMS ?? 3);
 const PLAYERS = Number(process.env.LOAD_PLAYERS ?? 50);
 /** How long a player thinks before each answer, at random within this range. */
 const THINK_MS = [2000, 8000] as const;
@@ -101,6 +106,8 @@ interface LoadPlayer {
 const latencies: number[] = [];
 const rejections = new Map<string, number>();
 let socketFailures = 0;
+/** Frames that do not follow the contract: they are counted, never thrown from a listener. */
+let unreadableMessages = 0;
 let answersSent = 0;
 /** When each player sent each answer, by `playerId:progress`. */
 const sentAt = new Map<string, number>();
@@ -172,7 +179,8 @@ async function connect(target: Target, player: LoadPlayer, gameId: string): Prom
       );
     });
     socket.addEventListener('message', ({ data }) => {
-      const message = ServerMessageDto.parse(JSON.parse(String(data)));
+      const message = readMessage(data);
+      if (!message) return;
       if (message.type === 'game-state' && !player.state) {
         player.state = message;
         player.playerId = message.playerId;
@@ -186,6 +194,15 @@ async function connect(target: Target, player: LoadPlayer, gameId: string): Prom
       }
     });
   });
+}
+
+function readMessage(data: unknown): ServerMessage | undefined {
+  try {
+    return ServerMessageDto.parse(JSON.parse(String(data)));
+  } catch {
+    unreadableMessages += 1;
+    return undefined;
+  }
 }
 
 /** Answers every dilemma of the game in order, thinking a while before each one. */
@@ -247,6 +264,7 @@ console.log(
       playersPerRoom: PLAYERS,
       sockets: ROOMS * PLAYERS,
       socketFailures,
+      unreadableMessages,
       answersSent,
       deliveries: { expected, received: latencies.length },
       latencyMs: {

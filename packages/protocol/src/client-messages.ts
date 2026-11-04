@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
-/** The version of this contract. Client and server agree on it once, when the connection opens. */
-export const CONTRACT_VERSION = 1;
+/**
+ * The version of this contract. Client and server agree on it once, when the connection opens.
+ * 2 since App Check: a client of 1 could not read the error that turns it down.
+ */
+export const CONTRACT_VERSION = 2;
 
 /** The languages a player can read the dilemmas in. */
 export const LanguageDto = z.enum(['es', 'en', 'fr', 'de', 'it', 'pt', 'ca']);

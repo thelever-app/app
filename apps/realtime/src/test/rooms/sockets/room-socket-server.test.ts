@@ -124,6 +124,12 @@ describe('RoomSocketServer', () => {
         { contractVersion: CONTRACT_VERSION + 1 },
         'unsupported-contract-version',
       ],
+      // Version 1 did not know App Check: its clients would wait forever for an error they cannot read.
+      [
+        'a client of the contract before App Check',
+        { contractVersion: 1 },
+        'unsupported-contract-version',
+      ],
       ['an invalid token', { token: 'forged' }, 'invalid-token'],
       ['a game that does not exist', { gameId: 'unknown-game' }, 'game-not-found'],
     ] as const)('should reject %s', async (_case, change, code) => {

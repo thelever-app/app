@@ -110,7 +110,8 @@ describe('signInAnonymousPlayer', () => {
       firebase.initializeApp.mock.results[0]?.value,
       {
         provider: expect.any(firebase.ReCaptchaEnterpriseProvider),
-        isTokenAutoRefreshEnabled: true,
+        // The room server only reads it on connect: renewing it in the background spends assessments.
+        isTokenAutoRefreshEnabled: false,
       },
     );
     expect(await player.getAppCheckToken(false)).toBe('app-check-token');
@@ -124,5 +125,17 @@ describe('signInAnonymousPlayer', () => {
     // Assert
     expect(firebase.initializeAppCheck).not.toHaveBeenCalled();
     expect(await player.getAppCheckToken(false)).toBeUndefined();
+  });
+
+  it('should have no App Check token when reCAPTCHA fails, so the server says why', async () => {
+    // Arrange
+    firebase.getAppCheckToken.mockRejectedValueOnce(new Error('appCheck/throttled'));
+    const player = await signInAnonymousPlayer({ ...CONFIG, appCheckSiteKey: 'test-site-key' });
+
+    // Act
+    const token = await player.getAppCheckToken(false);
+
+    // Assert
+    expect(token).toBeUndefined();
   });
 });

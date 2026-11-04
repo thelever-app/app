@@ -28,7 +28,9 @@ export class FirebaseAppCheckVerifier implements AppCheckVerifier {
     try {
       await this.#tokens.verifyToken(token);
     } catch (error) {
-      const code = (error as { code?: unknown } | null)?.code;
+      const { code, cause } = (error ?? {}) as { code?: unknown; cause?: { code?: unknown } };
+      // Firebase Admin gives a key it could not download the same code as a forged token.
+      if (cause?.code === 'key-fetch-error') throw error;
       if (typeof code === 'string' && REJECTED_TOKEN_CODES.has(code)) {
         throw new InvalidAppCheckError();
       }

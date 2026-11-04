@@ -1,4 +1,4 @@
-import { ROOT_CONTEXT, SpanKind, type Attributes } from '@opentelemetry/api';
+import { ROOT_CONTEXT, SpanKind, trace, TraceFlags, type Attributes } from '@opentelemetry/api';
 import { SamplingDecision } from '@opentelemetry/sdk-trace';
 import { describe, expect, it } from 'vitest';
 import { GameSampler } from '../../telemetry/game-sampler.ts';
@@ -6,14 +6,24 @@ import { GameSampler } from '../../telemetry/game-sampler.ts';
 const SOME_TRACE = '0af7651916cd43dd8448eb211c80319c';
 const OTHER_TRACE = 'f1e2d3c4b5a697887766554433221100';
 
-function decisionOf(sampler: GameSampler, attributes: Attributes, traceId = SOME_TRACE) {
-  return sampler.shouldSample(
-    ROOT_CONTEXT,
-    traceId,
-    'ws answer-dilemma',
-    SpanKind.SERVER,
-    attributes,
-  ).decision;
+function decisionOf(
+  sampler: GameSampler,
+  attributes: Attributes,
+  traceId = SOME_TRACE,
+  parent = ROOT_CONTEXT,
+) {
+  return sampler.shouldSample(parent, traceId, 'ws answer-dilemma', SpanKind.SERVER, attributes)
+    .decision;
+}
+
+/** A context whose parent came from another process, such as the instance that published. */
+function remoteParent(traceFlags: TraceFlags) {
+  return trace.setSpanContext(ROOT_CONTEXT, {
+    traceId: SOME_TRACE,
+    spanId: 'b7ad6b7169203331',
+    traceFlags,
+    isRemote: true,
+  });
 }
 
 describe('GameSampler', () => {
@@ -76,6 +86,21 @@ describe('GameSampler', () => {
     // Act
     const kept = decisionOf(keepAll, { 'http.route': '/rooms' });
     const dropped = decisionOf(keepNone, { 'http.route': '/rooms' });
+
+    // Assert
+    expect(kept).toBe(SamplingDecision.RECORD_AND_SAMPLED);
+    expect(dropped).toBe(SamplingDecision.NOT_RECORD);
+  });
+
+  it('should follow the parent from another process when the span belongs to no game', () => {
+    // Arrange: the instance that published decided by the game; the delivery of a room event has none.
+    const keepNone = new GameSampler(0);
+    const keepAll = new GameSampler(1);
+    const room = { 'room.id': 'TestRoomId' };
+
+    // Act
+    const kept = decisionOf(keepNone, room, SOME_TRACE, remoteParent(TraceFlags.SAMPLED));
+    const dropped = decisionOf(keepAll, room, SOME_TRACE, remoteParent(TraceFlags.NONE));
 
     // Assert
     expect(kept).toBe(SamplingDecision.RECORD_AND_SAMPLED);

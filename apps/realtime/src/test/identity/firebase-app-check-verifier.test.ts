@@ -15,10 +15,16 @@ const appCheck = {
   },
 };
 
-/** App Check failing for a reason that has nothing to do with the token. */
-const failingAppCheck = {
+/**
+ * App Check failing for a reason that has nothing to do with the token: Firebase Admin gives the
+ * same code as for a forged token when it cannot download the public keys, with the cause inside.
+ */
+const appCheckWithoutKeys = {
   async verifyToken(): Promise<{ appId: string }> {
-    throw Object.assign(new Error('JWKS unreachable'), { code: 'app-check/internal-error' });
+    throw Object.assign(new Error('Error fetching public keys'), {
+      code: 'app-check/invalid-argument',
+      cause: { code: 'key-fetch-error' },
+    });
   },
 };
 
@@ -40,10 +46,10 @@ describe('FirebaseAppCheckVerifier', () => {
     },
   );
 
-  it('should let any other failure of App Check through, as a fault of the server', async () => {
+  it('should let a failure to fetch the public keys through, as a fault of the server', async () => {
     // Act & Assert
     await expect(
-      new FirebaseAppCheckVerifier(failingAppCheck).verify('valid-token'),
-    ).rejects.toThrow('JWKS unreachable');
+      new FirebaseAppCheckVerifier(appCheckWithoutKeys).verify('valid-token'),
+    ).rejects.toThrow('Error fetching public keys');
   });
 });
