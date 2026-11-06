@@ -92,5 +92,25 @@ export interface Database {
   };
 }
 
+/** The tables of Dilemmas: only its adapters read or write them. */
+export type DilemmasTables = Pick<
+  Database,
+  'dilemmas' | 'dilemma_versions' | 'dilemma_version_options' | 'dilemma_version_tags'
+>;
+
+/** The tables of Game: its adapters see only these, never those of another context (ADR 0001). */
+export type GameTables = Pick<
+  Database,
+  | 'rooms'
+  | 'room_players'
+  | 'instances'
+  | 'room_connections'
+  | 'games'
+  | 'game_dilemmas'
+  | 'game_dilemma_options'
+  | 'game_players'
+  | 'answers'
+>;
+
 /** The database as the adapters and the room server get it. */
 export type DatabaseClient = Kysely<Database>;

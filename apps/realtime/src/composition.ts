@@ -230,20 +230,15 @@ async function sharedLifecycle(
   stopServing: StopServing,
 ): Promise<Lifecycle> {
   const { socketNotifier, stateSender, logger } = parts;
-  const delivery = new GameEventDelivery(socketNotifier, parts.gameLock, logger);
+  const delivery = new GameEventDelivery(socketNotifier, stateSender, parts.gameLock, logger, () =>
+    roomSockets.connected(),
+  );
   const listener = new GameEventsListener(storage.openListenClient, {
     onEvents: (playerIds, event, publishedAt) => {
       void delivery.deliver(playerIds, event, publishedAt);
     },
-    // Whatever was published while it was not listening is lost: a fresh state makes up for it.
     onReconnected: () => {
-      for (const connection of roomSockets.connected()) {
-        if (connection.session) {
-          stateSender.send(connection, connection.session).catch((error: unknown) => {
-            logger.error('sending the game state after listening again failed', error);
-          });
-        }
-      }
+      void delivery.catchUp();
     },
     logger,
   });

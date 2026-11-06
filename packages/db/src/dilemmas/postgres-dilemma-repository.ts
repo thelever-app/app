@@ -5,33 +5,33 @@ import {
   type DilemmaSnapshot,
 } from '@thelever-app/dilemmas';
 import type { Kysely, Transaction } from 'kysely';
-import type { Database } from '../schema.ts';
+import type { DilemmasTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
 
 function creatorOf({
   creator_type,
   creator_identity,
-}: Pick<Database['dilemmas'], 'creator_type' | 'creator_identity'>): Creator {
+}: Pick<DilemmasTables['dilemmas'], 'creator_type' | 'creator_identity'>): Creator {
   if (creator_type === 'player') return { type: 'player', identity: creator_identity ?? '' };
   return { type: creator_type };
 }
 
 /** Each version in its own rows, inserted once; saving again only changes the status and the visibility. */
 export class PostgresDilemmaRepository implements DilemmaRepository {
-  readonly #db: Kysely<Database>;
+  readonly #db: Kysely<DilemmasTables>;
 
-  constructor(db: Kysely<Database>) {
+  constructor(db: Kysely<DilemmasTables>) {
     this.#db = db;
   }
 
   async save(dilemma: Dilemma): Promise<void> {
-    const transaction = currentTransaction();
+    const transaction = currentTransaction<DilemmasTables>();
     if (transaction) return this.#save(transaction, dilemma.toSnapshot());
     await this.#db.transaction().execute((own) => this.#save(own, dilemma.toSnapshot()));
   }
 
   async findById(id: string): Promise<Dilemma | undefined> {
-    const latest = await (currentTransaction() ?? this.#db)
+    const latest = await (currentTransaction<DilemmasTables>() ?? this.#db)
       .selectFrom('dilemma_versions')
       .select('number')
       .where('dilemma_id', '=', id)
@@ -42,7 +42,7 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
   }
 
   async findVersion(id: string, version: number): Promise<Dilemma | undefined> {
-    const db = currentTransaction() ?? this.#db;
+    const db = currentTransaction<DilemmasTables>() ?? this.#db;
     const row = await db
       .selectFrom('dilemmas')
       .innerJoin('dilemma_versions', 'dilemma_versions.dilemma_id', 'dilemmas.id')
@@ -84,7 +84,7 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
     });
   }
 
-  async #save(db: Transaction<Database>, snapshot: DilemmaSnapshot): Promise<void> {
+  async #save(db: Transaction<DilemmasTables>, snapshot: DilemmaSnapshot): Promise<void> {
     const { id, language, creator, visibility, version } = snapshot;
     const creatorColumns = {
       creator_type: creator.type,

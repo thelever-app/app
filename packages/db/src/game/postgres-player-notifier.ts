@@ -6,7 +6,7 @@ import {
   ProgressUpdatedEvent,
 } from '@thelever-app/game';
 import { type Kysely, sql } from 'kysely';
-import type { Database } from '../schema.ts';
+import type { GameTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
 
 /** The only channel: every instance listens to it and delivers to the players it has sockets for. */
@@ -73,9 +73,9 @@ export function readNotification(payload: string): Notification {
  * commit, so nobody hears of a change that was not saved.
  */
 export class PostgresPlayerNotifier implements PlayerNotifier {
-  readonly #db: Kysely<Database>;
+  readonly #db: Kysely<GameTables>;
 
-  constructor(db: Kysely<Database>) {
+  constructor(db: Kysely<GameTables>) {
     this.#db = db;
   }
 
@@ -89,7 +89,7 @@ export class PostgresPlayerNotifier implements PlayerNotifier {
   }
 
   async #publish(payload: string): Promise<void> {
-    const transaction = currentTransaction();
+    const transaction = currentTransaction<GameTables>();
     const notify = sql`select pg_notify(${GAME_EVENTS_CHANNEL}, ${payload})`;
     if (!transaction) {
       await notify.execute(this.#db);

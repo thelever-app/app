@@ -2,10 +2,10 @@ import { isDeepStrictEqual } from 'node:util';
 import { Game, type GameRepository, type GameSnapshot } from '@thelever-app/game';
 import type { Insertable, Kysely, Transaction } from 'kysely';
 import { jsonArrayFrom } from 'kysely/helpers/postgres';
-import type { Database } from '../schema.ts';
+import type { GameTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
 
-type AnswerRow = Insertable<Database['answers']>;
+type AnswerRow = Insertable<GameTables['answers']>;
 
 /**
  * A game in its rows. Inside a command, reading it locks the row of its room, the same lock every
@@ -14,17 +14,17 @@ type AnswerRow = Insertable<Database['answers']>;
  * is one row, not the 300 the game may hold.
  */
 export class PostgresGameRepository implements GameRepository {
-  readonly #db: Kysely<Database>;
+  readonly #db: Kysely<GameTables>;
   /** What each command last read or saved of each game, to compare with what it saves next. */
-  readonly #known = new WeakMap<Transaction<Database>, Map<string, GameSnapshot>>();
+  readonly #known = new WeakMap<Transaction<GameTables>, Map<string, GameSnapshot>>();
 
-  constructor(db: Kysely<Database>) {
+  constructor(db: Kysely<GameTables>) {
     this.#db = db;
   }
 
   async save(game: Game): Promise<void> {
     const snapshot = game.toSnapshot();
-    const transaction = currentTransaction();
+    const transaction = currentTransaction<GameTables>();
     if (!transaction) {
       await this.#db.transaction().execute((own) => this.#save(own, snapshot, undefined));
       return;
@@ -33,14 +33,14 @@ export class PostgresGameRepository implements GameRepository {
     this.#remember(transaction, snapshot);
   }
 
-  #remember(transaction: Transaction<Database>, snapshot: GameSnapshot): void {
+  #remember(transaction: Transaction<GameTables>, snapshot: GameSnapshot): void {
     const known = this.#known.get(transaction) ?? new Map<string, GameSnapshot>();
     known.set(snapshot.id, snapshot);
     this.#known.set(transaction, known);
   }
 
   async findById(id: string): Promise<Game | undefined> {
-    const transaction = currentTransaction();
+    const transaction = currentTransaction<GameTables>();
     if (transaction) await lockRoomOf(transaction, id);
     const row = await readGame(transaction ?? this.#db, id);
     if (!row) return undefined;
@@ -51,7 +51,7 @@ export class PostgresGameRepository implements GameRepository {
 
   /** Writes the game: only what changed since the command last knew it, or all of it if it did not. */
   async #save(
-    db: Transaction<Database>,
+    db: Transaction<GameTables>,
     snapshot: GameSnapshot,
     known: GameSnapshot | undefined,
   ): Promise<void> {
@@ -61,7 +61,7 @@ export class PostgresGameRepository implements GameRepository {
   }
 
   /** Replaces whatever was stored of the game, which the command had not read. */
-  async #saveWhole(db: Transaction<Database>, snapshot: GameSnapshot): Promise<void> {
+  async #saveWhole(db: Transaction<GameTables>, snapshot: GameSnapshot): Promise<void> {
     await this.#saveDilemmas(db, snapshot);
     // The answers go before the players they belong to.
     await db.deleteFrom('answers').where('game_id', '=', snapshot.id).execute();
@@ -71,7 +71,7 @@ export class PostgresGameRepository implements GameRepository {
 
   /** Writes only what the command changed since it read or saved the game. */
   async #saveChanges(
-    db: Transaction<Database>,
+    db: Transaction<GameTables>,
     known: GameSnapshot,
     snapshot: GameSnapshot,
   ): Promise<void> {
@@ -83,7 +83,7 @@ export class PostgresGameRepository implements GameRepository {
   }
 
   async #saveGame(
-    db: Transaction<Database>,
+    db: Transaction<GameTables>,
     { id, roomId, inDecisionPhase, version }: GameSnapshot,
   ): Promise<void> {
     await db
@@ -96,7 +96,7 @@ export class PostgresGameRepository implements GameRepository {
   }
 
   /** The dilemmas of a game, and the options it copied of each, never change once it exists. */
-  async #saveDilemmas(db: Transaction<Database>, { id, dilemmas }: GameSnapshot): Promise<void> {
+  async #saveDilemmas(db: Transaction<GameTables>, { id, dilemmas }: GameSnapshot): Promise<void> {
     await db
       .insertInto('game_dilemmas')
       .values(
@@ -126,7 +126,7 @@ export class PostgresGameRepository implements GameRepository {
   }
 
   /** Leaves exactly the players of the snapshot, keeping those already there. */
-  async #savePlayers(db: Transaction<Database>, { id, players }: GameSnapshot): Promise<void> {
+  async #savePlayers(db: Transaction<GameTables>, { id, players }: GameSnapshot): Promise<void> {
     const playerIds = players.map((player) => player.id);
     await db
       .deleteFrom('game_players')
@@ -143,7 +143,7 @@ export class PostgresGameRepository implements GameRepository {
       .execute();
   }
 
-  async #deleteAnswers(db: Transaction<Database>, rows: readonly AnswerRow[]): Promise<void> {
+  async #deleteAnswers(db: Transaction<GameTables>, rows: readonly AnswerRow[]): Promise<void> {
     if (rows.length === 0) return;
     await db
       .deleteFrom('answers')
@@ -157,7 +157,7 @@ export class PostgresGameRepository implements GameRepository {
       .execute();
   }
 
-  async #upsertAnswers(db: Transaction<Database>, rows: readonly AnswerRow[]): Promise<void> {
+  async #upsertAnswers(db: Transaction<GameTables>, rows: readonly AnswerRow[]): Promise<void> {
     if (rows.length === 0) return;
     await db
       .insertInto('answers')
@@ -181,7 +181,7 @@ export class PostgresGameRepository implements GameRepository {
  * Locks the room of the game, in a statement of its own: one that also read the game would see it as
  * it was before waiting for the lock, without what the command that held it committed.
  */
-async function lockRoomOf(transaction: Transaction<Database>, gameId: string): Promise<void> {
+async function lockRoomOf(transaction: Transaction<GameTables>, gameId: string): Promise<void> {
   await transaction
     .selectFrom('rooms')
     .select('rooms.id')
@@ -193,7 +193,7 @@ async function lockRoomOf(transaction: Transaction<Database>, gameId: string): P
 }
 
 /** The game with its dilemmas, players and answers, in one round trip. */
-function readGame(db: Kysely<Database>, id: string) {
+function readGame(db: Kysely<GameTables>, id: string) {
   return db
     .selectFrom('games')
     .selectAll('games')

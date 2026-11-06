@@ -20,16 +20,74 @@ const otherContexts = (context) => ({
 
 /** No package reaches into the sources of another one by a relative path, which skips its entries. */
 const intoAnotherPackage = {
-  // Absolute, through the packages folder, or up and into the sources of a sibling package.
-  regex: `^/|(^|/)packages/|(^|/)\\.\\./(?:${[...CONTEXTS, 'db', 'integrations'].join('|')})/src/`,
+  // Absolute; through the packages, the apps or an installed copy; or up into a sibling package.
+  regex: `^/|(^|/)(?:packages|apps|node_modules)/|(^|/)\\.\\./(?:${[...CONTEXTS, 'db', 'integrations'].join('|')})/(?:src|seeds)(?:/|$)`,
   message: 'Import another package by its name and its entries, never by a path into its sources.',
 };
 
+/** The files of the workspace, apps, packages, tests and operations. */
+const WORKSPACE_FILES = [
+  'apps/**/*.{ts,tsx}',
+  'packages/**/*.{ts,tsx}',
+  'tests/**/*.ts',
+  'ops/**/*.ts',
+];
+
 /** Every file of the workspace, unless a later block, which carries this pattern too, says more. */
 const packageRules = {
-  files: ['apps/**/*.{ts,tsx}', 'packages/**/*.ts', 'tests/**/*.ts', 'ops/**/*.ts'],
+  files: WORKSPACE_FILES,
   rules: { 'no-restricted-imports': ['error', { patterns: [intoAnotherPackage] }] },
 };
+
+/**
+ * The rules on imports only see `import` and `export` statements: another package is never imported
+ * with `import()`, as a value or as a type, so every dependency between packages goes through them.
+ */
+const anotherPackage = `/^@thelever-app\\/|${intoAnotherPackage.regex.replaceAll('/', '\\/')}/`;
+const staticImportsRules = {
+  files: WORKSPACE_FILES,
+  rules: {
+    'no-restricted-syntax': [
+      'error',
+      ...['ImportExpression[source.value', 'TSImportType[argument.literal.value'].map((node) => ({
+        selector: `${node}=${anotherPackage}]`,
+        message: 'Import another package with an import statement, which the import rules check.',
+      })),
+    ],
+  },
+};
+
+/**
+ * The adapters of a context in packages/db see only its tables, through its view of the schema, and
+ * never the adapters of another context (ADR 0001).
+ */
+const tablesRules = [
+  { context: 'game', tables: 'GameTables', other: 'dilemmas' },
+  { context: 'dilemmas', tables: 'DilemmasTables', other: 'game' },
+].map(({ context, tables, other }) => ({
+  files: [`packages/db/src/${context}/**/*.ts`],
+  ignores: ['**/test/**'],
+  rules: {
+    'no-restricted-imports': [
+      'error',
+      {
+        patterns: [
+          {
+            regex: '(^|/)schema\\.ts$',
+            importNames: ['Database'],
+            message: `The adapters of ${context} use ${tables}, the tables of ${context}.`,
+          },
+          intoAnotherPackage,
+          otherContexts(context),
+          {
+            regex: `(^|/)${other}/`,
+            message: `The adapters of ${context} never use those of ${other}.`,
+          },
+        ],
+      },
+    ],
+  },
+}));
 
 /** Its domain and its application never import its adapters, by a path or by its own entries. */
 const ownAdapters = (context) => [
@@ -45,7 +103,7 @@ const ownAdapters = (context) => [
 
 const contextRules = CONTEXTS.flatMap((context) => [
   {
-    files: [`packages/${context}/**/*.ts`],
+    files: [`packages/${context}/**/*.{ts,tsx}`],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -55,7 +113,7 @@ const contextRules = CONTEXTS.flatMap((context) => [
   },
   {
     // Flat config replaces a rule for the files it matches, so this one carries both patterns.
-    files: [`packages/${context}/src/{domain,application}/**/*.ts`],
+    files: [`packages/${context}/src/{domain,application}/**/*.{ts,tsx}`],
     ignores: ['**/test/**'],
     rules: {
       'no-restricted-imports': [
@@ -118,6 +176,7 @@ export default defineConfig([
     languageOptions: { globals: globals.node },
   },
   packageRules,
+  staticImportsRules,
   {
     files: ['apps/web/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },
@@ -150,6 +209,7 @@ export default defineConfig([
     },
   },
   ...contextRules,
+  ...tablesRules,
   // The base first: the folder of each context replaces it for its own files.
   integrationBaseRule,
   ...integrationRules,
