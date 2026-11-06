@@ -26,7 +26,7 @@ interface Target {
 }
 
 /**
- * 3 rooms of 50 by default, 150 sockets, within the 160 dev takes today; LOAD_ROOMS=50 for the
+ * 3 rooms of 50 by default, 150 sockets, within the 500 dev takes today; LOAD_ROOMS=50 for the
  * whole of the requirement, once the room server is sized for it.
  */
 const ROOMS = Number(process.env.LOAD_ROOMS ?? 3);
