@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import { Game, type GameRepository, type GameSnapshot } from '@thelever-app/game';
 import type { Insertable, Kysely, Transaction } from 'kysely';
+import { jsonArrayFrom } from 'kysely/helpers/postgres';
 import type { Database } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
 
@@ -40,89 +41,10 @@ export class PostgresGameRepository implements GameRepository {
 
   async findById(id: string): Promise<Game | undefined> {
     const transaction = currentTransaction();
-    const db = transaction ?? this.#db;
-    if (transaction) {
-      await transaction
-        .selectFrom('rooms')
-        .select('rooms.id')
-        .where('rooms.id', '=', (eb) =>
-          eb.selectFrom('games').select('games.room_id').where('games.id', '=', id),
-        )
-        .forUpdate()
-        .execute();
-    }
-    const game = await db.selectFrom('games').selectAll().where('id', '=', id).executeTakeFirst();
-    if (!game) return undefined;
-
-    // The options the game copied of each dilemma when it started, in their order.
-    const options = await db
-      .selectFrom('game_dilemmas')
-      .innerJoin('game_dilemma_options', (join) =>
-        join
-          .onRef('game_dilemma_options.game_id', '=', 'game_dilemmas.game_id')
-          .onRef('game_dilemma_options.dilemma_id', '=', 'game_dilemmas.dilemma_id'),
-      )
-      .select([
-        'game_dilemmas.dilemma_id as dilemmaId',
-        'game_dilemmas.dilemma_version as version',
-        'game_dilemma_options.option_id as optionId',
-      ])
-      .where('game_dilemmas.game_id', '=', id)
-      .orderBy('game_dilemmas.position')
-      .orderBy('game_dilemma_options.position')
-      .execute();
-    const dilemmas = new Map<string, { version: number; optionIds: string[] }>();
-    for (const { dilemmaId, version, optionId } of options) {
-      const dilemma = dilemmas.get(dilemmaId) ?? { version, optionIds: [] };
-      dilemma.optionIds.push(optionId);
-      dilemmas.set(dilemmaId, dilemma);
-    }
-
-    const players = await db
-      .selectFrom('game_players')
-      .select('player_id')
-      .where('game_id', '=', id)
-      .orderBy('position')
-      .execute();
-    const answers = await db
-      .selectFrom('answers')
-      .innerJoin('game_dilemmas', (join) =>
-        join
-          .onRef('game_dilemmas.game_id', '=', 'answers.game_id')
-          .onRef('game_dilemmas.dilemma_id', '=', 'answers.dilemma_id'),
-      )
-      .selectAll('answers')
-      .where('answers.game_id', '=', id)
-      .orderBy('game_dilemmas.position')
-      .execute();
-
-    const found = Game.restore({
-      id: game.id,
-      roomId: game.room_id,
-      inDecisionPhase: game.in_decision_phase,
-      version: game.version,
-      dilemmas: [...dilemmas].map(([dilemmaId, { version, optionIds }]) => ({
-        dilemmaId,
-        version,
-        optionIds,
-      })),
-      players: players.map(({ player_id }) => ({
-        id: player_id,
-        answers: answers
-          .filter((answer) => answer.player_id === player_id)
-          .map((answer) => ({
-            dilemmaId: answer.dilemma_id,
-            vote: answer.vote,
-            seal: {
-              gameConsentVersion: answer.game_consent_version,
-              researchConsentVersion: answer.research_consent_version,
-              commercialLicenceConsentVersion: answer.commercial_licence_consent_version,
-              underEighteen: answer.under_eighteen,
-            },
-            voterInTheGap: answer.voter_in_the_gap,
-          })),
-      })),
-    });
+    if (transaction) await lockRoomOf(transaction, id);
+    const row = await readGame(transaction ?? this.#db, id);
+    if (!row) return undefined;
+    const found = Game.restore(snapshotOf(row));
     if (transaction) this.#remember(transaction, found.toSnapshot());
     return found;
   }
@@ -253,6 +175,112 @@ export class PostgresGameRepository implements GameRepository {
       )
       .execute();
   }
+}
+
+/**
+ * Locks the room of the game, in a statement of its own: one that also read the game would see it as
+ * it was before waiting for the lock, without what the command that held it committed.
+ */
+async function lockRoomOf(transaction: Transaction<Database>, gameId: string): Promise<void> {
+  await transaction
+    .selectFrom('rooms')
+    .select('rooms.id')
+    .where('rooms.id', '=', (eb) =>
+      eb.selectFrom('games').select('games.room_id').where('games.id', '=', gameId),
+    )
+    .forUpdate()
+    .execute();
+}
+
+/** The game with its dilemmas, players and answers, in one round trip. */
+function readGame(db: Kysely<Database>, id: string) {
+  return db
+    .selectFrom('games')
+    .selectAll('games')
+    .select((eb) => [
+      // The options of each dilemma are those of the version played, in their order.
+      jsonArrayFrom(
+        eb
+          .selectFrom('game_dilemmas')
+          .innerJoin('game_dilemma_options', (join) =>
+            join
+              .onRef('game_dilemma_options.game_id', '=', 'game_dilemmas.game_id')
+              .onRef('game_dilemma_options.dilemma_id', '=', 'game_dilemmas.dilemma_id'),
+          )
+          .select([
+            'game_dilemmas.dilemma_id as dilemmaId',
+            'game_dilemmas.dilemma_version as version',
+            'game_dilemma_options.option_id as optionId',
+          ])
+          .whereRef('game_dilemmas.game_id', '=', 'games.id')
+          .orderBy('game_dilemmas.position')
+          .orderBy('game_dilemma_options.position'),
+      ).as('options'),
+      jsonArrayFrom(
+        eb
+          .selectFrom('game_players')
+          .select('game_players.player_id')
+          .whereRef('game_players.game_id', '=', 'games.id')
+          .orderBy('game_players.position'),
+      ).as('players'),
+      jsonArrayFrom(
+        eb
+          .selectFrom('answers')
+          .innerJoin('game_dilemmas', (join) =>
+            join
+              .onRef('game_dilemmas.game_id', '=', 'answers.game_id')
+              .onRef('game_dilemmas.dilemma_id', '=', 'answers.dilemma_id'),
+          )
+          .selectAll('answers')
+          .whereRef('answers.game_id', '=', 'games.id')
+          .orderBy('game_dilemmas.position'),
+      ).as('answers'),
+    ])
+    .where('games.id', '=', id)
+    .executeTakeFirst();
+}
+
+type GameRow = NonNullable<Awaited<ReturnType<typeof readGame>>>;
+
+function snapshotOf(row: GameRow): GameSnapshot {
+  return {
+    id: row.id,
+    roomId: row.room_id,
+    inDecisionPhase: row.in_decision_phase,
+    version: row.version,
+    dilemmas: dilemmasOf(row.options),
+    players: row.players.map(({ player_id }) => ({
+      id: player_id,
+      answers: row.answers
+        .filter((answer) => answer.player_id === player_id)
+        .map((answer) => ({
+          dilemmaId: answer.dilemma_id,
+          vote: answer.vote,
+          seal: {
+            gameConsentVersion: answer.game_consent_version,
+            researchConsentVersion: answer.research_consent_version,
+            commercialLicenceConsentVersion: answer.commercial_licence_consent_version,
+            underEighteen: answer.under_eighteen,
+          },
+          voterInTheGap: answer.voter_in_the_gap,
+        })),
+    })),
+  };
+}
+
+/** One row per option, in order, grouped into the dilemmas they belong to. */
+function dilemmasOf(options: GameRow['options']): GameSnapshot['dilemmas'] {
+  const dilemmas = new Map<string, { version: number; optionIds: string[] }>();
+  for (const { dilemmaId, version, optionId } of options) {
+    const dilemma = dilemmas.get(dilemmaId) ?? { version, optionIds: [] };
+    dilemma.optionIds.push(optionId);
+    dilemmas.set(dilemmaId, dilemma);
+  }
+  return [...dilemmas].map(([dilemmaId, { version, optionIds }]) => ({
+    dilemmaId,
+    version,
+    optionIds,
+  }));
 }
 
 /** The answers that are new or different since `before`, and those that are no longer there. */

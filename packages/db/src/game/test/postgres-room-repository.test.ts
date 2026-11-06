@@ -4,6 +4,7 @@ import { SequentialIdGenerator } from '@thelever-app/game/in-memory';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../../schema.ts';
 import { emptyTables, useTestDatabase } from '../../test/support/test-database.ts';
+import { recordingReads } from '../../test/support/recording-reads.ts';
 import { inTransaction } from '../../transaction.ts';
 import { PostgresDilemmaRepository } from '../../dilemmas/postgres-dilemma-repository.ts';
 import { PostgresGameRepository } from '../postgres-game-repository.ts';
@@ -75,6 +76,55 @@ describe('PostgresRoomRepository', () => {
 
       // Assert
       expect(steps).toEqual(['first:read', 'first:end', 'second:read']);
+    });
+
+    it('should read a room in one statement, after locking it in another, inside a command', async () => {
+      // Arrange
+      const { room } = await savedRoom();
+      const { db, reads } = recordingReads(database.db());
+
+      // Act
+      await inTransaction(db, () =>
+        new PostgresRoomRepository(db, 'TestInstanceA').findById(room.id),
+      );
+
+      // Assert
+      expect(reads).toEqual(['lock rooms', 'select rooms']);
+    });
+
+    it('should read a room in one statement, without locking it, outside a command', async () => {
+      // Arrange
+      const { room } = await savedRoom();
+      const { db, reads } = recordingReads(database.db());
+
+      // Act
+      await new PostgresRoomRepository(db, 'TestInstanceA').findById(room.id);
+
+      // Assert
+      expect(reads).toEqual(['select rooms']);
+    });
+
+    it('should see what the command that held the room saved while it waited', async () => {
+      // Arrange: a command reads the room and connects Luis a while later.
+      const { room } = await savedRoom();
+      const rooms = new PostgresRoomRepository(database.db(), 'TestInstanceA');
+      const luis = room.players[1]!;
+      let firstRead!: () => void;
+      const read = new Promise<void>((resolve) => (firstRead = resolve));
+      const first = inTransaction(database.db(), async () => {
+        const found = (await rooms.findById(room.id))!;
+        firstRead();
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        found.connect(luis.id, 'TestLuisConnection');
+        await rooms.save(found);
+      });
+
+      // Act: another command reads the room meanwhile, and waits for the first one.
+      const seen = read.then(() => inTransaction(database.db(), () => rooms.findById(room.id)));
+      await first;
+
+      // Assert
+      expect((await seen)?.isConnected(luis.id)).toBe(true);
     });
 
     it('should not make a read outside a command wait', async () => {

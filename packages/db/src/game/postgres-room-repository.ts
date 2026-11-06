@@ -1,5 +1,6 @@
 import { Room, type RoomRepository, type RoomSnapshot } from '@thelever-app/game';
 import type { Kysely, Transaction } from 'kysely';
+import { jsonArrayFrom } from 'kysely/helpers/postgres';
 import type { Database } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
 
@@ -25,35 +26,16 @@ export class PostgresRoomRepository implements RoomRepository {
 
   async findById(id: string): Promise<Room | undefined> {
     const transaction = currentTransaction();
-    const db = transaction ?? this.#db;
     // Only a command locks: a query reads without waiting.
-    const room = await db
-      .selectFrom('rooms')
-      .selectAll()
-      .where('id', '=', id)
-      .$if(transaction !== undefined, (query) => query.forUpdate())
-      .executeTakeFirst();
+    if (transaction) await lockRoom(transaction, id);
+    const room = await readRoom(transaction ?? this.#db, id);
     if (!room) return undefined;
-
-    const players = await db
-      .selectFrom('room_players')
-      .select(['id', 'nickname', 'identity'])
-      .where('room_id', '=', id)
-      .orderBy('position')
-      .execute();
-    const connections = await db
-      .selectFrom('room_connections')
-      .innerJoin('room_players', 'room_players.id', 'room_connections.player_id')
-      .select(['room_connections.player_id as playerId', 'room_connections.id as connectionId'])
-      .where('room_players.room_id', '=', id)
-      .execute();
-
     return Room.restore({
       id: room.id,
       hostId: room.host_player_id,
       version: room.version,
-      players,
-      connections,
+      players: room.players,
+      connections: room.connections,
     });
   }
 
@@ -112,4 +94,37 @@ export class PostgresRoomRepository implements RoomRepository {
       .onConflict((conflict) => conflict.column('id').doNothing())
       .execute();
   }
+}
+
+/**
+ * Locks the room, in a statement of its own: one that also read its players and connections would see
+ * them as they were before waiting for the lock, without what the command that held it committed.
+ */
+async function lockRoom(transaction: Transaction<Database>, id: string): Promise<void> {
+  await transaction.selectFrom('rooms').select('id').where('id', '=', id).forUpdate().execute();
+}
+
+/** The room with its players and connections, in one round trip. */
+function readRoom(db: Kysely<Database>, id: string) {
+  return db
+    .selectFrom('rooms')
+    .selectAll('rooms')
+    .select((eb) => [
+      jsonArrayFrom(
+        eb
+          .selectFrom('room_players')
+          .select(['room_players.id', 'room_players.nickname', 'room_players.identity'])
+          .whereRef('room_players.room_id', '=', 'rooms.id')
+          .orderBy('room_players.position'),
+      ).as('players'),
+      jsonArrayFrom(
+        eb
+          .selectFrom('room_connections')
+          .innerJoin('room_players', 'room_players.id', 'room_connections.player_id')
+          .select(['room_connections.player_id as playerId', 'room_connections.id as connectionId'])
+          .whereRef('room_players.room_id', '=', 'rooms.id'),
+      ).as('connections'),
+    ])
+    .where('rooms.id', '=', id)
+    .executeTakeFirst();
 }
