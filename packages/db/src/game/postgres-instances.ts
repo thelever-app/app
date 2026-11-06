@@ -1,6 +1,6 @@
 import { type Kysely, sql } from 'kysely';
 import pg from 'pg';
-import type { Database } from '../schema.ts';
+import type { GameTables } from '../schema.ts';
 
 /** What PostgreSQL answers when a row is still referenced: here, by the connections of the instance. */
 const FOREIGN_KEY_VIOLATION = '23503';
@@ -10,9 +10,9 @@ const FOREIGN_KEY_VIOLATION = '23503';
  * database, so the clocks of the instances never disagree.
  */
 export class PostgresInstances {
-  readonly #db: Kysely<Database>;
+  readonly #db: Kysely<GameTables>;
 
-  constructor(db: Kysely<Database>) {
+  constructor(db: Kysely<GameTables>) {
     this.#db = db;
   }
 

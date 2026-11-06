@@ -1,7 +1,7 @@
 import { Room, type RoomRepository, type RoomSnapshot } from '@thelever-app/game';
 import type { Kysely, Transaction } from 'kysely';
 import { jsonArrayFrom } from 'kysely/helpers/postgres';
-import type { Database } from '../schema.ts';
+import type { GameTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
 
 /**
@@ -9,23 +9,23 @@ import { currentTransaction } from '../transaction.ts';
  * on one room never overlap, whatever instance runs them.
  */
 export class PostgresRoomRepository implements RoomRepository {
-  readonly #db: Kysely<Database>;
+  readonly #db: Kysely<GameTables>;
   /** The instance of the server this repository runs in: the one serving the connections it saves. */
   readonly #instanceId: string;
 
-  constructor(db: Kysely<Database>, instanceId: string) {
+  constructor(db: Kysely<GameTables>, instanceId: string) {
     this.#db = db;
     this.#instanceId = instanceId;
   }
 
   async save(room: Room): Promise<void> {
-    const transaction = currentTransaction();
+    const transaction = currentTransaction<GameTables>();
     if (transaction) return this.#save(transaction, room.toSnapshot());
     await this.#db.transaction().execute((own) => this.#save(own, room.toSnapshot()));
   }
 
   async findById(id: string): Promise<Room | undefined> {
-    const transaction = currentTransaction();
+    const transaction = currentTransaction<GameTables>();
     // Only a command locks: a query reads without waiting.
     if (transaction) await lockRoom(transaction, id);
     const room = await readRoom(transaction ?? this.#db, id);
@@ -39,7 +39,7 @@ export class PostgresRoomRepository implements RoomRepository {
     });
   }
 
-  async #save(db: Transaction<Database>, snapshot: RoomSnapshot): Promise<void> {
+  async #save(db: Transaction<GameTables>, snapshot: RoomSnapshot): Promise<void> {
     const { id, hostId, version, players, connections } = snapshot;
     await db
       .insertInto('rooms')
@@ -100,12 +100,12 @@ export class PostgresRoomRepository implements RoomRepository {
  * Locks the room, in a statement of its own: one that also read its players and connections would see
  * them as they were before waiting for the lock, without what the command that held it committed.
  */
-async function lockRoom(transaction: Transaction<Database>, id: string): Promise<void> {
+async function lockRoom(transaction: Transaction<GameTables>, id: string): Promise<void> {
   await transaction.selectFrom('rooms').select('id').where('id', '=', id).forUpdate().execute();
 }
 
 /** The room with its players and connections, in one round trip. */
-function readRoom(db: Kysely<Database>, id: string) {
+function readRoom(db: Kysely<GameTables>, id: string) {
   return db
     .selectFrom('rooms')
     .selectAll('rooms')

@@ -14,7 +14,11 @@ export async function inTransaction<T>(db: Kysely<Database>, work: () => Promise
   return db.transaction().execute((transaction) => current.run(transaction, work));
 }
 
-/** The transaction of the command in progress, if any. */
-export function currentTransaction(): Transaction<Database> | undefined {
-  return current.getStore();
+/**
+ * The transaction of the command in progress, if any, seen through the tables of the context that
+ * asks: the same connection, with only the tables its adapters may touch.
+ */
+export function currentTransaction<Tables extends Partial<Database> = Database>():
+  Transaction<Tables> | undefined {
+  return current.getStore() as Transaction<Tables> | undefined;
 }
