@@ -18,6 +18,7 @@ import {
 } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../../schema.ts';
+import { recordingReads } from '../../test/support/recording-reads.ts';
 import { emptyTables, useTestDatabase } from '../../test/support/test-database.ts';
 import { PostgresDilemmaRepository } from '../../dilemmas/postgres-dilemma-repository.ts';
 import { PostgresGameRepository } from '../postgres-game-repository.ts';
@@ -188,6 +189,39 @@ describe('PostgresGameRepository inside a command', () => {
     ]);
   });
 
+  it('should read a game in one statement, after locking its room in another', async () => {
+    // Arrange
+    const { gameId } = await answeredGame();
+    const { db, reads } = recordingReads(database.db());
+
+    // Act
+    await inTransaction(db, () => new PostgresGameRepository(db).findById(gameId));
+
+    // Assert
+    expect(reads).toEqual(['lock rooms', 'select games']);
+  });
+
+  it('should see what the command that held its room saved while it waited', async () => {
+    // Arrange: a command reads the game and answers for Ana a while later.
+    const { games, gameId, ana, second } = await answeredGame();
+    let firstRead!: () => void;
+    const read = new Promise<void>((resolve) => (firstRead = resolve));
+    const first = inTransaction(database.db(), async () => {
+      const game = (await games.findById(gameId))!;
+      firstRead();
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      game.answer(ana, second.id, second.options[0]!.id, SEAL_BEFORE_FIRST_ACCESS);
+      await games.save(game);
+    });
+
+    // Act: another command reads the game meanwhile, and waits for the first one.
+    const seen = read.then(() => inTransaction(database.db(), () => games.findById(gameId)));
+    await first;
+
+    // Assert
+    expect((await seen)?.progressOf(ana)).toBe(2);
+  });
+
   it('should save in full a game the command did not read', async () => {
     // Arrange
     const { games, gameId, ana, second } = await answeredGame();
@@ -224,5 +258,30 @@ describe('PostgresGameRepository inside a command', () => {
 
     // Assert
     expect((await games.findById(game.id))?.dilemmas).toEqual(dilemmas);
+  });
+});
+
+describe('PostgresGameRepository outside a command', () => {
+  it('should read a game in one statement, without locking anything', async () => {
+    // Arrange
+    await emptyTables(database.db());
+    await database
+      .db()
+      .insertInto('instances')
+      .values({ id: 'TestInstanceId', seen_at: new Date() })
+      .execute();
+    const ids = new GameIds();
+    const room = Room.create({ hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' }, ids);
+    await new PostgresRoomRepository(database.db(), 'TestInstanceId').save(room);
+    const dilemmas = [{ dilemmaId: 'TestDilemma1', version: 1, optionIds: ['TestOptionA'] }];
+    const game = Game.create({ roomId: room.id, dilemmas }, ids);
+    await new PostgresGameRepository(database.db()).save(game);
+    const { db, reads } = recordingReads(database.db());
+
+    // Act
+    await new PostgresGameRepository(db).findById(game.id);
+
+    // Assert
+    expect(reads).toEqual(['select games']);
   });
 });

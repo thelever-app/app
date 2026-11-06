@@ -31,8 +31,8 @@ interface Target {
  */
 const ROOMS = Number(process.env.LOAD_ROOMS ?? 3);
 const PLAYERS = Number(process.env.LOAD_PLAYERS ?? 50);
-/** How long a player thinks before each answer, at random within this range. */
-const THINK_MS = [2000, 8000] as const;
+/** How long a player reads, votes and predicts each dilemma, at random within this range. */
+const THINK_MS = [15000, 45000] as const;
 /** How many rooms are set up at once, so the setup does not measure itself. */
 const SETUP_IN_PARALLEL = 10;
 
