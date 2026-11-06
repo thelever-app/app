@@ -5,7 +5,8 @@ import { readdirSync, readFileSync } from 'node:fs';
  * Applies the dashboard and the alert policies of the room server to one environment, with the
  * credentials of whoever runs it: `node ops/monitoring/apply.ts dev`. Each one is found by its
  * display name and updated, or created if it does not exist yet, so running it again changes
- * only what changed here. The alerts go by email to the owner of the projects.
+ * only what changed here. An alert whose metric does not exist yet is skipped, and created by a
+ * later run. The alerts go by email to the owner of the projects.
  */
 
 const ALERTS_EMAIL = 'devopsrdc@gmail.com';
@@ -92,14 +93,32 @@ async function applyAlerts(channel: string): Promise<void> {
   for (const file of files.sort()) {
     const policy = { ...read(`./alerts/${file}`), notificationChannels: [channel] };
     const existing = alertPolicies.find(({ displayName }) => displayName === policy.displayName);
-    if (existing) {
-      await call('PATCH', `/v3/${existing.name}`, { ...policy, name: existing.name });
-      console.log(`updated alert "${policy.displayName}"`);
-    } else {
-      await call('POST', `/v3/projects/${project}/alertPolicies`, policy);
-      console.log(`created alert "${policy.displayName}"`);
+    try {
+      await applyAlert(policy, existing);
+    } catch (error) {
+      if (!isMissingMetric(error)) throw error;
+      // A metric exists once the room server first records it: the first game, the first error.
+      console.log(`skipped alert "${policy.displayName}": its metric does not exist yet`);
     }
   }
+}
+
+async function applyAlert(
+  policy: { readonly displayName: string },
+  existing: Named | undefined,
+): Promise<void> {
+  if (existing) {
+    await call('PATCH', `/v3/${existing.name}`, { ...policy, name: existing.name });
+    console.log(`updated alert "${policy.displayName}"`);
+  } else {
+    await call('POST', `/v3/projects/${project}/alertPolicies`, policy);
+    console.log(`created alert "${policy.displayName}"`);
+  }
+}
+
+/** Cloud Monitoring refuses an alert on a metric that no one has written yet. */
+function isMissingMetric(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('Cannot find metric');
 }
 
 const channel = await emailChannel();

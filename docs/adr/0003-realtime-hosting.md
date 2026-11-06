@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-23
+- Revised: 2026-11-06, the cost of a stopped instance, `dev` always on and the CPU always allocated
 - Notion: [ADR 0003: tiempo real y hosting (ws en Cloud Run, Dockerfile propio, Cloud SQL y LISTEN/NOTIFY entre instancias)](https://app.notion.com/p/40295e6919c581dc86aad593a70a5756)
 
 ## Context
@@ -46,7 +47,7 @@ Facts about Cloud Run, from its [WebSockets documentation](https://docs.cloud.go
 
 **PostgreSQL provider**
 
-1. Cloud SQL for PostgreSQL, Enterprise edition, zonal. In Madrid, from the Cloud Billing catalogue on 23 October: micro shared-core instance 0.01109 €/h (about 8.10 €/month), small 0.03696 €/h (about 27 €/month), SSD storage 0.17952 €/GiB-month (10 GiB minimum, about 1.80 €/month), plus backups. No free tier. A stopped instance only pays storage.
+1. Cloud SQL for PostgreSQL, Enterprise edition, zonal. In Madrid, from the Cloud Billing catalogue on 23 October: micro shared-core instance 0.01109 €/h (about 8.10 €/month), small 0.03696 €/h (about 27 €/month), SSD storage 0.17952 €/GiB-month (10 GiB minimum, about 1.80 €/month), plus backups. No free tier. A stopped instance still pays its storage and its public IP address (0.0108 €/h), so stopping it saves under 0.40 € a month.
 2. AlloyDB. Far above the needs and the budget.
 3. PostgreSQL on a VM. Cheapest, but patched and backed up by hand.
 4. A provider outside GCP with an EU region and scale to zero (Neon, Supabase). Cheaper while idle, but leaves GCP, adds a processor under GDPR and does not reach Cloud Run through the Cloud SQL connector.
@@ -78,11 +79,11 @@ Facts about Cloud Run, from its [WebSockets documentation](https://docs.cloud.go
 - **Message order:** every `GameStateDto` and `ProgressUpdatedDto` carries the version of the game it was computed from (the aggregate's version stored by the PostgreSQL adapter). The client applies a message only if its version is not older than the one it holds. Inside one instance, the commands of one game are handled one after another.
 - **Errors:** a rejected command gets an `ErrorDto` back on the same socket, with a stable error code taken from the domain error and the type of the command it answers. The client translates the code; the server never sends text for the screen.
 - **Reconnection:** the client reconnects on any close with backoff and jitter, authenticates again, and the server answers with a fresh `GameStateDto`. Any instance can serve it, because the state is in PostgreSQL. The server sends WebSocket pings to detect dead connections.
-- **PostgreSQL provider:** Cloud SQL for PostgreSQL 18, Enterprise edition, zonal, micro instance, one per environment, with backups, deletion protection, encrypted connections only and IAM database authentication enabled. The `dev` instance is stopped when unused. Cloud Run reaches it through the Cloud SQL connector. Size and high availability are revisited before launch.
+- **PostgreSQL provider:** Cloud SQL for PostgreSQL 18, Enterprise edition, zonal, micro instance, one per environment, with backups, deletion protection, encrypted connections only and IAM database authentication enabled. The `dev` instance stays on, like `prod`. Cloud Run reaches it through the Cloud SQL connector. Size and high availability are revisited before launch.
 
 ## Consequences
 
 - Easier: one place for state (PostgreSQL), so restarts, deploys and the hourly cut lose nothing; no extra service to run; the same Dockerfile works locally, in CI and in Cloud Run; everything stays in Madrid; production runs exactly the image tested in development.
 - Harder: rooms, heartbeats, reconnection and the version check are written by hand; every event goes through PostgreSQL; integration tests need a PostgreSQL with `LISTEN/NOTIFY`.
-- Cost: Cloud SQL is the fixed cost (about 10 € per month and environment while it runs; `dev` only while in use). Cloud Run costs nothing without players, and bills an instance's CPU while any socket is open.
+- Cost: Cloud SQL is the fixed cost (about 10 € per month and environment). Cloud Run costs nothing without players. Its CPU stays allocated between requests, because the beat of the instance, the check of `LISTEN`, the cleaning of dead instances and the export of telemetry run on timers: an instance is billed for as long as it lives, until Cloud Run retires it after its last socket closes.
 - Watch: TSK-24 measures on Cloud Run with the real server (wss, the cut at the timeout, reconnection to the room, a room spread across instances) and RNF-08 on real devices; if the results contradict this ADR, a new ADR supersedes it. `NOTIFY` payloads stay below 8000 bytes. A dedicated `LISTEN` connection does not go through a transaction pooler.
