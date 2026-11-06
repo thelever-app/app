@@ -92,6 +92,9 @@ importers:
       '@thelever-app/game':
         specifier: workspace:*
         version: link:../../packages/game
+      '@thelever-app/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       '@thelever-app/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
@@ -150,6 +153,9 @@ importers:
       '@thelever-app/game':
         specifier: workspace:*
         version: link:../../packages/game
+      '@thelever-app/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       '@thelever-app/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
@@ -241,6 +247,9 @@ importers:
       '@thelever-app/config':
         specifier: workspace:*
         version: link:../config
+      '@thelever-app/integrations':
+        specifier: workspace:*
+        version: link:../integrations
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
@@ -264,10 +273,19 @@ importers:
         version: link:../config
 
   packages/game:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
+  packages/integrations:
     dependencies:
       '@thelever-app/dilemmas':
         specifier: workspace:*
         version: link:../dilemmas
+      '@thelever-app/game':
+        specifier: workspace:*
+        version: link:../game
     devDependencies:
       '@thelever-app/config':
         specifier: workspace:*

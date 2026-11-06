@@ -54,22 +54,22 @@ export class PostgresGameRepository implements GameRepository {
     const game = await db.selectFrom('games').selectAll().where('id', '=', id).executeTakeFirst();
     if (!game) return undefined;
 
-    // The options of each dilemma are those of the version played, in their order.
+    // The options the game copied of each dilemma when it started, in their order.
     const options = await db
       .selectFrom('game_dilemmas')
-      .innerJoin('dilemma_version_options', (join) =>
+      .innerJoin('game_dilemma_options', (join) =>
         join
-          .onRef('dilemma_version_options.dilemma_id', '=', 'game_dilemmas.dilemma_id')
-          .onRef('dilemma_version_options.version', '=', 'game_dilemmas.dilemma_version'),
+          .onRef('game_dilemma_options.game_id', '=', 'game_dilemmas.game_id')
+          .onRef('game_dilemma_options.dilemma_id', '=', 'game_dilemmas.dilemma_id'),
       )
       .select([
         'game_dilemmas.dilemma_id as dilemmaId',
         'game_dilemmas.dilemma_version as version',
-        'dilemma_version_options.option_id as optionId',
+        'game_dilemma_options.option_id as optionId',
       ])
       .where('game_dilemmas.game_id', '=', id)
       .orderBy('game_dilemmas.position')
-      .orderBy('dilemma_version_options.position')
+      .orderBy('game_dilemma_options.position')
       .execute();
     const dilemmas = new Map<string, { version: number; optionIds: string[] }>();
     for (const { dilemmaId, version, optionId } of options) {
@@ -173,7 +173,7 @@ export class PostgresGameRepository implements GameRepository {
       .execute();
   }
 
-  /** The dilemmas of a game never change once it exists. */
+  /** The dilemmas of a game, and the options it copied of each, never change once it exists. */
   async #saveDilemmas(db: Transaction<Database>, { id, dilemmas }: GameSnapshot): Promise<void> {
     await db
       .insertInto('game_dilemmas')
@@ -186,6 +186,22 @@ export class PostgresGameRepository implements GameRepository {
         })),
       )
       .onConflict((conflict) => conflict.columns(['game_id', 'position']).doNothing())
+      .execute();
+    await db
+      .insertInto('game_dilemma_options')
+      .values(
+        dilemmas.flatMap(({ dilemmaId, optionIds }) =>
+          optionIds.map((optionId, position) => ({
+            game_id: id,
+            dilemma_id: dilemmaId,
+            option_id: optionId,
+            position,
+          })),
+        ),
+      )
+      .onConflict((conflict) =>
+        conflict.columns(['game_id', 'dilemma_id', 'option_id']).doNothing(),
+      )
       .execute();
   }
 

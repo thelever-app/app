@@ -1,21 +1,24 @@
 import {
-  DilemmaNotFoundError as DilemmasContextNotFoundError,
+  DilemmaNotFoundError as DilemmasNotFoundError,
+  type GetDilemmas,
   type GetDilemmasInput,
   type GetDilemmasOutput,
-  type GetDilemmasUseCase,
-} from '@thelever-app/dilemmas';
-import { DilemmaNotFoundError } from '../../application/errors/dilemma-not-found.error.ts';
-import type {
-  DilemmaCatalog,
-  DilemmaContent,
-} from '../../application/ports/dilemma-catalog.port.ts';
-import type { GameDilemma } from '../../domain/entities/game.ts';
+} from '@thelever-app/dilemmas/published';
+import {
+  type DilemmaCatalog,
+  type DilemmaContent,
+  DilemmaNotFoundError,
+  type GameDilemma,
+} from '@thelever-app/game';
 
-/** Asks the Dilemmas context through its use case and translates its answers and errors to the Game context. */
-export class DilemmasContextCatalog implements DilemmaCatalog {
-  readonly #getDilemmas: GetDilemmasUseCase;
+/**
+ * The anticorruption layer between Game and Dilemmas (ADR 0001): implements the catalog Game asks
+ * for on top of the query Dilemmas publishes, and translates its answers and errors to Game.
+ */
+export class PublishedDilemmasCatalog implements DilemmaCatalog {
+  readonly #getDilemmas: GetDilemmas;
 
-  constructor(getDilemmas: GetDilemmasUseCase) {
+  constructor(getDilemmas: GetDilemmas) {
     this.#getDilemmas = getDilemmas;
   }
 
@@ -42,7 +45,7 @@ export class DilemmasContextCatalog implements DilemmaCatalog {
       const { dilemmas } = await this.#getDilemmas.execute(input);
       return dilemmas;
     } catch (error) {
-      if (error instanceof DilemmasContextNotFoundError) {
+      if (error instanceof DilemmasNotFoundError) {
         throw new DilemmaNotFoundError(error.dilemmaId);
       }
       throw error;

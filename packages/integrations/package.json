@@ -1,0 +1,19 @@
+{
+  "name": "@thelever-app/integrations",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./game": "./src/game/index.ts"
+  },
+  "dependencies": {
+    "@thelever-app/dilemmas": "workspace:*",
+    "@thelever-app/game": "workspace:*"
+  },
+  "devDependencies": {
+    "@thelever-app/config": "workspace:*"
+  }
+}

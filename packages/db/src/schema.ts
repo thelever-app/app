@@ -66,6 +66,13 @@ export interface Database {
     dilemma_id: string;
     dilemma_version: number;
   };
+  /** The options of each dilemma a game plays, copied when it starts: Game reads only its own tables. */
+  game_dilemma_options: {
+    game_id: string;
+    dilemma_id: string;
+    option_id: string;
+    position: number;
+  };
   game_players: {
     game_id: string;
     player_id: string;

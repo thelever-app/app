@@ -16,6 +16,7 @@
     "@opentelemetry/context-async-hooks": "^3.0.0",
     "@opentelemetry/core": "^3.0.0",
     "@thelever-app/config": "workspace:*",
+    "@thelever-app/integrations": "workspace:*",
     "@types/pg": "^8.23.1"
   },
   "dependencies": {

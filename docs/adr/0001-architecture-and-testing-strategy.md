@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-15
+- Revised: 2026-11-04 (integration between bounded contexts)
 - Notion: [ADR 0001: arquitectura y estrategia de tests (DDD, hexagonal y BDD en dos niveles)](https://app.notion.com/p/3fa95e6919c581bb8105c6c894a93074)
 
 ## Context
@@ -33,6 +34,8 @@ Option 2.
 - Application: one use case per command or query, depending only on the domain and on ports (interfaces) it declares, such as a room repository, a clock or a notifier.
 - Adapters: implementations of the ports and entry points. WebSocket and HTTP in `apps/realtime`, React in `apps/web`, the database in `packages/db`, and in-memory versions for tests and for the simulated room.
 
+**Integration between bounded contexts.** A context never imports another context. When a context needs something from another one, it declares a port in its own language (as Game declares `DilemmaCatalog`). The context that provides it publishes what it promises in a published language: interfaces of its application and plain data types, exported only from its `/published` entry (as Dilemmas publishes `GetDilemmas`). An anticorruption layer in `packages/integrations`, one folder per consuming context, implements the consumer's port on top of the provider's published language and translates its errors. Each context owns its tables: no adapter of one context reads the tables of another, and no foreign key crosses from one context's tables to another's. What a context must keep from another, such as the options of the dilemmas a game plays, it copies into its own tables when it takes it. In-memory adapters and decorators of a context's own ports live in the context, in their own entries (`/in-memory`, `/cache`); its domain and application never import them. ESLint enforces these rules.
+
 The server is authoritative: the client renders state received from the application layer and never decides game rules.
 
 **Ubiquitous language.** A glossary in Notion lists every term in Spanish and English with its definition. Scenarios and code use the English terms.
@@ -54,5 +57,6 @@ Step texts are written once. Step definitions talk to a driver that expresses ac
 ## Consequences
 
 - Easier: the rules of the game live in one place and are tested in milliseconds; transport, database and hosting can change without touching them; scenarios that are invisible in the UI are executable; an agentic flow later gets a clear map of where each change goes.
-- Harder: more files and indirection than a layered app; ports and adapters must be kept thin; the glossary and the Gherkin must be maintained together.
+- Harder: more files and indirection than a layered app; ports and adapters must be kept thin; the glossary and the Gherkin must be maintained together. Every integration between contexts needs a port, a published interface and an adapter, and data copied between contexts must be copied when it is taken.
+- Easier, since 2026-11-04: a context can change its tables and its model without touching any other one; the dependencies between packages form no cycle and are checked by the linter.
 - Watch: the domain must not import from adapters (enforce with a lint rule on imports); the in-memory adapters used by acceptance tests must keep the same contract as the real ones, checked by shared contract tests when the real adapters arrive; acceptance tests must stay fast enough to run on every pull request.
