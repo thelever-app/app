@@ -42,7 +42,9 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
           vote,
         }),
       );
-      // Once committed. The use case only tells the others: the player learns their own progress from a fresh state.
+      // Once committed, and still in the lock. The use case only tells the others: the player learns
+      // their own progress from this state, and the screen applies a later change only on top of a
+      // state that has it, so nothing newer may reach them first.
       await this.#stateSender.send(connection, session);
     } finally {
       release();

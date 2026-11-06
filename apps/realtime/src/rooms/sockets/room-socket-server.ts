@@ -1,5 +1,5 @@
 import type { Server } from 'node:http';
-import { propagation, ROOT_CONTEXT } from '@opentelemetry/api';
+import { type Context, propagation, ROOT_CONTEXT, type Span } from '@opentelemetry/api';
 import type { Logger } from '@thelever-app/db';
 import { ClientMessageDto, ClientMessageTypeDto, type ErrorCodeDto } from '@thelever-app/protocol';
 import { WebSocketServer, type WebSocket } from 'ws';
@@ -25,6 +25,21 @@ function read(data: string): {
   const type = ClientMessageTypeDto.safeParse((raw as { type?: unknown } | null)?.type);
   const message = ClientMessageDto.safeParse(raw);
   return { command: type.success ? type.data : null, message: message.data };
+}
+
+/** How a message ended, as its duration is counted. */
+type Outcome = 'ok' | 'rejected' | 'error';
+
+/** The game a message is about: the one of the connection, or the one `connect` names. */
+function gameIdOf(message: ClientMessageDto | undefined, connection: RoomConnection) {
+  return connection.session?.gameId ?? (message?.type === 'connect' ? message.gameId : undefined);
+}
+
+/** The trace the device started for the command, if it sent one. */
+function traceOf(message: ClientMessageDto | undefined): Context {
+  return message?.traceparent
+    ? propagation.extract(ROOT_CONTEXT, { traceparent: message.traceparent })
+    : ROOT_CONTEXT;
 }
 
 /**
@@ -107,56 +122,61 @@ export class RoomSocketServer {
   #serve(connection: RoomConnection): void {
     this.#connections.add(connection);
     instruments().openSockets.add(1);
-    connection.socket.on('message', (data) => {
-      const { command, message } = read(String(data));
-      const gameId =
-        connection.session?.gameId ?? (message?.type === 'connect' ? message.gameId : undefined);
-      // The trace of the command starts on the device that sent it, when it says which.
-      const parent = message?.traceparent
-        ? propagation.extract(ROOT_CONTEXT, { traceparent: message.traceparent })
-        : ROOT_CONTEXT;
-      const started = performance.now();
-      return inSpan(
-        `ws ${command ?? 'unknown'}`,
-        { 'message.type': command ?? 'unknown', [GAME_ID]: gameId },
-        (span) =>
-          this.#dispatch(message, connection)
-            .then(() => 'ok' as const)
-            .catch((error: unknown) => {
-              const code = error instanceof Rejection ? error.code : this.#codeOf(error);
-              if (code) {
-                // The rules turning a command down is an answer, not a failure of the server.
-                span.setAttribute('rejection.code', code);
-                this.#logger.info('command rejected', { command: command ?? 'unknown', code });
-                connection.send({ type: 'error', command, code });
-                return 'rejected' as const;
-              }
-              markFailed(span, error);
-              this.#logger.error('socket message failed', error, {
-                command: command ?? 'unknown',
-              });
-              connection.socket.close(1011, 'internal error');
-              return 'error' as const;
-            })
-            .then((outcome) => {
-              instruments().messageDuration.record(performance.now() - started, {
-                'message.type': command ?? 'unknown',
-                outcome,
-              });
-            }),
-        { parent },
-      );
-    });
+    connection.socket.on('message', (data) => this.#onMessage(String(data), connection));
+    connection.socket.on('close', () => this.#onClose(connection));
+  }
 
-    connection.socket.on('close', () => {
-      this.#connections.delete(connection);
-      instruments().openSockets.add(-1);
-      if (this.#leaving) return;
-      inSpan('ws disconnect', { [GAME_ID]: connection.session?.gameId }, () =>
-        this.#disconnect.handle(connection),
-      ).catch((error: unknown) => {
-        this.#logger.error('disconnecting a closed socket failed', error);
-      });
+  /** Handles one message in a span of its own, and times it by its type and how it ended. */
+  async #onMessage(data: string, connection: RoomConnection): Promise<void> {
+    const { command, message } = read(data);
+    const type = command ?? 'unknown';
+    const started = performance.now();
+    const outcome = await inSpan(
+      `ws ${type}`,
+      { 'message.type': type, [GAME_ID]: gameIdOf(message, connection) },
+      (span) => this.#handle(message, command, connection, span),
+      { parent: traceOf(message) },
+    );
+    instruments().messageDuration.record(performance.now() - started, {
+      'message.type': type,
+      outcome,
+    });
+  }
+
+  /** Runs the message, and answers what goes wrong: with its code, or by closing the socket. */
+  async #handle(
+    message: ClientMessageDto | undefined,
+    command: ClientMessageTypeDto | null,
+    connection: RoomConnection,
+    span: Span,
+  ): Promise<Outcome> {
+    try {
+      await this.#dispatch(message, connection);
+      return 'ok';
+    } catch (error) {
+      const code = error instanceof Rejection ? error.code : this.#codeOf(error);
+      if (code) {
+        // The rules turning a command down is an answer, not a failure of the server.
+        span.setAttribute('rejection.code', code);
+        this.#logger.info('command rejected', { command: command ?? 'unknown', code });
+        connection.send({ type: 'error', command, code });
+        return 'rejected';
+      }
+      markFailed(span, error);
+      this.#logger.error('socket message failed', error, { command: command ?? 'unknown' });
+      connection.socket.close(1011, 'internal error');
+      return 'error';
+    }
+  }
+
+  #onClose(connection: RoomConnection): void {
+    this.#connections.delete(connection);
+    instruments().openSockets.add(-1);
+    if (this.#leaving) return;
+    inSpan('ws disconnect', { [GAME_ID]: connection.session?.gameId }, () =>
+      this.#disconnect.handle(connection),
+    ).catch((error: unknown) => {
+      this.#logger.error('disconnecting a closed socket failed', error);
     });
   }
 
