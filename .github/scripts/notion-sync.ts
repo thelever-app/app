@@ -29,9 +29,10 @@ function targetFor(eventName: string): Target | null {
     return { state: 'En revisión', prUrl: env('PR_URL') };
   }
   if (action === 'closed') {
-    return process.env.PR_MERGED === 'true'
-      ? { state: 'Listo', prUrl: env('PR_URL') }
-      : { state: 'En progreso', prUrl: null };
+    if (process.env.PR_MERGED !== 'true') return { state: 'En progreso', prUrl: null };
+    // A task can take several PRs: only the one labelled closes-task finishes it.
+    const closesTask = process.env.PR_CLOSES_TASK === 'true';
+    return { state: closesTask ? 'Listo' : 'En progreso', prUrl: env('PR_URL') };
   }
   return null;
 }

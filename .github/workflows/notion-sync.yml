@@ -42,4 +42,5 @@ jobs:
           BRANCH: ${{ github.event_name == 'create' && github.event.ref || github.head_ref }}
           PR_ACTION: ${{ github.event.action }}
           PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_CLOSES_TASK: ${{ contains(github.event.pull_request.labels.*.name, 'closes-task') }}
           PR_URL: ${{ github.event.pull_request.html_url }}
