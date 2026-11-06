@@ -6,7 +6,16 @@ import {
   SEAL_BEFORE_FIRST_ACCESS,
   SequentialIdGenerator as GameIds,
 } from '@thelever-app/game/in-memory';
-import { sql } from 'kysely';
+import {
+  DeleteQueryNode,
+  InsertQueryNode,
+  type KyselyPlugin,
+  type OperationNode,
+  sql,
+  type TableNode,
+  UpdateQueryNode,
+  ValuesNode,
+} from 'kysely';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../../schema.ts';
 import { emptyTables, useTestDatabase } from '../../test/support/test-database.ts';
@@ -88,6 +97,33 @@ describe('PostgresGameRepository inside a command', () => {
     return { games, gameId: game.id, ana: ana.id, luis: luis.id, first, second };
   }
 
+  /**
+   * The database, and each statement that writes through it: its table and how many rows it sends.
+   * A statement that changes no row (an insert that conflicts, a delete of nothing) counts too.
+   */
+  function recordingWrites() {
+    const writes: string[] = [];
+    const nameOf = (table: TableNode) => table.table.identifier.name;
+    const describe = (node: OperationNode): string | undefined => {
+      if (InsertQueryNode.is(node) && node.into) {
+        const rows = node.values && ValuesNode.is(node.values) ? node.values.values.length : 1;
+        return `insert ${nameOf(node.into)} ${rows}`;
+      }
+      if (UpdateQueryNode.is(node) && node.table) return `update ${String(node.table.kind)}`;
+      if (DeleteQueryNode.is(node)) return `delete ${nameOf(node.from.froms[0] as TableNode)}`;
+      return undefined;
+    };
+    const plugin: KyselyPlugin = {
+      transformQuery: ({ node }) => {
+        const write = describe(node);
+        if (write) writes.push(write);
+        return node;
+      },
+      transformResult: async ({ result }) => result,
+    };
+    return { db: database.db().withPlugin(plugin), writes };
+  }
+
   /** Each row of the game's tables with the transaction that last wrote it. */
   async function writers() {
     const { rows } = await sql<{ row: string; xmin: string }>`
@@ -103,9 +139,10 @@ describe('PostgresGameRepository inside a command', () => {
     // Arrange
     const { games, gameId, ana, luis, first, second } = await answeredGame();
     const before = await writers();
+    const { db, writes } = recordingWrites();
 
     // Act
-    await inTransaction(database.db(), async () => {
+    await inTransaction(db, async () => {
       const game = (await games.findById(gameId))!;
       game.answer(ana, second.id, second.options[0]!.id, SEAL_BEFORE_FIRST_ACCESS);
       await games.save(game);
@@ -118,14 +155,16 @@ describe('PostgresGameRepository inside a command', () => {
       .map(([row]) => row);
     expect(rewritten.sort()).toEqual(['game', `answer ${ana} ${second.id}`].sort());
     expect(after.get(`answer ${luis} ${first.id}`)).toBe(before.get(`answer ${luis} ${first.id}`));
+    expect(writes).toEqual(['insert games 1', 'insert answers 1']);
   });
 
   it('should keep every change of a command that saves the game twice', async () => {
     // Arrange
     const { games, gameId, ana, luis, first, second } = await answeredGame();
+    const { db, writes } = recordingWrites();
 
     // Act
-    await inTransaction(database.db(), async () => {
+    await inTransaction(db, async () => {
       const game = (await games.findById(gameId))!;
       game.answer(ana, first.id, first.options[1]!.id, SEAL_BEFORE_FIRST_ACCESS);
       await games.save(game);
@@ -139,6 +178,13 @@ describe('PostgresGameRepository inside a command', () => {
     expect(found?.answersOf(luis)).toEqual([
       { dilemmaId: first.id, vote: first.options[0]!.id },
       { dilemmaId: second.id, vote: second.options[1]!.id },
+    ]);
+    // The second save compares with the first one, not with what the command read.
+    expect(writes).toEqual([
+      'insert games 1',
+      'insert answers 1',
+      'insert games 1',
+      'insert answers 1',
     ]);
   });
 

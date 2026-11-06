@@ -1,5 +1,4 @@
 import { createServer, type Server } from 'node:http';
-import { type Attributes, SpanKind } from '@opentelemetry/api';
 import {
   type DatabaseClient,
   GameEventsListener,
@@ -21,7 +20,6 @@ import {
   CreateRoomUseCase,
   DisconnectConnectionsUseCase,
   DisconnectPlayerUseCase,
-  type DomainEvent,
   type GameRepository,
   GetGameStateUseCase,
   JoinRoomUseCase,
@@ -51,6 +49,7 @@ import { errorCodeOf } from './rooms/error-codes.ts';
 import { CreateRoomEndpoint } from './rooms/http/create-room.endpoint.ts';
 import { JoinRoomEndpoint } from './rooms/http/join-room.endpoint.ts';
 import { StartGameEndpoint } from './rooms/http/start-game.endpoint.ts';
+import { GameEventDelivery } from './rooms/game-event-delivery.ts';
 import { InstanceKeeper } from './rooms/instance-keeper.ts';
 import { RandomIdGenerator } from './rooms/random-id-generator.ts';
 import type { RunCommand } from './rooms/run-command.ts';
@@ -60,9 +59,6 @@ import { DisconnectHandler } from './rooms/sockets/disconnect.handler.ts';
 import { GameStateSender } from './rooms/sockets/game-state-sender.ts';
 import { RoomSocketServer } from './rooms/sockets/room-socket-server.ts';
 import { SocketNotifier } from './rooms/sockets/socket-notifier.ts';
-import { GAME_ID } from './telemetry/game-sampler.ts';
-import { instruments } from './telemetry/instruments.ts';
-import { inSpan } from './telemetry/tracing.ts';
 
 /** Where rooms, games and dilemmas live. */
 export type Storage =
@@ -120,6 +116,11 @@ interface Parts extends Adapters {
   readonly socketNotifier: SocketNotifier;
   readonly stateSender: GameStateSender;
   readonly logger: Logger;
+  /**
+   * One holder per game at a time in this instance: its commands never interleave, and an event
+   * of the game another instance published waits for the command in progress.
+   */
+  readonly gameLock: KeyedLock;
 }
 
 /** How the server stops, the same for every storage. */
@@ -172,8 +173,7 @@ function httpEndpoints({
 function roomSocketServer(parts: Parts, pingIntervalMs: number): RoomSocketServer {
   const { roomRepository, gameRepository, notifier, socketNotifier, stateSender, runCommand } =
     parts;
-  // One holder per game at a time, so its commands never interleave in this instance.
-  const gameLock = new KeyedLock();
+  const { gameLock } = parts;
   const disconnectHandler = new DisconnectHandler(
     new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier),
     socketNotifier,
@@ -213,16 +213,6 @@ function roomSocketServer(parts: Parts, pingIntervalMs: number): RoomSocketServe
   );
 }
 
-/** What a delivery span says: the event, its game or room, and how many players it is for. */
-function deliveryAttributes(playerIds: readonly string[], event: DomainEvent): Attributes {
-  return {
-    'event.type': event.type,
-    'event.recipients': playerIds.length,
-    [GAME_ID]: 'gameId' in event ? String(event.gameId) : undefined,
-    'room.id': 'roomId' in event ? String(event.roomId) : undefined,
-  };
-}
-
 /** In memory there is nobody to tell: leaving cleanly is stopping. */
 function aloneLifecycle(stopServing: StopServing): Lifecycle {
   const close = () => stopServing(1001, 'going away');
@@ -240,23 +230,10 @@ async function sharedLifecycle(
   stopServing: StopServing,
 ): Promise<Lifecycle> {
   const { socketNotifier, stateSender, logger } = parts;
+  const delivery = new GameEventDelivery(socketNotifier, parts.gameLock, logger);
   const listener = new GameEventsListener(storage.openListenClient, {
-    // One span per instance that delivers, not per player: a room of 50 would make 50 spans.
     onEvents: (playerIds, event, publishedAt) => {
-      inSpan(
-        'deliver game event',
-        deliveryAttributes(playerIds, event),
-        () => socketNotifier.notify(playerIds, event),
-        { kind: SpanKind.CONSUMER },
-      ).then(
-        () => {
-          if (publishedAt === undefined) return;
-          instruments().eventDelay.record(Date.now() - publishedAt, { 'event.type': event.type });
-        },
-        (error: unknown) => {
-          logger.error('delivering a game event failed', error, { event: event.type });
-        },
-      );
+      void delivery.deliver(playerIds, event, publishedAt);
     },
     // Whatever was published while it was not listening is lost: a fresh state makes up for it.
     onReconnected: () => {
@@ -328,6 +305,7 @@ export async function composeRealtimeServer({
     appCheckVerifier,
     socketNotifier,
     logger,
+    gameLock: new KeyedLock(),
     stateSender: new GameStateSender(
       new GetGameStateUseCase(adapters.roomRepository, adapters.gameRepository, catalog),
     ),
