@@ -1,38 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { Dilemma, GetDilemmasUseCase } from '@thelever-app/dilemmas';
-import { InMemoryDilemmaRepository, SequentialIdGenerator } from '@thelever-app/dilemmas/in-memory';
 import type {
   DilemmaCatalog,
   DilemmaContent,
 } from '../../../application/ports/dilemma-catalog.port.ts';
 import type { GameDilemma } from '../../../domain/entities/game.ts';
-import { CachedDilemmaCatalog } from '../cached-dilemma-catalog.ts';
-import { DilemmasContextCatalog } from '../../dilemmas/dilemmas-context-catalog.ts';
+import { InMemoryDilemmaCatalog } from '../../in-memory/in-memory-dilemma-catalog.ts';
 import {
   CONTRACT_DILEMMAS,
   describeDilemmaCatalogContract,
 } from '../../test/dilemma-catalog.contract.ts';
+import { CachedDilemmaCatalog } from '../cached-dilemma-catalog.ts';
 
 describeDilemmaCatalogContract('CachedDilemmaCatalog', async () => {
-  const repository = new InMemoryDilemmaRepository();
-  const idGenerator = new SequentialIdGenerator('dilemma');
-  const dilemmas = CONTRACT_DILEMMAS.map(({ text, options }) =>
-    Dilemma.create(
-      { language: 'es', category: 'honesty', tags: [], minimumAge: 16, text, options },
-      idGenerator,
-    ),
-  );
-  for (const dilemma of dilemmas) await repository.save(dilemma);
-  return {
-    catalog: new CachedDilemmaCatalog(
-      new DilemmasContextCatalog(new GetDilemmasUseCase(repository)),
-    ),
-    stored: dilemmas.map((dilemma) => ({
-      dilemmaId: dilemma.id,
-      text: dilemma.text,
-      options: dilemma.options.map(({ id, text }) => ({ optionId: id, text })),
+  const stored = CONTRACT_DILEMMAS.map(({ text, options }, index) => ({
+    dilemmaId: `TestDilemma${index + 1}`,
+    text,
+    options: options.map((option, optionIndex) => ({
+      optionId: `TestDilemma${index + 1}Option${optionIndex + 1}`,
+      text: option,
     })),
-  };
+  }));
+  return { catalog: new CachedDilemmaCatalog(new InMemoryDilemmaCatalog(stored)), stored };
 });
 
 /** A catalog that answers every version it is asked for and remembers what it was asked. */

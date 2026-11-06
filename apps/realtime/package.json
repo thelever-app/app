@@ -26,6 +26,7 @@
     "@thelever-app/db": "workspace:*",
     "@thelever-app/dilemmas": "workspace:*",
     "@thelever-app/game": "workspace:*",
+    "@thelever-app/integrations": "workspace:*",
     "@thelever-app/protocol": "workspace:*",
     "express": "^5.2.1",
     "firebase-admin": "^14.5.0",

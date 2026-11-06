@@ -19,7 +19,7 @@ import {
   type PlayerNotifier,
   type RoomRepository,
 } from '@thelever-app/game';
-import { DilemmasContextCatalog } from '@thelever-app/game/dilemmas';
+import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
 import {
   InMemoryGameRepository,
   InMemoryRoomRepository,
@@ -111,7 +111,7 @@ export class SimulatedRoomConnection implements RoomConnection {
           options.language,
         )
       : await loadSeedDilemmas(dilemmaRepository);
-    const catalog = new DilemmasContextCatalog(new GetDilemmasUseCase(dilemmaRepository));
+    const catalog = new PublishedDilemmasCatalog(new GetDilemmasUseCase(dilemmaRepository));
 
     const roomRepository = new InMemoryRoomRepository();
     const gameRepository = new InMemoryGameRepository();

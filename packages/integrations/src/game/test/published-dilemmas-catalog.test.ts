@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Dilemma, GetDilemmasUseCase } from '@thelever-app/dilemmas';
 import { InMemoryDilemmaRepository, SequentialIdGenerator } from '@thelever-app/dilemmas/in-memory';
-import { DilemmasContextCatalog } from '../dilemmas-context-catalog.ts';
-import {
-  CONTRACT_DILEMMAS,
-  describeDilemmaCatalogContract,
-} from '../../test/dilemma-catalog.contract.ts';
+import { CONTRACT_DILEMMAS, describeDilemmaCatalogContract } from '@thelever-app/game/contracts';
+import { PublishedDilemmasCatalog } from '../published-dilemmas-catalog.ts';
 
 const CLASSIFICATION = { language: 'es', category: 'honesty', tags: [], minimumAge: 16 };
 
@@ -23,16 +20,16 @@ async function catalogWithContractDilemmas() {
     options: dilemma.options.map(({ id, text }) => ({ optionId: id, text })),
   }));
   return {
-    catalog: new DilemmasContextCatalog(new GetDilemmasUseCase(repository)),
+    catalog: new PublishedDilemmasCatalog(new GetDilemmasUseCase(repository)),
     stored,
     repository,
     first: dilemmas[0]!,
   };
 }
 
-describeDilemmaCatalogContract('DilemmasContextCatalog', catalogWithContractDilemmas);
+describeDilemmaCatalogContract('PublishedDilemmasCatalog', catalogWithContractDilemmas);
 
-describe('DilemmasContextCatalog', () => {
+describe('PublishedDilemmasCatalog', () => {
   describe('findContents', () => {
     it('should return the version played, not the one the dilemma has now', async () => {
       // Arrange

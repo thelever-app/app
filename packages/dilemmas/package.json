@@ -8,6 +8,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./published": "./src/published.ts",
     "./in-memory": "./src/adapters/in-memory/index.ts",
     "./seed": "./src/seed/index.ts",
     "./contracts": "./src/adapters/test/index.ts"

@@ -17,8 +17,16 @@ export interface GetDilemmasOutput {
   }[];
 }
 
-/** The content of some dilemmas in one language, falling back to the original while there is no translation. */
-export class GetDilemmasUseCase {
+/**
+ * What Dilemmas publishes to the other contexts: the content of some dilemmas in one language,
+ * falling back to the original while there is no translation. It throws DilemmaNotFoundError
+ * if a dilemma, or that version of it, does not exist.
+ */
+export interface GetDilemmas {
+  execute(input: GetDilemmasInput): Promise<GetDilemmasOutput>;
+}
+
+export class GetDilemmasUseCase implements GetDilemmas {
   readonly #dilemmaRepository: DilemmaRepository;
 
   constructor(dilemmaRepository: DilemmaRepository) {

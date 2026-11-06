@@ -30,12 +30,12 @@ import {
   StartDecisionPhaseUseCase,
 } from '@thelever-app/game';
 import { CachedDilemmaCatalog } from '@thelever-app/game/cache';
-import { DilemmasContextCatalog } from '@thelever-app/game/dilemmas';
 import {
   InMemoryGameRepository,
   InMemoryRoomRepository,
   InMemorySealProvider,
 } from '@thelever-app/game/in-memory';
+import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
 import type { WebSocketServer } from 'ws';
 import { createApp } from './app.ts';
 import { KeyedLock } from './concurrency/keyed-lock.ts';
@@ -295,7 +295,7 @@ export async function composeRealtimeServer({
   const adapters = await adaptersFor(storage, socketNotifier);
   // Every connect and every answer reads the dilemmas played: once per instance is enough.
   const catalog = new CachedDilemmaCatalog(
-    new DilemmasContextCatalog(new GetDilemmasUseCase(adapters.dilemmaRepository)),
+    new PublishedDilemmasCatalog(new GetDilemmasUseCase(adapters.dilemmaRepository)),
   );
   const parts: Parts = {
     ...adapters,

@@ -2,7 +2,7 @@ import { Dilemma, GetDilemmasUseCase } from '@thelever-app/dilemmas';
 import { describeDilemmaRepositoryContract } from '@thelever-app/dilemmas/contracts';
 import { SequentialIdGenerator } from '@thelever-app/dilemmas/in-memory';
 import { CONTRACT_DILEMMAS, describeDilemmaCatalogContract } from '@thelever-app/game/contracts';
-import { DilemmasContextCatalog } from '@thelever-app/game/dilemmas';
+import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
 import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../../schema.ts';
@@ -16,7 +16,7 @@ describeDilemmaRepositoryContract('PostgresDilemmaRepository', async () => {
   return new PostgresDilemmaRepository(database.db());
 });
 
-describeDilemmaCatalogContract('DilemmasContextCatalog on PostgreSQL', async () => {
+describeDilemmaCatalogContract('PublishedDilemmasCatalog on PostgreSQL', async () => {
   await emptyTables(database.db());
   const repository = new PostgresDilemmaRepository(database.db());
   const idGenerator = new SequentialIdGenerator('dilemma');
@@ -32,7 +32,7 @@ describeDilemmaCatalogContract('DilemmasContextCatalog on PostgreSQL', async () 
     text: dilemma.text,
     options: dilemma.options.map(({ id, text }) => ({ optionId: id, text })),
   }));
-  return { catalog: new DilemmasContextCatalog(new GetDilemmasUseCase(repository)), stored };
+  return { catalog: new PublishedDilemmasCatalog(new GetDilemmasUseCase(repository)), stored };
 });
 
 describe('dilemma_versions', () => {

@@ -200,4 +200,29 @@ describe('PostgresGameRepository inside a command', () => {
     // Assert
     expect((await games.findById(gameId))?.toSnapshot()).toEqual(game.toSnapshot());
   });
+
+  it('should keep the options of the dilemmas it plays in its own tables', async () => {
+    // Arrange: dilemmas Dilemmas does not have, so only the repository can write their options.
+    await emptyTables(database.db());
+    await database
+      .db()
+      .insertInto('instances')
+      .values({ id: 'TestInstanceId', seen_at: new Date() })
+      .execute();
+    const ids = new GameIds();
+    const room = Room.create({ hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' }, ids);
+    await new PostgresRoomRepository(database.db(), 'TestInstanceId').save(room);
+    const dilemmas = [
+      { dilemmaId: 'TestDilemma1', version: 3, optionIds: ['TestOptionB', 'TestOptionA'] },
+      { dilemmaId: 'TestDilemma2', version: 1, optionIds: ['TestOptionC', 'TestOptionD'] },
+    ];
+    const game = Game.create({ roomId: room.id, dilemmas }, ids);
+    const games = new PostgresGameRepository(database.db());
+
+    // Act
+    await games.save(game);
+
+    // Assert
+    expect((await games.findById(game.id))?.dilemmas).toEqual(dilemmas);
+  });
 });

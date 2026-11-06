@@ -6,7 +6,6 @@
   "exports": {
     ".": "./src/index.ts",
     "./in-memory": "./src/adapters/in-memory/index.ts",
-    "./dilemmas": "./src/adapters/dilemmas/index.ts",
     "./cache": "./src/adapters/cache/index.ts",
     "./contracts": "./src/adapters/test/index.ts"
   },
@@ -15,8 +14,5 @@
   },
   "devDependencies": {
     "@thelever-app/config": "workspace:*"
-  },
-  "dependencies": {
-    "@thelever-app/dilemmas": "workspace:*"
   }
 }
