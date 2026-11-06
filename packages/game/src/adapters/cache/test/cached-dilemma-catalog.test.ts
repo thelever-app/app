@@ -128,4 +128,40 @@ describe('CachedDilemmaCatalog', () => {
       ['options', 'TestA'],
     ]);
   });
+
+  it('should return what it was asked for even when it is full', async () => {
+    // Arrange: full, with TestA the first kept.
+    const inner = new CountingCatalog();
+    const catalog = new CachedDilemmaCatalog(inner, { maxContents: 2 });
+    await catalog.findContents([{ dilemmaId: 'TestA', version: 1 }], 'es');
+    await catalog.findContents([{ dilemmaId: 'TestB', version: 1 }], 'es');
+
+    // Act
+    const found = await catalog.findContents(
+      [
+        { dilemmaId: 'TestA', version: 1 },
+        { dilemmaId: 'TestC', version: 1 },
+      ],
+      'es',
+    );
+
+    // Assert
+    expect(found.map(({ text }) => text)).toEqual(['TestText TestA@1 es', 'TestText TestC@1 es']);
+  });
+
+  it('should let go first of what it was asked for least recently', async () => {
+    // Arrange: TestA kept first, but asked for again after TestB.
+    const inner = new CountingCatalog();
+    const catalog = new CachedDilemmaCatalog(inner, { maxContents: 2 });
+    await catalog.findContents([{ dilemmaId: 'TestA', version: 1 }], 'es');
+    await catalog.findContents([{ dilemmaId: 'TestB', version: 1 }], 'es');
+    await catalog.findContents([{ dilemmaId: 'TestA', version: 1 }], 'es');
+
+    // Act
+    await catalog.findContents([{ dilemmaId: 'TestC', version: 1 }], 'es');
+    await catalog.findContents([{ dilemmaId: 'TestA', version: 1 }], 'es');
+
+    // Assert: TestA was still kept, TestB went.
+    expect(inner.asked).toEqual([['TestA@1:es'], ['TestB@1:es'], ['TestC@1:es']]);
+  });
 });

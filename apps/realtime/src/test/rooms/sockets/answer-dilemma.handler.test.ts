@@ -13,7 +13,9 @@ const SESSION = {
 } as const;
 
 describe('AnswerDilemmaHandler', () => {
-  it('should let the next command of the game in while it sends the answerer a fresh state', async () => {
+  // Each later change reaches the answerer as a delta, which the screen applies only on top of a
+  // state that already has their own answer: the state must leave before anything newer exists.
+  it('should send the answerer a fresh state before the next command of the game gets in', async () => {
     // Arrange
     const gameLock = new KeyedLock();
     let lockFreeWhileSending: boolean | undefined;
@@ -41,6 +43,6 @@ describe('AnswerDilemmaHandler', () => {
     );
 
     // Assert
-    expect(lockFreeWhileSending).toBe(true);
+    expect(lockFreeWhileSending).toBe(false);
   });
 });
