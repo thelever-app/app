@@ -39,7 +39,7 @@ const SETUP_IN_PARALLEL = 10;
 function localTarget(): Target {
   const auth = 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1';
   return {
-    realtime: 'http://localhost:3000',
+    realtime: process.env.LOAD_REALTIME ?? 'http://localhost:3000',
     signUp: () => signUp(`${auth}/accounts:signUp?key=demo-api-key`, {}),
     appCheckToken: async () => undefined,
   };
