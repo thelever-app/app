@@ -20,8 +20,15 @@ const otherContexts = (context) => ({
 
 /** No package reaches into the sources of another one by a relative path, which skips its entries. */
 const intoAnotherPackage = {
-  regex: `(^|/)\\.\\./(?:${[...CONTEXTS, 'db', 'integrations'].join('|')})/src/`,
+  // Absolute, through the packages folder, or up and into the sources of a sibling package.
+  regex: `^/|(^|/)packages/|(^|/)\\.\\./(?:${[...CONTEXTS, 'db', 'integrations'].join('|')})/src/`,
   message: 'Import another package by its name and its entries, never by a path into its sources.',
+};
+
+/** Every file of the workspace, unless a later block, which carries this pattern too, says more. */
+const packageRules = {
+  files: ['apps/**/*.{ts,tsx}', 'packages/**/*.ts', 'tests/**/*.ts', 'ops/**/*.ts'],
+  rules: { 'no-restricted-imports': ['error', { patterns: [intoAnotherPackage] }] },
 };
 
 /** Its domain and its application never import its adapters, by a path or by its own entries. */
@@ -72,13 +79,14 @@ const integrationRules = [
       `An integration for ${context} uses the ports of ${context} and the /published entry of the others (ADR 0001).`,
     );
   }),
-  // Outside the folder of a context, it serves none: only what the contexts publish.
-  integrationRule(
-    ['packages/integrations/src/*.ts'],
-    `^@thelever-app/(?:(?:${CONTEXTS.join('|')})(?:/(?!published$).*)?|db(?:/.*)?)$`,
-    'Outside the folder of a context, an integration uses only the /published entries (ADR 0001).',
-  ),
 ];
+
+/** Anywhere in an integration but the folder of a context it serves: only what the contexts publish. */
+const integrationBaseRule = integrationRule(
+  ['packages/integrations/src/**/*.ts'],
+  `^@thelever-app/(?:(?:${CONTEXTS.join('|')})(?:/(?!published$).*)?|db(?:/.*)?)$`,
+  'Outside the folder of a context, an integration uses only the /published entries (ADR 0001).',
+);
 
 function integrationRule(files, regex, message) {
   return {
@@ -109,6 +117,7 @@ export default defineConfig([
     ],
     languageOptions: { globals: globals.node },
   },
+  packageRules,
   {
     files: ['apps/web/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },
@@ -134,11 +143,14 @@ export default defineConfig([
               message:
                 'Only the simulated room may use the domain contexts. Use RoomConnection and @thelever-app/protocol.',
             },
+            intoAnotherPackage,
           ],
         },
       ],
     },
   },
   ...contextRules,
+  // The base first: the folder of each context replaces it for its own files.
+  integrationBaseRule,
   ...integrationRules,
 ]);

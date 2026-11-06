@@ -201,41 +201,28 @@ describe('PostgresGameRepository inside a command', () => {
     expect((await games.findById(gameId))?.toSnapshot()).toEqual(game.toSnapshot());
   });
 
-  it('should know the options of the dilemmas it plays without the tables of Dilemmas', async () => {
-    // Arrange: a game without answers, so nothing else holds the options of Dilemmas.
+  it('should keep the options of the dilemmas it plays in its own tables', async () => {
+    // Arrange: dilemmas Dilemmas does not have, so only the repository can write their options.
     await emptyTables(database.db());
     await database
       .db()
       .insertInto('instances')
       .values({ id: 'TestInstanceId', seen_at: new Date() })
       .execute();
-    const dilemmaRepository = new PostgresDilemmaRepository(database.db());
-    const [dilemma] = CONTRACT_DILEMMAS.map(({ text, options }) =>
-      Dilemma.create(
-        { text, options, language: 'es', category: 'honesty', tags: [], minimumAge: 16 },
-        new SequentialIdGenerator('dilemma'),
-      ),
-    ) as [Dilemma];
-    await dilemmaRepository.save(dilemma);
     const ids = new GameIds();
     const room = Room.create({ hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' }, ids);
     await new PostgresRoomRepository(database.db(), 'TestInstanceId').save(room);
-    const optionIds = dilemma.options.map(({ id }) => id);
-    const game = Game.create(
-      {
-        roomId: room.id,
-        dilemmas: [{ dilemmaId: dilemma.id, version: dilemma.version, optionIds }],
-      },
-      ids,
-    );
+    const dilemmas = [
+      { dilemmaId: 'TestDilemma1', version: 3, optionIds: ['TestOptionB', 'TestOptionA'] },
+      { dilemmaId: 'TestDilemma2', version: 1, optionIds: ['TestOptionC', 'TestOptionD'] },
+    ];
+    const game = Game.create({ roomId: room.id, dilemmas }, ids);
     const games = new PostgresGameRepository(database.db());
-    await games.save(game);
 
     // Act
-    await database.db().deleteFrom('dilemma_version_options').execute();
-    const found = await games.findById(game.id);
+    await games.save(game);
 
     // Assert
-    expect(found?.dilemmas).toEqual([{ dilemmaId: dilemma.id, version: 1, optionIds }]);
+    expect((await games.findById(game.id))?.dilemmas).toEqual(dilemmas);
   });
 });
