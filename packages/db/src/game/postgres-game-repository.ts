@@ -199,9 +199,7 @@ export class PostgresGameRepository implements GameRepository {
           })),
         ),
       )
-      .onConflict((conflict) =>
-        conflict.columns(['game_id', 'dilemma_id', 'option_id']).doNothing(),
-      )
+      .onConflict((conflict) => conflict.doNothing())
       .execute();
   }
 

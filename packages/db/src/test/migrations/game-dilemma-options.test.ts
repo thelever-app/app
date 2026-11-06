@@ -140,35 +140,93 @@ describe('the migration that gives Game the options of its dilemmas', () => {
     // Arrange: the user of the room server, granted the tables before the migration, as in an
     // environment until the migrate job grants the new one.
     const { db, url, dilemma, roomId } = await databaseAt(BEFORE);
-    const user = `thelever_test_app_${randomUUID().replaceAll('-', '')}`;
-    await sql`create role ${sql.id(user)}`.execute(db);
-    cleanups.push(async () => {
-      await sql`drop owned by ${sql.id(user)}`.execute(db);
-      await sql`drop role ${sql.id(user)}`.execute(db);
-    });
-    await grantRowAccess(db, user);
+    const user = await userOfTheRoomServer(db);
     await migrateToLatest(db);
-    const roomServer = new pg.Client({ connectionString: url });
-    await roomServer.connect();
-    cleanups.push(() => roomServer.end());
-    await roomServer.query(`set role ${user}`);
-    const gameId = `TestGame${randomUUID()}`;
+    const roomServer = await connectedAs(url, user);
 
     // Act: the previous revision starts a game.
-    await roomServer.query(
-      'insert into games (id, room_id, in_decision_phase, version) values ($1, $2, false, 1)',
-      [gameId, roomId],
-    );
-    await roomServer.query(
-      'insert into game_dilemmas (game_id, position, dilemma_id, dilemma_version) values ($1, 0, $2, $3)',
-      [gameId, dilemma.id, dilemma.version],
-    );
+    const gameId = await startedTheOldWayBy(roomServer, roomId, dilemma);
 
     // Assert
     const found = await new PostgresGameRepository(db).findById(gameId);
     expect(found?.dilemmas[0]?.optionIds).toHaveLength(3);
   });
+
+  it('should copy the options of the dilemma played, not of a table of the same name the user made', async () => {
+    // Arrange: a user of the database with the rights of the room server, which may make temporary
+    // tables, and the trigger runs as the owner of the schema.
+    const { db, url, dilemma, roomId, optionIds } = await databaseAt(BEFORE);
+    const user = await userOfTheRoomServer(db);
+    await migrateToLatest(db);
+    const session = await connectedAs(url, user);
+    await session.query(
+      'create temp table dilemma_version_options (dilemma_id text, version int, option_id text, position smallint)',
+    );
+    await session.query("insert into dilemma_version_options values ($1, $2, 'TestForged', 0)", [
+      dilemma.id,
+      dilemma.version,
+    ]);
+
+    // Act
+    const gameId = await startedTheOldWayBy(session, roomId, dilemma);
+
+    // Assert
+    const found = await new PostgresGameRepository(db).findById(gameId);
+    expect(found?.dilemmas[0]?.optionIds).toEqual(optionIds);
+  });
+
+  it('should give up soon, not hold every game up, while another transaction keeps a table it needs', async () => {
+    // Arrange: a long transaction, such as a query by hand, reading the games' dilemmas.
+    const { db, url } = await databaseAt(BEFORE);
+    const reader = new pg.Client({ connectionString: url });
+    await reader.connect();
+    cleanups.push(() => reader.end());
+    await reader.query('begin');
+    await reader.query('select count(*) from game_dilemmas');
+
+    // Act
+    const started = Date.now();
+    const migrating = migrateToLatest(db);
+
+    // Assert
+    await expect(migrating).rejects.toThrow('migration 0003-game-dilemma-options failed');
+    expect(Date.now() - started).toBeLessThan(10_000);
+  }, 15_000);
 });
+
+/** A user with the rights the room server has on the tables before the migration. */
+async function userOfTheRoomServer(db: Kysely<Database>): Promise<string> {
+  const user = `thelever_test_app_${randomUUID().replaceAll('-', '')}`;
+  await sql`create role ${sql.id(user)}`.execute(db);
+  cleanups.push(async () => {
+    await sql`drop owned by ${sql.id(user)}`.execute(db);
+    await sql`drop role ${sql.id(user)}`.execute(db);
+  });
+  await grantRowAccess(db, user);
+  return user;
+}
+
+async function connectedAs(url: string, user: string): Promise<pg.Client> {
+  const client = new pg.Client({ connectionString: url });
+  await client.connect();
+  cleanups.push(() => client.end());
+  await client.query(`set role ${user}`);
+  return client;
+}
+
+/** A game started by that session as the revision before Game kept its options writes it. */
+async function startedTheOldWayBy(session: pg.Client, roomId: string, dilemma: Dilemma) {
+  const gameId = `TestGame${randomUUID()}`;
+  await session.query(
+    'insert into games (id, room_id, in_decision_phase, version) values ($1, $2, false, 1)',
+    [gameId, roomId],
+  );
+  await session.query(
+    'insert into game_dilemmas (game_id, position, dilemma_id, dilemma_version) values ($1, 0, $2, $3)',
+    [gameId, dilemma.id, dilemma.version],
+  );
+  return gameId;
+}
 
 async function untilSomeoneWaitsForALock(db: Kysely<Database>): Promise<void> {
   for (let attempt = 0; attempt < 200; attempt += 1) {
