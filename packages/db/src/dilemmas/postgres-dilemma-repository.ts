@@ -5,8 +5,9 @@ import {
   type DilemmaCriteria,
   type DilemmaRepository,
   type DilemmaSnapshot,
+  WORD_SIMILARITY,
 } from '@thelever-app/dilemmas';
-import { type Kysely, sql, type Transaction } from 'kysely';
+import { type Kysely, type RawBuilder, sql, type Transaction } from 'kysely';
 import { jsonArrayFrom } from 'kysely/helpers/postgres';
 import type { DilemmasTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
@@ -89,8 +90,10 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
 
   async search(criteria: DilemmaCriteria): Promise<Dilemma[]> {
     const db = currentTransaction<DilemmasTables>() ?? this.#db;
-    const { dilemmaIds, categories = [], maximumMinimumAge, status } = criteria;
-    if (dilemmaIds?.length === 0) return [];
+    const { dilemmaIds, categories, maximumMinimumAge, status } = criteria;
+    if (dilemmaIds?.length === 0 || categories?.length === 0) return [];
+    const typed = criteria.text?.trim() ?? '';
+    const words = typed.split(/\s+/).filter((word) => word.length > 0);
 
     const rows = await db
       .selectFrom('dilemmas')
@@ -129,8 +132,18 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
       .where('dilemma_versions.status', '=', status)
       .where('dilemma_versions.minimum_age', '<=', maximumMinimumAge)
       .$if(dilemmaIds !== undefined, (query) => query.where('dilemmas.id', 'in', dilemmaIds ?? []))
-      .$if(categories.length > 0, (query) =>
-        query.where('dilemma_versions.category', 'in', categories as Category[]),
+      .$if(categories !== undefined, (query) =>
+        query.where('dilemma_versions.category', 'in', (categories ?? []) as Category[]),
+      )
+      // Every word typed is part of the text or a tag, or alike enough to one.
+      .$if(words.length > 0, (query) =>
+        query.where(sql<boolean>`${sql.join(words.map(matchesTextOrTag), sql` and `)}`),
+      )
+      // A tag equal to what was typed first, then the most alike to the text or a tag.
+      .$if(words.length > 0, (query) =>
+        query
+          .orderBy(sql`${hasTag(sql`= search_text(${typed})`)} desc`)
+          .orderBy(sql`${similarityTo(typed)} desc`),
       )
       // Byte order, as the other implementations sort.
       .orderBy(sql`dilemmas.id collate "C"`)
@@ -222,4 +235,40 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
         .execute();
     }
   }
+}
+
+/** Whether a tag of the version of the dilemma, as search_text leaves it, holds the condition. */
+function hasTag(condition: RawBuilder<unknown>): RawBuilder<boolean> {
+  return sql<boolean>`exists (
+    select 1 from dilemma_version_tags as typed_tags
+    where typed_tags.dilemma_id = dilemma_versions.dilemma_id
+      and typed_tags.version = dilemma_versions.number
+      and search_text(typed_tags.tag) ${condition}
+  )`;
+}
+
+/** A word typed is part of the text or of a tag, or alike enough to one, as pg_trgm measures it. */
+function matchesTextOrTag(word: string): RawBuilder<boolean> {
+  const alike = (field: RawBuilder<unknown>) =>
+    sql`(strpos(${field}, search_text(${word})) > 0
+      or word_similarity(search_text(${word}), ${field}) >= ${WORD_SIMILARITY})`;
+  return sql<boolean>`(${alike(sql`search_text(dilemma_versions.text)`)} or exists (
+    select 1 from dilemma_version_tags as typed_tags
+    where typed_tags.dilemma_id = dilemma_versions.dilemma_id
+      and typed_tags.version = dilemma_versions.number
+      and ${alike(sql`search_text(typed_tags.tag)`)}
+  ))`;
+}
+
+/** How alike what was typed is to the text or to the most alike tag, from 0 to 1. */
+function similarityTo(typed: string): RawBuilder<number> {
+  return sql<number>`greatest(
+    word_similarity(search_text(${typed}), search_text(dilemma_versions.text)),
+    coalesce((
+      select max(word_similarity(search_text(${typed}), search_text(typed_tags.tag)))
+      from dilemma_version_tags as typed_tags
+      where typed_tags.dilemma_id = dilemma_versions.dilemma_id
+        and typed_tags.version = dilemma_versions.number
+    ), 0)
+  )`;
 }

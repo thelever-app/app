@@ -298,10 +298,11 @@ export function LobbyScreen() {
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
-/** «Todas las categorías», «Honestidad» or «3 categorías». */
+/** «Todas las categorías», «Ninguna categoría», «Honestidad» or «3 categorías». */
 function categoriesOf({ categories }: RoomSettingsDto, t: Translate): string {
+  if (categories === null) return t('lobby.categories.all');
   const [only] = categories;
-  if (only === undefined) return t('lobby.categories.all');
+  if (only === undefined) return t('lobby.categories.none');
   if (categories.length === 1 && isCategory(only)) return t(`categories.${only}`);
   return t('lobby.categories.some', { count: categories.length });
 }

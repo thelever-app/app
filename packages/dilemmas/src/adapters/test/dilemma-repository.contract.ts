@@ -47,6 +47,8 @@ function catalogDilemma(
   id: string,
   facts: {
     readonly category?: Category;
+    readonly text?: string;
+    readonly tags?: readonly string[];
     readonly minimumAge?: MinimumAge;
     readonly status?: DilemmaStatus;
     readonly visibility?: Visibility;
@@ -59,13 +61,13 @@ function catalogDilemma(
     visibility: facts.visibility ?? 'public',
     version: {
       number: 1,
-      text: `TextOf${id}`,
+      text: facts.text ?? `TextOf${id}`,
       options: [
         { id: `${id}Option1`, text: 'TestOption1' },
         { id: `${id}Option2`, text: 'TestOption2' },
       ],
       category: facts.category ?? 'honesty',
-      tags: [],
+      tags: facts.tags ?? [],
       minimumAge: facts.minimumAge ?? 16,
       status: facts.status ?? 'in-catalog',
     },
@@ -302,17 +304,112 @@ export function describeDilemmaRepositoryContract(
         expect(found).toEqual(['TestJusticeDilemma', 'TestLoyaltyDilemma']);
       });
 
-      it('should find the dilemmas of every category when none is given', async () => {
+      it('should find the dilemmas of every category when no category is given', async () => {
         // Arrange
         const repository = await create();
         await repository.save(catalogDilemma('TestHonestyDilemma'));
         await repository.save(catalogDilemma('TestLoyaltyDilemma', { category: 'loyalty' }));
 
         // Act
-        const found = await idsFound(repository, { ...EVERYONE, categories: [] });
+        const found = await idsFound(repository, EVERYONE);
 
         // Assert
         expect(found).toEqual(['TestHonestyDilemma', 'TestLoyaltyDilemma']);
+      });
+
+      it('should find nothing for an empty list of categories', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(catalogDilemma('TestHonestyDilemma'));
+
+        // Act
+        const found = await idsFound(repository, { ...EVERYONE, categories: [] });
+
+        // Assert
+        expect(found).toEqual([]);
+      });
+
+      describe('with a text', () => {
+        const TRAM = 'Un tranvía sin frenos va hacia cinco personas que trabajan en la vía';
+
+        /** The tram, tagged family, and a dilemma about something else. */
+        async function tramAndWallet() {
+          const repository = await create();
+          await repository.save(catalogDilemma('TestTram', { text: TRAM, tags: ['familia'] }));
+          await repository.save(
+            catalogDilemma('TestWallet', {
+              text: 'Encuentras una cartera con 200 €',
+              tags: ['dinero'],
+            }),
+          );
+          return repository;
+        }
+
+        it.each(['tranv', 'TRANVIA', 'freno', 'cinco personas'])(
+          'should find part of a word of the text, without minding case or accents: %s',
+          async (text) => {
+            // Arrange
+            const repository = await tramAndWallet();
+
+            // Act
+            const found = await idsFound(repository, { ...EVERYONE, text });
+
+            // Assert
+            expect(found).toEqual(['TestTram']);
+          },
+        );
+
+        it('should find a word typed with a wrong letter', async () => {
+          // Arrange
+          const repository = await tramAndWallet();
+
+          // Act
+          const found = await idsFound(repository, { ...EVERYONE, text: 'tranbia' });
+
+          // Assert
+          expect(found).toEqual(['TestTram']);
+        });
+
+        it('should find part of a tag', async () => {
+          // Arrange
+          const repository = await tramAndWallet();
+
+          // Act
+          const found = await idsFound(repository, { ...EVERYONE, text: 'famil' });
+
+          // Assert
+          expect(found).toEqual(['TestTram']);
+        });
+
+        it('should find only the dilemmas where every word typed is in the text or the tags', async () => {
+          // Arrange
+          const repository = await tramAndWallet();
+
+          // Act
+          const both = await idsFound(repository, { ...EVERYONE, text: 'tranvía familia' });
+          const one = await idsFound(repository, { ...EVERYONE, text: 'tranvía dinero' });
+          const none = await idsFound(repository, { ...EVERYONE, text: 'amistad' });
+
+          // Assert
+          expect(both).toEqual(['TestTram']);
+          expect(one).toEqual([]);
+          expect(none).toEqual([]);
+        });
+
+        it('should put first a whole tag, then what is most like the text typed, then by id', async () => {
+          // Arrange
+          const repository = await create();
+          await repository.save(catalogDilemma('TestA', { text: 'Un tren con frenos rotos' }));
+          await repository.save(catalogDilemma('TestB', { text: 'Pasa un tranvía' }));
+          await repository.save(catalogDilemma('TestC', { text: 'Otra cosa', tags: ['tranvia'] }));
+          await repository.save(catalogDilemma('TestD', { text: 'Pasa un tranvía lleno' }));
+
+          // Act
+          const found = await idsFound(repository, { ...EVERYONE, text: 'tranvía' });
+
+          // Assert
+          expect(found).toEqual(['TestC', 'TestB', 'TestD']);
+        });
       });
 
       it('should find only the dilemmas with the ids given', async () => {

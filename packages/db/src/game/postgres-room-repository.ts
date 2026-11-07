@@ -162,7 +162,7 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     variant: settings.variant,
     adults_only: settings.adultsOnly,
     dilemma_language: settings.dilemmaLanguage,
-    categories: [...settings.categories],
+    categories: settings.categories && [...settings.categories],
     dilemma_count: settings.dilemmaCount,
     total_time_in_minutes: settings.totalTimeInMinutes,
     new_dilemmas: settings.newDilemmas,

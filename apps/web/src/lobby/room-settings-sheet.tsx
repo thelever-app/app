@@ -36,11 +36,15 @@ function changesBetween(before: RoomSettingsDto, after: RoomSettingsDto): Partia
   ) as Partial<RoomSettingsDto>;
 }
 
-/** The categories marked, in the order the screen offers them; none marked, every one. */
-function toggled(categories: readonly string[], category: string): string[] {
-  const marked = categories.includes(category)
-    ? categories.filter((marked) => marked !== category)
-    : [...categories, category];
+/**
+ * The categories marked, in the order the screen offers them. From every category (null),
+ * marking one plays only that one; unmarking the last one plays none.
+ */
+function toggled(categories: readonly string[] | null, category: string): string[] {
+  const before = categories ?? [];
+  const marked = before.includes(category)
+    ? before.filter((marked) => marked !== category)
+    : [...before, category];
   return CATEGORIES.filter((known) => marked.includes(known));
 }
 
@@ -163,9 +167,9 @@ export function RoomSettingsSheet({
                     <button
                       type="button"
                       role="checkbox"
-                      aria-checked={draft.categories.length === 0}
+                      aria-checked={draft.categories === null}
                       className={styles.chip}
-                      onClick={() => change({ categories: [] })}
+                      onClick={() => change({ categories: null })}
                     >
                       {t('settings.allCategories')}
                     </button>
@@ -174,7 +178,7 @@ export function RoomSettingsSheet({
                         key={category}
                         type="button"
                         role="checkbox"
-                        aria-checked={draft.categories.includes(category)}
+                        aria-checked={draft.categories?.includes(category) ?? false}
                         className={styles.chip}
                         onClick={() => change({ categories: toggled(draft.categories, category) })}
                       >

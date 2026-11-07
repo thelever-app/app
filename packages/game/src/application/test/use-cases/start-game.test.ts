@@ -89,7 +89,30 @@ describe('StartGameUseCase', () => {
       ]);
     });
 
-    it('should take the dilemmas from every category while the room chooses none', async () => {
+    it('should play only the dilemmas the players added when the room plays no category', async () => {
+      // Arrange
+      const { startGame, changeSettings, gameRepository, roomRepository, roomId, anaId, luisId } =
+        await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { categories: [], dilemmasPerPlayer: 1 },
+      });
+      const room = (await roomRepository.findById(roomId))!;
+      room.addDilemma(luisId, { dilemmaId: 'TestCatalog5', minimumAge: 16 });
+      await roomRepository.save(room);
+
+      // Act
+      const { gameId } = await startGame.execute({ roomId, playerId: anaId });
+
+      // Assert
+      const ids = (await gameRepository.findById(gameId))?.dilemmas.map(
+        ({ dilemmaId }) => dilemmaId,
+      );
+      expect(ids).toEqual(['TestCatalog5']);
+    });
+
+    it('should take the dilemmas from every category by default', async () => {
       // Arrange: ten dilemmas for everyone in the catalog, eight of life-and-death and two of honesty.
       const { startGame, changeSettings, gameRepository, roomId, anaId } = await arrange();
       await changeSettings.execute({

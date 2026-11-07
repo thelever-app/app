@@ -1,13 +1,12 @@
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import type { DilemmaStatus } from '../../domain/entities/dilemma.ts';
-import { relevanceOf } from '../../domain/services/text-search.ts';
 import type { DilemmaRepository } from '../ports/dilemma-repository.port.ts';
 
 export interface SearchDilemmasInput {
   readonly dilemmaIds?: readonly string[];
-  /** Any of them; none, every category. */
+  /** Any of them; an empty list finds nothing, and without it every category is searched. */
   readonly categories?: readonly string[];
-  /** What a player typed, looked for in the text, in the language asked for, and in the tags. */
+  /** What a player typed, looked for in the text and the tags as DilemmaCriteria says. */
   readonly text?: string;
   /** 16 leaves out the dilemmas for adults. */
   readonly maximumMinimumAge: MinimumAge;
@@ -29,8 +28,7 @@ export interface SearchDilemmasOutput {
 
 /**
  * What Dilemmas publishes to the other contexts to look for dilemmas: the public ones that match
- * every criterion given, at their current version. With a text, the ones that match it best come
- * first; the rest, and every search without one, ordered by id.
+ * every criterion given, at their current version, in the order the catalog gives them.
  */
 export interface SearchDilemmas {
   execute(input: SearchDilemmasInput): Promise<SearchDilemmasOutput>;
@@ -43,24 +41,13 @@ export class SearchDilemmasUseCase implements SearchDilemmas {
     this.#dilemmaRepository = dilemmaRepository;
   }
 
-  async execute({
-    language,
-    text: query = '',
-    ...criteria
-  }: SearchDilemmasInput): Promise<SearchDilemmasOutput> {
+  async execute({ language, ...criteria }: SearchDilemmasInput): Promise<SearchDilemmasOutput> {
     const found = await this.#dilemmaRepository.search(criteria);
-    const matched = found.flatMap((dilemma) => {
-      const text = dilemma.contentIn(language).text;
-      const relevance = relevanceOf(query, { text, tags: dilemma.tags });
-      return relevance === undefined ? [] : [{ dilemma, text, relevance }];
-    });
-    // A stable sort: the same relevance keeps the order by id of the repository.
-    matched.sort((a, b) => a.relevance - b.relevance);
     return {
-      dilemmas: matched.map(({ dilemma, text }) => ({
+      dilemmas: found.map((dilemma) => ({
         dilemmaId: dilemma.id,
         version: dilemma.version,
-        text,
+        text: dilemma.contentIn(language).text,
         minimumAge: dilemma.minimumAge,
         category: dilemma.category,
         tags: dilemma.tags,

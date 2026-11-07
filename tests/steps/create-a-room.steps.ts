@@ -135,7 +135,7 @@ Then(
   'the room has default categories, number of dilemmas and total time',
   async function (this: GameWorld) {
     const settings = await this.driver.settingsSeenBy(await this.host());
-    assert.deepEqual(settings.categories, [], 'the room does not start with every category');
+    assert.equal(settings.categories, null, 'the room does not start with every category');
     assert.ok(settings.dilemmaCount > 0, 'the room has no number of dilemmas');
     assert.ok(settings.totalTimeInMinutes > 0, 'the room has no total time');
   },

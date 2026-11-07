@@ -35,9 +35,10 @@ export { DuplicateTagError } from './domain/errors/duplicate-tag.error.ts';
 export { InvalidMinimumAgeError } from './domain/errors/invalid-minimum-age.error.ts';
 
 // Application
-export type {
-  DilemmaRepository,
-  DilemmaCriteria,
+export {
+  type DilemmaRepository,
+  type DilemmaCriteria,
+  WORD_SIMILARITY,
 } from './application/ports/dilemma-repository.port.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
 export {
