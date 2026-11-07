@@ -1,10 +1,16 @@
 import { z } from 'zod';
-import { ClientMessageTypeDto } from './client-messages.ts';
+import {
+  AvatarDto,
+  ClientMessageTypeDto,
+  GroupNatureDto,
+  PlaceDto,
+  RoomSettingsDto,
+} from './client-messages.ts';
 
 /** Goes up with every change of the game. The client drops anything older than what it holds (ADR 0003). */
 const GameVersionDto = z.number().int().nonnegative();
 
-/** Goes up with every change of who is connected to the room. Ordered apart from the game version. */
+/** Goes up with every change of the room: who is connected and, in the lobby, everything it shows. Ordered apart from the game version. */
 const RoomVersionDto = z.number().int().nonnegative();
 
 /**
@@ -38,6 +44,7 @@ export const GameStateDto = z.strictObject({
       z.strictObject({
         playerId: z.string().min(1),
         nickname: z.string().min(1),
+        avatar: AvatarDto,
         progress: z.number().int().nonnegative(),
         /** False while the player has no open connection: the others see them as disconnected. */
         connected: z.boolean(),
@@ -52,6 +59,49 @@ export const GameStateDto = z.strictObject({
     }),
   ),
 });
+
+/** A dilemma added or picked in the lobby, in the language of the room. Never who added it. */
+const LobbyDilemmaDto = z.strictObject({ dilemmaId: z.string().min(1), text: z.string() });
+
+/**
+ * What the screen needs to draw the lobby, as the player who receives it may see it: sent when
+ * they connect while there is no game, and again after every change of the lobby.
+ */
+export const RoomStateDto = z.strictObject({
+  type: z.literal('room-state'),
+  roomId: z.string().min(1),
+  /** The version of the room this state was computed from. */
+  roomVersion: RoomVersionDto,
+  code: z.string().length(5),
+  /** The player who receives the message. */
+  playerId: z.string().min(1),
+  hostId: z.string().min(1),
+  groupNature: GroupNatureDto,
+  place: PlaceDto,
+  settings: RoomSettingsDto,
+  /** The fewest players a game of the room starts with, by its variant: 2 nominal, 3 anonymous. */
+  minimumPlayers: z.number().int().positive(),
+  /** In the order they entered. */
+  players: z
+    .array(
+      z.strictObject({
+        playerId: z.string().min(1),
+        nickname: z.string().min(1),
+        avatar: AvatarDto,
+        connected: z.boolean(),
+      }),
+    )
+    .min(1),
+  addedDilemmas: z.array(LobbyDilemmaDto),
+  /** The one the player who receives the message added, so they can tell it apart; only theirs. */
+  ownAddedDilemmaId: z.string().min(1).nullable(),
+  pickedDilemmas: z.array(LobbyDilemmaDto),
+  /** Once the game starts, the player gets its state instead. */
+  currentGameId: z.string().min(1).nullable(),
+});
+
+/** The host expelled the player who receives it: they are no longer in the room. */
+export const ExpelledDto = z.strictObject({ type: z.literal('expelled') });
 
 /** Another player's progress went up. It never carries what they answered. */
 export const ProgressUpdatedDto = z.strictObject({
@@ -82,8 +132,22 @@ export const ErrorCodeDto = z.enum([
   'invalid-token',
   'invalid-app-check',
   'room-not-found',
+  'room-code-not-found',
   'game-not-found',
+  'player-not-in-room',
   'player-not-in-game',
+  'not-host',
+  'game-in-progress',
+  'room-full',
+  'player-expelled',
+  'host-cannot-be-expelled',
+  'avatar-taken',
+  'not-enough-players',
+  'adding-dilemmas-not-allowed',
+  'dilemma-already-added',
+  'dilemma-not-suitable',
+  'invalid-avatar',
+  'invalid-room-setting',
   'decision-phase-not-started',
   'dilemma-not-in-game',
   'dilemma-not-reached',
@@ -103,12 +167,16 @@ export const ErrorDto = z.strictObject({
 
 /** Every message the room server sends to a player. */
 export const ServerMessageDto = z.discriminatedUnion('type', [
+  RoomStateDto,
+  ExpelledDto,
   GameStateDto,
   ProgressUpdatedDto,
   ConnectionChangedDto,
   ErrorDto,
 ]);
 
+export type RoomStateDto = z.infer<typeof RoomStateDto>;
+export type ExpelledDto = z.infer<typeof ExpelledDto>;
 export type GameStateDto = z.infer<typeof GameStateDto>;
 export type ProgressUpdatedDto = z.infer<typeof ProgressUpdatedDto>;
 export type ConnectionChangedDto = z.infer<typeof ConnectionChangedDto>;

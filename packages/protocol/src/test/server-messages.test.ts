@@ -33,8 +33,20 @@ const gameState = {
     },
   ],
   players: [
-    { playerId: 'player-1', nickname: 'Ana', progress: 0, connected: false },
-    { playerId: 'player-2', nickname: 'Luis', progress: 1, connected: true },
+    {
+      playerId: 'player-1',
+      nickname: 'Ana',
+      avatar: { face: 'face-01', color: 'khaki' },
+      progress: 0,
+      connected: false,
+    },
+    {
+      playerId: 'player-2',
+      nickname: 'Luis',
+      avatar: { face: 'face-12', color: 'teal' },
+      progress: 1,
+      connected: true,
+    },
   ],
   answers: [{ dilemmaId: 'dilemma-1', vote: 'option-1' }],
 };
