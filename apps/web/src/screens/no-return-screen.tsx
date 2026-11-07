@@ -1,7 +1,8 @@
 import type { ErrorCodeDto } from '@thelever-app/protocol';
 import { useTranslation } from 'react-i18next';
-import mascotNeutral from '../assets/brand/mascot-neutral.svg';
-import mascotWaiting from '../assets/brand/mascot-waiting.svg';
+// Inline, in the page itself: these screens show when the network may be gone.
+import mascotNeutral from '../assets/brand/mascot-neutral.svg?inline';
+import mascotWaiting from '../assets/brand/mascot-waiting.svg?inline';
 import { Icon } from '../components/icon.tsx';
 import screen from './screen.module.css';
 import styles from './no-return-screen.module.css';
@@ -46,13 +47,14 @@ export function NoReturnScreen({ code, onReload, onHome }: NoReturnScreenProps) 
         <div className={styles.message}>
           <div className={styles.titleRow}>
             <h1 className={styles.title}>{t(`noReturn.${variant}.title`)}</h1>
-            <img
-              className={styles.mascot}
-              src={variant === 'update' ? mascotNeutral : mascotWaiting}
-              alt=""
-              width={72}
-              height={72}
-            />
+            <span className={styles.mascot}>
+              <img
+                src={variant === 'update' ? mascotNeutral : mascotWaiting}
+                alt=""
+                width={64}
+                height={64}
+              />
+            </span>
           </div>
           <p className={styles.text}>{t(`noReturn.${variant}.text`)}</p>
         </div>

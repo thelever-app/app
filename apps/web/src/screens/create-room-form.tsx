@@ -1,5 +1,5 @@
 import { GroupNatureDto, PlaceDto } from '@thelever-app/protocol';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { Icon, type IconName } from '../components/icon.tsx';
@@ -10,12 +10,19 @@ import { useRoomApi } from '../room/room-api-context.tsx';
 import { codeOf } from './room-error.ts';
 import styles from './form.module.css';
 
-/** What the form shows after each attempt: why it failed, and what the player had written. */
-interface CreateRoomState {
-  readonly error: string | undefined;
+/** What the room is created with, as the player fills it in. */
+interface CreateRoomChoices {
   readonly nickname: string;
-  readonly groupNature: string;
-  readonly place: string;
+  readonly groupNature: GroupNatureDto | undefined;
+  readonly place: PlaceDto | undefined;
+}
+
+/** The first thing still to fill in, which the button asks for instead of creating the room. */
+function missingOf({ nickname, groupNature, place }: CreateRoomChoices) {
+  if (nickname.trim() === '') return 'nickname';
+  if (groupNature === undefined) return 'groupNature';
+  if (place === undefined) return 'place';
+  return undefined;
 }
 
 const NATURES: readonly (readonly [GroupNatureDto, IconName])[] = [
@@ -33,36 +40,41 @@ const PLACES: readonly (readonly [PlaceDto, IconName])[] = [
 /**
  * Creating a room: the nickname, the nature of the group and the place, each one a single
  * choice, on the same screen. The dilemmas take the language of the device; the host changes it
- * in the lobby. Once created, the host enters its lobby.
+ * in the lobby. The button says what is still missing, and creates the room once nothing is.
+ * Once created, the host enters its lobby.
  */
 export function CreateRoomForm() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const api = useRoomApi();
 
-  const [state, formAction, isPending] = useActionState(
-    async (_previous: CreateRoomState, form: FormData): Promise<CreateRoomState> => {
-      const typed = {
-        nickname: String(form.get('nickname') ?? ''),
-        groupNature: String(form.get('groupNature') ?? ''),
-        place: String(form.get('place') ?? ''),
-      };
-      try {
-        const { roomId } = await api.createRoom({
-          nickname: typed.nickname,
-          groupNature: GroupNatureDto.parse(typed.groupNature),
-          place: PlaceDto.parse(typed.place),
-          dilemmaLanguage: deviceLanguage(i18n),
-        });
-        rememberNickname(typed.nickname);
-        void navigate(`/rooms/${roomId}`);
-        return { ...typed, error: undefined };
-      } catch (error) {
-        return { ...typed, error: codeOf(error) };
-      }
-    },
-    { error: undefined, nickname: lastNickname(), groupNature: '', place: '' },
-  );
+  const [choices, setChoices] = useState<CreateRoomChoices>(() => ({
+    nickname: lastNickname(),
+    groupNature: undefined,
+    place: undefined,
+  }));
+  const missing = missingOf(choices);
+  // React resets the form once its action ends, and a radio goes back to its defaultChecked: the
+  // radios carry the choice there, and tell it with onChange, instead of being controlled.
+
+  // Why the last attempt failed; what the player chose stays in the fields.
+  const [error, formAction, isPending] = useActionState(async (): Promise<string | undefined> => {
+    const { nickname, groupNature, place } = choices;
+    if (groupNature === undefined || place === undefined) return undefined;
+    try {
+      const { roomId } = await api.createRoom({
+        nickname,
+        groupNature,
+        place,
+        dilemmaLanguage: deviceLanguage(i18n),
+      });
+      rememberNickname(nickname);
+      void navigate(`/rooms/${roomId}`);
+      return undefined;
+    } catch (failure) {
+      return codeOf(failure);
+    }
+  }, undefined);
 
   return (
     <form action={formAction} className={styles.form}>
@@ -75,7 +87,8 @@ export function CreateRoomForm() {
           maxLength={20}
           autoComplete="nickname"
           placeholder={t('createRoom.nicknamePlaceholder')}
-          defaultValue={state.nickname}
+          value={choices.nickname}
+          onChange={(event) => setChoices({ ...choices, nickname: event.target.value })}
         />
       </label>
 
@@ -90,7 +103,8 @@ export function CreateRoomForm() {
                 name="groupNature"
                 value={nature}
                 required
-                defaultChecked={state.groupNature === nature}
+                defaultChecked={choices.groupNature === nature}
+                onChange={() => setChoices({ ...choices, groupNature: nature })}
               />
               <Icon name={icon} size={22} />
               {t(`createRoom.groupNature.${nature}`)}
@@ -111,7 +125,8 @@ export function CreateRoomForm() {
                 name="place"
                 value={place}
                 required
-                defaultChecked={state.place === place}
+                defaultChecked={choices.place === place}
+                onChange={() => setChoices({ ...choices, place })}
               />
               <Icon name={icon} size={20} />
               {t(`createRoom.place.${place}`)}
@@ -120,15 +135,22 @@ export function CreateRoomForm() {
         </div>
       </fieldset>
 
-      {state.error && (
+      {error && (
         <p role="alert" className={styles.error}>
-          {t(`roomErrors.${state.error}`, { defaultValue: t('roomErrors.unknown') })}
+          {t(`roomErrors.${error}`, { defaultValue: t('roomErrors.unknown') })}
         </p>
       )}
       <div className={styles.submit}>
         <SubmitButton
           pending={isPending}
-          text={isPending ? t('createRoom.submitting') : t('createRoom.submit')}
+          disabled={missing !== undefined}
+          text={
+            isPending
+              ? t('createRoom.submitting')
+              : missing
+                ? t(`createRoom.missing.${missing}`)
+                : t('createRoom.submit')
+          }
         />
       </div>
     </form>

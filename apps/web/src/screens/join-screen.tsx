@@ -18,7 +18,8 @@ type Preview =
 
 /**
  * /join/:code, where the link, the QR and the code field lead: whose room it is and what kind
- * before entering, and the nickname to enter with.
+ * before entering, and the nickname to enter with. A room that turns the player away, before or
+ * on joining, leaves the screen to the reason why.
  */
 export function JoinScreen() {
   const { t } = useTranslation();
@@ -90,7 +91,12 @@ export function JoinScreen() {
                 </p>
               )}
             </section>
-            <JoinRoomForm roomId={preview.room.roomId} />
+            <JoinRoomForm
+              roomId={preview.room.roomId}
+              onRefused={(refusal) =>
+                setAnswer({ code, preview: { status: 'refused', code: refusal } })
+              }
+            />
           </>
         )}
       </div>

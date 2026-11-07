@@ -49,7 +49,7 @@ describe('PlayerList', () => {
         .map((item) => item.textContent),
     ).toEqual([
       `Marta${t('playerList.progressCount', { progress: 1, total: 6 })}`,
-      `${t('playerList.you')}${t('playerList.progressCount', { progress: 2, total: 6 })}`,
+      `${t('playerList.you', { name: 'Ana' })}${t('playerList.progressCount', { progress: 2, total: 6 })}`,
     ]);
   });
 
@@ -96,7 +96,7 @@ describe('PlayerList', () => {
 
     // Assert
     expect(screen.queryByText('Ana')).toBeNull();
-    expect(screen.getByText(t('playerList.you'))).toBeDefined();
+    expect(screen.getByText(t('playerList.you', { name: 'Ana' }))).toBeDefined();
   });
 
   it('should not show who is missing when everyone has finished', async () => {

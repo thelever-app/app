@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import mascotWaiting from '../assets/brand/mascot-waiting.svg';
+// Inline, in the page itself: these screens show when the network may be gone.
+import mascotWaiting from '../assets/brand/mascot-waiting.svg?inline';
 import styles from './notice-bar.module.css';
 
 /** Over the screen while the link to the room is down: the answers already sent are kept by the server. */

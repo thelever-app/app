@@ -29,15 +29,15 @@ describe('hasFinished', () => {
 });
 
 describe('usePlayerName', () => {
-  it('should call the player using the screen by the word for "you" and the rest by their nickname', async () => {
+  it('should call the player using the screen by their nickname with «tú», and the rest by their nickname', async () => {
     // Arrange
-    const { Providers, t } = await providersFor({ game: aGame({ playerId: 'test-ana-id' }) });
+    const { Providers } = await providersFor({ game: aGame({ playerId: 'test-ana-id' }) });
 
     // Act
     const { result } = renderHook(() => usePlayerName(), { wrapper: Providers });
 
     // Assert
-    expect(result.current(ANA)).toBe(t('playerList.you'));
+    expect(result.current(ANA)).toBe('Ana (tú)');
     expect(result.current(LUIS)).toBe('Luis');
   });
 });

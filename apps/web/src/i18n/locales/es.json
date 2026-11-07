@@ -4,7 +4,7 @@
     "unavailable": "Sala no disponible todavía."
   },
   "playerList": {
-    "you": "Tú",
+    "you": "{{name}} (tú)",
     "pending_one": "Falta · {{count}}",
     "pending_many": "Faltan · {{count, number}}",
     "pending_other": "Faltan · {{count, number}}",
@@ -90,7 +90,12 @@
       "remote": "A distancia"
     },
     "submit": "Crear sala",
-    "submitting": "Creando la sala…"
+    "submitting": "Creando la sala…",
+    "missing": {
+      "nickname": "Escribe tu apodo",
+      "groupNature": "Elige con quién juegas",
+      "place": "Dinos dónde estáis"
+    }
   },
   "joinRoom": {
     "roomOf": "Sala de {{host}} · {{code}}",
@@ -101,7 +106,8 @@
     "submit": "Entrar en la sala",
     "submitting": "Entrando…",
     "loading": "Buscando la sala…",
-    "inTheRoom_many": "{{count}} en la sala"
+    "inTheRoom_many": "{{count}} en la sala",
+    "missingNickname": "Escribe tu apodo"
   },
   "roomErrors": {
     "nickname-missing": "Escribe un apodo.",

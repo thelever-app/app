@@ -27,7 +27,9 @@ export function WaitingScreen({ game, onReview }: WaitingScreenProps) {
         <div className={styles.intro}>
           <div className={styles.titleRow}>
             <h1 className={styles.title}>{t('waiting.title')}</h1>
-            <img className={styles.mascot} src={mascotDeciding} alt="" width={72} height={72} />
+            <span className={styles.mascot}>
+              <img src={mascotDeciding} alt="" width={64} height={64} />
+            </span>
           </div>
           <p className={styles.subtitle}>{t('waiting.subtitle')}</p>
           <button type="button" className={styles.review} onClick={onReview}>

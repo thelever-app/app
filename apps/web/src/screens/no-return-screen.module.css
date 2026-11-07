@@ -27,11 +27,17 @@
 }
 
 .mascot {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
   border-radius: var(--radius-full);
 }
 
-/* Its black body disappears on the asphalt of dark mode, so there it sits on a ticket-cream disc. */
+/* Its black body disappears on the asphalt of dark mode, so there it sits on a ticket-cream disc.
+   The drawing reaches the corners of its square: inside the disc it is smaller, so none is cut. */
 @media (prefers-color-scheme: dark) {
   .mascot {
     background: #fbf6ec;

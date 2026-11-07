@@ -13,6 +13,14 @@ describe('ReconnectingBar', () => {
     // Assert
     expect(screen.getByRole('status').textContent).toBe(t('notices.reconnecting'));
   });
+
+  it('should show the mascot without the network it is waiting for', async () => {
+    // Act
+    const { container } = await renderWithProviders(<ReconnectingBar />);
+
+    // Assert
+    expect(container.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
+  });
 });
 
 describe('PausedBar', () => {
@@ -22,6 +30,14 @@ describe('PausedBar', () => {
 
     // Assert
     expect(screen.getByRole('status').textContent).toBe(t('notices.paused'));
+  });
+
+  it('should show the mascot without the network it lets go', async () => {
+    // Act
+    const { container } = await renderWithProviders(<PausedBar />);
+
+    // Assert
+    expect(container.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
   });
 });
 

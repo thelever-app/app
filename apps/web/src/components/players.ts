@@ -17,9 +17,12 @@ export function useSelfPlayerId(): string {
   return playerId;
 }
 
-/** How to call each player on screen: «Tú» for the one using it, the nickname for everyone else. */
+/** How to call each player on screen: «Ana (tú)» for the one using it, the nickname for everyone else. */
 export function usePlayerName(): (player: Pick<Player, 'playerId' | 'nickname'>) => string {
   const { t } = useTranslation();
   const selfPlayerId = useSelfPlayerId();
-  return (player) => (player.playerId === selfPlayerId ? t('playerList.you') : player.nickname);
+  return (player) =>
+    player.playerId === selfPlayerId
+      ? t('playerList.you', { name: player.nickname })
+      : player.nickname;
 }

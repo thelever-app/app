@@ -112,16 +112,13 @@
   cursor: pointer;
 }
 
-.back:disabled {
-  color: var(--color-ink-muted);
-  cursor: default;
-}
-
 .continue {
   composes: primary from '../styles/buttons.module.css';
   flex-grow: 1;
 }
 
+/* Disabled, both buttons look the same: no ring, the surface and muted ink. */
+.back:disabled,
 .continue:disabled {
   background: var(--color-surface);
   color: var(--color-ink-muted);

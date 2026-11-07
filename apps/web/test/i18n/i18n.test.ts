@@ -26,7 +26,7 @@ describe('createI18n', () => {
     const i18n = await createI18n('de');
 
     // Assert
-    expect(i18n.t('playerList.you')).toBe('Tú');
+    expect(i18n.t('playerList.you', { name: 'Ana' })).toBe('Ana (tú)');
   });
 
   it('should take the language of the device and tell the page which one it reads', async () => {
@@ -61,7 +61,7 @@ describe('createI18n', () => {
     const i18n = await createI18n();
 
     // Assert
-    expect(i18n.t('playerList.you')).toBe('Tú');
+    expect(i18n.t('playerList.you', { name: 'Ana' })).toBe('Ana (tú)');
   });
 });
 
