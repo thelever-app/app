@@ -74,6 +74,7 @@ export class PostgresRoomRepository implements RoomRepository {
           identity,
           avatar_face: avatar.face as AvatarFace,
           avatar_color: avatar.color as PlayerColor,
+          has_left: snapshot.leftPlayerIds.includes(playerId),
         })),
       )
       .onConflict((conflict) =>
@@ -82,6 +83,7 @@ export class PostgresRoomRepository implements RoomRepository {
           nickname: eb.ref('excluded.nickname'),
           avatar_face: eb.ref('excluded.avatar_face'),
           avatar_color: eb.ref('excluded.avatar_color'),
+          has_left: eb.ref('excluded.has_left'),
         })),
       )
       .execute();
@@ -168,6 +170,7 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     new_dilemmas: settings.newDilemmas,
     dilemmas_per_player: settings.dilemmasPerPlayer,
     current_game_id: snapshot.currentGameId,
+    absent_host_player_id: snapshot.absentHostId,
   };
 }
 
@@ -194,6 +197,7 @@ function readRoom(db: Kysely<GameTables>, id: string) {
             'room_players.identity',
             'room_players.avatar_face',
             'room_players.avatar_color',
+            'room_players.has_left',
           ])
           .whereRef('room_players.room_id', '=', 'rooms.id')
           .orderBy('room_players.position'),
@@ -269,5 +273,7 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
     addedDilemmas: row.added,
     pickedDilemmas: row.picked,
     currentGameId: row.current_game_id,
+    absentHostId: row.absent_host_player_id,
+    leftPlayerIds: row.players.filter(({ has_left }) => has_left).map(({ id }) => id),
   };
 }

@@ -2,10 +2,14 @@ import { context, propagation } from '@opentelemetry/api';
 import {
   ConnectionChangedEvent,
   type DomainEvent,
+  HostChangedEvent,
   type LobbyChange,
   LobbyChangedEvent,
+  PlayerLeftEvent,
   type PlayerNotifier,
   ProgressUpdatedEvent,
+  RevealStartedEvent,
+  TotalTimeRanOutEvent,
 } from '@thelever-app/game';
 import { type Kysely, sql } from 'kysely';
 import type { GameTables } from '../schema.ts';
@@ -76,6 +80,35 @@ export function readNotification(payload: string): Notification {
           Number(event.roomVersion),
         ),
       };
+    default:
+      return { playerIds, trace, publishedAt, event: decisionPhaseEventOf(event) };
+  }
+}
+
+/** The events of the decision phase, rebuilt from their plain fields. */
+function decisionPhaseEventOf(event: Record<string, unknown>): DomainEvent {
+  switch (event.type) {
+    case 'TotalTimeRanOut':
+      return new TotalTimeRanOutEvent(
+        String(event.gameId),
+        (event.stragglerIds as unknown[]).map(String),
+        Number(event.gameVersion),
+      );
+    case 'RevealStarted':
+      return new RevealStartedEvent(String(event.gameId), Number(event.gameVersion));
+    case 'HostChanged':
+      return new HostChangedEvent(
+        String(event.roomId),
+        String(event.hostId),
+        Number(event.roomVersion),
+      );
+    case 'PlayerLeft':
+      return new PlayerLeftEvent(
+        String(event.roomId),
+        String(event.playerId),
+        Boolean(event.left),
+        Number(event.roomVersion),
+      );
     default:
       throw new Error(`no event of type ${String(event.type)} travels between instances`);
   }

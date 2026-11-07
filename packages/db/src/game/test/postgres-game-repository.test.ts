@@ -1,10 +1,11 @@
 import { Dilemma } from '@thelever-app/dilemmas';
 import { SequentialIdGenerator } from '@thelever-app/dilemmas/in-memory';
-import { Game, Player } from '@thelever-app/game';
+import { GAP_MARKER, Game, Player } from '@thelever-app/game';
 import { CONTRACT_DILEMMAS, describeGameRepositoryContract } from '@thelever-app/game/contracts';
 import {
   SEAL_BEFORE_FIRST_ACCESS,
   SequentialIdGenerator as GameIds,
+  SequentialRandomness,
 } from '@thelever-app/game/in-memory';
 import {
   DeleteQueryNode,
@@ -27,6 +28,13 @@ import { PostgresRoomRepository } from '../postgres-room-repository.ts';
 import { inTransaction } from '../../transaction.ts';
 
 const database = useTestDatabase<Database>();
+/** Where an answer is only the vote. */
+const ANONYMOUS = { ...TEST_GAME_SETTINGS, variant: 'anonymous' } as const;
+const STARTED_AT = new Date('2026-11-09T10:00:00Z');
+
+function answer(game: Game, playerId: string, dilemmaId: string, vote: string): void {
+  game.answer(playerId, dilemmaId, { vote }, SEAL_BEFORE_FIRST_ACCESS, STARTED_AT);
+}
 
 describeGameRepositoryContract('PostgresGameRepository', async () => {
   await emptyTables(database.db());
@@ -51,6 +59,7 @@ describeGameRepositoryContract('PostgresGameRepository', async () => {
       dilemmaId: dilemma.id,
       version: dilemma.version,
       optionIds: dilemma.options.map(({ id }) => id),
+      hasGap: dilemma.text.includes(GAP_MARKER),
     })),
   };
 });
@@ -86,15 +95,16 @@ describe('PostgresGameRepository inside a command', () => {
           version: dilemma.version,
           origin: 'picked-by-the-system',
           optionIds: dilemma.options.map(({ id }) => id),
+          hasGap: false,
         })),
-        settings: TEST_GAME_SETTINGS,
+        settings: ANONYMOUS,
       },
       ids,
     );
-    game.startDecisionPhase(room.players);
+    game.startDecisionPhase(room.players, STARTED_AT, new SequentialRandomness());
     const [ana, luis] = room.players as [Player, Player];
-    game.answer(ana.id, first.id, first.options[0]!.id, SEAL_BEFORE_FIRST_ACCESS);
-    game.answer(luis.id, first.id, first.options[0]!.id, SEAL_BEFORE_FIRST_ACCESS);
+    answer(game, ana.id, first.id, first.options[0]!.id);
+    answer(game, luis.id, first.id, first.options[0]!.id);
     const games = new PostgresGameRepository(database.db());
     await games.save(game);
     return { games, gameId: game.id, ana: ana.id, luis: luis.id, first, second };
@@ -147,7 +157,7 @@ describe('PostgresGameRepository inside a command', () => {
     // Act
     await inTransaction(db, async () => {
       const game = (await games.findById(gameId))!;
-      game.answer(ana, second.id, second.options[0]!.id, SEAL_BEFORE_FIRST_ACCESS);
+      answer(game, ana, second.id, second.options[0]!.id);
       await games.save(game);
     });
 
@@ -169,16 +179,18 @@ describe('PostgresGameRepository inside a command', () => {
     // Act
     await inTransaction(db, async () => {
       const game = (await games.findById(gameId))!;
-      game.answer(ana, first.id, first.options[1]!.id, SEAL_BEFORE_FIRST_ACCESS);
+      answer(game, ana, first.id, first.options[1]!.id);
       await games.save(game);
-      game.answer(luis, second.id, second.options[1]!.id, SEAL_BEFORE_FIRST_ACCESS);
+      answer(game, luis, second.id, second.options[1]!.id);
       await games.save(game);
     });
 
     // Assert
     const found = await games.findById(gameId);
-    expect(found?.answersOf(ana)).toEqual([{ dilemmaId: first.id, vote: first.options[1]!.id }]);
-    expect(found?.answersOf(luis)).toEqual([
+    expect(found?.answersOf(ana)).toMatchObject([
+      { dilemmaId: first.id, vote: first.options[1]!.id },
+    ]);
+    expect(found?.answersOf(luis)).toMatchObject([
       { dilemmaId: first.id, vote: first.options[0]!.id },
       { dilemmaId: second.id, vote: second.options[1]!.id },
     ]);
@@ -212,7 +224,7 @@ describe('PostgresGameRepository inside a command', () => {
       const game = (await games.findById(gameId))!;
       firstRead();
       await new Promise((resolve) => setTimeout(resolve, 200));
-      game.answer(ana, second.id, second.options[0]!.id, SEAL_BEFORE_FIRST_ACCESS);
+      answer(game, ana, second.id, second.options[0]!.id);
       await games.save(game);
     });
 
@@ -228,7 +240,7 @@ describe('PostgresGameRepository inside a command', () => {
     // Arrange
     const { games, gameId, ana, second } = await answeredGame();
     const game = (await games.findById(gameId))!;
-    game.answer(ana, second.id, second.options[0]!.id, SEAL_BEFORE_FIRST_ACCESS);
+    answer(game, ana, second.id, second.options[0]!.id);
 
     // Act
     await inTransaction(database.db(), () => games.save(game));
@@ -254,12 +266,14 @@ describe('PostgresGameRepository inside a command', () => {
         version: 3,
         origin: 'added-by-a-player',
         optionIds: ['TestOptionB', 'TestOptionA'],
+        hasGap: true,
       },
       {
         dilemmaId: 'TestDilemma2',
         version: 1,
         origin: 'picked-by-the-host',
         optionIds: ['TestOptionC', 'TestOptionD'],
+        hasGap: false,
       },
     ] as const;
     const game = Game.create({ roomId: room.id, dilemmas, settings: TEST_GAME_SETTINGS }, ids);
@@ -291,6 +305,7 @@ describe('PostgresGameRepository outside a command', () => {
         version: 1,
         origin: 'picked-by-the-system',
         optionIds: ['TestOptionA'],
+        hasGap: false,
       },
     ] as const;
     const game = Game.create({ roomId: room.id, dilemmas, settings: TEST_GAME_SETTINGS }, ids);
