@@ -1,4 +1,16 @@
-import type { Dilemma } from '../../domain/entities/dilemma.ts';
+import type { Dilemma, DilemmaStatus } from '../../domain/entities/dilemma.ts';
+import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
+
+/** Which public dilemmas to look for, at their current version; every criterion given must hold. */
+export interface DilemmaCriteria {
+  readonly dilemmaIds?: readonly string[];
+  readonly category?: string;
+  /** Every one of them. */
+  readonly tags?: readonly string[];
+  /** 16 leaves out the dilemmas for adults. */
+  readonly maximumMinimumAge: MinimumAge;
+  readonly status: DilemmaStatus;
+}
 
 export interface DilemmaRepository {
   /**
@@ -10,4 +22,6 @@ export interface DilemmaRepository {
   findById(id: string): Promise<Dilemma | undefined>;
   /** The dilemma as it was at that version, to read what was played; never to revise it. */
   findVersion(id: string, version: number): Promise<Dilemma | undefined>;
+  /** The public dilemmas that match, at their current version, ordered by id; none is an empty list. */
+  search(criteria: DilemmaCriteria): Promise<Dilemma[]>;
 }

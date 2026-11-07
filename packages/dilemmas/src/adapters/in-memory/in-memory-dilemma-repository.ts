@@ -1,4 +1,7 @@
-import type { DilemmaRepository } from '../../application/ports/dilemma-repository.port.ts';
+import type {
+  DilemmaCriteria,
+  DilemmaRepository,
+} from '../../application/ports/dilemma-repository.port.ts';
 import {
   Dilemma,
   type DilemmaSnapshot,
@@ -34,5 +37,20 @@ export class InMemoryDilemmaRepository implements DilemmaRepository {
     const stored = this.#dilemmas.get(id);
     const snapshot = stored?.versions.get(version);
     return stored && snapshot && Dilemma.restore({ ...stored.dilemma, version: snapshot });
+  }
+
+  async search(criteria: DilemmaCriteria): Promise<Dilemma[]> {
+    const ids = [...this.#dilemmas.keys()].sort();
+    const current = await Promise.all(ids.map((id) => this.findById(id)));
+    return current.filter(
+      (dilemma): dilemma is Dilemma =>
+        dilemma !== undefined &&
+        dilemma.visibility === 'public' &&
+        dilemma.status === criteria.status &&
+        dilemma.minimumAge <= criteria.maximumMinimumAge &&
+        (!criteria.dilemmaIds || criteria.dilemmaIds.includes(dilemma.id)) &&
+        (!criteria.category || dilemma.category === criteria.category) &&
+        (criteria.tags ?? []).every((tag) => dilemma.tags.includes(tag)),
+    );
   }
 }
