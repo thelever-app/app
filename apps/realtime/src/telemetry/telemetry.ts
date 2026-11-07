@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { type Attributes, diag, DiagLogLevel } from '@opentelemetry/api';
+import { type Attributes, diag, type DiagLogger, DiagLogLevel } from '@opentelemetry/api';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { ExpressInstrumentation } from '@opentelemetry/instrumentation-express';
@@ -41,6 +41,32 @@ export function httpInstrumentation(): HttpInstrumentation {
   });
 }
 
+const DROPPED_ATTRIBUTE = 'dropping invalid resource attribute value';
+
+/** Where the SDK says what fails, as the logs of the room server. */
+export function diagLogger(logger: Pick<Logger, 'warn' | 'error'>): DiagLogger {
+  return {
+    // A fixed message, so the errors of the SDK count as one kind; what failed goes as its cause.
+    // The SDK puts the name of its component first, then a text, then the error, if any.
+    error: (message, ...args) =>
+      logger.error(
+        'telemetry failed',
+        args.find((arg) => arg instanceof Error) ?? [message, ...args].join(' '),
+      ),
+    warn: (message, ...args) => {
+      // On Cloud Run the detector of Google Cloud cannot fill the attributes of other platforms
+      // (zone, cluster, host): five warnings at every start that say nothing.
+      if (message.startsWith(DROPPED_ATTRIBUTE)) return;
+      logger.warn(`telemetry: ${message}`, {
+        ...(args.length > 0 ? { detail: JSON.stringify(args).slice(0, 2000) } : {}),
+      });
+    },
+    info: () => {},
+    debug: () => {},
+    verbose: () => {},
+  };
+}
+
 /** What the telemetry of the process needs to know about its environment. */
 export interface TelemetryOptions {
   /** The Google Cloud project that receives it, and pays for it. */
@@ -65,25 +91,7 @@ export function startTelemetry({ projectId, sampleRatio, logger }: TelemetryOpti
     'x-goog-user-project': projectId,
   });
   const games = new GameSampler(sampleRatio);
-  diag.setLogger(
-    {
-      // A fixed message, so the errors of the SDK count as one kind; what failed goes as its cause.
-      // The SDK puts the name of its component first, then a text, then the error, if any.
-      error: (message, ...args) =>
-        logger.error(
-          'telemetry failed',
-          args.find((arg) => arg instanceof Error) ?? [message, ...args].join(' '),
-        ),
-      warn: (message, ...args) =>
-        logger.warn(`telemetry: ${message}`, {
-          ...(args.length > 0 ? { detail: JSON.stringify(args).slice(0, 2000) } : {}),
-        }),
-      info: () => {},
-      debug: () => {},
-      verbose: () => {},
-    },
-    DiagLogLevel.WARN,
-  );
+  diag.setLogger(diagLogger(logger), DiagLogLevel.WARN);
 
   const sdk = new NodeSDK({
     serviceName: 'realtime',
