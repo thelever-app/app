@@ -11,8 +11,8 @@ export interface SettingsView {
   readonly variant: string;
   readonly adultsOnly: boolean;
   readonly dilemmaLanguage: string;
-  /** None, every category. */
-  readonly categories: readonly string[];
+  /** Null, every category; an empty list, none. */
+  readonly categories: readonly string[] | null;
   readonly dilemmaCount: number;
   readonly totalTimeInMinutes: number;
   readonly newDilemmas: boolean;

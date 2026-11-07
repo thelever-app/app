@@ -88,18 +88,12 @@ describe('SearchDilemmasUseCase', () => {
       expect(dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(['TestDilemma1']);
     });
 
-    it('should find only the dilemmas whose text or tags hold what is searched', async () => {
+    it('should find the dilemmas with what the player typed, as the catalog searches it', async () => {
       // Arrange
       const searchDilemmas = await searchInCatalog();
 
       // Act
-      const byText = await searchDilemmas.execute({
-        text: 'text2',
-        maximumMinimumAge: 18,
-        status: 'in-catalog',
-        language: 'es',
-      });
-      const byTag = await searchDilemmas.execute({
+      const { dilemmas } = await searchDilemmas.execute({
         text: 'FAMILY',
         maximumMinimumAge: 18,
         status: 'in-catalog',
@@ -107,47 +101,7 @@ describe('SearchDilemmasUseCase', () => {
       });
 
       // Assert
-      expect(byText.dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(['TestDilemma2']);
-      expect(byTag.dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(['TestDilemma1']);
-    });
-
-    it('should put first the dilemmas that match best, and the rest by id', async () => {
-      // Arrange
-      const repository = new InMemoryDilemmaRepository();
-      const save = (id: string, text: string, tags: string[]) =>
-        repository.save(
-          Dilemma.create(
-            {
-              text,
-              language: 'es',
-              options: ['TestA', 'TestB'],
-              category: 'honesty',
-              tags,
-              minimumAge: 16,
-            },
-            new FixedIdGenerator(id, `${id}OptionA`, `${id}OptionB`),
-          ),
-        );
-      await save('TestInside', 'TestElectram', []);
-      await save('TestStart', 'Test tramway', []);
-      await save('TestTag', 'TestText', ['tram']);
-      await save('TestAlsoInside', 'TestMetram', []);
-
-      // Act
-      const { dilemmas } = await new SearchDilemmasUseCase(repository).execute({
-        text: 'tram',
-        maximumMinimumAge: 16,
-        status: 'in-catalog',
-        language: 'es',
-      });
-
-      // Assert
-      expect(dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual([
-        'TestTag',
-        'TestStart',
-        'TestAlsoInside',
-        'TestInside',
-      ]);
+      expect(dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(['TestDilemma1']);
     });
 
     it('should return the text in the original language while there is no translation', async () => {

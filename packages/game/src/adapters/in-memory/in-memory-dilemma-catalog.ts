@@ -61,7 +61,7 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
       .filter(
         (dilemma) =>
           (!criteria.dilemmaIds || criteria.dilemmaIds.includes(dilemma.dilemmaId)) &&
-          (!criteria.categories?.length || criteria.categories.includes(dilemma.category)) &&
+          (!criteria.categories || criteria.categories.includes(dilemma.category)) &&
           // Only the whole text typed, in any case: ranking what matches best is up to Dilemmas.
           [dilemma.text, ...dilemma.tags].some((field) => field.toLowerCase().includes(text)) &&
           dilemma.minimumAge <= criteria.maximumMinimumAge &&

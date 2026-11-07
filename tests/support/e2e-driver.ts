@@ -421,13 +421,19 @@ export class E2eDriver implements GameDriver {
         await sheet.getByLabel(SCREEN.language).selectOption(String(value));
       } else if (setting === 'categories') {
         const chips = sheet.getByRole('group', { name: SCREEN.categories });
-        // Every one first, then the ones to play: marking one unmarks «Todas».
-        await chips.getByRole('checkbox', { name: SCREEN.allCategories, exact: true }).click();
-        for (const category of value as readonly string[]) {
+        const chip = (category: string) => {
           const name = SCREEN.categoryNames[category];
           if (!name) throw new Error(`The driver does not know the category ${category}`);
-          await chips.getByRole('checkbox', { name, exact: true }).click();
+          return chips.getByRole('checkbox', { name, exact: true });
+        };
+        // «Todas» first: from there, marking one plays only that one, and unmarking it, none.
+        await chips.getByRole('checkbox', { name: SCREEN.allCategories, exact: true }).click();
+        const categories = value as readonly string[] | null;
+        if (categories?.length === 0) {
+          await chip('life-and-death').click();
+          await chip('life-and-death').click();
         }
+        for (const category of categories ?? []) await chip(category).click();
       } else if (setting === 'dilemmasPerPlayer') {
         const group = sheet.getByRole('radiogroup', { name: SCREEN.dilemmasPerPlayer });
         await chooseOption(group, value === 0 ? SCREEN.noDilemmas : String(value));

@@ -61,7 +61,8 @@ export class StartGameUseCase {
     const candidates = async (status: 'in-catalog' | 'in-exploration'): Promise<string[]> =>
       (
         await this.#dilemmaCatalog.search({
-          categories: settings.categories,
+          // Null plays every category: the search then looks at all of them.
+          ...(settings.categories && { categories: settings.categories }),
           maximumMinimumAge: settings.maximumMinimumAge,
           status,
           language: settings.dilemmaLanguage,

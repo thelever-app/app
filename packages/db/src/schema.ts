@@ -54,8 +54,8 @@ export interface Database {
     variant: RoomVariant;
     adults_only: boolean;
     dilemma_language: DilemmaLanguage;
-    /** None, every category. */
-    categories: string[];
+    /** Null, every category; an empty list, none. */
+    categories: string[] | null;
     dilemma_count: DilemmaCount;
     total_time_in_minutes: TotalTimeInMinutes;
     new_dilemmas: boolean;

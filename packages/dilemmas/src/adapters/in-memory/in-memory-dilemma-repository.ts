@@ -2,6 +2,7 @@ import type {
   DilemmaCriteria,
   DilemmaRepository,
 } from '../../application/ports/dilemma-repository.port.ts';
+import { rankOf } from './text-match.ts';
 import {
   Dilemma,
   type DilemmaSnapshot,
@@ -42,14 +43,26 @@ export class InMemoryDilemmaRepository implements DilemmaRepository {
   async search(criteria: DilemmaCriteria): Promise<Dilemma[]> {
     const ids = [...this.#dilemmas.keys()].sort();
     const current = await Promise.all(ids.map((id) => this.findById(id)));
-    return current.filter(
+    const found = current.filter(
       (dilemma): dilemma is Dilemma =>
         dilemma !== undefined &&
         dilemma.visibility === 'public' &&
         dilemma.status === criteria.status &&
         dilemma.minimumAge <= criteria.maximumMinimumAge &&
         (!criteria.dilemmaIds || criteria.dilemmaIds.includes(dilemma.id)) &&
-        (!criteria.categories?.length || criteria.categories.includes(dilemma.category)),
+        (!criteria.categories || criteria.categories.includes(dilemma.category)),
     );
+    const typed = criteria.text?.trim();
+    if (!typed) return found;
+    const ranked = found.flatMap((dilemma) => {
+      const rank = rankOf(typed, dilemma);
+      return rank ? [{ dilemma, rank }] : [];
+    });
+    // A stable sort: the same rank keeps the order by id.
+    ranked.sort(
+      (a, b) =>
+        Number(b.rank.wholeTag) - Number(a.rank.wholeTag) || b.rank.similarity - a.rank.similarity,
+    );
+    return ranked.map(({ dilemma }) => dilemma);
   }
 }

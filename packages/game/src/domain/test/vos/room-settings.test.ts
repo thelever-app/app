@@ -13,7 +13,7 @@ describe('RoomSettingsVO', () => {
         variant: 'nominal',
         adultsOnly: false,
         dilemmaLanguage: 'en',
-        categories: [],
+        categories: null,
         dilemmaCount: 8,
         totalTimeInMinutes: 6,
         newDilemmas: true,
@@ -59,6 +59,16 @@ describe('RoomSettingsVO', () => {
   });
 
   describe('categories', () => {
+    it('should play every category with null, and none with an empty list', () => {
+      // Act
+      const every = RoomSettingsVO.defaults('es');
+      const none = every.with({ categories: [] });
+
+      // Assert
+      expect(every.categories).toBeNull();
+      expect(none.categories).toEqual([]);
+    });
+
     it('should keep each category once, without the spaces around it', () => {
       // Act
       const settings = RoomSettingsVO.defaults('es').with({

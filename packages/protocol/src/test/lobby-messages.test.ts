@@ -104,6 +104,16 @@ describe('RoomStateDto', () => {
     expect(RoomStateDto.safeParse(blankCategory).success).toBe(false);
   });
 
+  it('should tell every category, as null, from none, as an empty list', () => {
+    // Arrange
+    const every = { ...roomState, settings: { ...settings, categories: null } };
+    const none = { ...roomState, settings: { ...settings, categories: [] } };
+
+    // Act & Assert
+    expect(RoomStateDto.parse(every).settings.categories).toBeNull();
+    expect(RoomStateDto.parse(none).settings.categories).toEqual([]);
+  });
+
   it('should reject a code that is not 5 characters long', () => {
     // Act & Assert
     expect(RoomStateDto.safeParse({ ...roomState, code: 'K7M2' }).success).toBe(false);

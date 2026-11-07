@@ -200,19 +200,26 @@ export function describeDilemmaCatalogContract(
         expect(byId).toEqual([second]);
       });
 
-      it('should find the dilemmas of every category when none is given', async () => {
+      it('should find the dilemmas of every category when no category is given', async () => {
         // Arrange
         const { catalog, stored } = await create();
 
         // Act
-        const found = await catalog.search({
-          ...FOR_EVERYONE,
-          maximumMinimumAge: 18,
-          categories: [],
-        });
+        const found = await catalog.search({ ...FOR_EVERYONE, maximumMinimumAge: 18 });
 
         // Assert
         expect(byText(found)).toEqual([foundAt(stored, 0), foundAt(stored, 1)]);
+      });
+
+      it('should find nothing for an empty list of categories', async () => {
+        // Arrange
+        const { catalog } = await create();
+
+        // Act
+        const found = await catalog.search({ ...FOR_EVERYONE, categories: [] });
+
+        // Assert
+        expect(found).toEqual([]);
       });
 
       it('should return an empty list when nothing matches', async () => {

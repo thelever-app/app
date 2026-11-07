@@ -81,6 +81,7 @@ describe('LobbyScreen', () => {
     });
 
     it.each([
+      [[], 'Ninguna categoría'],
       [['honesty'], 'Honestidad'],
       [['honesty', 'loyalty', 'justice'], '3 categorías'],
     ])('should name the categories %o of the room as %s', async (categories, named) => {
@@ -208,7 +209,7 @@ describe('LobbyScreen', () => {
       expect(send).not.toHaveBeenCalled();
     });
 
-    it('should play the categories the host marks, and every one again once none is marked', async () => {
+    it('should play the categories the host marks, none once every one is unmarked, and all with «Todas»', async () => {
       // Arrange
       const { t, send } = await renderLobby();
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
@@ -226,11 +227,17 @@ describe('LobbyScreen', () => {
       const whileMarked = allChecked();
       mark();
       const unmarked = allChecked();
+      const noneMarked = within(categories)
+        .getAllByRole('checkbox')
+        .every((box) => box.getAttribute('aria-checked') === 'false');
+      fireEvent.click(chip(t('settings.allCategories')));
+      const all = allChecked();
       mark();
       fireEvent.click(screen.getByRole('button', { name: t('settings.save') }));
 
       // Assert
-      expect([atFirst, whileMarked, unmarked]).toEqual(['true', 'false', 'true']);
+      expect([atFirst, whileMarked, unmarked, all]).toEqual(['true', 'false', 'false', 'true']);
+      expect(noneMarked).toBe(true);
       expect(send).toHaveBeenCalledWith({
         type: 'change-settings',
         changes: { categories: ['honesty', 'loyalty'] },

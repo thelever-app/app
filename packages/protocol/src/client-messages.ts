@@ -52,8 +52,11 @@ export const RoomSettingsDto = z.strictObject({
   variant: z.enum(['nominal', 'anonymous']),
   adultsOnly: z.boolean(),
   dilemmaLanguage: LanguageDto,
-  /** Categories of Dilemmas, which Game does not know; none, every category. */
-  categories: z.array(z.string().min(1)).max(20),
+  /**
+   * Categories of Dilemmas, which Game does not know: null plays every category, and an empty
+   * list none, so only the dilemmas the players add.
+   */
+  categories: z.array(z.string().min(1)).max(20).nullable(),
   dilemmaCount: z.union([z.literal(6), z.literal(8), z.literal(10), z.literal(12)]),
   totalTimeInMinutes: z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(10)]),
   /** Whether a game by categories keeps room for dilemmas in exploration. */

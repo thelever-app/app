@@ -19,7 +19,7 @@ export interface CatalogDilemma {
 /** Which dilemmas to look for; every criterion given must hold. */
 export interface DilemmaSearch {
   readonly dilemmaIds?: readonly string[];
-  /** Any of them; none, every category. */
+  /** Any of them; an empty list finds nothing, and without it every category is searched. */
   readonly categories?: readonly string[];
   /** What a player typed, looked for in the text and the tags; the best matches may come first. */
   readonly text?: string;

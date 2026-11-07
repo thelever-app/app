@@ -203,7 +203,8 @@
       "all": "Todas las categorías",
       "some_one": "{{count}} categoría",
       "some_other": "{{count}} categorías",
-      "some_many": "{{count}} categorías"
+      "some_many": "{{count}} categorías",
+      "none": "Ninguna categoría"
     },
     "pickedCount_one": "{{count}} dilema elegido",
     "pickedCount_other": "{{count}} dilemas elegidos",

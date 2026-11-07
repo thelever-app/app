@@ -20,9 +20,9 @@ export interface RoomSettingsSnapshot {
   readonly dilemmaLanguage: DilemmaLanguage;
   /**
    * The ids of the categories of Dilemmas a game by categories plays, which the room does not
-   * check; none, every category.
+   * check: null plays every category, and an empty list none, so only what the players add.
    */
-  readonly categories: readonly string[];
+  readonly categories: readonly string[] | null;
   readonly dilemmaCount: DilemmaCount;
   readonly totalTimeInMinutes: TotalTimeInMinutes;
   /** Whether a game by categories keeps room for dilemmas in exploration. */
@@ -41,9 +41,9 @@ export class RoomSettingsVO {
     if (!(DILEMMA_LANGUAGES as readonly string[]).includes(settings.dilemmaLanguage)) {
       throw new InvalidRoomSettingError('dilemma language', settings.dilemmaLanguage);
     }
-    const categories = settings.categories.map((category) => category.trim());
-    const blank = categories.findIndex((category) => category === '');
-    if (blank !== -1) throw new InvalidRoomSettingError('category', settings.categories[blank]);
+    const categories = settings.categories?.map((category) => category.trim()) ?? null;
+    const blank = categories?.findIndex((category) => category === '') ?? -1;
+    if (blank !== -1) throw new InvalidRoomSettingError('category', settings.categories?.[blank]);
     if (!(DILEMMA_COUNTS as readonly number[]).includes(settings.dilemmaCount)) {
       throw new InvalidRoomSettingError('number of dilemmas', settings.dilemmaCount);
     }
@@ -53,7 +53,7 @@ export class RoomSettingsVO {
     if (!(DILEMMAS_PER_PLAYER as readonly number[]).includes(settings.dilemmasPerPlayer)) {
       throw new InvalidRoomSettingError('dilemmas per player', settings.dilemmasPerPlayer);
     }
-    this.#settings = { ...settings, categories: [...new Set(categories)] };
+    this.#settings = { ...settings, categories: categories && [...new Set(categories)] };
   }
 
   /** A nominal room for everyone, with every category and new dilemmas, where players cannot add any. */
@@ -62,7 +62,7 @@ export class RoomSettingsVO {
       variant: 'nominal',
       adultsOnly: false,
       dilemmaLanguage: dilemmaLanguage as DilemmaLanguage,
-      categories: [],
+      categories: null,
       dilemmaCount: 8,
       totalTimeInMinutes: 6,
       newDilemmas: true,
@@ -82,8 +82,8 @@ export class RoomSettingsVO {
     return this.#settings.dilemmaLanguage;
   }
 
-  get categories(): readonly string[] {
-    return [...this.#settings.categories];
+  get categories(): readonly string[] | null {
+    return this.#settings.categories && [...this.#settings.categories];
   }
 
   get dilemmaCount(): DilemmaCount {

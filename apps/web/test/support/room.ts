@@ -15,7 +15,7 @@ export function aRoom(overrides: Partial<RoomStateDto> = {}): RoomStateDto {
       variant: 'nominal',
       adultsOnly: false,
       dilemmaLanguage: 'es',
-      categories: [],
+      categories: null,
       dilemmaCount: 8,
       totalTimeInMinutes: 6,
       newDilemmas: true,
