@@ -3,9 +3,16 @@ import { z } from 'zod';
 /**
  * The version of this contract. Client and server agree on it once, when the connection opens.
  * 2 since App Check: a client of 1 could not read the error that turns it down. 3 since the lobby:
- * a connection is to a room, not to a game.
+ * a connection is to a room, not to a game. 5 since the whole decision phase: predictions, the
+ * total time, the reveal, leaving and reporting.
  */
-export const CONTRACT_VERSION = 4;
+export const CONTRACT_VERSION = 5;
+
+/**
+ * Where the nickname of the person in the gap "someone in the group" goes, in the text of a
+ * dilemma and of its options; the game state says who it is.
+ */
+export const GAP_MARKER = '{gap}';
 
 /** The languages a player can read the dilemmas in. */
 export const LanguageDto = z.enum(['es', 'en', 'fr', 'de', 'it', 'pt', 'ca']);
@@ -96,6 +103,39 @@ export const AnswerDilemmaDto = z.strictObject({
   type: z.literal('answer-dilemma'),
   dilemmaId: z.string().min(1),
   vote: z.string().min(1),
+  /**
+   * In a nominal room, the predictions made so far, sent again with every change: how many of the
+   * others chose the same, and the vote of each player of the subset predicted.
+   */
+  matchPrediction: z.number().int().nonnegative().nullable().optional(),
+  votePredictions: z
+    .array(z.strictObject({ playerId: z.string().min(1), vote: z.string().min(1) }))
+    .max(10)
+    .optional(),
+  traceparent: TraceparentDto.optional(),
+});
+
+/** The host ends the decision phase and starts the reveal, at any moment. */
+export const StartRevealDto = z.strictObject({
+  type: z.literal('start-reveal'),
+  traceparent: TraceparentDto.optional(),
+});
+
+/** The player leaves the game in progress on purpose; they can join the room again. */
+export const LeaveRoomDto = z.strictObject({
+  type: z.literal('leave-room'),
+  traceparent: TraceparentDto.optional(),
+});
+
+/** Why a player reports a dilemma; only an offensive one lets them skip it. */
+export const ReportReasonDto = z.enum(['offensive', 'confusing', 'mistranslated', 'other']);
+
+/** The player reports a dilemma of the game to Moderation. */
+export const ReportDilemmaDto = z.strictObject({
+  type: z.literal('report-dilemma'),
+  dilemmaId: z.string().min(1),
+  reason: ReportReasonDto,
+  comment: z.string().max(500).optional(),
   traceparent: TraceparentDto.optional(),
 });
 
@@ -160,6 +200,9 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   RemoveAddedDilemmaDto,
   ExpelPlayerDto,
   StartGameDto,
+  StartRevealDto,
+  LeaveRoomDto,
+  ReportDilemmaDto,
 ]);
 
 /** The type of every message a player sends, so the server can say which one it rejected. */
@@ -173,6 +216,9 @@ export const ClientMessageTypeDto = z.enum([
   'remove-added-dilemma',
   'expel-player',
   'start-game',
+  'start-reveal',
+  'leave-room',
+  'report-dilemma',
 ]);
 
 export type LanguageDto = z.infer<typeof LanguageDto>;
@@ -191,5 +237,9 @@ export type ExpelPlayerDto = z.infer<typeof ExpelPlayerDto>;
 export type StartGameDto = z.infer<typeof StartGameDto>;
 export type ConnectDto = z.infer<typeof ConnectDto>;
 export type AnswerDilemmaDto = z.infer<typeof AnswerDilemmaDto>;
+export type StartRevealDto = z.infer<typeof StartRevealDto>;
+export type LeaveRoomDto = z.infer<typeof LeaveRoomDto>;
+export type ReportReasonDto = z.infer<typeof ReportReasonDto>;
+export type ReportDilemmaDto = z.infer<typeof ReportDilemmaDto>;
 export type ClientMessageDto = z.infer<typeof ClientMessageDto>;
 export type ClientMessageTypeDto = z.infer<typeof ClientMessageTypeDto>;

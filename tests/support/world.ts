@@ -47,9 +47,20 @@ export class GameWorld extends World {
   /** The avatar a step chose. */
   avatar: string | undefined;
 
+  /** The position (from 1) of the dilemma a step talks about as "it" or "that dilemma". */
+  position: number | undefined;
+
+  /** The options a step named, in lower case as the scenario writes them. */
+  options: readonly string[] = [];
+
+  /** The vote predictions a step made. */
+  predictions: readonly { readonly player: string; readonly vote: string }[] = [];
+
   #host: string | undefined;
   #choices: RoomChoices = {};
   #roomCreated = false;
+  #gameRequested = false;
+  #gameStarted = false;
 
   constructor(options: IWorldOptions) {
     super(options);
@@ -97,6 +108,25 @@ export class GameWorld extends World {
     if (this.inRoom.has(player)) return;
     await this.driver.joinRoom(player, nickname);
     this.inRoom.add(player);
+  }
+
+  /** The scenario plays a game; it starts once a step needs it, so earlier steps can set it up. */
+  requestGame(): void {
+    this.#gameRequested = true;
+  }
+
+  /** The game of the scenario, which the host starts with everyone if no step has yet. */
+  async game(): Promise<void> {
+    if (this.#gameStarted) return;
+    await this.host();
+    await this.driver.startDecisionPhase();
+    this.#gameStarted = true;
+  }
+
+  /** A step that sets up the game, so it must come before anything starts it. */
+  beforeTheGame(): void {
+    if (this.#gameStarted) throw new Error('A step sets up the game after it started');
+    if (!this.#gameRequested) throw new Error('A step sets up a game the scenario does not play');
   }
 
   /** The players in the room other than its host. */

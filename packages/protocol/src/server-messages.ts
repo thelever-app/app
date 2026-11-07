@@ -15,7 +15,8 @@ const RoomVersionDto = z.number().int().nonnegative();
 
 /**
  * What the screen needs to draw the decision phase: who is playing, how far each one is,
- * and the answers of the player who receives it. Never the answers of anybody else.
+ * and the answers of the player who receives it. Never the answers of anybody else, nor how long
+ * anyone took to answer.
  */
 export const GameStateDto = z.strictObject({
   type: z.literal('game-state'),
@@ -26,16 +27,30 @@ export const GameStateDto = z.strictObject({
   roomVersion: RoomVersionDto,
   /** The player who receives the message. */
   playerId: z.string().min(1),
+  phase: z.enum(['decision', 'reveal']),
+  /** Who may start the reveal now. */
+  hostId: z.string().min(1),
+  /** When the total time runs out, by the clock of the server; the game goes on after it. */
+  totalTimeEndsAt: z.iso.datetime(),
+  /** The time of the server when it sent this state, so the screen can correct its own clock. */
+  serverTime: z.iso.datetime(),
+  /** Once true, who has not finished is a straggler. */
+  totalTimeRanOut: z.boolean(),
   /** In the order every player gets them, in the language of the player. */
   dilemmas: z
     .array(
       z.strictObject({
         dilemmaId: z.string().min(1),
+        /** With GAP_MARKER where the nickname of the person in the gap goes. */
         text: z.string().min(1),
-        /** A vote is the optionId of one of them. */
+        /** In the order this player sees them. A vote is the optionId of one of them. */
         options: z
           .array(z.strictObject({ optionId: z.string().min(1), text: z.string().min(1) }))
           .min(1),
+        /** The players whose vote this player predicts; none in an anonymous room. */
+        predictionSubset: z.array(z.string().min(1)),
+        /** Who takes the gap "someone in the group", the same for everyone; null without it. */
+        personInTheGap: z.string().min(1).nullable(),
       }),
     )
     .min(1),
@@ -48,14 +63,27 @@ export const GameStateDto = z.strictObject({
         progress: z.number().int().nonnegative(),
         /** False while the player has no open connection: the others see them as disconnected. */
         connected: z.boolean(),
+        /** Left the game on purpose: nobody waits for them. */
+        left: z.boolean(),
       }),
     )
     .min(1),
-  /** Only the answers of the player who receives the message. */
+  /** Only the answers of the player who receives the message, complete or not yet. */
   answers: z.array(
     z.strictObject({
       dilemmaId: z.string().min(1),
       vote: z.string().min(1),
+      matchPrediction: z.number().int().nonnegative().nullable(),
+      votePredictions: z.array(
+        z.strictObject({ playerId: z.string().min(1), vote: z.string().min(1) }),
+      ),
+    }),
+  ),
+  /** The dilemmas the player who receives the message is recorded as "did not vote" for. */
+  didNotVote: z.array(
+    z.strictObject({
+      dilemmaId: z.string().min(1),
+      reason: z.enum(['not-answered', 'reported']),
     }),
   ),
 });
@@ -156,6 +184,15 @@ export const ErrorCodeDto = z.enum([
   'nickname-missing',
   'duplicate-dilemma',
   'dilemmas-missing',
+  'game-not-in-progress',
+  'decision-phase-over',
+  'vote-missing',
+  'predictions-not-allowed',
+  'invalid-match-prediction',
+  'player-not-in-prediction-subset',
+  'duplicate-vote-prediction',
+  'answer-incomplete',
+  'dilemma-skipped',
 ]);
 
 /** The answer to a rejected message, on the same connection. */

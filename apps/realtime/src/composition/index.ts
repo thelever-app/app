@@ -16,6 +16,11 @@ import { JoinRoomEndpoint } from '../rooms/http/join-room.endpoint.ts';
 import { RoomPreviewEndpoint } from '../rooms/http/room-preview.endpoint.ts';
 import { SearchDilemmasEndpoint } from '../rooms/http/search-dilemmas.endpoint.ts';
 import { RandomIdGenerator } from '../rooms/random-id-generator.ts';
+import { SystemClock } from '../rooms/system-clock.ts';
+import { TotalTimeTimers } from '../rooms/total-time-timers.ts';
+import { decisionPhaseCommandHandlers } from '../rooms/sockets/decision-phase-commands.ts';
+import { LeaveRoomHandler } from '../rooms/sockets/leave-room.handler.ts';
+import { ReportDilemmaHandler } from '../rooms/sockets/report-dilemma.handler.ts';
 import type { RunCommand } from '../rooms/run-command.ts';
 import { AnswerDilemmaHandler } from '../rooms/sockets/answer-dilemma.handler.ts';
 import { ConnectHandler } from '../rooms/sockets/connect.handler.ts';
@@ -67,9 +72,25 @@ export async function composeRealtimeServer(
   const { notifierFor, runCommand, ...repositories } = await adaptersFor(storage);
   const catalog = dilemmaCatalog(repositories.dilemmaRepository);
 
-  // 2. The queries, and with them what sends each player the state of their room.
+  // 2. The queries, and with them what sends each player the state of their room. One holder per
+  // room at a time in this instance: its commands never interleave, and an event of the room
+  // another instance published waits for the command in progress. Sending a game in its decision
+  // phase sets the timer of its total time in this instance.
+  const clock = new SystemClock();
+  const roomLock = new KeyedLock();
   const queries = gameQueries({ ...repositories, catalog });
-  const stateSender = new StateSender(queries.getRoomState, queries.getGameState);
+  const timers = new TotalTimeTimers(
+    (roomId) => commands.runOutTotalTime.execute({ roomId }),
+    roomLock,
+    runCommand,
+    logger,
+  );
+  const stateSender = new StateSender(
+    queries.getRoomState,
+    queries.getGameState,
+    clock,
+    (roomId, endsAt) => timers.schedule(roomId, endsAt),
+  );
   const socketNotifier = new SocketNotifier(stateSender);
 
   // 3. The commands, which notify the players of what changed.
@@ -79,12 +100,10 @@ export async function composeRealtimeServer(
     notifier: notifierFor(socketNotifier),
     idGenerator: new RandomIdGenerator(),
     randomness: new CryptoRandomness(),
+    clock,
   });
 
-  // 4. The HTTP routes and the room sockets on the same server. One holder per room at a time in
-  // this instance: its commands never interleave, and an event of the room another instance
-  // published waits for the command in progress.
-  const roomLock = new KeyedLock();
+  // 4. The HTTP routes and the room sockets on the same server.
   const http = createServer(
     createApp(httpEndpoints(commands, queries, runCommand), {
       authenticate: authentication(configuration.tokenVerifier, configuration.appCheckVerifier),
@@ -103,6 +122,7 @@ export async function composeRealtimeServer(
 
   // 5. How it stops: alone in memory; in PostgreSQL, among the other instances.
   const stopServing: StopServing = async (code, reason) => {
+    timers.clear();
     roomSockets.leave(code, reason);
     await new Promise((resolve) => sockets.close(resolve));
     await new Promise((resolve) => http.close(resolve));
@@ -168,6 +188,9 @@ function roomSocketServer(
     ),
     new AnswerDilemmaHandler(commands.answerDilemma, roomLock, stateSender, runCommand),
     ...lobbyCommandHandlers(commands, roomLock, runCommand),
+    ...decisionPhaseCommandHandlers(commands, roomLock, runCommand),
+    new LeaveRoomHandler(commands.leaveRoom, socketNotifier, roomLock, runCommand),
+    new ReportDilemmaHandler(commands.reportDilemma, roomLock, stateSender, runCommand),
   ];
   return new RoomSocketServer(handlers, disconnect, errorCodeOf, pingIntervalMs, logger);
 }

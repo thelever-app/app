@@ -226,7 +226,10 @@ describe('the lobby over the room sockets', () => {
     const states = await Promise.all([ana, luis, marta].map((client) => client.next('game-state')));
     expect(new Set(states.map(({ gameId }) => gameId)).size).toBe(1);
     expect(states[0]!.dilemmas.length).toBeGreaterThan(0);
-    expect(states.map(({ dilemmas }) => dilemmas)).toEqual(states.map(() => states[0]!.dilemmas));
+    // The same dilemmas in the same order for everyone; the options, each in their own order.
+    const idsOf = ({ dilemmas }: (typeof states)[number]) =>
+      dilemmas.map(({ dilemmaId }) => dilemmaId);
+    expect(states.map(idsOf)).toEqual(states.map(() => idsOf(states[0]!)));
   });
 
   it('should answer not-enough-players to a host alone', async () => {

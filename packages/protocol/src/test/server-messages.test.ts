@@ -13,6 +13,11 @@ const gameState = {
   gameVersion: 4,
   roomVersion: 2,
   playerId: 'player-2',
+  phase: 'decision',
+  hostId: 'player-1',
+  totalTimeEndsAt: '2026-11-09T10:06:00.000Z',
+  serverTime: '2026-11-09T10:01:12.345Z',
+  totalTimeRanOut: false,
   dilemmas: [
     {
       dilemmaId: 'dilemma-1',
@@ -21,15 +26,19 @@ const gameState = {
         { optionId: 'option-1', text: 'Pull the lever' },
         { optionId: 'option-2', text: 'Do nothing' },
       ],
+      predictionSubset: ['player-1'],
+      personInTheGap: null,
     },
     {
       dilemmaId: 'dilemma-2',
-      text: 'Text of the second dilemma',
+      text: 'Text of the second dilemma about {gap}',
       options: [
         { optionId: 'option-3', text: 'Save the child' },
         { optionId: 'option-4', text: 'Save the doctor' },
         { optionId: 'option-5', text: 'Save the athlete' },
       ],
+      predictionSubset: ['player-1'],
+      personInTheGap: 'player-1',
     },
   ],
   players: [
@@ -39,6 +48,7 @@ const gameState = {
       avatar: { face: 'face-01', color: 'khaki' },
       progress: 0,
       connected: false,
+      left: false,
     },
     {
       playerId: 'player-2',
@@ -46,9 +56,18 @@ const gameState = {
       avatar: { face: 'face-12', color: 'teal' },
       progress: 1,
       connected: true,
+      left: false,
     },
   ],
-  answers: [{ dilemmaId: 'dilemma-1', vote: 'option-1' }],
+  answers: [
+    {
+      dilemmaId: 'dilemma-1',
+      vote: 'option-1',
+      matchPrediction: 1,
+      votePredictions: [{ playerId: 'player-1', vote: 'option-2' }],
+    },
+  ],
+  didNotVote: [],
 };
 
 const progressUpdated = {
@@ -153,7 +172,10 @@ describe('GameStateDto', () => {
       ...gameState,
       players: [{ playerId: 'player-1', nickname: '', progress: 0, connected: true }],
     };
-    const emptyVote = { ...gameState, answers: [{ dilemmaId: 'dilemma-1', vote: '' }] };
+    const emptyVote = {
+      ...gameState,
+      answers: [{ dilemmaId: 'dilemma-1', vote: '', matchPrediction: null, votePredictions: [] }],
+    };
 
     // Act & Assert
     expect(GameStateDto.safeParse(emptyNickname).success).toBe(false);
@@ -314,7 +336,7 @@ describe('ErrorDto', () => {
   it('should reject a code or a command no schema knows', () => {
     // Act & Assert
     expect(ErrorDto.safeParse({ ...error, code: 'DilemmaNotReachedError' }).success).toBe(false);
-    expect(ErrorDto.safeParse({ ...error, command: 'start-reveal' }).success).toBe(false);
+    expect(ErrorDto.safeParse({ ...error, command: 'move-reveal' }).success).toBe(false);
   });
 
   it('should reject a text for the screen', () => {

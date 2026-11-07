@@ -34,6 +34,11 @@ export {
   RemoveAddedDilemmaDto,
   RoomSettingsDto,
   StartGameDto,
+  StartRevealDto,
+  LeaveRoomDto,
+  ReportReasonDto,
+  ReportDilemmaDto,
+  GAP_MARKER,
   TraceparentDto,
 } from './client-messages.ts';
 export { CreateRoomRequestDto, CreateRoomResponseDto } from './http/create-room.ts';

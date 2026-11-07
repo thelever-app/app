@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   AnswerDilemmaDto,
+  CONTRACT_VERSION,
   ClientMessageDto,
   ClientMessageTypeDto,
-  CONTRACT_VERSION,
   ConnectDto,
+  ReportDilemmaDto,
 } from '../client-messages.ts';
 
 const connect = {
@@ -148,7 +149,7 @@ describe('ClientMessageDto', () => {
 
   it('should reject a message no schema knows', () => {
     // Act & Assert
-    expect(ClientMessageDto.safeParse({ type: 'start-reveal' }).success).toBe(false);
+    expect(ClientMessageDto.safeParse({ type: 'move-reveal' }).success).toBe(false);
   });
 });
 
@@ -159,5 +160,55 @@ describe('ClientMessageTypeDto', () => {
 
     // Assert
     expect([...ClientMessageTypeDto.options].sort()).toEqual(types.sort());
+  });
+});
+
+describe('the messages of the decision phase', () => {
+  it('should accept an answer with the predictions made so far, or without any', () => {
+    // Arrange
+    const answer = { type: 'answer-dilemma', dilemmaId: 'dilemma-1', vote: 'option-1' };
+
+    // Act & Assert
+    expect(AnswerDilemmaDto.safeParse(answer).success).toBe(true);
+    expect(
+      AnswerDilemmaDto.safeParse({
+        ...answer,
+        matchPrediction: 2,
+        votePredictions: [{ playerId: 'player-1', vote: 'option-2' }],
+      }).success,
+    ).toBe(true);
+    expect(AnswerDilemmaDto.safeParse({ ...answer, matchPrediction: null }).success).toBe(true);
+  });
+
+  it('should reject a match prediction below 0 or not whole', () => {
+    // Arrange
+    const answer = { type: 'answer-dilemma', dilemmaId: 'dilemma-1', vote: 'option-1' };
+
+    // Act & Assert
+    expect(AnswerDilemmaDto.safeParse({ ...answer, matchPrediction: -1 }).success).toBe(false);
+    expect(AnswerDilemmaDto.safeParse({ ...answer, matchPrediction: 0.5 }).success).toBe(false);
+  });
+
+  it('should accept starting the reveal, leaving and reporting a dilemma', () => {
+    // Act & Assert
+    expect(ClientMessageDto.safeParse({ type: 'start-reveal' }).success).toBe(true);
+    expect(ClientMessageDto.safeParse({ type: 'leave-room' }).success).toBe(true);
+    expect(
+      ClientMessageDto.safeParse({
+        type: 'report-dilemma',
+        dilemmaId: 'dilemma-1',
+        reason: 'offensive',
+        comment: 'It names a real person',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('should reject a report without a reason Moderation knows, or with a comment too long', () => {
+    // Arrange
+    const report = { type: 'report-dilemma', dilemmaId: 'dilemma-1', reason: 'confusing' };
+
+    // Act & Assert
+    expect(ReportDilemmaDto.safeParse({ ...report, reason: 'boring' }).success).toBe(false);
+    expect(ReportDilemmaDto.safeParse({ ...report, comment: 'x'.repeat(501) }).success).toBe(false);
   });
 });

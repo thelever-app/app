@@ -98,7 +98,9 @@ describe('RoomSocketServer', () => {
       // Assert
       const state = await luis.next('game-state');
       expect(state.gameId).toBe(gameId);
-      expect(state.dilemmas).toEqual(dilemmas);
+      expect(state.dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(
+        dilemmas.map(({ dilemmaId }) => dilemmaId),
+      );
       expect(state.dilemmas.map(({ dilemmaId }) => dilemmaId).sort()).toEqual(
         SEED_DILEMMAS.map(({ id }) => id).sort(),
       );
@@ -202,7 +204,12 @@ describe('RoomSocketServer', () => {
       // Assert
       const state = await luis.next('game-state');
       expect(state.answers).toEqual(
-        [firstVoteOf(first)].map(({ dilemmaId, vote }) => ({ dilemmaId, vote })),
+        [firstVoteOf(first)].map(({ dilemmaId, vote }) => ({
+          dilemmaId,
+          vote,
+          matchPrediction: null,
+          votePredictions: [],
+        })),
       );
       const progress = await ana.next('progress-updated');
       expect(progress).toEqual({
@@ -342,7 +349,7 @@ describe('RoomSocketServer', () => {
   describe('messages that cannot be read', () => {
     it.each([
       ['text that is not JSON', 'not json', null],
-      ['a type no schema knows', { type: 'start-reveal' }, null],
+      ['a type no schema knows', { type: 'move-reveal' }, null],
       [
         'a known type with a wrong shape',
         { type: 'answer-dilemma', dilemmaId: '' },

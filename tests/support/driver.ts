@@ -50,6 +50,31 @@ export interface CatalogEntry {
   readonly status: 'in-catalog' | 'in-exploration';
 }
 
+/** What the game keeps of the answer of a player to a dilemma. */
+export interface RecordedAnswer {
+  /** The text of the option voted, as the test data writes it. */
+  readonly vote: string;
+  readonly matchPrediction: number | null;
+  /** By the name the scenario gives each predicted player, with the text of the option. */
+  readonly votePredictions: readonly { readonly player: string; readonly vote: string }[];
+  /** The texts of the options in the order the voter saw them. */
+  readonly optionOrder: readonly string[];
+  readonly responseTimeSeconds: number | null;
+  readonly voterInTheGap: boolean;
+  readonly researchConsent: boolean;
+  readonly commercialLicenceConsent: boolean;
+  readonly underEighteen: boolean;
+}
+
+/** What a player declared and consented to, which the seal of their answers records. */
+export interface Declaration {
+  readonly underEighteen: boolean;
+  readonly researchConsent: boolean;
+}
+
+/** Why a player reports a dilemma, as the scenario says it. */
+export type ReportReason = 'offensive' | 'confusing';
+
 export type InvitationMethod = 'invitation link' | 'code' | 'QR';
 
 /** Why a player could not get into a room. */
@@ -178,4 +203,61 @@ export interface GameDriver {
   dilemmaShownTo(player: string): Promise<number>;
   /** Whether `viewer` sees `player` as connected, from what `viewer` received. */
   connectionSeenBy(viewer: string, player: string): Promise<boolean | undefined>;
+
+  /** The text of the dilemma in that position (from 1) as `player` sees it, with the gap filled. */
+  dilemmaTextSeenBy(player: string, position: number): Promise<string>;
+  /** The texts of the options of the dilemma in that position as `player` sees them, in order. */
+  optionsSeenBy(player: string, position: number): Promise<string[]>;
+  /** Who takes the gap of each dilemma of the game that has it, by its position (from 1). */
+  peopleInTheGap(): Promise<Map<number, string>>;
+  /** The text the game keeps of the dilemma in that position, with the gap unfilled. */
+  textKeptFor(position: number): Promise<string>;
+  answerRecordedFor(player: string, position: number): Promise<RecordedAnswer | undefined>;
+  /** Positions (from 1) of the dilemmas `player` is recorded as "did not vote" for. */
+  didNotVoteRecordedFor(player: string): Promise<number[]>;
+  /** Everything every player received or can ask for about the game, of any kind. */
+  everythingPlayersSee(): Promise<object[]>;
+
+  /** What `player` declared in the first access, before the game starts. Only in the application. */
+  declare(player: string, declaration: Declaration): Promise<void>;
+  /** Time passes for everyone. Only in the application. */
+  letTimePass(seconds: number): Promise<void>;
+  /** The total time of the game runs out, and every device notices. */
+  runOutTotalTime(): Promise<void>;
+  /** Who `viewer` sees as not finished once the time ran out, by name. */
+  stragglersSeenBy(viewer: string): Promise<string[]>;
+
+  /** `player` votes the dilemma they are on, with the option given or the first one. */
+  vote(player: string, option?: string): Promise<void>;
+  /** As `vote`, on a dilemma they have not voted; whether they could predict anything. */
+  canMakePredictions(player: string): Promise<boolean>;
+  predictMatch(player: string, count: number): Promise<void>;
+  predictVotes(
+    player: string,
+    predictions: readonly { readonly player: string; readonly vote: string }[],
+  ): Promise<void>;
+  /** The players whose vote `player` predicts in the dilemma in that position, by name. */
+  predictionSubsetOf(player: string, position: number): Promise<string[]>;
+  /** How many players each player predicts at most, as the game is set up. */
+  predictionLimit(): number;
+  /** How many times each player was in the subset of anyone, over the whole game. */
+  timesEachPlayerWasPredicted(): Promise<Map<string, number>>;
+  /** What the predictions of `player` scored in each dilemma; empty until the reveal. */
+  pointsOf(
+    player: string,
+  ): Promise<
+    { readonly position: number; readonly match: number | null; readonly votes: number | null }[]
+  >;
+
+  /** `player` reports the dilemma they are on. */
+  report(player: string, reason: ReportReason): Promise<void>;
+  startReveal(host: string): Promise<void>;
+  /** Whether `player` has a way to start the reveal now. */
+  canStartReveal(player: string): Promise<boolean>;
+  /** Whether `viewer` is in the reveal, from what they received. */
+  isInTheReveal(viewer: string): Promise<boolean>;
+  /** Who `viewer` sees as the host during the game, by name. */
+  hostSeenBy(viewer: string): Promise<string>;
+  /** `player` leaves the game on purpose. */
+  leave(player: string): Promise<void>;
 }

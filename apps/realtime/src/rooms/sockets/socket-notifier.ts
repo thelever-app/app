@@ -1,7 +1,11 @@
 import {
   ConnectionChangedEvent,
+  HostChangedEvent,
   LobbyChangedEvent,
+  PlayerLeftEvent,
   ProgressUpdatedEvent,
+  RevealStartedEvent,
+  TotalTimeRanOutEvent,
   type DomainEvent,
   type PlayerNotifier,
 } from '@thelever-app/game';
@@ -31,9 +35,18 @@ function messageFor(event: DomainEvent): ServerMessageDto | undefined {
 }
 
 /**
- * Delivers the events of the use cases to the connections of each player in this instance. A change
- * of the lobby reaches each player as the state they may see after it, which differs per player.
+ * The events that reach each player as the state they may see after them, which differs per
+ * player: a change of the lobby, and the changes of the decision phase that redraw the screen.
  */
+const SENT_AS_STATE = [
+  LobbyChangedEvent,
+  TotalTimeRanOutEvent,
+  RevealStartedEvent,
+  HostChangedEvent,
+  PlayerLeftEvent,
+] as const;
+
+/** Delivers the events of the use cases to the connections of each player in this instance. */
 export class SocketNotifier implements PlayerNotifier {
   readonly #connections = new Map<string, Set<RoomConnection>>();
   readonly #stateSender: Pick<StateSender, 'send'>;
@@ -55,7 +68,7 @@ export class SocketNotifier implements PlayerNotifier {
   }
 
   async notify(playerIds: readonly string[], event: DomainEvent): Promise<void> {
-    if (event instanceof LobbyChangedEvent) {
+    if (SENT_AS_STATE.some((type) => event instanceof type)) {
       await this.#sendStates(playerIds);
       return;
     }

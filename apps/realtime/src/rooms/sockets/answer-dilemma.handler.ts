@@ -7,7 +7,10 @@ import { Rejection } from './rejection.ts';
 import type { RoomConnection } from './room-connection.ts';
 import type { SocketMessageHandler } from './socket-message-handler.ts';
 
-/** `answer-dilemma`: the player answers a dilemma, or changes an answer they already gave. */
+/**
+ * `answer-dilemma`: the player answers a dilemma, complete or with the predictions made so far, or
+ * changes an answer they already gave.
+ */
 export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemma'> {
   readonly type = 'answer-dilemma';
   readonly #answerDilemma: AnswerDilemmaUseCase;
@@ -28,7 +31,10 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
     this.#runCommand = runCommand;
   }
 
-  async handle({ dilemmaId, vote }: AnswerDilemmaDto, connection: RoomConnection): Promise<void> {
+  async handle(
+    { dilemmaId, vote, matchPrediction, votePredictions }: AnswerDilemmaDto,
+    connection: RoomConnection,
+  ): Promise<void> {
     const session = connection.session;
     if (!session) throw new Rejection('not-connected');
 
@@ -40,6 +46,8 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
           playerId: session.playerId,
           dilemmaId,
           vote,
+          ...(matchPrediction !== undefined && { matchPrediction }),
+          ...(votePredictions && { votePredictions }),
         }),
       );
       // Once committed, and still in the lock. The use case only tells the others: the player learns

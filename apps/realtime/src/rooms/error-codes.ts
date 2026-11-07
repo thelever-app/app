@@ -1,5 +1,14 @@
 import {
   AddingDilemmasNotAllowedError,
+  AnswerIncompleteError,
+  DecisionPhaseOverError,
+  DilemmaSkippedError,
+  DuplicateVotePredictionError,
+  GameNotInProgressError,
+  InvalidMatchPredictionError,
+  PlayerNotInPredictionSubsetError,
+  PredictionsNotAllowedError,
+  VoteMissingError,
   AvatarTakenError,
   DecisionPhaseNotStartedError,
   DilemmasMissingError,
@@ -61,6 +70,15 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [DuplicateDilemmaError, 'duplicate-dilemma'],
   // No dilemma of the catalog suits the room: its categories, language or age leave none.
   [DilemmasMissingError, 'dilemmas-missing'],
+  [GameNotInProgressError, 'game-not-in-progress'],
+  [DecisionPhaseOverError, 'decision-phase-over'],
+  [VoteMissingError, 'vote-missing'],
+  [PredictionsNotAllowedError, 'predictions-not-allowed'],
+  [InvalidMatchPredictionError, 'invalid-match-prediction'],
+  [PlayerNotInPredictionSubsetError, 'player-not-in-prediction-subset'],
+  [DuplicateVotePredictionError, 'duplicate-vote-prediction'],
+  [AnswerIncompleteError, 'answer-incomplete'],
+  [DilemmaSkippedError, 'dilemma-skipped'],
 ];
 
 /** The code to answer with, or undefined if the error is not one a client can cause. */
