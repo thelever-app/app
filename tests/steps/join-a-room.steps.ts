@@ -57,6 +57,20 @@ Given(
   },
 );
 
+Given('a player who last played as {string}', async function (this: GameWorld, nickname: string) {
+  this.player = SOMEONE.anotherPlayer;
+  await this.driver.lastPlayedAs(this.player, nickname);
+});
+
+When('the player opens an invitation link', async function (this: GameWorld) {
+  await this.host();
+  await this.driver.openInvitation(this.player, 'invitation link');
+});
+
+Then('the nickname field shows {string}', async function (this: GameWorld, nickname: string) {
+  assert.equal(await this.driver.nicknameFieldSeenBy(this.player), nickname);
+});
+
 When('a player opens its invitation link', async function (this: GameWorld) {
   this.player = SOMEONE.anotherPlayer;
   await this.driver.openInvitation(this.player, 'invitation link');

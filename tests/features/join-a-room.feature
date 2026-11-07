@@ -3,7 +3,7 @@ Feature: Join a room
   I want to join a room someone else has created
   So that I can play with my group
 
-  @ui @todo
+  @ui
   Scenario Outline: The player joins with any invitation method
     Given a device that has completed the first access
     And an existing room in the lobby
@@ -18,19 +18,19 @@ Feature: Join a room
       | code            |
       | QR              |
 
-  @ui @todo
+  @ui
   Scenario: The player sees the type of room before joining
     Given a nominal room created by "Ana"
     When a player opens its invitation link
     Then the player sees that the room belongs to "Ana" and is nominal before entering
 
-  @ui @todo
+  @ui
   Scenario: The player sees who is in an adults-only room before joining
     Given a room marked as adults only with 4 players
     When a player opens its invitation link
     Then the player sees that the room is for adults only and has 4 players before entering
 
-  @ui @todo
+  @ui
   Scenario: The code goes through as soon as it is complete
     Given a player on the join screen
     When the player types the 5 characters of the code of an existing room
@@ -60,7 +60,7 @@ Feature: Join a room
     When "Luis" writes a new dilemma in the lobby that mentions a person by name
     Then "Luis" is offered to use the gap "someone in the group" instead
 
-  @ui @todo
+  @ui
   Scenario: Only catalog dilemmas suitable for the room are offered
     Given the host has allowed players to add dilemmas
     And a room not marked as adults only
@@ -74,36 +74,36 @@ Feature: Join a room
     When "Luis" tries to add one of his private dilemmas for adults
     Then the dilemma is not added
 
-  @ui @todo
+  @ui
   Scenario: A player can add only one dilemma
     Given "Luis" has already added a dilemma
     When "Luis" tries to add another one
     Then the second dilemma is not added
 
-  @ui @todo
+  @ui
   Scenario: Nobody knows who added a dilemma before the reveal
     Given "Luis" has added a dilemma
     Then no player in the lobby sees who added it
 
-  @ui @screen @todo
+  @ui @screen
   Scenario: The nickname is prefilled with the last one used
     Given a player who last played as "Ana"
     When the player opens an invitation link
     Then the nickname field shows "Ana"
 
-  @ui @todo
+  @ui
   Scenario: Each player gets a random avatar not used in the room
     Given a room where some avatars are already taken
     When a player joins the room
     Then the player gets a random avatar that nobody else in the room has
 
-  @ui @todo
+  @ui
   Scenario: The player chooses another available avatar
     Given a player in the lobby
     When the player chooses another avatar that nobody else in the room has
     Then everyone in the lobby sees the new avatar
 
-  @ui @todo
+  @ui
   Scenario: Two players can share a nickname
     Given a lobby with a player called "Ana"
     When another player joins as "Ana"
@@ -117,19 +117,19 @@ Feature: Join a room
     Then the player is told the room is for adults only
     And does not enter the room
 
-  @ui @todo
+  @ui
   Scenario: A full room cannot be joined
     Given a room with 50 players
     When another player tries to join
     Then the player is told the room is full
     And does not enter the room
 
-  @ui @todo
+  @ui
   Scenario: A code that does not match any room
     When a player enters a code that does not match any room
     Then the player is told the room does not exist
 
-  @ui @todo
+  @ui
   Scenario: An expelled player cannot rejoin the same game
     Given a player who was expelled from a room
     When the player tries to join that game again

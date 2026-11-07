@@ -84,6 +84,10 @@ export interface GameDriver {
   /** Where the game is recorded as played, together or remote. */
   placeRecorded(): Promise<string>;
 
+  /** The device of `player` last played with that nickname. Only on the device (@screen). */
+  lastPlayedAs(player: string, nickname: string): Promise<void>;
+  /** What the nickname field shows to `player` before they enter. Only on the device (@screen). */
+  nicknameFieldSeenBy(player: string): Promise<string>;
   /** `player` opens the room with one of the ways of inviting and sees it before entering. */
   openInvitation(player: string, method: InvitationMethod): Promise<void>;
   /** `player` types a code on the join screen, without pressing any button. */

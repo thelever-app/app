@@ -27,7 +27,6 @@ import {
   StartGameUseCase,
   AvatarVO,
   type GetRoomStateOutput,
-  type ExplorationSlots,
 } from '@thelever-app/game';
 import {
   InMemoryDilemmaCatalog,
@@ -50,52 +49,37 @@ import type {
   RoomPreview,
   SettingsView,
 } from './driver.ts';
+import {
+  catalogEntryOf,
+  EXPLORATION_SLOTS,
+  explorationSlotsFor,
+  OPTION_TEXTS,
+  TEST_DILEMMAS,
+} from './test-catalog.ts';
 
 /** Test data: the vote the driver casts when a step does not say which one. */
 const VOTE = 'option-1';
 /** Test data: the vote the driver changes to; the other option of every dilemma. */
 const OTHER_VOTE = 'option-2';
 
-/** Test data: the thresholds of exploration the room server is configured with. */
-const EXPLORATION_SLOTS: ExplorationSlots = [
-  { fromDilemmaCount: 6, slots: 2 },
-  { fromDilemmaCount: 11, slots: 3 },
-];
-
 /** Test data: what the creation screen gets when a step does not choose. */
 const DEFAULT_CHOICES = { groupNature: 'friends', place: 'together', deviceLanguage: 'es' };
 
-function dilemmas(
-  prefix: string,
-  count: number,
-  facts: Omit<InMemoryDilemma, 'dilemmaId' | 'text' | 'options'>,
-): InMemoryDilemma[] {
-  return Array.from({ length: count }, (_, index) => ({
-    dilemmaId: `${prefix}-${index + 1}`,
-    text: `Text of ${prefix}-${index + 1}`,
+/** The test data, as the catalog of Game keeps it: every dilemma with the same two options. */
+const DILEMMAS: readonly InMemoryDilemma[] = TEST_DILEMMAS.map(
+  ({ dilemmaId, text, minimumAge, category, tags, status }) => ({
+    dilemmaId,
+    text,
     options: [
-      { optionId: VOTE, text: 'Pull the lever' },
-      { optionId: OTHER_VOTE, text: 'Do nothing' },
+      { optionId: VOTE, text: OPTION_TEXTS[0] },
+      { optionId: OTHER_VOTE, text: OPTION_TEXTS[1] },
     ],
-    ...facts,
-  }));
-}
-
-/**
- * Test data, enough for every scenario of the lobby and the decision phase:
- * - in the default category, 8 dilemmas suitable from 16 and tagged "family", so a room for
- *   everyone fills a game of 8 with them alone; 12 for adults, so an adults-only room almost
- *   surely plays some; and new dilemmas for each age;
- * - in honesty, 8 dilemmas and 2 new ones, to change the category.
- */
-const DILEMMAS: readonly InMemoryDilemma[] = [
-  ...dilemmas('life-and-death', 8, { minimumAge: 16, tags: ['family'] }),
-  ...dilemmas('life-and-death-for-adults', 12, { minimumAge: 18 }),
-  ...dilemmas('new-life-and-death', 3, { minimumAge: 16, status: 'in-exploration' }),
-  ...dilemmas('new-life-and-death-for-adults', 1, { minimumAge: 18, status: 'in-exploration' }),
-  ...dilemmas('honesty', 8, { minimumAge: 16, category: 'honesty' }),
-  ...dilemmas('new-honesty', 2, { minimumAge: 16, category: 'honesty', status: 'in-exploration' }),
-];
+    minimumAge: minimumAge as 16 | 18,
+    category,
+    tags,
+    status,
+  }),
+);
 
 /** Test data: each player of a scenario uses the app with an identity of their own. */
 function identityOf(player: string): string {
@@ -265,6 +249,15 @@ export class AcceptanceDriver implements GameDriver {
   /** The room keeps it and every game of the room copies it when it starts. */
   async placeRecorded(): Promise<string> {
     return (await this.#roomStateOf(this.#hostName())).place;
+  }
+
+  /** The application never knows what a device remembers: the scenarios tagged @screen. */
+  async lastPlayedAs(): Promise<void> {
+    throw new Error('Only the device remembers the last nickname: the scenario must be @screen');
+  }
+
+  async nicknameFieldSeenBy(): Promise<string> {
+    throw new Error('Only the device shows the nickname field: the scenario must be @screen');
   }
 
   async openInvitation(player: string, method: InvitationMethod): Promise<void> {
@@ -441,13 +434,7 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   catalogEntryOf(dilemmaId: string): CatalogEntry {
-    const dilemma = DILEMMAS.find((candidate) => candidate.dilemmaId === dilemmaId);
-    if (!dilemma) throw new Error(`The test data has no dilemma ${dilemmaId}`);
-    return {
-      minimumAge: dilemma.minimumAge ?? 16,
-      category: dilemma.category ?? 'life-and-death',
-      status: dilemma.status ?? 'in-catalog',
-    };
+    return catalogEntryOf(dilemmaId);
   }
 
   async expel(host: string, player: string): Promise<void> {
@@ -489,10 +476,7 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   newDilemmasSetForGamesOf(dilemmaCount: number): number {
-    const rows = EXPLORATION_SLOTS.filter(
-      ({ fromDilemmaCount }) => fromDilemmaCount <= dilemmaCount,
-    );
-    return rows.at(-1)?.slots ?? 0;
+    return explorationSlotsFor(dilemmaCount);
   }
 
   // Decision phase
