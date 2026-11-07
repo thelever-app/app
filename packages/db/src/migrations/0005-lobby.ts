@@ -7,9 +7,12 @@ import { type Kysely, sql } from 'kysely';
 // The lists are written here, not imported from the domain: a migration is history and must not change.
 export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`set local lock_timeout = '5s'`.execute(db);
-  // The rooms from before the lobby have none of that, and only tests made them: they go, and
-  // their games with them in cascade.
+  // The rooms from before the lobby have none of that, and only tests made them: they go, with
+  // their games. The games first: their players point at the players of the room with no cascade.
+  await sql`delete from games`.execute(db);
   await sql`delete from rooms`.execute(db);
+  // The checks deferred to the commit run now: a table with checks pending cannot be altered.
+  await sql`set constraints all immediate`.execute(db);
 
   await db.schema
     .alterTable('rooms')
