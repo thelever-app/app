@@ -2,6 +2,8 @@ import { context, propagation } from '@opentelemetry/api';
 import {
   ConnectionChangedEvent,
   type DomainEvent,
+  type LobbyChange,
+  LobbyChangedEvent,
   type PlayerNotifier,
   ProgressUpdatedEvent,
 } from '@thelever-app/game';
@@ -60,6 +62,17 @@ export function readNotification(payload: string): Notification {
           String(event.roomId),
           String(event.playerId),
           Boolean(event.connected),
+          Number(event.roomVersion),
+        ),
+      };
+    case 'LobbyChanged':
+      return {
+        playerIds,
+        trace,
+        publishedAt,
+        event: new LobbyChangedEvent(
+          String(event.roomId),
+          String(event.change) as LobbyChange,
           Number(event.roomVersion),
         ),
       };

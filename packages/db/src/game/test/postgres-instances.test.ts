@@ -1,9 +1,9 @@
-import { Player, Room } from '@thelever-app/game';
 import { SequentialIdGenerator } from '@thelever-app/game/in-memory';
 import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../../schema.ts';
 import { emptyTables, useTestDatabase } from '../../test/support/test-database.ts';
+import { roomOf } from '../../test/support/rooms.ts';
 import { PostgresInstances } from '../postgres-instances.ts';
 import { PostgresRoomRepository } from '../postgres-room-repository.ts';
 
@@ -16,9 +16,8 @@ async function roomsOfTwoInstances() {
   await instances.beat('TestInstanceA');
   await instances.beat('TestInstanceB');
   const idGenerator = new SequentialIdGenerator();
-  const first = Room.create({ hostNickname: 'Ana', hostIdentity: 'TestAna' }, idGenerator);
-  first.addPlayer(Player.create({ nickname: 'Luis', identity: 'TestLuis' }, idGenerator));
-  const second = Room.create({ hostNickname: 'Eva', hostIdentity: 'TestEva' }, idGenerator);
+  const first = roomOf('Ana', ['Luis'], idGenerator, 'K7M2Q');
+  const second = roomOf('Eva', [], idGenerator, 'P4R8T');
   first.connect(first.host.id, 'TestAnaConnection');
   second.connect(second.host.id, 'TestEvaConnection');
   const ofA = new PostgresRoomRepository(database.db(), 'TestInstanceA');

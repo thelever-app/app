@@ -1,10 +1,11 @@
-import { Game, Player, Room } from '@thelever-app/game';
+import { Game } from '@thelever-app/game';
 import { describeRoomRepositoryContract } from '@thelever-app/game/contracts';
-import { SequentialIdGenerator } from '@thelever-app/game/in-memory';
+import { SequentialIdGenerator, SequentialRandomness } from '@thelever-app/game/in-memory';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../../schema.ts';
 import { emptyTables, useTestDatabase } from '../../test/support/test-database.ts';
 import { recordingReads } from '../../test/support/recording-reads.ts';
+import { roomOf, TEST_GAME_SETTINGS } from '../../test/support/rooms.ts';
 import { inTransaction } from '../../transaction.ts';
 import { PostgresDilemmaRepository } from '../../dilemmas/postgres-dilemma-repository.ts';
 import { PostgresGameRepository } from '../postgres-game-repository.ts';
@@ -26,8 +27,7 @@ async function withInstances(...ids: string[]) {
 async function savedRoom() {
   await withInstances('TestInstanceA', 'TestInstanceB');
   const idGenerator = new SequentialIdGenerator();
-  const room = Room.create({ hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' }, idGenerator);
-  room.addPlayer(Player.create({ nickname: 'Luis', identity: 'TestLuisIdentity' }, idGenerator));
+  const room = roomOf('Ana', ['Luis'], idGenerator);
   room.connect(room.host.id, 'TestAnaConnection');
   await new PostgresRoomRepository(database.db(), 'TestInstanceA').save(room);
   return { room, idGenerator };
@@ -174,6 +174,57 @@ describe('PostgresRoomRepository', () => {
         { id: 'TestLuisConnection', instance_id: 'TestInstanceB' },
       ]);
     });
+
+    it('should keep the game in progress of the room', async () => {
+      // Arrange
+      const { room, idGenerator } = await savedRoom();
+      room.join(
+        { nickname: 'Marta', identity: 'TestMartaIdentity' },
+        idGenerator,
+        new SequentialRandomness(),
+      );
+      const game = Game.create(
+        {
+          roomId: room.id,
+          dilemmas: [
+            {
+              dilemmaId: 'TestDilemma',
+              version: 1,
+              origin: 'picked-by-the-system',
+              optionIds: ['TestOptionA', 'TestOptionB'],
+            },
+          ],
+          settings: TEST_GAME_SETTINGS,
+        },
+        idGenerator,
+      );
+      room.startGame(room.host.id, game.id);
+      const rooms = new PostgresRoomRepository(database.db(), 'TestInstanceA');
+
+      // Act: the game first, as the command that starts it saves them.
+      await new PostgresGameRepository(database.db()).save(game);
+      await rooms.save(room);
+
+      // Assert
+      expect((await rooms.findById(room.id))?.currentGameId).toBe(game.id);
+    });
+
+    it('should refuse a game in progress that is not a game of the room', async () => {
+      // Arrange
+      const { room, idGenerator } = await savedRoom();
+      room.join(
+        { nickname: 'Marta', identity: 'TestMartaIdentity' },
+        idGenerator,
+        new SequentialRandomness(),
+      );
+      room.startGame(room.host.id, 'TestGameOfNoRoom');
+
+      // Act
+      const saving = new PostgresRoomRepository(database.db(), 'TestInstanceA').save(room);
+
+      // Assert
+      await expect(saving).rejects.toThrow('rooms_current_game');
+    });
   });
 });
 
@@ -201,9 +252,11 @@ describe('PostgresGameRepository', () => {
             {
               dilemmaId: dilemma.id,
               version: 1,
+              origin: 'picked-by-the-system',
               optionIds: dilemma.options.map(({ id }) => id),
             },
           ],
+          settings: TEST_GAME_SETTINGS,
         },
         idGenerator,
       );

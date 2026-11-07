@@ -82,13 +82,24 @@ export class PostgresGameRepository implements GameRepository {
     await this.#upsertAnswers(db, changed);
   }
 
+  /** What the game copied of its room when it started never changes either. */
   async #saveGame(
     db: Transaction<GameTables>,
-    { id, roomId, inDecisionPhase, version }: GameSnapshot,
+    { id, roomId, inDecisionPhase, version, settings }: GameSnapshot,
   ): Promise<void> {
     await db
       .insertInto('games')
-      .values({ id, room_id: roomId, in_decision_phase: inDecisionPhase, version })
+      .values({
+        id,
+        room_id: roomId,
+        in_decision_phase: inDecisionPhase,
+        version,
+        variant: settings.variant,
+        group_nature: settings.groupNature,
+        place: settings.place,
+        dilemma_language: settings.dilemmaLanguage,
+        total_time_in_minutes: settings.totalTimeInMinutes,
+      })
       .onConflict((conflict) =>
         conflict.column('id').doUpdateSet({ in_decision_phase: inDecisionPhase, version }),
       )
@@ -100,11 +111,12 @@ export class PostgresGameRepository implements GameRepository {
     await db
       .insertInto('game_dilemmas')
       .values(
-        dilemmas.map(({ dilemmaId, version }, position) => ({
+        dilemmas.map(({ dilemmaId, version, origin }, position) => ({
           game_id: id,
           position,
           dilemma_id: dilemmaId,
           dilemma_version: version,
+          origin,
         })),
       )
       .onConflict((conflict) => conflict.columns(['game_id', 'position']).doNothing())
@@ -210,6 +222,7 @@ function readGame(db: Kysely<GameTables>, id: string) {
           .select([
             'game_dilemmas.dilemma_id as dilemmaId',
             'game_dilemmas.dilemma_version as version',
+            'game_dilemmas.origin',
             'game_dilemma_options.option_id as optionId',
           ])
           .whereRef('game_dilemmas.game_id', '=', 'games.id')
@@ -248,6 +261,13 @@ function snapshotOf(row: GameRow): GameSnapshot {
     roomId: row.room_id,
     inDecisionPhase: row.in_decision_phase,
     version: row.version,
+    settings: {
+      variant: row.variant,
+      groupNature: row.group_nature,
+      place: row.place,
+      dilemmaLanguage: row.dilemma_language,
+      totalTimeInMinutes: row.total_time_in_minutes,
+    },
     dilemmas: dilemmasOf(row.options),
     players: row.players.map(({ player_id }) => ({
       id: player_id,
@@ -270,15 +290,19 @@ function snapshotOf(row: GameRow): GameSnapshot {
 
 /** One row per option, in order, grouped into the dilemmas they belong to. */
 function dilemmasOf(options: GameRow['options']): GameSnapshot['dilemmas'] {
-  const dilemmas = new Map<string, { version: number; optionIds: string[] }>();
-  for (const { dilemmaId, version, optionId } of options) {
-    const dilemma = dilemmas.get(dilemmaId) ?? { version, optionIds: [] };
+  const dilemmas = new Map<
+    string,
+    { version: number; origin: GameRow['options'][number]['origin']; optionIds: string[] }
+  >();
+  for (const { dilemmaId, version, origin, optionId } of options) {
+    const dilemma = dilemmas.get(dilemmaId) ?? { version, origin, optionIds: [] };
     dilemma.optionIds.push(optionId);
     dilemmas.set(dilemmaId, dilemma);
   }
-  return [...dilemmas].map(([dilemmaId, { version, optionIds }]) => ({
+  return [...dilemmas].map(([dilemmaId, { version, origin, optionIds }]) => ({
     dilemmaId,
     version,
+    origin,
     optionIds,
   }));
 }
