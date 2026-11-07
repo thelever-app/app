@@ -7,6 +7,7 @@ import { renderWithProviders } from '../support/render.tsx';
 const PLAYERS = ['Luis', 'Ana', 'Marta', 'Pablo', 'Sara', 'Nico'].map((nickname, index) => ({
   playerId: `test-${nickname.toLowerCase()}-id`,
   nickname,
+  avatar: { face: 'face-01', color: 'teal' } as const,
   progress: index,
   connected: true,
 }));

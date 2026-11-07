@@ -20,13 +20,19 @@ export class CreateRoomEndpoint implements HttpEndpoint {
   }
 
   async handle(req: Request, res: Response): Promise<void> {
-    const { nickname } = parseBody(CreateRoomRequestDto, req.body);
-    const { roomId, hostId } = await this.#runCommand(() =>
+    const { nickname, groupNature, place, dilemmaLanguage } = parseBody(
+      CreateRoomRequestDto,
+      req.body,
+    );
+    const { roomId, code, hostId } = await this.#runCommand(() =>
       this.#createRoom.execute({
         hostNickname: nickname,
         hostIdentity: identityOf(res),
+        groupNature,
+        place,
+        dilemmaLanguage,
       }),
     );
-    res.status(201).json(CreateRoomResponseDto.parse({ roomId, playerId: hostId }));
+    res.status(201).json(CreateRoomResponseDto.parse({ roomId, code, playerId: hostId }));
   }
 }

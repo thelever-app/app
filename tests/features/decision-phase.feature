@@ -15,7 +15,6 @@ Feature: Decision phase
       Then every player gets the first dilemma of the game
       And the dilemmas follow the same order for all players
 
-    @todo
     Scenario: A game by category reserves room for new dilemmas
       Given a game of 8 dilemmas chosen by category with new dilemmas included
       When the game is put together
@@ -62,7 +61,6 @@ Feature: Decision phase
       Then his answer records the version of the research consent and that there is no commercial licence consent
       And his answer is marked as given by a player under 18
 
-    @todo
     Scenario: A room has only one game in progress
       When "Ana" tries to start another game in that room
       Then no new game starts

@@ -1,5 +1,4 @@
 import { CONTRACT_VERSION } from '@thelever-app/protocol';
-import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CloudLoggingLogger } from '../../telemetry/cloud-logging-logger.ts';
 import { tokenOf } from '../support/fake-token-verifier.ts';
@@ -37,7 +36,7 @@ describe('a traced game', () => {
   it('should continue on the server the trace each command started on the device', async () => {
     // Arrange
     const { server } = await tracedRoomServer();
-    const { gameId } = await gameInDecisionPhase(server.http);
+    const { roomId, dilemmas } = await gameInDecisionPhase(server);
     const connectTrace = '0af7651916cd43dd8448eb211c80319c';
     const answerTrace = '4bf92f3577b34da6a3ce929d0e0e4736';
     const ana = await TestClient.open(server.url);
@@ -47,28 +46,29 @@ describe('a traced game', () => {
       type: 'connect',
       contractVersion: CONTRACT_VERSION,
       token: tokenOf('ana'),
-      gameId,
+      roomId,
       language: 'es',
       traceparent: traceparentOf(connectTrace, 'b7ad6b7169203331'),
     });
     await ana.next('game-state');
     ana.send({
       type: 'answer-dilemma',
-      dilemmaId: SEED_DILEMMAS[0]!.id,
-      vote: SEED_DILEMMAS[0]!.options[0]!.id,
+      dilemmaId: dilemmas[0]!.dilemmaId,
+      vote: dilemmas[0]!.options[0]!.optionId,
       traceparent: traceparentOf(answerTrace, '00f067aa0ba902b7'),
     });
     // The one who answers learns their progress from a fresh state.
     await ana.next('game-state');
 
     // Assert
-    const connect = spans.finished().find(({ name }) => name === 'ws connect');
-    const answer = spans.finished().find(({ name }) => name === 'ws answer-dilemma');
+    // The last ones: the host connected and started the game before.
+    const connect = spans.finished().findLast(({ name }) => name === 'ws connect');
+    const answer = spans.finished().findLast(({ name }) => name === 'ws answer-dilemma');
     expect(connect?.spanContext().traceId).toBe(connectTrace);
     expect(connect?.parentSpanContext?.spanId).toBe('b7ad6b7169203331');
     expect(answer?.spanContext().traceId).toBe(answerTrace);
     expect(answer?.attributes).toMatchObject({
-      'game.id': gameId,
+      'room.id': roomId,
       'message.type': 'answer-dilemma',
     });
   });
@@ -76,8 +76,8 @@ describe('a traced game', () => {
   it('should tie what the server logs about a command to the trace the device started', async () => {
     // Arrange
     const { server, entries } = await tracedRoomServer();
-    const { gameId } = await gameInDecisionPhase(server.http);
-    const ana = await TestClient.connected(server.url, 'ana', gameId);
+    const { roomId } = await gameInDecisionPhase(server);
+    const ana = await TestClient.connected(server.url, 'ana', roomId);
     const rejectedTrace = '5bf92f3577b34da6a3ce929d0e0e4736';
 
     // Act

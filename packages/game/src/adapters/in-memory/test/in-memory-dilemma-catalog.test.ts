@@ -5,7 +5,8 @@ import {
 } from '../../test/dilemma-catalog.contract.ts';
 
 describeDilemmaCatalogContract('InMemoryDilemmaCatalog', async () => {
-  const stored = CONTRACT_DILEMMAS.map(({ text, options }, index) => ({
+  const dilemmas = CONTRACT_DILEMMAS.map(({ text, options, ...facts }, index) => ({
+    ...facts,
     dilemmaId: `TestDilemma${index + 1}`,
     text,
     options: options.map((option, optionIndex) => ({
@@ -13,5 +14,6 @@ describeDilemmaCatalogContract('InMemoryDilemmaCatalog', async () => {
       text: option,
     })),
   }));
-  return { catalog: new InMemoryDilemmaCatalog(stored), stored };
+  const stored = dilemmas.map(({ dilemmaId, text, options }) => ({ dilemmaId, text, options }));
+  return { catalog: new InMemoryDilemmaCatalog(dilemmas), stored };
 });

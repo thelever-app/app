@@ -4,21 +4,19 @@ import { DisconnectConnectionsUseCase } from '../../use-cases/disconnect-connect
 import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
 import { ConnectionChangedEvent } from '../../../domain/events/connection-changed.event.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
-import { gameInDecisionPhase } from '../support/game-in-decision-phase.ts';
+import {
+  gameInDecisionPhase,
+  ROOM_VERSION_WHEN_THE_GAME_STARTS,
+} from '../support/game-in-decision-phase.ts';
 
 /** Like the arranged game, with Ana connected once and Luis twice, as from two tabs. */
 async function arrange() {
   const game = await gameInDecisionPhase();
   const notifier = new InMemoryPlayerNotifier();
-  const connectPlayer = new ConnectPlayerUseCase(
-    game.roomRepository,
-    game.gameRepository,
-    notifier,
-    game.idGenerator,
-  );
-  const ana = await connectPlayer.execute({ gameId: game.gameId, identity: 'TestAnaIdentity' });
-  const luis1 = await connectPlayer.execute({ gameId: game.gameId, identity: 'TestLuisIdentity' });
-  const luis2 = await connectPlayer.execute({ gameId: game.gameId, identity: 'TestLuisIdentity' });
+  const connectPlayer = new ConnectPlayerUseCase(game.roomRepository, notifier, game.idGenerator);
+  const ana = await connectPlayer.execute({ roomId: game.roomId, identity: 'TestAnaIdentity' });
+  const luis1 = await connectPlayer.execute({ roomId: game.roomId, identity: 'TestLuisIdentity' });
+  const luis2 = await connectPlayer.execute({ roomId: game.roomId, identity: 'TestLuisIdentity' });
   const disconnectConnections = new DisconnectConnectionsUseCase(game.roomRepository, notifier);
   return { ...game, notifier, disconnectConnections, ana, luis1, luis2 };
 }
@@ -66,7 +64,12 @@ describe('DisconnectConnectionsUseCase', () => {
       await disconnectConnections.execute({ roomId, connections: [luis1, luis2] });
 
       // Assert
-      const event = new ConnectionChangedEvent(roomId, luisId, false, 3);
+      const event = new ConnectionChangedEvent(
+        roomId,
+        luisId,
+        false,
+        ROOM_VERSION_WHEN_THE_GAME_STARTS + 3,
+      );
       expect(notifier.receivedBy(anaId).slice(before)).toEqual([event]);
       expect(notifier.receivedBy(martaId).at(-1)).toEqual(event);
       expect(notifier.receivedBy(luisId)).not.toContainEqual(event);
@@ -82,7 +85,7 @@ describe('DisconnectConnectionsUseCase', () => {
 
       // Assert
       expect(notifier.receivedBy(luisId).at(-1)).toEqual(
-        new ConnectionChangedEvent(roomId, anaId, false, 3),
+        new ConnectionChangedEvent(roomId, anaId, false, ROOM_VERSION_WHEN_THE_GAME_STARTS + 3),
       );
     });
 

@@ -2,35 +2,33 @@ import { type Attributes, SpanKind } from '@opentelemetry/api';
 import type { Logger } from '@thelever-app/db';
 import type { DomainEvent, PlayerNotifier } from '@thelever-app/game';
 import type { KeyedLock } from '../concurrency/keyed-lock.ts';
-import { GAME_ID } from '../telemetry/game-sampler.ts';
+import { GAME_ID, ROOM_ID } from '../telemetry/game-sampler.ts';
 import { instruments } from '../telemetry/instruments.ts';
 import { inSpan } from '../telemetry/tracing.ts';
-import type { GameStateSender } from './sockets/game-state-sender.ts';
+import type { SocketNotifier } from './sockets/socket-notifier.ts';
 import type { RoomConnection } from './sockets/room-connection.ts';
 
 /**
  * Delivers to the sockets of this instance the events another instance published, each in turn with
- * the commands of the game its player plays: the answerer gets their fresh state inside the lock of
- * the game, and the screen applies a later change only on top of that state.
+ * the commands of the room of its player: the answerer gets their fresh state inside the lock of
+ * the room, and the screen applies a later change only on top of that state.
  */
 export class GameEventDelivery {
-  readonly #notifier: PlayerNotifier;
-  readonly #stateSender: Pick<GameStateSender, 'send'>;
-  readonly #gameLock: KeyedLock;
+  /** The sockets of this instance: each event, and a fresh state that closes the connection of one expelled. */
+  readonly #notifier: PlayerNotifier & Pick<SocketNotifier, 'sendState'>;
+  readonly #roomLock: KeyedLock;
   readonly #logger: Logger;
-  /** The connections of this instance now, with the game of each player. */
+  /** The connections of this instance now, with the room of each player. */
   readonly #connections: () => readonly RoomConnection[];
 
   constructor(
-    notifier: PlayerNotifier,
-    stateSender: Pick<GameStateSender, 'send'>,
-    gameLock: KeyedLock,
+    notifier: PlayerNotifier & Pick<SocketNotifier, 'sendState'>,
+    roomLock: KeyedLock,
     logger: Logger,
     connections: () => readonly RoomConnection[],
   ) {
     this.#notifier = notifier;
-    this.#stateSender = stateSender;
-    this.#gameLock = gameLock;
+    this.#roomLock = roomLock;
     this.#logger = logger;
     this.#connections = connections;
   }
@@ -59,7 +57,7 @@ export class GameEventDelivery {
   }
 
   /**
-   * Sends every player connected here a fresh state, in turn with the commands of their game: what
+   * Sends every player connected here a fresh state, in turn with the commands of their room: what
    * was published while this instance was not listening is lost. Never throws.
    */
   async catchUp(): Promise<void> {
@@ -68,43 +66,40 @@ export class GameEventDelivery {
         const { session } = connection;
         if (!session) return;
         try {
-          await this.#inTurn(session.gameId, () => this.#stateSender.send(connection, session));
+          await this.#inTurn(session.roomId, async () => {
+            await this.#notifier.sendState(connection, session);
+          });
         } catch (error) {
-          this.#logger.error('sending the game state after listening again failed', error);
+          this.#logger.error('sending the state after listening again failed', error);
         }
       }),
     );
   }
 
-  /** An event of a game waits for that game; one of the room, for the game of each player. */
+  /** Every event waits for the room of each player who receives it here. */
   async #deliverInTurn(playerIds: readonly string[], event: DomainEvent): Promise<void> {
-    const gameId = gameIdOf(event);
-    if (gameId !== undefined) {
-      await this.#inTurn(gameId, () => this.#notifier.notify(playerIds, event));
-      return;
-    }
     await Promise.all(
-      [...this.#byGame(playerIds)].map(([game, players]) =>
-        this.#inTurn(game, () => this.#notifier.notify(players, event)),
+      [...this.#byRoom(playerIds)].map(([room, players]) =>
+        this.#inTurn(room, () => this.#notifier.notify(players, event)),
       ),
     );
   }
 
-  /** The players connected here, by the game each one plays. */
-  #byGame(playerIds: readonly string[]): Map<string, string[]> {
+  /** The players connected here, by the room of each one. */
+  #byRoom(playerIds: readonly string[]): Map<string, string[]> {
     const wanted = new Set(playerIds);
-    const byGame = new Map<string, string[]>();
+    const byRoom = new Map<string, string[]>();
     for (const { session } of this.#connections()) {
       if (!session || !wanted.has(session.playerId)) continue;
-      const players = byGame.get(session.gameId) ?? [];
+      const players = byRoom.get(session.roomId) ?? [];
       if (!players.includes(session.playerId)) players.push(session.playerId);
-      byGame.set(session.gameId, players);
+      byRoom.set(session.roomId, players);
     }
-    return byGame;
+    return byRoom;
   }
 
-  async #inTurn(gameId: string, work: () => Promise<void>): Promise<void> {
-    const release = await this.#gameLock.acquire(gameId);
+  async #inTurn(roomId: string, work: () => Promise<void>): Promise<void> {
+    const release = await this.#roomLock.acquire(roomId);
     try {
       await work();
     } finally {
@@ -123,6 +118,6 @@ function attributesOf(playerIds: readonly string[], event: DomainEvent): Attribu
     'event.type': event.type,
     'event.recipients': playerIds.length,
     [GAME_ID]: gameIdOf(event),
-    'room.id': 'roomId' in event ? String(event.roomId) : undefined,
+    [ROOM_ID]: 'roomId' in event ? String(event.roomId) : undefined,
   };
 }

@@ -1,13 +1,15 @@
-import { PlayerNotInGameError } from '../../domain/errors/player-not-in-game.error.ts';
+import { DecisionPhaseNotStartedError } from '../../domain/errors/decision-phase-not-started.error.ts';
+import { PlayerNotInRoomError } from '../../domain/errors/player-not-in-room.error.ts';
 import { GameNotFoundError } from '../errors/game-not-found.error.ts';
-import { RoomNotFoundError } from '../errors/room-not-found.error.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import type { SealProvider } from '../ports/seal-provider.port.ts';
+import { findRoom } from './find-room.ts';
 
 export interface AnswerDilemmaInput {
-  readonly gameId: string;
+  /** The player answers the game in progress in their room. */
+  readonly roomId: string;
   readonly playerId: string;
   readonly dilemmaId: string;
   readonly vote: string;
@@ -32,14 +34,15 @@ export class AnswerDilemmaUseCase {
     this.#sealProvider = sealProvider;
   }
 
-  async execute({ gameId, playerId, dilemmaId, vote }: AnswerDilemmaInput): Promise<void> {
+  async execute({ roomId, playerId, dilemmaId, vote }: AnswerDilemmaInput): Promise<void> {
+    // The identity, which the seal comes from, lives in the room; the game only knows who plays it.
+    const room = await findRoom(this.#roomRepository, roomId);
+    const player = room.players.find(({ id }) => id === playerId);
+    if (!player) throw new PlayerNotInRoomError(playerId);
+    const gameId = room.currentGameId;
+    if (!gameId) throw new DecisionPhaseNotStartedError();
     const game = await this.#gameRepository.findById(gameId);
     if (!game) throw new GameNotFoundError(gameId);
-    // The identity, which the seal comes from, lives in the room; the game only knows who plays it.
-    const room = await this.#roomRepository.findById(game.roomId);
-    if (!room) throw new RoomNotFoundError(game.roomId);
-    const player = room.players.find(({ id }) => id === playerId);
-    if (!player) throw new PlayerNotInGameError(playerId);
 
     game.answer(playerId, dilemmaId, vote, await this.#sealProvider.sealFor(player.identity));
     const events = game.pullEvents();

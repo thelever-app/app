@@ -1,50 +1,38 @@
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
-import { GameNotFoundError } from '../errors/game-not-found.error.ts';
-import { IdentityNotInGameError } from '../errors/identity-not-in-game.error.ts';
-import { RoomNotFoundError } from '../errors/room-not-found.error.ts';
-import type { GameRepository } from '../ports/game-repository.port.ts';
+import { IdentityNotInRoomError } from '../errors/identity-not-in-room.error.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
+import { findRoom } from './find-room.ts';
 
 export interface ConnectPlayerInput {
-  readonly gameId: string;
+  readonly roomId: string;
   /** Who connects, from their verified token; never a player id the client sends. */
   readonly identity: string;
 }
 
 export interface ConnectPlayerOutput {
-  /** The player of the game behind that identity. */
+  /** The player of the room behind that identity. */
   readonly playerId: string;
   /** Identifies this connection, to tell its close apart from the close of the others of the player. */
   readonly connectionId: string;
 }
 
-/** A player opens a connection to a game, for the first time or again; the others see them connected. */
+/** A player opens a connection to their room, in the lobby or in a game; the others see them connected. */
 export class ConnectPlayerUseCase {
   readonly #roomRepository: RoomRepository;
-  readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
   readonly #idGenerator: IdGenerator;
 
-  constructor(
-    roomRepository: RoomRepository,
-    gameRepository: GameRepository,
-    notifier: PlayerNotifier,
-    idGenerator: IdGenerator,
-  ) {
+  constructor(roomRepository: RoomRepository, notifier: PlayerNotifier, idGenerator: IdGenerator) {
     this.#roomRepository = roomRepository;
-    this.#gameRepository = gameRepository;
     this.#notifier = notifier;
     this.#idGenerator = idGenerator;
   }
 
-  async execute({ gameId, identity }: ConnectPlayerInput): Promise<ConnectPlayerOutput> {
-    const game = await this.#gameRepository.findById(gameId);
-    if (!game) throw new GameNotFoundError(gameId);
-    const room = await this.#roomRepository.findById(game.roomId);
-    if (!room) throw new RoomNotFoundError(game.roomId);
+  async execute({ roomId, identity }: ConnectPlayerInput): Promise<ConnectPlayerOutput> {
+    const room = await findRoom(this.#roomRepository, roomId);
     const playerId = room.playerWith(identity)?.id;
-    if (!playerId || !game.playerIds.includes(playerId)) throw new IdentityNotInGameError(gameId);
+    if (!playerId) throw new IdentityNotInRoomError(roomId);
 
     const connectionId = this.#idGenerator.generate();
     room.connect(playerId, connectionId);
@@ -52,7 +40,7 @@ export class ConnectPlayerUseCase {
     await this.#roomRepository.save(room);
 
     // The connection is already saved: a player who cannot be reached must not undo it.
-    const otherPlayerIds = game.playerIds.filter((id) => id !== playerId);
+    const otherPlayerIds = room.players.map(({ id }) => id).filter((id) => id !== playerId);
     await Promise.allSettled(events.map((event) => this.#notifier.notify(otherPlayerIds, event)));
 
     return { playerId, connectionId };

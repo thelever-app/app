@@ -12,10 +12,15 @@ import {
 import { onServer, urlOf } from '@thelever-app/db/test';
 import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
 import { chromium, type Browser } from 'playwright';
+import { loadTestDilemmas } from './test-catalog.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-/** The port of apps/web/public/config.json, which the build copies to dist: the web looks there. */
-const REALTIME_PORT = 3000;
+/**
+ * The port of apps/web/public/config.json, which the build copies to dist: the web looks there.
+ * Another one with E2E_REALTIME_PORT, when a room server for development already takes it; the
+ * browsers of the scenarios are then pointed at it.
+ */
+const REALTIME_PORT = Number(process.env.E2E_REALTIME_PORT ?? 3000);
 const WEB_PORT = 4173;
 const READY_TIMEOUT_MS = 30_000;
 /** Locally, DATABASE_URL comes from the .env of the repo; in CI, from the workflow. */
@@ -31,6 +36,10 @@ export interface E2eStack {
   readonly realtimeUrl: string;
   /** Where the built web is served. */
   readonly webUrl: string;
+  /** The database of the run, to read what the game keeps. */
+  readonly databaseUrl: string;
+  /** The Auth emulator, to sign in the players the scenario brings in without a screen. */
+  readonly authEmulatorHost: string;
 }
 
 let running:
@@ -41,7 +50,10 @@ let running:
     }
   | undefined;
 
-/** A database of its own for the run, migrated and with the seed dilemmas, as the migrate job leaves one. */
+/**
+ * A database of its own for the run, migrated and with the seed dilemmas, as the migrate job
+ * leaves one, and the test data the scenarios check.
+ */
 async function createE2eDatabase(): Promise<string> {
   if (existsSync(ENV_FILE)) process.loadEnvFile(ENV_FILE);
   const name = `thelever_e2e_${randomUUID().replaceAll('-', '')}`;
@@ -53,6 +65,7 @@ async function createE2eDatabase(): Promise<string> {
   try {
     await migrateToLatest(db);
     await loadSeedDilemmas(new PostgresDilemmaRepository(db));
+    await loadTestDilemmas(new PostgresDilemmaRepository(db));
   } finally {
     await close();
   }
@@ -91,7 +104,17 @@ export async function startE2eStack(): Promise<void> {
   try {
     await Promise.all([ready(`${realtimeUrl}/health`), ready(webUrl)]);
     const browser = await chromium.launch();
-    running = { stack: { browser, realtimeUrl, webUrl }, processes, database };
+    running = {
+      stack: {
+        browser,
+        realtimeUrl,
+        webUrl,
+        databaseUrl: urlOf(database),
+        authEmulatorHost: authEmulator,
+      },
+      processes,
+      database,
+    };
   } catch (error) {
     await Promise.all(processes.map(stop));
     await dropE2eDatabase(database);

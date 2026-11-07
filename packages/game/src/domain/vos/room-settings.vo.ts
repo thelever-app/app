@@ -1,0 +1,108 @@
+import { InvalidRoomSettingError } from '../errors/invalid-room-setting.error.ts';
+
+/** The languages of the app, in which a room can play its dilemmas. */
+export const DILEMMA_LANGUAGES = ['es', 'en', 'fr', 'de', 'it', 'pt', 'ca'] as const;
+export const DILEMMA_COUNTS = [6, 8, 10, 12] as const;
+export const TOTAL_TIMES_IN_MINUTES = [4, 6, 8, 10] as const;
+export const DEFAULT_CATEGORY = 'life-and-death';
+
+/** Nominal: everyone sees who voted what and predicts. Anonymous: only votes, nobody sees anyone's. */
+export type RoomVariant = 'nominal' | 'anonymous';
+export type DilemmaLanguage = (typeof DILEMMA_LANGUAGES)[number];
+export type DilemmaCount = (typeof DILEMMA_COUNTS)[number];
+export type TotalTimeInMinutes = (typeof TOTAL_TIMES_IN_MINUTES)[number];
+
+export interface RoomSettingsSnapshot {
+  readonly variant: RoomVariant;
+  readonly adultsOnly: boolean;
+  readonly dilemmaLanguage: DilemmaLanguage;
+  /** The id of a category of Dilemmas, which the room does not check. */
+  readonly category: string;
+  readonly dilemmaCount: DilemmaCount;
+  readonly totalTimeInMinutes: TotalTimeInMinutes;
+  /** Whether a game by category keeps room for dilemmas in exploration. */
+  readonly newDilemmas: boolean;
+  readonly playersCanAddDilemmas: boolean;
+}
+
+/** How the host sets up the games of the room. It lasts across rematches; each game copies it. */
+export class RoomSettingsVO {
+  readonly #settings: RoomSettingsSnapshot;
+
+  constructor(settings: RoomSettingsSnapshot) {
+    if (settings.variant !== 'nominal' && settings.variant !== 'anonymous') {
+      throw new InvalidRoomSettingError('variant', settings.variant);
+    }
+    if (!(DILEMMA_LANGUAGES as readonly string[]).includes(settings.dilemmaLanguage)) {
+      throw new InvalidRoomSettingError('dilemma language', settings.dilemmaLanguage);
+    }
+    if (!settings.category.trim()) throw new InvalidRoomSettingError('category', settings.category);
+    if (!(DILEMMA_COUNTS as readonly number[]).includes(settings.dilemmaCount)) {
+      throw new InvalidRoomSettingError('number of dilemmas', settings.dilemmaCount);
+    }
+    if (!(TOTAL_TIMES_IN_MINUTES as readonly number[]).includes(settings.totalTimeInMinutes)) {
+      throw new InvalidRoomSettingError('total time', settings.totalTimeInMinutes);
+    }
+    this.#settings = { ...settings, category: settings.category.trim() };
+  }
+
+  /** A nominal room for everyone, with new dilemmas, where players cannot add any. */
+  static defaults(dilemmaLanguage: string): RoomSettingsVO {
+    return new RoomSettingsVO({
+      variant: 'nominal',
+      adultsOnly: false,
+      dilemmaLanguage: dilemmaLanguage as DilemmaLanguage,
+      category: DEFAULT_CATEGORY,
+      dilemmaCount: 8,
+      totalTimeInMinutes: 6,
+      newDilemmas: true,
+      playersCanAddDilemmas: false,
+    });
+  }
+
+  get variant(): RoomVariant {
+    return this.#settings.variant;
+  }
+
+  get adultsOnly(): boolean {
+    return this.#settings.adultsOnly;
+  }
+
+  get dilemmaLanguage(): DilemmaLanguage {
+    return this.#settings.dilemmaLanguage;
+  }
+
+  get category(): string {
+    return this.#settings.category;
+  }
+
+  get dilemmaCount(): DilemmaCount {
+    return this.#settings.dilemmaCount;
+  }
+
+  get totalTimeInMinutes(): TotalTimeInMinutes {
+    return this.#settings.totalTimeInMinutes;
+  }
+
+  get newDilemmas(): boolean {
+    return this.#settings.newDilemmas;
+  }
+
+  get playersCanAddDilemmas(): boolean {
+    return this.#settings.playersCanAddDilemmas;
+  }
+
+  /** The highest minimum age the dilemmas of the room may have. */
+  get maximumMinimumAge(): 16 | 18 {
+    return this.#settings.adultsOnly ? 18 : 16;
+  }
+
+  /** New settings with the changes; what is not changed stays. */
+  with(changes: Partial<RoomSettingsSnapshot>): RoomSettingsVO {
+    return new RoomSettingsVO({ ...this.#settings, ...changes });
+  }
+
+  toSnapshot(): RoomSettingsSnapshot {
+    return { ...this.#settings };
+  }
+}

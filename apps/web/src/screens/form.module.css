@@ -1,0 +1,134 @@
+/* The forms of the start: a column that fills the screen, with the main action at the bottom. */
+.form {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 500;
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  font: inherit;
+  font-size: 16px;
+  color: var(--color-ink);
+}
+
+.choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend {
+  margin-bottom: 10px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 500;
+}
+
+/* Each option is a label with its radio inside: the radio stays for the keyboard and the screen reader. */
+.natures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.nature {
+  position: relative;
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nature:has(input:checked) {
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+.places {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.place {
+  position: relative;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 9px;
+  font-size: var(--type-label-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.place:has(input:checked) {
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1.5px var(--color-ink);
+}
+
+/* The radio is not drawn, but it is still there: focusable, checkable and announced. */
+.radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nature:has(.radio:focus-visible),
+.place:has(.radio:focus-visible) {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-ink-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+/* Pushes the submit button to the bottom of the screen. */
+.submit {
+  margin-top: auto;
+}

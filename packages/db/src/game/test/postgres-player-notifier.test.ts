@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 import { W3CTraceContextPropagator } from '@opentelemetry/core';
 import { context, propagation, trace, TraceFlags } from '@opentelemetry/api';
-import { ConnectionChangedEvent, ProgressUpdatedEvent, type DomainEvent } from '@thelever-app/game';
+import {
+  ConnectionChangedEvent,
+  LobbyChangedEvent,
+  ProgressUpdatedEvent,
+  type DomainEvent,
+} from '@thelever-app/game';
 import { sql } from 'kysely';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { ConsoleLogger } from '../../console-logger.ts';
@@ -62,19 +67,23 @@ describe('PostgresPlayerNotifier', () => {
       const notifier = new PostgresPlayerNotifier(database.db());
       const progress = new ProgressUpdatedEvent('TestGameId', 'TestLuisId', 2, 7);
       const connection = new ConnectionChangedEvent('TestRoomId', 'TestLuisId', false, 3);
+      const lobby = new LobbyChangedEvent('TestRoomId', 'settings-changed', 4);
 
       // Act
       await notifier.notify(['TestAnaId', 'TestMartaId'], progress);
       await notifier.notify(['TestAnaId'], connection);
+      await notifier.notify(['TestAnaId', 'TestLuisId'], lobby);
 
       // Assert
-      await until(() => received.length === 2);
+      await until(() => received.length === 3);
       expect(received).toEqual([
         { playerIds: ['TestAnaId', 'TestMartaId'], event: progress },
         { playerIds: ['TestAnaId'], event: connection },
+        { playerIds: ['TestAnaId', 'TestLuisId'], event: lobby },
       ]);
       expect(received[0]?.event).toBeInstanceOf(ProgressUpdatedEvent);
       expect(received[1]?.event).toBeInstanceOf(ConnectionChangedEvent);
+      expect(received[2]?.event).toBeInstanceOf(LobbyChangedEvent);
     });
 
     it('should deliver what a command notifies only once it commits', async () => {

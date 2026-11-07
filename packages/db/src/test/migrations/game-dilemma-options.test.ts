@@ -1,19 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { Dilemma } from '@thelever-app/dilemmas';
 import { SequentialIdGenerator } from '@thelever-app/dilemmas/in-memory';
-import { Game, Room } from '@thelever-app/game';
-import {
-  SEAL_BEFORE_FIRST_ACCESS,
-  SequentialIdGenerator as GameIds,
-} from '@thelever-app/game/in-memory';
 import { type Kysely, sql } from 'kysely';
 import pg from 'pg';
 import { afterEach, describe, expect, it } from 'vitest';
 import { openDatabase } from '../../connection.ts';
 import { ConsoleLogger } from '../../console-logger.ts';
 import { PostgresDilemmaRepository } from '../../dilemmas/postgres-dilemma-repository.ts';
-import { PostgresGameRepository } from '../../game/postgres-game-repository.ts';
-import { PostgresRoomRepository } from '../../game/postgres-room-repository.ts';
 import { grantRowAccess } from '../../grants.ts';
 import { migrateTo } from '../../migrator.ts';
 import type { Database } from '../../schema.ts';
@@ -27,6 +20,9 @@ afterEach(async () => {
   // Last opened, first closed: the database goes after the connections to it.
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
+
+// The tables of Game are written and read here in SQL, as they were at these migrations: the
+// repositories and the schema of the code follow the latest one, which a later migration changed.
 
 /** An empty database of its own, migrated up to `migration`, with one dilemma and one room. */
 async function databaseAt(migration: string) {
@@ -53,36 +49,127 @@ async function databaseAt(migration: string) {
     new SequentialIdGenerator('dilemma'),
   );
   await new PostgresDilemmaRepository(db).save(dilemma);
-  await db.insertInto('instances').values({ id: 'TestInstance', seen_at: new Date() }).execute();
-  const room = Room.create({ hostNickname: 'Ana', hostIdentity: 'TestAna' }, new GameIds());
-  await new PostgresRoomRepository(db, 'TestInstance').save(room);
+  const { roomId, hostId } = await roomOfItsHost(db);
   return {
     db,
     url: urlOf(name),
     dilemma,
-    room,
-    roomId: room.id,
+    roomId,
+    hostId,
     optionIds: dilemma.options.map(({ id }) => id),
   };
+}
+
+/** A room with only its host, Ana. */
+async function roomOfItsHost(db: Kysely<Database>) {
+  const roomId = `TestRoom${randomUUID()}`;
+  const hostId = `TestAna${randomUUID()}`;
+  // In one transaction: the room points at its host, checked at the commit.
+  await db.transaction().execute(async (trx) => {
+    await sql`insert into rooms (id, host_player_id, version) values (${roomId}, ${hostId}, 1)`.execute(
+      trx,
+    );
+    await sql`
+      insert into room_players (id, room_id, position, nickname, identity)
+      values (${hostId}, ${roomId}, 0, 'Ana', 'TestAna')
+    `.execute(trx);
+  });
+  return { roomId, hostId };
 }
 
 /** A game started as the revision before Game kept its options writes it: no options of its own. */
 async function startedTheOldWay(db: Kysely<Database>, roomId: string, dilemma: Dilemma) {
   const gameId = `TestGame${randomUUID()}`;
-  await db
-    .insertInto('games')
-    .values({ id: gameId, room_id: roomId, in_decision_phase: false, version: 1 })
-    .execute();
-  await db
-    .insertInto('game_dilemmas')
-    .values({
-      game_id: gameId,
-      position: 0,
-      dilemma_id: dilemma.id,
-      dilemma_version: dilemma.version,
-    })
-    .execute();
+  await sql`
+    insert into games (id, room_id, in_decision_phase, version)
+    values (${gameId}, ${roomId}, false, 1)
+  `.execute(db);
+  await sql`
+    insert into game_dilemmas (game_id, position, dilemma_id, dilemma_version)
+    values (${gameId}, 0, ${dilemma.id}, ${dilemma.version})
+  `.execute(db);
   return gameId;
+}
+
+/**
+ * A game in the decision phase for the host, of one dilemma with the options Game keeps of it, as
+ * the revision that writes them saves it.
+ */
+async function inDecisionPhase(
+  db: Kysely<Database>,
+  game: { roomId: string; hostId: string; dilemmaId: string; optionIds: string[] },
+) {
+  const { roomId, hostId, dilemmaId, optionIds } = game;
+  const gameId = `TestGame${randomUUID()}`;
+  await db.transaction().execute(async (trx) => {
+    await sql`
+      insert into games (id, room_id, in_decision_phase, version)
+      values (${gameId}, ${roomId}, true, 1)
+    `.execute(trx);
+    await sql`
+      insert into game_dilemmas (game_id, position, dilemma_id, dilemma_version)
+      values (${gameId}, 0, ${dilemmaId}, 1)
+    `.execute(trx);
+    // While the trigger of 0003 is there, it has copied the same options already.
+    await sql`
+      insert into game_dilemma_options (game_id, dilemma_id, option_id, position)
+      select ${gameId}, ${dilemmaId}, option_id, (position - 1)::smallint
+      from unnest(${optionIds}::text[]) with ordinality as options (option_id, position)
+      on conflict do nothing
+    `.execute(trx);
+    await sql`
+      insert into game_players (game_id, player_id, position) values (${gameId}, ${hostId}, 0)
+    `.execute(trx);
+  });
+  return gameId;
+}
+
+/** The answer of a player, with the consent to play only. */
+async function answered(
+  db: Kysely<Database>,
+  answer: { gameId: string; playerId: string; dilemmaId: string; vote: string },
+) {
+  const { gameId, playerId, dilemmaId, vote } = answer;
+  await sql`
+    insert into answers (game_id, player_id, dilemma_id, dilemma_version, vote,
+      game_consent_version, research_consent_version, commercial_licence_consent_version,
+      under_eighteen, voter_in_the_gap)
+    values (${gameId}, ${playerId}, ${dilemmaId}, 1, ${vote}, 'TestConsent1', null, null, false, false)
+  `.execute(db);
+}
+
+/** The dilemmas of a game in their order, each with the ids of the options Game keeps of it. */
+async function dilemmasOf(db: Kysely<Database>, gameId: string) {
+  const { rows } = await sql<{ dilemma_id: string; dilemma_version: number; option_ids: string[] }>`
+    select game_dilemmas.dilemma_id, game_dilemmas.dilemma_version,
+      coalesce(array_agg(options.option_id order by options.position)
+        filter (where options.option_id is not null), '{}') as option_ids
+    from game_dilemmas
+    left join game_dilemma_options as options using (game_id, dilemma_id)
+    where game_dilemmas.game_id = ${gameId}
+    group by game_dilemmas.position, game_dilemmas.dilemma_id, game_dilemmas.dilemma_version
+    order by game_dilemmas.position
+  `.execute(db);
+  return rows.map((row) => ({
+    dilemmaId: row.dilemma_id,
+    version: row.dilemma_version,
+    optionIds: row.option_ids,
+  }));
+}
+
+/** The ids of the options Game keeps for a game, in their order. */
+async function optionIdsOf(db: Kysely<Database>, gameId: string) {
+  return (await dilemmasOf(db, gameId)).flatMap(({ optionIds }) => optionIds);
+}
+
+/** The answers of a player in a game. */
+async function answersOf(db: Kysely<Database>, gameId: string, playerId: string) {
+  const { rows } = await sql<{ dilemma_id: string; vote: string }>`
+    select dilemma_id, vote from answers
+    where game_id = ${gameId} and player_id = ${playerId}
+    order by dilemma_id
+  `.execute(db);
+  return rows.map((row) => ({ dilemmaId: row.dilemma_id, vote: row.vote }));
 }
 
 describe('the migration that gives Game the options of its dilemmas', () => {
@@ -95,8 +182,9 @@ describe('the migration that gives Game the options of its dilemmas', () => {
     await migrateTo(db, THIS);
 
     // Assert
-    const found = await new PostgresGameRepository(db).findById(gameId);
-    expect(found?.dilemmas).toEqual([{ dilemmaId: dilemma.id, version: 1, optionIds }]);
+    expect(await dilemmasOf(db, gameId)).toEqual([
+      { dilemmaId: dilemma.id, version: 1, optionIds },
+    ]);
   });
 
   it('should copy the options of a game the previous revision starts while the deploy goes on', async () => {
@@ -108,8 +196,9 @@ describe('the migration that gives Game the options of its dilemmas', () => {
     const gameId = await startedTheOldWay(db, roomId, dilemma);
 
     // Assert
-    const found = await new PostgresGameRepository(db).findById(gameId);
-    expect(found?.dilemmas).toEqual([{ dilemmaId: dilemma.id, version: 1, optionIds }]);
+    expect(await dilemmasOf(db, gameId)).toEqual([
+      { dilemmaId: dilemma.id, version: 1, optionIds },
+    ]);
   });
 
   it('should wait for a command of the previous revision that is starting a game, not deadlock with it', async () => {
@@ -137,8 +226,7 @@ describe('the migration that gives Game the options of its dilemmas', () => {
 
     // Assert
     await expect(migrating).resolves.toContain('0003-game-dilemma-options');
-    const found = await new PostgresGameRepository(db).findById(gameId);
-    expect(found?.dilemmas[0]?.optionIds).toHaveLength(3);
+    expect(await optionIdsOf(db, gameId)).toHaveLength(3);
   });
 
   it('should copy the options for the user of the room server before it is granted the new table', async () => {
@@ -153,8 +241,7 @@ describe('the migration that gives Game the options of its dilemmas', () => {
     const gameId = await startedTheOldWayBy(roomServer, roomId, dilemma);
 
     // Assert
-    const found = await new PostgresGameRepository(db).findById(gameId);
-    expect(found?.dilemmas[0]?.optionIds).toHaveLength(3);
+    expect(await optionIdsOf(db, gameId)).toHaveLength(3);
   });
 
   it('should copy the options of the dilemma played, not of a table of the same name the user made', async () => {
@@ -176,8 +263,7 @@ describe('the migration that gives Game the options of its dilemmas', () => {
     const gameId = await startedTheOldWayBy(session, roomId, dilemma);
 
     // Assert
-    const found = await new PostgresGameRepository(db).findById(gameId);
-    expect(found?.dilemmas[0]?.optionIds).toEqual(optionIds);
+    expect(await optionIdsOf(db, gameId)).toEqual(optionIds);
   });
 
   it('should give up soon, not hold every game up, while another transaction keeps a table it needs', async () => {
@@ -203,75 +289,58 @@ describe('the migration that checks the votes against the options Game keeps', (
   const NEXT = '0004-game-answers-vote';
 
   /** A game of Game's own dilemma, which Dilemmas does not have, started for the host. */
-  function gameOfItsOwnDilemma(room: Room) {
-    const game = Game.create(
-      {
-        roomId: room.id,
-        dilemmas: [{ dilemmaId: 'TestDilemma', version: 1, optionIds: ['TestA', 'TestB'] }],
-      },
-      new GameIds(),
-    );
-    game.startDecisionPhase(room.players);
-    return game;
+  function gameOfItsOwnDilemma(db: Kysely<Database>, roomId: string, hostId: string) {
+    return inDecisionPhase(db, {
+      roomId,
+      hostId,
+      dilemmaId: 'TestDilemma',
+      optionIds: ['TestA', 'TestB'],
+    });
   }
 
   it('should keep the answers given before it', async () => {
     // Arrange
-    const { db, dilemma, room, optionIds } = await databaseAt(THIS);
-    const game = Game.create(
-      { roomId: room.id, dilemmas: [{ dilemmaId: dilemma.id, version: 1, optionIds }] },
-      new GameIds(),
-    );
-    game.startDecisionPhase(room.players);
-    game.answer(room.host.id, dilemma.id, optionIds[1]!, SEAL_BEFORE_FIRST_ACCESS);
-    await new PostgresGameRepository(db).save(game);
+    const { db, dilemma, roomId, hostId, optionIds } = await databaseAt(THIS);
+    const gameId = await inDecisionPhase(db, { roomId, hostId, dilemmaId: dilemma.id, optionIds });
+    await answered(db, { gameId, playerId: hostId, dilemmaId: dilemma.id, vote: optionIds[1]! });
 
     // Act
     await migrateTo(db, NEXT);
 
     // Assert
-    const found = await new PostgresGameRepository(db).findById(game.id);
-    expect(found?.answersOf(room.host.id)).toEqual([{ dilemmaId: dilemma.id, vote: optionIds[1] }]);
+    expect(await answersOf(db, gameId, hostId)).toEqual([
+      { dilemmaId: dilemma.id, vote: optionIds[1] },
+    ]);
   });
 
   it('should take a vote among the options of the game, whatever Dilemmas has', async () => {
     // Arrange
-    const { db, room } = await databaseAt(THIS);
-    const game = gameOfItsOwnDilemma(room);
+    const { db, roomId, hostId } = await databaseAt(THIS);
     await migrateTo(db, NEXT);
-    game.answer(room.host.id, 'TestDilemma', 'TestB', SEAL_BEFORE_FIRST_ACCESS);
 
     // Act
-    await new PostgresGameRepository(db).save(game);
+    const gameId = await gameOfItsOwnDilemma(db, roomId, hostId);
+    await answered(db, { gameId, playerId: hostId, dilemmaId: 'TestDilemma', vote: 'TestB' });
 
     // Assert
-    const found = await new PostgresGameRepository(db).findById(game.id);
-    expect(found?.answersOf(room.host.id)).toEqual([{ dilemmaId: 'TestDilemma', vote: 'TestB' }]);
+    expect(await answersOf(db, gameId, hostId)).toEqual([
+      { dilemmaId: 'TestDilemma', vote: 'TestB' },
+    ]);
   });
 
   it('should refuse a vote that is not an option of the game', async () => {
     // Arrange
-    const { db, room } = await databaseAt(THIS);
-    const game = gameOfItsOwnDilemma(room);
-    await new PostgresGameRepository(db).save(game);
+    const { db, roomId, hostId } = await databaseAt(THIS);
+    const gameId = await gameOfItsOwnDilemma(db, roomId, hostId);
     await migrateTo(db, NEXT);
 
     // Act
-    const answering = db
-      .insertInto('answers')
-      .values({
-        game_id: game.id,
-        player_id: room.host.id,
-        dilemma_id: 'TestDilemma',
-        dilemma_version: 1,
-        vote: 'TestNotAnOption',
-        game_consent_version: 'TestConsent1',
-        research_consent_version: null,
-        commercial_licence_consent_version: null,
-        under_eighteen: false,
-        voter_in_the_gap: false,
-      })
-      .execute();
+    const answering = answered(db, {
+      gameId,
+      playerId: hostId,
+      dilemmaId: 'TestDilemma',
+      vote: 'TestNotAnOption',
+    });
 
     // Assert
     await expect(answering).rejects.toThrow('answers_vote');
@@ -286,23 +355,13 @@ describe('the migration that checks the votes against the options Game keeps', (
     const gameId = await startedTheOldWay(db, roomId, dilemma);
 
     // Assert
-    const copied = await db
-      .selectFrom('game_dilemma_options')
-      .select('option_id')
-      .where('game_id', '=', gameId)
-      .execute();
-    expect(copied).toEqual([]);
+    expect(await optionIdsOf(db, gameId)).toEqual([]);
   });
 
   it('should wait for a command that is answering, not deadlock with it', async () => {
     // Arrange: a command reads the game, as the repository does, before it saves an answer.
-    const { db, url, room, dilemma, optionIds } = await databaseAt(THIS);
-    const game = Game.create(
-      { roomId: room.id, dilemmas: [{ dilemmaId: dilemma.id, version: 1, optionIds }] },
-      new GameIds(),
-    );
-    game.startDecisionPhase(room.players);
-    await new PostgresGameRepository(db).save(game);
+    const { db, url, roomId, hostId, dilemma, optionIds } = await databaseAt(THIS);
+    const gameId = await inDecisionPhase(db, { roomId, hostId, dilemmaId: dilemma.id, optionIds });
     const command = new pg.Client({ connectionString: url });
     await command.connect();
     cleanups.push(() => command.end());
@@ -310,7 +369,7 @@ describe('the migration that checks the votes against the options Game keeps', (
     await command.query(
       `select * from game_dilemmas join game_dilemma_options using (game_id, dilemma_id)
        left join answers using (game_id, dilemma_id) where game_id = $1`,
-      [game.id],
+      [gameId],
     );
 
     // Act: the migration starts and waits for it; then the command answers and commits.
@@ -320,7 +379,7 @@ describe('the migration that checks the votes against the options Game keeps', (
       `insert into answers (game_id, player_id, dilemma_id, dilemma_version, vote,
          game_consent_version, under_eighteen, voter_in_the_gap)
        values ($1, $2, $3, 1, $4, 'TestConsent1', false, false)`,
-      [game.id, room.host.id, dilemma.id, optionIds[0]],
+      [gameId, hostId, dilemma.id, optionIds[0]],
     );
     await command.query('commit');
 

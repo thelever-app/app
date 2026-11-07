@@ -5,7 +5,9 @@ import type { GameWorld } from '../support/world.ts';
 Given(
   '{string} hosts a room with {string} and {string}',
   async function (this: GameWorld, host: string, firstPlayer: string, secondPlayer: string) {
-    await this.driver.hostRoom(host, [firstPlayer, secondPlayer]);
+    await this.hostIs(host);
+    await this.isInTheRoom(firstPlayer);
+    await this.isInTheRoom(secondPlayer);
   },
 );
 
@@ -121,3 +123,52 @@ Then(
     }
   },
 );
+
+Given(
+  'a game of {int} dilemmas chosen by category with new dilemmas included',
+  async function (this: GameWorld, count: number) {
+    const settings = await this.driver.settingsSeenBy(await this.host());
+    assert.equal(settings.dilemmaCount, count);
+    assert.equal(settings.newDilemmas, true);
+  },
+);
+
+When('the game is put together', async function (this: GameWorld) {
+  // The host put it together when the game started, in the background.
+  this.dilemmas = await this.driver.dilemmasOfTheGame();
+});
+
+Then(
+  'it includes the number of new dilemmas set for games of {int} dilemmas',
+  function (this: GameWorld, count: number) {
+    const newOnes = this.dilemmas.filter(
+      (dilemmaId) => this.driver.catalogEntryOf(dilemmaId).status === 'in-exploration',
+    );
+    assert.equal(newOnes.length, this.driver.newDilemmasSetForGamesOf(count));
+  },
+);
+
+Then('the rest come from the catalog', async function (this: GameWorld) {
+  const { dilemmaCount } = await this.driver.settingsSeenBy(await this.host());
+  const fromTheCatalog = this.dilemmas.filter(
+    (dilemmaId) => this.driver.catalogEntryOf(dilemmaId).status === 'in-catalog',
+  );
+  assert.equal(this.dilemmas.length, dilemmaCount);
+  assert.equal(
+    fromTheCatalog.length,
+    dilemmaCount - this.driver.newDilemmasSetForGamesOf(dilemmaCount),
+  );
+});
+
+When(
+  '{string} tries to start another game in that room',
+  async function (this: GameWorld, host: string) {
+    this.gameBefore = await this.driver.currentGameSeenBy(host);
+    assert.ok(this.gameBefore, 'no game in progress');
+    await this.driver.tryToStartGame(host);
+  },
+);
+
+Then('no new game starts', async function (this: GameWorld) {
+  assert.equal(await this.driver.currentGameSeenBy(await this.host()), this.gameBefore);
+});

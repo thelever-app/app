@@ -9,7 +9,11 @@ const STATUS: Partial<Record<ErrorCodeDto, number>> = {
   'duplicate-dilemma': 400,
   'invalid-token': 401,
   'invalid-app-check': 401,
+  'invalid-avatar': 400,
+  'invalid-room-setting': 400,
+  'player-not-in-room': 403,
   'room-not-found': 404,
+  'room-code-not-found': 404,
   'dilemma-not-found': 404,
 };
 

@@ -41,6 +41,7 @@ describe('createApp', () => {
     const app = createApp([echo('post', '/anything', false)], {
       authenticate: guard,
       errorHandler,
+      webOrigins: [],
     });
 
     // Act
@@ -55,6 +56,7 @@ describe('createApp', () => {
     const app = createApp([echo('get', '/open', false), echo('get', '/closed', true)], {
       authenticate: guard,
       errorHandler,
+      webOrigins: [],
     });
 
     // Act
@@ -71,6 +73,7 @@ describe('createApp', () => {
     const app = createApp([echo('get', '/failing', false, new Error('expected'))], {
       authenticate: guard,
       errorHandler,
+      webOrigins: [],
     });
 
     // Act

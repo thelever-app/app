@@ -7,6 +7,28 @@ export interface DilemmaContent {
   readonly options: readonly { readonly optionId: string; readonly text: string }[];
 }
 
+/** A dilemma of the catalog as the lobby shows it, in the language asked for. */
+export interface CatalogDilemma {
+  readonly dilemmaId: string;
+  readonly text: string;
+  readonly minimumAge: 16 | 18;
+  readonly category: string;
+  readonly tags: readonly string[];
+}
+
+/** Which dilemmas to look for; every criterion given must hold. */
+export interface DilemmaSearch {
+  readonly dilemmaIds?: readonly string[];
+  readonly category?: string;
+  /** Every one of them. */
+  readonly tags?: readonly string[];
+  /** 16 leaves out the dilemmas for adults. */
+  readonly maximumMinimumAge: 16 | 18;
+  /** In the general catalog, or in exploration before it gets there. */
+  readonly status: 'in-catalog' | 'in-exploration';
+  readonly language: string;
+}
+
 /**
  * How the Game context asks the Dilemmas context for the dilemmas of a game.
  * Both methods keep the order asked for and throw DilemmaNotFoundError if a dilemma, or that version of it, does not exist.
@@ -22,4 +44,6 @@ export interface DilemmaCatalog {
     dilemmas: readonly { readonly dilemmaId: string; readonly version: number }[],
     language: string,
   ): Promise<readonly DilemmaContent[]>;
+  /** The public dilemmas that match, at their current version; none is an empty list. */
+  search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]>;
 }

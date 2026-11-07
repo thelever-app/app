@@ -5,6 +5,7 @@ import {
   type ServerMessageDto,
 } from '@thelever-app/protocol';
 import { describe, expect, it } from 'vitest';
+import { aRoom } from '../support/room.ts';
 import type { RoomConnectionStatus } from '../../src/room/room-connection.ts';
 import { WebSocketRoomConnection } from '../../src/room/websocket-room-connection.ts';
 import { FakeScheduler, FakeSocket } from '../support/fake-socket.ts';
@@ -25,7 +26,15 @@ const GAME_STATE: GameStateDto = {
       ],
     },
   ],
-  players: [{ playerId: 'test-ana-id', nickname: 'Ana', progress: 0, connected: true }],
+  players: [
+    {
+      playerId: 'test-ana-id',
+      nickname: 'Ana',
+      avatar: { face: 'face-01', color: 'teal' },
+      progress: 0,
+      connected: true,
+    },
+  ],
   answers: [],
 };
 
@@ -50,7 +59,7 @@ function open(
   const tokens = ['test-token-1', 'test-token-2', 'test-token-3', 'test-token-4'];
   const connection = WebSocketRoomConnection.open({
     url: 'wss://realtime.test',
-    gameId: 'test-game-id',
+    roomId: 'test-room-id',
     language: 'es',
     getToken: async (forceRefresh) =>
       forceRefresh ? 'test-fresh-token' : (tokens.shift() ?? 'test-token-last'),
@@ -93,7 +102,7 @@ describe('WebSocketRoomConnection', () => {
       expect(sockets.map(({ url }) => url)).toEqual(['wss://realtime.test']);
     });
 
-    it('should send connect with the contract version, the token, the game and the language', async () => {
+    it('should send connect with the contract version, the token, the room and the language', async () => {
       // Arrange
       const { current } = open();
 
@@ -106,7 +115,7 @@ describe('WebSocketRoomConnection', () => {
           type: 'connect',
           contractVersion: CONTRACT_VERSION,
           token: 'test-token-1',
-          gameId: 'test-game-id',
+          roomId: 'test-room-id',
           language: 'es',
           traceparent: TEST_TRACEPARENT,
         },
@@ -158,6 +167,18 @@ describe('WebSocketRoomConnection', () => {
 
       // Act
       current().receive(GAME_STATE);
+
+      // Assert
+      expect(statuses).toEqual(['connecting', 'connected']);
+    });
+
+    it('should be connected too when the first state is the one of the lobby', async () => {
+      // Arrange
+      const { current, statuses } = open();
+      await accept(current());
+
+      // Act
+      current().receive(aRoom());
 
       // Assert
       expect(statuses).toEqual(['connecting', 'connected']);
@@ -513,6 +534,38 @@ describe('WebSocketRoomConnection', () => {
 
       // Assert
       expect(current().sentMessages()).toEqual([expect.objectContaining({ type: 'connect' })]);
+    });
+  });
+
+  describe('expelled', () => {
+    it('should tell the screen and give up for good', async () => {
+      // Arrange
+      const { current, received, statuses } = open();
+      await accept(current());
+      current().receive(aRoom());
+
+      // Act
+      current().receive({ type: 'expelled' });
+
+      // Assert
+      expect(received.at(-1)).toEqual({ type: 'expelled' });
+      expect(statuses.at(-1)).toBe('rejected');
+      expect(current().closedByClient).toBe(true);
+    });
+
+    it('should not connect again when the server closes the socket after it', async () => {
+      // Arrange
+      const { current, scheduler, sockets } = open();
+      await accept(current());
+      current().receive(aRoom());
+      current().receive({ type: 'expelled' });
+
+      // Act
+      current().drop();
+
+      // Assert
+      expect(scheduler.waits).toEqual([]);
+      expect(sockets).toHaveLength(1);
     });
   });
 

@@ -1,10 +1,13 @@
 import {
+  type Category,
   type Creator,
   Dilemma,
+  type DilemmaCriteria,
   type DilemmaRepository,
   type DilemmaSnapshot,
 } from '@thelever-app/dilemmas';
-import type { Kysely, Transaction } from 'kysely';
+import { type Kysely, sql, type Transaction } from 'kysely';
+import { jsonArrayFrom } from 'kysely/helpers/postgres';
 import type { DilemmasTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
 
@@ -82,6 +85,86 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
         status: row.status,
       },
     });
+  }
+
+  async search(criteria: DilemmaCriteria): Promise<Dilemma[]> {
+    const db = currentTransaction<DilemmasTables>() ?? this.#db;
+    const { dilemmaIds, category, tags, maximumMinimumAge, status } = criteria;
+    if (dilemmaIds?.length === 0) return [];
+
+    const rows = await db
+      .selectFrom('dilemmas')
+      .innerJoin('dilemma_versions', 'dilemma_versions.dilemma_id', 'dilemmas.id')
+      .selectAll(['dilemmas', 'dilemma_versions'])
+      .select((eb) => [
+        jsonArrayFrom(
+          eb
+            .selectFrom('dilemma_version_options')
+            .select(['option_id as id', 'text'])
+            .whereRef('dilemma_version_options.dilemma_id', '=', 'dilemma_versions.dilemma_id')
+            .whereRef('dilemma_version_options.version', '=', 'dilemma_versions.number')
+            .orderBy('position'),
+        ).as('options'),
+        jsonArrayFrom(
+          eb
+            .selectFrom('dilemma_version_tags')
+            .select('tag')
+            .whereRef('dilemma_version_tags.dilemma_id', '=', 'dilemma_versions.dilemma_id')
+            .whereRef('dilemma_version_tags.version', '=', 'dilemma_versions.number')
+            .orderBy('position'),
+        ).as('tags'),
+      ])
+      .where('dilemmas.visibility', '=', 'public')
+      // Only the current version of each dilemma: no later one exists.
+      .where(({ not, exists, selectFrom }) =>
+        not(
+          exists(
+            selectFrom('dilemma_versions as later')
+              .select('later.number')
+              .whereRef('later.dilemma_id', '=', 'dilemma_versions.dilemma_id')
+              .whereRef('later.number', '>', 'dilemma_versions.number'),
+          ),
+        ),
+      )
+      .where('dilemma_versions.status', '=', status)
+      .where('dilemma_versions.minimum_age', '<=', maximumMinimumAge)
+      .$if(dilemmaIds !== undefined, (query) => query.where('dilemmas.id', 'in', dilemmaIds ?? []))
+      .$if(category !== undefined, (query) =>
+        query.where('dilemma_versions.category', '=', category as Category),
+      )
+      .$if((tags ?? []).length > 0, (query) =>
+        query.where(
+          ({ selectFrom }) =>
+            selectFrom('dilemma_version_tags')
+              .select(({ fn }) => fn.countAll<string>().as('count'))
+              .whereRef('dilemma_version_tags.dilemma_id', '=', 'dilemma_versions.dilemma_id')
+              .whereRef('dilemma_version_tags.version', '=', 'dilemma_versions.number')
+              .where('dilemma_version_tags.tag', 'in', tags ?? []),
+          '=',
+          String(new Set(tags).size),
+        ),
+      )
+      // Byte order, as the other implementations sort.
+      .orderBy(sql`dilemmas.id collate "C"`)
+      .execute();
+
+    return rows.map((row) =>
+      Dilemma.restore({
+        id: row.id,
+        language: row.language,
+        creator: creatorOf(row),
+        visibility: row.visibility,
+        version: {
+          number: row.number,
+          text: row.text,
+          options: row.options,
+          category: row.category,
+          tags: row.tags.map(({ tag }) => tag),
+          minimumAge: row.minimum_age,
+          status: row.status,
+        },
+      }),
+    );
   }
 
   async #save(db: Transaction<DilemmasTables>, snapshot: DilemmaSnapshot): Promise<void> {

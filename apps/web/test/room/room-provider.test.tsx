@@ -3,9 +3,10 @@ import { act, render, renderHook, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RoomConnection } from '../../src/room/room-connection.ts';
-import { RoomProvider, useRoom } from '../../src/room/room-provider.tsx';
+import { RoomProvider, useGame, useLobby, useRoom } from '../../src/room/room-provider.tsx';
 import { SimulatedRoomConnection } from '../../src/room/simulated-room-connection.ts';
 import { fakeConnection } from '../support/fake-connection.ts';
+import { aRoom } from '../support/room.ts';
 
 const GAME_STATE: GameStateDto = {
   type: 'game-state',
@@ -27,18 +28,21 @@ const GAME_STATE: GameStateDto = {
     {
       playerId: 'test-player-id-0',
       nickname: 'Ana',
+      avatar: { face: 'face-01', color: 'teal' },
       progress: 0,
       connected: true,
     },
     {
       playerId: 'test-player-id-1',
       nickname: 'Luis',
+      avatar: { face: 'face-02', color: 'rust' },
       progress: 0,
       connected: true,
     },
     {
       playerId: 'test-player-id-2',
       nickname: 'Natalia',
+      avatar: { face: 'face-03', color: 'olive' },
       progress: 0,
       connected: true,
     },
@@ -127,6 +131,74 @@ describe('RoomProvider', () => {
     expect(screen.getByText('TestRejected game-not-found')).toBeDefined();
     expect(screen.queryByText('TestScreen')).toBeNull();
   });
+
+  it('should show its children once the lobby arrives', () => {
+    // Arrange
+    const fake = fakeConnection();
+    renderProvider(fake.connection);
+
+    // Act
+    act(() => fake.deliver(aRoom()));
+
+    // Assert
+    expect(screen.getByText('TestScreen')).toBeDefined();
+  });
+
+  it('should show that the host expelled the player when the room gives up on them', () => {
+    // Arrange
+    const fake = fakeConnection();
+    renderProvider(fake.connection);
+    act(() => fake.deliver(aRoom()));
+
+    // Act
+    act(() => {
+      fake.deliver({ type: 'expelled' });
+      fake.changeStatus('rejected');
+    });
+
+    // Assert
+    expect(screen.getByText('TestRejected player-expelled')).toBeDefined();
+  });
+});
+
+describe('useGame and useLobby', () => {
+  it('should give the game to a screen of the game', () => {
+    // Arrange
+    const fake = fakeConnection();
+    const { result } = renderHook(() => useGame(), { wrapper: wrapperFor(fake.connection) });
+
+    // Act
+    act(() => fake.deliver(GAME_STATE));
+
+    // Assert
+    expect(result.current.game).toBe(GAME_STATE);
+  });
+
+  it('should give the lobby to a screen of the lobby', () => {
+    // Arrange
+    const fake = fakeConnection();
+    const lobby = aRoom();
+    const { result } = renderHook(() => useLobby(), { wrapper: wrapperFor(fake.connection) });
+
+    // Act
+    act(() => fake.deliver(lobby));
+
+    // Assert
+    expect(result.current.lobby).toBe(lobby);
+  });
+
+  it('should throw when the screen of the game shows in the lobby', () => {
+    // Arrange
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const fake = fakeConnection();
+    renderHook(() => useGame(), { wrapper: wrapperFor(fake.connection) });
+
+    // Act & Assert
+    expect(() => act(() => fake.deliver(aRoom()))).toThrow(
+      'useGame must be called while the player has a game',
+    );
+    vi.restoreAllMocks();
+  });
 });
 
 describe('useRoom', () => {
@@ -168,7 +240,7 @@ describe('useRoom', () => {
     );
 
     // Assert
-    expect(result.current.game.players.map(({ progress }) => progress)).toEqual([0, 1, 0]);
+    expect(result.current.game?.players.map(({ progress }) => progress)).toEqual([0, 1, 0]);
   });
 
   it('should show what the server rejected until the player dismisses it', () => {
@@ -268,6 +340,22 @@ describe('useRoom', () => {
     });
   });
 
+  it('should send a command of the lobby to the room', () => {
+    // Arrange
+    const fake = fakeConnection();
+    const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(fake.connection) });
+    act(() => fake.deliver(aRoom()));
+
+    // Act
+    result.current.send({ type: 'expel-player', playerId: 'test-marta-id' });
+
+    // Assert
+    expect(fake.connection.send).toHaveBeenCalledWith({
+      type: 'expel-player',
+      playerId: 'test-marta-id',
+    });
+  });
+
   it('should keep the same answerDilemma across renders', () => {
     // Arrange
     const fake = fakeConnection();
@@ -284,26 +372,32 @@ describe('useRoom', () => {
     expect(result.current.answerDilemma).toBe(first);
   });
 
-  it('should follow a simulated room as its fake players answer', async () => {
+  it('should follow a simulated room from its lobby to the game', async () => {
     // Arrange
     vi.useFakeTimers();
     const connection = await SimulatedRoomConnection.open({
       nickname: 'Ana',
       language: 'es',
-      others: [{ nickname: 'Luis', answerEveryMs: 1000 }],
+      others: [
+        { nickname: 'Luis', joinAfterMs: 10, answerEveryMs: 1000 },
+        { nickname: 'Marta', joinAfterMs: 10, answerEveryMs: 1000 },
+      ],
       dilemmas: [
         { text: 'TestText1', options: ['TestOptionA', 'TestOptionB'] },
         { text: 'TestText2', options: ['TestOptionC', 'TestOptionD'] },
       ],
     });
     const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(connection) });
-    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(() => vi.advanceTimersByTimeAsync(10));
+    const playersInTheLobby = result.current.lobby?.players.length;
 
     // Act
+    act(() => result.current.send({ type: 'start-game' }));
     await act(() => vi.advanceTimersByTimeAsync(1000));
 
     // Assert
-    expect(result.current.game.players.map(({ progress }) => progress)).toEqual([0, 1]);
+    expect(playersInTheLobby).toBe(3);
+    expect(result.current.game?.players.map(({ progress }) => progress)).toEqual([0, 1, 1]);
     connection.close();
   });
 });

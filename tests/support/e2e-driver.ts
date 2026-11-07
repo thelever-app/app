@@ -1,44 +1,126 @@
-import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
+import { type Database, ConsoleLogger, openDatabase } from '@thelever-app/db';
 import {
   ClientMessageDto,
-  CreateRoomResponseDto,
   JoinRoomResponseDto,
   ServerMessageDto,
-  StartGameResponseDto,
   type GameStateDto,
+  type RoomStateDto,
 } from '@thelever-app/protocol';
 import { isDeepStrictEqual } from 'node:util';
-import type { BrowserContext, Page, WebSocketRoute } from 'playwright';
-import type { GameDriver } from './driver.ts';
+import type {
+  BrowserContext,
+  BrowserContextOptions,
+  Locator,
+  Page,
+  WebSocketRoute,
+} from 'playwright';
+import type {
+  CatalogEntry,
+  GameDriver,
+  GameSettingsView,
+  InvitationMethod,
+  JoinRefusal,
+  PlayerView,
+  RoomChoices,
+  RoomPreview,
+  SettingsView,
+} from './driver.ts';
 import type { E2eStack } from './e2e-stack.ts';
-
-/** Test data: the dilemmas of the seed, which the room server loads, in the order of the game. */
-const DILEMMA_IDS = SEED_DILEMMAS.map(({ id }) => id);
+import { catalogEntryOf, explorationSlotsFor } from './test-catalog.ts';
 
 /** What the driver looks for on screen, in the language of the browsers: es.json of the web. */
 const SCREEN = {
+  create: 'Crear sala',
+  joinWithCode: 'Unirme con un código',
+  nickname: 'Tu apodo',
+  natureGroup: '¿Con quién vas a jugar?',
+  natures: { family: 'Familia', friends: 'Amigos', work: 'Compañeros', mixed: 'Mezcla' },
+  places: { together: 'En el mismo sitio', remote: 'A distancia' },
+  code: 'Código de la sala',
+  enter: 'Entrar en la sala',
+  host: 'Anfitrión',
+  share: 'Compartir enlace',
+  copied: 'Enlace copiado',
+  showQr: 'Mostrar QR',
+  qr: (code: string) => `Código QR de la sala ${code}`,
+  close: 'Cerrar',
+  videoCall: 'videollamada',
+  change: 'Cambiar',
+  save: 'Guardar',
+  variants: { nominal: 'Nominal', anonymous: 'Anónimo' },
+  switches: {
+    adultsOnly: 'Solo mayores de 18',
+    newDilemmas: 'Incluir dilemas nuevos',
+    playersCanAddDilemmas: 'Los jugadores pueden añadir dilemas',
+  },
+  language: 'Idioma',
+  category: 'Categoría',
+  dilemmaCount: 'Dilemas',
+  totalTime: 'Tiempo total',
+  pick: 'Elegir dilemas uno a uno',
+  search: 'Buscar por etiqueta',
+  play: (count: number) => (count === 1 ? 'Jugar este' : `Jugar estos ${count}`),
+  add: 'Añadir un dilema',
+  remove: 'Quitar este dilema',
+  addedTitle: /^Dilemas añadidos/,
+  toExpel: (nickname: string) => `${nickname}. Toca para expulsar`,
+  expel: 'Expulsar',
+  expelled: 'Te han sacado de la sala',
+  toChangeAvatar: /Toca para cambiar tu avatar$/,
+  face: (number: number) => `Cara ${number}`,
+  colors: {
+    khaki: 'Caqui',
+    teal: 'Verde azulado',
+    brown: 'Marrón',
+    slate: 'Pizarra',
+    cyan: 'Cian',
+    rust: 'Óxido',
+    olive: 'Oliva',
+    stone: 'Piedra',
+  },
+  useAvatar: 'Usar este',
+  start: 'Empezar la partida',
+  refusals: {
+    'Esa sala no existe': 'room-does-not-exist',
+    'Esa sala ya no existe': 'room-does-not-exist',
+    'Esta sala está completa': 'room-full',
+    'No puedes volver a entrar en esta partida': 'expelled',
+  } as Readonly<Record<string, JoinRefusal>>,
+  roomOf: /^Sala de (.+) · [A-Z0-9]{5}$/,
+  inTheRoom: /^(\d+) en la sala$/,
+  anonymous: 'Sala anónima',
   position: /Dilema (\d+) de \d+/,
   group: 'Progreso del grupo',
   progressCount: /(\d+)\/\d+/,
   showAll: 'Ver todos',
-  close: 'Cerrar',
   disconnected: 'desconectado',
   back: 'Volver al dilema anterior',
   continue: 'Continuar',
 } as const;
+
+/** Where the web keeps the last nickname on the device (identity/last-nickname.ts). */
+const LAST_NICKNAME_KEY = 'thelever.lastNickname';
+
+/** The language of each device a scenario names, as the browser announces it. */
+const LOCALES: Readonly<Record<string, string>> = { es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
+/** The language of the browsers when a scenario does not name one. */
+const SPANISH = 'es-ES';
 
 /** The narrowest phone the web supports: every scenario plays on it. */
 const PHONE = { width: 320, height: 640 };
 const WAIT_TIMEOUT_MS = 10_000;
 /** Long enough for the longest wait between two attempts to reconnect, 10 s, and the attempt itself. */
 const RECONNECTION_TIMEOUT_MS = 15_000;
+/**
+ * The players with a screen of their own. A Given that fills a room brings in the rest over HTTP,
+ * without a browser: fifty browsers do not fit in a test.
+ */
+const MAX_SCREENS = 6;
 
-/** One player of the scenario, with a browser context of their own: their own session and storage. */
-interface E2ePlayer {
-  readonly nickname: string;
+/** The browser of a player: their own session and storage, and what goes through their socket. */
+interface PlayerScreen {
   readonly context: BrowserContext;
   readonly page: Page;
-  playerId: string | undefined;
   /** Every message the page sent to the room server, in order. */
   readonly sent: ClientMessageDto[];
   /** Every message the room server sent to the page, in order. */
@@ -47,6 +129,18 @@ interface E2ePlayer {
   link: { readonly page: WebSocketRoute; readonly server: WebSocketRoute } | undefined;
   /** While false, the page cannot reach the room server, as with no network. */
   online: boolean;
+}
+
+/** One player of the scenario, by the name the scenario gives them. */
+interface E2ePlayer {
+  readonly name: string;
+  nickname: string;
+  /** Their player in the room, once they entered it. */
+  playerId: string | undefined;
+  /** None for the players a Given brings in over HTTP. */
+  readonly screen: PlayerScreen | undefined;
+  preview: RoomPreview | undefined;
+  refusal: JoinRefusal | undefined;
 }
 
 /**
@@ -63,7 +157,10 @@ export class E2eDriver implements GameDriver {
   readonly #players = new Map<string, E2ePlayer>();
   /** The votes each player cast, in order, to look for them where they must not be. */
   readonly #votes = new Map<string, { readonly dilemmaId: string; readonly vote: string }[]>();
-  #roomId: string | undefined;
+  #host: string | undefined;
+  /** Whether the host gave the nickname and the nature of the group on the same screen. */
+  #askedTogether = false;
+  #fillers = 0;
 
   constructor(stack: E2eStack) {
     this.#stack = stack;
@@ -71,7 +168,7 @@ export class E2eDriver implements GameDriver {
 
   /** The screen of each player, to check what any player sees. */
   screens(): Page[] {
-    return [...this.#players.values()].map(({ page }) => page);
+    return [...this.#players.values()].flatMap(({ screen }) => (screen ? [screen.page] : []));
   }
 
   async start(): Promise<void> {
@@ -79,85 +176,481 @@ export class E2eDriver implements GameDriver {
   }
 
   async stop(): Promise<void> {
-    await Promise.all([...this.#players.values()].map(({ context }) => context.close()));
+    await Promise.all(
+      [...this.#players.values()].map(async ({ screen }) => screen?.context.close()),
+    );
   }
 
-  async hostRoom(host: string, players: string[]): Promise<void> {
-    const [hostPlayer, ...others] = await Promise.all(
-      [host, ...players].map((nickname) => this.#openBrowser(nickname)),
-    );
-    if (!hostPlayer) throw new Error('The scenario hosts a room without a host');
+  // Lobby
 
-    const { roomId, playerId } = await this.#post(
-      '/rooms',
-      hostPlayer,
-      { nickname: host },
-      CreateRoomResponseDto,
+  async createRoom(host: string, choices: RoomChoices = {}): Promise<void> {
+    const player = await this.#withScreen(host, LOCALES[choices.deviceLanguage ?? 'es'] ?? SPANISH);
+    const { page } = screenOf(player);
+    await page.goto(`${this.#stack.webUrl}/`);
+    await page.getByRole('button', { name: SCREEN.create }).click();
+
+    const nickname = page.getByRole('textbox', { name: SCREEN.nickname });
+    const natures = page.getByRole('group', { name: SCREEN.natureGroup });
+    this.#askedTogether = (await nickname.isVisible()) && (await natures.isVisible());
+    await nickname.fill(host);
+    await chooseOption(page, SCREEN.natures[(choices.groupNature ?? 'friends') as 'friends']);
+    await chooseOption(page, SCREEN.places[(choices.place ?? 'together') as 'together']);
+    await page.getByRole('button', { name: SCREEN.create }).click();
+
+    await page.waitForURL(/\/rooms\//);
+    await waitUntil(() => lastLobbyOf(player), `${host} gets the lobby of their room`);
+    player.nickname = host;
+    this.#host = host;
+  }
+
+  async nicknameAndGroupNatureAskedTogether(): Promise<boolean> {
+    return this.#askedTogether;
+  }
+
+  /** The screen marks the host next to their own row. */
+  async isHost(player: string): Promise<boolean> {
+    const seen = this.#playerCalled(player);
+    const { page } = screenOf(seen);
+    const own = page.locator(`li[data-player-id="${this.#playerIdOf(seen)}"]`);
+    return (await own.textContent())?.includes(SCREEN.host) ?? false;
+  }
+
+  async roomCodeSeenBy(player: string): Promise<string> {
+    const { page } = screenOf(this.#playerCalled(player));
+    return (await page.getByTestId('room-code').textContent()) ?? '';
+  }
+
+  /** The link the screen copies opens the room for whoever follows it. */
+  async canShareInvitationLink(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    await page.getByRole('button', { name: SCREEN.share }).click();
+    await page.getByRole('button', { name: SCREEN.copied }).waitFor();
+    const link = String(await page.evaluate('navigator.clipboard.readText()'));
+    return this.#opensTheRoom(link, await this.roomCodeSeenBy(player));
+  }
+
+  /** The QR at full screen carries a link that opens the room. */
+  async canShowQrFullScreen(player: string): Promise<boolean> {
+    const link = await this.#qrLinkOf(player);
+    return this.#opensTheRoom(link, await this.roomCodeSeenBy(player));
+  }
+
+  async videoCallAdviceSeenBy(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const advice = page.getByRole('note').filter({ hasText: SCREEN.videoCall });
+    return steady(async () => (await advice.count()) > 0);
+  }
+
+  /** As the room keeps it, and every game of the room copies when it starts. */
+  async placeRecorded(): Promise<string> {
+    return this.#lobbyOf(this.#hostName()).place;
+  }
+
+  /** Where the web keeps it on the device, as if the player had entered a room with it. */
+  async lastPlayedAs(player: string, nickname: string): Promise<void> {
+    const { context } = screenOf(await this.#withScreen(player));
+    await context.addInitScript(
+      ([key, value]) => {
+        localStorage.setItem(key, value);
+      },
+      [LAST_NICKNAME_KEY, nickname] as const,
     );
-    this.#roomId = roomId;
-    hostPlayer.playerId = playerId;
-    for (const player of others) {
-      const joined = await this.#post(
-        `/rooms/${roomId}/players`,
-        player,
-        { nickname: player.nickname },
-        JoinRoomResponseDto,
-      );
-      player.playerId = joined.playerId;
+  }
+
+  async nicknameFieldSeenBy(player: string): Promise<string> {
+    const { page } = screenOf(this.#playerCalled(player));
+    return page.getByRole('textbox', { name: SCREEN.nickname }).inputValue();
+  }
+
+  async openInvitation(player: string, method: InvitationMethod): Promise<void> {
+    const code = await this.roomCodeSeenBy(this.#hostName());
+    if (method === 'code') {
+      await this.typeRoomCode(player, code);
+      return;
+    }
+    const link =
+      method === 'QR'
+        ? await this.#qrLinkOf(this.#hostName())
+        : `${this.#stack.webUrl}/join/${code}`;
+    const opener = await this.#withScreen(player);
+    await screenOf(opener).page.goto(link);
+    await this.#readJoinScreen(opener);
+  }
+
+  /** On the start screen, with no button: the field goes through once the code is complete. */
+  async typeRoomCode(player: string, code: string): Promise<void> {
+    const opener = await this.#withScreen(player);
+    const { page } = screenOf(opener);
+    await page.goto(`${this.#stack.webUrl}/`);
+    await page.getByRole('button', { name: SCREEN.joinWithCode }).click();
+    await page.getByRole('textbox', { name: SCREEN.code }).fill(code);
+    await this.#readJoinScreen(opener);
+  }
+
+  async roomPreviewSeenBy(player: string): Promise<RoomPreview | undefined> {
+    return this.#playerCalled(player).preview;
+  }
+
+  async confirmNickname(player: string, nickname: string): Promise<void> {
+    const joiner = this.#playerCalled(player);
+    const { page } = screenOf(joiner);
+    await page.getByRole('textbox', { name: SCREEN.nickname }).fill(nickname);
+    await page.getByRole('button', { name: SCREEN.enter }).click();
+
+    await page.locator('[data-testid="room-code"], [role="alert"] h1').first().waitFor();
+    const refusal = await this.#refusalOn(page);
+    joiner.refusal = refusal;
+    if (refusal) return;
+    joiner.nickname = nickname;
+    await waitUntil(() => lastLobbyOf(joiner), `${player} gets the lobby`);
+    await this.#untilEveryoneSees(`${player} is in the room`, (lobby) =>
+      lobby.players.some(({ playerId }) => playerId === joiner.playerId),
+    );
+  }
+
+  async joinRoom(player: string, nickname = player): Promise<void> {
+    if (this.screens().length >= MAX_SCREENS && !this.#players.has(player)) {
+      await this.#joinWithoutScreen(player, nickname);
+      return;
+    }
+    await this.tryToJoinRoom(player, nickname);
+    const { refusal } = this.#playerCalled(player);
+    if (refusal) throw new Error(`The scenario has ${player} join, but the room says ${refusal}`);
+  }
+
+  async tryToJoinRoom(player: string, nickname = player): Promise<void> {
+    await this.openInvitation(player, 'code');
+    if (this.#playerCalled(player).refusal) return;
+    await this.confirmNickname(player, nickname);
+  }
+
+  async joinRefusalSeenBy(player: string): Promise<JoinRefusal | undefined> {
+    return this.#playerCalled(player).refusal;
+  }
+
+  /** As the host sees the room: whoever left it or never entered is not there. */
+  async isInTheRoom(player: string): Promise<boolean> {
+    const { playerId } = this.#playerCalled(player);
+    if (!playerId) return false;
+    return this.#playersOfTheRoom().some((seen) => seen.playerId === playerId);
+  }
+
+  async isInTheLobby(player: string): Promise<boolean> {
+    if (!(await this.isInTheRoom(player))) return false;
+    const { page } = screenOf(this.#playerCalled(player));
+    return page.getByTestId('room-code').isVisible();
+  }
+
+  /** The rows of the lobby on the screen of `viewer`: who, and the face and colour they show. */
+  async playersSeenBy(viewer: string): Promise<PlayerView[]> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    return steady(() =>
+      page.locator('li[data-player-id]').evaluateAll((rows) =>
+        rows.map((row) => {
+          const avatar = row.querySelector('[data-face]');
+          return {
+            nickname: row.getAttribute('data-nickname') ?? '',
+            avatar: `${avatar?.getAttribute('data-face')}/${avatar?.getAttribute('data-color')}`,
+          };
+        }),
+      ),
+    );
+  }
+
+  /** In the picker: the first colour and face that nobody in the room shows, the player included. */
+  async chooseAnotherFreeAvatar(player: string): Promise<string> {
+    const chooser = this.#playerCalled(player);
+    const { page } = screenOf(chooser);
+    const taken = new Set((await this.playersSeenBy(player)).map(({ avatar }) => avatar));
+    await page.getByRole('button', { name: SCREEN.toChangeAvatar }).click();
+    const picker = page.getByRole('dialog');
+
+    for (const [color, colorName] of Object.entries(SCREEN.colors)) {
+      await picker.getByRole('button', { name: colorName, exact: true }).click();
+      for (let number = 1; number <= 12; number += 1) {
+        const avatar = `face-${String(number).padStart(2, '0')}/${color}`;
+        const face = picker.getByRole('button', { name: SCREEN.face(number), exact: true });
+        if (taken.has(avatar) || (await face.isDisabled())) continue;
+        await face.click();
+        await picker.getByRole('button', { name: SCREEN.useAvatar }).click();
+        const playerId = this.#playerIdOf(chooser);
+        await this.#untilEveryoneSees(`${player} has the avatar ${avatar}`, (lobby) =>
+          lobby.players.some(
+            (seen) =>
+              seen.playerId === playerId && `${seen.avatar.face}/${seen.avatar.color}` === avatar,
+          ),
+        );
+        return avatar;
+      }
+    }
+    throw new Error('The room has no free avatar left');
+  }
+
+  /** As the lobby on the device has it, from the last state the room server sent. */
+  async settingsSeenBy(viewer: string): Promise<SettingsView> {
+    return this.#lobbyOf(viewer).settings;
+  }
+
+  async changeSettings(host: string, changes: Partial<SettingsView>): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
+    const sheet = page.getByRole('dialog');
+
+    for (const [setting, value] of Object.entries(changes)) {
+      if (setting === 'variant') {
+        await chooseOption(sheet, SCREEN.variants[value as 'nominal']);
+      } else if (setting in SCREEN.switches) {
+        const name = SCREEN.switches[setting as keyof typeof SCREEN.switches];
+        await sheet
+          .getByRole('switch', { name: new RegExp(`^${escaped(name)}`) })
+          .setChecked(Boolean(value));
+      } else if (setting === 'dilemmaLanguage') {
+        await sheet.getByLabel(SCREEN.language).selectOption(String(value));
+      } else if (setting === 'category') {
+        await sheet.getByLabel(SCREEN.category).selectOption(String(value));
+      } else if (setting === 'dilemmaCount') {
+        const group = sheet.getByRole('group', { name: SCREEN.dilemmaCount, exact: true });
+        await chooseOption(group, String(value));
+      } else if (setting === 'totalTimeInMinutes') {
+        const group = sheet.getByRole('group', { name: SCREEN.totalTime });
+        await chooseOption(group, `${value} min`);
+      } else {
+        throw new Error(`The driver cannot change ${setting} on screen`);
+      }
+    }
+    await sheet.getByRole('button', { name: SCREEN.save }).click();
+    await sheet.waitFor({ state: 'hidden' });
+    await this.#untilEveryoneSees('the new configuration', (lobby) =>
+      Object.entries(changes).every(
+        ([setting, value]) => lobby.settings[setting as keyof SettingsView] === value,
+      ),
+    );
+  }
+
+  async canChangeSettings(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const change = page.getByRole('button', { name: SCREEN.change, exact: true });
+    return steady(async () => (await change.count()) > 0);
+  }
+
+  /** The first dilemma the search of the screen offers. */
+  async addDilemma(player: string): Promise<void> {
+    const adder = this.#playerCalled(player);
+    const { page } = screenOf(adder);
+    const answer = this.#nextSearchOn(page);
+    await page.getByRole('button', { name: SCREEN.add }).click();
+    const [first] = await answer;
+    if (!first) throw new Error('The catalog has no dilemma suitable for the room');
+
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: new RegExp(`^${escaped(first.text)}`) })
+      .click();
+    await waitUntil(
+      () => lastLobbyOf(adder)?.ownAddedDilemmaId === first.dilemmaId,
+      `${player} has added ${first.dilemmaId}`,
+    );
+    await this.#untilEveryoneSees(`${first.dilemmaId} is added`, (lobby) =>
+      lobby.addedDilemmas.some(({ dilemmaId }) => dilemmaId === first.dilemmaId),
+    );
+  }
+
+  /** The screen offers no way to add a second one. */
+  async tryToAddAnotherDilemma(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const add = page.getByRole('button', { name: SCREEN.add });
+    if (!(await steady(async () => (await add.count()) > 0))) return false;
+    await this.addDilemma(player);
+    return true;
+  }
+
+  async addedDilemmasSeenBy(viewer: string): Promise<string[]> {
+    return this.#lobbyOf(viewer).addedDilemmas.map(({ dilemmaId }) => dilemmaId);
+  }
+
+  /** From everything the device has of the added dilemmas: what the screen shows and what it got. */
+  async authorsOfAddedDilemmasSeenBy(viewer: string): Promise<string[]> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const lobby = this.#lobbyOf(viewer);
+    const section = page.getByRole('region', { name: SCREEN.addedTitle });
+    const shown = (await section.count()) > 0 ? await section.textContent() : '';
+    const seen = `${shown} ${JSON.stringify(lobby.addedDilemmas)}`;
+    return lobby.players
+      .filter(({ playerId, nickname }) => seen.includes(playerId) || seen.includes(nickname))
+      .map(({ nickname }) => nickname);
+  }
+
+  async removeAddedDilemma(host: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const before = this.#lobbyOf(host).addedDilemmas.length;
+    await page.getByRole('button', { name: SCREEN.remove }).first().click();
+    await this.#untilEveryoneSees(
+      'one dilemma less is added',
+      (lobby) => lobby.addedDilemmas.length === before - 1,
+    );
+  }
+
+  /**
+   * The host searches where they pick the dilemmas of the game; any other player, where they add
+   * one. The ids are those of what the room server answered and the screen shows.
+   */
+  async searchDilemmas(player: string, tags?: string[]): Promise<string[]> {
+    const { page } = screenOf(this.#playerCalled(player));
+    let answer = this.#nextSearchOn(page);
+    if (player === this.#hostName()) {
+      await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
+      await page.getByRole('button', { name: SCREEN.pick }).click();
+    } else {
+      await page.getByRole('button', { name: SCREEN.add }).click();
+    }
+    let found = await answer;
+    if (tags) {
+      answer = this.#nextSearchOn(page, 'tags=');
+      await page.getByRole('searchbox', { name: SCREEN.search }).fill(tags.join(' '));
+      found = await answer;
+    }
+    const sheet = page.getByRole('dialog');
+    const [first] = found;
+    if (first) await sheet.getByText(first.text, { exact: true }).waitFor();
+    await page.keyboard.press('Escape');
+    await sheet.waitFor({ state: 'hidden' });
+    return found.map(({ dilemmaId }) => dilemmaId);
+  }
+
+  async pickDilemmas(host: string, dilemmaIds: string[]): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const answer = this.#nextSearchOn(page);
+    await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
+    await page.getByRole('button', { name: SCREEN.pick }).click();
+    const found = await answer;
+
+    const sheet = page.getByRole('dialog');
+    for (const dilemmaId of dilemmaIds) {
+      const dilemma = found.find((candidate) => candidate.dilemmaId === dilemmaId);
+      if (!dilemma) throw new Error(`The search of the host does not offer ${dilemmaId}`);
+      await sheet.getByRole('checkbox', { name: new RegExp(`^${escaped(dilemma.text)}`) }).click();
+    }
+    await sheet.getByRole('button', { name: SCREEN.play(dilemmaIds.length) }).click();
+    await this.#untilEveryoneSees('the picked dilemmas', (lobby) =>
+      isDeepStrictEqual(
+        lobby.pickedDilemmas.map(({ dilemmaId }) => dilemmaId).toSorted(),
+        dilemmaIds.toSorted(),
+      ),
+    );
+  }
+
+  catalogEntryOf(dilemmaId: string): CatalogEntry {
+    return catalogEntryOf(dilemmaId);
+  }
+
+  async expel(host: string, player: string): Promise<void> {
+    const expelled = this.#playerCalled(player);
+    const { page } = screenOf(this.#playerCalled(host));
+    await page.getByRole('button', { name: SCREEN.toExpel(expelled.nickname) }).click();
+    await page.getByRole('dialog').getByRole('button', { name: SCREEN.expel, exact: true }).click();
+
+    await this.#untilEveryoneSees(
+      `${player} is out`,
+      (lobby) => !lobby.players.some(({ playerId }) => playerId === expelled.playerId),
+    );
+    await expelled.screen?.page.getByRole('heading', { name: SCREEN.expelled }).waitFor();
+  }
+
+  async canExpel(host: string, player: string): Promise<boolean> {
+    const { nickname } = this.#playerCalled(player);
+    const { page } = screenOf(this.#playerCalled(host));
+    const expel = page.getByRole('button', { name: SCREEN.toExpel(nickname) });
+    return steady(async () => (await expel.count()) > 0);
+  }
+
+  /** The room says how many it needs: the driver brings in the missing ones before starting. */
+  async startGame(host: string): Promise<void> {
+    const { players, minimumPlayers } = this.#lobbyOf(host);
+    for (let count = players.length; count < minimumPlayers; count++) {
+      this.#fillers += 1;
+      await this.joinRoom(`Filler ${this.#fillers}`);
+    }
+    await this.#start(host);
+  }
+
+  /** The screen only offers to start once the room has the players it needs. */
+  async tryToStartGame(host: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const start = page.getByRole('button', { name: SCREEN.start });
+    if (await steady(async () => (await start.count()) > 0)) await this.#start(host);
+  }
+
+  async currentGameSeenBy(player: string): Promise<string | undefined> {
+    const { screen } = this.#playerCalled(player);
+    const last = screen?.received.findLast(isState);
+    if (last?.type === 'game-state') return last.gameId;
+    return last?.currentGameId ?? undefined;
+  }
+
+  async dilemmasOfTheGame(): Promise<string[]> {
+    return this.#gameOf(this.#hostName()).dilemmas.map(({ dilemmaId }) => dilemmaId);
+  }
+
+  /** As the game keeps it in the database: the room may change after the game started. */
+  async settingsOfTheGame(): Promise<GameSettingsView> {
+    const { gameId } = this.#gameOf(this.#hostName());
+    const { db, close } = await openDatabase<Database>(
+      { kind: 'url', url: this.#stack.databaseUrl },
+      { maxConnections: 1, logger: new ConsoleLogger() },
+    );
+    try {
+      const game = await db
+        .selectFrom('games')
+        .select(['variant', 'place', 'dilemma_language', 'total_time_in_minutes'])
+        .where('id', '=', gameId)
+        .executeTakeFirstOrThrow();
+      return {
+        variant: game.variant,
+        place: game.place,
+        dilemmaLanguage: game.dilemma_language,
+        totalTimeInMinutes: game.total_time_in_minutes,
+      };
+    } finally {
+      await close();
     }
   }
+
+  newDilemmasSetForGamesOf(dilemmaCount: number): number {
+    return explorationSlotsFor(dilemmaCount);
+  }
+
+  // Decision phase
 
   async startDecisionPhase(): Promise<void> {
-    const [host] = this.#players.values();
-    if (!this.#roomId || !host) {
-      throw new Error('The scenario starts the decision phase without a room');
-    }
-
-    const { gameId } = await this.#post(
-      `/rooms/${this.#roomId}/games`,
-      host,
-      { dilemmaIds: DILEMMA_IDS },
-      StartGameResponseDto,
-    );
-    // Every player opens the game, as they would from the link the host shares.
-    await Promise.all(
-      [...this.#players.values()].map(async (player) => {
-        player.sent.length = 0;
-        player.received.length = 0;
-        await player.page.goto(`${this.#stack.webUrl}/games/${gameId}`);
-        await player.page.getByText(SCREEN.position).waitFor();
-      }),
-    );
-    for (const player of this.#players.values()) {
-      await this.#untilOthersHear(player, 'is connected', ({ connected }) => connected);
-    }
+    await this.startGame(this.#hostName());
   }
 
   /** Answers the first `count` dilemmas of the game, in order, with their first option. */
   async answerDilemmas(player: string, count: number): Promise<void> {
-    const screen = this.#playerCalled(player);
-    for (const dilemmaId of DILEMMA_IDS.slice(0, count)) {
-      const [first] = this.#dilemmaOn(screen, dilemmaId).options;
+    const answerer = this.#playerCalled(player);
+    for (const { dilemmaId, options } of this.#gameOf(player).dilemmas.slice(0, count)) {
+      const [first] = options;
       if (!first) throw new Error(`The dilemma ${dilemmaId} has no options`);
-      await this.#answer(screen, dilemmaId, first.optionId);
+      await this.#answer(answerer, dilemmaId, first.optionId);
     }
   }
 
   async changeVote(player: string, position: number): Promise<void> {
-    const screen = this.#playerCalled(player);
+    const answerer = this.#playerCalled(player);
+    const { page } = screenOf(answerer);
     const dilemmaId = this.#dilemmaIdAt(position);
     const [previous] = (await this.votesCastFor(player, position)).slice(-1);
     if (!previous) throw new Error(`The scenario changes a vote ${player} never cast`);
-    const other = this.#dilemmaOn(screen, dilemmaId).options.find(
+    const other = this.#dilemmaOn(answerer, dilemmaId).options.find(
       ({ optionId }) => optionId !== previous,
     );
     if (!other) throw new Error(`The dilemma ${dilemmaId} has no other option`);
 
     // Back one dilemma at a time, as the player would.
-    while ((await this.#positionOn(screen.page)) > position) {
-      await screen.page.getByRole('button', { name: SCREEN.back }).click();
+    while ((await positionOn(page)) > position) {
+      await page.getByRole('button', { name: SCREEN.back }).click();
     }
-    await this.#answer(screen, dilemmaId, other.optionId);
+    await this.#answer(answerer, dilemmaId, other.optionId);
   }
 
   async votesCastFor(player: string, position: number): Promise<string[]> {
@@ -170,21 +663,21 @@ export class E2eDriver implements GameDriver {
   /** What the room server last told `player` it keeps for them. */
   async voteRecordedFor(player: string, position: number): Promise<string | undefined> {
     const dilemmaId = this.#dilemmaIdAt(position);
-    return lastStateOf(this.#playerCalled(player))?.answers.find(
-      (answer) => answer.dilemmaId === dilemmaId,
-    )?.vote;
+    return this.#gameOf(player).answers.find((answer) => answer.dilemmaId === dilemmaId)?.vote;
   }
 
   /** What the room server last told `player` it keeps for them, in the order of the dilemmas. */
   async votesRecordedFor(player: string): Promise<string[]> {
-    const answers = lastStateOf(this.#playerCalled(player))?.answers ?? [];
-    return answers
-      .toSorted((a, b) => DILEMMA_IDS.indexOf(a.dilemmaId) - DILEMMA_IDS.indexOf(b.dilemmaId))
+    const game = this.#gameOf(player);
+    const order = game.dilemmas.map(({ dilemmaId }) => dilemmaId);
+    return game.answers
+      .toSorted((a, b) => order.indexOf(a.dilemmaId) - order.indexOf(b.dilemmaId))
       .map(({ vote }) => vote);
   }
 
   async disconnect(player: string): Promise<void> {
-    const screen = this.#playerCalled(player);
+    const disconnecting = this.#playerCalled(player);
+    const screen = screenOf(disconnecting);
     const { link } = screen;
     if (!link) throw new Error(`The scenario disconnects ${player}, who is not connected`);
 
@@ -192,31 +685,32 @@ export class E2eDriver implements GameDriver {
     screen.link = undefined;
     link.server.close();
     link.page.close();
-    await this.#untilOthersHear(screen, 'is disconnected', ({ connected }) => !connected);
+    await this.#untilOthersHear(disconnecting, 'is disconnected', ({ connected }) => !connected);
   }
 
   /** The page connects again by itself, as soon as its next attempt finds the network back. */
   async reconnect(player: string): Promise<void> {
-    const screen = this.#playerCalled(player);
-    const statesBefore = screen.received.filter(isGameState).length;
+    const reconnecting = this.#playerCalled(player);
+    const screen = screenOf(reconnecting);
+    const statesBefore = screen.received.filter(isState).length;
     screen.online = true;
 
     await waitUntil(
-      () => screen.received.filter(isGameState).length > statesBefore || undefined,
+      () => screen.received.filter(isState).length > statesBefore || undefined,
       `${player} gets a fresh state from the room server`,
       RECONNECTION_TIMEOUT_MS,
     );
-    await this.#untilOthersHear(screen, 'is connected', ({ connected }) => connected);
+    await this.#untilOthersHear(reconnecting, 'is connected', ({ connected }) => connected);
   }
 
   async dilemmaShownTo(player: string): Promise<number> {
-    const { page } = this.#playerCalled(player);
-    return steady(() => this.#positionOn(page));
+    const { page } = screenOf(this.#playerCalled(player));
+    return steady(() => positionOn(page));
   }
 
   /** Whether `viewer` sees `player` as connected, in the sheet with the whole group. */
   async connectionSeenBy(viewer: string, player: string): Promise<boolean | undefined> {
-    const { page } = this.#playerCalled(viewer);
+    const { page } = screenOf(this.#playerCalled(viewer));
     await page.getByRole('button', { name: SCREEN.showAll }).click();
     const sheet = page.getByRole('dialog');
     const row = sheet.getByRole('listitem').filter({ hasText: player });
@@ -232,7 +726,7 @@ export class E2eDriver implements GameDriver {
 
   /** The progress of `player` in the strip at the top of the screen of `viewer`. */
   async progressSeenBy(viewer: string, player: string): Promise<number | undefined> {
-    const { page } = this.#playerCalled(viewer);
+    const { page } = screenOf(this.#playerCalled(viewer));
     const row = page
       .getByRole('region', { name: SCREEN.group })
       .getByRole('listitem')
@@ -249,8 +743,8 @@ export class E2eDriver implements GameDriver {
    * That state lists every option of every dilemma, and only the answers of whoever gets it.
    */
   async messagesReceivedByOthers(player: string): Promise<object[]> {
-    return this.#othersThan(this.#playerCalled(player)).flatMap(({ received }) =>
-      received.filter((message) => !isGameState(message)),
+    return this.#othersThan(this.#playerCalled(player)).flatMap(({ screen }) =>
+      (screen?.received ?? []).filter((message) => message.type !== 'game-state'),
     );
   }
 
@@ -258,65 +752,214 @@ export class E2eDriver implements GameDriver {
     return (this.#votes.get(player) ?? []).map(({ vote }) => vote);
   }
 
-  /**
-   * A browser of its own for the player. The web signs in anonymously as soon as it opens a game,
-   * so the driver opens one that does not exist and takes the token from its first message.
-   */
-  async #openBrowser(nickname: string): Promise<E2ePlayer> {
-    const context = await this.#stack.browser.newContext({ viewport: PHONE, locale: 'es-ES' });
+  /** The player of that name, with a browser of their own, opened the first time they need it. */
+  async #withScreen(name: string, locale = SPANISH): Promise<E2ePlayer> {
+    const known = this.#players.get(name);
+    if (known?.screen) return known;
+    if (known) throw new Error(`${name} came in without a screen, and the scenario needs one`);
+
+    const context = await this.#newContext({
+      locale,
+      permissions: ['clipboard-read', 'clipboard-write'],
+    });
     // Below the timeout of a step, so a failure names what the screen did not show.
     context.setDefaultTimeout(WAIT_TIMEOUT_MS);
-    const player: E2ePlayer = {
-      nickname,
+    // A desktop browser without the share sheet of a phone: the screen copies the link instead.
+    await context.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'share', { value: undefined, configurable: true });
+    });
+    const screen: PlayerScreen = {
       context,
       page: await context.newPage(),
-      playerId: undefined,
       sent: [],
       received: [],
       link: undefined,
       online: true,
     };
-    this.#players.set(nickname, player);
+    const player: E2ePlayer = {
+      name,
+      nickname: name,
+      playerId: undefined,
+      screen,
+      preview: undefined,
+      refusal: undefined,
+    };
+    this.#players.set(name, player);
 
     const realtime = new URL(this.#stack.realtimeUrl);
     await context.routeWebSocket(
       (url) => url.host === realtime.host,
-      (socket) => this.#link(player, socket),
+      (socket) => this.#link(player, screen, socket),
     );
-    await player.page.goto(`${this.#stack.webUrl}/games/not-a-game`);
-    await waitUntil(() => tokenOf(player), `the browser of ${nickname} signs in`);
     return player;
   }
 
+  /** A phone whose web talks to the room server of the run, wherever it listens. */
+  async #newContext(options: BrowserContextOptions): Promise<BrowserContext> {
+    const context = await this.#stack.browser.newContext({ viewport: PHONE, ...options });
+    const realtime = new URL(this.#stack.realtimeUrl);
+    await context.route('**/config.json', async (route) => {
+      const response = await route.fetch();
+      const config = (await response.json()) as Record<string, unknown>;
+      await route.fulfill({
+        response,
+        json: { ...config, realtimeUrl: realtime.origin.replace(/^http/, 'ws') },
+      });
+    });
+    return context;
+  }
+
+  /** A player a Given brings in over HTTP, signed in on the Auth emulator, with no browser. */
+  async #joinWithoutScreen(name: string, nickname: string): Promise<void> {
+    const signUp = await fetch(
+      `http://${this.#stack.authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnSecureToken: true }),
+      },
+    );
+    const { idToken } = (await signUp.json()) as { readonly idToken: string };
+    const { roomId } = this.#lobbyOf(this.#hostName());
+    const joined = await fetch(`${this.#stack.realtimeUrl}/rooms/${roomId}/players`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname }),
+    });
+    if (!joined.ok) throw new Error(`${name} could not join: ${await joined.text()}`);
+    const { playerId } = JoinRoomResponseDto.parse(await joined.json());
+    this.#players.set(name, {
+      name,
+      nickname,
+      playerId,
+      screen: undefined,
+      preview: undefined,
+      refusal: undefined,
+    });
+    await this.#untilEveryoneSees(`${name} is in the room`, (lobby) =>
+      lobby.players.some((seen) => seen.playerId === playerId),
+    );
+  }
+
   /** Joins the socket of the page to the room server, keeping what goes through it. */
-  #link(player: E2ePlayer, socket: WebSocketRoute): void {
-    if (!player.online) {
+  #link(player: E2ePlayer, screen: PlayerScreen, socket: WebSocketRoute): void {
+    if (!screen.online) {
       socket.close();
       return;
     }
     const server = socket.connectToServer();
     const link = { page: socket, server };
-    player.link = link;
+    screen.link = link;
 
     socket.onMessage((message) => {
       const parsed = ClientMessageDto.safeParse(JSON.parse(String(message)));
-      if (parsed.success) player.sent.push(parsed.data);
+      if (parsed.success) screen.sent.push(parsed.data);
       server.send(message);
     });
     server.onMessage((message) => {
       const parsed = ServerMessageDto.safeParse(JSON.parse(String(message)));
-      if (parsed.success) player.received.push(parsed.data);
+      if (parsed.success) {
+        screen.received.push(parsed.data);
+        if (isState(parsed.data)) player.playerId = parsed.data.playerId;
+      }
       socket.send(message);
     });
     // Either end closing closes the other, as with no driver in between.
     socket.onClose(() => {
-      if (player.link === link) player.link = undefined;
+      if (screen.link === link) screen.link = undefined;
       server.close();
     });
     server.onClose(() => {
-      if (player.link === link) player.link = undefined;
+      if (screen.link === link) screen.link = undefined;
       socket.close();
     });
+  }
+
+  /** What the join screen shows: the room before entering it, or why the player cannot. */
+  async #readJoinScreen(opener: E2ePlayer): Promise<void> {
+    const { page } = screenOf(opener);
+    await page.locator('[data-testid="room-of"], [role="alert"] h1').first().waitFor();
+    opener.refusal = await this.#refusalOn(page);
+    if (opener.refusal) {
+      opener.preview = undefined;
+      return;
+    }
+    const roomOf = (await page.getByTestId('room-of').textContent()) ?? '';
+    const count = (await page.getByTestId('player-count').textContent()) ?? '';
+    const variant = (await page.getByTestId('room-variant').textContent()) ?? '';
+    opener.preview = {
+      host: roomOf.match(SCREEN.roomOf)?.[1] ?? '',
+      playerCount: Number(count.match(SCREEN.inTheRoom)?.[1]),
+      variant: variant.includes(SCREEN.anonymous) ? 'anonymous' : 'nominal',
+      adultsOnly: (await page.getByTestId('room-adults-only').count()) > 0,
+    };
+  }
+
+  /** Why the screen says the player cannot enter, if it does. */
+  async #refusalOn(page: Page): Promise<JoinRefusal | undefined> {
+    const title = page.locator('[role="alert"] h1');
+    if ((await title.count()) === 0) return undefined;
+    return SCREEN.refusals[(await title.textContent()) ?? ''];
+  }
+
+  /** The link the QR at full screen carries; it closes the QR again. */
+  async #qrLinkOf(player: string): Promise<string> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const code = await this.roomCodeSeenBy(player);
+    await page.getByRole('button', { name: SCREEN.showQr }).click();
+    const qr = page.getByRole('img', { name: SCREEN.qr(code) });
+    const link = (await qr.getAttribute('data-link')) ?? '';
+    await page.getByRole('dialog').getByRole('button', { name: SCREEN.close }).click();
+    await qr.waitFor({ state: 'hidden' });
+    return link;
+  }
+
+  /** Whether whoever follows the link sees that room before entering it. */
+  async #opensTheRoom(link: string, code: string): Promise<boolean> {
+    const context = await this.#newContext({ locale: SPANISH });
+    try {
+      const page = await context.newPage();
+      await page.goto(link);
+      const roomOf = page.getByTestId('room-of');
+      await roomOf.waitFor();
+      return (await roomOf.textContent())?.endsWith(code) ?? false;
+    } finally {
+      await context.close();
+    }
+  }
+
+  /** The next answer of the room server to a search of the page, with what it found. */
+  async #nextSearchOn(
+    page: Page,
+    containing = '',
+  ): Promise<readonly { readonly dilemmaId: string; readonly text: string }[]> {
+    const response = await page.waitForResponse(
+      (candidate) =>
+        candidate.request().method() === 'GET' &&
+        /\/rooms\/[^/]+\/dilemmas/.test(candidate.url()) &&
+        candidate.url().includes(containing),
+    );
+    const { dilemmas } = (await response.json()) as {
+      readonly dilemmas: readonly { readonly dilemmaId: string; readonly text: string }[];
+    };
+    return dilemmas;
+  }
+
+  /** The host presses start: every player with a screen gets the game. */
+  async #start(host: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    await page.getByRole('button', { name: SCREEN.start }).click();
+    const inTheRoom = this.#withScreens().filter(
+      (player) =>
+        player.playerId !== undefined &&
+        this.#playersOfTheRoom().some(({ playerId }) => playerId === player.playerId),
+    );
+    await Promise.all(
+      inTheRoom.map(async (player) => {
+        await waitUntil(() => lastGameOf(player), `${player.name} gets the game`);
+        await screenOf(player).page.getByText(SCREEN.position).waitFor();
+      }),
+    );
   }
 
   /** Chooses the option on screen and continues, then waits until the room has the vote. */
@@ -325,22 +968,19 @@ export class E2eDriver implements GameDriver {
     const option = dilemma.options.find(({ optionId }) => optionId === vote);
     if (!option) throw new Error(`The dilemma ${dilemmaId} has no option ${vote}`);
 
-    const isNew = !lastStateOf(player)?.answers.some((answer) => answer.dilemmaId === dilemmaId);
-    const { page } = player;
+    const isNew = !lastGameOf(player)?.answers.some((answer) => answer.dilemmaId === dilemmaId);
+    const { page } = screenOf(player);
     await page.getByRole('heading', { level: 1, name: dilemma.text }).waitFor();
     await page.getByRole('radio', { name: option.text, exact: true }).click();
     await page.getByRole('button', { name: SCREEN.continue }).click();
-    this.#votes.set(player.nickname, [
-      ...(this.#votes.get(player.nickname) ?? []),
-      { dilemmaId, vote },
-    ]);
+    this.#votes.set(player.name, [...(this.#votes.get(player.name) ?? []), { dilemmaId, vote }]);
 
     await waitUntil(
       () =>
-        lastStateOf(player)?.answers.some(
+        lastGameOf(player)?.answers.some(
           (answer) => answer.dilemmaId === dilemmaId && answer.vote === vote,
         ),
-      `the room keeps the vote of ${player.nickname} for ${dilemmaId}`,
+      `the room keeps the vote of ${player.name} for ${dilemmaId}`,
     );
     // A changed vote tells the others nothing: only a new answer moves the progress they see.
     if (!isNew) return;
@@ -362,53 +1002,63 @@ export class E2eDriver implements GameDriver {
     await waitUntil(
       () =>
         this.#othersThan(player).every((other) => {
+          if (!other.screen?.link) return true;
           const about = heardAbout(other, playerId);
-          return !other.link || (about !== undefined && heard(about));
+          return about !== undefined && heard(about);
         }) || undefined,
-      `everyone else hears that ${player.nickname} ${what}`,
+      `everyone else hears that ${player.name} ${what}`,
     );
   }
 
-  async #post<T>(
-    path: string,
-    caller: E2ePlayer,
-    body: object,
-    response: { parse(data: unknown): T },
-  ): Promise<T> {
-    const token = tokenOf(caller);
-    if (!token) throw new Error(`${caller.nickname} is not signed in`);
-    const answer = await fetch(this.#stack.realtimeUrl + path, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const json: unknown = await answer.json();
-    if (!answer.ok) {
-      throw new Error(`POST ${path} answered ${answer.status}: ${JSON.stringify(json)}`);
-    }
-    return response.parse(json);
+  /** Waits until every player with the lobby open on a screen sees that. */
+  async #untilEveryoneSees(what: string, sees: (lobby: RoomStateDto) => boolean): Promise<void> {
+    await waitUntil(
+      () =>
+        this.#withScreens().every((player) => {
+          const last = player.screen?.received.findLast(isState);
+          // The game, an expulsion or a closed socket leave the lobby behind.
+          if (last?.type !== 'room-state' || !player.screen?.link) return true;
+          return sees(last);
+        }) || undefined,
+      `everyone in the lobby sees ${what}`,
+    );
   }
 
-  /** The position (from 1) of the dilemma on the screen of the page. */
-  async #positionOn(page: Page): Promise<number> {
-    const text = await page.getByText(SCREEN.position).textContent();
-    const position = text?.match(SCREEN.position)?.[1];
-    if (position === undefined) throw new Error('The screen shows no dilemma');
-    return Number(position);
+  /** Who is in the room, from the last state the host got: the lobby or the game. */
+  #playersOfTheRoom(): readonly { readonly playerId: string }[] {
+    const host = this.#playerCalled(this.#hostName());
+    const last = host.screen?.received.findLast(isState);
+    return last?.players ?? [];
+  }
+
+  #lobbyOf(player: string): RoomStateDto {
+    const lobby = lastLobbyOf(this.#playerCalled(player));
+    if (!lobby) throw new Error(`${player} has no lobby open`);
+    return lobby;
+  }
+
+  #gameOf(player: string): GameStateDto {
+    const game = lastGameOf(this.#playerCalled(player));
+    if (!game) throw new Error(`${player} has no game open`);
+    return game;
   }
 
   /** The dilemma as the room server sent it to the player, with the ids and texts of its options. */
   #dilemmaOn(player: E2ePlayer, dilemmaId: string): GameStateDto['dilemmas'][number] {
-    const dilemma = lastStateOf(player)?.dilemmas.find((d) => d.dilemmaId === dilemmaId);
-    if (!dilemma) throw new Error(`${player.nickname} did not get the dilemma ${dilemmaId}`);
+    const dilemma = lastGameOf(player)?.dilemmas.find((d) => d.dilemmaId === dilemmaId);
+    if (!dilemma) throw new Error(`${player.name} did not get the dilemma ${dilemmaId}`);
     return dilemma;
   }
 
-  /** The scenario counts dilemmas from 1, as people do. */
+  /** The scenario counts dilemmas from 1, as people do, in the order every player gets them. */
   #dilemmaIdAt(position: number): string {
-    const dilemmaId = DILEMMA_IDS[position - 1];
+    const dilemmaId = this.#gameOf(this.#hostName()).dilemmas[position - 1]?.dilemmaId;
     if (!dilemmaId) throw new Error(`The game has no dilemma in position ${position}`);
     return dilemmaId;
+  }
+
+  #withScreens(): E2ePlayer[] {
+    return [...this.#players.values()].filter(({ screen }) => screen !== undefined);
   }
 
   #othersThan(player: E2ePlayer): E2ePlayer[] {
@@ -416,29 +1066,65 @@ export class E2eDriver implements GameDriver {
   }
 
   #playerIdOf(player: E2ePlayer): string {
-    if (!player.playerId) throw new Error(`${player.nickname} is not in the room`);
+    if (!player.playerId) throw new Error(`${player.name} is not in the room`);
     return player.playerId;
   }
 
-  /** A nickname that no step introduced is a mistake in the scenario, not in the game. */
-  #playerCalled(nickname: string): E2ePlayer {
-    const player = this.#players.get(nickname);
-    if (!player) throw new Error(`No player called "${nickname}" in this scenario`);
+  #hostName(): string {
+    if (!this.#host) throw new Error('The scenario has no room yet');
+    return this.#host;
+  }
+
+  /** A name that no step introduced is a mistake in the scenario, not in the game. */
+  #playerCalled(name: string): E2ePlayer {
+    const player = this.#players.get(name);
+    if (!player) throw new Error(`No player called "${name}" in this scenario`);
     return player;
   }
 }
 
-function isGameState(message: ServerMessageDto): message is GameStateDto {
-  return message.type === 'game-state';
+function screenOf(player: E2ePlayer): PlayerScreen {
+  if (!player.screen) throw new Error(`${player.name} has no screen in this scenario`);
+  return player.screen;
 }
 
-function lastStateOf({ received }: E2ePlayer): GameStateDto | undefined {
-  return received.findLast(isGameState);
+function isState(message: ServerMessageDto): message is RoomStateDto | GameStateDto {
+  return message.type === 'room-state' || message.type === 'game-state';
 }
 
-/** The token the page sent with its last `connect`. */
-function tokenOf({ sent }: E2ePlayer): string | undefined {
-  return sent.findLast((message) => message.type === 'connect')?.token;
+/** The lobby, while the last state the player got is the one of the lobby. */
+function lastLobbyOf({ screen }: E2ePlayer): RoomStateDto | undefined {
+  const last = screen?.received.findLast(isState);
+  return last?.type === 'room-state' ? last : undefined;
+}
+
+function lastGameOf({ screen }: E2ePlayer): GameStateDto | undefined {
+  return screen?.received.findLast(
+    (message): message is GameStateDto => message.type === 'game-state',
+  );
+}
+
+/** Picks a single choice drawn as a card: its label, as the player taps it. */
+async function chooseOption(within: Page | Locator, label: string): Promise<void> {
+  const option = within
+    .locator('label')
+    .filter({ hasText: new RegExp(`^\\s*${escaped(label)}\\s*$`) });
+  await option.click();
+  if (!(await option.locator('input').isChecked())) {
+    throw new Error(`Choosing "${label}" did not check it`);
+  }
+}
+
+/** The position (from 1) of the dilemma on the screen of the page. */
+async function positionOn(page: Page): Promise<number> {
+  const text = await page.getByText(SCREEN.position).textContent();
+  const position = text?.match(SCREEN.position)?.[1];
+  if (position === undefined) throw new Error('The screen shows no dilemma');
+  return Number(position);
+}
+
+function escaped(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /** What a player knows about another one. */
@@ -448,11 +1134,14 @@ interface HeardAbout {
 }
 
 /** What the player knows about the one with that id, from every message they received. */
-function heardAbout({ received }: E2ePlayer, playerId: string): HeardAbout | undefined {
+function heardAbout({ screen }: E2ePlayer, playerId: string): HeardAbout | undefined {
   let about: HeardAbout | undefined;
-  for (const message of received) {
+  for (const message of screen?.received ?? []) {
     if (message.type === 'game-state') {
       about = message.players.find((player) => player.playerId === playerId);
+    } else if (message.type === 'room-state') {
+      const seen = message.players.find((player) => player.playerId === playerId);
+      about = seen && { connected: seen.connected, progress: 0 };
     } else if (message.type === 'progress-updated' && message.playerId === playerId && about) {
       about = { ...about, progress: message.progress };
     } else if (message.type === 'connection-changed' && message.playerId === playerId && about) {

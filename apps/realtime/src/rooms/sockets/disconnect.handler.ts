@@ -8,19 +8,19 @@ import type { SocketNotifier } from './socket-notifier.ts';
 export class DisconnectHandler {
   readonly #disconnectPlayer: DisconnectPlayerUseCase;
   readonly #notifier: SocketNotifier;
-  /** One holder per game at a time, so its commands never interleave in this instance. */
-  readonly #gameLock: KeyedLock;
+  /** One holder per room at a time, so its commands never interleave in this instance. */
+  readonly #roomLock: KeyedLock;
   readonly #runCommand: RunCommand;
 
   constructor(
     disconnectPlayer: DisconnectPlayerUseCase,
     notifier: SocketNotifier,
-    gameLock: KeyedLock,
+    roomLock: KeyedLock,
     runCommand: RunCommand,
   ) {
     this.#disconnectPlayer = disconnectPlayer;
     this.#notifier = notifier;
-    this.#gameLock = gameLock;
+    this.#roomLock = roomLock;
     this.#runCommand = runCommand;
   }
 
@@ -28,17 +28,17 @@ export class DisconnectHandler {
     const session = connection.session;
     if (!session) return;
 
-    this.#notifier.unregister(session.playerId, connection.socket);
+    this.#notifier.unregister(session.playerId, connection);
     await this.end(session);
   }
 
-  /** Closes the connection of that session in its game. Ending it again changes nothing. */
+  /** Closes the connection of that session in its room. Ending it again changes nothing. */
   async end(session: Session): Promise<void> {
-    const release = await this.#gameLock.acquire(session.gameId);
+    const release = await this.#roomLock.acquire(session.roomId);
     try {
       await this.#runCommand(() =>
         this.#disconnectPlayer.execute({
-          gameId: session.gameId,
+          roomId: session.roomId,
           playerId: session.playerId,
           connectionId: session.connectionId,
         }),

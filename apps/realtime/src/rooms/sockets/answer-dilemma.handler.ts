@@ -2,7 +2,7 @@ import type { AnswerDilemmaUseCase } from '@thelever-app/game';
 import type { AnswerDilemmaDto } from '@thelever-app/protocol';
 import type { KeyedLock } from '../../concurrency/keyed-lock.ts';
 import type { RunCommand } from '../run-command.ts';
-import type { GameStateSender } from './game-state-sender.ts';
+import type { StateSender } from './state-sender.ts';
 import { Rejection } from './rejection.ts';
 import type { RoomConnection } from './room-connection.ts';
 import type { SocketMessageHandler } from './socket-message-handler.ts';
@@ -11,19 +11,19 @@ import type { SocketMessageHandler } from './socket-message-handler.ts';
 export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemma'> {
   readonly type = 'answer-dilemma';
   readonly #answerDilemma: AnswerDilemmaUseCase;
-  /** One holder per game at a time, so its commands never interleave in this instance. */
-  readonly #gameLock: KeyedLock;
-  readonly #stateSender: GameStateSender;
+  /** One holder per room at a time, so its commands never interleave in this instance. */
+  readonly #roomLock: KeyedLock;
+  readonly #stateSender: StateSender;
   readonly #runCommand: RunCommand;
 
   constructor(
     answerDilemma: AnswerDilemmaUseCase,
-    gameLock: KeyedLock,
-    stateSender: GameStateSender,
+    roomLock: KeyedLock,
+    stateSender: StateSender,
     runCommand: RunCommand,
   ) {
     this.#answerDilemma = answerDilemma;
-    this.#gameLock = gameLock;
+    this.#roomLock = roomLock;
     this.#stateSender = stateSender;
     this.#runCommand = runCommand;
   }
@@ -32,11 +32,11 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
     const session = connection.session;
     if (!session) throw new Rejection('not-connected');
 
-    const release = await this.#gameLock.acquire(session.gameId);
+    const release = await this.#roomLock.acquire(session.roomId);
     try {
       await this.#runCommand(() =>
         this.#answerDilemma.execute({
-          gameId: session.gameId,
+          roomId: session.roomId,
           playerId: session.playerId,
           dilemmaId,
           vote,

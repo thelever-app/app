@@ -1,21 +1,64 @@
 import { describe, expect, it } from 'vitest';
-import { CreateRoomUseCase } from '../../use-cases/create-room.use-case.ts';
 import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
 import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
-import { InMemoryRoomRepository } from '../../../adapters/in-memory/in-memory-room-repository.ts';
-import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
+import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
+import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
+import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
+
+async function arrange() {
+  const lobby = await lobbyOfThree();
+  const notifier = new InMemoryPlayerNotifier();
+  const joinRoom = new JoinRoomUseCase(
+    lobby.roomRepository,
+    notifier,
+    lobby.idGenerator,
+    lobby.randomness,
+  );
+  return { ...lobby, notifier, joinRoom };
+}
 
 describe('JoinRoomUseCase', () => {
   describe('execute', () => {
-    it('should add a new player with that nickname to the room', async () => {
+    it('should add a new player, with an avatar nobody else in the room has', async () => {
       // Arrange
-      const roomRepository = new InMemoryRoomRepository();
-      const idGenerator = new SequentialIdGenerator();
-      const { roomId } = await new CreateRoomUseCase(roomRepository, idGenerator).execute({
-        hostNickname: 'Ana',
-        hostIdentity: 'TestAnaIdentity',
+      const { joinRoom, roomRepository, roomId } = await arrange();
+
+      // Act
+      const { playerId } = await joinRoom.execute({
+        roomId,
+        nickname: 'Pablo',
+        identity: 'TestPabloIdentity',
       });
-      const joinRoom = new JoinRoomUseCase(roomRepository, idGenerator);
+
+      // Assert
+      const room = await roomRepository.findById(roomId);
+      const pablo = room?.players.find(({ id }) => id === playerId);
+      expect(pablo?.nickname).toBe('Pablo');
+      const others = room?.players.filter(({ id }) => id !== playerId) ?? [];
+      expect(others.some(({ avatar }) => avatar.equals(pablo!.avatar))).toBe(false);
+    });
+
+    it('should tell everyone in the room that the lobby changed', async () => {
+      // Arrange
+      const { joinRoom, notifier, roomId, anaId } = await arrange();
+
+      // Act
+      const { playerId } = await joinRoom.execute({
+        roomId,
+        nickname: 'Pablo',
+        identity: 'TestPabloIdentity',
+      });
+
+      // Assert
+      expect(notifier.receivedBy(anaId)).toEqual([
+        new LobbyChangedEvent(roomId, 'player-joined', 3),
+      ]);
+      expect(notifier.receivedBy(playerId)).toHaveLength(1);
+    });
+
+    it('should give back the player of someone already in the room, telling nobody', async () => {
+      // Arrange
+      const { joinRoom, notifier, roomId, luisId } = await arrange();
 
       // Act
       const { playerId } = await joinRoom.execute({
@@ -25,53 +68,17 @@ describe('JoinRoomUseCase', () => {
       });
 
       // Assert
-      const room = await roomRepository.findById(roomId);
-      const player = room?.players.find((candidate) => candidate.id === playerId);
-      expect(player?.nickname).toBe('Luis');
-    });
-
-    it('should return the same player when the same identity joins again', async () => {
-      // Arrange
-      const roomRepository = new InMemoryRoomRepository();
-      const idGenerator = new SequentialIdGenerator();
-      const { roomId } = await new CreateRoomUseCase(roomRepository, idGenerator).execute({
-        hostNickname: 'Ana',
-        hostIdentity: 'TestAnaIdentity',
-      });
-      const joinRoom = new JoinRoomUseCase(roomRepository, idGenerator);
-      const first = await joinRoom.execute({
-        roomId,
-        nickname: 'Luis',
-        identity: 'TestLuisIdentity',
-      });
-
-      // Act
-      const second = await joinRoom.execute({
-        roomId,
-        nickname: 'Luis',
-        identity: 'TestLuisIdentity',
-      });
-
-      // Assert
-      expect(second.playerId).toBe(first.playerId);
-      const room = await roomRepository.findById(roomId);
-      expect(room?.players).toHaveLength(2);
+      expect(playerId).toBe(luisId);
+      expect(notifier.receivedBy(luisId)).toEqual([]);
     });
 
     it('should throw an error if the room does not exist', async () => {
       // Arrange
-      const joinRoom = new JoinRoomUseCase(
-        new InMemoryRoomRepository(),
-        new SequentialIdGenerator(),
-      );
+      const { joinRoom } = await arrange();
 
       // Act & Assert
       await expect(
-        joinRoom.execute({
-          roomId: 'TestUnknownId',
-          nickname: 'Luis',
-          identity: 'TestLuisIdentity',
-        }),
+        joinRoom.execute({ roomId: 'TestUnknownId', nickname: 'Pablo', identity: 'TestId' }),
       ).rejects.toThrow(RoomNotFoundError);
     });
   });

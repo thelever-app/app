@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { DilemmaRepository } from '../../application/ports/dilemma-repository.port.ts';
-import { Dilemma } from '../../domain/entities/dilemma.ts';
+import type {
+  DilemmaCriteria,
+  DilemmaRepository,
+} from '../../application/ports/dilemma-repository.port.ts';
+import { Dilemma, type DilemmaStatus, type Visibility } from '../../domain/entities/dilemma.ts';
+import type { Category } from '../../domain/vos/category.vo.ts';
+import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.ts';
 
 function dilemma(): Dilemma {
@@ -35,6 +40,43 @@ function revised(): Dilemma {
     new FixedIdGenerator('TestOptionId4'),
   );
   return revisedDilemma;
+}
+
+/** A dilemma of one option pair at its first version; what is not given, public and in the catalog. */
+function catalogDilemma(
+  id: string,
+  facts: {
+    readonly category?: Category;
+    readonly tags?: readonly string[];
+    readonly minimumAge?: MinimumAge;
+    readonly status?: DilemmaStatus;
+    readonly visibility?: Visibility;
+  } = {},
+): Dilemma {
+  return Dilemma.restore({
+    id,
+    language: 'es',
+    creator: { type: 'curation-team' },
+    visibility: facts.visibility ?? 'public',
+    version: {
+      number: 1,
+      text: `TextOf${id}`,
+      options: [
+        { id: `${id}Option1`, text: 'TestOption1' },
+        { id: `${id}Option2`, text: 'TestOption2' },
+      ],
+      category: facts.category ?? 'honesty',
+      tags: facts.tags ?? [],
+      minimumAge: facts.minimumAge ?? 16,
+      status: facts.status ?? 'in-catalog',
+    },
+  });
+}
+
+const EVERYONE: DilemmaCriteria = { maximumMinimumAge: 16, status: 'in-catalog' };
+
+async function idsFound(repository: DilemmaRepository, criteria: DilemmaCriteria) {
+  return (await repository.search(criteria)).map(({ id }) => id);
 }
 
 /**
@@ -183,6 +225,133 @@ export function describeDilemmaRepositoryContract(
         // Assert
         expect((await repository.findVersion('TestDilemmaId', 1))?.options).toHaveLength(3);
         expect((await repository.findVersion('TestDilemmaId', 2))?.text).toBe('TestRevisedText');
+      });
+    });
+
+    describe('search', () => {
+      it('should find the public dilemmas with that status, at their current version, by id', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(catalogDilemma('TestDilemmaB'));
+        await repository.save(catalogDilemma('TestDilemmaA'));
+        await repository.save(catalogDilemma('TestNewDilemma', { status: 'in-exploration' }));
+
+        // Act
+        const found = await repository.search(EVERYONE);
+
+        // Assert
+        expect(found.map((dilemma) => dilemma.toSnapshot())).toEqual([
+          catalogDilemma('TestDilemmaA').toSnapshot(),
+          catalogDilemma('TestDilemmaB').toSnapshot(),
+        ]);
+      });
+
+      it('should find the dilemmas in exploration when asked for them', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(catalogDilemma('TestDilemma'));
+        await repository.save(catalogDilemma('TestNewDilemma', { status: 'in-exploration' }));
+
+        // Act
+        const found = await idsFound(repository, { ...EVERYONE, status: 'in-exploration' });
+
+        // Assert
+        expect(found).toEqual(['TestNewDilemma']);
+      });
+
+      it('should leave out the private dilemmas', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(catalogDilemma('TestPrivateDilemma', { visibility: 'private' }));
+
+        // Act
+        const found = await idsFound(repository, EVERYONE);
+
+        // Assert
+        expect(found).toEqual([]);
+      });
+
+      it('should leave out the dilemmas for adults when the maximum minimum age is 16', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(catalogDilemma('TestDilemma'));
+        await repository.save(catalogDilemma('TestAdultDilemma', { minimumAge: 18 }));
+
+        // Act
+        const forEveryone = await idsFound(repository, EVERYONE);
+        const forAdults = await idsFound(repository, { ...EVERYONE, maximumMinimumAge: 18 });
+
+        // Assert
+        expect(forEveryone).toEqual(['TestDilemma']);
+        expect(forAdults).toEqual(['TestAdultDilemma', 'TestDilemma']);
+      });
+
+      it('should find only the dilemmas of the category given', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(catalogDilemma('TestHonestyDilemma'));
+        await repository.save(catalogDilemma('TestLoyaltyDilemma', { category: 'loyalty' }));
+
+        // Act
+        const found = await idsFound(repository, { ...EVERYONE, category: 'loyalty' });
+
+        // Assert
+        expect(found).toEqual(['TestLoyaltyDilemma']);
+      });
+
+      it('should find only the dilemmas with every tag given', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(catalogDilemma('TestBoth', { tags: ['testfamily', 'testwork'] }));
+        await repository.save(catalogDilemma('TestFamily', { tags: ['testfamily'] }));
+        await repository.save(catalogDilemma('TestNone'));
+
+        // Act
+        const one = await idsFound(repository, { ...EVERYONE, tags: ['testfamily'] });
+        const both = await idsFound(repository, { ...EVERYONE, tags: ['testwork', 'testfamily'] });
+
+        // Assert
+        expect(one).toEqual(['TestBoth', 'TestFamily']);
+        expect(both).toEqual(['TestBoth']);
+      });
+
+      it('should find only the dilemmas with the ids given', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(catalogDilemma('TestDilemmaA'));
+        await repository.save(catalogDilemma('TestDilemmaB'));
+
+        // Act
+        const found = await idsFound(repository, { ...EVERYONE, dilemmaIds: ['TestDilemmaB'] });
+
+        // Assert
+        expect(found).toEqual(['TestDilemmaB']);
+      });
+
+      it('should look only at the current version of each dilemma', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(dilemma());
+        await repository.save(revised());
+
+        // Act
+        const asItWas = await idsFound(repository, { ...EVERYONE, category: 'honesty' });
+        const asItIs = await repository.search({ ...EVERYONE, maximumMinimumAge: 18 });
+
+        // Assert
+        expect(asItWas).toEqual([]);
+        expect(asItIs.map((found) => found.toSnapshot())).toEqual([revised().toSnapshot()]);
+      });
+
+      it('should return an empty list when nothing matches', async () => {
+        // Arrange
+        const repository = await create();
+
+        // Act
+        const found = await idsFound(repository, { ...EVERYONE, dilemmaIds: ['TestNoDilemma'] });
+
+        // Assert
+        expect(found).toEqual([]);
       });
     });
   });

@@ -24,6 +24,7 @@ export interface GetGameStateOutput {
   readonly players: readonly {
     readonly playerId: string;
     readonly nickname: string;
+    readonly avatar: { readonly face: string; readonly color: string };
     readonly progress: number;
     readonly connected: boolean;
   }[];
@@ -62,6 +63,7 @@ export class GetGameStateUseCase {
       .map((player) => ({
         playerId: player.id,
         nickname: player.nickname,
+        avatar: { face: player.avatar.face, color: player.avatar.color },
         progress: game.progressOf(player.id),
         connected: room.isConnected(player.id),
       }));

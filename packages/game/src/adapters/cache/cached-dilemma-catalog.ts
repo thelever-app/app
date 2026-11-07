@@ -1,6 +1,8 @@
 import type {
+  CatalogDilemma,
   DilemmaCatalog,
   DilemmaContent,
+  DilemmaSearch,
 } from '../../application/ports/dilemma-catalog.port.ts';
 import type { GameDilemma } from '../../domain/entities/game.ts';
 
@@ -24,6 +26,11 @@ export class CachedDilemmaCatalog implements DilemmaCatalog {
 
   findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
     return this.#catalog.findOptionIds(dilemmaIds);
+  }
+
+  /** A search looks at the current versions, which change: it always asks the catalog. */
+  search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]> {
+    return this.#catalog.search(criteria);
   }
 
   async findContents(

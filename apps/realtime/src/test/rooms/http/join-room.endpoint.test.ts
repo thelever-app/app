@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { bearer, composedHttpServer } from '../../support/room-server.ts';
+import { bearer, composedHttpServer, ROOM_CHOICES } from '../../support/room-server.ts';
 
 describe('POST /rooms/:roomId/players', () => {
   it('should add whoever calls to the room, and give them the same player if they join again', async () => {
@@ -9,7 +9,7 @@ describe('POST /rooms/:roomId/players', () => {
     const { body: room } = await request(server)
       .post('/rooms')
       .set('Authorization', bearer('ana'))
-      .send({ nickname: 'Ana' });
+      .send({ nickname: 'Ana', ...ROOM_CHOICES });
 
     // Act
     const first = await request(server)

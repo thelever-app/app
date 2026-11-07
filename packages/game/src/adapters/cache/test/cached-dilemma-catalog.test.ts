@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type {
+  CatalogDilemma,
   DilemmaCatalog,
   DilemmaContent,
+  DilemmaSearch,
 } from '../../../application/ports/dilemma-catalog.port.ts';
 import type { GameDilemma } from '../../../domain/entities/game.ts';
 import { InMemoryDilemmaCatalog } from '../../in-memory/in-memory-dilemma-catalog.ts';
@@ -12,7 +14,8 @@ import {
 import { CachedDilemmaCatalog } from '../cached-dilemma-catalog.ts';
 
 describeDilemmaCatalogContract('CachedDilemmaCatalog', async () => {
-  const stored = CONTRACT_DILEMMAS.map(({ text, options }, index) => ({
+  const dilemmas = CONTRACT_DILEMMAS.map(({ text, options, ...facts }, index) => ({
+    ...facts,
     dilemmaId: `TestDilemma${index + 1}`,
     text,
     options: options.map((option, optionIndex) => ({
@@ -20,7 +23,8 @@ describeDilemmaCatalogContract('CachedDilemmaCatalog', async () => {
       text: option,
     })),
   }));
-  return { catalog: new CachedDilemmaCatalog(new InMemoryDilemmaCatalog(stored)), stored };
+  const stored = dilemmas.map(({ dilemmaId, text, options }) => ({ dilemmaId, text, options }));
+  return { catalog: new CachedDilemmaCatalog(new InMemoryDilemmaCatalog(dilemmas)), stored };
 });
 
 /** A catalog that answers every version it is asked for and remembers what it was asked. */
@@ -44,6 +48,11 @@ class CountingCatalog implements DilemmaCatalog {
       text: `TestText ${dilemmaId}@${version} ${language}`,
       options: [],
     }));
+  }
+
+  async search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]> {
+    this.asked.push(['search', criteria.status]);
+    return [];
   }
 }
 
@@ -151,5 +160,28 @@ describe('CachedDilemmaCatalog', () => {
 
     // Assert: TestA was still kept, TestB went.
     expect(inner.asked).toEqual([['TestA@1:es'], ['TestB@1:es'], ['TestC@1:es']]);
+  });
+
+  describe('search', () => {
+    it('should always ask the catalog, since current versions change', async () => {
+      // Arrange
+      const counting = new CountingCatalog();
+      const catalog = new CachedDilemmaCatalog(counting);
+      const criteria = {
+        maximumMinimumAge: 16,
+        status: 'in-catalog',
+        language: 'es',
+      } as const;
+
+      // Act
+      await catalog.search(criteria);
+      await catalog.search(criteria);
+
+      // Assert
+      expect(counting.asked).toEqual([
+        ['search', 'in-catalog'],
+        ['search', 'in-catalog'],
+      ]);
+    });
   });
 });

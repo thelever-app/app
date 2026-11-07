@@ -6,7 +6,6 @@ import {
   CreateRoomResponseDto,
   type GameStateDto,
   ServerMessageDto,
-  StartGameResponseDto,
   type ServerMessageDto as ServerMessage,
 } from '@thelever-app/protocol';
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
@@ -100,6 +99,8 @@ interface LoadPlayer {
   socket?: WebSocket;
   playerId?: string;
   state?: GameStateDto;
+  /** Resolves once the player has the state of the game, when the host starts it. */
+  started?: Promise<void>;
 }
 
 /** What the run measured. */
@@ -134,29 +135,42 @@ async function post<T>(
   return parse(await response.json());
 }
 
-/** Sets up one room with every player in it and its game started; returns the game. */
+/** Sets up one room with every player in it, in the lobby; returns the room. */
 async function setUpRoom(target: Target, players: readonly LoadPlayer[]): Promise<string> {
   const [host, ...others] = players;
-  const { roomId } = await post(target, '/rooms', host!.token, { nickname: 'Host' }, (value) =>
-    CreateRoomResponseDto.parse(value),
+  const { roomId } = await post(
+    target,
+    '/rooms',
+    host!.token,
+    { nickname: 'Host', groupNature: 'friends', place: 'together', dilemmaLanguage: 'es' },
+    (value) => CreateRoomResponseDto.parse(value),
   );
   await Promise.all(
     others.map((player, index) =>
       post(target, `/rooms/${roomId}/players`, player.token, { nickname: `P${index}` }, () => {}),
     ),
   );
-  const { gameId } = await post(
-    target,
-    `/rooms/${roomId}/games`,
-    host!.token,
-    { dilemmaIds: SEED_DILEMMAS.map(({ id }) => id) },
-    (value) => StartGameResponseDto.parse(value),
-  );
-  return gameId;
+  return roomId;
 }
 
-/** Connects one player and resolves with their first state; every progress of another is timed. */
-async function connect(target: Target, player: LoadPlayer, gameId: string): Promise<void> {
+/** The host picks every dilemma of the seed, so the game has as many as it can, and starts it. */
+function startGame([host]: readonly LoadPlayer[]): void {
+  const socket = host!.socket!;
+  socket.send(
+    JSON.stringify({
+      type: 'pick-dilemmas',
+      dilemmaIds: SEED_DILEMMAS.map(({ id }) => id),
+      traceparent: traceparent(),
+    }),
+  );
+  socket.send(JSON.stringify({ type: 'start-game', traceparent: traceparent() }));
+}
+
+/**
+ * Connects one player to the room and resolves once they see the lobby; `started` resolves with
+ * the state of the game. Every progress of another is timed.
+ */
+async function connect(target: Target, player: LoadPlayer, roomId: string): Promise<void> {
   const socket = new WebSocket(target.realtime.replace(/^http/, 'ws'));
   player.socket = socket;
   const appCheckToken = await target.appCheckToken();
@@ -172,19 +186,25 @@ async function connect(target: Target, player: LoadPlayer, gameId: string): Prom
           contractVersion: CONTRACT_VERSION,
           token: player.token,
           ...(appCheckToken ? { appCheckToken } : {}),
-          gameId,
+          roomId,
           language: 'es',
           traceparent: traceparent(),
         }),
       );
     });
+    let gameStarted: () => void = () => {};
+    player.started = new Promise((started) => {
+      gameStarted = started;
+    });
     socket.addEventListener('message', ({ data }) => {
       const message = readMessage(data);
       if (!message) return;
-      if (message.type === 'game-state' && !player.state) {
-        player.state = message;
+      if (message.type === 'room-state') {
         player.playerId = message.playerId;
         resolve();
+      } else if (message.type === 'game-state' && !player.state) {
+        player.state = message;
+        gameStarted();
       } else if (message.type === 'progress-updated') {
         const at = sentAt.get(`${message.playerId}:${message.progress}`);
         if (at !== undefined) latencies.push(performance.now() - at);
@@ -233,9 +253,9 @@ const started = performance.now();
 // The same players fill every room: an identity is only once in each room.
 const tokens = await Promise.all(Array.from({ length: PLAYERS }, () => target.signUp()));
 const rooms = Array.from({ length: ROOMS }, () => tokens.map((token): LoadPlayer => ({ token })));
-const games: string[] = [];
+const roomIds: string[] = [];
 for (let index = 0; index < rooms.length; index += SETUP_IN_PARALLEL) {
-  games.push(
+  roomIds.push(
     ...(await Promise.all(
       rooms.slice(index, index + SETUP_IN_PARALLEL).map((players) => setUpRoom(target, players)),
     )),
@@ -244,9 +264,14 @@ for (let index = 0; index < rooms.length; index += SETUP_IN_PARALLEL) {
 console.log(`set up ${ROOMS} rooms of ${PLAYERS} in ${Math.round(performance.now() - started)} ms`);
 
 await Promise.all(
-  rooms.flatMap((players, room) => players.map((player) => connect(target, player, games[room]!))),
+  rooms.flatMap((players, room) =>
+    players.map((player) => connect(target, player, roomIds[room]!)),
+  ),
 );
 console.log(`connected ${ROOMS * PLAYERS} sockets`);
+for (const players of rooms) startGame(players);
+await Promise.all(rooms.flat().map((player) => player.started));
+console.log(`started ${ROOMS} games`);
 
 const playing = performance.now();
 await Promise.all(rooms.flat().map((player) => play(player)));

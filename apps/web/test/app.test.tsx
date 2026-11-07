@@ -1,20 +1,45 @@
-import { act, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App.tsx';
-import { aGame } from './support/game.ts';
-import { fakeConnection } from './support/fake-connection.ts';
-import { renderWithProviders } from './support/render.tsx';
+import { fakeRoomApi, renderAtRoute } from './support/routing.tsx';
 
 describe('App', () => {
-  it('should show the decision phase once the game arrives', async () => {
-    // Arrange
-    const { connection, deliver } = fakeConnection();
-    await renderWithProviders(<App />, { connection });
-
+  it('should open the start at /', async () => {
     // Act
-    act(() => deliver(aGame()));
+    const { t } = await renderAtRoute(<App />);
 
     // Assert
-    expect(screen.getByRole('heading', { name: 'Texto del dilema 1' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: t('home.title') })).toBeDefined();
+  });
+
+  it('should show the room of the code in the address before joining', async () => {
+    // Arrange
+    const previewRoom = vi.fn(async () => ({
+      roomId: 'test-room-id',
+      hostNickname: 'Ana',
+      variant: 'nominal' as const,
+      adultsOnly: false,
+      playerCount: 3,
+    }));
+
+    // Act
+    const { t } = await renderAtRoute(<App />, {
+      api: fakeRoomApi({ previewRoom }),
+      at: '/join/K7M2Q',
+    });
+
+    // Assert
+    expect(
+      await screen.findByText(t('joinRoom.roomOf', { host: 'Ana', code: 'K7M2Q' })),
+    ).toBeDefined();
+    expect(previewRoom).toHaveBeenCalledWith('K7M2Q');
+  });
+
+  it('should go back to the start from an address that does not exist', async () => {
+    // Act
+    const { location } = await renderAtRoute(<App />, { at: '/games/old-game-id' });
+
+    // Assert
+    expect(location()).toBe('/');
   });
 });

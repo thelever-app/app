@@ -7,11 +7,16 @@ import {
   PostgresDilemmaRepository,
 } from '@thelever-app/db';
 import { endListeningConnections, useTestDatabase } from '@thelever-app/db/test';
-import { loadSeedDilemmas, SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
+import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
 import { CONTRACT_VERSION } from '@thelever-app/protocol';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { tokenOf } from '../support/fake-token-verifier.ts';
-import { gameInDecisionPhase, startRoomServer, TestClient } from '../support/room-server.ts';
+import {
+  gameInDecisionPhase,
+  lobbyOfThree,
+  startRoomServer,
+  TestClient,
+} from '../support/room-server.ts';
 
 const database = useTestDatabase<Database>();
 const running: { readonly stop: () => Promise<void> }[] = [];
@@ -67,13 +72,13 @@ async function instance({ silentAfterMs = 300 } = {}) {
 }
 
 /** Connects `identity` to the game and returns the client and the id of its player. */
-async function connect(url: string, identity: string, gameId: string) {
+async function connect(url: string, identity: string, roomId: string) {
   const client = await TestClient.open(url);
   client.send({
     type: 'connect',
     contractVersion: CONTRACT_VERSION,
     token: tokenOf(identity),
-    gameId,
+    roomId,
     language: 'es',
   });
   const { playerId } = await client.next('game-state');
@@ -81,20 +86,41 @@ async function connect(url: string, identity: string, gameId: string) {
 }
 
 describe('the room server on several instances', () => {
+  it('should show a player on another instance what changes in the lobby, and start the game for them', async () => {
+    // Arrange
+    const a = await instance();
+    const b = await instance();
+    const { roomId } = await lobbyOfThree(a.http);
+    const ana = await TestClient.connected(a.url, 'ana', roomId, 'room-state');
+    const luis = await TestClient.connected(b.url, 'luis', roomId, 'room-state');
+    await TestClient.connected(b.url, 'marta', roomId, 'room-state');
+    luis.received.length = 0;
+
+    // Act
+    ana.send({ type: 'change-settings', changes: { variant: 'anonymous' } });
+    const changed = await luis.next('room-state', 5000);
+    ana.send({ type: 'start-game' });
+
+    // Assert
+    expect(changed.settings.variant).toBe('anonymous');
+    const started = await luis.next('game-state', 5000);
+    expect(started.gameId).toBe((await ana.next('game-state', 5000)).gameId);
+  });
+
   it('should let a player on each instance see the other connect and answer', async () => {
     // Arrange
     const a = await instance();
     const b = await instance();
-    const { gameId } = await gameInDecisionPhase(a.http);
-    const ana = await connect(a.url, 'ana', gameId);
+    const { roomId, dilemmas } = await gameInDecisionPhase(a);
+    const ana = await connect(a.url, 'ana', roomId);
 
     // Act
-    const luis = await connect(b.url, 'luis', gameId);
-    const [first] = SEED_DILEMMAS;
+    const luis = await connect(b.url, 'luis', roomId);
+    const [first] = dilemmas;
     luis.client.send({
       type: 'answer-dilemma',
-      dilemmaId: first!.id,
-      vote: first!.options[0]!.id,
+      dilemmaId: first!.dilemmaId,
+      vote: first!.options[0]!.optionId,
     });
 
     // Assert
@@ -112,9 +138,9 @@ describe('the room server on several instances', () => {
     // Arrange
     const a = await instance();
     const b = await instance();
-    const { gameId } = await gameInDecisionPhase(a.http);
-    const ana = await connect(a.url, 'ana', gameId);
-    const luis = await connect(b.url, 'luis', gameId);
+    const { roomId } = await gameInDecisionPhase(a);
+    const ana = await connect(a.url, 'ana', roomId);
+    const luis = await connect(b.url, 'luis', roomId);
     await ana.client.next('connection-changed');
 
     // Act: it stops at once, without closing anything in the database.
@@ -131,9 +157,9 @@ describe('the room server on several instances', () => {
     // Arrange: nobody would take these instances for dead within the test.
     const a = await instance({ silentAfterMs: 60_000 });
     const b = await instance({ silentAfterMs: 60_000 });
-    const { gameId } = await gameInDecisionPhase(a.http);
-    const ana = await connect(a.url, 'ana', gameId);
-    const luis = await connect(b.url, 'luis', gameId);
+    const { roomId } = await gameInDecisionPhase(a);
+    const ana = await connect(a.url, 'ana', roomId);
+    const luis = await connect(b.url, 'luis', roomId);
     await ana.client.next('connection-changed');
     const closeCode = new Promise<number>((resolve) => luis.client.socket.once('close', resolve));
 
@@ -151,8 +177,8 @@ describe('the room server on several instances', () => {
   it('should make the players of an instance taken for dead while alive connect again', async () => {
     // Arrange
     const a = await instance({ silentAfterMs: 60_000 });
-    const { gameId } = await gameInDecisionPhase(a.http);
-    const ana = await connect(a.url, 'ana', gameId);
+    const { roomId } = await gameInDecisionPhase(a);
+    const ana = await connect(a.url, 'ana', roomId);
     const closeCode = new Promise<number>((resolve, reject) => {
       ana.client.socket.once('close', resolve);
       setTimeout(() => reject(new Error('the socket stayed open')), 2000);
@@ -168,14 +194,14 @@ describe('the room server on several instances', () => {
 
     // Assert
     expect(await closeCode).toBe(1012);
-    expect((await connect(a.url, 'ana', gameId)).playerId).toBe(ana.playerId);
+    expect((await connect(a.url, 'ana', roomId)).playerId).toBe(ana.playerId);
   });
 
   it('should send a fresh state to every socket after losing the connection that listens', async () => {
     // Arrange
     const a = await instance();
-    const { gameId } = await gameInDecisionPhase(a.http);
-    const ana = await connect(a.url, 'ana', gameId);
+    const { roomId, gameId } = await gameInDecisionPhase(a);
+    const ana = await connect(a.url, 'ana', roomId);
 
     // Act: the database ends the connection, as a restart or a network cut would.
     await endListeningConnections(database.db());

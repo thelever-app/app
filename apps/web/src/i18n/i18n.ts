@@ -50,3 +50,11 @@ export async function createI18n(language?: string): Promise<i18n> {
   instance.on('languageChanged', setPageLanguage);
   return instance;
 }
+
+/**
+ * The language the device asks for, among those a room can play its dilemmas in: it may have no
+ * catalog for the interface yet, which then falls back to the source.
+ */
+export function deviceLanguage({ language }: Pick<i18n, 'language'>): LanguageDto {
+  return LanguageDto.safeParse(language?.split('-')[0]).data ?? SOURCE_LANGUAGE;
+}

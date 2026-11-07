@@ -13,4 +13,11 @@ export class InMemoryRoomRepository implements RoomRepository {
     const snapshot = this.#snapshots.get(id);
     return snapshot && Room.restore(snapshot);
   }
+
+  async findByCode(code: string): Promise<Room | undefined> {
+    const snapshot = [...this.#snapshots.values()].find(
+      (candidate) => candidate.code === code.trim().toUpperCase(),
+    );
+    return snapshot && Room.restore(snapshot);
+  }
 }

@@ -26,7 +26,7 @@ export type Schedule = (callback: () => void, ms: number) => () => void;
 
 export interface WebSocketRoomOptions {
   readonly url: string;
-  readonly gameId: string;
+  readonly roomId: string;
   /** The language the player reads the dilemmas in. */
   readonly language: LanguageDto;
   /**
@@ -57,7 +57,7 @@ const LONGEST_WAIT_MS = 10_000;
  * hands every message of the server to the screen. When the socket drops for any reason, the
  * server's hourly cut too, it waits and connects again; the server answers with a fresh state.
  * If the server rejects the token, it tries once more with a fresh one; if it rejects anything
- * else, or the fresh token too, it gives up for good.
+ * else, or the fresh token too, it gives up for good. So it does when the host expels the player.
  */
 export class WebSocketRoomConnection implements RoomConnection {
   readonly #options: WebSocketRoomOptions;
@@ -173,7 +173,7 @@ export class WebSocketRoomConnection implements RoomConnection {
         contractVersion: CONTRACT_VERSION,
         token,
         ...(appCheckToken === undefined ? {} : { appCheckToken }),
-        gameId: this.#options.gameId,
+        roomId: this.#options.roomId,
         language: this.#options.language,
         traceparent: this.#options.newTraceparent(),
       } satisfies ClientMessageDto),
@@ -188,7 +188,13 @@ export class WebSocketRoomConnection implements RoomConnection {
       this.#onRejectedConnect(message);
       return;
     }
-    if (message.type === 'game-state' && this.#status !== 'connected') {
+    if (message.type === 'expelled') {
+      this.#deliver(message);
+      this.#giveUp();
+      return;
+    }
+    const isState = message.type === 'room-state' || message.type === 'game-state';
+    if (isState && this.#status !== 'connected') {
       this.#failedAttempts = 0;
       this.#triedFreshToken = false;
       this.#triedFreshAppCheck = false;
@@ -219,8 +225,13 @@ export class WebSocketRoomConnection implements RoomConnection {
       return;
     }
     this.#deliver(rejection);
+    this.#giveUp();
+  }
+
+  /** For good: the screen already has why, and the socket does not connect again. */
+  #giveUp(): void {
     this.#setStatus('rejected');
-    socket?.close();
+    this.#socket?.close();
   }
 
   #sendPending(): void {

@@ -9,4 +9,9 @@ export {
   type GetDilemmasInput,
   type GetDilemmasOutput,
 } from './application/use-cases/get-dilemmas.use-case.ts';
+export {
+  type SearchDilemmas,
+  type SearchDilemmasInput,
+  type SearchDilemmasOutput,
+} from './application/use-cases/search-dilemmas.use-case.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';

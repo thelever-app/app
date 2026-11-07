@@ -27,58 +27,58 @@ function remoteParent(traceFlags: TraceFlags) {
 }
 
 describe('GameSampler', () => {
-  it('should keep every game with a ratio of 1', () => {
+  it('should keep every room with a ratio of 1', () => {
     // Arrange
     const sampler = new GameSampler(1);
 
     // Act
-    const decision = decisionOf(sampler, { 'game.id': 'TestGameId' });
+    const decision = decisionOf(sampler, { 'room.id': 'TestRoomId' });
 
     // Assert
     expect(decision).toBe(SamplingDecision.RECORD_AND_SAMPLED);
   });
 
-  it('should drop every game with a ratio of 0', () => {
+  it('should drop every room with a ratio of 0', () => {
     // Arrange
     const sampler = new GameSampler(0);
 
     // Act
-    const decision = decisionOf(sampler, { 'game.id': 'TestGameId' });
+    const decision = decisionOf(sampler, { 'room.id': 'TestRoomId' });
 
     // Assert
     expect(decision).toBe(SamplingDecision.NOT_RECORD);
   });
 
-  it('should decide the same for every trace of one game, so a game is kept whole or not at all', () => {
+  it('should decide the same for every trace of one room, so a room is kept whole or not at all', () => {
     // Arrange
     const sampler = new GameSampler(0.5);
-    const gameIds = Array.from({ length: 50 }, (_, index) => `TestGame${index}`);
+    const roomIds = Array.from({ length: 50 }, (_, index) => `TestRoom${index}`);
 
     // Act
-    const first = gameIds.map((gameId) => decisionOf(sampler, { 'game.id': gameId }, SOME_TRACE));
-    const second = gameIds.map((gameId) => decisionOf(sampler, { 'game.id': gameId }, OTHER_TRACE));
+    const first = roomIds.map((roomId) => decisionOf(sampler, { 'room.id': roomId }, SOME_TRACE));
+    const second = roomIds.map((roomId) => decisionOf(sampler, { 'room.id': roomId }, OTHER_TRACE));
 
     // Assert
     expect(second).toEqual(first);
   });
 
-  it('should keep about the ratio of the games', () => {
+  it('should keep about the ratio of the rooms', () => {
     // Arrange
     const sampler = new GameSampler(0.25);
-    const gameIds = Array.from({ length: 2000 }, () => crypto.randomUUID());
+    const roomIds = Array.from({ length: 2000 }, () => crypto.randomUUID());
 
     // Act
-    const kept = gameIds.filter(
-      (gameId) =>
-        decisionOf(sampler, { 'game.id': gameId }) === SamplingDecision.RECORD_AND_SAMPLED,
+    const kept = roomIds.filter(
+      (roomId) =>
+        decisionOf(sampler, { 'room.id': roomId }) === SamplingDecision.RECORD_AND_SAMPLED,
     ).length;
 
     // Assert
-    expect(kept / gameIds.length).toBeGreaterThan(0.2);
-    expect(kept / gameIds.length).toBeLessThan(0.3);
+    expect(kept / roomIds.length).toBeGreaterThan(0.2);
+    expect(kept / roomIds.length).toBeLessThan(0.3);
   });
 
-  it('should decide by the trace when the span belongs to no game', () => {
+  it('should decide by the trace when the span belongs to no room', () => {
     // Arrange
     const keepAll = new GameSampler(1);
     const keepNone = new GameSampler(0);
@@ -92,15 +92,15 @@ describe('GameSampler', () => {
     expect(dropped).toBe(SamplingDecision.NOT_RECORD);
   });
 
-  it('should follow the parent from another process when the span belongs to no game', () => {
-    // Arrange: the instance that published decided by the game; the delivery of a room event has none.
+  it('should follow the parent from another process when the span belongs to no room', () => {
+    // Arrange: the instance that published decided by the room; the delivery of a game event has none.
     const keepNone = new GameSampler(0);
     const keepAll = new GameSampler(1);
-    const room = { 'room.id': 'TestRoomId' };
+    const game = { 'game.id': 'TestGameId' };
 
     // Act
-    const kept = decisionOf(keepNone, room, SOME_TRACE, remoteParent(TraceFlags.SAMPLED));
-    const dropped = decisionOf(keepAll, room, SOME_TRACE, remoteParent(TraceFlags.NONE));
+    const kept = decisionOf(keepNone, game, SOME_TRACE, remoteParent(TraceFlags.SAMPLED));
+    const dropped = decisionOf(keepAll, game, SOME_TRACE, remoteParent(TraceFlags.NONE));
 
     // Assert
     expect(kept).toBe(SamplingDecision.RECORD_AND_SAMPLED);

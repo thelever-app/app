@@ -1,0 +1,323 @@
+/* Header, content that scrolls on its own and the action at the bottom: nothing covers a row. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--color-surface);
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.signage {
+  margin: 0;
+  font-size: var(--type-signage-size);
+  line-height: var(--type-signage-line-height);
+  font-weight: var(--type-signage-weight);
+  letter-spacing: var(--type-signage-letter-spacing);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.iconButton {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  margin-right: -12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.code {
+  margin: -8px 0 0;
+  font-family: var(--font-display);
+  font-size: 54px;
+  line-height: 55px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.shareRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.share,
+.qr {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.share {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.qr {
+  background: transparent;
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+}
+
+.main {
+  flex-grow: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.variant {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.variantText {
+  margin: 0;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.variantText strong {
+  font-weight: 600;
+}
+
+.divider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.muted {
+  margin: 0;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  color: var(--color-ink-muted);
+}
+
+.change {
+  min-height: 40px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--type-label-size);
+  font-weight: 600;
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.advice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.dilemmas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dilemma {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px 10px var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.dilemmaText {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 21px;
+  font-weight: 600;
+}
+
+.caption {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-ink-muted);
+}
+
+.addCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #17140f;
+  color: #f5efe2;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.addTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 700;
+  color: #ffd23f;
+}
+
+.addButton {
+  align-self: flex-start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: #ffd23f;
+  color: #17140f;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ownDilemma {
+  margin: 0;
+}
+
+.players {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.playerList {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.player {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--color-ink);
+  text-align: left;
+}
+
+button.player {
+  cursor: pointer;
+}
+
+.playerName {
+  flex-grow: 1;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 500;
+}
+
+.tag {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3) var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.start {
+  composes: primary from '../styles/buttons.module.css';
+  min-height: 52px;
+}
+
+.start:disabled {
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  box-shadow: none;
+  cursor: default;
+}
+
+.guestWait {
+  margin: 0;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  text-align: center;
+}
+
+/* Why the game did not start, until the room changes. */
+.rejection {
+  margin: 0;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}

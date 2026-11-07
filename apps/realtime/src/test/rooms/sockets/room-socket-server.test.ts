@@ -1,18 +1,22 @@
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
-import { CONTRACT_VERSION } from '@thelever-app/protocol';
+import { CONTRACT_VERSION, type GameStateDto } from '@thelever-app/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TokenVerifier } from '../../../identity/token-verifier.ts';
 import { FakeTokenVerifier, tokenOf } from '../../support/fake-token-verifier.ts';
 import { gameInDecisionPhase, startRoomServer, TestClient } from '../../support/room-server.ts';
 
-const [FIRST, SECOND, THIRD] = SEED_DILEMMAS;
+/** The answer that votes the first option of a dilemma of the game. */
+function firstVoteOf(dilemma: GameStateDto['dilemmas'][number] | undefined) {
+  if (!dilemma) throw new Error('the game has fewer dilemmas than the test needs');
+  return { dilemmaId: dilemma.dilemmaId, vote: dilemma.options[0]!.optionId };
+}
 
-function connectMessage(identity: string, gameId: string) {
+function connectMessage(identity: string, roomId: string) {
   return {
     type: 'connect',
     contractVersion: CONTRACT_VERSION,
     token: tokenOf(identity),
-    gameId,
+    roomId,
     language: 'es',
   };
 }
@@ -85,17 +89,18 @@ describe('RoomSocketServer', () => {
     it('should answer with the game state of whoever connects', async () => {
       // Arrange
       server = await startRoomServer();
-      const { gameId } = await gameInDecisionPhase(server.http);
+      const { roomId, gameId, dilemmas } = await gameInDecisionPhase(server);
       const luis = await TestClient.open(server.url);
 
       // Act
-      luis.send(connectMessage('luis', gameId));
+      luis.send(connectMessage('luis', roomId));
 
       // Assert
       const state = await luis.next('game-state');
       expect(state.gameId).toBe(gameId);
-      expect(state.dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(
-        SEED_DILEMMAS.map(({ id }) => id),
+      expect(state.dilemmas).toEqual(dilemmas);
+      expect(state.dilemmas.map(({ dilemmaId }) => dilemmaId).sort()).toEqual(
+        SEED_DILEMMAS.map(({ id }) => id).sort(),
       );
       expect(state.players.find(({ playerId }) => playerId === state.playerId)?.nickname).toBe(
         'Luis',
@@ -106,11 +111,11 @@ describe('RoomSocketServer', () => {
     it('should tell the players already connected', async () => {
       // Arrange
       server = await startRoomServer();
-      const { gameId } = await gameInDecisionPhase(server.http);
-      const ana = await TestClient.connected(server.url, 'ana', gameId);
+      const { roomId } = await gameInDecisionPhase(server);
+      const ana = await TestClient.connected(server.url, 'ana', roomId);
 
       // Act
-      const luis = await TestClient.connected(server.url, 'luis', gameId);
+      const luis = await TestClient.connected(server.url, 'luis', roomId);
 
       // Assert
       const change = await ana.next('connection-changed');
@@ -131,31 +136,31 @@ describe('RoomSocketServer', () => {
         'unsupported-contract-version',
       ],
       ['an invalid token', { token: 'forged' }, 'invalid-token'],
-      ['a game that does not exist', { gameId: 'unknown-game' }, 'game-not-found'],
+      ['a room that does not exist', { roomId: 'unknown-room' }, 'room-not-found'],
     ] as const)('should reject %s', async (_case, change, code) => {
       // Arrange
       server = await startRoomServer();
-      const { gameId } = await gameInDecisionPhase(server.http);
+      const { roomId } = await gameInDecisionPhase(server);
       const luis = await TestClient.open(server.url);
 
       // Act
-      luis.send({ ...connectMessage('luis', gameId), ...change });
+      luis.send({ ...connectMessage('luis', roomId), ...change });
 
       // Assert
       expect(await luis.next('error')).toEqual({ type: 'error', command: 'connect', code });
     });
 
-    it('should end the previous session of a socket that connects to another game', async () => {
+    it('should end the previous session of a socket that connects to another room', async () => {
       // Arrange
       server = await startRoomServer();
-      const first = await gameInDecisionPhase(server.http);
-      const second = await gameInDecisionPhase(server.http);
-      const ana = await TestClient.connected(server.url, 'ana', first.gameId);
-      const luis = await TestClient.connected(server.url, 'luis', first.gameId);
+      const first = await gameInDecisionPhase(server);
+      const second = await gameInDecisionPhase(server);
+      const ana = await TestClient.connected(server.url, 'ana', first.roomId);
+      const luis = await TestClient.connected(server.url, 'luis', first.roomId);
       await ana.next('connection-changed');
 
       // Act
-      luis.send(connectMessage('luis', second.gameId));
+      luis.send(connectMessage('luis', second.roomId));
 
       // Assert
       await luis.next('game-state');
@@ -163,20 +168,20 @@ describe('RoomSocketServer', () => {
       expect(change.connected).toBe(false);
     });
 
-    it('should reject an identity that does not play the game', async () => {
+    it('should reject an identity that is not in the room', async () => {
       // Arrange
       server = await startRoomServer();
-      const { gameId } = await gameInDecisionPhase(server.http);
+      const { roomId } = await gameInDecisionPhase(server);
       const stranger = await TestClient.open(server.url);
 
       // Act
-      stranger.send(connectMessage('stranger', gameId));
+      stranger.send(connectMessage('stranger', roomId));
 
       // Assert
       expect(await stranger.next('error')).toEqual({
         type: 'error',
         command: 'connect',
-        code: 'player-not-in-game',
+        code: 'player-not-in-room',
       });
     });
   });
@@ -185,17 +190,20 @@ describe('RoomSocketServer', () => {
     it('should send a fresh state to whoever answers and the new progress to the others', async () => {
       // Arrange
       server = await startRoomServer();
-      const { gameId } = await gameInDecisionPhase(server.http);
-      const ana = await TestClient.connected(server.url, 'ana', gameId);
-      const luis = await TestClient.connected(server.url, 'luis', gameId);
+      const { roomId, dilemmas } = await gameInDecisionPhase(server);
+      const [first] = dilemmas;
+      const ana = await TestClient.connected(server.url, 'ana', roomId);
+      const luis = await TestClient.connected(server.url, 'luis', roomId);
       await ana.next('connection-changed');
 
       // Act
-      luis.send({ type: 'answer-dilemma', dilemmaId: FIRST!.id, vote: FIRST!.options[0]!.id });
+      luis.send({ type: 'answer-dilemma', ...firstVoteOf(first) });
 
       // Assert
       const state = await luis.next('game-state');
-      expect(state.answers).toEqual([{ dilemmaId: FIRST!.id, vote: FIRST!.options[0]!.id }]);
+      expect(state.answers).toEqual(
+        [firstVoteOf(first)].map(({ dilemmaId, vote }) => ({ dilemmaId, vote })),
+      );
       const progress = await ana.next('progress-updated');
       expect(progress).toEqual({
         type: 'progress-updated',
@@ -208,12 +216,12 @@ describe('RoomSocketServer', () => {
     it('should apply the answers of one game in the order they arrive', async () => {
       // Arrange
       server = await startRoomServer();
-      const { gameId } = await gameInDecisionPhase(server.http);
-      const luis = await TestClient.connected(server.url, 'luis', gameId);
+      const { roomId, dilemmas } = await gameInDecisionPhase(server);
+      const luis = await TestClient.connected(server.url, 'luis', roomId);
 
       // Act
-      for (const dilemma of [FIRST!, SECOND!, THIRD!]) {
-        luis.send({ type: 'answer-dilemma', dilemmaId: dilemma.id, vote: dilemma.options[0]!.id });
+      for (const dilemma of dilemmas.slice(0, 3)) {
+        luis.send({ type: 'answer-dilemma', ...firstVoteOf(dilemma) });
       }
 
       // Assert
@@ -229,7 +237,11 @@ describe('RoomSocketServer', () => {
       const luis = await TestClient.open(server.url);
 
       // Act
-      luis.send({ type: 'answer-dilemma', dilemmaId: FIRST!.id, vote: FIRST!.options[0]!.id });
+      luis.send({
+        type: 'answer-dilemma',
+        dilemmaId: 'seed-trolley',
+        vote: 'seed-trolley-option-1',
+      });
 
       // Assert
       expect(await luis.next('error')).toEqual({
@@ -242,11 +254,11 @@ describe('RoomSocketServer', () => {
     it('should answer a rule of the game that is broken with its code', async () => {
       // Arrange
       server = await startRoomServer();
-      const { gameId } = await gameInDecisionPhase(server.http);
-      const luis = await TestClient.connected(server.url, 'luis', gameId);
+      const { roomId, dilemmas } = await gameInDecisionPhase(server);
+      const luis = await TestClient.connected(server.url, 'luis', roomId);
 
-      // Act
-      luis.send({ type: 'answer-dilemma', dilemmaId: SECOND!.id, vote: SECOND!.options[0]!.id });
+      // Act: the second dilemma before the first.
+      luis.send({ type: 'answer-dilemma', ...firstVoteOf(dilemmas[1]) });
 
       // Assert
       expect(await luis.next('error')).toEqual({
@@ -261,9 +273,9 @@ describe('RoomSocketServer', () => {
     it('should tell the others when a socket closes', async () => {
       // Arrange
       server = await startRoomServer();
-      const { gameId } = await gameInDecisionPhase(server.http);
-      const ana = await TestClient.connected(server.url, 'ana', gameId);
-      const luis = await TestClient.connected(server.url, 'luis', gameId);
+      const { roomId } = await gameInDecisionPhase(server);
+      const ana = await TestClient.connected(server.url, 'ana', roomId);
+      const luis = await TestClient.connected(server.url, 'luis', roomId);
       await ana.next('connection-changed');
 
       // Act
@@ -278,11 +290,11 @@ describe('RoomSocketServer', () => {
       // Arrange
       const tokenVerifier = new HeldTokenVerifier();
       server = await startRoomServer({ tokenVerifier });
-      const { gameId } = await gameInDecisionPhase(server.http);
-      const ana = await TestClient.connected(server.url, 'ana', gameId);
+      const { roomId } = await gameInDecisionPhase(server);
+      const ana = await TestClient.connected(server.url, 'ana', roomId);
       const luis = await TestClient.open(server.url);
       tokenVerifier.hold();
-      luis.send(connectMessage('luis', gameId));
+      luis.send(connectMessage('luis', roomId));
       await tokenVerifier.verifying();
       luis.socket.close();
       await until(() => server!.openSockets() === 1);
@@ -298,10 +310,10 @@ describe('RoomSocketServer', () => {
     it('should end a socket that stops answering the pings, and tell the others', async () => {
       // Arrange
       server = await startRoomServer({ pingIntervalMs: 50 });
-      const { gameId } = await gameInDecisionPhase(server.http);
-      const ana = await TestClient.connected(server.url, 'ana', gameId);
+      const { roomId } = await gameInDecisionPhase(server);
+      const ana = await TestClient.connected(server.url, 'ana', roomId);
       const luis = await TestClient.open(server.url, { autoPong: false });
-      luis.send(connectMessage('luis', gameId));
+      luis.send(connectMessage('luis', roomId));
       await luis.next('game-state');
       await ana.next('connection-changed');
 
@@ -316,8 +328,8 @@ describe('RoomSocketServer', () => {
     it('should keep a socket that answers the pings', async () => {
       // Arrange
       server = await startRoomServer({ pingIntervalMs: 50 });
-      const { gameId } = await gameInDecisionPhase(server.http);
-      const ana = await TestClient.connected(server.url, 'ana', gameId);
+      const { roomId } = await gameInDecisionPhase(server);
+      const ana = await TestClient.connected(server.url, 'ana', roomId);
 
       // Act
       await new Promise((resolve) => setTimeout(resolve, 300));

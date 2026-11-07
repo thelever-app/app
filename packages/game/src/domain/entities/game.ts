@@ -13,6 +13,9 @@ import type { IdGenerator } from '../ports/id-generator.port.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { AnswerVO, type Seal } from '../vos/answer.vo.ts';
 import { DilemmaVO } from '../vos/dilemma.vo.ts';
+import type { DilemmaOrigin } from '../services/compose-game.ts';
+import type { GroupNature, Place } from '../vos/group.vo.ts';
+import type { DilemmaLanguage, RoomVariant, TotalTimeInMinutes } from '../vos/room-settings.vo.ts';
 import { Player } from './player.ts';
 
 /** A dilemma of the game: its id, the version played and the ids of its options. */
@@ -22,10 +25,25 @@ export interface GameDilemma {
   readonly optionIds: readonly string[];
 }
 
+/** A dilemma as the game plays it: what the catalog gives, and how it got into the game. */
+export interface PlayedDilemma extends GameDilemma {
+  readonly origin: DilemmaOrigin;
+}
+
+/** What the game copies from its room when it starts, and keeps even if the room changes. */
+export interface GameSettings {
+  readonly variant: RoomVariant;
+  readonly groupNature: GroupNature;
+  readonly place: Place;
+  readonly dilemmaLanguage: DilemmaLanguage;
+  readonly totalTimeInMinutes: TotalTimeInMinutes;
+}
+
 export interface GameSnapshot {
   readonly id: string;
   readonly roomId: string;
-  readonly dilemmas: readonly GameDilemma[];
+  readonly dilemmas: readonly PlayedDilemma[];
+  readonly settings: GameSettings;
   readonly inDecisionPhase: boolean;
   readonly version: number;
   readonly players: readonly {
@@ -43,13 +61,20 @@ export class Game {
   readonly #id: IdVO;
   readonly #roomId: IdVO;
   readonly #dilemmas: readonly DilemmaVO[];
+  readonly #origins: ReadonlyMap<string, DilemmaOrigin>;
+  readonly #settings: GameSettings;
   #inDecisionPhase = false;
   /** Goes up with every change, so the clients can drop what is older than what they hold. */
   #version = 0;
   readonly #answers = new Map<string, Map<string, AnswerVO>>();
   #events: DomainEvent[] = [];
 
-  private constructor(id: string, roomId: string, dilemmas: readonly GameDilemma[]) {
+  private constructor(
+    id: string,
+    roomId: string,
+    dilemmas: readonly PlayedDilemma[],
+    settings: GameSettings,
+  ) {
     if (dilemmas.length === 0) throw new DilemmasMissingError();
     const ids = dilemmas.map(({ dilemmaId }) => dilemmaId);
     const repeated = ids.find((dilemmaId, index) => ids.indexOf(dilemmaId) !== index);
@@ -60,13 +85,23 @@ export class Game {
     this.#dilemmas = dilemmas.map(
       ({ dilemmaId, version, optionIds }) => new DilemmaVO(dilemmaId, version, optionIds),
     );
+    this.#origins = new Map(dilemmas.map(({ dilemmaId, origin }) => [dilemmaId, origin]));
+    this.#settings = { ...settings };
   }
 
   static create(
-    { roomId, dilemmas }: { readonly roomId: string; readonly dilemmas: readonly GameDilemma[] },
+    {
+      roomId,
+      dilemmas,
+      settings,
+    }: {
+      readonly roomId: string;
+      readonly dilemmas: readonly PlayedDilemma[];
+      readonly settings: GameSettings;
+    },
     idGenerator: IdGenerator,
   ): Game {
-    return new Game(idGenerator.generate(), roomId, dilemmas);
+    return new Game(idGenerator.generate(), roomId, dilemmas, settings);
   }
 
   get id(): string {
@@ -78,12 +113,17 @@ export class Game {
   }
 
   /** In the order every player gets them. */
-  get dilemmas(): readonly GameDilemma[] {
+  get dilemmas(): readonly PlayedDilemma[] {
     return this.#dilemmas.map(({ dilemmaId, version, optionIds }) => ({
       dilemmaId,
       version,
       optionIds,
+      origin: this.#origins.get(dilemmaId) as DilemmaOrigin,
     }));
+  }
+
+  get settings(): GameSettings {
+    return { ...this.#settings };
   }
 
   get playerIds(): readonly string[] {
@@ -155,6 +195,7 @@ export class Game {
       id: this.id,
       roomId: this.roomId,
       dilemmas: this.dilemmas,
+      settings: this.settings,
       inDecisionPhase: this.#inDecisionPhase,
       version: this.#version,
       players: [...this.#answers].map(([playerId, answers]) => ({
@@ -170,7 +211,7 @@ export class Game {
   }
 
   static restore(snapshot: GameSnapshot): Game {
-    const game = new Game(snapshot.id, snapshot.roomId, snapshot.dilemmas);
+    const game = new Game(snapshot.id, snapshot.roomId, snapshot.dilemmas, snapshot.settings);
     game.#inDecisionPhase = snapshot.inDecisionPhase;
     game.#version = snapshot.version;
     for (const player of snapshot.players) {

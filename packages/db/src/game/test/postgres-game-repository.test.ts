@@ -1,6 +1,6 @@
 import { Dilemma } from '@thelever-app/dilemmas';
 import { SequentialIdGenerator } from '@thelever-app/dilemmas/in-memory';
-import { Game, Player, Room } from '@thelever-app/game';
+import { Game, Player } from '@thelever-app/game';
 import { CONTRACT_DILEMMAS, describeGameRepositoryContract } from '@thelever-app/game/contracts';
 import {
   SEAL_BEFORE_FIRST_ACCESS,
@@ -19,6 +19,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../../schema.ts';
 import { recordingReads } from '../../test/support/recording-reads.ts';
+import { roomOf, TEST_GAME_SETTINGS } from '../../test/support/rooms.ts';
 import { emptyTables, useTestDatabase } from '../../test/support/test-database.ts';
 import { PostgresDilemmaRepository } from '../../dilemmas/postgres-dilemma-repository.ts';
 import { PostgresGameRepository } from '../postgres-game-repository.ts';
@@ -74,8 +75,7 @@ describe('PostgresGameRepository inside a command', () => {
     for (const dilemma of dilemmas) await dilemmaRepository.save(dilemma);
     const [first, second] = dilemmas as [Dilemma, Dilemma];
     const ids = new GameIds();
-    const room = Room.create({ hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' }, ids);
-    room.addPlayer(Player.create({ nickname: 'Luis', identity: 'TestLuisIdentity' }, ids));
+    const room = roomOf('Ana', ['Luis'], ids);
     const rooms = new PostgresRoomRepository(database.db(), 'TestInstanceId');
     await rooms.save(room);
     const game = Game.create(
@@ -84,8 +84,10 @@ describe('PostgresGameRepository inside a command', () => {
         dilemmas: dilemmas.map((dilemma) => ({
           dilemmaId: dilemma.id,
           version: dilemma.version,
+          origin: 'picked-by-the-system',
           optionIds: dilemma.options.map(({ id }) => id),
         })),
+        settings: TEST_GAME_SETTINGS,
       },
       ids,
     );
@@ -244,13 +246,23 @@ describe('PostgresGameRepository inside a command', () => {
       .values({ id: 'TestInstanceId', seen_at: new Date() })
       .execute();
     const ids = new GameIds();
-    const room = Room.create({ hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' }, ids);
+    const room = roomOf('Ana', [], ids);
     await new PostgresRoomRepository(database.db(), 'TestInstanceId').save(room);
     const dilemmas = [
-      { dilemmaId: 'TestDilemma1', version: 3, optionIds: ['TestOptionB', 'TestOptionA'] },
-      { dilemmaId: 'TestDilemma2', version: 1, optionIds: ['TestOptionC', 'TestOptionD'] },
-    ];
-    const game = Game.create({ roomId: room.id, dilemmas }, ids);
+      {
+        dilemmaId: 'TestDilemma1',
+        version: 3,
+        origin: 'added-by-a-player',
+        optionIds: ['TestOptionB', 'TestOptionA'],
+      },
+      {
+        dilemmaId: 'TestDilemma2',
+        version: 1,
+        origin: 'picked-by-the-host',
+        optionIds: ['TestOptionC', 'TestOptionD'],
+      },
+    ] as const;
+    const game = Game.create({ roomId: room.id, dilemmas, settings: TEST_GAME_SETTINGS }, ids);
     const games = new PostgresGameRepository(database.db());
 
     // Act
@@ -271,10 +283,17 @@ describe('PostgresGameRepository outside a command', () => {
       .values({ id: 'TestInstanceId', seen_at: new Date() })
       .execute();
     const ids = new GameIds();
-    const room = Room.create({ hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' }, ids);
+    const room = roomOf('Ana', [], ids);
     await new PostgresRoomRepository(database.db(), 'TestInstanceId').save(room);
-    const dilemmas = [{ dilemmaId: 'TestDilemma1', version: 1, optionIds: ['TestOptionA'] }];
-    const game = Game.create({ roomId: room.id, dilemmas }, ids);
+    const dilemmas = [
+      {
+        dilemmaId: 'TestDilemma1',
+        version: 1,
+        origin: 'picked-by-the-system',
+        optionIds: ['TestOptionA'],
+      },
+    ] as const;
+    const game = Game.create({ roomId: room.id, dilemmas, settings: TEST_GAME_SETTINGS }, ids);
     await new PostgresGameRepository(database.db()).save(game);
     const { db, reads } = recordingReads(database.db());
 

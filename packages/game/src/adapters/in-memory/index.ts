@@ -7,5 +7,6 @@ export { InMemoryRoomRepository } from './in-memory-room-repository.ts';
 export { InMemoryGameRepository } from './in-memory-game-repository.ts';
 export { InMemoryPlayerNotifier } from './in-memory-player-notifier.ts';
 export { SequentialIdGenerator } from './sequential-id-generator.ts';
-export { InMemoryDilemmaCatalog } from './in-memory-dilemma-catalog.ts';
+export { SequentialRandomness } from './sequential-randomness.ts';
+export { InMemoryDilemmaCatalog, type InMemoryDilemma } from './in-memory-dilemma-catalog.ts';
 export { InMemorySealProvider, SEAL_BEFORE_FIRST_ACCESS } from './in-memory-seal-provider.ts';

@@ -11,7 +11,7 @@ const connect = {
   type: 'connect',
   contractVersion: CONTRACT_VERSION,
   token: 'firebase-id-token',
-  gameId: 'game-1',
+  roomId: 'room-1',
   language: 'es',
 };
 
@@ -50,10 +50,10 @@ describe('ConnectDto', () => {
     expect(ConnectDto.safeParse({ ...connect, contractVersion: '1' }).success).toBe(false);
   });
 
-  it('should reject an empty token or game', () => {
+  it('should reject an empty token or room', () => {
     // Act & Assert
     expect(ConnectDto.safeParse({ ...connect, token: '' }).success).toBe(false);
-    expect(ConnectDto.safeParse({ ...connect, gameId: '' }).success).toBe(false);
+    expect(ConnectDto.safeParse({ ...connect, roomId: '' }).success).toBe(false);
   });
 
   it('should accept every supported language and reject any other', () => {

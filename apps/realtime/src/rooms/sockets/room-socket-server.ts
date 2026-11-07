@@ -3,7 +3,7 @@ import { type Context, propagation, ROOT_CONTEXT, type Span } from '@opentelemet
 import type { Logger } from '@thelever-app/db';
 import { ClientMessageDto, ClientMessageTypeDto, type ErrorCodeDto } from '@thelever-app/protocol';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { GAME_ID } from '../../telemetry/game-sampler.ts';
+import { ROOM_ID } from '../../telemetry/game-sampler.ts';
 import { instruments } from '../../telemetry/instruments.ts';
 import { inSpan, markFailed } from '../../telemetry/tracing.ts';
 import type { DisconnectHandler } from './disconnect.handler.ts';
@@ -30,9 +30,9 @@ function read(data: string): {
 /** How a message ended, as its duration is counted. */
 type Outcome = 'ok' | 'rejected' | 'error';
 
-/** The game a message is about: the one of the connection, or the one `connect` names. */
-function gameIdOf(message: ClientMessageDto | undefined, connection: RoomConnection) {
-  return connection.session?.gameId ?? (message?.type === 'connect' ? message.gameId : undefined);
+/** The room a message is about: the one of the connection, or the one `connect` names. */
+function roomIdOf(message: ClientMessageDto | undefined, connection: RoomConnection) {
+  return connection.session?.roomId ?? (message?.type === 'connect' ? message.roomId : undefined);
 }
 
 /** The trace the device started for the command, if it sent one. */
@@ -133,7 +133,7 @@ export class RoomSocketServer {
     const started = performance.now();
     const outcome = await inSpan(
       `ws ${type}`,
-      { 'message.type': type, [GAME_ID]: gameIdOf(message, connection) },
+      { 'message.type': type, [ROOM_ID]: roomIdOf(message, connection) },
       (span) => this.#handle(message, command, connection, span),
       { parent: traceOf(message) },
     );
@@ -173,7 +173,7 @@ export class RoomSocketServer {
     this.#connections.delete(connection);
     instruments().openSockets.add(-1);
     if (this.#leaving) return;
-    inSpan('ws disconnect', { [GAME_ID]: connection.session?.gameId }, () =>
+    inSpan('ws disconnect', { [ROOM_ID]: connection.session?.roomId }, () =>
       this.#disconnect.handle(connection),
     ).catch((error: unknown) => {
       this.#logger.error('disconnecting a closed socket failed', error);

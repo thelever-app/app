@@ -1,0 +1,34 @@
+.avatar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--avatar-color);
+}
+
+.avatar[data-dimmed] {
+  opacity: 0.4;
+}
+
+.sm {
+  width: 36px;
+  height: 36px;
+}
+
+.md {
+  width: 48px;
+  height: 48px;
+}
+
+.lg {
+  width: 64px;
+  height: 64px;
+}
+
+.face {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

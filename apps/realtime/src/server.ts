@@ -8,7 +8,7 @@ import {
 import { initializeApp } from 'firebase-admin/app';
 import { getAppCheck } from 'firebase-admin/app-check';
 import { getAuth } from 'firebase-admin/auth';
-import { composeRealtimeServer } from './composition.ts';
+import { composeRealtimeServer } from './composition/index.ts';
 import { UncheckedAppCheck } from './identity/app-check-verifier.ts';
 import { FirebaseAppCheckVerifier } from './identity/firebase-app-check-verifier.ts';
 import { FirebaseTokenVerifier } from './identity/firebase-token-verifier.ts';
@@ -38,11 +38,17 @@ const database = await openDatabase<Database>(databaseConfig, {
   logger,
 });
 
+// The origins the web is served from, separated by spaces; locally, those of Vite.
+const webOrigins = (process.env.WEB_ORIGINS ?? 'http://localhost:5173 http://localhost:4173')
+  .split(' ')
+  .filter((origin) => origin.length > 0);
+
 const server = await composeRealtimeServer({
   tokenVerifier,
   appCheckVerifier,
   pingIntervalMs: 30_000,
   logger,
+  webOrigins,
   storage: {
     kind: 'postgres',
     db: database.db,

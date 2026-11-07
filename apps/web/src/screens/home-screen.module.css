@@ -1,0 +1,116 @@
+.header {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: var(--space-3) var(--space-2) var(--space-3) 20px;
+  box-sizing: border-box;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: 27px;
+  line-height: 32px;
+  font-weight: 700;
+}
+
+/* The level-crossing stripe of the brand. */
+.stripe {
+  height: 8px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-primary) 0 12px,
+    var(--color-ink) 12px 24px
+  );
+}
+
+.main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 28px var(--space-4) var(--space-4);
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 38px;
+  font-weight: 600;
+}
+
+.create,
+.join {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  font: inherit;
+  text-align: left;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.create {
+  min-height: 64px;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 600;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: inset 0 0 0 2px var(--color-on-primary);
+}
+
+.join {
+  min-height: 56px;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 500;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+}
+
+.step {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: var(--space-4) 20px 28px;
+}
+
+.back {
+  width: 44px;
+  height: 44px;
+  margin-left: -12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.stepTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 31px;
+  line-height: 36px;
+  font-weight: 600;
+}
+
+.lead {
+  margin: -8px 0 0;
+  color: var(--color-ink-muted);
+}
+
+.hint {
+  margin: -8px 0 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-ink-muted);
+  text-align: center;
+}

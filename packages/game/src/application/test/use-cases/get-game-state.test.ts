@@ -1,66 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { CreateRoomUseCase } from '../../use-cases/create-room.use-case.ts';
-import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
-import { StartDecisionPhaseUseCase } from '../../use-cases/start-decision-phase.use-case.ts';
 import { AnswerDilemmaUseCase } from '../../use-cases/answer-dilemma.use-case.ts';
 import { GetGameStateUseCase } from '../../use-cases/get-game-state.use-case.ts';
 import { GameNotFoundError } from '../../errors/game-not-found.error.ts';
 import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
 import { PlayerNotInGameError } from '../../../domain/errors/player-not-in-game.error.ts';
 import { Game } from '../../../domain/entities/game.ts';
-import { InMemoryRoomRepository } from '../../../adapters/in-memory/in-memory-room-repository.ts';
-import { InMemoryGameRepository } from '../../../adapters/in-memory/in-memory-game-repository.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
-import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
 import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
 import { DilemmaNotFoundError } from '../../errors/dilemma-not-found.error.ts';
 import { ConnectPlayerUseCase } from '../../use-cases/connect-player.use-case.ts';
-import { TEST_DILEMMA_IDS, TEST_OPTION_IDS, testCatalog } from '../support/test-catalog.ts';
+import { TEST_DILEMMA_IDS, TEST_OPTION_IDS } from '../support/test-catalog.ts';
+import {
+  gameInDecisionPhase as sharedGameInDecisionPhase,
+  TEST_GAME_SETTINGS,
+} from '../support/game-in-decision-phase.ts';
 
 /** Ana hosts a room with Luis and Marta, and the game is in the decision phase. */
 async function gameInDecisionPhase() {
-  const roomRepository = new InMemoryRoomRepository();
-  const gameRepository = new InMemoryGameRepository();
-  const idGenerator = new SequentialIdGenerator();
-  const joinRoom = new JoinRoomUseCase(roomRepository, idGenerator);
-
-  const { roomId, hostId: anaId } = await new CreateRoomUseCase(
-    roomRepository,
-    idGenerator,
-  ).execute({ hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' });
-  const { playerId: luisId } = await joinRoom.execute({
-    roomId,
-    nickname: 'Luis',
-    identity: 'TestLuisIdentity',
-  });
-  const { playerId: martaId } = await joinRoom.execute({
-    roomId,
-    nickname: 'Marta',
-    identity: 'TestMartaIdentity',
-  });
-  const catalog = testCatalog();
-  const { gameId } = await new StartDecisionPhaseUseCase(
-    roomRepository,
-    gameRepository,
-    catalog,
-    idGenerator,
-  ).execute({ roomId, dilemmaIds: TEST_DILEMMA_IDS });
-
+  const game = await sharedGameInDecisionPhase();
   return {
-    gameRepository,
-    roomRepository,
+    ...game,
     answerDilemma: new AnswerDilemmaUseCase(
-      roomRepository,
-      gameRepository,
+      game.roomRepository,
+      game.gameRepository,
       new InMemoryPlayerNotifier(),
       new InMemorySealProvider(),
     ),
-    getGameState: new GetGameStateUseCase(roomRepository, gameRepository, catalog),
-    gameId,
-    anaId,
-    luisId,
-    martaId,
+    getGameState: new GetGameStateUseCase(game.roomRepository, game.gameRepository, game.catalog),
   };
 }
 
@@ -85,18 +52,31 @@ describe('GetGameStateUseCase', () => {
       );
     });
 
-    it('should return every player with their nickname and progress', async () => {
+    it('should return every player with their nickname, avatar and progress', async () => {
       // Arrange
-      const { getGameState, answerDilemma, gameId, anaId, luisId, martaId } =
-        await gameInDecisionPhase();
-      await answerDilemma.execute({
+      const {
+        getGameState,
+        answerDilemma,
+        roomRepository,
+        roomId,
         gameId,
+        anaId,
+        luisId,
+        martaId,
+      } = await gameInDecisionPhase();
+      const room = await roomRepository.findById(roomId);
+      const avatarOf = (playerId: string) => {
+        const avatar = room?.players.find(({ id }) => id === playerId)?.avatar;
+        return avatar && { face: avatar.face, color: avatar.color };
+      };
+      await answerDilemma.execute({
+        roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
       });
       await answerDilemma.execute({
-        gameId,
+        roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma2',
         vote: 'TestOption',
@@ -107,23 +87,40 @@ describe('GetGameStateUseCase', () => {
 
       // Assert
       expect(state.players).toEqual([
-        { playerId: anaId, nickname: 'Ana', progress: 0, connected: false },
-        { playerId: luisId, nickname: 'Luis', progress: 2, connected: false },
-        { playerId: martaId, nickname: 'Marta', progress: 0, connected: false },
+        {
+          playerId: anaId,
+          nickname: 'Ana',
+          avatar: avatarOf(anaId),
+          progress: 0,
+          connected: false,
+        },
+        {
+          playerId: luisId,
+          nickname: 'Luis',
+          avatar: avatarOf(luisId),
+          progress: 2,
+          connected: false,
+        },
+        {
+          playerId: martaId,
+          nickname: 'Marta',
+          avatar: avatarOf(martaId),
+          progress: 0,
+          connected: false,
+        },
       ]);
     });
 
     it('should return whether each player is connected', async () => {
       // Arrange
-      const { getGameState, gameRepository, roomRepository, gameId, anaId, luisId } =
+      const { getGameState, roomRepository, roomId, gameId, anaId, luisId } =
         await gameInDecisionPhase();
       const connectPlayer = new ConnectPlayerUseCase(
         roomRepository,
-        gameRepository,
         new InMemoryPlayerNotifier(),
         new FixedIdGenerator('TestConnectionId'),
       );
-      await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
+      await connectPlayer.execute({ roomId, identity: 'TestLuisIdentity' });
 
       // Act
       const state = await getGameState.execute({ gameId, playerId: anaId, language: 'es' });
@@ -136,34 +133,33 @@ describe('GetGameStateUseCase', () => {
 
     it('should return the version of the game and of the room it was computed from', async () => {
       // Arrange
-      const { getGameState, answerDilemma, gameRepository, roomRepository, gameId, luisId } =
+      const { getGameState, answerDilemma, roomRepository, roomId, gameId, luisId } =
         await gameInDecisionPhase();
       await answerDilemma.execute({
-        gameId,
+        roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
       });
       await new ConnectPlayerUseCase(
         roomRepository,
-        gameRepository,
         new InMemoryPlayerNotifier(),
         new FixedIdGenerator('TestConnectionId'),
-      ).execute({ gameId, identity: 'TestLuisIdentity' });
+      ).execute({ roomId, identity: 'TestLuisIdentity' });
 
       // Act
       const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
 
       // Assert
       expect(state.gameVersion).toBe(2);
-      expect(state.roomVersion).toBe(1);
+      expect(state.roomVersion).toBe((await roomRepository.findById(roomId))?.version);
     });
 
     it('should return the answers of the player who asks', async () => {
       // Arrange
-      const { getGameState, answerDilemma, gameId, luisId } = await gameInDecisionPhase();
+      const { getGameState, answerDilemma, roomId, gameId, luisId } = await gameInDecisionPhase();
       await answerDilemma.execute({
-        gameId,
+        roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
@@ -178,9 +174,10 @@ describe('GetGameStateUseCase', () => {
 
     it('should never return the answers of the other players', async () => {
       // Arrange
-      const { getGameState, answerDilemma, gameId, anaId, luisId } = await gameInDecisionPhase();
+      const { getGameState, answerDilemma, roomId, gameId, anaId, luisId } =
+        await gameInDecisionPhase();
       await answerDilemma.execute({
-        gameId,
+        roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestSecretOption',
@@ -193,6 +190,7 @@ describe('GetGameStateUseCase', () => {
       expect(state.answers).toEqual([]);
       for (const player of state.players) {
         expect(Object.keys(player).sort()).toEqual([
+          'avatar',
           'connected',
           'nickname',
           'playerId',
@@ -228,7 +226,15 @@ describe('GetGameStateUseCase', () => {
       const game = Game.create(
         {
           roomId: room.id,
-          dilemmas: [{ dilemmaId: 'TestGoneDilemma', version: 1, optionIds: TEST_OPTION_IDS }],
+          dilemmas: [
+            {
+              dilemmaId: 'TestGoneDilemma',
+              version: 1,
+              optionIds: TEST_OPTION_IDS,
+              origin: 'picked-by-the-host',
+            },
+          ],
+          settings: TEST_GAME_SETTINGS,
         },
         new FixedIdGenerator('TestGoneGameId'),
       );
@@ -249,7 +255,15 @@ describe('GetGameStateUseCase', () => {
       const game = Game.create(
         {
           roomId: room.id,
-          dilemmas: [{ dilemmaId: dilemmaId!, version: 2, optionIds: TEST_OPTION_IDS }],
+          dilemmas: [
+            {
+              dilemmaId: dilemmaId!,
+              version: 2,
+              optionIds: TEST_OPTION_IDS,
+              origin: 'picked-by-the-host',
+            },
+          ],
+          settings: TEST_GAME_SETTINGS,
         },
         new FixedIdGenerator('TestLaterVersionGameId'),
       );
@@ -272,7 +286,9 @@ describe('GetGameStateUseCase', () => {
             dilemmaId,
             version: 1,
             optionIds: TEST_OPTION_IDS,
+            origin: 'picked-by-the-host' as const,
           })),
+          settings: TEST_GAME_SETTINGS,
         },
         new FixedIdGenerator('TestOrphanGameId'),
       );
