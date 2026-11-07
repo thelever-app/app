@@ -1,28 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { ConnectPlayerUseCase } from '../../use-cases/connect-player.use-case.ts';
 import { DisconnectPlayerUseCase } from '../../use-cases/disconnect-player.use-case.ts';
-import { GameNotFoundError } from '../../errors/game-not-found.error.ts';
+import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
 import { ConnectionChangedEvent } from '../../../domain/events/connection-changed.event.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
-import { gameInDecisionPhase } from '../support/game-in-decision-phase.ts';
+import {
+  gameInDecisionPhase,
+  ROOM_VERSION_WHEN_THE_GAME_STARTS,
+} from '../support/game-in-decision-phase.ts';
 
 /** Like the arranged game, with Luis connected. */
 async function arrange() {
   const game = await gameInDecisionPhase();
   const notifier = new InMemoryPlayerNotifier();
-  const connectPlayer = new ConnectPlayerUseCase(
-    game.roomRepository,
-    game.gameRepository,
-    notifier,
-    game.idGenerator,
-  );
-  const disconnectPlayer = new DisconnectPlayerUseCase(
-    game.roomRepository,
-    game.gameRepository,
-    notifier,
-  );
+  const connectPlayer = new ConnectPlayerUseCase(game.roomRepository, notifier, game.idGenerator);
+  const disconnectPlayer = new DisconnectPlayerUseCase(game.roomRepository, notifier);
   const { connectionId } = await connectPlayer.execute({
-    gameId: game.gameId,
+    roomId: game.roomId,
     identity: 'TestLuisIdentity',
   });
   return { ...game, notifier, connectPlayer, disconnectPlayer, connectionId };
@@ -30,30 +24,28 @@ async function arrange() {
 
 describe('DisconnectPlayerUseCase', () => {
   describe('execute', () => {
-    it('should disconnect the player from the room of the game', async () => {
+    it('should disconnect the player from their room', async () => {
       // Arrange
-      const { disconnectPlayer, roomRepository, roomId, gameId, luisId, connectionId } =
-        await arrange();
+      const { disconnectPlayer, roomRepository, roomId, luisId, connectionId } = await arrange();
 
       // Act
-      await disconnectPlayer.execute({ gameId, playerId: luisId, connectionId });
+      await disconnectPlayer.execute({ roomId, playerId: luisId, connectionId });
 
       // Assert
       const room = await roomRepository.findById(roomId);
       expect(room?.isConnected(luisId)).toBe(false);
     });
 
-    it('should tell the other players of the game', async () => {
+    it('should tell the other players of the room', async () => {
       // Arrange
-      const { disconnectPlayer, notifier, roomId, gameId, anaId, luisId, connectionId } =
-        await arrange();
+      const { disconnectPlayer, notifier, roomId, anaId, luisId, connectionId } = await arrange();
 
       // Act
-      await disconnectPlayer.execute({ gameId, playerId: luisId, connectionId });
+      await disconnectPlayer.execute({ roomId, playerId: luisId, connectionId });
 
       // Assert
       expect(notifier.receivedBy(anaId).at(-1)).toEqual(
-        new ConnectionChangedEvent(roomId, luisId, false, 2),
+        new ConnectionChangedEvent(roomId, luisId, false, ROOM_VERSION_WHEN_THE_GAME_STARTS + 2),
       );
     });
 
@@ -65,15 +57,14 @@ describe('DisconnectPlayerUseCase', () => {
         notifier,
         roomRepository,
         roomId,
-        gameId,
         anaId,
         luisId,
         connectionId,
       } = await arrange();
-      await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
+      await connectPlayer.execute({ roomId, identity: 'TestLuisIdentity' });
 
       // Act
-      await disconnectPlayer.execute({ gameId, playerId: luisId, connectionId });
+      await disconnectPlayer.execute({ roomId, playerId: luisId, connectionId });
 
       // Assert
       const room = await roomRepository.findById(roomId);
@@ -89,17 +80,16 @@ describe('DisconnectPlayerUseCase', () => {
         notifier,
         roomRepository,
         roomId,
-        gameId,
         anaId,
         luisId,
         connectionId,
       } = await arrange();
-      const second = await connectPlayer.execute({ gameId, identity: 'TestLuisIdentity' });
-      await disconnectPlayer.execute({ gameId, playerId: luisId, connectionId });
+      const second = await connectPlayer.execute({ roomId, identity: 'TestLuisIdentity' });
+      await disconnectPlayer.execute({ roomId, playerId: luisId, connectionId });
 
       // Act
       await disconnectPlayer.execute({
-        gameId,
+        roomId,
         playerId: luisId,
         connectionId: second.connectionId,
       });
@@ -108,18 +98,18 @@ describe('DisconnectPlayerUseCase', () => {
       const room = await roomRepository.findById(roomId);
       expect(room?.isConnected(luisId)).toBe(false);
       expect(notifier.receivedBy(anaId).at(-1)).toEqual(
-        new ConnectionChangedEvent(roomId, luisId, false, 2),
+        new ConnectionChangedEvent(roomId, luisId, false, ROOM_VERSION_WHEN_THE_GAME_STARTS + 2),
       );
     });
 
-    it('should throw an error if the game does not exist', async () => {
+    it('should throw an error if the room does not exist', async () => {
       // Arrange
       const { disconnectPlayer, luisId, connectionId } = await arrange();
 
       // Act & Assert
       await expect(
-        disconnectPlayer.execute({ gameId: 'TestUnknownGameId', playerId: luisId, connectionId }),
-      ).rejects.toThrow(GameNotFoundError);
+        disconnectPlayer.execute({ roomId: 'TestUnknownRoomId', playerId: luisId, connectionId }),
+      ).rejects.toThrow(RoomNotFoundError);
     });
   });
 });

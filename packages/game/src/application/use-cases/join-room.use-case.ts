@@ -1,7 +1,9 @@
-import { Player } from '../../domain/entities/player.ts';
-import { RoomNotFoundError } from '../errors/room-not-found.error.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
+import type { Randomness } from '../../domain/ports/randomness.port.ts';
+import { RoomNotFoundError } from '../errors/room-not-found.error.ts';
+import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
+import { notifyRoom } from './notify-room.ts';
 
 export interface JoinRoomInput {
   readonly roomId: string;
@@ -14,26 +16,33 @@ export interface JoinRoomOutput {
   readonly playerId: string;
 }
 
-/** A new player joins an existing room; whoever is already in it gets their player back. */
+/** A new player joins a room with a free avatar; whoever is already in it gets their player back. */
 export class JoinRoomUseCase {
   readonly #roomRepository: RoomRepository;
+  readonly #notifier: PlayerNotifier;
   readonly #idGenerator: IdGenerator;
+  readonly #randomness: Randomness;
 
-  constructor(roomRepository: RoomRepository, idGenerator: IdGenerator) {
+  constructor(
+    roomRepository: RoomRepository,
+    notifier: PlayerNotifier,
+    idGenerator: IdGenerator,
+    randomness: Randomness,
+  ) {
     this.#roomRepository = roomRepository;
+    this.#notifier = notifier;
     this.#idGenerator = idGenerator;
+    this.#randomness = randomness;
   }
 
   async execute({ roomId, nickname, identity }: JoinRoomInput): Promise<JoinRoomOutput> {
     const room = await this.#roomRepository.findById(roomId);
     if (!room) throw new RoomNotFoundError(roomId);
 
-    const existing = room.playerWith(identity);
-    if (existing) return { playerId: existing.id };
-
-    const player = Player.create({ nickname, identity }, this.#idGenerator);
-    room.addPlayer(player);
-    await this.#roomRepository.save(room);
+    const player = room.join({ nickname, identity }, this.#idGenerator, this.#randomness);
+    const events = room.pullEvents();
+    if (events.length > 0) await this.#roomRepository.save(room);
+    await notifyRoom(room, events, this.#notifier);
 
     return { playerId: player.id };
   }

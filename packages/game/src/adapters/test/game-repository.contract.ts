@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { GameRepository } from '../../application/ports/game-repository.port.ts';
 import type { RoomRepository } from '../../application/ports/room-repository.port.ts';
 import { Game, type GameDilemma } from '../../domain/entities/game.ts';
-import { Player } from '../../domain/entities/player.ts';
 import { Room } from '../../domain/entities/room.ts';
 import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.ts';
+import { FixedRandomness } from '../../domain/test/support/fixed-randomness.ts';
 
 /** Two different seals, so a repository that mixes them up fails. */
 const ANA_SEAL = {
@@ -38,17 +38,39 @@ export function describeGameRepositoryContract(
   async function arrange() {
     const { games, rooms, dilemmas } = await create();
     const room = Room.create(
-      { hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' },
+      {
+        hostNickname: 'Ana',
+        hostIdentity: 'TestAnaIdentity',
+        groupNature: 'family',
+        place: 'remote',
+        dilemmaLanguage: 'es',
+        code: 'K7M2Q',
+      },
       new FixedIdGenerator('TestRoomId', 'TestAnaId'),
+      new FixedRandomness(),
     );
-    room.addPlayer(
-      Player.create(
-        { nickname: 'Luis', identity: 'TestLuisIdentity' },
-        new FixedIdGenerator('TestLuisId'),
-      ),
+    room.join(
+      { nickname: 'Luis', identity: 'TestLuisIdentity' },
+      new FixedIdGenerator('TestLuisId'),
+      new FixedRandomness(),
     );
     await rooms.save(room);
-    const game = Game.create({ roomId: room.id, dilemmas }, new FixedIdGenerator('TestGameId'));
+    // Each origin and different settings from the defaults, so a repository that loses them fails.
+    const origins = ['added-by-a-player', 'picked-by-the-host', 'picked-by-the-system'] as const;
+    const game = Game.create(
+      {
+        roomId: room.id,
+        dilemmas: dilemmas.map((dilemma, index) => ({ ...dilemma, origin: origins[index % 3]! })),
+        settings: {
+          variant: 'anonymous',
+          groupNature: 'family',
+          place: 'remote',
+          dilemmaLanguage: 'ca',
+          totalTimeInMinutes: 10,
+        },
+      },
+      new FixedIdGenerator('TestGameId'),
+    );
     const [first, second] = dilemmas as [GameDilemma, GameDilemma];
     return {
       games,

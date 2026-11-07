@@ -1,20 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import type { RoomRepository } from '../../application/ports/room-repository.port.ts';
-import { Player } from '../../domain/entities/player.ts';
 import { Room, type RoomSnapshot } from '../../domain/entities/room.ts';
 import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.ts';
+import { FixedRandomness } from '../../domain/test/support/fixed-randomness.ts';
+import { AvatarVO } from '../../domain/vos/avatar.vo.ts';
 
-function room(): Room {
+function room(id = 'TestRoomId', hostId = 'TestAnaId', code = 'K7M2Q'): Room {
   return Room.create(
-    { hostNickname: 'Ana', hostIdentity: 'TestAnaIdentity' },
-    new FixedIdGenerator('TestRoomId', 'TestAnaId'),
+    {
+      hostNickname: 'Ana',
+      hostIdentity: 'TestAnaIdentity',
+      groupNature: 'friends',
+      place: 'together',
+      dilemmaLanguage: 'es',
+      code,
+    },
+    new FixedIdGenerator(id, hostId),
+    new FixedRandomness(),
   );
 }
 
-function player(name: string): Player {
-  return Player.create(
+/** A new player joins with the next free avatar. */
+function join(saved: Room, name: string): void {
+  saved.join(
     { nickname: name, identity: `Test${name}Identity` },
     new FixedIdGenerator(`Test${name}Id`),
+    new FixedRandomness(),
   );
 }
 
@@ -44,8 +55,8 @@ export function describeRoomRepositoryContract(
         // Arrange
         const repository = await create();
         const saved = room();
-        saved.addPlayer(player('Luis'));
-        saved.addPlayer(player('Eva'));
+        join(saved, 'Luis');
+        join(saved, 'Eva');
         saved.connect('TestAnaId', 'TestAnaConnection1');
         saved.connect('TestAnaId', 'TestAnaConnection2');
         saved.connect('TestEvaId', 'TestEvaConnection');
@@ -81,7 +92,7 @@ export function describeRoomRepositoryContract(
         await repository.save(saved);
 
         // Act
-        saved.addPlayer(player('Luis'));
+        join(saved, 'Luis');
         saved.connect('TestLuisId', 'TestLuisConnection');
 
         // Assert
@@ -91,13 +102,73 @@ export function describeRoomRepositoryContract(
       });
     });
 
+    describe('findByCode', () => {
+      it('should find the room with that code, typed in any case', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(room('TestRoomId', 'TestAnaId', 'K7M2Q'));
+        await repository.save(room('TestOtherRoomId', 'TestOtherAnaId', 'P3X8W'));
+
+        // Act
+        const found = await repository.findByCode('p3x8w');
+
+        // Assert
+        expect(found?.id).toBe('TestOtherRoomId');
+      });
+
+      it('should return undefined if no room has that code', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(room());
+
+        // Act
+        const found = await repository.findByCode('ZZZZZ');
+
+        // Assert
+        expect(found).toBeUndefined();
+      });
+    });
+
     describe('save', () => {
+      it('should keep everything about the lobby: settings, avatars, dilemmas and who was expelled', async () => {
+        // Arrange
+        const repository = await create();
+        const saved = room();
+        join(saved, 'Luis');
+        join(saved, 'Marta');
+        join(saved, 'Pablo');
+        saved.changeAvatar('TestLuisId', new AvatarVO('face-12', 'teal'));
+        saved.changeSettings('TestAnaId', {
+          variant: 'anonymous',
+          adultsOnly: true,
+          dilemmaLanguage: 'ca',
+          category: 'honesty',
+          dilemmaCount: 12,
+          totalTimeInMinutes: 10,
+          newDilemmas: false,
+          playersCanAddDilemmas: true,
+        });
+        saved.addDilemma('TestLuisId', { dilemmaId: 'TestAddedDilemma', minimumAge: 18 });
+        saved.pickDilemmas('TestAnaId', [
+          { dilemmaId: 'TestPickedDilemma1', minimumAge: 16 },
+          { dilemmaId: 'TestPickedDilemma2', minimumAge: 18 },
+        ]);
+        saved.expel('TestAnaId', 'TestPabloId');
+
+        // Act
+        await repository.save(saved);
+
+        // Assert
+        const found = await repository.findById('TestRoomId');
+        expect(comparable(found?.toSnapshot())).toEqual(comparable(saved.toSnapshot()));
+      });
+
       it('should keep only the last save of a room', async () => {
         // Arrange
         const repository = await create();
         const saved = room();
         await repository.save(saved);
-        saved.addPlayer(player('Luis'));
+        join(saved, 'Luis');
         saved.connect('TestLuisId', 'TestLuisConnection');
 
         // Act
@@ -106,14 +177,14 @@ export function describeRoomRepositoryContract(
         // Assert
         const found = await repository.findById('TestRoomId');
         expect(comparable(found?.toSnapshot())).toEqual(comparable(saved.toSnapshot()));
-        expect(found?.version).toBe(1);
+        expect(found?.version).toBe(saved.version);
       });
 
       it('should forget the connections closed before saving again', async () => {
         // Arrange
         const repository = await create();
         const saved = room();
-        saved.addPlayer(player('Luis'));
+        join(saved, 'Luis');
         saved.connect('TestAnaId', 'TestAnaConnection1');
         saved.connect('TestAnaId', 'TestAnaConnection2');
         saved.connect('TestLuisId', 'TestLuisConnection');
