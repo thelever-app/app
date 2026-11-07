@@ -6,7 +6,7 @@ import type { TokenVerifier } from '../../identity/token-verifier.ts';
 import type { KeyedLock } from '../../concurrency/keyed-lock.ts';
 import type { RunCommand } from '../run-command.ts';
 import type { DisconnectHandler } from './disconnect.handler.ts';
-import type { GameStateSender } from './game-state-sender.ts';
+import type { StateSender } from './state-sender.ts';
 import { Rejection } from './rejection.ts';
 import type { RoomConnection, Session } from './room-connection.ts';
 import type { SocketMessageHandler } from './socket-message-handler.ts';
@@ -19,9 +19,9 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
   readonly #tokenVerifier: TokenVerifier;
   readonly #appCheckVerifier: AppCheckVerifier;
   readonly #notifier: SocketNotifier;
-  /** One holder per game at a time, so its commands never interleave in this instance. */
-  readonly #gameLock: KeyedLock;
-  readonly #stateSender: GameStateSender;
+  /** One holder per room at a time, so its commands never interleave in this instance. */
+  readonly #roomLock: KeyedLock;
+  readonly #stateSender: StateSender;
   readonly #disconnect: DisconnectHandler;
   readonly #runCommand: RunCommand;
 
@@ -30,8 +30,8 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
     tokenVerifier: TokenVerifier,
     appCheckVerifier: AppCheckVerifier,
     notifier: SocketNotifier,
-    gameLock: KeyedLock,
-    stateSender: GameStateSender,
+    roomLock: KeyedLock,
+    stateSender: StateSender,
     disconnect: DisconnectHandler,
     runCommand: RunCommand,
   ) {
@@ -39,14 +39,14 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
     this.#tokenVerifier = tokenVerifier;
     this.#appCheckVerifier = appCheckVerifier;
     this.#notifier = notifier;
-    this.#gameLock = gameLock;
+    this.#roomLock = roomLock;
     this.#stateSender = stateSender;
     this.#disconnect = disconnect;
     this.#runCommand = runCommand;
   }
 
   async handle(
-    { contractVersion, token, appCheckToken, gameId, language }: ConnectDto,
+    { contractVersion, token, appCheckToken, roomId, language }: ConnectDto,
     connection: RoomConnection,
   ): Promise<void> {
     if (contractVersion !== CONTRACT_VERSION) throw new Rejection('unsupported-contract-version');
@@ -55,16 +55,16 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
 
     const previous = connection.session;
     let session: Session;
-    const release = await this.#gameLock.acquire(gameId);
+    const release = await this.#roomLock.acquire(roomId);
     try {
       const { playerId, connectionId } = await this.#runCommand(() =>
-        this.#connectPlayer.execute({ gameId, identity }),
+        this.#connectPlayer.execute({ roomId, identity }),
       );
-      // A socket that connects again, to another game or as another player, stops receiving for the previous one.
-      if (previous) this.#notifier.unregister(previous.playerId, connection.socket);
-      session = { gameId, playerId, connectionId, language };
+      // A socket that connects again, to another room or as another player, stops receiving for the previous one.
+      if (previous) this.#notifier.unregister(previous.playerId, connection);
+      session = { roomId, playerId, connectionId, language };
       connection.session = session;
-      this.#notifier.register(playerId, connection.socket);
+      this.#notifier.register(playerId, connection);
       await this.#stateSender.send(connection, session);
     } finally {
       release();
@@ -74,7 +74,7 @@ export class ConnectHandler implements SocketMessageHandler<'connect'> {
     if (previous) await this.#disconnect.end(previous);
     // A socket that closed while connecting was handled before it had this session.
     if (connection.socket.readyState === WebSocket.CLOSED) {
-      this.#notifier.unregister(session.playerId, connection.socket);
+      this.#notifier.unregister(session.playerId, connection);
       await this.#disconnect.end(session);
     }
   }

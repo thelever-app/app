@@ -1,6 +1,5 @@
 import type { AddressInfo } from 'node:net';
 import { ConsoleLogger, type Logger } from '@thelever-app/db';
-import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
 import {
   CONTRACT_VERSION,
   ServerMessageDto,
@@ -8,10 +7,17 @@ import {
   type ServerMessageDto as ServerMessage,
 } from '@thelever-app/protocol';
 import WebSocket from 'ws';
-import { composeRealtimeServer, type Storage } from '../../composition.ts';
+import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
+import { composeRealtimeServer, type Storage } from '../../composition/index.ts';
 import { type AppCheckVerifier, UncheckedAppCheck } from '../../identity/app-check-verifier.ts';
 import type { TokenVerifier } from '../../identity/token-verifier.ts';
 import { FakeTokenVerifier, tokenOf } from './fake-token-verifier.ts';
+
+/** The origin of the web in the tests, which may read the answers of the HTTP routes. */
+export const WEB_ORIGIN = 'http://localhost:5173';
+
+/** What a test room is created with when the test does not say. */
+export const ROOM_CHOICES = { groupNature: 'friends', place: 'together', dilemmaLanguage: 'es' };
 
 /** The HTTP server of the room server, as the composition root builds it but with the fake token verifier. */
 export async function composedHttpServer() {
@@ -21,6 +27,7 @@ export async function composedHttpServer() {
     pingIntervalMs: 30_000,
     storage: { kind: 'memory' },
     logger: new ConsoleLogger(),
+    webOrigins: [WEB_ORIGIN],
   });
   return http;
 }
@@ -47,6 +54,7 @@ export async function startRoomServer({
     pingIntervalMs,
     storage,
     logger,
+    webOrigins: [WEB_ORIGIN],
   });
   const { http: server, sockets } = composed;
   await new Promise<void>((resolve) => server.listen(0, resolve));
@@ -69,7 +77,11 @@ export async function startRoomServer({
   };
 }
 
-async function post(url: string, identity: string, body: object): Promise<Record<string, string>> {
+export async function post(
+  url: string,
+  identity: string,
+  body: object,
+): Promise<Record<string, string>> {
   const response = await fetch(url, {
     method: 'POST',
     headers: { Authorization: `Bearer ${tokenOf(identity)}`, 'Content-Type': 'application/json' },
@@ -79,15 +91,35 @@ async function post(url: string, identity: string, body: object): Promise<Record
   return (await response.json()) as Record<string, string>;
 }
 
-/** Ana hosts a room with Luis and Marta, and the game is in the decision phase, with the seed dilemmas. */
-export async function gameInDecisionPhase(http: string) {
-  const { roomId } = await post(`${http}/rooms`, 'ana', { nickname: 'Ana' });
+/** Ana hosts a room with Luis and Marta, all of them in the lobby and nobody connected. */
+export async function lobbyOfThree(http: string) {
+  const { roomId, code } = await post(`${http}/rooms`, 'ana', { nickname: 'Ana', ...ROOM_CHOICES });
   await post(`${http}/rooms/${roomId}/players`, 'luis', { nickname: 'Luis' });
   await post(`${http}/rooms/${roomId}/players`, 'marta', { nickname: 'Marta' });
-  const { gameId } = await post(`${http}/rooms/${roomId}/games`, 'ana', {
-    dilemmaIds: SEED_DILEMMAS.map(({ id }) => id),
-  });
-  return { roomId: roomId!, gameId: gameId! };
+  return { roomId: roomId!, code: code! };
+}
+
+/**
+ * The same lobby, and Ana has picked the seed dilemmas and started the game from her socket, which
+ * then closed: the game is in the decision phase and nobody is connected. It returns the dilemmas
+ * in the order the game plays them, which the server shuffles.
+ */
+export async function gameInDecisionPhase(server: {
+  readonly url: string;
+  readonly http: string;
+  readonly openSockets: () => number;
+}) {
+  const { roomId } = await lobbyOfThree(server.http);
+  const ana = await TestClient.connected(server.url, 'ana', roomId, 'room-state');
+  ana.send({ type: 'pick-dilemmas', dilemmaIds: SEED_DILEMMAS.map(({ id }) => id) });
+  await ana.next('room-state');
+  ana.send({ type: 'start-game' });
+  const { gameId, dilemmas } = await ana.next('game-state');
+  const before = server.openSockets();
+  ana.socket.close();
+  await ana.closed();
+  while (server.openSockets() >= before) await new Promise((resolve) => setTimeout(resolve, 5));
+  return { roomId, gameId, dilemmas };
 }
 
 /** A client of the room server that keeps every message it receives, already validated. */
@@ -113,17 +145,25 @@ export class TestClient {
     return new TestClient(socket);
   }
 
-  /** Opens a client and connects it to the game as `identity`, then waits for its game state. */
-  static async connected(url: string, identity: string, gameId: string): Promise<TestClient> {
+  /**
+   * Opens a client and connects it to the room as `identity`, then waits for the state it gets
+   * first: that of the game in progress, unless told otherwise.
+   */
+  static async connected(
+    url: string,
+    identity: string,
+    roomId: string,
+    first: 'game-state' | 'room-state' = 'game-state',
+  ): Promise<TestClient> {
     const client = await TestClient.open(url);
     client.send({
       type: 'connect',
       contractVersion: CONTRACT_VERSION,
       token: tokenOf(identity),
-      gameId,
+      roomId,
       language: 'es',
     });
-    await client.next('game-state');
+    await client.next(first);
     return client;
   }
 

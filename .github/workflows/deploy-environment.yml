@@ -31,6 +31,7 @@ jobs:
     environment: ${{ inputs.environment }}
     env:
       PROJECT: thelever-app-${{ inputs.environment }}
+      WEB_DOMAIN: ${{ inputs.environment == 'prod' && 'thelever.app' || 'dev.thelever.app' }}
       WORKLOAD_IDENTITY_PROVIDER: projects/236232367578/locations/global/workloadIdentityPools/github/providers/thelever-app-app
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -77,7 +78,7 @@ jobs:
           gcloud run deploy realtime --project "$PROJECT" --region europe-southwest1 \
             --image "$(cat image.txt)" \
             --service-account "realtime@$PROJECT.iam.gserviceaccount.com" \
-            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=realtime@$PROJECT.iam,DB_POOL_SIZE=3,APP_CHECK=required" \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=realtime@$PROJECT.iam,DB_POOL_SIZE=3,APP_CHECK=required,WEB_ORIGINS=https://$WEB_DOMAIN https://$PROJECT.web.app https://$PROJECT.firebaseapp.com" \
             --timeout 3600 --session-affinity --min-instances 0 --max-instances 2 --concurrency 250 \
             --no-cpu-throttling \
             --quiet

@@ -2,6 +2,7 @@ import type { Logger } from '@thelever-app/db';
 import {
   ConnectionChangedEvent,
   type DomainEvent,
+  LobbyChangedEvent,
   type PlayerNotifier,
   ProgressUpdatedEvent,
 } from '@thelever-app/game';
@@ -35,10 +36,10 @@ function recordingLogger() {
   return { logger, errors };
 }
 
-/** A connection of this instance, with the player in that game. */
-function connectionOf(playerId: string, gameId: string): RoomConnection {
+/** A connection of this instance, with the player in that room. */
+function connectionOf(playerId: string, roomId: string): RoomConnection {
   const connection = new RoomConnection({ send: () => {} } as unknown as WebSocket);
-  connection.session = { gameId, playerId, connectionId: `${playerId}Connection`, language: 'es' };
+  connection.session = { roomId, playerId, connectionId: `${playerId}Connection`, language: 'es' };
   return connection;
 }
 
@@ -50,18 +51,19 @@ function recordingSender(failingFor?: string) {
     send: async (_connection: RoomConnection, { playerId }: Session) => {
       if (playerId === failingFor) throw new Error('socket closed');
       sentTo.push(playerId);
+      return 'sent' as const;
     },
   };
 }
 
 /** The delivery of an instance with those connections. */
-function deliveryWith(connections: readonly RoomConnection[] = [], failingFor?: string) {
+function deliveryWith(connections: readonly RoomConnection[], failingFor?: string) {
   const notifier = new RecordingNotifier();
-  const gameLock = new KeyedLock();
+  const roomLock = new KeyedLock();
   const sender = recordingSender(failingFor);
   const { logger, errors } = recordingLogger();
-  const delivery = new GameEventDelivery(notifier, sender, gameLock, logger, () => connections);
-  return { delivery, notifier, gameLock, sender, errors };
+  const delivery = new GameEventDelivery(notifier, sender, roomLock, logger, () => connections);
+  return { delivery, notifier, roomLock, sender, errors };
 }
 
 async function settle(): Promise<void> {
@@ -70,10 +72,12 @@ async function settle(): Promise<void> {
 
 describe('GameEventDelivery', () => {
   describe('deliver', () => {
-    it('should wait for the command of the game in progress before delivering its events', async () => {
-      // Arrange: a command of the game holds it, and has not sent the answerer their state yet.
-      const { delivery, notifier, gameLock } = deliveryWith();
-      const release = await gameLock.acquire('TestGameId');
+    it('should wait for the command of the room before delivering an event of its game', async () => {
+      // Arrange: a command of the room holds it, and has not sent the answerer their state yet.
+      const { delivery, notifier, roomLock } = deliveryWith([
+        connectionOf('TestAnaId', 'TestRoomId'),
+      ]);
+      const release = await roomLock.acquire('TestRoomId');
       const progress = new ProgressUpdatedEvent('TestGameId', 'TestLuisId', 1, 6);
 
       // Act
@@ -88,13 +92,13 @@ describe('GameEventDelivery', () => {
       expect(notifier.delivered).toEqual([progress]);
     });
 
-    it('should wait for the command of the game each player plays before delivering an event of the room', async () => {
-      // Arrange: Ana plays here a game that a command holds.
-      const { delivery, notifier, gameLock } = deliveryWith([
-        connectionOf('TestAnaId', 'TestGameId'),
+    it('should wait for the command of the room before delivering an event of the room', async () => {
+      // Arrange
+      const { delivery, notifier, roomLock } = deliveryWith([
+        connectionOf('TestAnaId', 'TestRoomId'),
       ]);
-      const release = await gameLock.acquire('TestGameId');
-      const change = new ConnectionChangedEvent('TestRoomId', 'TestLuisId', true, 3);
+      const release = await roomLock.acquire('TestRoomId');
+      const change = new LobbyChangedEvent('TestRoomId', 'settings-changed', 3);
 
       // Act
       const delivering = delivery.deliver(['TestAnaId'], change, undefined);
@@ -108,9 +112,27 @@ describe('GameEventDelivery', () => {
       expect(notifier.delivered).toEqual([change]);
     });
 
+    it('should not hold an event for a room that no command of another room holds', async () => {
+      // Arrange: a command holds another room.
+      const { delivery, notifier, roomLock } = deliveryWith([
+        connectionOf('TestAnaId', 'TestRoomId'),
+      ]);
+      const release = await roomLock.acquire('TestOtherRoomId');
+      const change = new ConnectionChangedEvent('TestRoomId', 'TestLuisId', true, 3);
+
+      // Act
+      await delivery.deliver(['TestAnaId'], change, undefined);
+      release();
+
+      // Assert
+      expect(notifier.delivered).toEqual([change]);
+    });
+
     it('should log a delivery that fails and let the next one through', async () => {
       // Arrange
-      const { delivery, notifier, errors } = deliveryWith();
+      const { delivery, notifier, errors } = deliveryWith([
+        connectionOf('TestAnaId', 'TestRoomId'),
+      ]);
       notifier.failing = true;
 
       // Act
@@ -133,13 +155,13 @@ describe('GameEventDelivery', () => {
   });
 
   describe('catchUp', () => {
-    it('should send each player a fresh state once the command of their game is done', async () => {
-      // Arrange: a command holds the game of Ana, not that of Luis.
-      const { delivery, sender, gameLock } = deliveryWith([
-        connectionOf('TestAnaId', 'TestGameA'),
-        connectionOf('TestLuisId', 'TestGameB'),
+    it('should send each player a fresh state once the command of their room is done', async () => {
+      // Arrange: a command holds the room of Ana, not that of Luis.
+      const { delivery, sender, roomLock } = deliveryWith([
+        connectionOf('TestAnaId', 'TestRoomA'),
+        connectionOf('TestLuisId', 'TestRoomB'),
       ]);
-      const release = await gameLock.acquire('TestGameA');
+      const release = await roomLock.acquire('TestRoomA');
 
       // Act
       const catchingUp = delivery.catchUp();
@@ -156,7 +178,7 @@ describe('GameEventDelivery', () => {
     it('should log a fresh state that fails and send the others', async () => {
       // Arrange
       const { delivery, sender, errors } = deliveryWith(
-        [connectionOf('TestAnaId', 'TestGameA'), connectionOf('TestLuisId', 'TestGameB')],
+        [connectionOf('TestAnaId', 'TestRoomA'), connectionOf('TestLuisId', 'TestRoomB')],
         'TestAnaId',
       );
 
@@ -164,7 +186,7 @@ describe('GameEventDelivery', () => {
       await delivery.catchUp();
 
       // Assert
-      expect(errors).toEqual(['sending the game state after listening again failed']);
+      expect(errors).toEqual(['sending the state after listening again failed']);
       expect(sender.sentTo).toEqual(['TestLuisId']);
     });
   });

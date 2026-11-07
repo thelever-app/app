@@ -1,13 +1,15 @@
 import {
   ConnectionChangedEvent,
+  LobbyChangedEvent,
   ProgressUpdatedEvent,
   type DomainEvent,
   type PlayerNotifier,
 } from '@thelever-app/game';
 import { ServerMessageDto } from '@thelever-app/protocol';
-import type { WebSocket } from 'ws';
+import type { RoomConnection } from './room-connection.ts';
+import type { StateSender } from './state-sender.ts';
 
-/** The message a player receives for each event, or undefined if the event never leaves the server. */
+/** The message a player receives for each event, or undefined if the event never leaves the server as is. */
 function messageFor(event: DomainEvent): ServerMessageDto | undefined {
   if (event instanceof ProgressUpdatedEvent) {
     return {
@@ -29,29 +31,55 @@ function messageFor(event: DomainEvent): ServerMessageDto | undefined {
 }
 
 /**
- * Delivers the events of the use cases to the sockets of each player in this instance.
+ * Delivers the events of the use cases to the connections of each player in this instance. A change
+ * of the lobby reaches each player as the state they may see after it, which differs per player.
  */
 export class SocketNotifier implements PlayerNotifier {
-  readonly #sockets = new Map<string, Set<WebSocket>>();
+  readonly #connections = new Map<string, Set<RoomConnection>>();
+  readonly #stateSender: Pick<StateSender, 'send'>;
 
-  register(playerId: string, socket: WebSocket): void {
-    const sockets = this.#sockets.get(playerId) ?? new Set();
-    sockets.add(socket);
-    this.#sockets.set(playerId, sockets);
+  constructor(stateSender: Pick<StateSender, 'send'>) {
+    this.#stateSender = stateSender;
   }
 
-  unregister(playerId: string, socket: WebSocket): void {
-    const sockets = this.#sockets.get(playerId);
-    sockets?.delete(socket);
-    if (sockets?.size === 0) this.#sockets.delete(playerId);
+  register(playerId: string, connection: RoomConnection): void {
+    const connections = this.#connections.get(playerId) ?? new Set();
+    connections.add(connection);
+    this.#connections.set(playerId, connections);
+  }
+
+  unregister(playerId: string, connection: RoomConnection): void {
+    const connections = this.#connections.get(playerId);
+    connections?.delete(connection);
+    if (connections?.size === 0) this.#connections.delete(playerId);
   }
 
   async notify(playerIds: readonly string[], event: DomainEvent): Promise<void> {
+    if (event instanceof LobbyChangedEvent) {
+      await this.#sendStates(playerIds);
+      return;
+    }
     const message = messageFor(event);
     if (!message) return;
     const data = JSON.stringify(ServerMessageDto.parse(message));
     for (const playerId of playerIds) {
-      for (const socket of this.#sockets.get(playerId) ?? []) socket.send(data);
+      for (const { socket } of this.#connections.get(playerId) ?? []) socket.send(data);
     }
+  }
+
+  async #sendStates(playerIds: readonly string[]): Promise<void> {
+    const sends = playerIds.flatMap((playerId) =>
+      [...(this.#connections.get(playerId) ?? [])].map(async (connection) => {
+        const { session } = connection;
+        if (!session) return;
+        const delivered = await this.#stateSender.send(connection, session);
+        if (delivered === 'sent') return;
+        // Expelled: the connection stops receiving for the room and closes, without disconnecting
+        // anyone, since expelling already closed the connections of the player in the room.
+        this.unregister(playerId, connection);
+        connection.socket.close(1000, 'expelled');
+      }),
+    );
+    await Promise.all(sends);
   }
 }

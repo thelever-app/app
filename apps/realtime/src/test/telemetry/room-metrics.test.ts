@@ -42,8 +42,8 @@ describe('the metrics of the room server', () => {
   it('should time each message by its type and outcome', async () => {
     // Arrange
     const server = await roomServer();
-    const { gameId } = await gameInDecisionPhase(server.http);
-    const ana = await TestClient.connected(server.url, 'ana', gameId);
+    const { roomId } = await gameInDecisionPhase(server);
+    const ana = await TestClient.connected(server.url, 'ana', roomId);
 
     // Act
     ana.send({ type: 'answer-dilemma', dilemmaId: 'not-in-this-game', vote: 'option-1' });

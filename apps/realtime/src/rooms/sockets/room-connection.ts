@@ -1,9 +1,9 @@
 import { ServerMessageDto, type ConnectDto } from '@thelever-app/protocol';
 import type { WebSocket } from 'ws';
 
-/** What a connection knows once its player has connected. The player and the game never come from a message. */
+/** What a connection knows once its player has connected. The player and the room never come from a message. */
 export interface Session {
-  readonly gameId: string;
+  readonly roomId: string;
   readonly playerId: string;
   readonly connectionId: string;
   readonly language: ConnectDto['language'];

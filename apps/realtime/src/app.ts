@@ -1,4 +1,5 @@
 import express, { type ErrorRequestHandler, type Express, type RequestHandler } from 'express';
+import { cors } from './http/cors.ts';
 import type { HttpEndpoint } from './http/http-endpoint.ts';
 
 export interface AppOptions {
@@ -6,6 +7,8 @@ export interface AppOptions {
   readonly authenticate: RequestHandler;
   /** Answers whatever an endpoint throws. */
   readonly errorHandler: ErrorRequestHandler;
+  /** The origins the web is served from, which may read the answers. */
+  readonly webOrigins: readonly string[];
 }
 
 /**
@@ -14,10 +17,11 @@ export interface AppOptions {
  */
 export function createApp(
   endpoints: readonly HttpEndpoint[],
-  { authenticate, errorHandler }: AppOptions,
+  { authenticate, errorHandler, webOrigins }: AppOptions,
 ): Express {
   const app = express();
 
+  app.use(cors(webOrigins));
   app.use(express.json());
 
   for (const endpoint of endpoints) {

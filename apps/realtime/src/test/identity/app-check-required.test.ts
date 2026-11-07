@@ -1,7 +1,7 @@
 import { CONTRACT_VERSION } from '@thelever-app/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import { FakeAppCheckVerifier, VALID_APP_CHECK } from '../support/fake-app-check-verifier.ts';
-import { bearer, startRoomServer, TestClient } from '../support/room-server.ts';
+import { bearer, ROOM_CHOICES, startRoomServer, TestClient } from '../support/room-server.ts';
 import { tokenOf } from '../support/fake-token-verifier.ts';
 
 const servers: Awaited<ReturnType<typeof startRoomServer>>[] = [];
@@ -21,7 +21,7 @@ function createRoom(http: string, headers: Record<string, string>) {
   return fetch(`${http}/rooms`, {
     method: 'POST',
     headers: { Authorization: bearer('ana'), 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify({ nickname: 'Ana' }),
+    body: JSON.stringify({ nickname: 'Ana', ...ROOM_CHOICES }),
   });
 }
 
@@ -50,7 +50,7 @@ describe('App Check', () => {
     expect(response.status).toBe(201);
   });
 
-  it('should turn down a connect without a valid App Check token, before looking at the game', async () => {
+  it('should turn down a connect without a valid App Check token, before looking at the room', async () => {
     // Arrange
     const { url } = await serverAskingForAppCheck();
     const ana = await TestClient.open(url);
@@ -60,7 +60,7 @@ describe('App Check', () => {
       type: 'connect',
       contractVersion: CONTRACT_VERSION,
       token: tokenOf('ana'),
-      gameId: 'TestGameId',
+      roomId: 'TestRoomId',
       language: 'es',
     });
 

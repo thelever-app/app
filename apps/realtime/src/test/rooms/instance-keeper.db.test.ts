@@ -9,7 +9,7 @@ import {
 } from '@thelever-app/db';
 import { useTestDatabase } from '@thelever-app/db/test';
 import { DisconnectConnectionsUseCase, Room } from '@thelever-app/game';
-import { SequentialIdGenerator } from '@thelever-app/game/in-memory';
+import { SequentialIdGenerator, SequentialRandomness } from '@thelever-app/game/in-memory';
 import { describe, expect, it } from 'vitest';
 import { InstanceKeeper } from '../../rooms/instance-keeper.ts';
 
@@ -40,8 +40,16 @@ describe('InstanceKeeper', () => {
       const db = database.db();
       const rooms = new PostgresRoomRepository(db, 'TestInstance');
       const room = Room.create(
-        { hostNickname: 'Ana', hostIdentity: 'TestAna' },
+        {
+          hostNickname: 'Ana',
+          hostIdentity: 'TestAna',
+          groupNature: 'friends',
+          place: 'together',
+          dilemmaLanguage: 'es',
+          code: 'K7M2Q',
+        },
         new SequentialIdGenerator(),
+        new SequentialRandomness(),
       );
       room.connect(room.host.id, 'TestAnaConnection');
       const instances = new InstancesWithALateConnection(db, async () => {

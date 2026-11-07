@@ -2,11 +2,11 @@ import type { AnswerDilemmaUseCase } from '@thelever-app/game';
 import { describe, expect, it } from 'vitest';
 import { KeyedLock } from '../../../concurrency/keyed-lock.ts';
 import { AnswerDilemmaHandler } from '../../../rooms/sockets/answer-dilemma.handler.ts';
-import type { GameStateSender } from '../../../rooms/sockets/game-state-sender.ts';
+import type { StateSender } from '../../../rooms/sockets/state-sender.ts';
 import type { RoomConnection } from '../../../rooms/sockets/room-connection.ts';
 
 const SESSION = {
-  gameId: 'TestGameId',
+  roomId: 'TestRoomId',
   playerId: 'TestAnaId',
   connectionId: 'TestConnectionId',
   language: 'es',
@@ -15,14 +15,14 @@ const SESSION = {
 describe('AnswerDilemmaHandler', () => {
   // Each later change reaches the answerer as a delta, which the screen applies only on top of a
   // state that already has their own answer: the state must leave before anything newer exists.
-  it('should send the answerer a fresh state before the next command of the game gets in', async () => {
+  it('should send the answerer a fresh state before the next command of the room gets in', async () => {
     // Arrange
-    const gameLock = new KeyedLock();
+    const roomLock = new KeyedLock();
     let lockFreeWhileSending: boolean | undefined;
     const stateSender = {
       async send() {
         const entered = await Promise.race([
-          gameLock.acquire(SESSION.gameId).then((release) => {
+          roomLock.acquire(SESSION.roomId).then((release) => {
             release();
             return true;
           }),
@@ -30,9 +30,9 @@ describe('AnswerDilemmaHandler', () => {
         ]);
         lockFreeWhileSending = entered;
       },
-    } as unknown as GameStateSender;
+    } as unknown as StateSender;
     const answerDilemma = { execute: async () => {} } as unknown as AnswerDilemmaUseCase;
-    const handler = new AnswerDilemmaHandler(answerDilemma, gameLock, stateSender, (command) =>
+    const handler = new AnswerDilemmaHandler(answerDilemma, roomLock, stateSender, (command) =>
       command(),
     );
 
