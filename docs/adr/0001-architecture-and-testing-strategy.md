@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-15
-- Revised: 2026-11-04 (integration between bounded contexts)
+- Revised: 2026-11-04 (integration between bounded contexts), 2026-11-06 (the @screen tag)
 - Notion: [ADR 0001: arquitectura y estrategia de tests (DDD, hexagonal y BDD en dos niveles)](https://app.notion.com/p/3fa95e6919c581bb8105c6c894a93074)
 
 ## Context
@@ -44,7 +44,7 @@ The server is authoritative: the client renders state received from the applicat
 
 | Level       | Runs against                                                    | Tool                                       | Scope                                                            |
 | ----------- | --------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------- |
-| Acceptance  | The application layer, in Node, with in-memory adapters         | Cucumber.js, profile `acceptance`          | Every scenario not tagged `@todo`                                |
+| Acceptance  | The application layer, in Node, with in-memory adapters         | Cucumber.js, profile `acceptance`          | Every scenario not tagged `@todo` or `@screen`                   |
 | End to end  | The built web app, the room server and several browser contexts | Cucumber.js with Playwright, profile `e2e` | Scenarios tagged `@ui`                                           |
 | Unit        | Domain and application code                                     | Vitest                                     | Test-driven: no domain code without a failing test asking for it |
 | Component   | React components                                                | Vitest with Testing Library                | Rendering and interaction of each screen                         |
@@ -52,7 +52,7 @@ The server is authoritative: the client renders state received from the applicat
 
 Step texts are written once. Step definitions talk to a driver that expresses actions and observations in domain terms; the acceptance profile uses a driver that calls use cases and the end-to-end profile one that drives browsers.
 
-**Workflow.** Outside in, with two loops: a scenario fails, unit tests drive the domain and application code until it passes, then refactor. Tags live in Notion: `@ui` for scenarios visible on screen and `@todo` for scenarios not implemented yet. The CI runs `not @todo` in the acceptance profile on every pull request; removing `@todo` is part of finishing a story. The end-to-end profile is added with the real room server.
+**Workflow.** Outside in, with two loops: a scenario fails, unit tests drive the domain and application code until it passes, then refactor. Tags live in Notion: `@ui` for scenarios visible on screen, `@screen` for those that happen only on the device and the application layer knows nothing of (such as a field prefilled from what the device remembers), which run only end to end, and `@todo` for scenarios not implemented yet. The CI runs `not @todo and not @screen` in the acceptance profile on every pull request; removing `@todo` is part of finishing a story. The end-to-end profile is added with the real room server.
 
 ## Consequences
 
