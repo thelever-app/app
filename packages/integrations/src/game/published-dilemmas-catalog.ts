@@ -3,11 +3,14 @@ import {
   type GetDilemmas,
   type GetDilemmasInput,
   type GetDilemmasOutput,
+  type SearchDilemmas,
 } from '@thelever-app/dilemmas/published';
 import {
+  type CatalogDilemma,
   type DilemmaCatalog,
   type DilemmaContent,
   DilemmaNotFoundError,
+  type DilemmaSearch,
   type GameDilemma,
 } from '@thelever-app/game';
 
@@ -17,9 +20,11 @@ import {
  */
 export class PublishedDilemmasCatalog implements DilemmaCatalog {
   readonly #getDilemmas: GetDilemmas;
+  readonly #searchDilemmas: SearchDilemmas;
 
-  constructor(getDilemmas: GetDilemmas) {
+  constructor(getDilemmas: GetDilemmas, searchDilemmas: SearchDilemmas) {
     this.#getDilemmas = getDilemmas;
+    this.#searchDilemmas = searchDilemmas;
   }
 
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
@@ -38,6 +43,18 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
   ): Promise<readonly DilemmaContent[]> {
     const found = await this.#find({ dilemmas, language });
     return found.map(({ dilemmaId, text, options }) => ({ dilemmaId, text, options }));
+  }
+
+  async search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]> {
+    const { dilemmas } = await this.#searchDilemmas.execute(criteria);
+    // Game keeps the version a game plays when it starts, not when it is found.
+    return dilemmas.map(({ dilemmaId, text, minimumAge, category, tags }) => ({
+      dilemmaId,
+      text,
+      minimumAge,
+      category,
+      tags,
+    }));
   }
 
   async #find(input: GetDilemmasInput): Promise<GetDilemmasOutput['dilemmas']> {
