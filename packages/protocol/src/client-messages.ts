@@ -5,7 +5,7 @@ import { z } from 'zod';
  * 2 since App Check: a client of 1 could not read the error that turns it down. 3 since the lobby:
  * a connection is to a room, not to a game.
  */
-export const CONTRACT_VERSION = 3;
+export const CONTRACT_VERSION = 4;
 
 /** The languages a player can read the dilemmas in. */
 export const LanguageDto = z.enum(['es', 'en', 'fr', 'de', 'it', 'pt', 'ca']);
@@ -52,13 +52,14 @@ export const RoomSettingsDto = z.strictObject({
   variant: z.enum(['nominal', 'anonymous']),
   adultsOnly: z.boolean(),
   dilemmaLanguage: LanguageDto,
-  /** One of the categories of Dilemmas, which Game does not know. */
-  category: z.string().min(1),
+  /** Categories of Dilemmas, which Game does not know; none, every category. */
+  categories: z.array(z.string().min(1)).max(20),
   dilemmaCount: z.union([z.literal(6), z.literal(8), z.literal(10), z.literal(12)]),
   totalTimeInMinutes: z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(10)]),
-  /** Whether a game by category keeps room for dilemmas in exploration. */
+  /** Whether a game by categories keeps room for dilemmas in exploration. */
   newDilemmas: z.boolean(),
-  playersCanAddDilemmas: z.boolean(),
+  /** How many dilemmas each player, the host too, may add in the lobby; none, and nobody adds any. */
+  dilemmasPerPlayer: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
 });
 
 /**
@@ -111,21 +112,21 @@ export const ChangeSettingsDto = z.strictObject({
   traceparent: TraceparentDto.optional(),
 });
 
-/** The host picks the dilemmas of the game one by one; none, and the game goes by category. */
+/** The host picks the dilemmas of the game one by one; none, and the game goes by categories. */
 export const PickDilemmasDto = z.strictObject({
   type: z.literal('pick-dilemmas'),
   dilemmaIds: z.array(z.string().min(1)).max(50),
   traceparent: TraceparentDto.optional(),
 });
 
-/** A player adds a dilemma of the catalog, if the host allows it; one per player. */
+/** A player adds a dilemma of the catalog, up to as many as the host allows each one. */
 export const AddDilemmaDto = z.strictObject({
   type: z.literal('add-dilemma'),
   dilemmaId: z.string().min(1),
   traceparent: TraceparentDto.optional(),
 });
 
-/** The host removes a dilemma a player added, without knowing who. */
+/** The host removes a dilemma a player added, without knowing who; a player, one they added. */
 export const RemoveAddedDilemmaDto = z.strictObject({
   type: z.literal('remove-added-dilemma'),
   dilemmaId: z.string().min(1),

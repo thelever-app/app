@@ -3,7 +3,6 @@ import {
   AvatarTakenError,
   DecisionPhaseNotStartedError,
   DilemmasMissingError,
-  DilemmaAlreadyAddedError,
   DilemmaNotFoundError,
   DilemmaNotInGameError,
   DilemmaNotReachedError,
@@ -25,6 +24,7 @@ import {
   RoomCodeNotFoundError,
   RoomFullError,
   RoomNotFoundError,
+  TooManyAddedDilemmasError,
 } from '@thelever-app/game';
 import type { ErrorCodeDto } from '@thelever-app/protocol';
 import { InvalidAppCheckError } from '../identity/app-check-verifier.ts';
@@ -48,7 +48,7 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [AvatarTakenError, 'avatar-taken'],
   [NotEnoughPlayersError, 'not-enough-players'],
   [AddingDilemmasNotAllowedError, 'adding-dilemmas-not-allowed'],
-  [DilemmaAlreadyAddedError, 'dilemma-already-added'],
+  [TooManyAddedDilemmasError, 'too-many-added-dilemmas'],
   [DilemmaNotSuitableError, 'dilemma-not-suitable'],
   [InvalidAvatarError, 'invalid-avatar'],
   [InvalidRoomSettingError, 'invalid-room-setting'],
@@ -59,7 +59,7 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [DilemmaNotFoundError, 'dilemma-not-found'],
   [NicknameMissingError, 'nickname-missing'],
   [DuplicateDilemmaError, 'duplicate-dilemma'],
-  // No dilemma of the catalog suits the room: its category, language or age leave none.
+  // No dilemma of the catalog suits the room: its categories, language or age leave none.
   [DilemmasMissingError, 'dilemmas-missing'],
 ];
 

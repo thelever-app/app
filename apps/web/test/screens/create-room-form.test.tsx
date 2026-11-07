@@ -85,12 +85,45 @@ describe('CreateRoomForm', () => {
     expect(lastNickname()).toBe('Ana');
   });
 
+  it('should not let the room be created, and say what is missing, until everything is chosen', async () => {
+    // Arrange
+    const { t } = await renderForm(async () => CREATED);
+    const button = () => screen.getByRole('button');
+    const missing: string[] = [];
+
+    // Act
+    fireEvent.change(screen.getByRole('textbox', { name: t('createRoom.nickname') }), {
+      target: { value: '   ' },
+    });
+    missing.push(button().textContent);
+    fireEvent.change(screen.getByRole('textbox', { name: t('createRoom.nickname') }), {
+      target: { value: 'Ana' },
+    });
+    missing.push(button().textContent);
+    fireEvent.click(screen.getByRole('radio', { name: t('createRoom.groupNature.friends') }));
+    missing.push(button().textContent);
+    const disabledUntilTheEnd = button().hasAttribute('disabled');
+    fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.remote') }));
+
+    // Assert
+    expect(missing).toEqual([
+      t('createRoom.missing.nickname'),
+      t('createRoom.missing.groupNature'),
+      t('createRoom.missing.place'),
+    ]);
+    expect(disabledUntilTheEnd).toBe(true);
+    expect(screen.getByRole('button', { name: t('createRoom.submit') })).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+
   it('should say why the room server said no, and keep what the player chose', async () => {
     // Arrange
     const { fill, submit, t, location } = await renderForm(async () => {
-      throw new RoomApiError('nickname-missing');
+      throw new RoomApiError('dilemmas-missing');
     });
-    fill({ nickname: '   ', nature: 'family', place: 'together' });
+    fill({ nickname: 'Ana', nature: 'family', place: 'together' });
 
     // Act
     submit();
@@ -98,7 +131,11 @@ describe('CreateRoomForm', () => {
     // Assert
     expect(await screen.findByRole('alert')).toHaveProperty(
       'textContent',
-      t('roomErrors.nickname-missing'),
+      t('roomErrors.dilemmas-missing'),
+    );
+    expect(screen.getByRole('textbox', { name: t('createRoom.nickname') })).toHaveProperty(
+      'value',
+      'Ana',
     );
     expect(screen.getByRole('radio', { name: t('createRoom.groupNature.family') })).toHaveProperty(
       'checked',

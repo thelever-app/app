@@ -89,7 +89,7 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
 
   async search(criteria: DilemmaCriteria): Promise<Dilemma[]> {
     const db = currentTransaction<DilemmasTables>() ?? this.#db;
-    const { dilemmaIds, category, tags, maximumMinimumAge, status } = criteria;
+    const { dilemmaIds, categories = [], maximumMinimumAge, status } = criteria;
     if (dilemmaIds?.length === 0) return [];
 
     const rows = await db
@@ -129,20 +129,8 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
       .where('dilemma_versions.status', '=', status)
       .where('dilemma_versions.minimum_age', '<=', maximumMinimumAge)
       .$if(dilemmaIds !== undefined, (query) => query.where('dilemmas.id', 'in', dilemmaIds ?? []))
-      .$if(category !== undefined, (query) =>
-        query.where('dilemma_versions.category', '=', category as Category),
-      )
-      .$if((tags ?? []).length > 0, (query) =>
-        query.where(
-          ({ selectFrom }) =>
-            selectFrom('dilemma_version_tags')
-              .select(({ fn }) => fn.countAll<string>().as('count'))
-              .whereRef('dilemma_version_tags.dilemma_id', '=', 'dilemma_versions.dilemma_id')
-              .whereRef('dilemma_version_tags.version', '=', 'dilemma_versions.number')
-              .where('dilemma_version_tags.tag', 'in', tags ?? []),
-          '=',
-          String(new Set(tags).size),
-        ),
+      .$if(categories.length > 0, (query) =>
+        query.where('dilemma_versions.category', 'in', categories as Category[]),
       )
       // Byte order, as the other implementations sort.
       .orderBy(sql`dilemmas.id collate "C"`)

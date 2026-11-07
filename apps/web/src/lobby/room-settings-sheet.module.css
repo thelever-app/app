@@ -1,3 +1,14 @@
+/* The design leaves 24px between the parts of the settings, so each one reads on its own. */
+.content {
+  gap: var(--space-6);
+}
+
+/* A part that begins a new topic: a line above it. */
+.section {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
 .group {
   margin: 0;
   padding: 0;
@@ -130,12 +141,6 @@
   font-weight: 500;
 }
 
-.selects {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
 .select {
   display: flex;
   flex-direction: column;
@@ -145,9 +150,10 @@
   font-weight: 500;
 }
 
+/* Room on the right for the arrow of the select, which the browser draws inside the padding. */
 .select select {
-  min-height: 44px;
-  padding: 0 var(--space-2);
+  min-height: 48px;
+  padding: 0 36px 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
@@ -168,5 +174,56 @@
   font: inherit;
   font-weight: 600;
   color: var(--color-ink);
+  cursor: pointer;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.chip[aria-checked='true'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: none;
+}
+
+.picked {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 6px 0 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.change {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
   cursor: pointer;
 }

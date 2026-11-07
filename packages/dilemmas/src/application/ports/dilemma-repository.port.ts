@@ -4,9 +4,8 @@ import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 /** Which public dilemmas to look for, at their current version; every criterion given must hold. */
 export interface DilemmaCriteria {
   readonly dilemmaIds?: readonly string[];
-  readonly category?: string;
-  /** Every one of them. */
-  readonly tags?: readonly string[];
+  /** Any of them; none, every category. */
+  readonly categories?: readonly string[];
   /** 16 leaves out the dilemmas for adults. */
   readonly maximumMinimumAge: MinimumAge;
   readonly status: DilemmaStatus;

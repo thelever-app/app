@@ -12,7 +12,7 @@ export interface ComposedDilemma {
 }
 
 /**
- * The exploration slots: how many dilemmas in exploration a game by category keeps room for, by
+ * The exploration slots: how many dilemmas in exploration a game by categories keeps room for, by
  * its number of dilemmas. Each row applies from its `fromDilemmaCount` on. The values are
  * settings, not rules of the game.
  */

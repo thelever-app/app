@@ -12,7 +12,7 @@ const LANGUAGES: Readonly<Record<string, string>> = { English: 'en', Spanish: 'e
 /** Test data: a new value for each part of the configuration the host can change before starting. */
 const NEW_CONFIGURATION: Partial<SettingsView> = {
   dilemmaLanguage: 'fr',
-  category: 'honesty',
+  categories: ['honesty'],
   dilemmaCount: 6,
   totalTimeInMinutes: 4,
 };
@@ -132,10 +132,10 @@ Then('the dilemmas of the room are in {word}', async function (this: GameWorld, 
 });
 
 Then(
-  'the room has a default category, number of dilemmas and total time',
+  'the room has default categories, number of dilemmas and total time',
   async function (this: GameWorld) {
     const settings = await this.driver.settingsSeenBy(await this.host());
-    assert.ok(settings.category, 'the room has no category');
+    assert.deepEqual(settings.categories, [], 'the room does not start with every category');
     assert.ok(settings.dilemmaCount > 0, 'the room has no number of dilemmas');
     assert.ok(settings.totalTimeInMinutes > 0, 'the room has no total time');
   },
@@ -146,7 +146,7 @@ Given('a host in the lobby', async function (this: GameWorld) {
 });
 
 When(
-  'the host changes the dilemma language, the category, the number of dilemmas or the total time',
+  'the host changes the dilemma language, the categories, the number of dilemmas or the total time',
   async function (this: GameWorld) {
     this.changes = NEW_CONFIGURATION;
     await this.driver.changeSettings(await this.host(), this.changes);
@@ -161,7 +161,7 @@ Then('the game uses the new configuration', async function (this: GameWorld) {
   assert.equal(settings.totalTimeInMinutes, this.changes.totalTimeInMinutes);
   assert.equal(dilemmas.length, this.changes.dilemmaCount);
   for (const dilemmaId of dilemmas) {
-    assert.equal(this.driver.catalogEntryOf(dilemmaId).category, this.changes.category);
+    assert.ok(this.changes.categories?.includes(this.driver.catalogEntryOf(dilemmaId).category));
   }
 });
 
@@ -175,7 +175,7 @@ Given(
 
 When('{string} changes the configuration', async function (this: GameWorld, host: string) {
   await this.hostIs(host);
-  this.changes = { variant: 'anonymous', category: 'honesty', totalTimeInMinutes: 8 };
+  this.changes = { variant: 'anonymous', categories: ['honesty'], totalTimeInMinutes: 8 };
   await this.driver.changeSettings(host, this.changes);
 });
 
@@ -184,7 +184,11 @@ Then(
   async function (this: GameWorld, player: string) {
     const seen = await this.driver.settingsSeenBy(player);
     for (const [setting, value] of Object.entries(this.changes)) {
-      assert.equal(seen[setting as keyof SettingsView], value, `${player} sees the old ${setting}`);
+      assert.deepEqual(
+        seen[setting as keyof SettingsView],
+        value,
+        `${player} sees the old ${setting}`,
+      );
     }
   },
 );
@@ -329,10 +333,10 @@ Then('the game can include dilemmas for adults', async function (this: GameWorld
 });
 
 When(
-  'the host searches the tag {string} and picks {int} dilemmas',
-  async function (this: GameWorld, tag: string, count: number) {
+  'the host searches {string} and picks {int} dilemmas',
+  async function (this: GameWorld, text: string, count: number) {
     const host = await this.host();
-    const found = await this.driver.searchDilemmas(host, [tag]);
+    const found = await this.driver.searchDilemmas(host, text);
     assert.ok(found.length >= count, `the search shows only ${found.length} dilemmas`);
     this.dilemmas = found.slice(0, count);
     await this.driver.pickDilemmas(host, [...this.dilemmas]);
@@ -361,6 +365,57 @@ Then('only dilemmas suitable from 16 are shown', function (this: GameWorld) {
   assert.ok(minimumAgesOf(this, this.dilemmas).every((age) => age === 16));
 });
 
+When('the host searches part of the text of a dilemma', async function (this: GameWorld) {
+  const host = await this.host();
+  const [dilemmaId] = (await this.driver.searchDilemmas(host)).slice(-1);
+  assert.ok(dilemmaId, 'the catalog has no dilemma for the room');
+  const { text } = this.driver.catalogEntryOf(dilemmaId);
+  // The end of its text, in other case: part of a word, as a player types it.
+  const part = text.slice(-Math.ceil(text.length / 3)).toUpperCase();
+  this.dilemmas = [dilemmaId];
+  this.found = await this.driver.searchDilemmas(host, part);
+});
+
+Then('that dilemma is shown', function (this: GameWorld) {
+  const [dilemmaId] = this.dilemmas;
+  assert.ok(dilemmaId, 'no step said which dilemma');
+  assert.ok(this.found.includes(dilemmaId), `the search does not show ${dilemmaId}`);
+});
+
+When(
+  'the host chooses the categories {string} and {string}',
+  async function (this: GameWorld, first: string, second: string) {
+    this.changes = { categories: [first, second] };
+    await this.driver.changeSettings(await this.host(), this.changes);
+  },
+);
+
+Then('every dilemma of the game is of one of those categories', async function (this: GameWorld) {
+  const dilemmas = await dilemmasOfTheGame(this);
+  assert.ok(dilemmas.length > 0, 'the game has no dilemmas');
+  for (const dilemmaId of dilemmas) {
+    const { category } = this.driver.catalogEntryOf(dilemmaId);
+    assert.ok(this.changes.categories?.includes(category), `${dilemmaId} is of ${category}`);
+  }
+});
+
+Given('the host has picked specific dilemmas', async function (this: GameWorld) {
+  const host = await this.host();
+  const found = await this.driver.searchDilemmas(host);
+  await this.driver.pickDilemmas(host, found.slice(0, 2));
+  assert.equal((await this.driver.pickedDilemmasSeenBy(host)).length, 2);
+});
+
+When('the host chooses to play by categories', async function (this: GameWorld) {
+  await this.driver.playByCategories(await this.host());
+});
+
+Then('no dilemma is picked for the game', async function (this: GameWorld) {
+  for (const viewer of this.inRoom) {
+    assert.deepEqual(await this.driver.pickedDilemmasSeenBy(viewer), [], viewer);
+  }
+});
+
 Given('the option to include new dilemmas is on by default', async function (this: GameWorld) {
   const settings = await this.driver.settingsSeenBy(await this.host());
   assert.equal(settings.newDilemmas, true);
@@ -383,12 +438,12 @@ Given(
   '{string} has allowed players to add dilemmas',
   async function (this: GameWorld, host: string) {
     await this.hostIs(host);
-    await this.driver.changeSettings(host, { playersCanAddDilemmas: true });
+    await this.driver.changeSettings(host, { dilemmasPerPlayer: 1 });
   },
 );
 
 Given('the host has allowed players to add dilemmas', async function (this: GameWorld) {
-  await this.driver.changeSettings(await this.host(), { playersCanAddDilemmas: true });
+  await this.driver.changeSettings(await this.host(), { dilemmasPerPlayer: 1 });
 });
 
 Given('a player has added a dilemma', async function (this: GameWorld) {

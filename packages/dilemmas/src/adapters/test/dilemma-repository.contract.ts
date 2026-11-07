@@ -47,7 +47,6 @@ function catalogDilemma(
   id: string,
   facts: {
     readonly category?: Category;
-    readonly tags?: readonly string[];
     readonly minimumAge?: MinimumAge;
     readonly status?: DilemmaStatus;
     readonly visibility?: Visibility;
@@ -66,7 +65,7 @@ function catalogDilemma(
         { id: `${id}Option2`, text: 'TestOption2' },
       ],
       category: facts.category ?? 'honesty',
-      tags: facts.tags ?? [],
+      tags: [],
       minimumAge: facts.minimumAge ?? 16,
       status: facts.status ?? 'in-catalog',
     },
@@ -286,33 +285,34 @@ export function describeDilemmaRepositoryContract(
         expect(forAdults).toEqual(['TestAdultDilemma', 'TestDilemma']);
       });
 
-      it('should find only the dilemmas of the category given', async () => {
+      it('should find only the dilemmas of any of the categories given', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(catalogDilemma('TestHonestyDilemma'));
+        await repository.save(catalogDilemma('TestLoyaltyDilemma', { category: 'loyalty' }));
+        await repository.save(catalogDilemma('TestJusticeDilemma', { category: 'justice' }));
+
+        // Act
+        const found = await idsFound(repository, {
+          ...EVERYONE,
+          categories: ['loyalty', 'justice'],
+        });
+
+        // Assert
+        expect(found).toEqual(['TestJusticeDilemma', 'TestLoyaltyDilemma']);
+      });
+
+      it('should find the dilemmas of every category when none is given', async () => {
         // Arrange
         const repository = await create();
         await repository.save(catalogDilemma('TestHonestyDilemma'));
         await repository.save(catalogDilemma('TestLoyaltyDilemma', { category: 'loyalty' }));
 
         // Act
-        const found = await idsFound(repository, { ...EVERYONE, category: 'loyalty' });
+        const found = await idsFound(repository, { ...EVERYONE, categories: [] });
 
         // Assert
-        expect(found).toEqual(['TestLoyaltyDilemma']);
-      });
-
-      it('should find only the dilemmas with every tag given', async () => {
-        // Arrange
-        const repository = await create();
-        await repository.save(catalogDilemma('TestBoth', { tags: ['testfamily', 'testwork'] }));
-        await repository.save(catalogDilemma('TestFamily', { tags: ['testfamily'] }));
-        await repository.save(catalogDilemma('TestNone'));
-
-        // Act
-        const one = await idsFound(repository, { ...EVERYONE, tags: ['testfamily'] });
-        const both = await idsFound(repository, { ...EVERYONE, tags: ['testwork', 'testfamily'] });
-
-        // Assert
-        expect(one).toEqual(['TestBoth', 'TestFamily']);
-        expect(both).toEqual(['TestBoth']);
+        expect(found).toEqual(['TestHonestyDilemma', 'TestLoyaltyDilemma']);
       });
 
       it('should find only the dilemmas with the ids given', async () => {
@@ -335,7 +335,7 @@ export function describeDilemmaRepositoryContract(
         await repository.save(revised());
 
         // Act
-        const asItWas = await idsFound(repository, { ...EVERYONE, category: 'honesty' });
+        const asItWas = await idsFound(repository, { ...EVERYONE, categories: ['honesty'] });
         const asItIs = await repository.search({ ...EVERYONE, maximumMinimumAge: 18 });
 
         // Assert

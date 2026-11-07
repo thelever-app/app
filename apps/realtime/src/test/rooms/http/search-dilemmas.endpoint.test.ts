@@ -30,29 +30,30 @@ describe('GET /rooms/:roomId/dilemmas', () => {
     );
   });
 
-  it('should find only the dilemmas of the category and with every tag asked for', async () => {
-    // Arrange
+  it('should find the dilemmas of the category with what the player typed, the best match first', async () => {
+    // Arrange: the trolley is tagged «tranvía», and typing it without the accent finds it too.
     const { server, roomId } = await roomOfAna();
     const [trolley] = SEED_DILEMMAS;
 
     // Act
     const response = await request(server)
       .get(`/rooms/${roomId}/dilemmas`)
-      .query({ category: trolley!.category, tags: trolley!.tags.join(',') })
+      .query({ category: trolley!.category, q: 'TRANVIA' })
       .set('Authorization', bearer('ana'));
 
     // Assert
-    expect(response.body).toEqual({
-      dilemmas: [
-        {
-          dilemmaId: trolley!.id,
-          text: trolley!.text,
-          minimumAge: trolley!.minimumAge,
-          category: trolley!.category,
-          tags: trolley!.tags,
-        },
-      ],
+    expect(response.body.dilemmas[0]).toEqual({
+      dilemmaId: trolley!.id,
+      text: trolley!.text,
+      minimumAge: trolley!.minimumAge,
+      category: trolley!.category,
+      tags: trolley!.tags,
     });
+    expect(
+      response.body.dilemmas.every(
+        ({ category }: { category: string }) => category === trolley!.category,
+      ),
+    ).toBe(true);
   });
 
   it('should answer player-not-in-room to someone who is not in the room', async () => {

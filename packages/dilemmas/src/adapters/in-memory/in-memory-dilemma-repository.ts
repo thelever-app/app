@@ -49,8 +49,7 @@ export class InMemoryDilemmaRepository implements DilemmaRepository {
         dilemma.status === criteria.status &&
         dilemma.minimumAge <= criteria.maximumMinimumAge &&
         (!criteria.dilemmaIds || criteria.dilemmaIds.includes(dilemma.id)) &&
-        (!criteria.category || dilemma.category === criteria.category) &&
-        (criteria.tags ?? []).every((tag) => dilemma.tags.includes(tag)),
+        (!criteria.categories?.length || criteria.categories.includes(dilemma.category)),
     );
   }
 }

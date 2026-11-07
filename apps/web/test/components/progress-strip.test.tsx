@@ -39,7 +39,7 @@ describe('ProgressStrip', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual([
-      `${t('playerList.you')} ${count(1)}`,
+      `${t('playerList.you', { name: 'Ana' })} ${count(1)}`,
       `Luis ${count(0)}`,
       `Marta ${count(2)}`,
       `Pablo ${count(3)}`,

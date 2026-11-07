@@ -15,11 +15,11 @@ const settings = {
   variant: 'nominal',
   adultsOnly: false,
   dilemmaLanguage: 'es',
-  category: 'life-and-death',
+  categories: ['life-and-death', 'honesty'],
   dilemmaCount: 8,
   totalTimeInMinutes: 6,
   newDilemmas: true,
-  playersCanAddDilemmas: false,
+  dilemmasPerPlayer: 2,
 };
 
 const roomState = {
@@ -48,7 +48,7 @@ const roomState = {
     },
   ],
   addedDilemmas: [{ dilemmaId: 'dilemma-1', text: 'Text of the first dilemma' }],
-  ownAddedDilemmaId: 'dilemma-1',
+  ownAddedDilemmaIds: ['dilemma-1'],
   pickedDilemmas: [],
   currentGameId: null,
 };
@@ -94,10 +94,14 @@ describe('RoomStateDto', () => {
       players: [{ ...ana, avatar: { face: 'face-13', color: 'khaki' } }, luis],
     };
     const badCount = { ...roomState, settings: { ...settings, dilemmaCount: 7 } };
+    const tooManyPerPlayer = { ...roomState, settings: { ...settings, dilemmasPerPlayer: 4 } };
+    const blankCategory = { ...roomState, settings: { ...settings, categories: [''] } };
 
     // Act & Assert
     expect(RoomStateDto.safeParse(badFace).success).toBe(false);
     expect(RoomStateDto.safeParse(badCount).success).toBe(false);
+    expect(RoomStateDto.safeParse(tooManyPerPlayer).success).toBe(false);
+    expect(RoomStateDto.safeParse(blankCategory).success).toBe(false);
   });
 
   it('should reject a code that is not 5 characters long', () => {

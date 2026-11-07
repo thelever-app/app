@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import mascotWaiting from '../assets/brand/mascot-waiting.svg';
+// Inline, in the page itself: these screens show when the network may be gone.
+import mascotWaiting from '../assets/brand/mascot-waiting.svg?inline';
 import { Icon } from '../components/icon.tsx';
 import screen from './screen.module.css';
 import styles from './join-refusal.module.css';

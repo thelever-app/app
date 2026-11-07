@@ -28,7 +28,8 @@ export interface RoomApi {
   joinRoom(roomId: string, nickname: string): Promise<JoinRoomResponseDto>;
   searchDilemmas(
     roomId: string,
-    criteria: { readonly category?: string; readonly tags?: readonly string[] },
+    /** One category, or every one; what the player typed, looked for in the text and the tags. */
+    criteria: { readonly category?: string; readonly q?: string },
   ): Promise<SearchDilemmasResponseDto['dilemmas']>;
 }
 
@@ -91,10 +92,10 @@ export function httpRoomApi({
       call('POST', `/rooms/${encodeURIComponent(roomId)}/players`, JoinRoomResponseDto, {
         nickname,
       }),
-    searchDilemmas: async (roomId, { category, tags }) => {
+    searchDilemmas: async (roomId, { category, q }) => {
       const query = new URLSearchParams();
       if (category) query.set('category', category);
-      if (tags && tags.length > 0) query.set('tags', tags.join(','));
+      if (q) query.set('q', q);
       const search = query.size > 0 ? `?${query.toString()}` : '';
       const { dilemmas } = await call(
         'GET',

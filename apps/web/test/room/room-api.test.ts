@@ -142,19 +142,16 @@ describe('httpRoomApi', () => {
   });
 
   describe('searchDilemmas', () => {
-    it('should ask for the dilemmas of the category with every tag, separated by commas', async () => {
+    it('should ask for the dilemmas of the category with what the player typed', async () => {
       // Arrange
       const { fetch, calls } = answering(200, { dilemmas: [] });
 
       // Act
-      await apiWith(fetch).searchDilemmas('room-1', {
-        category: 'honesty',
-        tags: ['family', 'work'],
-      });
+      await apiWith(fetch).searchDilemmas('room-1', { category: 'honesty', q: 'tranvía rojo' });
 
       // Assert
       expect(calls[0]?.url).toBe(
-        'https://realtime.example/rooms/room-1/dilemmas?category=honesty&tags=family%2Cwork',
+        'https://realtime.example/rooms/room-1/dilemmas?category=honesty&q=tranv%C3%ADa+rojo',
       );
     });
   });

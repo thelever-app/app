@@ -8,7 +8,7 @@ import { notifyRoom } from './notify-room.ts';
 export interface PickDilemmasInput {
   readonly roomId: string;
   readonly playerId: string;
-  /** In the order the host picked them; none goes back to a game by category. */
+  /** In the order the host picked them; none goes back to a game by categories. */
   readonly dilemmaIds: readonly string[];
 }
 

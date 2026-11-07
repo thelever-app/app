@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { MAXIMUM_PLAYERS, Room, type RoomSnapshot } from '../../entities/room.ts';
 import { AddingDilemmasNotAllowedError } from '../../errors/adding-dilemmas-not-allowed.error.ts';
 import { AvatarTakenError } from '../../errors/avatar-taken.error.ts';
-import { DilemmaAlreadyAddedError } from '../../errors/dilemma-already-added.error.ts';
 import { DilemmaNotSuitableError } from '../../errors/dilemma-not-suitable.error.ts';
 import { DuplicateDilemmaError } from '../../errors/duplicate-dilemma.error.ts';
 import { GameInProgressError } from '../../errors/game-in-progress.error.ts';
@@ -17,6 +16,7 @@ import { NotHostError } from '../../errors/not-host.error.ts';
 import { PlayerExpelledError } from '../../errors/player-expelled.error.ts';
 import { PlayerNotInRoomError } from '../../errors/player-not-in-room.error.ts';
 import { RoomFullError } from '../../errors/room-full.error.ts';
+import { TooManyAddedDilemmasError } from '../../errors/too-many-added-dilemmas.error.ts';
 import { ConnectionChangedEvent } from '../../events/connection-changed.event.ts';
 import { LobbyChangedEvent } from '../../events/lobby-changed.event.ts';
 import { AvatarVO } from '../../vos/avatar.vo.ts';
@@ -302,7 +302,7 @@ describe('Room', () => {
     it('should drop the dilemmas for adults when the room stops being for adults only', () => {
       // Arrange
       const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { adultsOnly: true, playersCanAddDilemmas: true });
+      room.changeSettings('TestHostId', { adultsOnly: true, dilemmasPerPlayer: 1 });
       room.addDilemma('TestLuisId', FOR_ADULTS);
       room.pickDilemmas('TestHostId', [FOR_EVERYONE, { ...FOR_ADULTS, dilemmaId: 'TestOther' }]);
 
@@ -312,6 +312,24 @@ describe('Room', () => {
       // Assert
       expect(room.addedDilemmas).toEqual([]);
       expect(room.pickedDilemmas).toEqual([FOR_EVERYONE]);
+    });
+
+    it('should keep only the first dilemmas each player added when the host allows fewer', () => {
+      // Arrange
+      const room = lobbyOfThree();
+      room.changeSettings('TestHostId', { dilemmasPerPlayer: 3 });
+      room.addDilemma('TestLuisId', FOR_EVERYONE);
+      room.addDilemma('TestLuisId', { dilemmaId: 'TestSecond', minimumAge: 16 });
+      room.addDilemma('TestMartaId', { dilemmaId: 'TestThird', minimumAge: 16 });
+
+      // Act
+      room.changeSettings('TestHostId', { dilemmasPerPlayer: 1 });
+      const afterOne = room.addedDilemmas.map(({ dilemmaId }) => dilemmaId);
+      room.changeSettings('TestHostId', { dilemmasPerPlayer: 0 });
+
+      // Assert
+      expect(afterOne).toEqual(['TestDilemma', 'TestThird']);
+      expect(room.addedDilemmas).toEqual([]);
     });
   });
 
@@ -359,9 +377,9 @@ describe('Room', () => {
   });
 
   describe('addDilemma', () => {
-    function lobbyWhereAddingIsAllowed(): Room {
+    function lobbyWhereAddingIsAllowed(dilemmasPerPlayer: 1 | 2 = 1): Room {
       const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { playersCanAddDilemmas: true });
+      room.changeSettings('TestHostId', { dilemmasPerPlayer });
       room.pullEvents();
       return room;
     }
@@ -388,15 +406,31 @@ describe('Room', () => {
       );
     });
 
-    it('should throw an error if the player has already added one', () => {
+    it('should let each player add as many dilemmas as the host allows, and no more', () => {
       // Arrange
-      const room = lobbyWhereAddingIsAllowed();
+      const room = lobbyWhereAddingIsAllowed(2);
       room.addDilemma('TestLuisId', FOR_EVERYONE);
+      room.addDilemma('TestLuisId', { dilemmaId: 'TestSecond', minimumAge: 16 });
 
       // Act & Assert
       expect(() =>
-        room.addDilemma('TestLuisId', { dilemmaId: 'TestSecond', minimumAge: 16 }),
-      ).toThrow(DilemmaAlreadyAddedError);
+        room.addDilemma('TestLuisId', { dilemmaId: 'TestThird', minimumAge: 16 }),
+      ).toThrow(TooManyAddedDilemmasError);
+      expect(room.addedDilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual([
+        'TestDilemma',
+        'TestSecond',
+      ]);
+    });
+
+    it('should let the host add dilemmas too', () => {
+      // Arrange
+      const room = lobbyWhereAddingIsAllowed();
+
+      // Act
+      room.addDilemma('TestHostId', FOR_EVERYONE);
+
+      // Assert
+      expect(room.addedDilemmas).toEqual([{ ...FOR_EVERYONE, playerId: 'TestHostId' }]);
     });
 
     it('should throw an error if another player has already added that dilemma', () => {
@@ -427,12 +461,18 @@ describe('Room', () => {
   });
 
   describe('removeAddedDilemma', () => {
-    it('should let the host remove a dilemma a player added', () => {
-      // Arrange
+    /** Luis added a dilemma, and nothing that happened so far is pending. */
+    function lobbyWhereLuisAdded(): Room {
       const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { playersCanAddDilemmas: true });
+      room.changeSettings('TestHostId', { dilemmasPerPlayer: 1 });
       room.addDilemma('TestLuisId', FOR_EVERYONE);
       room.pullEvents();
+      return room;
+    }
+
+    it('should let the host remove a dilemma a player added', () => {
+      // Arrange
+      const room = lobbyWhereLuisAdded();
 
       // Act
       room.removeAddedDilemma('TestHostId', 'TestDilemma');
@@ -442,12 +482,38 @@ describe('Room', () => {
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'dilemmas-changed', 5)]);
     });
 
-    it('should throw an error if the player is not the host', () => {
+    it('should let a player remove a dilemma they added, and add another one', () => {
       // Arrange
-      const room = lobbyOfThree();
+      const room = lobbyWhereLuisAdded();
+
+      // Act
+      room.removeAddedDilemma('TestLuisId', 'TestDilemma');
+      room.addDilemma('TestLuisId', { dilemmaId: 'TestSecond', minimumAge: 16 });
+
+      // Assert
+      expect(room.addedDilemmas).toEqual([
+        { dilemmaId: 'TestSecond', minimumAge: 16, playerId: 'TestLuisId' },
+      ]);
+    });
+
+    it('should throw an error if a player who is not the host removes what another one added', () => {
+      // Arrange
+      const room = lobbyWhereLuisAdded();
 
       // Act & Assert
-      expect(() => room.removeAddedDilemma('TestLuisId', 'TestDilemma')).toThrow(NotHostError);
+      expect(() => room.removeAddedDilemma('TestMartaId', 'TestDilemma')).toThrow(NotHostError);
+      expect(room.addedDilemmas).toHaveLength(1);
+    });
+
+    it('should throw an error once the game has started', () => {
+      // Arrange
+      const room = lobbyWhereLuisAdded();
+      room.startGame('TestHostId', 'TestGameId');
+
+      // Act & Assert
+      expect(() => room.removeAddedDilemma('TestLuisId', 'TestDilemma')).toThrow(
+        GameInProgressError,
+      );
     });
   });
 
@@ -455,7 +521,7 @@ describe('Room', () => {
     it('should take the player, their connections and their dilemma out of the room', () => {
       // Arrange
       const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { playersCanAddDilemmas: true });
+      room.changeSettings('TestHostId', { dilemmasPerPlayer: 1 });
       room.addDilemma('TestMartaId', FOR_EVERYONE);
       room.connect('TestMartaId', 'TestConnectionId');
       room.pullEvents();
@@ -823,7 +889,7 @@ describe('Room', () => {
     it('should rebuild the whole room from its snapshot, without recording any event', () => {
       // Arrange
       const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { playersCanAddDilemmas: true, adultsOnly: true });
+      room.changeSettings('TestHostId', { dilemmasPerPlayer: 1, adultsOnly: true });
       room.addDilemma('TestLuisId', FOR_ADULTS);
       room.pickDilemmas('TestHostId', [FOR_EVERYONE]);
       room.connect('TestHostId', 'TestFirstConnectionId');

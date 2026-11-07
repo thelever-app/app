@@ -57,4 +57,12 @@ describe('NoReturnScreen', () => {
     // Assert
     expect(onHome).toHaveBeenCalledOnce();
   });
+
+  it('should show the mascot even when the screen comes because the network went', async () => {
+    // Act
+    await renderNoReturn('player-expelled');
+
+    // Assert
+    expect(document.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
+  });
 });

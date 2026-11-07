@@ -1,6 +1,5 @@
 import { AddingDilemmasNotAllowedError } from '../errors/adding-dilemmas-not-allowed.error.ts';
 import { AvatarTakenError } from '../errors/avatar-taken.error.ts';
-import { DilemmaAlreadyAddedError } from '../errors/dilemma-already-added.error.ts';
 import { DilemmaNotSuitableError } from '../errors/dilemma-not-suitable.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { GameInProgressError } from '../errors/game-in-progress.error.ts';
@@ -11,6 +10,7 @@ import { NotHostError } from '../errors/not-host.error.ts';
 import { PlayerExpelledError } from '../errors/player-expelled.error.ts';
 import { PlayerNotInRoomError } from '../errors/player-not-in-room.error.ts';
 import { RoomFullError } from '../errors/room-full.error.ts';
+import { TooManyAddedDilemmasError } from '../errors/too-many-added-dilemmas.error.ts';
 import { ConnectionChangedEvent } from '../events/connection-changed.event.ts';
 import type { DomainEvent } from '../events/domain-event.ts';
 import { LobbyChangedEvent, type LobbyChange } from '../events/lobby-changed.event.ts';
@@ -60,7 +60,7 @@ export interface RoomSnapshot {
   /** Who was expelled from the game the lobby is getting ready. */
   readonly expelledIdentities: readonly string[];
   readonly addedDilemmas: readonly AddedDilemma[];
-  /** The dilemmas the host picked one by one; none, and the game is put together by category. */
+  /** The dilemmas the host picked one by one; none, and the game is put together by categories. */
   readonly pickedDilemmas: readonly LobbyDilemma[];
   readonly currentGameId: string | null;
 }
@@ -223,13 +223,19 @@ export class Room {
     this.#changeLobby('avatar-changed');
   }
 
-  /** Only the host, and only in the lobby. Dilemmas that no longer suit the room are dropped. */
+  /**
+   * Only the host, and only in the lobby. Dilemmas that no longer suit the room are dropped, and
+   * each player keeps only the first ones they added that the room still allows.
+   */
   changeSettings(playerId: string, changes: Partial<RoomSettingsSnapshot>): void {
     this.#ensureHostInLobby(playerId);
 
     this.#settings = this.#settings.with(changes);
     const suits = (dilemma: LobbyDilemma): boolean => this.#suits(dilemma);
-    this.#addedDilemmas = this.#addedDilemmas.filter(suits);
+    const allowed = this.#settings.dilemmasPerPlayer;
+    this.#addedDilemmas = this.#addedDilemmas
+      .filter(suits)
+      .filter((added, index, all) => this.#addedBefore(added.playerId, all, index) < allowed);
     this.#pickedDilemmas = this.#pickedDilemmas.filter(suits);
     this.#changeLobby('settings-changed');
   }
@@ -247,14 +253,17 @@ export class Room {
     this.#changeLobby('dilemmas-changed');
   }
 
-  /** When the host allows it, each player adds one dilemma that suits the room. */
+  /**
+   * When the host allows it, each player, the host too, adds dilemmas that suit the room, up to
+   * as many as the room allows each one.
+   */
   addDilemma(playerId: string, dilemma: LobbyDilemma): void {
     this.#player(playerId);
     if (!this.isInLobby) throw new GameInProgressError(this.id);
-    if (!this.#settings.playersCanAddDilemmas) throw new AddingDilemmasNotAllowedError(this.id);
-    if (this.#addedDilemmas.some((added) => added.playerId === playerId)) {
-      throw new DilemmaAlreadyAddedError(playerId);
-    }
+    const allowed = this.#settings.dilemmasPerPlayer;
+    if (allowed === 0) throw new AddingDilemmasNotAllowedError(this.id);
+    const added = this.#addedBefore(playerId, this.#addedDilemmas, this.#addedDilemmas.length);
+    if (added >= allowed) throw new TooManyAddedDilemmasError(playerId, allowed);
     if (this.#addedDilemmas.some((added) => added.dilemmaId === dilemma.dilemmaId)) {
       throw new DuplicateDilemmaError(dilemma.dilemmaId);
     }
@@ -264,12 +273,21 @@ export class Room {
     this.#changeLobby('dilemmas-changed');
   }
 
-  /** The host removes a dilemma a player added, without knowing who added it. */
+  /**
+   * The host removes any dilemma a player added, without knowing who added it; any other player,
+   * only one they added themselves.
+   */
   removeAddedDilemma(playerId: string, dilemmaId: string): void {
-    this.#ensureHostInLobby(playerId);
-    const before = this.#addedDilemmas.length;
-    this.#addedDilemmas = this.#addedDilemmas.filter((added) => added.dilemmaId !== dilemmaId);
-    if (this.#addedDilemmas.length !== before) this.#changeLobby('dilemmas-changed');
+    this.#player(playerId);
+    if (!this.isInLobby) throw new GameInProgressError(this.id);
+    const removed = this.#addedDilemmas.find((added) => added.dilemmaId === dilemmaId);
+    if (!removed) return;
+    if (playerId !== this.#host.id && removed.playerId !== playerId) {
+      throw new NotHostError(playerId);
+    }
+
+    this.#addedDilemmas = this.#addedDilemmas.filter((added) => added !== removed);
+    this.#changeLobby('dilemmas-changed');
   }
 
   /** The host takes a player out of the lobby; they cannot come back to that game. */
@@ -393,6 +411,11 @@ export class Room {
     this.#player(playerId);
     if (playerId !== this.#host.id) throw new NotHostError(playerId);
     if (!this.isInLobby) throw new GameInProgressError(this.id);
+  }
+
+  /** How many of the added dilemmas before that position the player added. */
+  #addedBefore(playerId: string, added: readonly AddedDilemma[], position: number): number {
+    return added.slice(0, position).filter((dilemma) => dilemma.playerId === playerId).length;
   }
 
   #isWorn(avatar: AvatarVO): boolean {

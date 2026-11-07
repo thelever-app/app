@@ -12,9 +12,12 @@ const PREVIEW = {
   playerCount: 4,
 };
 
-async function renderJoin(previewRoom: (code: string) => Promise<typeof PREVIEW>) {
+async function renderJoin(
+  previewRoom: (code: string) => Promise<typeof PREVIEW>,
+  joinRoom: () => Promise<{ playerId: string }> = async () => ({ playerId: 'test-luis-id' }),
+) {
   return renderAtRoute(<JoinScreen />, {
-    api: fakeRoomApi({ previewRoom: vi.fn(previewRoom) }),
+    api: fakeRoomApi({ previewRoom: vi.fn(previewRoom), joinRoom: vi.fn(joinRoom) }),
     at: '/join/K7M2Q',
     path: '/join/:code',
   });
@@ -55,5 +58,28 @@ describe('JoinScreen', () => {
     // Assert
     expect(heading).toBeDefined();
     expect(location()).toBe('/');
+  });
+
+  it('should leave the room behind, at full screen, when it turns the player away on joining', async () => {
+    // Arrange
+    const { t } = await renderJoin(
+      async () => PREVIEW,
+      async () => {
+        throw new RoomApiError('player-expelled');
+      },
+    );
+    fireEvent.change(await screen.findByRole('textbox', { name: t('joinRoom.nickname') }), {
+      target: { value: 'Luis' },
+    });
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('joinRoom.submit') }));
+
+    // Assert
+    expect(
+      await screen.findByRole('heading', { name: t('joinRefusal.player-expelled.title') }),
+    ).toBeDefined();
+    expect(screen.queryByTestId('room-of')).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 });

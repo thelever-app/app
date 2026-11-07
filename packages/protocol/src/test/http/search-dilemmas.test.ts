@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { SearchDilemmasQueryDto, SearchDilemmasResponseDto } from '../../http/search-dilemmas.ts';
 
 describe('SearchDilemmasQueryDto', () => {
-  it('should read the tags separated by commas', () => {
+  it('should read a category and the text the player typed', () => {
     // Act
-    const query = SearchDilemmasQueryDto.parse({ category: 'honesty', tags: 'family,work' });
+    const query = SearchDilemmasQueryDto.parse({ category: 'honesty', q: 'tranvía' });
 
     // Assert
-    expect(query).toEqual({ category: 'honesty', tags: ['family', 'work'] });
+    expect(query).toEqual({ category: 'honesty', q: 'tranvía' });
+  });
+
+  it('should reject a text longer than a player would type', () => {
+    // Act & Assert
+    expect(SearchDilemmasQueryDto.safeParse({ q: 'a'.repeat(101) }).success).toBe(false);
   });
 
   it('should accept no criteria at all', () => {

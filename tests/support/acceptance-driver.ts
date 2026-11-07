@@ -14,7 +14,6 @@ import {
   JoinRoomUseCase,
   LobbyChangedEvent,
   PickDilemmasUseCase,
-  DilemmaAlreadyAddedError,
   GameInProgressError,
   NotEnoughPlayersError,
   NotHostError,
@@ -27,6 +26,7 @@ import {
   StartGameUseCase,
   AvatarVO,
   type GetRoomStateOutput,
+  TooManyAddedDilemmasError,
 } from '@thelever-app/game';
 import {
   InMemoryDilemmaCatalog,
@@ -381,16 +381,12 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async addDilemma(player: string): Promise<void> {
-    const [dilemmaId] = await this.searchDilemmas(player);
-    if (!dilemmaId) throw new Error('The catalog has no dilemma suitable for the room');
-    await this.#add(player, dilemmaId);
+    await this.#add(player, await this.#notYetAdded(player));
   }
 
   async tryToAddAnotherDilemma(player: string): Promise<boolean> {
-    const added = new Set(await this.addedDilemmasSeenBy(player));
-    const another = (await this.searchDilemmas(player)).find((id) => !added.has(id));
-    if (!another) throw new Error('The catalog has no other dilemma suitable for the room');
-    return this.#accepts(() => this.#add(player, another), DilemmaAlreadyAddedError);
+    const another = await this.#notYetAdded(player);
+    return this.#accepts(() => this.#add(player, another), TooManyAddedDilemmasError);
   }
 
   async addedDilemmasSeenBy(viewer: string): Promise<string[]> {
@@ -406,21 +402,29 @@ export class AcceptanceDriver implements GameDriver {
       .map(({ nickname }) => nickname);
   }
 
-  async removeAddedDilemma(host: string): Promise<void> {
-    const [dilemmaId] = await this.addedDilemmasSeenBy(host);
-    if (!dilemmaId) throw new Error(`The scenario has ${host} remove a dilemma, but none is added`);
+  /** What the screen offers to remove: every added dilemma to the host, their own to the rest. */
+  async removeAddedDilemma(player: string): Promise<void> {
+    const state = await this.#roomStateOf(player);
+    const removable =
+      state.hostId === state.playerId
+        ? state.addedDilemmas.map(({ dilemmaId }) => dilemmaId)
+        : state.ownAddedDilemmaIds;
+    const [dilemmaId] = removable;
+    if (!dilemmaId) {
+      throw new Error(`The scenario has ${player} remove a dilemma, but none is theirs`);
+    }
     await this.#removeAddedDilemma.execute({
       roomId: this.#currentRoomId(),
-      playerId: this.#playerIdOf(host),
+      playerId: this.#playerIdOf(player),
       dilemmaId,
     });
   }
 
-  async searchDilemmas(player: string, tags?: string[]): Promise<string[]> {
+  async searchDilemmas(player: string, text?: string): Promise<string[]> {
     const found = await this.#searchDilemmas.execute({
       roomId: this.#currentRoomId(),
       identity: this.#playerCalled(player).identity,
-      ...(tags && { tags }),
+      ...(text && { text }),
     });
     return found.map(({ dilemmaId }) => dilemmaId);
   }
@@ -431,6 +435,16 @@ export class AcceptanceDriver implements GameDriver {
       playerId: this.#playerIdOf(host),
       dilemmaIds,
     });
+  }
+
+  /** Picking none is how the screen goes back to a game by categories. */
+  async playByCategories(host: string): Promise<void> {
+    await this.pickDilemmas(host, []);
+  }
+
+  async pickedDilemmasSeenBy(viewer: string): Promise<string[]> {
+    const { pickedDilemmas } = await this.#roomStateOf(viewer);
+    return pickedDilemmas.map(({ dilemmaId }) => dilemmaId);
   }
 
   catalogEntryOf(dilemmaId: string): CatalogEntry {
@@ -594,6 +608,14 @@ export class AcceptanceDriver implements GameDriver {
       playerId: this.#playerIdOf(host),
     });
     this.#gameId = gameId;
+  }
+
+  /** A dilemma of the catalog suitable for the room that nobody added yet. */
+  async #notYetAdded(player: string): Promise<string> {
+    const added = new Set(await this.addedDilemmasSeenBy(player));
+    const dilemmaId = (await this.searchDilemmas(player)).find((id) => !added.has(id));
+    if (!dilemmaId) throw new Error('The catalog has no other dilemma suitable for the room');
+    return dilemmaId;
   }
 
   async #add(player: string, dilemmaId: string): Promise<void> {

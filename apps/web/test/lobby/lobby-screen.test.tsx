@@ -74,9 +74,37 @@ describe('LobbyScreen', () => {
 
       // Assert
       expect(screen.getByText(t('variant.anonymous.name'))).toBeDefined();
+      expect(screen.getByTestId('room-dilemmas').textContent).toBe('Todas las categorías');
       expect(screen.getByTestId('room-settings').textContent).toBe(
         '8 dilemas · 6 min · Español · Amigos',
       );
+    });
+
+    it.each([
+      [['honesty'], 'Honestidad'],
+      [['honesty', 'loyalty', 'justice'], '3 categorías'],
+    ])('should name the categories %o of the room as %s', async (categories, named) => {
+      // Act
+      await renderLobby(aRoom({ settings: { ...aRoom().settings, categories } }));
+
+      // Assert
+      expect(screen.getByTestId('room-dilemmas').textContent).toBe(named);
+    });
+
+    it('should count the dilemmas the host picked instead of the categories', async () => {
+      // Act
+      await renderLobby(
+        aRoom({
+          pickedDilemmas: [
+            { dilemmaId: 'test-dilemma-1', text: 'TestText1' },
+            { dilemmaId: 'test-dilemma-2', text: 'TestText2' },
+          ],
+        }),
+      );
+
+      // Assert
+      expect(screen.getByTestId('room-dilemmas').textContent).toBe('2 dilemas elegidos');
+      expect(screen.getByTestId('room-settings').textContent).toBe('6 min · Español · Amigos');
     });
 
     it('should advise a video call to a group that plays remotely', async () => {
@@ -180,7 +208,78 @@ describe('LobbyScreen', () => {
       expect(send).not.toHaveBeenCalled();
     });
 
-    it('should pick the dilemmas it finds by tag', async () => {
+    it('should play the categories the host marks, and every one again once none is marked', async () => {
+      // Arrange
+      const { t, send } = await renderLobby();
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      const categories = screen.getByRole('group', { name: t('settings.categories') });
+      const chip = (name: string) => within(categories).getByRole('checkbox', { name });
+      const allChecked = () => chip(t('settings.allCategories')).getAttribute('aria-checked');
+      const mark = () => {
+        fireEvent.click(chip(t('categories.honesty')));
+        fireEvent.click(chip(t('categories.loyalty')));
+      };
+      const atFirst = allChecked();
+
+      // Act
+      mark();
+      const whileMarked = allChecked();
+      mark();
+      const unmarked = allChecked();
+      mark();
+      fireEvent.click(screen.getByRole('button', { name: t('settings.save') }));
+
+      // Assert
+      expect([atFirst, whileMarked, unmarked]).toEqual(['true', 'false', 'true']);
+      expect(send).toHaveBeenCalledWith({
+        type: 'change-settings',
+        changes: { categories: ['honesty', 'loyalty'] },
+      });
+    });
+
+    it('should let each player add as many dilemmas as the host chooses', async () => {
+      // Arrange
+      const { t, send } = await renderLobby();
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      const perPlayer = screen.getByRole('radiogroup', {
+        name: t('settings.dilemmasPerPlayer.label'),
+      });
+
+      // Act
+      fireEvent.click(within(perPlayer).getByRole('radio', { name: '2' }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.save') }));
+
+      // Assert
+      expect(send).toHaveBeenCalledWith({
+        type: 'change-settings',
+        changes: { dilemmasPerPlayer: 2 },
+      });
+    });
+
+    it('should open by hand with the picked dilemmas, and go back by categories in one tap', async () => {
+      // Arrange
+      const room = aRoom({ pickedDilemmas: [{ dilemmaId: 'test-dilemma-1', text: 'TestText1' }] });
+      const { t, send } = await renderLobby(room);
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      const settings = screen.getByRole('dialog', { name: t('settings.title') });
+      const byHand = (
+        within(settings).getByRole('radio', { name: t('settings.byHand') }) as HTMLInputElement
+      ).checked;
+      const pickedShown = within(settings).queryByText(t('settings.picked', { count: 1 })) !== null;
+      const categoriesShown = screen.queryByRole('group', { name: t('settings.categories') });
+
+      // Act
+      fireEvent.click(screen.getByRole('radio', { name: t('settings.byCategories') }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.save') }));
+
+      // Assert
+      expect(byHand).toBe(true);
+      expect(pickedShown).toBe(true);
+      expect(categoriesShown).toBeNull();
+      expect(send).toHaveBeenCalledWith({ type: 'pick-dilemmas', dilemmaIds: [] });
+    });
+
+    it('should pick the dilemmas it finds by what the host types', async () => {
       // Arrange
       const searchDilemmas = vi.fn(async () => [...FOUND]);
       const { t, send } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
@@ -189,25 +288,48 @@ describe('LobbyScreen', () => {
 
       // Act
       fireEvent.change(screen.getByRole('searchbox', { name: t('pickDilemmas.search') }), {
-        target: { value: '#Family' },
+        target: { value: 'Tranv' },
       });
+      await waitFor(() =>
+        expect(searchDilemmas).toHaveBeenLastCalledWith('test-room-id', { q: 'Tranv' }),
+      );
       fireEvent.click(await screen.findByRole('checkbox', { name: /TestText1/ }));
       fireEvent.click(screen.getByRole('button', { name: t('pickDilemmas.play', { count: 1 }) }));
 
       // Assert
-      await waitFor(() =>
-        expect(searchDilemmas).toHaveBeenLastCalledWith('test-room-id', { tags: ['family'] }),
-      );
       expect(send).toHaveBeenCalledWith({ type: 'pick-dilemmas', dilemmaIds: ['test-dilemma-1'] });
     });
 
-    it('should go back to a game by category by unchecking every picked dilemma', async () => {
+    it('should search only once the host stops typing, keeping what it found on screen', async () => {
+      // Arrange: the second search never answers.
+      let calls = 0;
+      const searchDilemmas = vi.fn(() =>
+        calls++ === 0 ? Promise.resolve([...FOUND]) : new Promise<never>(() => {}),
+      );
+      const { t } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
+      await screen.findByRole('checkbox', { name: /TestText1/ });
+      const search = screen.getByRole('searchbox', { name: t('pickDilemmas.search') });
+
+      // Act
+      for (const typed of ['f', 'fa', 'fam']) {
+        fireEvent.change(search, { target: { value: typed } });
+      }
+      await waitFor(() => expect(searchDilemmas).toHaveBeenCalledTimes(2));
+
+      // Assert
+      expect(searchDilemmas).toHaveBeenLastCalledWith('test-room-id', { q: 'fam' });
+      expect(screen.getByRole('checkbox', { name: /TestText1/ })).toBeDefined();
+    });
+
+    it('should go back to a game by categories by unchecking every picked dilemma', async () => {
       // Arrange
       const searchDilemmas = vi.fn(async () => FOUND);
       const room = aRoom({ pickedDilemmas: [{ dilemmaId: 'test-dilemma-1', text: 'TestText1' }] });
       const { t, send } = await renderLobby(room, fakeRoomApi({ searchDilemmas }));
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
-      fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.changePicked') }));
 
       // Act
       fireEvent.click(await screen.findByRole('checkbox', { name: /TestText1/ }));
@@ -249,7 +371,7 @@ describe('LobbyScreen', () => {
       // Arrange
       const { t, send } = await renderLobby(
         aRoom({
-          settings: { ...aRoom().settings, playersCanAddDilemmas: true },
+          settings: { ...aRoom().settings, dilemmasPerPlayer: 1 },
           addedDilemmas: [{ dilemmaId: 'test-dilemma-1', text: 'TestText1' }],
         }),
       );
@@ -269,6 +391,20 @@ describe('LobbyScreen', () => {
     });
   });
 
+  it('should let the host add dilemmas too, when players may add them', async () => {
+    // Arrange
+    const searchDilemmas = vi.fn(async () => [...FOUND]);
+    const room = aRoom({ settings: { ...aRoom().settings, dilemmasPerPlayer: 1 } });
+    const { t, send } = await renderLobby(room, fakeRoomApi({ searchDilemmas }));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('lobby.add.action') }));
+    fireEvent.click(await screen.findByRole('button', { name: /TestText2/ }));
+
+    // Assert
+    expect(send).toHaveBeenCalledWith({ type: 'add-dilemma', dilemmaId: 'test-dilemma-2' });
+  });
+
   describe('another player', () => {
     it('should see the configuration without any way to change it, nor to start or expel', async () => {
       // Act
@@ -286,7 +422,7 @@ describe('LobbyScreen', () => {
       const searchDilemmas = vi.fn(async () => [...FOUND]);
       const room = aRoom({
         ...AS_LUIS,
-        settings: { ...aRoom().settings, playersCanAddDilemmas: true },
+        settings: { ...aRoom().settings, dilemmasPerPlayer: 1 },
       });
       const { t, send } = await renderLobby(room, fakeRoomApi({ searchDilemmas }));
 
@@ -298,20 +434,50 @@ describe('LobbyScreen', () => {
       expect(send).toHaveBeenCalledWith({ type: 'add-dilemma', dilemmaId: 'test-dilemma-2' });
     });
 
-    it('should see the dilemma they added, and no way to add another', async () => {
+    it('should see the dilemmas they added and how many are left, and no way to add more', async () => {
       // Act
       const { t } = await renderLobby(
         aRoom({
           ...AS_LUIS,
-          settings: { ...aRoom().settings, playersCanAddDilemmas: true },
-          addedDilemmas: [{ dilemmaId: 'test-dilemma-1', text: 'TestText1' }],
-          ownAddedDilemmaId: 'test-dilemma-1',
+          settings: { ...aRoom().settings, dilemmasPerPlayer: 2 },
+          addedDilemmas: [
+            { dilemmaId: 'test-dilemma-1', text: 'TestText1' },
+            { dilemmaId: 'test-dilemma-2', text: 'TestText2' },
+            { dilemmaId: 'test-dilemma-3', text: 'TestText3' },
+          ],
+          ownAddedDilemmaIds: ['test-dilemma-1', 'test-dilemma-2'],
         }),
       );
 
       // Assert
-      expect(screen.getByText('TestText1')).toBeDefined();
+      const card = screen.getByRole('region', { name: t('lobby.add.title') });
+      expect(within(card).getByText(t('lobby.add.count', { count: 2, total: 2 }))).toBeDefined();
+      expect(within(card).getByText('TestText1')).toBeDefined();
+      expect(within(card).queryByText('TestText3')).toBeNull();
       expect(screen.queryByRole('button', { name: t('lobby.add.action') })).toBeNull();
+    });
+
+    it('should remove a dilemma they added', async () => {
+      // Arrange
+      const { t, send } = await renderLobby(
+        aRoom({
+          ...AS_LUIS,
+          settings: { ...aRoom().settings, dilemmasPerPlayer: 2 },
+          addedDilemmas: [{ dilemmaId: 'test-dilemma-1', text: 'TestText1' }],
+          ownAddedDilemmaIds: ['test-dilemma-1'],
+        }),
+      );
+      const card = screen.getByRole('region', { name: t('lobby.add.title') });
+
+      // Act
+      fireEvent.click(within(card).getByRole('button', { name: t('lobby.add.remove') }));
+
+      // Assert
+      expect(send).toHaveBeenCalledWith({
+        type: 'remove-added-dilemma',
+        dilemmaId: 'test-dilemma-1',
+      });
+      expect(within(card).getByRole('button', { name: t('lobby.add.action') })).toBeDefined();
     });
 
     it('should take an avatar nobody else in the room has', async () => {

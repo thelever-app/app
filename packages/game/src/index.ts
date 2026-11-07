@@ -35,12 +35,13 @@ export {
   DILEMMA_LANGUAGES,
   DILEMMA_COUNTS,
   TOTAL_TIMES_IN_MINUTES,
-  DEFAULT_CATEGORY,
+  DILEMMAS_PER_PLAYER,
   type RoomSettingsSnapshot,
   type RoomVariant,
   type DilemmaLanguage,
   type DilemmaCount,
   type TotalTimeInMinutes,
+  type DilemmasPerPlayer,
 } from './domain/vos/room-settings.vo.ts';
 export { GROUP_NATURES, PLACES, type GroupNature, type Place } from './domain/vos/group.vo.ts';
 export {
@@ -82,7 +83,7 @@ export { PlayerExpelledError } from './domain/errors/player-expelled.error.ts';
 export { AvatarTakenError } from './domain/errors/avatar-taken.error.ts';
 export { NotEnoughPlayersError } from './domain/errors/not-enough-players.error.ts';
 export { AddingDilemmasNotAllowedError } from './domain/errors/adding-dilemmas-not-allowed.error.ts';
-export { DilemmaAlreadyAddedError } from './domain/errors/dilemma-already-added.error.ts';
+export { TooManyAddedDilemmasError } from './domain/errors/too-many-added-dilemmas.error.ts';
 export { DilemmaNotSuitableError } from './domain/errors/dilemma-not-suitable.error.ts';
 export { HostCannotBeExpelledError } from './domain/errors/host-cannot-be-expelled.error.ts';
 

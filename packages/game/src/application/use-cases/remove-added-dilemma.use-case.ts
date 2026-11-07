@@ -9,7 +9,7 @@ export interface RemoveAddedDilemmaInput {
   readonly dilemmaId: string;
 }
 
-/** The host removes a dilemma a player added, without knowing who added it. */
+/** The host removes a dilemma a player added, without knowing who; a player, one they added. */
 export class RemoveAddedDilemmaUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #notifier: PlayerNotifier;

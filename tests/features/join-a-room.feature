@@ -75,10 +75,23 @@ Feature: Join a room
     Then the dilemma is not added
 
   @ui
-  Scenario: A player can add only one dilemma
-    Given "Luis" has already added a dilemma
+  Scenario: A player adds as many dilemmas as the host allows
+    Given the host allows each player to add 2 dilemmas
+    And "Luis" has already added 2 dilemmas
     When "Luis" tries to add another one
-    Then the second dilemma is not added
+    Then the third dilemma is not added
+
+  @ui
+  Scenario: A player removes a dilemma they added
+    Given "Luis" has added a dilemma
+    When "Luis" removes it
+    Then nobody in the lobby sees it
+
+  @ui
+  Scenario: The host adds a dilemma too
+    Given the host has allowed players to add dilemmas
+    When the host adds a dilemma
+    Then everyone in the lobby sees it among the added dilemmas
 
   @ui
   Scenario: Nobody knows who added a dilemma before the reveal

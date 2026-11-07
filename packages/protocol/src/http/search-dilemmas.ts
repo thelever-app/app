@@ -1,16 +1,13 @@
 import { z } from 'zod';
 
 /**
- * GET /rooms/:roomId/dilemmas?category=…&tags=…: the dilemmas of the catalog that suit the room,
- * to pick or add one. Only a player of the room may ask. Several tags go separated by commas.
+ * GET /rooms/:roomId/dilemmas?category=…&q=…: the dilemmas of the catalog that suit the room, to
+ * pick or add one; with a text, looked for in the text and the tags, the best matches first. Only
+ * a player of the room may ask.
  */
 export const SearchDilemmasQueryDto = z.strictObject({
   category: z.string().min(1).optional(),
-  tags: z
-    .string()
-    .min(1)
-    .transform((tags) => tags.split(',').filter((tag) => tag.length > 0))
-    .optional(),
+  q: z.string().min(1).max(100).optional(),
 });
 
 export const SearchDilemmasResponseDto = z.strictObject({

@@ -5,7 +5,6 @@ import type { CatalogEntry } from './driver.ts';
 /** A dilemma of the test data, with what a scenario checks of it. */
 export interface TestDilemma extends CatalogEntry {
   readonly dilemmaId: string;
-  readonly text: string;
   readonly tags: readonly string[];
 }
 
@@ -34,14 +33,14 @@ function dilemmas(
 
 /**
  * Test data, enough for every scenario of the lobby and the decision phase:
- * - in the default category, 8 dilemmas suitable from 16 and tagged "family", so a room for
- *   everyone fills a game of 8 with them alone; 12 for adults, so an adults-only room almost
- *   surely plays some; and new dilemmas for each age;
- * - in honesty, 8 dilemmas and 2 new ones, to change the category.
+ * - in life-and-death, 8 dilemmas suitable from 16 and tagged "family", so a search for it fills
+ *   a game of 8; 30 for adults, so an adults-only room of every category almost surely plays
+ *   some; and new dilemmas for each age;
+ * - in honesty, 8 dilemmas and 2 new ones, to choose categories.
  */
 export const TEST_DILEMMAS: readonly TestDilemma[] = [
   ...dilemmas('life-and-death', 8, { tags: ['family'] }),
-  ...dilemmas('life-and-death-for-adults', 12, { minimumAge: 18 }),
+  ...dilemmas('life-and-death-for-adults', 30, { minimumAge: 18 }),
   ...dilemmas('new-life-and-death', 3, { status: 'in-exploration' }),
   ...dilemmas('new-life-and-death-for-adults', 1, { minimumAge: 18, status: 'in-exploration' }),
   ...dilemmas('honesty', 8, { category: 'honesty' }),
@@ -68,9 +67,15 @@ export function explorationSlotsFor(dilemmaCount: number): number {
  */
 export function catalogEntryOf(dilemmaId: string): CatalogEntry {
   const test = TEST_DILEMMAS.find((dilemma) => dilemma.dilemmaId === dilemmaId);
-  if (test) return { minimumAge: test.minimumAge, category: test.category, status: test.status };
+  if (test) {
+    const { text, minimumAge, category, status } = test;
+    return { text, minimumAge, category, status };
+  }
   const seed = SEED_DILEMMAS.find(({ id }) => id === dilemmaId);
-  if (seed) return { minimumAge: seed.minimumAge, category: seed.category, status: 'in-catalog' };
+  if (seed) {
+    const { text, minimumAge, category } = seed;
+    return { text, minimumAge, category, status: 'in-catalog' };
+  }
   throw new Error(`The test data has no dilemma ${dilemmaId}`);
 }
 

@@ -9,6 +9,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getAppCheck } from 'firebase-admin/app-check';
 import { getAuth } from 'firebase-admin/auth';
 import { composeRealtimeServer } from './composition/index.ts';
+import { PING_INTERVAL_MS } from './rooms/sockets/heartbeat.ts';
 import { UncheckedAppCheck } from './identity/app-check-verifier.ts';
 import { FirebaseAppCheckVerifier } from './identity/firebase-app-check-verifier.ts';
 import { FirebaseTokenVerifier } from './identity/firebase-token-verifier.ts';
@@ -46,7 +47,7 @@ const webOrigins = (process.env.WEB_ORIGINS ?? 'http://localhost:5173 http://loc
 const server = await composeRealtimeServer({
   tokenVerifier,
   appCheckVerifier,
-  pingIntervalMs: 30_000,
+  pingIntervalMs: PING_INTERVAL_MS,
   logger,
   webOrigins,
   storage: {

@@ -81,7 +81,7 @@ export interface GameCommandsDependencies extends GameQueriesDependencies {
 }
 
 /**
- * How many dilemmas in exploration a game by category keeps room for: 2 slots from 6 dilemmas and 3
+ * How many dilemmas in exploration a game by categories keeps room for: 2 slots from 6 dilemmas and 3
  * from 11. The thresholds of exploration and moderation set them; they change here, not in
  * the rules of the game.
  */
