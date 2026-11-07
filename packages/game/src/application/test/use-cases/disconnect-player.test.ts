@@ -14,7 +14,11 @@ async function arrange() {
   const game = await gameInDecisionPhase();
   const notifier = new InMemoryPlayerNotifier();
   const connectPlayer = new ConnectPlayerUseCase(game.roomRepository, notifier, game.idGenerator);
-  const disconnectPlayer = new DisconnectPlayerUseCase(game.roomRepository, notifier);
+  const disconnectPlayer = new DisconnectPlayerUseCase(
+    game.roomRepository,
+    game.gameRepository,
+    notifier,
+  );
   const { connectionId } = await connectPlayer.execute({
     roomId: game.roomId,
     identity: 'TestLuisIdentity',

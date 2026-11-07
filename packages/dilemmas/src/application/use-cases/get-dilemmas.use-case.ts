@@ -1,4 +1,5 @@
 import { DilemmaNotFoundError } from '../errors/dilemma-not-found.error.ts';
+import { hasGap } from '../../domain/vos/gap.ts';
 import type { DilemmaRepository } from '../ports/dilemma-repository.port.ts';
 
 export interface GetDilemmasInput {
@@ -14,6 +15,8 @@ export interface GetDilemmasOutput {
     readonly version: number;
     readonly text: string;
     readonly options: readonly { readonly optionId: string; readonly text: string }[];
+    /** Whether a player of the room takes the place of "someone in the group" in it. */
+    readonly hasGap: boolean;
   }[];
 }
 
@@ -48,6 +51,7 @@ export class GetDilemmasUseCase implements GetDilemmas {
           version: dilemma.version,
           text,
           options: options.map(({ id, text }) => ({ optionId: id, text })),
+          hasGap: hasGap([dilemma.text, ...dilemma.options.map((option) => option.text)]),
         };
       }),
     );

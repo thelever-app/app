@@ -21,6 +21,9 @@ export {
   type PlayedDilemma,
   type GameSettings,
   type GameSnapshot,
+  type GamePhase,
+  type DidNotVoteReason,
+  type AnswerDraft,
 } from './domain/entities/game.ts';
 export {
   AvatarVO,
@@ -49,13 +52,20 @@ export {
   type DilemmaOrigin,
   type ExplorationSlots,
 } from './domain/services/compose-game.ts';
-export type { Seal } from './domain/vos/answer.vo.ts';
+export type { Seal, VotePrediction, AnswerProps } from './domain/vos/answer.vo.ts';
+export { PREDICTION_LIMIT } from './domain/services/prediction-subsets.ts';
+export { MAXIMUM_POINTS, type PredictionPoints } from './domain/services/score-predictions.ts';
 export type { DomainEvent } from './domain/events/domain-event.ts';
 export { ProgressUpdatedEvent } from './domain/events/progress-updated.event.ts';
 export { ConnectionChangedEvent } from './domain/events/connection-changed.event.ts';
 export { LobbyChangedEvent, type LobbyChange } from './domain/events/lobby-changed.event.ts';
+export { TotalTimeRanOutEvent } from './domain/events/total-time-ran-out.event.ts';
+export { RevealStartedEvent } from './domain/events/reveal-started.event.ts';
+export { HostChangedEvent } from './domain/events/host-changed.event.ts';
+export { PlayerLeftEvent } from './domain/events/player-left.event.ts';
 export type { IdGenerator } from './domain/ports/id-generator.port.ts';
 export type { Randomness } from './domain/ports/randomness.port.ts';
+export type { Clock } from './domain/ports/clock.port.ts';
 export { MissingArgumentError } from './domain/errors/missing-argument.error.ts';
 export { IdMissingError } from './domain/errors/id-missing.error.ts';
 export { NicknameMissingError } from './domain/errors/nickname-missing.error.ts';
@@ -86,18 +96,34 @@ export { AddingDilemmasNotAllowedError } from './domain/errors/adding-dilemmas-n
 export { TooManyAddedDilemmasError } from './domain/errors/too-many-added-dilemmas.error.ts';
 export { DilemmaNotSuitableError } from './domain/errors/dilemma-not-suitable.error.ts';
 export { HostCannotBeExpelledError } from './domain/errors/host-cannot-be-expelled.error.ts';
+export { DecisionPhaseOverError } from './domain/errors/decision-phase-over.error.ts';
+export { PredictionsNotAllowedError } from './domain/errors/predictions-not-allowed.error.ts';
+export { InvalidMatchPredictionError } from './domain/errors/invalid-match-prediction.error.ts';
+export { PlayerNotInPredictionSubsetError } from './domain/errors/player-not-in-prediction-subset.error.ts';
+export { DuplicateVotePredictionError } from './domain/errors/duplicate-vote-prediction.error.ts';
+export { AnswerIncompleteError } from './domain/errors/answer-incomplete.error.ts';
+export { DilemmaSkippedError } from './domain/errors/dilemma-skipped.error.ts';
+export { GameNotInProgressError } from './domain/errors/game-not-in-progress.error.ts';
 
 // Application
 export type { RoomRepository } from './application/ports/room-repository.port.ts';
 export type { GameRepository } from './application/ports/game-repository.port.ts';
 export type { PlayerNotifier } from './application/ports/player-notifier.port.ts';
 export type { SealProvider } from './application/ports/seal-provider.port.ts';
-export type {
-  DilemmaCatalog,
-  DilemmaContent,
-  CatalogDilemma,
-  DilemmaSearch,
+export {
+  GAP_MARKER,
+  type DilemmaCatalog,
+  type DilemmaContent,
+  type CatalogDilemma,
+  type DilemmaSearch,
 } from './application/ports/dilemma-catalog.port.ts';
+export {
+  REPORT_REASONS,
+  type ReportReason,
+  type DilemmaReport,
+  type DilemmaReports,
+} from './application/ports/dilemma-reports.port.ts';
+export { InvalidReportReasonError } from './application/errors/invalid-report-reason.error.ts';
 export { RoomNotFoundError } from './application/errors/room-not-found.error.ts';
 export { GameNotFoundError } from './application/errors/game-not-found.error.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
@@ -179,3 +205,19 @@ export {
   type GetGameStateInput,
   type GetGameStateOutput,
 } from './application/use-cases/get-game-state.use-case.ts';
+export {
+  StartRevealUseCase,
+  type StartRevealInput,
+} from './application/use-cases/start-reveal.use-case.ts';
+export {
+  RunOutTotalTimeUseCase,
+  type RunOutTotalTimeInput,
+} from './application/use-cases/run-out-total-time.use-case.ts';
+export {
+  LeaveRoomUseCase,
+  type LeaveRoomInput,
+} from './application/use-cases/leave-room.use-case.ts';
+export {
+  ReportDilemmaUseCase,
+  type ReportDilemmaInput,
+} from './application/use-cases/report-dilemma.use-case.ts';

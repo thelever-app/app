@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AnswerDilemmaUseCase } from '../../use-cases/answer-dilemma.use-case.ts';
 import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
 import { PlayerNotInRoomError } from '../../../domain/errors/player-not-in-room.error.ts';
-import { DecisionPhaseNotStartedError } from '../../../domain/errors/decision-phase-not-started.error.ts';
+import { GameNotInProgressError } from '../../../domain/errors/game-not-in-progress.error.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { ProgressUpdatedEvent } from '../../../domain/events/progress-updated.event.ts';
@@ -33,12 +33,13 @@ async function gameInDecisionPhase(notifier: PlayerNotifier = new InMemoryPlayer
   return {
     ...game,
     notifier: notifier as InMemoryPlayerNotifier,
-    answerDilemma: new AnswerDilemmaUseCase(
-      game.roomRepository,
-      game.gameRepository,
+    answerDilemma: new AnswerDilemmaUseCase({
+      roomRepository: game.roomRepository,
+      gameRepository: game.gameRepository,
       notifier,
-      new InMemorySealProvider(new Map([['TestLuisIdentity', LUIS_SEAL]])),
-    ),
+      sealProvider: new InMemorySealProvider(new Map([['TestLuisIdentity', LUIS_SEAL]])),
+      clock: game.clock,
+    }),
   };
 }
 
@@ -167,12 +168,13 @@ describe('AnswerDilemmaUseCase', () => {
     it('should throw an error if the room has no game in progress', async () => {
       // Arrange
       const lobby = await lobbyOfThree();
-      const answerDilemma = new AnswerDilemmaUseCase(
-        lobby.roomRepository,
-        lobby.gameRepository,
-        lobby.notifier,
-        new InMemorySealProvider(),
-      );
+      const answerDilemma = new AnswerDilemmaUseCase({
+        roomRepository: lobby.roomRepository,
+        gameRepository: lobby.gameRepository,
+        notifier: lobby.notifier,
+        sealProvider: new InMemorySealProvider(),
+        clock: lobby.clock,
+      });
 
       // Act & Assert
       await expect(
@@ -182,7 +184,7 @@ describe('AnswerDilemmaUseCase', () => {
           dilemmaId: 'TestDilemma1',
           vote: 'TestOption',
         }),
-      ).rejects.toThrow(DecisionPhaseNotStartedError);
+      ).rejects.toThrow(GameNotInProgressError);
     });
   });
 });

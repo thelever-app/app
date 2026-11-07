@@ -1,5 +1,7 @@
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import type { Randomness } from '../../domain/ports/randomness.port.ts';
+import { PlayerLeftEvent } from '../../domain/events/player-left.event.ts';
+import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findRoom } from './find-room.ts';
@@ -16,23 +18,29 @@ export interface JoinRoomOutput {
   readonly playerId: string;
 }
 
-/** A new player joins a room with a free avatar; whoever is already in it gets their player back. */
+/**
+ * A new player joins a room with a free avatar; whoever is already in it gets their player back,
+ * and who had left the game in progress comes back to it as a player.
+ */
 export class JoinRoomUseCase {
   readonly #roomRepository: RoomRepository;
+  readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
   readonly #idGenerator: IdGenerator;
   readonly #randomness: Randomness;
 
-  constructor(
-    roomRepository: RoomRepository,
-    notifier: PlayerNotifier,
-    idGenerator: IdGenerator,
-    randomness: Randomness,
-  ) {
-    this.#roomRepository = roomRepository;
-    this.#notifier = notifier;
-    this.#idGenerator = idGenerator;
-    this.#randomness = randomness;
+  constructor(ports: {
+    readonly roomRepository: RoomRepository;
+    readonly gameRepository: GameRepository;
+    readonly notifier: PlayerNotifier;
+    readonly idGenerator: IdGenerator;
+    readonly randomness: Randomness;
+  }) {
+    this.#roomRepository = ports.roomRepository;
+    this.#gameRepository = ports.gameRepository;
+    this.#notifier = ports.notifier;
+    this.#idGenerator = ports.idGenerator;
+    this.#randomness = ports.randomness;
   }
 
   async execute({ roomId, nickname, identity }: JoinRoomInput): Promise<JoinRoomOutput> {
@@ -40,6 +48,15 @@ export class JoinRoomUseCase {
 
     const player = room.join({ nickname, identity }, this.#idGenerator, this.#randomness);
     const events = room.pullEvents();
+    const returned = events.some((event) => event instanceof PlayerLeftEvent && !event.left);
+    const gameId = room.currentGameId;
+    if (returned && gameId) {
+      const game = await this.#gameRepository.findById(gameId);
+      if (game?.playerIds.includes(player.id)) {
+        game.rejoin(player.id);
+        await this.#gameRepository.save(game);
+      }
+    }
     if (events.length > 0) await this.#roomRepository.save(room);
     await notifyRoom(room, events, this.#notifier);
 

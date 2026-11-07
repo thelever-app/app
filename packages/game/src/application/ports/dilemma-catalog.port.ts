@@ -1,6 +1,12 @@
 import type { GameDilemma } from '../../domain/entities/game.ts';
 
-/** What a player reads of a dilemma: its text and its options, in one language. */
+/**
+ * Where the nickname of the person in the gap "someone in the group" goes, in the text of a dilemma
+ * and of its options, in every language: Dilemmas keeps it as it is, and so does the game.
+ */
+export const GAP_MARKER = '{gap}';
+
+/** What a player reads of a dilemma: its text and its options, in one language, with the gap unfilled. */
 export interface DilemmaContent {
   readonly dilemmaId: string;
   readonly text: string;
@@ -35,7 +41,10 @@ export interface DilemmaSearch {
  * Both methods keep the order asked for and throw DilemmaNotFoundError if a dilemma, or that version of it, does not exist.
  */
 export interface DilemmaCatalog {
-  /** The structure the rules of the game need: the current version of each dilemma and the ids of its options. */
+  /**
+   * The structure the rules of the game need: the current version of each dilemma, the ids of its
+   * options and whether its text or an option has the gap.
+   */
   findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]>;
   /**
    * The content of the versions played, in the language asked for or in the original one while there is

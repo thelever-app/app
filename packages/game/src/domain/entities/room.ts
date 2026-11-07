@@ -3,6 +3,7 @@ import { AvatarTakenError } from '../errors/avatar-taken.error.ts';
 import { DilemmaNotSuitableError } from '../errors/dilemma-not-suitable.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { GameInProgressError } from '../errors/game-in-progress.error.ts';
+import { GameNotInProgressError } from '../errors/game-not-in-progress.error.ts';
 import { HostCannotBeExpelledError } from '../errors/host-cannot-be-expelled.error.ts';
 import { HostMissingError } from '../errors/host-missing.error.ts';
 import { NotEnoughPlayersError } from '../errors/not-enough-players.error.ts';
@@ -13,6 +14,8 @@ import { RoomFullError } from '../errors/room-full.error.ts';
 import { TooManyAddedDilemmasError } from '../errors/too-many-added-dilemmas.error.ts';
 import { ConnectionChangedEvent } from '../events/connection-changed.event.ts';
 import type { DomainEvent } from '../events/domain-event.ts';
+import { HostChangedEvent } from '../events/host-changed.event.ts';
+import { PlayerLeftEvent } from '../events/player-left.event.ts';
 import { LobbyChangedEvent, type LobbyChange } from '../events/lobby-changed.event.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
@@ -63,6 +66,10 @@ export interface RoomSnapshot {
   /** The dilemmas the host picked one by one; none, and the game is put together by categories. */
   readonly pickedDilemmas: readonly LobbyDilemma[];
   readonly currentGameId: string | null;
+  /** The host who lost the role while disconnected, and gets it back on connecting again. */
+  readonly absentHostId: string | null;
+  /** Who left the game in progress on purpose. */
+  readonly leftPlayerIds: readonly string[];
 }
 
 export interface CreateRoomProps {
@@ -79,7 +86,8 @@ export interface CreateRoomProps {
 export class Room {
   readonly #id: IdVO;
   readonly #code: RoomCodeVO;
-  readonly #host: Player;
+  #hostId: string;
+  #absentHostId: string | null = null;
   readonly #groupNature: GroupNature;
   readonly #place: Place;
   #settings: RoomSettingsVO;
@@ -93,6 +101,7 @@ export class Room {
   #addedDilemmas: AddedDilemma[] = [];
   #pickedDilemmas: LobbyDilemma[] = [];
   #currentGameId: IdVO | null = null;
+  readonly #leftPlayerIds = new Set<string>();
   #events: DomainEvent[] = [];
 
   private constructor(
@@ -111,7 +120,7 @@ export class Room {
     this.#groupNature = toGroupNature(snapshot.groupNature);
     this.#place = toPlace(snapshot.place);
     this.#settings = new RoomSettingsVO(snapshot.settings);
-    this.#host = host;
+    this.#hostId = host.id;
     this.#players = [...players];
   }
 
@@ -140,7 +149,7 @@ export class Room {
   }
 
   get host(): Player {
-    return this.#host;
+    return this.#player(this.#hostId);
   }
 
   get groupNature(): GroupNature {
@@ -190,7 +199,14 @@ export class Room {
     randomness: Randomness,
   ): Player {
     const existing = this.playerWith(identity);
-    if (existing) return existing;
+    if (existing) {
+      // Who left the game on purpose comes back as a player, never as the host.
+      if (this.#leftPlayerIds.delete(existing.id)) {
+        this.#version += 1;
+        this.#events.push(new PlayerLeftEvent(this.id, existing.id, false, this.#version));
+      }
+      return existing;
+    }
     if (this.#expelledIdentities.has(identity)) throw new PlayerExpelledError(this.id);
     if (this.#players.length >= MAXIMUM_PLAYERS) throw new RoomFullError(this.id);
 
@@ -282,7 +298,7 @@ export class Room {
     if (!this.isInLobby) throw new GameInProgressError(this.id);
     const removed = this.#addedDilemmas.find((added) => added.dilemmaId === dilemmaId);
     if (!removed) return;
-    if (playerId !== this.#host.id && removed.playerId !== playerId) {
+    if (playerId !== this.#hostId && removed.playerId !== playerId) {
       throw new NotHostError(playerId);
     }
 
@@ -293,7 +309,7 @@ export class Room {
   /** The host takes a player out of the lobby; they cannot come back to that game. */
   expel(hostId: string, playerId: string): void {
     this.#ensureHostInLobby(hostId);
-    if (playerId === this.#host.id) throw new HostCannotBeExpelledError();
+    if (playerId === this.#hostId) throw new HostCannotBeExpelledError();
     const player = this.#player(playerId);
 
     this.#players.splice(this.#players.indexOf(player), 1);
@@ -326,7 +342,10 @@ export class Room {
     this.#changeLobby('game-started');
   }
 
-  /** The player opens a connection, on top of any others they have open, such as another tab. */
+  /**
+   * The player opens a connection, on top of any others they have open, such as another tab. A
+   * host who lost the role while disconnected gets it back.
+   */
   connect(playerId: string, connectionId: string): void {
     const connection = new IdVO(connectionId);
     const wasConnected = this.isConnected(playerId);
@@ -335,6 +354,42 @@ export class Room {
     open.add(connection.value);
     this.#connections.set(playerId, open);
     if (!wasConnected) this.#changeConnection(playerId, true);
+    if (playerId === this.#absentHostId && !this.#leftPlayerIds.has(playerId)) {
+      this.#absentHostId = null;
+      this.#changeHost(playerId);
+    }
+  }
+
+  /**
+   * The player leaves the game in progress on purpose: their connections close and, if they were
+   * the host, the role passes on for good. They keep their place in the room and can join again.
+   */
+  leave(playerId: string): void {
+    this.#player(playerId);
+    if (this.isInLobby) throw new GameNotInProgressError(this.id);
+    if (this.#leftPlayerIds.has(playerId)) return;
+
+    this.#leftPlayerIds.add(playerId);
+    if (this.#connections.delete(playerId)) this.#changeConnection(playerId, false);
+    this.#version += 1;
+    this.#events.push(new PlayerLeftEvent(this.id, playerId, true, this.#version));
+    if (playerId === this.#hostId) this.#handOverHost();
+    if (playerId === this.#absentHostId) this.#absentHostId = null;
+  }
+
+  hasLeft(playerId: string): boolean {
+    this.#player(playerId);
+    return this.#leftPlayerIds.has(playerId);
+  }
+
+  /**
+   * The host is away (disconnected) when the game needs one: the role passes to the connected
+   * player who has been in the room longest, and the host gets it back on connecting again.
+   */
+  handOverHost(): void {
+    if (this.isConnected(this.#hostId)) return;
+    const absentHostId = this.#hostId;
+    if (this.#handOverHost()) this.#absentHostId ??= absentHostId;
   }
 
   /**
@@ -366,7 +421,7 @@ export class Room {
     return {
       id: this.id,
       code: this.code,
-      hostId: this.#host.id,
+      hostId: this.#hostId,
       groupNature: this.#groupNature,
       place: this.#place,
       settings: this.#settings.toSnapshot(),
@@ -379,6 +434,8 @@ export class Room {
       addedDilemmas: this.addedDilemmas,
       pickedDilemmas: this.pickedDilemmas,
       currentGameId: this.currentGameId,
+      absentHostId: this.#absentHostId,
+      leftPlayerIds: [...this.#leftPlayerIds],
     };
   }
 
@@ -398,6 +455,8 @@ export class Room {
     room.#addedDilemmas = [...snapshot.addedDilemmas];
     room.#pickedDilemmas = [...snapshot.pickedDilemmas];
     room.#currentGameId = snapshot.currentGameId === null ? null : new IdVO(snapshot.currentGameId);
+    room.#absentHostId = snapshot.absentHostId;
+    for (const playerId of snapshot.leftPlayerIds) room.#leftPlayerIds.add(playerId);
     return room;
   }
 
@@ -409,7 +468,7 @@ export class Room {
 
   #ensureHostInLobby(playerId: string): void {
     this.#player(playerId);
-    if (playerId !== this.#host.id) throw new NotHostError(playerId);
+    if (playerId !== this.#hostId) throw new NotHostError(playerId);
     if (!this.isInLobby) throw new GameInProgressError(this.id);
   }
 
@@ -429,6 +488,22 @@ export class Room {
   #changeLobby(change: LobbyChange): void {
     this.#version += 1;
     this.#events.push(new LobbyChangedEvent(this.id, change, this.#version));
+  }
+
+  /** To the connected player who has been in the room longest and has not left; whether anyone took it. */
+  #handOverHost(): boolean {
+    const successor = this.#players.find(
+      ({ id }) => id !== this.#hostId && this.#connections.has(id) && !this.#leftPlayerIds.has(id),
+    );
+    if (!successor) return false;
+    this.#changeHost(successor.id);
+    return true;
+  }
+
+  #changeHost(hostId: string): void {
+    this.#hostId = hostId;
+    this.#version += 1;
+    this.#events.push(new HostChangedEvent(this.id, hostId, this.#version));
   }
 
   #changeConnection(playerId: string, connected: boolean): void {

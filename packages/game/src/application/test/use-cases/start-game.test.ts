@@ -22,6 +22,7 @@ async function arrange() {
       notifier,
       idGenerator: lobby.idGenerator,
       randomness: lobby.randomness,
+      clock: lobby.clock,
     },
     EXPLORATION_SLOTS,
   );

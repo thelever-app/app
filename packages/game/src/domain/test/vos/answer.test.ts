@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { AnswerVO } from '../../vos/answer.vo.ts';
+import { AnswerVO, type AnswerProps } from '../../vos/answer.vo.ts';
 import { VoteMissingError } from '../../errors/vote-missing.error.ts';
+import { InvalidMatchPredictionError } from '../../errors/invalid-match-prediction.error.ts';
 
 const SEAL = {
   gameConsentVersion: 'TestGameConsentVersion',
@@ -8,33 +9,49 @@ const SEAL = {
   commercialLicenceConsentVersion: null,
   underEighteen: false,
 };
+const PROPS: AnswerProps = {
+  vote: 'TestOption',
+  matchPrediction: 1,
+  votePredictions: [{ playerId: 'TestAnaId', vote: 'TestOtherOption' }],
+  optionOrder: ['TestOtherOption', 'TestOption'],
+  responseTimeMs: null,
+  seal: SEAL,
+  voterInTheGap: false,
+};
 
 describe('AnswerVO', () => {
   describe('constructor', () => {
-    it('should set the vote correctly', () => {
-      // Arrange
-      const vote = 'TestOption';
-
+    it('should keep the vote, the predictions and what is recorded with them', () => {
       // Act
-      const answerVO = new AnswerVO(vote, SEAL, false);
+      const answerVO = new AnswerVO({ ...PROPS, voterInTheGap: true });
 
       // Assert
-      expect(answerVO.vote).toBe(vote);
-    });
-
-    it('should keep its seal and whether the voter was the person in the gap', () => {
-      // Act
-      const answerVO = new AnswerVO('TestOption', SEAL, true);
-
-      // Assert
+      expect(answerVO.vote).toBe('TestOption');
+      expect(answerVO.matchPrediction).toBe(1);
+      expect(answerVO.votePredictions).toEqual(PROPS.votePredictions);
+      expect(answerVO.optionOrder).toEqual(PROPS.optionOrder);
+      expect(answerVO.responseTimeMs).toBeNull();
       expect(answerVO.seal).toEqual(SEAL);
       expect(answerVO.voterInTheGap).toBe(true);
+    });
+
+    it('should trim the vote and the predicted votes', () => {
+      // Act
+      const answerVO = new AnswerVO({
+        ...PROPS,
+        vote: ' TestOption ',
+        votePredictions: [{ playerId: 'TestAnaId', vote: ' TestOtherOption ' }],
+      });
+
+      // Assert
+      expect(answerVO.vote).toBe('TestOption');
+      expect(answerVO.votePredictions[0]?.vote).toBe('TestOtherOption');
     });
 
     it('should not let its seal be changed through the object it was given', () => {
       // Arrange
       const seal = { ...SEAL };
-      const answerVO = new AnswerVO('TestOption', seal, false);
+      const answerVO = new AnswerVO({ ...PROPS, seal });
 
       // Act
       seal.underEighteen = true;
@@ -44,11 +61,35 @@ describe('AnswerVO', () => {
     });
 
     it('should throw an error if the vote is missing', () => {
-      // Arrange
-      const vote = '';
-
       // Act & Assert
-      expect(() => new AnswerVO(vote, SEAL, false)).toThrow(VoteMissingError);
+      expect(() => new AnswerVO({ ...PROPS, vote: '' })).toThrow(VoteMissingError);
+    });
+
+    it('should throw an error if a predicted vote is missing', () => {
+      // Act & Assert
+      expect(
+        () => new AnswerVO({ ...PROPS, votePredictions: [{ playerId: 'TestAnaId', vote: ' ' }] }),
+      ).toThrow(VoteMissingError);
+    });
+
+    it('should throw an error if the match prediction is not a whole number from 0', () => {
+      // Act & Assert
+      expect(() => new AnswerVO({ ...PROPS, matchPrediction: -1 })).toThrow(
+        InvalidMatchPredictionError,
+      );
+      expect(() => new AnswerVO({ ...PROPS, matchPrediction: 1.5 })).toThrow(
+        InvalidMatchPredictionError,
+      );
+    });
+  });
+
+  describe('completedIn', () => {
+    it('should give the same answer with the time it took to complete it', () => {
+      // Act
+      const completed = new AnswerVO(PROPS).completedIn(40_000);
+
+      // Assert
+      expect(completed.toProps()).toEqual({ ...PROPS, responseTimeMs: 40_000 });
     });
   });
 });

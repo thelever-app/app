@@ -1,4 +1,4 @@
-import type { Randomness } from '../../../domain/ports/randomness.port.ts';
+import type { Randomness } from '../../ports/randomness.port.ts';
 
 /** Keeps every order as it was, since a shuffle swaps each item with itself, and picks the last option. */
 export class KeepOrderRandomness implements Randomness {

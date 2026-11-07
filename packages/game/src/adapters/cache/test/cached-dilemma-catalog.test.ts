@@ -33,7 +33,7 @@ class CountingCatalog implements DilemmaCatalog {
 
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
     this.asked.push(['options', ...dilemmaIds]);
-    return dilemmaIds.map((dilemmaId) => ({ dilemmaId, version: 1, optionIds: [] }));
+    return dilemmaIds.map((dilemmaId) => ({ dilemmaId, version: 1, optionIds: [], hasGap: false }));
   }
 
   async findContents(
