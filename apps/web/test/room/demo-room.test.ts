@@ -8,7 +8,7 @@ describe('DEMO_ROOM', () => {
     vi.useRealTimers();
   });
 
-  it('should open a lobby every fake player joins, and a game with the seed dilemmas of its category', async () => {
+  it('should open a lobby every fake player joins, and a game with the seed dilemmas of every category', async () => {
     // Arrange
     vi.useFakeTimers();
     const connection = await SimulatedRoomConnection.open(DEMO_ROOM);
@@ -18,6 +18,7 @@ describe('DEMO_ROOM', () => {
     await vi.advanceTimersByTimeAsync(lastJoins);
 
     // Act
+    const catalog = await connection.searchDilemmas({});
     connection.send({ type: 'start-game' });
     await vi.advanceTimersByTimeAsync(0);
     connection.close();
@@ -26,7 +27,7 @@ describe('DEMO_ROOM', () => {
     const lobby = received.filter((message) => message.type === 'room-state').at(-1);
     const game = received.find((message) => message.type === 'game-state');
     expect(lobby?.players).toHaveLength(DEMO_ROOM.others.length + 1);
-    // The seed has three dilemmas of life and death, the category a room starts with.
-    expect(game?.dilemmas).toHaveLength(3);
+    // A room starts with every category: the game plays every dilemma of the seed, up to 8.
+    expect(game?.dilemmas).toHaveLength(Math.min(8, catalog.length));
   });
 });

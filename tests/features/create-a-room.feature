@@ -48,12 +48,12 @@ Feature: Create a room
     Given a host whose device is in English
     When the host creates a room
     Then the dilemmas of the room are in English
-    And the room has a default category, number of dilemmas and total time
+    And the room has default categories, number of dilemmas and total time
 
   @ui
   Scenario: The host changes the configuration before starting
     Given a host in the lobby
-    When the host changes the dilemma language, the category, the number of dilemmas or the total time
+    When the host changes the dilemma language, the categories, the number of dilemmas or the total time
     Then the game uses the new configuration
 
   @ui
@@ -126,8 +126,8 @@ Feature: Create a room
       | mix             | private dilemmas and catalog dilemmas |
 
   @ui
-  Scenario: The host picks specific dilemmas by searching tags
-    When the host searches the tag "family" and picks 6 dilemmas
+  Scenario: The host picks specific dilemmas by searching
+    When the host searches "family" and picks 6 dilemmas
     Then the game uses exactly those 6 dilemmas
     And no new dilemmas are added for the exploration
 
@@ -136,6 +136,22 @@ Feature: Create a room
     Given a room not marked as adults only
     When the host searches for dilemmas
     Then only dilemmas suitable from 16 are shown
+
+  @ui
+  Scenario: The search finds a dilemma by part of its text
+    When the host searches part of the text of a dilemma
+    Then that dilemma is shown
+
+  @ui
+  Scenario: The host plays several categories
+    When the host chooses the categories "life-and-death" and "honesty"
+    Then every dilemma of the game is of one of those categories
+
+  @ui
+  Scenario: The host goes back to a game by categories
+    Given the host has picked specific dilemmas
+    When the host chooses to play by categories
+    Then no dilemma is picked for the game
 
   Scenario: The host turns off new dilemmas
     Given the option to include new dilemmas is on by default

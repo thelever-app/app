@@ -51,14 +51,27 @@ const SCREEN = {
   switches: {
     adultsOnly: 'Solo mayores de 18',
     newDilemmas: 'Incluir dilemas nuevos',
-    playersCanAddDilemmas: 'Los jugadores pueden añadir dilemas',
   },
-  language: 'Idioma',
-  category: 'Categoría',
+  language: 'Idioma de los dilemas',
+  byCategories: 'Por categorías',
+  categories: 'Categorías',
+  allCategories: 'Todas',
+  categoryNames: {
+    'life-and-death': 'Vida y muerte',
+    honesty: 'Honestidad',
+    loyalty: 'Lealtad',
+    justice: 'Justicia',
+    'love-and-relationships': 'Amor y relaciones',
+    'work-and-money': 'Trabajo y dinero',
+    'technology-and-the-future': 'Tecnología y futuro',
+  } as Readonly<Record<string, string>>,
   dilemmaCount: 'Dilemas',
   totalTime: 'Tiempo total',
+  dilemmasPerPlayer: 'Dilemas que añade cada jugador',
+  noDilemmas: 'Ninguno',
   pick: 'Elegir dilemas uno a uno',
-  search: 'Buscar por etiqueta',
+  changePicked: 'Cambiar',
+  search: 'Buscar dilemas',
   play: (count: number) => (count === 1 ? 'Jugar este' : `Jugar estos ${count}`),
   add: 'Añadir un dilema',
   remove: 'Quitar este dilema',
@@ -406,8 +419,18 @@ export class E2eDriver implements GameDriver {
           .setChecked(Boolean(value));
       } else if (setting === 'dilemmaLanguage') {
         await sheet.getByLabel(SCREEN.language).selectOption(String(value));
-      } else if (setting === 'category') {
-        await sheet.getByLabel(SCREEN.category).selectOption(String(value));
+      } else if (setting === 'categories') {
+        const chips = sheet.getByRole('group', { name: SCREEN.categories });
+        // Every one first, then the ones to play: marking one unmarks «Todas».
+        await chips.getByRole('checkbox', { name: SCREEN.allCategories, exact: true }).click();
+        for (const category of value as readonly string[]) {
+          const name = SCREEN.categoryNames[category];
+          if (!name) throw new Error(`The driver does not know the category ${category}`);
+          await chips.getByRole('checkbox', { name, exact: true }).click();
+        }
+      } else if (setting === 'dilemmasPerPlayer') {
+        const group = sheet.getByRole('radiogroup', { name: SCREEN.dilemmasPerPlayer });
+        await chooseOption(group, value === 0 ? SCREEN.noDilemmas : String(value));
       } else if (setting === 'dilemmaCount') {
         const group = sheet.getByRole('group', { name: SCREEN.dilemmaCount, exact: true });
         await chooseOption(group, String(value));
@@ -421,8 +444,8 @@ export class E2eDriver implements GameDriver {
     await sheet.getByRole('button', { name: SCREEN.save }).click();
     await sheet.waitFor({ state: 'hidden' });
     await this.#untilEveryoneSees('the new configuration', (lobby) =>
-      Object.entries(changes).every(
-        ([setting, value]) => lobby.settings[setting as keyof SettingsView] === value,
+      Object.entries(changes).every(([setting, value]) =>
+        isDeepStrictEqual(lobby.settings[setting as keyof SettingsView], value),
       ),
     );
   }
@@ -433,21 +456,22 @@ export class E2eDriver implements GameDriver {
     return steady(async () => (await change.count()) > 0);
   }
 
-  /** The first dilemma the search of the screen offers. */
+  /** The first dilemma the search of the screen offers that nobody added yet. */
   async addDilemma(player: string): Promise<void> {
     const adder = this.#playerCalled(player);
     const { page } = screenOf(adder);
+    const added = new Set(await this.addedDilemmasSeenBy(player));
     const answer = this.#nextSearchOn(page);
     await page.getByRole('button', { name: SCREEN.add }).click();
-    const [first] = await answer;
-    if (!first) throw new Error('The catalog has no dilemma suitable for the room');
+    const first = (await answer).find(({ dilemmaId }) => !added.has(dilemmaId));
+    if (!first) throw new Error('The catalog has no other dilemma suitable for the room');
 
     await page
       .getByRole('dialog')
       .getByRole('button', { name: new RegExp(`^${escaped(first.text)}`) })
       .click();
     await waitUntil(
-      () => lastLobbyOf(adder)?.ownAddedDilemmaId === first.dilemmaId,
+      () => lastLobbyOf(adder)?.ownAddedDilemmaIds.includes(first.dilemmaId),
       `${player} has added ${first.dilemmaId}`,
     );
     await this.#untilEveryoneSees(`${first.dilemmaId} is added`, (lobby) =>
@@ -455,7 +479,7 @@ export class E2eDriver implements GameDriver {
     );
   }
 
-  /** The screen offers no way to add a second one. */
+  /** The screen offers no way to add more than the room allows. */
   async tryToAddAnotherDilemma(player: string): Promise<boolean> {
     const { page } = screenOf(this.#playerCalled(player));
     const add = page.getByRole('button', { name: SCREEN.add });
@@ -480,9 +504,10 @@ export class E2eDriver implements GameDriver {
       .map(({ nickname }) => nickname);
   }
 
-  async removeAddedDilemma(host: string): Promise<void> {
-    const { page } = screenOf(this.#playerCalled(host));
-    const before = this.#lobbyOf(host).addedDilemmas.length;
+  /** The host sees every added dilemma with a way to remove it; anyone else, only their own. */
+  async removeAddedDilemma(player: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const before = this.#lobbyOf(player).addedDilemmas.length;
     await page.getByRole('button', { name: SCREEN.remove }).first().click();
     await this.#untilEveryoneSees(
       'one dilemma less is added',
@@ -494,19 +519,19 @@ export class E2eDriver implements GameDriver {
    * The host searches where they pick the dilemmas of the game; any other player, where they add
    * one. The ids are those of what the room server answered and the screen shows.
    */
-  async searchDilemmas(player: string, tags?: string[]): Promise<string[]> {
+  async searchDilemmas(player: string, text?: string): Promise<string[]> {
     const { page } = screenOf(this.#playerCalled(player));
     let answer = this.#nextSearchOn(page);
     if (player === this.#hostName()) {
-      await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
-      await page.getByRole('button', { name: SCREEN.pick }).click();
+      await this.#openPickSheet(player);
     } else {
       await page.getByRole('button', { name: SCREEN.add }).click();
     }
     let found = await answer;
-    if (tags) {
-      answer = this.#nextSearchOn(page, 'tags=');
-      await page.getByRole('searchbox', { name: SCREEN.search }).fill(tags.join(' '));
+    if (text) {
+      // The screen searches once the player stops typing; filling the field types it all at once.
+      answer = this.#nextSearchOn(page, 'q=');
+      await page.getByRole('searchbox', { name: SCREEN.search }).fill(text);
       found = await answer;
     }
     const sheet = page.getByRole('dialog');
@@ -520,8 +545,7 @@ export class E2eDriver implements GameDriver {
   async pickDilemmas(host: string, dilemmaIds: string[]): Promise<void> {
     const { page } = screenOf(this.#playerCalled(host));
     const answer = this.#nextSearchOn(page);
-    await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
-    await page.getByRole('button', { name: SCREEN.pick }).click();
+    await this.#openPickSheet(host);
     const found = await answer;
 
     const sheet = page.getByRole('dialog');
@@ -537,6 +561,24 @@ export class E2eDriver implements GameDriver {
         dilemmaIds.toSorted(),
       ),
     );
+  }
+
+  /** «Por categorías» in the settings leaves the picked dilemmas in one tap. */
+  async playByCategories(host: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
+    const sheet = page.getByRole('dialog');
+    await chooseOption(sheet, SCREEN.byCategories);
+    await sheet.getByRole('button', { name: SCREEN.save }).click();
+    await sheet.waitFor({ state: 'hidden' });
+    await this.#untilEveryoneSees(
+      'no picked dilemma',
+      (lobby) => lobby.pickedDilemmas.length === 0,
+    );
+  }
+
+  async pickedDilemmasSeenBy(viewer: string): Promise<string[]> {
+    return this.#lobbyOf(viewer).pickedDilemmas.map(({ dilemmaId }) => dilemmaId);
   }
 
   catalogEntryOf(dilemmaId: string): CatalogEntry {
@@ -929,6 +971,16 @@ export class E2eDriver implements GameDriver {
   }
 
   /** The next answer of the room server to a search of the page, with what it found. */
+  /** From the settings: by categories, the link to pick; by hand, the row of the picked ones. */
+  async #openPickSheet(host: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const byHand = this.#lobbyOf(host).pickedDilemmas.length > 0;
+    await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
+    const sheet = page.getByRole('dialog');
+    const open = byHand ? SCREEN.changePicked : SCREEN.pick;
+    await sheet.getByRole('button', { name: open, exact: true }).click();
+  }
+
   async #nextSearchOn(
     page: Page,
     containing = '',

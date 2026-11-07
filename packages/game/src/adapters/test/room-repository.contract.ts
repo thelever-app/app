@@ -142,13 +142,14 @@ export function describeRoomRepositoryContract(
           variant: 'anonymous',
           adultsOnly: true,
           dilemmaLanguage: 'ca',
-          category: 'honesty',
+          categories: ['honesty', 'loyalty'],
           dilemmaCount: 12,
           totalTimeInMinutes: 10,
           newDilemmas: false,
-          playersCanAddDilemmas: true,
+          dilemmasPerPlayer: 2,
         });
         saved.addDilemma('TestLuisId', { dilemmaId: 'TestAddedDilemma', minimumAge: 18 });
+        saved.addDilemma('TestLuisId', { dilemmaId: 'TestOtherAddedDilemma', minimumAge: 16 });
         saved.pickDilemmas('TestAnaId', [
           { dilemmaId: 'TestPickedDilemma1', minimumAge: 16 },
           { dilemmaId: 'TestPickedDilemma2', minimumAge: 18 },

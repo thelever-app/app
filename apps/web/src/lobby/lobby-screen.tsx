@@ -8,6 +8,7 @@ import { useLobby } from '../room/room-provider.tsx';
 import { AddDilemmaSheet } from './add-dilemma-sheet.tsx';
 import { AvatarPickerSheet } from './avatar-picker-sheet.tsx';
 import { ExpelSheet } from './expel-sheet.tsx';
+import { isCategory } from './categories.ts';
 import { invitationLink, spelled } from './invitation.ts';
 import { PickDilemmasSheet } from './pick-dilemmas-sheet.tsx';
 import { QrScreen } from './qr-screen.tsx';
@@ -95,9 +96,16 @@ export function LobbyScreen() {
           </div>
           <div className={styles.divider} />
           <div className={styles.summaryRow}>
-            <span className={styles.muted} data-testid="room-settings">
-              {summaryOf(settings, lobby.groupNature, t)}
-              {settings.adultsOnly && ` · ${t('lobby.adultsOnly')}`}
+            <span className={styles.summaryText}>
+              <span className={styles.summaryDilemmas} data-testid="room-dilemmas">
+                {lobby.pickedDilemmas.length > 0
+                  ? t('lobby.pickedCount', { count: lobby.pickedDilemmas.length })
+                  : categoriesOf(settings, t)}
+              </span>
+              <span className={styles.muted} data-testid="room-settings">
+                {summaryOf(settings, lobby.groupNature, lobby.pickedDilemmas.length > 0, t)}
+                {settings.adultsOnly && ` · ${t('lobby.adultsOnly')}`}
+              </span>
             </span>
             {isHost && (
               <button
@@ -156,13 +164,14 @@ export function LobbyScreen() {
           </section>
         )}
 
-        {!isHost && settings.playersCanAddDilemmas && (
+        {settings.dilemmasPerPlayer > 0 && (
           <AddCard
-            ownText={
-              lobby.addedDilemmas.find(({ dilemmaId }) => dilemmaId === lobby.ownAddedDilemmaId)
-                ?.text
-            }
+            own={lobby.addedDilemmas.filter(({ dilemmaId }) =>
+              lobby.ownAddedDilemmaIds.includes(dilemmaId),
+            )}
+            allowed={settings.dilemmasPerPlayer}
             onAdd={() => setOpen({ sheet: 'add' })}
+            onRemove={(dilemmaId) => send({ type: 'remove-added-dilemma', dilemmaId })}
           />
         )}
 
@@ -243,7 +252,9 @@ export function LobbyScreen() {
       {open.sheet === 'settings' && (
         <RoomSettingsSheet
           settings={settings}
+          pickedCount={lobby.pickedDilemmas.length}
           onSave={(changes) => send({ type: 'change-settings', changes })}
+          onPlayByCategories={() => send({ type: 'pick-dilemmas', dilemmaIds: [] })}
           onPickDilemmas={() => setOpen({ sheet: 'pick' })}
           onClose={close}
         />
@@ -285,45 +296,68 @@ export function LobbyScreen() {
   );
 }
 
-/** «8 dilemas · 6 min · Español · Amigos». */
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+/** «Todas las categorías», «Honestidad» or «3 categorías». */
+function categoriesOf({ categories }: RoomSettingsDto, t: Translate): string {
+  const [only] = categories;
+  if (only === undefined) return t('lobby.categories.all');
+  if (categories.length === 1 && isCategory(only)) return t(`categories.${only}`);
+  return t('lobby.categories.some', { count: categories.length });
+}
+
+/** «8 dilemas · 6 min · Español · Amigos»; with dilemmas picked, they say how many there are. */
 function summaryOf(
   settings: RoomSettingsDto,
   groupNature: string,
-  t: ReturnType<typeof useTranslation>['t'],
+  picked: boolean,
+  t: Translate,
 ): string {
-  return t('lobby.summary', {
+  const values = {
     count: settings.dilemmaCount,
     minutes: settings.totalTimeInMinutes,
     language: t(`languages.${settings.dilemmaLanguage}`),
     nature: t(`createRoom.groupNature.${groupNature as 'friends'}`),
-  });
+  };
+  return picked ? t('lobby.summaryPicked', values) : t('lobby.summary', values);
 }
 
 interface AddCardProps {
-  /** The dilemma the player added, if they did: only one each. */
-  readonly ownText: string | undefined;
+  /** The dilemmas the player using the screen added. */
+  readonly own: readonly { readonly dilemmaId: string; readonly text: string }[];
+  /** How many each player may add. */
+  readonly allowed: number;
   readonly onAdd: () => void;
+  readonly onRemove: (dilemmaId: string) => void;
 }
 
-function AddCard({ ownText, onAdd }: AddCardProps) {
+/** Each player, the host too, adds dilemmas up to what the room allows, and removes their own. */
+function AddCard({ own, allowed, onAdd, onRemove }: AddCardProps) {
   const { t } = useTranslation();
   return (
     <section className={styles.addCard} aria-labelledby="add-dilemma">
       <h2 id="add-dilemma" className={styles.addTitle}>
         {t('lobby.add.title')}
       </h2>
-      {ownText === undefined ? (
-        <>
-          <span>{t('lobby.add.text')}</span>
-          <button type="button" className={styles.addButton} onClick={onAdd}>
-            <Icon name="add" size={20} />
-            {t('lobby.add.action')}
+      <span>{t('lobby.add.count', { count: own.length, total: allowed })}</span>
+      {own.map(({ dilemmaId, text }) => (
+        <div key={dilemmaId} className={styles.ownDilemma}>
+          <span className={styles.ownDilemmaText}>{text}</span>
+          <button
+            type="button"
+            className={styles.ownRemove}
+            aria-label={t('lobby.add.remove')}
+            onClick={() => onRemove(dilemmaId)}
+          >
+            <Icon name="close" size={20} />
           </button>
-        </>
-      ) : (
-        <p className={styles.ownDilemma}>
-          {t('lobby.add.yours')} <strong>{ownText}</strong>
-        </p>
+        </div>
+      ))}
+      {own.length < allowed && (
+        <button type="button" className={styles.addButton} onClick={onAdd}>
+          <Icon name="add" size={20} />
+          {t('lobby.add.action')}
+        </button>
       )}
     </section>
   );

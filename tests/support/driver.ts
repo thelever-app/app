@@ -11,11 +11,12 @@ export interface SettingsView {
   readonly variant: string;
   readonly adultsOnly: boolean;
   readonly dilemmaLanguage: string;
-  readonly category: string;
+  /** None, every category. */
+  readonly categories: readonly string[];
   readonly dilemmaCount: number;
   readonly totalTimeInMinutes: number;
   readonly newDilemmas: boolean;
-  readonly playersCanAddDilemmas: boolean;
+  readonly dilemmasPerPlayer: number;
 }
 
 /** What a player sees of a room before entering it. */
@@ -43,6 +44,7 @@ export interface GameSettingsView {
 
 /** Test data the driver loaded: what a dilemma is, to check what a game or a search returns. */
 export interface CatalogEntry {
+  readonly text: string;
   readonly minimumAge: number;
   readonly category: string;
   readonly status: 'in-catalog' | 'in-exploration';
@@ -113,19 +115,23 @@ export interface GameDriver {
   /** Whether `player` has any way to change the configuration. */
   canChangeSettings(player: string): Promise<boolean>;
 
-  /** `player` adds a dilemma of the catalog suitable for the room. */
+  /** `player` adds a dilemma of the catalog suitable for the room that nobody added yet. */
   addDilemma(player: string): Promise<void>;
-  /** As `addDilemma`, with another dilemma; whether it was added. */
+  /** As `addDilemma`; whether it was added. */
   tryToAddAnotherDilemma(player: string): Promise<boolean>;
   /** The ids of the dilemmas added by the players, as `viewer` sees them. */
   addedDilemmasSeenBy(viewer: string): Promise<string[]>;
   /** Who `viewer` can tell added each dilemma, from everything they see of the added dilemmas. */
   authorsOfAddedDilemmasSeenBy(viewer: string): Promise<string[]>;
-  /** `host` removes the first added dilemma they see. */
-  removeAddedDilemma(host: string): Promise<void>;
-  /** The ids of the dilemmas of the catalog that a search of `player` shows. */
-  searchDilemmas(player: string, tags?: string[]): Promise<string[]>;
+  /** `player` removes the first added dilemma they may: any for the host, their own for anyone else. */
+  removeAddedDilemma(player: string): Promise<void>;
+  /** The ids of the dilemmas of the catalog that a search of `player` shows, for what they typed. */
+  searchDilemmas(player: string, text?: string): Promise<string[]>;
   pickDilemmas(host: string, dilemmaIds: string[]): Promise<void>;
+  /** `host` goes back to a game by categories, leaving the picked dilemmas at once. */
+  playByCategories(host: string): Promise<void>;
+  /** The ids of the dilemmas the host picked, as `viewer` sees them. */
+  pickedDilemmasSeenBy(viewer: string): Promise<string[]>;
   catalogEntryOf(dilemmaId: string): CatalogEntry;
 
   expel(host: string, player: string): Promise<void>;

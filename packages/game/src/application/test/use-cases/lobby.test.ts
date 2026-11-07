@@ -35,7 +35,7 @@ async function arrange() {
       changeSettings.execute({
         roomId: lobby.roomId,
         playerId: lobby.anaId,
-        changes: { playersCanAddDilemmas: true },
+        changes: { dilemmasPerPlayer: 1 },
       }),
     changeAvatar: new ChangeAvatarUseCase(roomRepository, notifier),
     pickDilemmas: new PickDilemmasUseCase(roomRepository, catalog, notifier),
@@ -115,7 +115,7 @@ describe('ChangeRoomSettingsUseCase', () => {
       playerId: anaId,
       changes: {
         dilemmaLanguage: 'en',
-        category: 'honesty',
+        categories: ['honesty', 'loyalty'],
         dilemmaCount: 6,
         totalTimeInMinutes: 4,
       },
@@ -125,7 +125,7 @@ describe('ChangeRoomSettingsUseCase', () => {
     const { settings } = (await roomRepository.findById(roomId))!;
     expect(settings.toSnapshot()).toMatchObject({
       dilemmaLanguage: 'en',
-      category: 'honesty',
+      categories: ['honesty', 'loyalty'],
       dilemmaCount: 6,
       totalTimeInMinutes: 4,
     });
@@ -225,6 +225,26 @@ describe('AddDilemmaUseCase and RemoveAddedDilemmaUseCase', () => {
     expect((await roomRepository.findById(roomId))?.addedDilemmas).toEqual([]);
   });
 
+  it('should let the player who added a dilemma remove it, and nobody else but the host', async () => {
+    // Arrange
+    const { allowAdding, addDilemma, removeAddedDilemma, roomRepository, roomId, luisId, martaId } =
+      await arrange();
+    await allowAdding();
+    await addDilemma.execute({ roomId, playerId: luisId, dilemmaId: 'TestCatalog5' });
+
+    // Act
+    const byMarta = removeAddedDilemma.execute({
+      roomId,
+      playerId: martaId,
+      dilemmaId: 'TestCatalog5',
+    });
+    await expect(byMarta).rejects.toThrow(NotHostError);
+    await removeAddedDilemma.execute({ roomId, playerId: luisId, dilemmaId: 'TestCatalog5' });
+
+    // Assert
+    expect((await roomRepository.findById(roomId))?.addedDilemmas).toEqual([]);
+  });
+
   it('should throw an error for a dilemma that does not suit the room', async () => {
     // Arrange
     const { allowAdding, addDilemma, roomId, luisId } = await arrange();
@@ -268,7 +288,7 @@ describe('SearchDilemmasUseCase', () => {
     expect(found.every(({ minimumAge }) => minimumAge === 16)).toBe(true);
   });
 
-  it('should find the dilemmas with a tag, also those for adults in a room for adults', async () => {
+  it('should find the dilemmas with what is searched, also those for adults in a room for adults', async () => {
     // Arrange
     const { searchDilemmas, changeSettings, roomId, anaId } = await arrange();
     await changeSettings.execute({ roomId, playerId: anaId, changes: { adultsOnly: true } });
@@ -278,7 +298,7 @@ describe('SearchDilemmasUseCase', () => {
     const family = await searchDilemmas.execute({
       roomId,
       identity: 'TestAnaIdentity',
-      tags: ['family'],
+      text: 'family',
     });
 
     // Assert
@@ -288,6 +308,21 @@ describe('SearchDilemmasUseCase', () => {
       'TestCatalog4',
       'TestCatalog5',
     ]);
+  });
+
+  it('should find only the dilemmas of the category given', async () => {
+    // Arrange
+    const { searchDilemmas, roomId } = await arrange();
+
+    // Act
+    const found = await searchDilemmas.execute({
+      roomId,
+      identity: 'TestAnaIdentity',
+      category: 'honesty',
+    });
+
+    // Assert
+    expect(found.map(({ dilemmaId }) => dilemmaId)).toEqual(['TestHonesty1', 'TestHonesty2']);
   });
 
   it('should throw an error if whoever searches is not in the room', async () => {
@@ -326,13 +361,13 @@ describe('GetRoomStateUseCase', () => {
       settings: room.settings.toSnapshot(),
       minimumPlayers: 2,
       addedDilemmas: [{ dilemmaId: 'TestCatalog5', text: 'TextOfTestCatalog5' }],
-      ownAddedDilemmaId: null,
+      ownAddedDilemmaIds: [],
       pickedDilemmas: [],
       currentGameId: null,
     });
     expect(forAna.players.map(({ nickname }) => nickname)).toEqual(['Ana', 'Luis', 'Marta']);
     expect(forAna.addedDilemmas[0]).not.toHaveProperty('playerId');
-    expect(forLuis.ownAddedDilemmaId).toBe('TestCatalog5');
+    expect(forLuis.ownAddedDilemmaIds).toEqual(['TestCatalog5']);
   });
 
   it('should throw an error if whoever asks is not in the room', async () => {

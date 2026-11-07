@@ -9,6 +9,7 @@ import type {
   PlayerColor,
   RoomVariant,
   TotalTimeInMinutes,
+  DilemmasPerPlayer,
 } from '@thelever-app/game';
 import type { Generated, Kysely } from 'kysely';
 
@@ -53,11 +54,12 @@ export interface Database {
     variant: RoomVariant;
     adults_only: boolean;
     dilemma_language: DilemmaLanguage;
-    category: string;
+    /** None, every category. */
+    categories: string[];
     dilemma_count: DilemmaCount;
     total_time_in_minutes: TotalTimeInMinutes;
     new_dilemmas: boolean;
-    players_can_add_dilemmas: boolean;
+    dilemmas_per_player: DilemmasPerPlayer;
     current_game_id: string | null;
     created_at: Generated<Date>;
   };

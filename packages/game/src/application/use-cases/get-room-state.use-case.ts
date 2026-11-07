@@ -31,8 +31,8 @@ export interface GetRoomStateOutput {
   }[];
   /** Never who added each one, not even to the host. */
   readonly addedDilemmas: readonly { readonly dilemmaId: string; readonly text: string }[];
-  /** The one the player who asks added, if any, so they know they cannot add another. */
-  readonly ownAddedDilemmaId: string | null;
+  /** The ones the player who asks added, so they can remove them and know how many are left. */
+  readonly ownAddedDilemmaIds: readonly string[];
   readonly pickedDilemmas: readonly { readonly dilemmaId: string; readonly text: string }[];
   readonly currentGameId: string | null;
 }
@@ -77,8 +77,9 @@ export class GetRoomStateUseCase {
         connected: room.isConnected(player.id),
       })),
       addedDilemmas: room.addedDilemmas.map(({ dilemmaId }) => withText(dilemmaId)),
-      ownAddedDilemmaId:
-        room.addedDilemmas.find((added) => added.playerId === playerId)?.dilemmaId ?? null,
+      ownAddedDilemmaIds: room.addedDilemmas
+        .filter((added) => added.playerId === playerId)
+        .map(({ dilemmaId }) => dilemmaId),
       pickedDilemmas: room.pickedDilemmas.map(({ dilemmaId }) => withText(dilemmaId)),
       currentGameId: room.currentGameId,
     };

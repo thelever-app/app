@@ -4,7 +4,7 @@ import { InvalidRoomSettingError } from '../../errors/invalid-room-setting.error
 
 describe('RoomSettingsVO', () => {
   describe('defaults', () => {
-    it('should start nominal, for everyone, with new dilemmas and without players adding any', () => {
+    it('should start nominal, for everyone, with every category, new dilemmas and without players adding any', () => {
       // Act
       const settings = RoomSettingsVO.defaults('en');
 
@@ -13,11 +13,11 @@ describe('RoomSettingsVO', () => {
         variant: 'nominal',
         adultsOnly: false,
         dilemmaLanguage: 'en',
-        category: 'life-and-death',
+        categories: [],
         dilemmaCount: 8,
         totalTimeInMinutes: 6,
         newDilemmas: true,
-        playersCanAddDilemmas: false,
+        dilemmasPerPlayer: 0,
       });
     });
 
@@ -44,7 +44,9 @@ describe('RoomSettingsVO', () => {
 
     it.each([
       { variant: 'secret' },
-      { category: '  ' },
+      { categories: ['honesty', '  '] },
+      { dilemmasPerPlayer: 4 },
+      { dilemmasPerPlayer: -1 },
       { dilemmaCount: 7 },
       { totalTimeInMinutes: 5 },
       { dilemmaLanguage: 'ja' },
@@ -53,6 +55,18 @@ describe('RoomSettingsVO', () => {
       expect(() => RoomSettingsVO.defaults('es').with(change as never)).toThrow(
         InvalidRoomSettingError,
       );
+    });
+  });
+
+  describe('categories', () => {
+    it('should keep each category once, without the spaces around it', () => {
+      // Act
+      const settings = RoomSettingsVO.defaults('es').with({
+        categories: [' honesty', 'loyalty', 'honesty '],
+      });
+
+      // Assert
+      expect(settings.categories).toEqual(['honesty', 'loyalty']);
     });
   });
 

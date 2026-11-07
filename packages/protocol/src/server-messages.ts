@@ -93,8 +93,8 @@ export const RoomStateDto = z.strictObject({
     )
     .min(1),
   addedDilemmas: z.array(LobbyDilemmaDto),
-  /** The one the player who receives the message added, so they can tell it apart; only theirs. */
-  ownAddedDilemmaId: z.string().min(1).nullable(),
+  /** The ones the player who receives the message added, so they can tell them apart; only theirs. */
+  ownAddedDilemmaIds: z.array(z.string().min(1)),
   pickedDilemmas: z.array(LobbyDilemmaDto),
   /** Once the game starts, the player gets its state instead. */
   currentGameId: z.string().min(1).nullable(),
@@ -144,7 +144,7 @@ export const ErrorCodeDto = z.enum([
   'avatar-taken',
   'not-enough-players',
   'adding-dilemmas-not-allowed',
-  'dilemma-already-added',
+  'too-many-added-dilemmas',
   'dilemma-not-suitable',
   'invalid-avatar',
   'invalid-room-setting',

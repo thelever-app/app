@@ -56,12 +56,14 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
   }
 
   async search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]> {
+    const text = criteria.text?.trim().toLowerCase() ?? '';
     return [...this.#dilemmas.values()]
       .filter(
         (dilemma) =>
           (!criteria.dilemmaIds || criteria.dilemmaIds.includes(dilemma.dilemmaId)) &&
-          (!criteria.category || dilemma.category === criteria.category) &&
-          (criteria.tags ?? []).every((tag) => dilemma.tags.includes(tag)) &&
+          (!criteria.categories?.length || criteria.categories.includes(dilemma.category)) &&
+          // Only the whole text typed, in any case: ranking what matches best is up to Dilemmas.
+          [dilemma.text, ...dilemma.tags].some((field) => field.toLowerCase().includes(text)) &&
           dilemma.minimumAge <= criteria.maximumMinimumAge &&
           dilemma.status === criteria.status,
       )

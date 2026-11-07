@@ -64,6 +64,31 @@ describe('the lobby over the room sockets', () => {
     expect(state.hostId).toBe(state.players[0]?.playerId);
   });
 
+  it('should give back their place in the lobby to a player who opens the room again, as a reload does', async () => {
+    // Arrange
+    const { server: started, roomId, ana, luis } = await connectedLobby();
+    const before = await stateSeenBy(started.url, 'luis', roomId);
+    luis.socket.close();
+    await ana.next('connection-changed');
+
+    // Act
+    const again = await TestClient.open(started.url);
+    again.send({
+      type: 'connect',
+      contractVersion: CONTRACT_VERSION,
+      token: tokenOf('luis'),
+      roomId,
+      language: 'es',
+    });
+    const state = await again.next('room-state');
+    const backOnline = await ana.next('connection-changed');
+
+    // Assert
+    expect(state).toMatchObject({ playerId: before.playerId, currentGameId: null });
+    expect(state.players.map(({ nickname }) => nickname)).toEqual(['Ana', 'Luis', 'Marta']);
+    expect(backOnline).toMatchObject({ playerId: before.playerId, connected: true });
+  });
+
   it('should show everyone in the lobby who joins, as soon as they join', async () => {
     // Arrange
     const { server: started, roomId, ana } = await connectedLobby();
@@ -131,7 +156,7 @@ describe('the lobby over the room sockets', () => {
   it('should let a player add a dilemma that nobody can tell is theirs, and the host remove it', async () => {
     // Arrange
     const { ana, luis } = await connectedLobby();
-    ana.send({ type: 'change-settings', changes: { playersCanAddDilemmas: true } });
+    ana.send({ type: 'change-settings', changes: { dilemmasPerPlayer: 1 } });
     await luis.next('room-state');
     await ana.next('room-state');
 
@@ -144,10 +169,34 @@ describe('the lobby over the room sockets', () => {
 
     // Assert
     expect(seenByAna.addedDilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(['seed-trolley']);
-    expect(seenByAna.ownAddedDilemmaId).toBeNull();
-    expect(seenByLuis.ownAddedDilemmaId).toBe('seed-trolley');
+    expect(seenByAna.ownAddedDilemmaIds).toEqual([]);
+    expect(seenByLuis.ownAddedDilemmaIds).toEqual(['seed-trolley']);
     expect(JSON.stringify(seenByAna.addedDilemmas)).not.toContain(seenByLuis.playerId);
     expect(afterRemoving.addedDilemmas).toEqual([]);
+  });
+
+  it('should let a player remove a dilemma they added, and refuse more than the host allows', async () => {
+    // Arrange
+    const { ana, luis } = await connectedLobby();
+    ana.send({ type: 'change-settings', changes: { dilemmasPerPlayer: 1 } });
+    await luis.next('room-state');
+    luis.send({ type: 'add-dilemma', dilemmaId: 'seed-trolley' });
+    await luis.next('room-state');
+
+    // Act
+    luis.send({ type: 'add-dilemma', dilemmaId: 'seed-wallet' });
+    const refused = await luis.next('error');
+    luis.send({ type: 'remove-added-dilemma', dilemmaId: 'seed-trolley' });
+    const afterRemoving = await luis.next('room-state');
+
+    // Assert
+    expect(refused).toEqual({
+      type: 'error',
+      command: 'add-dilemma',
+      code: 'too-many-added-dilemmas',
+    });
+    expect(afterRemoving.addedDilemmas).toEqual([]);
+    expect(afterRemoving.ownAddedDilemmaIds).toEqual([]);
   });
 
   it('should tell an expelled player and close their socket, and show the others who is left', async () => {
@@ -200,10 +249,10 @@ describe('the lobby over the room sockets', () => {
     });
   });
 
-  it('should answer dilemmas-missing to a start in a category with no dilemma for the room', async () => {
+  it('should answer dilemmas-missing to a start in categories with no dilemma for the room', async () => {
     // Arrange: the seed has no dilemma of justice.
     const { ana } = await connectedLobby();
-    ana.send({ type: 'change-settings', changes: { category: 'justice' } });
+    ana.send({ type: 'change-settings', changes: { categories: ['justice'] } });
     await ana.next('room-state');
 
     // Act

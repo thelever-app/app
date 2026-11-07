@@ -92,7 +92,8 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  /* The design leaves 20px between the parts of the lobby. */
+  gap: 20px;
   padding: var(--space-4);
 }
 
@@ -132,6 +133,17 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+.summaryText {
+  display: flex;
+  flex-direction: column;
+}
+
+.summaryDilemmas {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
 }
 
 .muted {
@@ -236,7 +248,35 @@
 }
 
 .ownDilemma {
-  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px 8px var(--space-3);
+  border-radius: var(--radius-md);
+  background: #2a261d;
+}
+
+.ownDilemmaText {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 21px;
+  font-weight: 600;
+}
+
+.ownRemove {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: #f5efe2;
+  cursor: pointer;
 }
 
 .players {

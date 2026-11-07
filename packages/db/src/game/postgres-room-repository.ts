@@ -162,11 +162,11 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     variant: settings.variant,
     adults_only: settings.adultsOnly,
     dilemma_language: settings.dilemmaLanguage,
-    category: settings.category,
+    categories: [...settings.categories],
     dilemma_count: settings.dilemmaCount,
     total_time_in_minutes: settings.totalTimeInMinutes,
     new_dilemmas: settings.newDilemmas,
-    players_can_add_dilemmas: settings.playersCanAddDilemmas,
+    dilemmas_per_player: settings.dilemmasPerPlayer,
     current_game_id: snapshot.currentGameId,
   };
 }
@@ -251,11 +251,11 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
       variant: row.variant,
       adultsOnly: row.adults_only,
       dilemmaLanguage: row.dilemma_language,
-      category: row.category,
+      categories: row.categories,
       dilemmaCount: row.dilemma_count,
       totalTimeInMinutes: row.total_time_in_minutes,
       newDilemmas: row.new_dilemmas,
-      playersCanAddDilemmas: row.players_can_add_dilemmas,
+      dilemmasPerPlayer: row.dilemmas_per_player,
     },
     players: row.players.map(({ id, nickname, identity, avatar_face, avatar_color }) => ({
       id,

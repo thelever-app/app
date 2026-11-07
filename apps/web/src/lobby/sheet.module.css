@@ -22,6 +22,11 @@
   color: var(--color-ink);
 }
 
+/* A sheet whose list changes as the player searches: it keeps its height, so it does not jump. */
+.tall {
+  height: 88dvh;
+}
+
 .handle {
   align-self: center;
   width: 40px;

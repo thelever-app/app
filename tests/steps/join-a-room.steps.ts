@@ -253,12 +253,39 @@ Then('only dilemmas suitable for players from 16 are offered', function (this: G
   }
 });
 
+/** The room lets each player add at least `count` dilemmas, without lowering what it allows. */
+async function allowAdding(world: GameWorld, count: number): Promise<void> {
+  const host = await world.host();
+  const { dilemmasPerPlayer } = await world.driver.settingsSeenBy(host);
+  if (dilemmasPerPlayer < count) {
+    await world.driver.changeSettings(host, { dilemmasPerPlayer: count });
+  }
+}
+
+Given(
+  'the host allows each player to add {int} dilemmas',
+  async function (this: GameWorld, count: number) {
+    await allowAdding(this, count);
+  },
+);
+
 Given(
   /^"([^"]*)" has (?:already )?added a dilemma$/,
   async function (this: GameWorld, player: string) {
-    await this.driver.changeSettings(await this.host(), { playersCanAddDilemmas: true });
+    await allowAdding(this, 1);
     await this.isInTheRoom(player);
     await this.driver.addDilemma(player);
+    this.dilemmas = await this.driver.addedDilemmasSeenBy(player);
+  },
+);
+
+Given(
+  '{string} has already added {int} dilemmas',
+  async function (this: GameWorld, player: string, count: number) {
+    await allowAdding(this, count);
+    await this.isInTheRoom(player);
+    for (let added = 0; added < count; added += 1) await this.driver.addDilemma(player);
+    this.dilemmas = await this.driver.addedDilemmasSeenBy(player);
   },
 );
 
@@ -266,9 +293,36 @@ When('{string} tries to add another one', async function (this: GameWorld, playe
   this.accepted = await this.driver.tryToAddAnotherDilemma(player);
 });
 
-Then('the second dilemma is not added', async function (this: GameWorld) {
+Then('the third dilemma is not added', async function (this: GameWorld) {
   assert.equal(this.accepted, false);
-  assert.equal((await this.driver.addedDilemmasSeenBy(await this.host())).length, 1);
+  assert.equal((await this.driver.addedDilemmasSeenBy(await this.host())).length, 2);
+});
+
+When('{string} removes it', async function (this: GameWorld, player: string) {
+  await this.driver.removeAddedDilemma(player);
+});
+
+Then('nobody in the lobby sees it', async function (this: GameWorld) {
+  const [dilemmaId] = this.dilemmas;
+  assert.ok(dilemmaId, 'no step added a dilemma');
+  for (const viewer of this.inRoom) {
+    assert.ok(!(await this.driver.addedDilemmasSeenBy(viewer)).includes(dilemmaId), viewer);
+  }
+});
+
+When('the host adds a dilemma', async function (this: GameWorld) {
+  const host = await this.host();
+  await this.isInTheRoom(SOMEONE.player);
+  await this.driver.addDilemma(host);
+  this.dilemmas = await this.driver.addedDilemmasSeenBy(host);
+});
+
+Then('everyone in the lobby sees it among the added dilemmas', async function (this: GameWorld) {
+  const [dilemmaId] = this.dilemmas;
+  assert.ok(dilemmaId, 'no step added a dilemma');
+  for (const viewer of this.inRoom) {
+    assert.ok((await this.driver.addedDilemmasSeenBy(viewer)).includes(dilemmaId), viewer);
+  }
 });
 
 Then('no player in the lobby sees who added it', async function (this: GameWorld) {

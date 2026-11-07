@@ -35,6 +35,8 @@ export class GameWorld extends World {
 
   /** The dilemmas a step found or picked, for a later step to look at. */
   dilemmas: readonly string[] = [];
+  /** What the last search of a step showed. */
+  found: readonly string[] = [];
 
   /** The game in progress before a step tried to start one. */
   gameBefore: string | undefined;

@@ -19,9 +19,10 @@ export interface CatalogDilemma {
 /** Which dilemmas to look for; every criterion given must hold. */
 export interface DilemmaSearch {
   readonly dilemmaIds?: readonly string[];
-  readonly category?: string;
-  /** Every one of them. */
-  readonly tags?: readonly string[];
+  /** Any of them; none, every category. */
+  readonly categories?: readonly string[];
+  /** What a player typed, looked for in the text and the tags; the best matches may come first. */
+  readonly text?: string;
   /** 16 leaves out the dilemmas for adults. */
   readonly maximumMinimumAge: 16 | 18;
   /** In the general catalog, or in exploration before it gets there. */

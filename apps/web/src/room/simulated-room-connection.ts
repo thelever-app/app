@@ -63,11 +63,11 @@ export interface SimulatedRoomOptions {
     readonly joinAfterMs: number;
     readonly answerEveryMs: number;
   }[];
-  /** The dilemmas of the catalog, in the category the room starts with; the seed ones if absent. */
+  /** The dilemmas of the catalog, all of one category; the seed ones if absent. */
   readonly dilemmas?: readonly { readonly text: string; readonly options: readonly string[] }[];
 }
 
-/** The catalog of the simulation has a single category: the one a room starts with. */
+/** The dilemmas given to the simulation are all of one category. */
 const CLASSIFICATION = { category: 'life-and-death', tags: [], minimumAge: 16 } as const;
 
 /** The same as the room server, so a game of the simulation is composed like a real one. */
@@ -205,13 +205,13 @@ export class SimulatedRoomConnection implements RoomConnection {
   /** The dilemmas of the catalog that suit the room, as the room server answers the search. */
   async searchDilemmas(criteria: {
     readonly category?: string;
-    readonly tags?: readonly string[];
+    readonly q?: string;
   }): Promise<SearchDilemmasResponseDto['dilemmas']> {
     const dilemmas = await this.#useCases.searchDilemmas.execute({
       roomId: this.#roomId,
       identity: SELF_IDENTITY,
       ...(criteria.category && { category: criteria.category }),
-      ...(criteria.tags && { tags: criteria.tags }),
+      ...(criteria.q && { text: criteria.q }),
     });
     return SearchDilemmasResponseDto.parse({ dilemmas }).dilemmas;
   }

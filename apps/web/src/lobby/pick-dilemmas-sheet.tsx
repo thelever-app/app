@@ -16,16 +16,17 @@ interface PickDilemmasSheetProps {
 }
 
 /**
- * The host searches the catalog by category and tag and picks the dilemmas of the game; or, with
- * some picked before, unchecks them all to go back to a game by category.
+ * The host searches the catalog by category and by text and picks the dilemmas of the game; or,
+ * with some picked before, unchecks them all to go back to a game by categories.
  */
 export function PickDilemmasSheet({ roomId, picked, onPick, onClose }: PickDilemmasSheetProps) {
   const { t } = useTranslation();
   const [category, setCategory] = useState<string | undefined>(undefined);
-  const [tags, setTags] = useState('');
+  const [text, setText] = useState('');
   const [chosen, setChosen] = useState<readonly string[]>(picked);
-  const search = useDilemmaSearch(roomId, { category, tags });
-  // With dilemmas picked before, unchecking them all goes back to a game by category.
+  const search = useDilemmaSearch(roomId, { category, text });
+  const found = search.status === 'failed' ? [] : search.dilemmas;
+  // With dilemmas picked before, unchecking them all goes back to a game by categories.
   const byCategory = chosen.length === 0 && picked.length > 0;
   const label = byCategory
     ? t('pickDilemmas.byCategory')
@@ -43,7 +44,7 @@ export function PickDilemmasSheet({ roomId, picked, onPick, onClose }: PickDilem
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className={sheet.overlay} />
-        <Dialog.Content className={sheet.sheet} aria-describedby={undefined}>
+        <Dialog.Content className={`${sheet.sheet} ${sheet.tall}`} aria-describedby={undefined}>
           <div aria-hidden="true" className={sheet.handle} />
           <div className={sheet.top}>
             <Dialog.Title className={sheet.title}>{t('pickDilemmas.title')}</Dialog.Title>
@@ -58,11 +59,11 @@ export function PickDilemmasSheet({ roomId, picked, onPick, onClose }: PickDilem
               className={styles.searchInput}
               aria-label={t('pickDilemmas.search')}
               placeholder={t('pickDilemmas.searchPlaceholder')}
-              value={tags}
-              onChange={(event) => setTags(event.target.value)}
+              value={text}
+              onChange={(event) => setText(event.target.value)}
             />
           </label>
-          <div className={styles.chips} role="radiogroup" aria-label={t('settings.category')}>
+          <div className={styles.chips} role="radiogroup" aria-label={t('settings.categories')}>
             {[undefined, ...CATEGORIES].map((id) => (
               <button
                 key={id ?? 'all'}
@@ -76,33 +77,32 @@ export function PickDilemmasSheet({ roomId, picked, onPick, onClose }: PickDilem
               </button>
             ))}
           </div>
-          <div className={sheet.content}>
+          <div className={sheet.content} aria-busy={search.status === 'searching'}>
             <p className={sheet.hint}>{t('pickDilemmas.hint')}</p>
-            {search.status === 'found' && search.dilemmas.length === 0 && (
+            {search.status === 'found' && found.length === 0 && (
               <p className={sheet.hint}>{t('pickDilemmas.empty')}</p>
             )}
-            {search.status === 'found' &&
-              search.dilemmas.map((dilemma) => {
-                const checked = chosen.includes(dilemma.dilemmaId);
-                return (
-                  <button
-                    key={dilemma.dilemmaId}
-                    type="button"
-                    role="checkbox"
-                    aria-checked={checked}
-                    className={sheet.dilemma}
-                    onClick={() => toggle(dilemma.dilemmaId)}
-                  >
-                    <Icon name={checked ? 'checkBox' : 'checkBoxBlank'} size={22} />
-                    <span className={sheet.dilemmaText}>
-                      <span className={sheet.dilemmaTitle}>{dilemma.text}</span>
-                      <span className={sheet.dilemmaMeta}>
-                        {dilemma.tags.map((tag) => `#${tag}`).join(' ')}
-                      </span>
+            {found.map((dilemma) => {
+              const checked = chosen.includes(dilemma.dilemmaId);
+              return (
+                <button
+                  key={dilemma.dilemmaId}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={checked}
+                  className={sheet.dilemma}
+                  onClick={() => toggle(dilemma.dilemmaId)}
+                >
+                  <Icon name={checked ? 'checkBox' : 'checkBoxBlank'} size={22} />
+                  <span className={sheet.dilemmaText}>
+                    <span className={sheet.dilemmaTitle}>{dilemma.text}</span>
+                    <span className={sheet.dilemmaMeta}>
+                      {dilemma.tags.map((tag) => `#${tag}`).join(' ')}
                     </span>
-                  </button>
-                );
-              })}
+                  </span>
+                </button>
+              );
+            })}
           </div>
           <button
             type="button"

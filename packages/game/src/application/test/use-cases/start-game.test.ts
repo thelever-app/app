@@ -49,7 +49,12 @@ describe('StartGameUseCase', () => {
 
     it('should put the game together from the settings of the room', async () => {
       // Arrange: life-and-death has eight dilemmas for everyone in the catalog and three new ones.
-      const { startGame, gameRepository, roomId, anaId } = await arrange();
+      const { startGame, changeSettings, gameRepository, roomId, anaId } = await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { categories: ['life-and-death'] },
+      });
 
       // Act
       const { gameId } = await startGame.execute({ roomId, playerId: anaId });
@@ -62,6 +67,46 @@ describe('StartGameUseCase', () => {
       expect(ids).not.toContain('TestCatalog1');
       expect(ids.some((id) => id.startsWith('TestHonesty'))).toBe(false);
       expect(game?.dilemmas.every(({ origin }) => origin === 'picked-by-the-system')).toBe(true);
+    });
+
+    it('should take the dilemmas from any of the categories of the room', async () => {
+      // Arrange: honesty has two dilemmas in the catalog, and justice none.
+      const { startGame, changeSettings, gameRepository, roomId, anaId } = await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { categories: ['honesty', 'justice'], newDilemmas: false },
+      });
+
+      // Act
+      const { gameId } = await startGame.execute({ roomId, playerId: anaId });
+
+      // Assert
+      const game = await gameRepository.findById(gameId);
+      expect(game?.dilemmas.map(({ dilemmaId }) => dilemmaId).sort()).toEqual([
+        'TestHonesty1',
+        'TestHonesty2',
+      ]);
+    });
+
+    it('should take the dilemmas from every category while the room chooses none', async () => {
+      // Arrange: ten dilemmas for everyone in the catalog, eight of life-and-death and two of honesty.
+      const { startGame, changeSettings, gameRepository, roomId, anaId } = await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { dilemmaCount: 12, newDilemmas: false },
+      });
+
+      // Act
+      const { gameId } = await startGame.execute({ roomId, playerId: anaId });
+
+      // Assert
+      const ids = (await gameRepository.findById(gameId))?.dilemmas.map(
+        ({ dilemmaId }) => dilemmaId,
+      );
+      expect(ids).toHaveLength(10);
+      expect(ids).toEqual(expect.arrayContaining(['TestHonesty1', 'TestHonesty2']));
     });
 
     it('should copy the settings of the room into the game', async () => {
@@ -182,10 +227,14 @@ describe('StartGameUseCase', () => {
       expect(search).not.toHaveBeenCalled();
     });
 
-    it('should not start a game without dilemmas, in a category that has none for the room', async () => {
+    it('should not start a game without dilemmas, in categories that have none for the room', async () => {
       // Arrange
       const { startGame, changeSettings, roomId, anaId, roomRepository } = await arrange();
-      await changeSettings.execute({ roomId, playerId: anaId, changes: { category: 'justice' } });
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { categories: ['justice'] },
+      });
 
       // Act & Assert
       await expect(startGame.execute({ roomId, playerId: anaId })).rejects.toThrow(

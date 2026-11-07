@@ -116,7 +116,7 @@
     "room-code-not-found": "No hay ninguna sala con ese código.",
     "room-not-found": "Esa sala ya no existe.",
     "unknown": "No ha salido bien. Inténtalo otra vez.",
-    "dilemmas-missing": "No hay dilemas para esta configuración. Prueba con otra categoría."
+    "dilemmas-missing": "No hay dilemas para esta configuración. Prueba con otras categorías."
   },
   "home": {
     "title": "¿Jugamos?",
@@ -180,11 +180,10 @@
       "hint": "No sabes quién los ha añadido: se verá en el reveal. El resto saldrá del catálogo."
     },
     "add": {
-      "title": "Añade un dilema a la partida",
-      "text": "Uno por persona. Nadie sabrá que es tuyo hasta el reveal.",
+      "title": "Añade dilemas a la partida",
+      "count": "Has añadido {{count}} de {{total}}. Nadie sabrá que son tuyos hasta el reveal.",
       "action": "Añadir un dilema",
-      "yours": "Has añadido un dilema:",
-      "remove": "Quitarlo"
+      "remove": "Quitar este dilema"
     },
     "picked": {
       "title": "Dilemas elegidos · {{count}}"
@@ -199,7 +198,17 @@
     "missing_one": "Falta {{count}} jugador para empezar",
     "missing_other": "Faltan {{count}} jugadores para empezar",
     "guestWait": "{{host}} empezará la partida cuando estéis todos.",
-    "missing_many": "Faltan {{count}} jugadores para empezar"
+    "missing_many": "Faltan {{count}} jugadores para empezar",
+    "categories": {
+      "all": "Todas las categorías",
+      "some_one": "{{count}} categoría",
+      "some_other": "{{count}} categorías",
+      "some_many": "{{count}} categorías"
+    },
+    "pickedCount_one": "{{count}} dilema elegido",
+    "pickedCount_other": "{{count}} dilemas elegidos",
+    "pickedCount_many": "{{count}} dilemas elegidos",
+    "summaryPicked": "{{minutes}} min · {{language}} · {{nature}}"
   },
   "languages": {
     "es": "Español",
@@ -231,8 +240,13 @@
       "label": "Solo mayores de 18",
       "hint": "Permite dilemas para adultos. Solo podrán entrar mayores de 18."
     },
-    "language": "Idioma",
-    "category": "Categoría",
+    "language": "Idioma de los dilemas",
+    "howPicked": "Cómo se eligen los dilemas",
+    "byCategories": "Por categorías",
+    "byHand": "A mano",
+    "categories": "Categorías",
+    "allCategories": "Todas",
+    "categoriesHint": "La partida mezcla dilemas de las categorías marcadas.",
     "dilemmaCount": "Dilemas",
     "totalTime": "Tiempo total",
     "minutes": "{{count}} min",
@@ -240,18 +254,26 @@
       "label": "Incluir dilemas nuevos",
       "hint": "Ayudáis a valorar dilemas recién llegados al catálogo."
     },
-    "playersCanAddDilemmas": {
-      "label": "Los jugadores pueden añadir dilemas",
-      "hint": "Uno cada uno, como mucho. Nadie sabrá de quién es hasta el reveal."
+    "dilemmasPerPlayer": {
+      "label": "Dilemas que añade cada jugador",
+      "none": "Ninguno",
+      "hint": "El anfitrión también. Cuentan dentro del número de dilemas, y nadie sabrá de quién es cada uno hasta el reveal."
     },
     "pick": "Elegir dilemas uno a uno",
+    "picked_one": "{{count}} dilema elegido",
+    "picked_other": "{{count}} dilemas elegidos",
+    "picked_many": "{{count}} dilemas elegidos",
+    "noPicked": "Ningún dilema elegido",
+    "changePicked": "Cambiar",
+    "choosePicked": "Elegir",
+    "byHandHint": "La partida juega estos y los que añadan los jugadores, sin categorías ni dilemas nuevos. «Por categorías» los quita de un toque.",
     "save": "Guardar"
   },
   "pickDilemmas": {
     "title": "Elegir dilemas",
     "back": "Volver a los ajustes",
-    "search": "Buscar por etiqueta",
-    "searchPlaceholder": "Buscar por etiqueta: familia, trabajo…",
+    "search": "Buscar dilemas",
+    "searchPlaceholder": "Busca por texto o etiqueta: familia, tranvía…",
     "all": "Todas",
     "hint": "Solo aparecen dilemas aptos para esta sala. Al elegirlos a mano no se añaden dilemas nuevos.",
     "none": "Elige al menos uno",
@@ -260,13 +282,14 @@
     "empty": "No hay dilemas aptos con esa búsqueda.",
     "tags": "#{{tags}}",
     "play_many": "Jugar estos {{count}}",
-    "byCategory": "Volver a jugar por categoría"
+    "byCategory": "Volver a jugar por categorías"
   },
   "addDilemma": {
     "title": "Añade un dilema",
-    "search": "Buscar por etiqueta",
+    "search": "Buscar dilemas",
     "close": "Cerrar",
-    "empty": "No hay dilemas aptos con esa búsqueda."
+    "empty": "No hay dilemas aptos con esa búsqueda.",
+    "searchPlaceholder": "Busca por texto o etiqueta"
   },
   "expel": {
     "title": "¿Expulsar a {{name}}?",
