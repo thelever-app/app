@@ -15,6 +15,7 @@ import { OptionNotInDilemmaError } from '../../errors/option-not-in-dilemma.erro
 import { DilemmaNotReachedError } from '../../errors/dilemma-not-reached.error.ts';
 import { OptionsMissingError } from '../../errors/options-missing.error.ts';
 import { InvalidDilemmaVersionError } from '../../errors/invalid-dilemma-version.error.ts';
+import { AvatarVO } from '../../vos/avatar.vo.ts';
 
 const OPTION_IDS = ['TestOption', 'TestOtherOption', 'TestSecretOption'];
 const SEAL = {
@@ -27,19 +28,28 @@ const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId
   dilemmaId,
   version: index + 1,
   optionIds: OPTION_IDS,
+  origin: 'picked-by-the-system' as const,
 }));
+const SETTINGS = {
+  variant: 'nominal',
+  groupNature: 'friends',
+  place: 'remote',
+  dilemmaLanguage: 'es',
+  totalTimeInMinutes: 6,
+} as const;
+const AVATAR = new AvatarVO('face-01', 'khaki');
 
 function gameInDecisionPhase(): { game: Game; ana: Player; luis: Player } {
   const ana = Player.create(
-    { nickname: 'Ana', identity: 'TestAnaIdentity' },
+    { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
     new FixedIdGenerator('TestAnaId'),
   );
   const luis = Player.create(
-    { nickname: 'Luis', identity: 'TestLuisIdentity' },
+    { nickname: 'Luis', identity: 'TestLuisIdentity', avatar: AVATAR },
     new FixedIdGenerator('TestLuisId'),
   );
   const game = Game.create(
-    { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+    { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
     new FixedIdGenerator('TestId'),
   );
   game.startDecisionPhase([ana, luis]);
@@ -55,7 +65,10 @@ describe('Game', () => {
       const roomId = 'TestRoomId';
 
       // Act
-      const game = Game.create({ roomId, dilemmas: DILEMMAS }, new FixedIdGenerator(id));
+      const game = Game.create(
+        { roomId, dilemmas: DILEMMAS, settings: SETTINGS },
+        new FixedIdGenerator(id),
+      );
 
       // Assert
       expect(game.id).toBe(id);
@@ -66,7 +79,7 @@ describe('Game', () => {
     it('should not be in the decision phase yet', () => {
       // Arrange & Act
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -77,21 +90,30 @@ describe('Game', () => {
     it('should throw an error if the id is missing', () => {
       // Act & Assert
       expect(() =>
-        Game.create({ roomId: 'TestRoomId', dilemmas: DILEMMAS }, new FixedIdGenerator('')),
+        Game.create(
+          { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
+          new FixedIdGenerator(''),
+        ),
       ).toThrow(IdMissingError);
     });
 
     it('should throw an error if the room id is missing', () => {
       // Act & Assert
       expect(() =>
-        Game.create({ roomId: '', dilemmas: DILEMMAS }, new FixedIdGenerator('TestId')),
+        Game.create(
+          { roomId: '', dilemmas: DILEMMAS, settings: SETTINGS },
+          new FixedIdGenerator('TestId'),
+        ),
       ).toThrow(IdMissingError);
     });
 
     it('should throw an error if there are no dilemmas', () => {
       // Act & Assert
       expect(() =>
-        Game.create({ roomId: 'TestRoomId', dilemmas: [] }, new FixedIdGenerator('TestId')),
+        Game.create(
+          { roomId: 'TestRoomId', dilemmas: [], settings: SETTINGS },
+          new FixedIdGenerator('TestId'),
+        ),
       ).toThrow(DilemmasMissingError);
     });
   });
@@ -100,15 +122,16 @@ describe('Game', () => {
     it('should not let the dilemmas be changed from outside the game', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
         new FixedIdGenerator('TestId'),
       );
 
       // Act
-      (game.dilemmas as { dilemmaId: string; version: number; optionIds: string[] }[]).push({
+      (game.dilemmas as unknown[]).push({
         dilemmaId: 'TestIntruderDilemma',
         version: 1,
         optionIds: OPTION_IDS,
+        origin: 'picked-by-the-host',
       });
 
       // Assert
@@ -120,14 +143,14 @@ describe('Game', () => {
     it('should put the game in the decision phase', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
         new FixedIdGenerator('TestId'),
       );
 
       // Act
       game.startDecisionPhase([
         Player.create(
-          { nickname: 'Ana', identity: 'TestAnaIdentity' },
+          { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
           new FixedIdGenerator('TestAnaId'),
         ),
       ]);
@@ -139,11 +162,11 @@ describe('Game', () => {
     it('should start every player with no progress', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
         new FixedIdGenerator('TestId'),
       );
       const ana = Player.create(
-        { nickname: 'Ana', identity: 'TestAnaIdentity' },
+        { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
         new FixedIdGenerator('TestAnaId'),
       );
 
@@ -236,7 +259,7 @@ describe('Game', () => {
     it('should throw an error if the game is not in the decision phase', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -405,7 +428,7 @@ describe('Game', () => {
     it('should start at 0', () => {
       // Arrange & Act
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -416,14 +439,14 @@ describe('Game', () => {
     it('should go up when the decision phase starts', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
         new FixedIdGenerator('TestId'),
       );
 
       // Act
       game.startDecisionPhase([
         Player.create(
-          { nickname: 'Ana', identity: 'TestAnaIdentity' },
+          { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
           new FixedIdGenerator('TestAnaId'),
         ),
       ]);
@@ -501,7 +524,7 @@ describe('Game', () => {
     it('should be empty before the decision phase', () => {
       // Arrange & Act
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -532,6 +555,7 @@ describe('Game', () => {
         id: 'TestId',
         roomId: 'TestRoomId',
         dilemmas: DILEMMAS,
+        settings: SETTINGS,
         inDecisionPhase: true,
         version: 2,
         players: [
@@ -565,7 +589,7 @@ describe('Game', () => {
     it('should rebuild a game that is not in the decision phase yet', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -610,7 +634,15 @@ describe('Game', () => {
         Game.create(
           {
             roomId: 'TestRoomId',
-            dilemmas: [{ dilemmaId: 'TestDilemma1', version: 1, optionIds: [] }],
+            dilemmas: [
+              {
+                dilemmaId: 'TestDilemma1',
+                version: 1,
+                optionIds: [],
+                origin: 'picked-by-the-host',
+              },
+            ],
+            settings: SETTINGS,
           },
           new FixedIdGenerator('TestId'),
         ),
@@ -624,7 +656,15 @@ describe('Game', () => {
           Game.create(
             {
               roomId: 'TestRoomId',
-              dilemmas: [{ dilemmaId: 'TestDilemma1', version, optionIds: OPTION_IDS }],
+              dilemmas: [
+                {
+                  dilemmaId: 'TestDilemma1',
+                  version,
+                  optionIds: OPTION_IDS,
+                  origin: 'picked-by-the-host',
+                },
+              ],
+              settings: SETTINGS,
             },
             new FixedIdGenerator('TestId'),
           ),
@@ -642,7 +682,9 @@ describe('Game', () => {
               dilemmaId,
               version: 1,
               optionIds: OPTION_IDS,
+              origin: 'picked-by-the-host' as const,
             })),
+            settings: SETTINGS,
           },
           new FixedIdGenerator('TestId'),
         ),
@@ -652,7 +694,7 @@ describe('Game', () => {
     it('should throw an error if the decision phase starts without players', () => {
       // Arrange
       const game = Game.create(
-        { roomId: 'TestRoomId', dilemmas: DILEMMAS },
+        { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
         new FixedIdGenerator('TestId'),
       );
 
@@ -669,6 +711,29 @@ describe('Game', () => {
       // Act & Assert
       expect(() => game.startDecisionPhase([ana, luis])).toThrow(DecisionPhaseAlreadyStartedError);
       expect(game.progressOf(luis.id)).toBe(1);
+    });
+  });
+
+  describe('settings and origins', () => {
+    it('should keep the settings it copied from its room and how each dilemma got in', () => {
+      // Arrange
+      const dilemmas = [
+        { ...DILEMMAS[0]!, origin: 'added-by-a-player' as const },
+        { ...DILEMMAS[1]!, origin: 'picked-by-the-host' as const },
+      ];
+
+      // Act
+      const game = Game.create(
+        { roomId: 'TestRoomId', dilemmas, settings: SETTINGS },
+        new FixedIdGenerator('TestId'),
+      );
+
+      // Assert
+      expect(game.settings).toEqual(SETTINGS);
+      expect(game.dilemmas.map(({ origin }) => origin)).toEqual([
+        'added-by-a-player',
+        'picked-by-the-host',
+      ]);
     });
   });
 });
