@@ -2,6 +2,7 @@ import {
   AddingDilemmasNotAllowedError,
   AvatarTakenError,
   DecisionPhaseNotStartedError,
+  DilemmasMissingError,
   DilemmaAlreadyAddedError,
   DilemmaNotFoundError,
   DilemmaNotInGameError,
@@ -58,6 +59,8 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [DilemmaNotFoundError, 'dilemma-not-found'],
   [NicknameMissingError, 'nickname-missing'],
   [DuplicateDilemmaError, 'duplicate-dilemma'],
+  // No dilemma of the catalog suits the room: its category, language or age leave none.
+  [DilemmasMissingError, 'dilemmas-missing'],
 ];
 
 /** The code to answer with, or undefined if the error is not one a client can cause. */

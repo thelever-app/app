@@ -54,6 +54,8 @@ export class StartGameUseCase {
 
   async execute({ roomId, playerId }: StartGameInput): Promise<StartGameOutput> {
     const room = await findRoom(this.#roomRepository, roomId);
+    // Nothing is put together for a game that cannot start.
+    room.ensureCanStartGame(playerId);
     const { settings } = room;
 
     const candidates = async (status: 'in-catalog' | 'in-exploration'): Promise<string[]> =>
@@ -65,15 +67,17 @@ export class StartGameUseCase {
           language: settings.dilemmaLanguage,
         })
       ).map(({ dilemmaId }) => dilemmaId);
+    // The dilemmas the host picked are the game: no candidates to look for.
+    const [inCatalog, inExploration] =
+      room.pickedDilemmas.length > 0
+        ? [[], []]
+        : await Promise.all([candidates('in-catalog'), candidates('in-exploration')]);
     const composed = composeGame(
       {
         settings,
         pickedDilemmas: room.pickedDilemmas,
         addedDilemmas: room.addedDilemmas,
-        candidates: {
-          inCatalog: await candidates('in-catalog'),
-          inExploration: await candidates('in-exploration'),
-        },
+        candidates: { inCatalog, inExploration },
         explorationSlots: this.#explorationSlots,
       },
       this.#randomness,
@@ -100,7 +104,6 @@ export class StartGameUseCase {
       },
       this.#idGenerator,
     );
-    // Throws if the player is not the host, the room has too few players or a game in progress.
     room.startGame(playerId, game.id);
     game.startDecisionPhase(room.players);
     const events = room.pullEvents();

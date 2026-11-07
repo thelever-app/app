@@ -113,7 +113,6 @@ export async function composeRealtimeServer(
       : await sharedLifecycle(storage, {
           roomSockets,
           socketNotifier,
-          stateSender,
           roomLock,
           disconnectConnections: commands.disconnectConnections,
           runCommand,

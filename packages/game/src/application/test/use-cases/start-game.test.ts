@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ChangeRoomSettingsUseCase } from '../../use-cases/change-room-settings.use-case.ts';
 import { PickDilemmasUseCase } from '../../use-cases/pick-dilemmas.use-case.ts';
 import { StartGameUseCase } from '../../use-cases/start-game.use-case.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
+import { DilemmasMissingError } from '../../../domain/errors/dilemmas-missing.error.ts';
 import { GameInProgressError } from '../../../domain/errors/game-in-progress.error.ts';
 import { NotEnoughPlayersError } from '../../../domain/errors/not-enough-players.error.ts';
 import { NotHostError } from '../../../domain/errors/not-host.error.ts';
@@ -152,6 +153,45 @@ describe('StartGameUseCase', () => {
       await expect(
         lobby.startGame.execute({ roomId: lobby.roomId, playerId: lobby.anaId }),
       ).rejects.toThrow(NotEnoughPlayersError);
+    });
+
+    it('should not look for any dilemma before knowing the game can start', async () => {
+      // Arrange
+      const { startGame, catalog, roomId, luisId } = await arrange();
+      const search = vi.spyOn(catalog, 'search');
+
+      // Act & Assert
+      await expect(startGame.execute({ roomId, playerId: luisId })).rejects.toThrow(NotHostError);
+      expect(search).not.toHaveBeenCalled();
+    });
+
+    it('should not look for candidates when the host picked the dilemmas', async () => {
+      // Arrange
+      const lobby = await arrange();
+      await new PickDilemmasUseCase(lobby.roomRepository, lobby.catalog, lobby.notifier).execute({
+        roomId: lobby.roomId,
+        playerId: lobby.anaId,
+        dilemmaIds: ['TestCatalog3'],
+      });
+      const search = vi.spyOn(lobby.catalog, 'search');
+
+      // Act
+      await lobby.startGame.execute({ roomId: lobby.roomId, playerId: lobby.anaId });
+
+      // Assert
+      expect(search).not.toHaveBeenCalled();
+    });
+
+    it('should not start a game without dilemmas, in a category that has none for the room', async () => {
+      // Arrange
+      const { startGame, changeSettings, roomId, anaId, roomRepository } = await arrange();
+      await changeSettings.execute({ roomId, playerId: anaId, changes: { category: 'justice' } });
+
+      // Act & Assert
+      await expect(startGame.execute({ roomId, playerId: anaId })).rejects.toThrow(
+        DilemmasMissingError,
+      );
+      expect((await roomRepository.findById(roomId))?.isInLobby).toBe(true);
     });
   });
 });

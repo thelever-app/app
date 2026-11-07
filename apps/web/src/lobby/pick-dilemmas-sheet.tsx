@@ -15,13 +15,23 @@ interface PickDilemmasSheetProps {
   readonly onClose: () => void;
 }
 
-/** The host searches the catalog by category and tag and picks the dilemmas of the game. */
+/**
+ * The host searches the catalog by category and tag and picks the dilemmas of the game; or, with
+ * some picked before, unchecks them all to go back to a game by category.
+ */
 export function PickDilemmasSheet({ roomId, picked, onPick, onClose }: PickDilemmasSheetProps) {
   const { t } = useTranslation();
   const [category, setCategory] = useState<string | undefined>(undefined);
   const [tags, setTags] = useState('');
   const [chosen, setChosen] = useState<readonly string[]>(picked);
   const search = useDilemmaSearch(roomId, { category, tags });
+  // With dilemmas picked before, unchecking them all goes back to a game by category.
+  const byCategory = chosen.length === 0 && picked.length > 0;
+  const label = byCategory
+    ? t('pickDilemmas.byCategory')
+    : chosen.length === 0
+      ? t('pickDilemmas.none')
+      : t('pickDilemmas.play', { count: chosen.length });
 
   const toggle = (dilemmaId: string) => {
     setChosen(
@@ -97,15 +107,13 @@ export function PickDilemmasSheet({ roomId, picked, onPick, onClose }: PickDilem
           <button
             type="button"
             className={sheet.primary}
-            disabled={chosen.length === 0}
+            disabled={chosen.length === 0 && !byCategory}
             onClick={() => {
               onPick(chosen);
               onClose();
             }}
           >
-            {chosen.length === 0
-              ? t('pickDilemmas.none')
-              : t('pickDilemmas.play', { count: chosen.length })}
+            {label}
           </button>
         </Dialog.Content>
       </Dialog.Portal>

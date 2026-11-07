@@ -1,8 +1,8 @@
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import type { Randomness } from '../../domain/ports/randomness.port.ts';
-import { RoomNotFoundError } from '../errors/room-not-found.error.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
+import { findRoom } from './find-room.ts';
 import { notifyRoom } from './notify-room.ts';
 
 export interface JoinRoomInput {
@@ -36,8 +36,7 @@ export class JoinRoomUseCase {
   }
 
   async execute({ roomId, nickname, identity }: JoinRoomInput): Promise<JoinRoomOutput> {
-    const room = await this.#roomRepository.findById(roomId);
-    if (!room) throw new RoomNotFoundError(roomId);
+    const room = await findRoom(this.#roomRepository, roomId);
 
     const player = room.join({ nickname, identity }, this.#idGenerator, this.#randomness);
     const events = room.pullEvents();

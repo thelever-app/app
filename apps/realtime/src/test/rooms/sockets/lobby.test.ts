@@ -200,6 +200,23 @@ describe('the lobby over the room sockets', () => {
     });
   });
 
+  it('should answer dilemmas-missing to a start in a category with no dilemma for the room', async () => {
+    // Arrange: the seed has no dilemma of justice.
+    const { ana } = await connectedLobby();
+    ana.send({ type: 'change-settings', changes: { category: 'justice' } });
+    await ana.next('room-state');
+
+    // Act
+    ana.send({ type: 'start-game' });
+
+    // Assert
+    expect(await ana.next('error')).toEqual({
+      type: 'error',
+      command: 'start-game',
+      code: 'dilemmas-missing',
+    });
+  });
+
   it('should answer not-connected to a command of the lobby before connecting', async () => {
     // Arrange
     server = await startRoomServer();

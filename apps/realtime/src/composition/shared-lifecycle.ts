@@ -6,7 +6,6 @@ import { InstanceKeeper } from '../rooms/instance-keeper.ts';
 import type { RunCommand } from '../rooms/run-command.ts';
 import type { RoomSocketServer } from '../rooms/sockets/room-socket-server.ts';
 import type { SocketNotifier } from '../rooms/sockets/socket-notifier.ts';
-import type { StateSender } from '../rooms/sockets/state-sender.ts';
 import type { SharedStorage } from './storage.ts';
 
 /** How the server stops. */
@@ -24,7 +23,6 @@ export type StopServing = (code: number, reason: string) => Promise<void>;
 export interface SharedLifecycleParts {
   readonly roomSockets: RoomSocketServer;
   readonly socketNotifier: SocketNotifier;
-  readonly stateSender: StateSender;
   readonly roomLock: KeyedLock;
   readonly disconnectConnections: DisconnectConnectionsUseCase;
   readonly runCommand: RunCommand;
@@ -41,7 +39,6 @@ export async function sharedLifecycle(
   {
     roomSockets,
     socketNotifier,
-    stateSender,
     roomLock,
     disconnectConnections,
     runCommand,
@@ -49,7 +46,7 @@ export async function sharedLifecycle(
     stopServing,
   }: SharedLifecycleParts,
 ): Promise<Lifecycle> {
-  const delivery = new GameEventDelivery(socketNotifier, stateSender, roomLock, logger, () =>
+  const delivery = new GameEventDelivery(socketNotifier, roomLock, logger, () =>
     roomSockets.connected(),
   );
   const listener = new GameEventsListener(storage.openListenClient, {

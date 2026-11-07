@@ -25,7 +25,7 @@ type Open =
 export function LobbyScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { lobby, send } = useLobby();
+  const { lobby, send, rejection } = useLobby();
   const [open, setOpen] = useState<Open>({ sheet: 'none' });
   const [copied, setCopied] = useState(false);
   const close = () => setOpen({ sheet: 'none' });
@@ -221,6 +221,11 @@ export function LobbyScreen() {
       </main>
 
       <footer className={styles.footer}>
+        {rejection?.command === 'start-game' && (
+          <p role="alert" className={styles.rejection}>
+            {t(`roomErrors.${rejection.code}`, { defaultValue: t('roomErrors.unknown') })}
+          </p>
+        )}
         {isHost ? (
           <button
             type="button"

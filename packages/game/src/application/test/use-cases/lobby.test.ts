@@ -175,6 +175,18 @@ describe('PickDilemmasUseCase', () => {
     ]);
   });
 
+  it('should go back to a game by category when the host picks none', async () => {
+    // Arrange
+    const { pickDilemmas, roomRepository, roomId, anaId } = await arrange();
+    await pickDilemmas.execute({ roomId, playerId: anaId, dilemmaIds: ['TestCatalog4'] });
+
+    // Act
+    await pickDilemmas.execute({ roomId, playerId: anaId, dilemmaIds: [] });
+
+    // Assert
+    expect((await roomRepository.findById(roomId))?.pickedDilemmas).toEqual([]);
+  });
+
   it('should throw an error for a dilemma for adults in a room for everyone', async () => {
     // Arrange
     const { pickDilemmas, roomId, anaId } = await arrange();

@@ -126,6 +126,20 @@ describe('LobbyScreen', () => {
       expect(send).toHaveBeenCalledWith({ type: 'start-game' });
     });
 
+    it('should say why the game did not start, until the room changes', async () => {
+      // Arrange
+      const { t, deliver } = await renderLobby();
+
+      // Act
+      act(() => deliver({ type: 'error', command: 'start-game', code: 'dilemmas-missing' }));
+      const shown = screen.getByRole('alert').textContent;
+      act(() => deliver(aRoom({ roomVersion: 4 })));
+
+      // Assert
+      expect(shown).toBe(t('roomErrors.dilemmas-missing'));
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
     it('should say how many players are missing, as the room says it needs', async () => {
       // Act
       const { t } = await renderLobby(aRoom({ minimumPlayers: 5 }));
@@ -185,6 +199,38 @@ describe('LobbyScreen', () => {
         expect(searchDilemmas).toHaveBeenLastCalledWith('test-room-id', { tags: ['family'] }),
       );
       expect(send).toHaveBeenCalledWith({ type: 'pick-dilemmas', dilemmaIds: ['test-dilemma-1'] });
+    });
+
+    it('should go back to a game by category by unchecking every picked dilemma', async () => {
+      // Arrange
+      const searchDilemmas = vi.fn(async () => FOUND);
+      const room = aRoom({ pickedDilemmas: [{ dilemmaId: 'test-dilemma-1', text: 'TestText1' }] });
+      const { t, send } = await renderLobby(room, fakeRoomApi({ searchDilemmas }));
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
+
+      // Act
+      fireEvent.click(await screen.findByRole('checkbox', { name: /TestText1/ }));
+      fireEvent.click(screen.getByRole('button', { name: t('pickDilemmas.byCategory') }));
+
+      // Assert
+      expect(send).toHaveBeenCalledWith({ type: 'pick-dilemmas', dilemmaIds: [] });
+    });
+
+    it('should not offer to play without dilemmas when none was picked', async () => {
+      // Arrange
+      const searchDilemmas = vi.fn(async () => FOUND);
+      const { t } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
+
+      // Assert
+      expect(screen.getByRole('button', { name: t('pickDilemmas.none') })).toHaveProperty(
+        'disabled',
+        true,
+      );
     });
 
     it('should expel a player after confirming it', async () => {

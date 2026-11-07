@@ -313,3 +313,11 @@ button.player {
   line-height: var(--type-label-line-height);
   text-align: center;
 }
+
+/* Why the game did not start, until the room changes. */
+.rejection {
+  margin: 0;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}

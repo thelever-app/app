@@ -519,6 +519,21 @@ describe('Room', () => {
     });
   });
 
+  describe('ensureCanStartGame', () => {
+    it('should check the same as starting, without starting anything', () => {
+      // Arrange
+      const room = lobbyOfThree();
+
+      // Act
+      room.ensureCanStartGame('TestHostId');
+
+      // Assert
+      expect(() => room.ensureCanStartGame('TestLuisId')).toThrow(NotHostError);
+      expect(room.isInLobby).toBe(true);
+      expect(room.pullEvents()).toEqual([]);
+    });
+  });
+
   describe('startGame', () => {
     it('should keep the game in progress and record that the lobby changed', () => {
       // Arrange

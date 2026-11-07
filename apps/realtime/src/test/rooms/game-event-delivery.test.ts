@@ -12,14 +12,28 @@ import { KeyedLock } from '../../concurrency/keyed-lock.ts';
 import { GameEventDelivery } from '../../rooms/game-event-delivery.ts';
 import { RoomConnection, type Session } from '../../rooms/sockets/room-connection.ts';
 
-/** A notifier that remembers what it delivered, or fails if told to. */
+/**
+ * The sockets of the instance: they remember what they delivered and to whom they sent a fresh
+ * state, or fail if told to, or for one player.
+ */
 class RecordingNotifier implements PlayerNotifier {
   readonly delivered: DomainEvent[] = [];
+  readonly sentTo: string[] = [];
   failing = false;
+  readonly #failingFor: string | undefined;
+
+  constructor(failingFor?: string) {
+    this.#failingFor = failingFor;
+  }
 
   async notify(_playerIds: readonly string[], event: DomainEvent): Promise<void> {
     if (this.failing) throw new Error('socket closed');
     this.delivered.push(event);
+  }
+
+  async sendState(_connection: RoomConnection, { playerId }: Session): Promise<void> {
+    if (playerId === this.#failingFor) throw new Error('socket closed');
+    this.sentTo.push(playerId);
   }
 }
 
@@ -43,27 +57,13 @@ function connectionOf(playerId: string, roomId: string): RoomConnection {
   return connection;
 }
 
-/** A sender of fresh states that remembers to whom it sent them, or fails for one player. */
-function recordingSender(failingFor?: string) {
-  const sentTo: string[] = [];
-  return {
-    sentTo,
-    send: async (_connection: RoomConnection, { playerId }: Session) => {
-      if (playerId === failingFor) throw new Error('socket closed');
-      sentTo.push(playerId);
-      return 'sent' as const;
-    },
-  };
-}
-
 /** The delivery of an instance with those connections. */
 function deliveryWith(connections: readonly RoomConnection[], failingFor?: string) {
-  const notifier = new RecordingNotifier();
+  const notifier = new RecordingNotifier(failingFor);
   const roomLock = new KeyedLock();
-  const sender = recordingSender(failingFor);
   const { logger, errors } = recordingLogger();
-  const delivery = new GameEventDelivery(notifier, sender, roomLock, logger, () => connections);
-  return { delivery, notifier, roomLock, sender, errors };
+  const delivery = new GameEventDelivery(notifier, roomLock, logger, () => connections);
+  return { delivery, notifier, roomLock, sender: notifier, errors };
 }
 
 async function settle(): Promise<void> {

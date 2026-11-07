@@ -6,7 +6,7 @@ import {
   type PlayerNotifier,
 } from '@thelever-app/game';
 import { ServerMessageDto } from '@thelever-app/protocol';
-import type { RoomConnection } from './room-connection.ts';
+import type { RoomConnection, Session } from './room-connection.ts';
 import type { StateSender } from './state-sender.ts';
 
 /** The message a player receives for each event, or undefined if the event never leaves the server as is. */
@@ -67,17 +67,23 @@ export class SocketNotifier implements PlayerNotifier {
     }
   }
 
+  /**
+   * Sends the player of the connection what they may see now. One who is no longer in the room
+   * stops receiving for it and their connection closes, without disconnecting anyone: expelling
+   * already closed the connections of the player in the room.
+   */
+  async sendState(connection: RoomConnection, session: Session): Promise<void> {
+    const delivered = await this.#stateSender.send(connection, session);
+    if (delivered === 'sent') return;
+    this.unregister(session.playerId, connection);
+    connection.socket.close(1000, 'expelled');
+  }
+
   async #sendStates(playerIds: readonly string[]): Promise<void> {
     const sends = playerIds.flatMap((playerId) =>
       [...(this.#connections.get(playerId) ?? [])].map(async (connection) => {
         const { session } = connection;
-        if (!session) return;
-        const delivered = await this.#stateSender.send(connection, session);
-        if (delivered === 'sent') return;
-        // Expelled: the connection stops receiving for the room and closes, without disconnecting
-        // anyone, since expelling already closed the connections of the player in the room.
-        this.unregister(playerId, connection);
-        connection.socket.close(1000, 'expelled');
+        if (session) await this.sendState(connection, session);
       }),
     );
     await Promise.all(sends);

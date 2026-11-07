@@ -5,7 +5,7 @@ import type { KeyedLock } from '../concurrency/keyed-lock.ts';
 import { GAME_ID, ROOM_ID } from '../telemetry/game-sampler.ts';
 import { instruments } from '../telemetry/instruments.ts';
 import { inSpan } from '../telemetry/tracing.ts';
-import type { StateSender } from './sockets/state-sender.ts';
+import type { SocketNotifier } from './sockets/socket-notifier.ts';
 import type { RoomConnection } from './sockets/room-connection.ts';
 
 /**
@@ -14,22 +14,20 @@ import type { RoomConnection } from './sockets/room-connection.ts';
  * the room, and the screen applies a later change only on top of that state.
  */
 export class GameEventDelivery {
-  readonly #notifier: PlayerNotifier;
-  readonly #stateSender: Pick<StateSender, 'send'>;
+  /** The sockets of this instance: each event, and a fresh state that closes the connection of one expelled. */
+  readonly #notifier: PlayerNotifier & Pick<SocketNotifier, 'sendState'>;
   readonly #roomLock: KeyedLock;
   readonly #logger: Logger;
   /** The connections of this instance now, with the room of each player. */
   readonly #connections: () => readonly RoomConnection[];
 
   constructor(
-    notifier: PlayerNotifier,
-    stateSender: Pick<StateSender, 'send'>,
+    notifier: PlayerNotifier & Pick<SocketNotifier, 'sendState'>,
     roomLock: KeyedLock,
     logger: Logger,
     connections: () => readonly RoomConnection[],
   ) {
     this.#notifier = notifier;
-    this.#stateSender = stateSender;
     this.#roomLock = roomLock;
     this.#logger = logger;
     this.#connections = connections;
@@ -69,7 +67,7 @@ export class GameEventDelivery {
         if (!session) return;
         try {
           await this.#inTurn(session.roomId, async () => {
-            await this.#stateSender.send(connection, session);
+            await this.#notifier.sendState(connection, session);
           });
         } catch (error) {
           this.#logger.error('sending the state after listening again failed', error);

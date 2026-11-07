@@ -290,11 +290,19 @@ export class Room {
     return MINIMUM_PLAYERS[this.#settings.variant];
   }
 
-  /** The host starts the game the lobby got ready, with the players its variant needs. */
-  startGame(playerId: string, gameId: string): void {
+  /**
+   * Whether the player may start a game now, as `startGame` checks it: the host, in the lobby,
+   * with the players its variant needs. So nothing is put together for a game that cannot start.
+   */
+  ensureCanStartGame(playerId: string): void {
     this.#ensureHostInLobby(playerId);
     const minimum = this.minimumPlayers;
     if (this.#players.length < minimum) throw new NotEnoughPlayersError(minimum);
+  }
+
+  /** The host starts the game the lobby got ready, with the players its variant needs. */
+  startGame(playerId: string, gameId: string): void {
+    this.ensureCanStartGame(playerId);
 
     this.#currentGameId = new IdVO(gameId);
     this.#changeLobby('game-started');

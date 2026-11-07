@@ -109,7 +109,8 @@
     "player-expelled": "El anfitrión te ha sacado de esta partida.",
     "room-code-not-found": "No hay ninguna sala con ese código.",
     "room-not-found": "Esa sala ya no existe.",
-    "unknown": "No ha salido bien. Inténtalo otra vez."
+    "unknown": "No ha salido bien. Inténtalo otra vez.",
+    "dilemmas-missing": "No hay dilemas para esta configuración. Prueba con otra categoría."
   },
   "home": {
     "title": "¿Jugamos?",
@@ -252,7 +253,8 @@
     "play_other": "Jugar estos {{count}}",
     "empty": "No hay dilemas aptos con esa búsqueda.",
     "tags": "#{{tags}}",
-    "play_many": "Jugar estos {{count}}"
+    "play_many": "Jugar estos {{count}}",
+    "byCategory": "Volver a jugar por categoría"
   },
   "addDilemma": {
     "title": "Añade un dilema",
