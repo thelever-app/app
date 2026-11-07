@@ -17,8 +17,20 @@ export function aGame(overrides: Partial<GameStateDto> = {}): GameStateDto {
       ],
     })),
     players: [
-      { playerId: 'test-ana-id', nickname: 'Ana', progress: 0, connected: true },
-      { playerId: 'test-luis-id', nickname: 'Luis', progress: 1, connected: true },
+      {
+        playerId: 'test-ana-id',
+        nickname: 'Ana',
+        avatar: { face: 'face-01', color: 'teal' },
+        progress: 0,
+        connected: true,
+      },
+      {
+        playerId: 'test-luis-id',
+        nickname: 'Luis',
+        avatar: { face: 'face-02', color: 'rust' },
+        progress: 1,
+        connected: true,
+      },
     ],
     answers: [],
     ...overrides,

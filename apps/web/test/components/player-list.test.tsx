@@ -1,14 +1,33 @@
 import { screen, within } from '@testing-library/react';
+import type { GameStateDto } from '@thelever-app/protocol';
 import { describe, expect, it } from 'vitest';
 import { PlayerList } from '../../src/components/player-list.tsx';
 import { aGame } from '../support/game.ts';
 import { renderWithProviders } from '../support/render.tsx';
 
 /** Ana is the player using the screen; Luis has finished; Marta goes last. */
-const PLAYERS = [
-  { playerId: 'test-ana-id', nickname: 'Ana', progress: 2, connected: true },
-  { playerId: 'test-luis-id', nickname: 'Luis', progress: 6, connected: true },
-  { playerId: 'test-marta-id', nickname: 'Marta', progress: 1, connected: true },
+const PLAYERS: GameStateDto['players'] = [
+  {
+    playerId: 'test-ana-id',
+    nickname: 'Ana',
+    avatar: { face: 'face-01', color: 'teal' },
+    progress: 2,
+    connected: true,
+  },
+  {
+    playerId: 'test-luis-id',
+    nickname: 'Luis',
+    avatar: { face: 'face-02', color: 'rust' },
+    progress: 6,
+    connected: true,
+  },
+  {
+    playerId: 'test-marta-id',
+    nickname: 'Marta',
+    avatar: { face: 'face-03', color: 'olive' },
+    progress: 1,
+    connected: true,
+  },
 ];
 
 function renderList(players = PLAYERS) {

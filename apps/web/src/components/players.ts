@@ -9,13 +9,16 @@ export function hasFinished(player: Player, dilemmaCount: number): boolean {
   return player.progress >= dilemmaCount;
 }
 
-/** The id of the player using the screen, as the room says. */
+/** The id of the player using the screen, as the room says, in the lobby or in the game. */
 export function useSelfPlayerId(): string {
-  return useRoom().game.playerId;
+  const { lobby, game } = useRoom();
+  const playerId = game?.playerId ?? lobby?.playerId;
+  if (playerId === undefined) throw new Error('useSelfPlayerId needs the lobby or the game');
+  return playerId;
 }
 
 /** How to call each player on screen: «Tú» for the one using it, the nickname for everyone else. */
-export function usePlayerName(): (player: Player) => string {
+export function usePlayerName(): (player: Pick<Player, 'playerId' | 'nickname'>) => string {
   const { t } = useTranslation();
   const selfPlayerId = useSelfPlayerId();
   return (player) => (player.playerId === selfPlayerId ? t('playerList.you') : player.nickname);

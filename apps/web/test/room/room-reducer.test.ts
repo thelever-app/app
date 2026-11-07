@@ -6,6 +6,10 @@ import type {
   ProgressUpdatedDto,
 } from '@thelever-app/protocol';
 import { INITIAL_ROOM_STATE, roomReducer, type RoomState } from '../../src/room/room-reducer.ts';
+import { aRoom } from '../support/room.ts';
+
+const ANA_AVATAR = { face: 'face-01', color: 'teal' } as const;
+const LUIS_AVATAR = { face: 'face-02', color: 'rust' } as const;
 
 const GAME_STATE: GameStateDto = {
   type: 'game-state',
@@ -32,8 +36,8 @@ const GAME_STATE: GameStateDto = {
     },
   ],
   players: [
-    { playerId: 'TestAnaId', nickname: 'Ana', progress: 0, connected: true },
-    { playerId: 'TestLuisId', nickname: 'Luis', progress: 0, connected: true },
+    { playerId: 'TestAnaId', nickname: 'Ana', avatar: ANA_AVATAR, progress: 0, connected: true },
+    { playerId: 'TestLuisId', nickname: 'Luis', avatar: LUIS_AVATAR, progress: 0, connected: true },
   ],
   answers: [],
 };
@@ -45,10 +49,62 @@ const ERROR: ErrorDto = {
 };
 
 /** The room once the first state has arrived. */
-const WITH_GAME: RoomState = { game: GAME_STATE, rejection: undefined };
+const WITH_GAME: RoomState = { ...INITIAL_ROOM_STATE, game: GAME_STATE };
+
+/** The room once the lobby has arrived. */
+const LOBBY = aRoom({ roomId: 'TestRoomId', playerId: 'TestAnaId', roomVersion: 2 });
+const WITH_LOBBY: RoomState = { ...INITIAL_ROOM_STATE, lobby: LOBBY };
 
 describe('roomReducer', () => {
+  describe('room-state', () => {
+    it('should become the lobby when there is none yet', () => {
+      // Act
+      const { lobby, game } = roomReducer(INITIAL_ROOM_STATE, LOBBY);
+
+      // Assert
+      expect(lobby).toBe(LOBBY);
+      expect(game).toBeUndefined();
+    });
+
+    it('should drop a lobby older than the room it holds', () => {
+      // Act & Assert
+      expect(roomReducer(WITH_LOBBY, { ...LOBBY, roomVersion: 1 })).toBe(WITH_LOBBY);
+      expect(roomReducer(WITH_GAME, { ...LOBBY, roomVersion: 1 })).toBe(WITH_GAME);
+    });
+
+    it('should clear the rejection, because the lobby already shows what the server kept', () => {
+      // Arrange
+      const rejected: RoomState = { ...WITH_LOBBY, rejection: ERROR };
+
+      // Act
+      const { rejection } = roomReducer(rejected, { ...LOBBY, roomVersion: 3 });
+
+      // Assert
+      expect(rejection).toBeUndefined();
+    });
+  });
+
+  describe('expelled', () => {
+    it('should say the player was expelled and keep the lobby they saw', () => {
+      // Act
+      const { lobby, expelled } = roomReducer(WITH_LOBBY, { type: 'expelled' });
+
+      // Assert
+      expect(expelled).toBe(true);
+      expect(lobby).toBe(LOBBY);
+    });
+  });
+
   describe('game-state', () => {
+    it('should replace the lobby once the game starts', () => {
+      // Act
+      const { lobby, game } = roomReducer(WITH_LOBBY, { ...GAME_STATE, roomVersion: 3 });
+
+      // Assert
+      expect(lobby).toBeUndefined();
+      expect(game?.roomVersion).toBe(3);
+    });
+
     it('should become the state when there is none yet', () => {
       // Act
       const { game, rejection } = roomReducer(INITIAL_ROOM_STATE, GAME_STATE);
@@ -64,8 +120,20 @@ describe('roomReducer', () => {
         ...GAME_STATE,
         gameVersion: 3,
         players: [
-          { playerId: 'TestAnaId', nickname: 'Ana', progress: 1, connected: true },
-          { playerId: 'TestLuisId', nickname: 'Luis', progress: 2, connected: true },
+          {
+            playerId: 'TestAnaId',
+            nickname: 'Ana',
+            avatar: ANA_AVATAR,
+            progress: 1,
+            connected: true,
+          },
+          {
+            playerId: 'TestLuisId',
+            nickname: 'Luis',
+            avatar: LUIS_AVATAR,
+            progress: 2,
+            connected: true,
+          },
         ],
         answers: [{ dilemmaId: 'TestDilemma1', vote: 'TestOption' }],
       };
@@ -89,7 +157,7 @@ describe('roomReducer', () => {
 
     it('should clear the rejection, because the state already shows what the server kept', () => {
       // Arrange
-      const rejected: RoomState = { game: GAME_STATE, rejection: ERROR };
+      const rejected: RoomState = { ...INITIAL_ROOM_STATE, game: GAME_STATE, rejection: ERROR };
 
       // Act
       const { rejection } = roomReducer(rejected, { ...GAME_STATE, gameVersion: 2 });
@@ -113,8 +181,20 @@ describe('roomReducer', () => {
 
       // Assert
       expect(game?.players).toEqual([
-        { playerId: 'TestAnaId', nickname: 'Ana', progress: 0, connected: true },
-        { playerId: 'TestLuisId', nickname: 'Luis', progress: 1, connected: true },
+        {
+          playerId: 'TestAnaId',
+          nickname: 'Ana',
+          avatar: ANA_AVATAR,
+          progress: 0,
+          connected: true,
+        },
+        {
+          playerId: 'TestLuisId',
+          nickname: 'Luis',
+          avatar: LUIS_AVATAR,
+          progress: 1,
+          connected: true,
+        },
       ]);
     });
 
@@ -159,7 +239,7 @@ describe('roomReducer', () => {
 
     it('should keep the rejection, which is about the player and not about the others', () => {
       // Arrange
-      const rejected: RoomState = { game: GAME_STATE, rejection: ERROR };
+      const rejected: RoomState = { ...INITIAL_ROOM_STATE, game: GAME_STATE, rejection: ERROR };
 
       // Act
       const { rejection } = roomReducer(rejected, luisAnswered);
@@ -183,8 +263,20 @@ describe('roomReducer', () => {
 
       // Assert
       expect(game?.players).toEqual([
-        { playerId: 'TestAnaId', nickname: 'Ana', progress: 0, connected: true },
-        { playerId: 'TestLuisId', nickname: 'Luis', progress: 0, connected: false },
+        {
+          playerId: 'TestAnaId',
+          nickname: 'Ana',
+          avatar: ANA_AVATAR,
+          progress: 0,
+          connected: true,
+        },
+        {
+          playerId: 'TestLuisId',
+          nickname: 'Luis',
+          avatar: LUIS_AVATAR,
+          progress: 0,
+          connected: false,
+        },
       ]);
       expect(game?.roomVersion).toBe(3);
     });
@@ -198,6 +290,18 @@ describe('roomReducer', () => {
     it('should do nothing when no state has arrived yet', () => {
       // Act & Assert
       expect(roomReducer(INITIAL_ROOM_STATE, luisDisconnected)).toBe(INITIAL_ROOM_STATE);
+    });
+
+    it('should change whether that player is connected in the lobby too', () => {
+      // Act
+      const { lobby } = roomReducer(WITH_LOBBY, {
+        ...luisDisconnected,
+        playerId: 'test-luis-id',
+      });
+
+      // Assert
+      expect(lobby?.players.map(({ connected }) => connected)).toEqual([true, false, true]);
+      expect(lobby?.roomVersion).toBe(3);
     });
   });
 
@@ -215,7 +319,7 @@ describe('roomReducer', () => {
   describe('rejection-dismissed', () => {
     it('should clear the rejection and leave the game as it was', () => {
       // Arrange
-      const rejected: RoomState = { game: GAME_STATE, rejection: ERROR };
+      const rejected: RoomState = { ...INITIAL_ROOM_STATE, game: GAME_STATE, rejection: ERROR };
 
       // Act
       const { game, rejection } = roomReducer(rejected, { type: 'rejection-dismissed' });

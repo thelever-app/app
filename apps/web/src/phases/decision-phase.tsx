@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { hasFinished } from '../components/players.ts';
-import { useRoom } from '../room/room-provider.tsx';
+import { useGame } from '../room/room-provider.tsx';
 import { DilemmaScreen } from '../screens/dilemma-screen.tsx';
 import { WaitingScreen } from '../screens/waiting-screen.tsx';
 
 /** The decision phase: the next dilemma, or waiting for the others once every one is answered. */
 export function DecisionPhase() {
-  const { game, rejection, answerDilemma } = useRoom();
+  const { game, rejection, answerDilemma } = useGame();
   const [isReviewing, setIsReviewing] = useState(false);
 
   // The screen moves on before the room confirms; each answer it rejects starts the dilemmas
