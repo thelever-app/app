@@ -65,6 +65,228 @@
       "title": "No hemos podido reconocerte",
       "text": "Suele ser algo pasajero. Vuelve a intentarlo en un momento.",
       "action": "Volver a intentarlo"
+    },
+    "expelled": {
+      "title": "Te han sacado de la sala",
+      "text": "Quien creó la sala te ha expulsado de esta partida. Si el grupo juega la revancha, podrás unirte a ella.",
+      "action": "Volver al inicio"
     }
+  },
+  "createRoom": {
+    "title": "Nueva sala",
+    "nickname": "Tu apodo",
+    "nicknamePlaceholder": "Cómo te verá el grupo",
+    "groupNature": {
+      "label": "¿Con quién vas a jugar?",
+      "family": "Familia",
+      "friends": "Amigos",
+      "work": "Compañeros",
+      "mixed": "Mezcla",
+      "hint": "Sirve para entender cómo cambian los votos según con quién juegas."
+    },
+    "place": {
+      "label": "¿Dónde estáis?",
+      "together": "En el mismo sitio",
+      "remote": "A distancia"
+    },
+    "submit": "Crear sala",
+    "submitting": "Creando la sala…"
+  },
+  "joinRoom": {
+    "roomOf": "Sala de {{host}} · {{code}}",
+    "inTheRoom_one": "{{count}} en la sala",
+    "inTheRoom_other": "{{count}} en la sala",
+    "adultsOnly": "Solo para mayores de 18: puede tener dilemas para adultos.",
+    "nickname": "Tu apodo",
+    "submit": "Entrar en la sala",
+    "submitting": "Entrando…",
+    "loading": "Buscando la sala…",
+    "inTheRoom_many": "{{count}} en la sala"
+  },
+  "roomErrors": {
+    "nickname-missing": "Escribe un apodo.",
+    "room-full": "La sala está llena: ya hay 50 jugadores.",
+    "player-expelled": "El anfitrión te ha sacado de esta partida.",
+    "room-code-not-found": "No hay ninguna sala con ese código.",
+    "room-not-found": "Esa sala ya no existe.",
+    "unknown": "No ha salido bien. Inténtalo otra vez."
+  },
+  "home": {
+    "title": "¿Jugamos?",
+    "mascot": "La Palanca, saludando",
+    "create": "Crear sala",
+    "joinWithCode": "Unirme con un código",
+    "back": "Volver"
+  },
+  "joinCode": {
+    "title": "Escribe el código de la sala",
+    "text": "Son 5 caracteres. Te lo puede dictar quien ha creado la sala.",
+    "label": "Código de la sala",
+    "hint": "Entra solo al completar el código. También puedes pegarlo."
+  },
+  "variant": {
+    "nominal": {
+      "name": "Sala nominal:",
+      "text": "en el reveal todos verán qué votó cada uno."
+    },
+    "anonymous": {
+      "name": "Sala anónima:",
+      "text": "nadie verá quién votó qué."
+    }
+  },
+  "joinRefusal": {
+    "room-code-not-found": {
+      "title": "Esa sala no existe",
+      "text": "Revisa el código: son 5 caracteres. Pídeselo de nuevo a quien ha creado la sala.",
+      "action": "Probar otro código"
+    },
+    "room-full": {
+      "title": "Esta sala está completa",
+      "text": "Ya hay 50 jugadores dentro, que es el máximo. Puedes crear tu propia sala.",
+      "action": "Volver al inicio"
+    },
+    "player-expelled": {
+      "title": "No puedes volver a entrar en esta partida",
+      "text": "Si el grupo juega la revancha, podrás unirte a ella.",
+      "action": "Volver al inicio"
+    },
+    "room-not-found": {
+      "title": "Esa sala ya no existe",
+      "text": "Se ha cerrado. Si el grupo sigue jugando, pide que te pasen el código nuevo.",
+      "action": "Volver al inicio"
+    }
+  },
+  "lobby": {
+    "codeLabel": "Código de la sala",
+    "leave": "Salir de la sala",
+    "share": "Compartir enlace",
+    "shareText": "Únete a mi sala de TheLever con el código {{code}}",
+    "copied": "Enlace copiado",
+    "showQr": "Mostrar QR",
+    "summary": "{{count}} dilemas · {{minutes}} min · {{language}} · {{nature}}",
+    "change": "Cambiar",
+    "adultsOnly": "Solo para mayores de 18",
+    "remote": "Jugáis a distancia: mejor en videollamada, para comentar el reveal en directo.",
+    "added": {
+      "title": "Dilemas añadidos · {{count}} de {{total}}",
+      "remove": "Quitar este dilema",
+      "hint": "No sabes quién los ha añadido: se verá en el reveal. El resto saldrá del catálogo."
+    },
+    "add": {
+      "title": "Añade un dilema a la partida",
+      "text": "Uno por persona. Nadie sabrá que es tuyo hasta el reveal.",
+      "action": "Añadir un dilema",
+      "yours": "Has añadido un dilema:",
+      "remove": "Quitarlo"
+    },
+    "picked": {
+      "title": "Dilemas elegidos · {{count}}"
+    },
+    "players": "En la sala · {{count}}",
+    "you": "{{name}} (tú)",
+    "host": "Anfitrión",
+    "toExpel": "{{name}}. Toca para expulsar",
+    "toChangeAvatar": "{{name}}. Toca para cambiar tu avatar",
+    "waiting": "Esperando a más gente. Comparte el código o el enlace para que entren.",
+    "start": "Empezar la partida",
+    "missing_one": "Falta {{count}} jugador para empezar",
+    "missing_other": "Faltan {{count}} jugadores para empezar",
+    "guestWait": "{{host}} empezará la partida cuando estéis todos.",
+    "missing_many": "Faltan {{count}} jugadores para empezar"
+  },
+  "languages": {
+    "es": "Español",
+    "en": "English",
+    "fr": "Français",
+    "de": "Deutsch",
+    "it": "Italiano",
+    "pt": "Português",
+    "ca": "Català"
+  },
+  "categories": {
+    "life-and-death": "Vida y muerte",
+    "honesty": "Honestidad",
+    "loyalty": "Lealtad",
+    "justice": "Justicia",
+    "love-and-relationships": "Amor y relaciones",
+    "work-and-money": "Trabajo y dinero",
+    "technology-and-the-future": "Tecnología y futuro"
+  },
+  "settings": {
+    "title": "Ajustes de la partida",
+    "close": "Cerrar",
+    "reveal": "Reveal",
+    "nominal": "Nominal",
+    "anonymous": "Anónimo",
+    "nominalHint": "En el reveal se verá qué votó cada uno, y se juega a predecir.",
+    "anonymousHint": "Nadie verá quién votó qué. Sin predicciones ni puntos: solo votar.",
+    "adultsOnly": {
+      "label": "Solo mayores de 18",
+      "hint": "Permite dilemas para adultos. Solo podrán entrar mayores de 18."
+    },
+    "language": "Idioma",
+    "category": "Categoría",
+    "dilemmaCount": "Dilemas",
+    "totalTime": "Tiempo total",
+    "minutes": "{{count}} min",
+    "newDilemmas": {
+      "label": "Incluir dilemas nuevos",
+      "hint": "Ayudáis a valorar dilemas recién llegados al catálogo."
+    },
+    "playersCanAddDilemmas": {
+      "label": "Los jugadores pueden añadir dilemas",
+      "hint": "Uno cada uno, como mucho. Nadie sabrá de quién es hasta el reveal."
+    },
+    "pick": "Elegir dilemas uno a uno",
+    "save": "Guardar"
+  },
+  "pickDilemmas": {
+    "title": "Elegir dilemas",
+    "back": "Volver a los ajustes",
+    "search": "Buscar por etiqueta",
+    "searchPlaceholder": "Buscar por etiqueta: familia, trabajo…",
+    "all": "Todas",
+    "hint": "Solo aparecen dilemas aptos para esta sala. Al elegirlos a mano no se añaden dilemas nuevos.",
+    "none": "Elige al menos uno",
+    "play_one": "Jugar este",
+    "play_other": "Jugar estos {{count}}",
+    "empty": "No hay dilemas aptos con esa búsqueda.",
+    "tags": "#{{tags}}",
+    "play_many": "Jugar estos {{count}}"
+  },
+  "addDilemma": {
+    "title": "Añade un dilema",
+    "search": "Buscar por etiqueta",
+    "close": "Cerrar",
+    "empty": "No hay dilemas aptos con esa búsqueda."
+  },
+  "expel": {
+    "title": "¿Expulsar a {{name}}?",
+    "text": "Saldrá de la sala y no podrá volver a esta partida. Podrá jugar otras.",
+    "confirm": "Expulsar",
+    "cancel": "Cancelar"
+  },
+  "avatarPicker": {
+    "title": "Elige tu avatar",
+    "face": "Cara {{number}}",
+    "hint": "Las combinaciones que ya usa alguien de la sala aparecen desactivadas.",
+    "use": "Usar este",
+    "close": "Cerrar",
+    "colors": {
+      "khaki": "Caqui",
+      "teal": "Verde azulado",
+      "brown": "Marrón",
+      "slate": "Pizarra",
+      "cyan": "Cian",
+      "rust": "Óxido",
+      "olive": "Oliva",
+      "stone": "Piedra"
+    }
+  },
+  "qr": {
+    "title": "Apunta con la cámara para entrar",
+    "close": "Cerrar",
+    "label": "Código QR de la sala {{code}}",
+    "or": "o entra en {{host}} y escribe el código"
   }
 }

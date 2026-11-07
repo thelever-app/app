@@ -1,0 +1,12 @@
+.button {
+  composes: primary from '../styles/buttons.module.css';
+  width: 100%;
+  min-height: 52px;
+}
+
+.button:disabled {
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  box-shadow: none;
+  cursor: default;
+}

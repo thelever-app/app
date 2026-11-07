@@ -10,17 +10,23 @@ interface NoReturnScreenProps {
   /** Why the room will not take the player back, as the server said it. */
   readonly code: ErrorCodeDto | undefined;
   readonly onReload: () => void;
+  /** Back to the start, to create a room or join another. */
+  readonly onHome: () => void;
 }
 
-type Variant = 'gone' | 'device' | 'update' | 'identity';
+type Variant = 'gone' | 'device' | 'update' | 'identity' | 'expelled';
 
 /** Any other reason gets the variant that lets the player try again, which may help. */
 function variantOf(code: ErrorCodeDto | undefined): Variant {
   switch (code) {
     case 'game-not-found':
+    case 'room-not-found':
       return 'gone';
     case 'player-not-in-game':
+    case 'player-not-in-room':
       return 'device';
+    case 'player-expelled':
+      return 'expelled';
     case 'unsupported-contract-version':
       return 'update';
     default:
@@ -29,7 +35,7 @@ function variantOf(code: ErrorCodeDto | undefined): Variant {
 }
 
 /** The room will not take the player back: what happened, and reloading when it may help. */
-export function NoReturnScreen({ code, onReload }: NoReturnScreenProps) {
+export function NoReturnScreen({ code, onReload, onHome }: NoReturnScreenProps) {
   const { t } = useTranslation();
   const variant = variantOf(code);
   const withReload = variant === 'update' || variant === 'identity' ? variant : undefined;
@@ -56,6 +62,13 @@ export function NoReturnScreen({ code, onReload }: NoReturnScreenProps) {
           <button type="button" className={styles.action} onClick={onReload}>
             <Icon name="refresh" size={20} />
             {t(`noReturn.${withReload}.action`)}
+          </button>
+        </footer>
+      )}
+      {variant === 'expelled' && (
+        <footer className={styles.footer}>
+          <button type="button" className={styles.action} onClick={onHome}>
+            {t('noReturn.expelled.action')}
           </button>
         </footer>
       )}

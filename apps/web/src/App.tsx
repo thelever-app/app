@@ -1,11 +1,19 @@
-import { RoomNotices } from './components/room-notices.tsx';
-import { DecisionPhase } from './phases/decision-phase.tsx';
+import { Navigate, Route, Routes } from 'react-router';
+import { HomeScreen } from './screens/home-screen.tsx';
+import { JoinScreen } from './screens/join-screen.tsx';
+import { RoomScreen } from './screens/room-screen.tsx';
 
+/**
+ * The addresses of the web. The room, not its game, has the address: it outlives the rematch,
+ * and its lobby and its game share it. Any other address goes back to the start.
+ */
 export function App() {
   return (
-    <>
-      <RoomNotices />
-      <DecisionPhase />
-    </>
+    <Routes>
+      <Route path="/" element={<HomeScreen />} />
+      <Route path="/join/:code" element={<JoinScreen />} />
+      <Route path="/rooms/:roomId" element={<RoomScreen />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

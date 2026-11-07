@@ -1,0 +1,59 @@
+.heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.faces {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.face {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  cursor: pointer;
+}
+
+.face img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.face[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+.face:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* The eight colours in one row, at any width. */
+.colors {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 36px));
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.color {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--swatch);
+  cursor: pointer;
+}
+
+.color[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--color-bg),
+    0 0 0 4px var(--color-ink);
+}

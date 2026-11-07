@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createI18n } from '../../src/i18n/i18n.ts';
+import { createI18n, deviceLanguage } from '../../src/i18n/i18n.ts';
 
 function deviceLanguages(languages: string[]) {
   vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(languages);
@@ -62,5 +62,24 @@ describe('createI18n', () => {
 
     // Assert
     expect(i18n.t('playerList.you')).toBe('Tú');
+  });
+});
+
+describe('deviceLanguage', () => {
+  it('should be the language of the device even without a catalog for its interface', async () => {
+    // Arrange
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-US']);
+
+    // Act
+    const language = deviceLanguage(await createI18n());
+
+    // Assert
+    expect(language).toBe('en');
+    vi.restoreAllMocks();
+  });
+
+  it('should be the source language for one a room cannot play in', () => {
+    // Act & Assert
+    expect(deviceLanguage({ language: 'ja-JP' })).toBe('es');
   });
 });

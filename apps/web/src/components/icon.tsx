@@ -6,10 +6,52 @@ import error from '@material-symbols/svg-500/rounded/error.svg?url';
 import expandMore from '@material-symbols/svg-500/rounded/keyboard_arrow_down-fill.svg?url';
 import refresh from '@material-symbols/svg-500/rounded/refresh-fill.svg?url';
 import undo from '@material-symbols/svg-500/rounded/undo-fill.svg?url';
+import addCircle from '@material-symbols/svg-500/rounded/add_circle-fill.svg?url';
+import add from '@material-symbols/svg-500/rounded/add.svg?url';
+import checkBox from '@material-symbols/svg-500/rounded/check_box-fill.svg?url';
+import checkBoxBlank from '@material-symbols/svg-500/rounded/check_box_outline_blank.svg?url';
+import chevronRight from '@material-symbols/svg-500/rounded/chevron_right.svg?url';
+import diversity from '@material-symbols/svg-500/rounded/diversity_3-fill.svg?url';
+import familyRestroom from '@material-symbols/svg-500/rounded/family_restroom-fill.svg?url';
+import groups from '@material-symbols/svg-500/rounded/groups-fill.svg?url';
+import iosShare from '@material-symbols/svg-500/rounded/ios_share.svg?url';
+import pin from '@material-symbols/svg-500/rounded/pin.svg?url';
+import qrCode from '@material-symbols/svg-500/rounded/qr_code_2.svg?url';
+import search from '@material-symbols/svg-500/rounded/search.svg?url';
+import sync from '@material-symbols/svg-500/rounded/sync.svg?url';
+import videocam from '@material-symbols/svg-500/rounded/videocam.svg?url';
+import visibility from '@material-symbols/svg-500/rounded/visibility-fill.svg?url';
+import visibilityOff from '@material-symbols/svg-500/rounded/visibility_off-fill.svg?url';
+import work from '@material-symbols/svg-500/rounded/work-fill.svg?url';
 import styles from './icon.module.css';
 
 /** The Material Symbols the screens use, hosted with the app: never loaded from Google. */
-const ICONS = { arrowBack, checkCircle, close, error, expandMore, refresh, undo } as const;
+const ICONS = {
+  add,
+  addCircle,
+  arrowBack,
+  checkBox,
+  checkBoxBlank,
+  checkCircle,
+  chevronRight,
+  close,
+  diversity,
+  error,
+  expandMore,
+  familyRestroom,
+  groups,
+  iosShare,
+  pin,
+  qrCode,
+  refresh,
+  search,
+  sync,
+  undo,
+  videocam,
+  visibility,
+  visibilityOff,
+  work,
+} as const;
 
 export type IconName = keyof typeof ICONS;
 

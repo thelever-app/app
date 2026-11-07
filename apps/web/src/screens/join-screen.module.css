@@ -1,0 +1,57 @@
+.body {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: var(--space-4) 20px 28px;
+}
+
+.back {
+  width: 44px;
+  height: 44px;
+  margin-left: -12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.signage {
+  font-size: var(--type-signage-size);
+  line-height: var(--type-signage-line-height);
+  font-weight: var(--type-signage-weight);
+  letter-spacing: var(--type-signage-letter-spacing);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.count {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  color: var(--color-ink-muted);
+}
+
+.line {
+  margin: 0;
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.line strong {
+  font-weight: 600;
+}
