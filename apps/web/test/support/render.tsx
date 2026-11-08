@@ -2,6 +2,7 @@ import type { GameStateDto } from '@thelever-app/protocol';
 import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
+import { MemoryRouter } from 'react-router';
 import { createI18n } from '../../src/i18n/i18n.ts';
 import type { RoomConnection } from '../../src/room/room-connection.ts';
 import { RoomProvider } from '../../src/room/room-provider.tsx';
@@ -40,7 +41,11 @@ export async function providersFor({ game, ...options }: ProvidersOptions = {}) 
     ) : (
       children
     );
-    return <I18nextProvider i18n={i18n}>{content}</I18nextProvider>;
+    return (
+      <MemoryRouter>
+        <I18nextProvider i18n={i18n}>{content}</I18nextProvider>
+      </MemoryRouter>
+    );
   }
   return { Providers, t: i18n.t };
 }

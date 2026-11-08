@@ -17,9 +17,16 @@ const GAME_STATE: GameStateDto = {
   gameVersion: 1,
   roomVersion: 2,
   playerId: 'TestAnaId',
+  phase: 'decision',
+  hostId: 'TestAnaId',
+  totalTimeEndsAt: '2026-11-09T10:06:00.000Z',
+  serverTime: '2026-11-09T10:00:00.000Z',
+  totalTimeRanOut: false,
   dilemmas: [
     {
       dilemmaId: 'TestDilemma1',
+      predictionSubset: [],
+      personInTheGap: null,
       text: 'TestText1',
       options: [
         { optionId: 'TestOptionA', text: 'TestOptionTextA' },
@@ -28,6 +35,8 @@ const GAME_STATE: GameStateDto = {
     },
     {
       dilemmaId: 'TestDilemma2',
+      predictionSubset: [],
+      personInTheGap: null,
       text: 'TestText2',
       options: [
         { optionId: 'TestOptionC', text: 'TestOptionTextC' },
@@ -36,10 +45,26 @@ const GAME_STATE: GameStateDto = {
     },
   ],
   players: [
-    { playerId: 'TestAnaId', nickname: 'Ana', avatar: ANA_AVATAR, progress: 0, connected: true },
-    { playerId: 'TestLuisId', nickname: 'Luis', avatar: LUIS_AVATAR, progress: 0, connected: true },
+    {
+      playerId: 'TestAnaId',
+      nickname: 'Ana',
+      avatar: ANA_AVATAR,
+      progress: 0,
+      connected: true,
+      left: false,
+    },
+    {
+      playerId: 'TestLuisId',
+      nickname: 'Luis',
+      avatar: LUIS_AVATAR,
+      progress: 0,
+      connected: true,
+      left: false,
+    },
   ],
   answers: [],
+  reports: [],
+  didNotVote: [],
 };
 
 const ERROR: ErrorDto = {
@@ -126,6 +151,7 @@ describe('roomReducer', () => {
             avatar: ANA_AVATAR,
             progress: 1,
             connected: true,
+            left: false,
           },
           {
             playerId: 'TestLuisId',
@@ -133,9 +159,17 @@ describe('roomReducer', () => {
             avatar: LUIS_AVATAR,
             progress: 2,
             connected: true,
+            left: false,
           },
         ],
-        answers: [{ dilemmaId: 'TestDilemma1', vote: 'TestOption' }],
+        answers: [
+          {
+            dilemmaId: 'TestDilemma1',
+            vote: 'TestOption',
+            matchPrediction: null,
+            votePredictions: [],
+          },
+        ],
       };
 
       // Act
@@ -187,6 +221,7 @@ describe('roomReducer', () => {
           avatar: ANA_AVATAR,
           progress: 0,
           connected: true,
+          left: false,
         },
         {
           playerId: 'TestLuisId',
@@ -194,6 +229,7 @@ describe('roomReducer', () => {
           avatar: LUIS_AVATAR,
           progress: 1,
           connected: true,
+          left: false,
         },
       ]);
     });
@@ -269,6 +305,7 @@ describe('roomReducer', () => {
           avatar: ANA_AVATAR,
           progress: 0,
           connected: true,
+          left: false,
         },
         {
           playerId: 'TestLuisId',
@@ -276,6 +313,7 @@ describe('roomReducer', () => {
           avatar: LUIS_AVATAR,
           progress: 0,
           connected: false,
+          left: false,
         },
       ]);
       expect(game?.roomVersion).toBe(3);

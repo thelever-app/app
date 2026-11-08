@@ -4,13 +4,16 @@ import { WaitingScreen } from '../../src/screens/waiting-screen.tsx';
 import { renderWithProviders } from '../support/render.tsx';
 import { aGame } from '../support/game.ts';
 
-async function renderWaiting() {
+async function renderWaiting(game = aGame()) {
   const onReview = vi.fn();
-  const game = aGame();
-  const { t } = await renderWithProviders(<WaitingScreen game={game} onReview={onReview} />, {
-    game,
-  });
-  return { onReview, t };
+  const onLaunchReveal = vi.fn();
+  const { t } = await renderWithProviders(
+    <WaitingScreen game={game} onReview={onReview} onLaunchReveal={onLaunchReveal} />,
+    {
+      game,
+    },
+  );
+  return { onReview, onLaunchReveal, t };
 }
 
 describe('WaitingScreen', () => {
@@ -35,5 +38,35 @@ describe('WaitingScreen', () => {
 
     // Assert
     expect(onReview).toHaveBeenCalledOnce();
+  });
+
+  it('should let the host start the reveal and say what happens to what is not answered', async () => {
+    // Arrange
+    const { onLaunchReveal, t } = await renderWaiting();
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('waiting.launchReveal') }));
+
+    // Assert
+    expect(onLaunchReveal).toHaveBeenCalled();
+    expect(screen.getByText(t('waiting.launchCaption', { count: 2 }))).toBeDefined();
+  });
+
+  it('should tell a guest who may start the reveal', async () => {
+    // Act
+    const { t } = await renderWaiting(aGame({ hostId: 'test-luis-id' }));
+
+    // Assert
+    expect(screen.queryByRole('button', { name: t('waiting.launchReveal') })).toBeNull();
+    expect(screen.getByText(t('waiting.guest', { host: 'Luis' }))).toBeDefined();
+  });
+
+  it('should say the time ran out, and who decides when the reveal starts', async () => {
+    // Act
+    const { t } = await renderWaiting(aGame({ totalTimeRanOut: true, hostId: 'test-luis-id' }));
+
+    // Assert
+    expect(screen.getByRole('heading', { name: t('timeUp.title') })).toBeDefined();
+    expect(screen.getByText(t('timeUp.subtitleGuest', { host: 'Luis' }))).toBeDefined();
   });
 });

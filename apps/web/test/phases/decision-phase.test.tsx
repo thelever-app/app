@@ -8,7 +8,12 @@ import { renderWithProviders } from '../support/render.tsx';
 
 /** As the server sends it once Ana has answered all three: her answers and her progress. */
 const allAnswered: GameStateDto = aGame({
-  answers: [1, 2, 3].map((n) => ({ dilemmaId: `test-dilemma-${n}`, vote: `test-option-${n}a` })),
+  answers: [1, 2, 3].map((n) => ({
+    dilemmaId: `test-dilemma-${n}`,
+    vote: `test-option-${n}a`,
+    matchPrediction: null,
+    votePredictions: [],
+  })),
   players: [
     {
       playerId: 'test-ana-id',
@@ -16,6 +21,7 @@ const allAnswered: GameStateDto = aGame({
       avatar: { face: 'face-01', color: 'teal' },
       progress: 3,
       connected: true,
+      left: false,
     },
     {
       playerId: 'test-luis-id',
@@ -23,6 +29,7 @@ const allAnswered: GameStateDto = aGame({
       avatar: { face: 'face-02', color: 'rust' },
       progress: 1,
       connected: true,
+      left: false,
     },
   ],
 });
@@ -59,6 +66,8 @@ describe('DecisionPhase', () => {
       type: 'answer-dilemma',
       dilemmaId: 'test-dilemma-1',
       vote: 'test-option-1a',
+      matchPrediction: null,
+      votePredictions: [],
     });
   });
 
@@ -130,7 +139,12 @@ describe('DecisionPhase', () => {
             answers: [1, 2].map((n) => ({
               dilemmaId: `test-dilemma-${n}`,
               vote: `test-option-${n}a`,
+              matchPrediction: null,
+              votePredictions: [],
             })),
+            players: aGame().players.map((player) =>
+              player.playerId === 'test-ana-id' ? { ...player, progress: 2 } : player,
+            ),
           }),
         ),
       );
@@ -147,6 +161,8 @@ describe('DecisionPhase', () => {
         type: 'answer-dilemma',
         dilemmaId: 'test-dilemma-3',
         vote: 'test-option-3b',
+        matchPrediction: null,
+        votePredictions: [],
       });
     });
 
@@ -163,7 +179,14 @@ describe('DecisionPhase', () => {
         deliver(
           aGame({
             gameVersion: 2,
-            answers: [{ dilemmaId: 'test-dilemma-1', vote: 'test-option-1a' }],
+            answers: [
+              {
+                dilemmaId: 'test-dilemma-1',
+                vote: 'test-option-1a',
+                matchPrediction: null,
+                votePredictions: [],
+              },
+            ],
           }),
         ),
       );

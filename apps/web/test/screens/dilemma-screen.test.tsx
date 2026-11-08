@@ -14,13 +14,29 @@ async function renderScreen(game: GameStateDto = aGame(), initialPosition?: numb
       initialPosition={initialPosition}
       onAnswer={onAnswer}
       onDone={onDone}
+      onLaunchReveal={vi.fn()}
+      onReport={vi.fn()}
+      onSkip={vi.fn()}
+      onLeave={vi.fn()}
     />,
     { game },
   );
   return { onAnswer, onDone, ...result };
 }
 
-const answeredFirst = aGame({ answers: [{ dilemmaId: 'test-dilemma-1', vote: 'test-option-1b' }] });
+const answeredFirst = aGame({
+  answers: [
+    {
+      dilemmaId: 'test-dilemma-1',
+      vote: 'test-option-1b',
+      matchPrediction: null,
+      votePredictions: [],
+    },
+  ],
+  players: aGame().players.map((player) =>
+    player.playerId === 'test-ana-id' ? { ...player, progress: 1 } : player,
+  ),
+});
 
 function option(name: string) {
   return screen.getByRole('radio', { name });
@@ -77,7 +93,12 @@ describe('DilemmaScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
 
     // Assert
-    expect(onAnswer).toHaveBeenCalledWith('test-dilemma-1', 'test-option-1a');
+    expect(onAnswer).toHaveBeenCalledWith({
+      dilemmaId: 'test-dilemma-1',
+      vote: 'test-option-1a',
+      matchPrediction: null,
+      votePredictions: [],
+    });
     expect(screen.getByRole('heading', { name: 'Texto del dilema 2' })).toBeDefined();
     expect(screen.getByRole('button', { name: t('dilemma.choose') })).toBeDefined();
   });
@@ -103,7 +124,12 @@ describe('DilemmaScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
 
     // Assert
-    expect(onAnswer).toHaveBeenCalledWith('test-dilemma-1', 'test-option-1a');
+    expect(onAnswer).toHaveBeenCalledWith({
+      dilemmaId: 'test-dilemma-1',
+      vote: 'test-option-1a',
+      matchPrediction: null,
+      votePredictions: [],
+    });
   });
 
   it('should not send anything when the player continues without changing the vote', async () => {
@@ -139,9 +165,22 @@ describe('DilemmaScreen', () => {
     // Act
     rerender(
       <DilemmaScreen
-        game={aGame({ answers: [{ dilemmaId: 'test-dilemma-1', vote: 'test-option-1a' }] })}
+        game={aGame({
+          answers: [
+            {
+              dilemmaId: 'test-dilemma-1',
+              vote: 'test-option-1a',
+              matchPrediction: null,
+              votePredictions: [],
+            },
+          ],
+        })}
         onAnswer={vi.fn()}
         onDone={vi.fn()}
+        onLaunchReveal={vi.fn()}
+        onReport={vi.fn()}
+        onSkip={vi.fn()}
+        onLeave={vi.fn()}
       />,
     );
 

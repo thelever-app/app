@@ -12,6 +12,16 @@
   opacity: 0.4;
 }
 
+.xs {
+  width: 28px;
+  height: 28px;
+}
+
+.s {
+  width: 32px;
+  height: 32px;
+}
+
 .sm {
   width: 36px;
   height: 36px;

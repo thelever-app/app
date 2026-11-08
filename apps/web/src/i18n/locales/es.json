@@ -20,7 +20,8 @@
     "position": "Dilema {{position, number}} de {{total, number}}",
     "group": "Progreso del grupo",
     "more": "+{{count, number}}",
-    "showAll": "Ver todos"
+    "showAll": "Ver todos",
+    "predicting": "Dilema {{position, number}} de {{total, number}} · Predice"
   },
   "groupSheet": {
     "title": "El grupo",
@@ -39,7 +40,91 @@
     "finished": "Has terminado · {{progress, number}} de {{total, number}}",
     "title": "Esperando a los demás",
     "subtitle": "Cuando terminen todos, llega el reveal. Mientras tanto, puedes repasar o cambiar tus respuestas.",
-    "review": "Repasar mis respuestas"
+    "review": "Repasar mis respuestas",
+    "mascotWaiting": "La Palanca, esperando",
+    "mascotDoubting": "La Palanca, dudando",
+    "launchReveal": "Lanzar el reveal",
+    "launchCaption_one": "Falta {{count}}. Lo que no haya respondido quedará como «no votó».",
+    "launchCaption_many": "Faltan {{count, number}}. Lo que no hayan respondido quedará como «no votó».",
+    "launchCaption_other": "Faltan {{count, number}}. Lo que no hayan respondido quedará como «no votó».",
+    "guest": "{{host}} puede lanzar el reveal; si no, empieza solo cuando terminéis todos.",
+    "guestTimeUp": "Si el último termina antes, el reveal empieza solo."
+  },
+  "game": {
+    "timeLeft": "Quedan {{time}}"
+  },
+  "timeUp": {
+    "title": "Se acabó el tiempo",
+    "subtitleHost": "Quienes faltan pueden terminar. Tú decides cuándo empieza el reveal.",
+    "subtitleGuest": "Quienes faltan pueden terminar. {{host}} decide cuándo empieza el reveal.",
+    "straggler": "Puedes terminar, pero {{host}} puede lanzar el reveal en cualquier momento.",
+    "stragglerHost": "Puedes terminar; tú decides cuándo empieza el reveal, desde el menú ⋮."
+  },
+  "predict": {
+    "voted": "Votaste «",
+    "votedEnd": "»",
+    "matchQuestion_one": "Del otro jugador, ¿cuántos eligieron lo mismo que tú?",
+    "matchQuestion_many": "De los otros {{count, number}}, ¿cuántos eligieron lo mismo que tú?",
+    "matchQuestion_other": "De los otros {{count, number}}, ¿cuántos eligieron lo mismo que tú?",
+    "matchValue": "{{count, number}} de {{total, number}}",
+    "matchHint": "Toca la barra para elegir",
+    "matchChosen": "{{count, number}} de {{total, number}} eligieron lo mismo que tú",
+    "voteQuestion": "¿Y qué votó cada uno?",
+    "voteOf": "El voto de {{name}}",
+    "back": "Volver a tu voto",
+    "missing_one": "Falta {{count}} respuesta",
+    "missing_many": "Faltan {{count, number}} respuestas",
+    "missing_other": "Faltan {{count, number}} respuestas",
+    "next": "Siguiente dilema"
+  },
+  "gameMenu": {
+    "open": "Más opciones",
+    "title": "Menú de la partida",
+    "launchReveal": "Lanzar el reveal",
+    "onlyHost": "Solo el anfitrión",
+    "showGroup": "Ver el grupo",
+    "report": "Reportar este dilema",
+    "reportSubtitle": "Nadie del grupo lo sabrá",
+    "reported": "Ya reportaste este dilema",
+    "leave": "Salir de la partida"
+  },
+  "report": {
+    "title": "¿Qué le pasa a este dilema?",
+    "reasons": {
+      "offensive": "Ofensivo",
+      "confusing": "Confuso",
+      "mistranslated": "Mal traducido",
+      "other": "Otro"
+    },
+    "comment": "Comentario (opcional)",
+    "placeholder": "¿Qué has visto?",
+    "noPersonalData": "No incluyas datos personales.",
+    "counter": "{{count, number}}/{{max, number}}",
+    "chooseReason": "Elige un motivo",
+    "send": "Enviar reporte",
+    "note": "Lo revisará el equipo. Nadie del grupo sabrá que lo has reportado."
+  },
+  "reportSent": {
+    "thanks": "Gracias.",
+    "text": "Lo revisará el equipo; nadie del grupo lo sabe.",
+    "canSkip": "Si prefieres no responderlo, puedes saltarlo.",
+    "skip": "Saltar dilema"
+  },
+  "launchReveal": {
+    "title": "¿Lanzar el reveal ya?",
+    "body_one": "Falta {{count}} jugador por terminar. Los dilemas que no haya respondido quedarán como «no votó» y no puntuarán.",
+    "body_many": "Faltan {{count, number}} jugadores por terminar. Los dilemas que no hayan respondido quedarán como «no votó» y no puntuarán.",
+    "body_other": "Faltan {{count, number}} jugadores por terminar. Los dilemas que no hayan respondido quedarán como «no votó» y no puntuarán.",
+    "launch": "Lanzar el reveal ya",
+    "wait": "Seguir esperando"
+  },
+  "newHost": {
+    "title": "Ahora eres el anfitrión",
+    "disconnected": "{{host}} ha perdido la conexión. Tus opciones están en el menú ⋮.",
+    "left": "{{host}} ha salido de la partida. Tus opciones están en el menú ⋮."
+  },
+  "reveal": {
+    "region": "Reveal"
   },
   "notices": {
     "reconnecting": "Reconectando… tus respuestas están guardadas",

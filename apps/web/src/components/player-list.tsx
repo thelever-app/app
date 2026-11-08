@@ -1,6 +1,7 @@
 import type { GameStateDto } from '@thelever-app/protocol';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from './icon.tsx';
 import { hasFinished, usePlayerName } from './players.ts';
 import styles from './player-list.module.css';
@@ -34,6 +35,7 @@ export function PlayerList({ players, dilemmaCount }: PlayerListProps) {
             {pending.map((player) => (
               <li key={player.playerId} className={styles.pendingPlayer}>
                 <div className={styles.pendingLine}>
+                  <Avatar avatar={player.avatar} size="s" dimmed={!player.connected} />
                   <span className={styles.name}>
                     {nameOf(player)}
                     {!player.connected && (
@@ -68,6 +70,7 @@ export function PlayerList({ players, dilemmaCount }: PlayerListProps) {
         <ul className={styles.done}>
           {done.map((player) => (
             <li key={player.playerId} className={styles.donePlayer}>
+              <Avatar avatar={player.avatar} size="xs" dimmed={!player.connected} />
               {nameOf(player)}
               <span role="img" aria-label={t('playerList.finished')} className={styles.finished}>
                 <Icon name="checkCircle" size={18} />

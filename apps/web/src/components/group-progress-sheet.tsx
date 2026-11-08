@@ -8,20 +8,31 @@ import styles from './group-progress-sheet.module.css';
 interface GroupProgressSheetProps {
   readonly players: GameStateDto['players'];
   readonly dilemmaCount: number;
+  /** Opened from elsewhere, such as the menu of the game: then it has no «Ver todos» of its own. */
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
 }
 
 /** «Ver todos» and the sheet it opens: everyone's progress, never what they answered. */
-export function GroupProgressSheet({ players, dilemmaCount }: GroupProgressSheetProps) {
+export function GroupProgressSheet({
+  players,
+  dilemmaCount,
+  open,
+  onOpenChange,
+}: GroupProgressSheetProps) {
   const { t } = useTranslation();
+  const controlled = open !== undefined;
 
   return (
-    <Dialog.Root>
-      <Dialog.Trigger asChild>
-        <button type="button" className={styles.trigger}>
-          {t('progressStrip.showAll')}
-          <Icon name="expandMore" size={18} />
-        </button>
-      </Dialog.Trigger>
+    <Dialog.Root {...(controlled && { open, onOpenChange })}>
+      {!controlled && (
+        <Dialog.Trigger asChild>
+          <button type="button" className={styles.trigger}>
+            {t('progressStrip.showAll')}
+            <Icon name="expandMore" size={18} />
+          </button>
+        </Dialog.Trigger>
+      )}
       <Dialog.Portal>
         <Dialog.Overlay className={styles.overlay} />
         <Dialog.Content className={styles.sheet}>

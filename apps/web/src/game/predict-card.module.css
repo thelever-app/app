@@ -1,0 +1,209 @@
+.main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 20px var(--space-4) var(--space-4);
+}
+
+/* The vote of the player, in the colour of the first option, as a pill. */
+.voted {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 6px var(--space-3) 6px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-option-a);
+  color: var(--color-on-option);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 500;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--type-title-family);
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+/* A bar to tap: each step is a value, from none of the others to all of them. */
+.bar {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  height: 48px;
+}
+
+.track {
+  position: absolute;
+  inset-inline: 0;
+  top: 20px;
+  height: 8px;
+  border-radius: 6px;
+  background: linear-gradient(
+    to right,
+    var(--color-option-a) var(--fill),
+    var(--color-surface) var(--fill)
+  );
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+  pointer-events: none;
+}
+
+.step {
+  position: relative;
+  min-width: 0;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* The thumb sits on the value chosen, only once there is one. */
+.step[data-state='checked']::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translateX(-50%);
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-raised);
+}
+
+.readout {
+  margin: 0;
+  text-align: center;
+  font-size: var(--type-body-size);
+  line-height: 24px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-muted);
+}
+
+.readout[data-chosen] {
+  color: var(--color-ink);
+}
+
+.players {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.playerName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 500;
+}
+
+.hidden {
+  composes: hidden from './sheet.module.css';
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.option {
+  min-height: 44px;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  color: var(--color-ink);
+  font-size: var(--type-label-size);
+  line-height: 18px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* The prediction chosen takes the colour of its option, by position, as on the dilemma. */
+.option[data-state='checked'] {
+  color: var(--color-on-option);
+  box-shadow:
+    0 0 0 2px var(--color-bg),
+    0 0 0 4px var(--color-ink);
+}
+
+.option[data-state='checked']:nth-of-type(1) {
+  background: var(--color-option-a);
+}
+
+.option[data-state='checked']:nth-of-type(2) {
+  background: var(--color-option-b);
+}
+
+.option[data-state='checked']:nth-of-type(3) {
+  background: var(--color-option-3);
+}
+
+.option[data-state='checked']:nth-of-type(4) {
+  background: var(--color-option-4);
+}
+
+.footer {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.next {
+  composes: primary from '../styles/buttons.module.css';
+  flex-grow: 1;
+}
+
+.next:disabled {
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  box-shadow: none;
+  cursor: default;
+}

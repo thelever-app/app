@@ -3,10 +3,13 @@ import { RadioGroup } from 'radix-ui';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
+import { DilemmaText } from '../game/dilemma-text.tsx';
 import styles from './dilemma-card.module.css';
 
 interface DilemmaCardProps {
   readonly dilemma: GameStateDto['dilemmas'][number];
+  /** The nickname that takes the gap «alguien del grupo», if the dilemma has it. */
+  readonly personInTheGap?: string | undefined;
   /** The vote the room has recorded for this dilemma, if any. */
   readonly savedVote: string | undefined;
   readonly canGoBack: boolean;
@@ -19,6 +22,7 @@ interface DilemmaCardProps {
 /** One dilemma: its text, its options and the way on. Its choice starts from the saved vote. */
 export function DilemmaCard({
   dilemma,
+  personInTheGap,
   savedVote,
   canGoBack,
   isSending,
@@ -33,7 +37,7 @@ export function DilemmaCard({
     <>
       <main className={styles.main}>
         <h1 id={textId} className={styles.text}>
-          {dilemma.text}
+          <DilemmaText text={dilemma.text} personInTheGap={personInTheGap} />
         </h1>
         <RadioGroup.Root
           className={styles.options}
@@ -48,7 +52,7 @@ export function DilemmaCard({
               value={option.optionId}
               className={styles.option}
             >
-              {option.text}
+              <DilemmaText text={option.text} personInTheGap={personInTheGap} />
               <RadioGroup.Indicator className={styles.check}>
                 <Icon name="checkCircle" size={20} />
               </RadioGroup.Indicator>

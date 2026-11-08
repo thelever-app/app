@@ -19,8 +19,18 @@ import {
   ExpelPlayerUseCase,
   GetGameStateUseCase,
   GetRoomStateUseCase,
+  HostChangedEvent,
   JoinRoomUseCase,
+  LeaveRoomUseCase,
   LobbyChangedEvent,
+  PlayerLeftEvent,
+  ReportDilemmaUseCase,
+  RevealStartedEvent,
+  RunOutTotalTimeUseCase,
+  SkipDilemmaUseCase,
+  StartRevealUseCase,
+  TotalTimeRanOutEvent,
+  type Clock,
   PickDilemmasUseCase,
   ProgressUpdatedEvent,
   RemoveAddedDilemmaUseCase,
@@ -34,6 +44,7 @@ import {
 } from '@thelever-app/game';
 import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
 import {
+  InMemoryDilemmaReports,
   InMemoryGameRepository,
   InMemoryRoomRepository,
   InMemorySealProvider,
@@ -76,6 +87,15 @@ const EXPLORATION_SLOTS: ExplorationSlots = [
   { fromDilemmaCount: 11, slots: 3 },
 ];
 
+/** The events that reach the screen as the state it may see after them, as the room server sends them. */
+const SENT_AS_STATE = [
+  LobbyChangedEvent,
+  TotalTimeRanOutEvent,
+  RevealStartedEvent,
+  HostChangedEvent,
+  PlayerLeftEvent,
+] as const;
+
 /** Who uses the screen in the simulation. */
 const SELF_IDENTITY = 'simulated-0';
 
@@ -96,6 +116,9 @@ class CallbackPlayerNotifier implements PlayerNotifier {
 const MATH_RANDOMNESS: Randomness = {
   integer: (maxExclusive) => Math.floor(Math.random() * maxExclusive),
 };
+
+/** The clock of the browser, as the room server reads its own. */
+const BROWSER_CLOCK: Clock = { now: () => new Date() };
 
 /** The parts of the configuration a message changes: those it carries, none left undefined. */
 function onlyGiven(changes: ChangeSettingsDto['changes']): Partial<RoomSettingsSnapshot> {
@@ -139,9 +162,16 @@ export class SimulatedRoomConnection implements RoomConnection {
     const catalog = this.#catalog;
     const notifier = this.#notifier;
     const idGenerator = this.#idGenerator;
+    const clock = BROWSER_CLOCK;
     this.#useCases = {
       createRoom: new CreateRoomUseCase(rooms, idGenerator, MATH_RANDOMNESS),
-      joinRoom: new JoinRoomUseCase(rooms, notifier, idGenerator, MATH_RANDOMNESS),
+      joinRoom: new JoinRoomUseCase({
+        roomRepository: rooms,
+        gameRepository: games,
+        notifier,
+        idGenerator,
+        randomness: MATH_RANDOMNESS,
+      }),
       connectPlayer: new ConnectPlayerUseCase(rooms, notifier, idGenerator),
       getRoomState: new GetRoomStateUseCase(rooms, catalog),
       getGameState: new GetGameStateUseCase(rooms, games, catalog),
@@ -160,10 +190,33 @@ export class SimulatedRoomConnection implements RoomConnection {
           notifier,
           idGenerator,
           randomness: MATH_RANDOMNESS,
+          clock,
         },
         EXPLORATION_SLOTS,
       ),
-      answerDilemma: new AnswerDilemmaUseCase(rooms, games, notifier, new InMemorySealProvider()),
+      answerDilemma: new AnswerDilemmaUseCase({
+        roomRepository: rooms,
+        gameRepository: games,
+        notifier,
+        sealProvider: new InMemorySealProvider(),
+        clock,
+      }),
+      startReveal: new StartRevealUseCase(rooms, games, notifier),
+      runOutTotalTime: new RunOutTotalTimeUseCase(rooms, games, notifier, clock),
+      leaveRoom: new LeaveRoomUseCase(rooms, games, notifier),
+      skipDilemma: new SkipDilemmaUseCase({
+        roomRepository: rooms,
+        gameRepository: games,
+        notifier,
+        clock,
+      }),
+      reportDilemma: new ReportDilemmaUseCase({
+        roomRepository: rooms,
+        gameRepository: games,
+        reports: new InMemoryDilemmaReports(),
+        notifier,
+        clock,
+      }),
     };
   }
 
@@ -260,12 +313,42 @@ export class SimulatedRoomConnection implements RoomConnection {
       case 'connect':
         return;
       case 'answer-dilemma': {
-        const { dilemmaId, vote } = message;
-        await useCases.answerDilemma.execute({ roomId, playerId, dilemmaId, vote });
+        const { dilemmaId, vote, matchPrediction, votePredictions } = message;
+        await useCases.answerDilemma.execute({
+          roomId,
+          playerId,
+          dilemmaId,
+          vote,
+          ...(matchPrediction !== undefined && { matchPrediction }),
+          ...(votePredictions && { votePredictions }),
+        });
         // The use case only tells the others: the player learns their own progress from a fresh state.
         this.#enqueue(() => this.#sendState());
         return;
       }
+      case 'report-dilemma': {
+        const { dilemmaId, reason, comment } = message;
+        await useCases.reportDilemma.execute({
+          roomId,
+          playerId,
+          dilemmaId,
+          reason,
+          ...(comment !== undefined && { comment }),
+        });
+        this.#enqueue(() => this.#sendState());
+        return;
+      }
+      case 'skip-dilemma':
+        await useCases.skipDilemma.execute({ roomId, playerId, dilemmaId: message.dilemmaId });
+        this.#enqueue(() => this.#sendState());
+        return;
+      case 'start-reveal':
+        await useCases.startReveal.execute({ roomId, playerId });
+        return;
+      case 'leave-room':
+        await useCases.leaveRoom.execute({ roomId, playerId });
+        this.close();
+        return;
       case 'change-avatar':
         await useCases.changeAvatar.execute({
           roomId,
@@ -304,22 +387,45 @@ export class SimulatedRoomConnection implements RoomConnection {
       case 'start-game':
         await useCases.startGame.execute({ roomId, playerId });
         this.#startFakePlayers();
+        await this.#runOutTotalTimeOnTime();
     }
   }
 
-  /** Each fake player answers in order, each one with a different option so votes vary. */
+  /** As the timer of the room server: when the total time ends, the room finds it over. */
+  async #runOutTotalTimeOnTime(): Promise<void> {
+    const { game } = await this.#gameOf(this.#playerId);
+    if (!game) return;
+    const left = game.totalTimeEndsAt.getTime() - BROWSER_CLOCK.now().getTime();
+    this.#after(Math.max(0, left), () =>
+      this.#useCases.runOutTotalTime.execute({ roomId: this.#roomId }),
+    );
+  }
+
+  /**
+   * Each fake player answers in order, each one with a different option so votes vary, and makes
+   * every prediction a nominal room asks for.
+   */
   #startFakePlayers(): void {
     this.#fakePlayers.forEach(({ playerId, answerEveryMs }, position) => {
       const answerNext = async (): Promise<void> => {
         const { game } = await this.#gameOf(playerId);
-        const dilemma = game?.dilemmas[game.players.find((p) => p.playerId === playerId)!.progress];
+        if (game?.phase !== 'decision') return;
+        const dilemma = game.dilemmas[game.players.find((p) => p.playerId === playerId)!.progress];
         if (!dilemma) return;
         const vote = dilemma.options[position % dilemma.options.length]!.optionId;
+        const nominal = dilemma.predictionSubset.length > 0;
         await this.#useCases.answerDilemma.execute({
           roomId: this.#roomId,
           playerId,
           dilemmaId: dilemma.dilemmaId,
           vote,
+          ...(nominal && {
+            matchPrediction: MATH_RANDOMNESS.integer(game.players.length),
+            votePredictions: dilemma.predictionSubset.map((predicted) => ({
+              playerId: predicted,
+              vote,
+            })),
+          }),
         });
         this.#after(answerEveryMs, answerNext);
       };
@@ -351,7 +457,13 @@ export class SimulatedRoomConnection implements RoomConnection {
   async #sendState(listener?: ServerMessageListener): Promise<void> {
     const { game } = await this.#gameOf(this.#playerId);
     if (game) {
-      this.#emit(ServerMessageDto.parse({ type: 'game-state', ...game }), listener);
+      const message = {
+        type: 'game-state',
+        ...game,
+        totalTimeEndsAt: game.totalTimeEndsAt.toISOString(),
+        serverTime: BROWSER_CLOCK.now().toISOString(),
+      };
+      this.#emit(ServerMessageDto.parse(message), listener);
       return;
     }
     const room = await this.#useCases.getRoomState.execute({
@@ -363,7 +475,7 @@ export class SimulatedRoomConnection implements RoomConnection {
 
   #onEvent(playerId: string, event: DomainEvent): void {
     if (playerId !== this.#playerId) return;
-    if (event instanceof LobbyChangedEvent) {
+    if (SENT_AS_STATE.some((type) => event instanceof type)) {
       this.#enqueue(() => this.#sendState());
     } else if (event instanceof ProgressUpdatedEvent) {
       const message = ServerMessageDto.parse({

@@ -13,6 +13,7 @@ const PLAYERS: GameStateDto['players'] = [
     avatar: { face: 'face-01', color: 'teal' },
     progress: 2,
     connected: true,
+    left: false,
   },
   {
     playerId: 'test-luis-id',
@@ -20,6 +21,7 @@ const PLAYERS: GameStateDto['players'] = [
     avatar: { face: 'face-02', color: 'rust' },
     progress: 6,
     connected: true,
+    left: false,
   },
   {
     playerId: 'test-marta-id',
@@ -27,6 +29,7 @@ const PLAYERS: GameStateDto['players'] = [
     avatar: { face: 'face-03', color: 'olive' },
     progress: 1,
     connected: true,
+    left: false,
   },
 ];
 

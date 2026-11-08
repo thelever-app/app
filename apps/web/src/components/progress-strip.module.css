@@ -6,8 +6,16 @@
   background: var(--color-surface);
 }
 
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .position {
   composes: signage from '../styles/typography.module.css';
+  flex-grow: 1;
+  margin: 0;
   color: var(--color-ink-muted);
 }
 
@@ -31,15 +39,14 @@
   min-width: 36px;
 }
 
-/* Until the avatars arrive, the nickname stands in their place. */
+/* The avatar says who it is on screen; the nickname is there for whoever cannot see it. */
 .name {
-  max-width: 64px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  clip-path: inset(50%);
   white-space: nowrap;
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line-height);
-  font-weight: 500;
 }
 
 .count {

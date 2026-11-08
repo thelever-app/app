@@ -11,6 +11,7 @@ const ANA: GameStateDto['players'][number] = {
   avatar: { face: 'face-01', color: 'teal' },
   progress: 2,
   connected: true,
+  left: false,
 };
 const LUIS: GameStateDto['players'][number] = {
   playerId: 'test-luis-id',
@@ -18,6 +19,7 @@ const LUIS: GameStateDto['players'][number] = {
   avatar: { face: 'face-02', color: 'rust' },
   progress: 3,
   connected: true,
+  left: false,
 };
 
 describe('hasFinished', () => {

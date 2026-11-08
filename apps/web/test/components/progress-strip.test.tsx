@@ -10,12 +10,16 @@ const PLAYERS = ['Luis', 'Ana', 'Marta', 'Pablo', 'Sara', 'Nico'].map((nickname,
   avatar: { face: 'face-01', color: 'teal' } as const,
   progress: index,
   connected: true,
+  left: false,
 }));
 
 function renderStrip() {
-  return renderWithProviders(<ProgressStrip position={1} players={PLAYERS} dilemmaCount={6} />, {
-    game: aGame({ playerId: 'test-ana-id' }),
-  });
+  return renderWithProviders(
+    <ProgressStrip position={1} players={PLAYERS} dilemmaCount={6} game={aGame()} />,
+    {
+      game: aGame({ playerId: 'test-ana-id' }),
+    },
+  );
 }
 
 describe('ProgressStrip', () => {

@@ -178,22 +178,26 @@ describe('SimulatedRoomConnection', () => {
     });
 
     it('should answer for the player and send back their answer and progress', async () => {
-      // Arrange
+      // Arrange: a nominal room, where the answer is the vote with every prediction.
       const { received } = await playing();
       const [first] = lastGame(received).dilemmas;
+      const vote = first!.options[0]!.optionId;
+      const votePredictions = first!.predictionSubset.map((playerId) => ({ playerId, vote }));
 
       // Act
       connection!.send({
         type: 'answer-dilemma',
         dilemmaId: first!.dilemmaId,
-        vote: first!.options[0]!.optionId,
+        vote,
+        matchPrediction: 0,
+        votePredictions,
       });
       await vi.advanceTimersByTimeAsync(0);
 
       // Assert
       const game = lastGame(received);
       expect(game.answers).toEqual([
-        { dilemmaId: first!.dilemmaId, vote: first!.options[0]!.optionId },
+        { dilemmaId: first!.dilemmaId, vote, matchPrediction: 0, votePredictions },
       ]);
       expect(game.players.find(({ playerId }) => playerId === game.playerId)?.progress).toBe(1);
     });

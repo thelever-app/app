@@ -14,9 +14,16 @@ const GAME_STATE: GameStateDto = {
   gameVersion: 1,
   roomVersion: 3,
   playerId: 'test-player-id-0',
+  phase: 'decision',
+  hostId: 'test-player-id-0',
+  totalTimeEndsAt: '2026-11-09T10:06:00.000Z',
+  serverTime: '2026-11-09T10:00:00.000Z',
+  totalTimeRanOut: false,
   dilemmas: [
     {
       dilemmaId: 'test-dilemma-id',
+      predictionSubset: [],
+      personInTheGap: null,
       text: 'TestText1',
       options: [
         { optionId: 'TestOptionA', text: 'TestOptionTextA' },
@@ -31,6 +38,7 @@ const GAME_STATE: GameStateDto = {
       avatar: { face: 'face-01', color: 'teal' },
       progress: 0,
       connected: true,
+      left: false,
     },
     {
       playerId: 'test-player-id-1',
@@ -38,6 +46,7 @@ const GAME_STATE: GameStateDto = {
       avatar: { face: 'face-02', color: 'rust' },
       progress: 0,
       connected: true,
+      left: false,
     },
     {
       playerId: 'test-player-id-2',
@@ -45,9 +54,12 @@ const GAME_STATE: GameStateDto = {
       avatar: { face: 'face-03', color: 'olive' },
       progress: 0,
       connected: true,
+      left: false,
     },
   ],
   answers: [],
+  reports: [],
+  didNotVote: [],
 };
 
 function wrapperFor(connection: RoomConnection) {
@@ -330,7 +342,7 @@ describe('useRoom', () => {
     act(() => fake.deliver(GAME_STATE));
 
     // Act
-    result.current.answerDilemma('TestDilemma1', 'TestOption');
+    result.current.answerDilemma({ dilemmaId: 'TestDilemma1', vote: 'TestOption' });
 
     // Assert
     expect(fake.connection.send).toHaveBeenCalledWith({

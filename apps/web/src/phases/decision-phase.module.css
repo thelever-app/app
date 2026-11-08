@@ -1,0 +1,26 @@
+.newHost {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mascot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: #fbf6ec;
+}
+
+.newHostText {
+  display: flex;
+  flex-direction: column;
+}
+
+.signal {
+  color: #ffd23f;
+  font-weight: 600;
+}

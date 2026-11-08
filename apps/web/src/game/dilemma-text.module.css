@@ -1,0 +1,7 @@
+/* The nickname in the gap: the signal yellow of the main action, with its ink. */
+.person {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}

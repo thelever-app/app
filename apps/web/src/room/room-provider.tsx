@@ -4,6 +4,7 @@ import type {
   ErrorDto,
   GameStateDto,
   RoomStateDto,
+  AnswerDilemmaDto,
 } from '@thelever-app/protocol';
 import {
   createContext,
@@ -21,6 +22,9 @@ import { INITIAL_ROOM_STATE, roomReducer } from './room-reducer.ts';
 /** What a player sends once in the room: anything but saying who connects. */
 export type RoomCommandDto = Exclude<ClientMessageDto, { readonly type: 'connect' }>;
 
+/** The answer to a dilemma as the screen holds it, complete or not yet. */
+export type AnswerDraft = Omit<AnswerDilemmaDto, 'type' | 'traceparent'>;
+
 interface Room {
   /** The room while the player is in its lobby. */
   readonly lobby: RoomStateDto | undefined;
@@ -31,7 +35,8 @@ interface Room {
   /** The last message the server rejected, until the next state or until the player dismisses it. */
   readonly rejection: ErrorDto | undefined;
   readonly send: (command: RoomCommandDto) => void;
-  readonly answerDilemma: (dilemmaId: string, vote: string) => void;
+  /** The answer to a dilemma as it stands: the vote and, in a nominal room, the predictions made. */
+  readonly answerDilemma: (answer: AnswerDraft) => void;
   readonly dismissRejection: () => void;
 }
 
@@ -71,8 +76,8 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
   );
 
   const answerDilemma = useCallback(
-    (dilemmaId: string, vote: string) => {
-      send({ type: 'answer-dilemma', dilemmaId, vote });
+    (answer: AnswerDraft) => {
+      send({ type: 'answer-dilemma', ...answer });
     },
     [send],
   );

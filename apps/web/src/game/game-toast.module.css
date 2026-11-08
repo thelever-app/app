@@ -1,0 +1,28 @@
+/* Ink of the light theme in both themes, as a station sign at night, over the actions at the bottom. */
+.toast {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 92px;
+  z-index: 20;
+  max-width: calc(480px - 2 * var(--space-4));
+  margin-inline: auto;
+  width: calc(100% - 2 * var(--space-4));
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: #17140f;
+  color: #f5efe2;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.hazard {
+  height: 6px;
+  background: repeating-linear-gradient(135deg, #ffd23f 0 12px, #17140f 12px 24px);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px 12px;
+}
