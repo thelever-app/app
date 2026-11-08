@@ -23,6 +23,7 @@ import {
   LeaveRoomUseCase,
   ReportDilemmaUseCase,
   RunOutTotalTimeUseCase,
+  SkipDilemmaUseCase,
   StartRevealUseCase,
   type Clock,
   type ExplorationSlots,
@@ -108,6 +109,7 @@ export interface GameCommands extends LobbyUseCases, DecisionPhaseUseCases {
   readonly runOutTotalTime: RunOutTotalTimeUseCase;
   readonly leaveRoom: LeaveRoomUseCase;
   readonly reportDilemma: ReportDilemmaUseCase;
+  readonly skipDilemma: SkipDilemmaUseCase;
 }
 
 export function gameCommands({
@@ -161,6 +163,7 @@ export function gameCommands({
     runOutTotalTime: new RunOutTotalTimeUseCase(roomRepository, gameRepository, notifier, clock),
     leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier),
     // Until Moderation keeps them, the reports stay in the memory of the instance that took them.
+    skipDilemma: new SkipDilemmaUseCase({ roomRepository, gameRepository, notifier, clock }),
     reportDilemma: new ReportDilemmaUseCase({
       roomRepository,
       gameRepository,

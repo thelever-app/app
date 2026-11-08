@@ -23,8 +23,8 @@ export interface ReportDilemmaInput {
 }
 
 /**
- * A player reports a dilemma of the game to Moderation. Reported as offensive, it is also
- * skipped: recorded as "did not vote", and the player gets the next one.
+ * A player reports a dilemma of the game to Moderation, once. Reported as offensive, they may
+ * then skip it.
  */
 export class ReportDilemmaUseCase {
   readonly #roomRepository: RoomRepository;
@@ -67,15 +67,13 @@ export class ReportDilemmaUseCase {
     const dilemma = game.dilemmas.find((played) => played.dilemmaId === dilemmaId);
     if (!dilemma) throw new DilemmaNotInGameError(dilemmaId);
 
-    if (reason === 'offensive') {
-      const at = this.#clock.now();
-      game.runOutTotalTime(at);
-      game.skip(playerId, dilemmaId, at);
-      handOverHostIfAway(room, game);
-    }
+    const at = this.#clock.now();
+    game.runOutTotalTime(at);
+    game.recordReport(playerId, dilemmaId, reason === 'offensive');
+    handOverHostIfAway(room, game);
     const gameEvents = game.pullEvents();
     const roomEvents = room.pullEvents();
-    if (gameEvents.length > 0 || reason === 'offensive') await this.#gameRepository.save(game);
+    await this.#gameRepository.save(game);
     if (roomEvents.length > 0) await this.#roomRepository.save(room);
     await this.#reports.report({
       dilemmaId,

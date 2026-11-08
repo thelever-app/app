@@ -2,7 +2,9 @@ import { AnswerIncompleteError } from '../errors/answer-incomplete.error.ts';
 import { DecisionPhaseAlreadyStartedError } from '../errors/decision-phase-already-started.error.ts';
 import { DecisionPhaseNotStartedError } from '../errors/decision-phase-not-started.error.ts';
 import { DecisionPhaseOverError } from '../errors/decision-phase-over.error.ts';
+import { DilemmaAlreadyReportedError } from '../errors/dilemma-already-reported.error.ts';
 import { DilemmaNotInGameError } from '../errors/dilemma-not-in-game.error.ts';
+import { DilemmaNotReportedAsOffensiveError } from '../errors/dilemma-not-reported-as-offensive.error.ts';
 import { DilemmaNotReachedError } from '../errors/dilemma-not-reached.error.ts';
 import { DilemmaSkippedError } from '../errors/dilemma-skipped.error.ts';
 import { DilemmasMissingError } from '../errors/dilemmas-missing.error.ts';
@@ -102,6 +104,8 @@ export interface GameSnapshot {
       readonly reason: DidNotVoteReason;
     }[];
     readonly points: readonly ({ readonly dilemmaId: string } & PredictionPoints)[];
+    /** The dilemmas the player reported, and whether as offensive, which lets them skip it. */
+    readonly reports: readonly { readonly dilemmaId: string; readonly offensive: boolean }[];
   }[];
 }
 
@@ -111,6 +115,8 @@ interface PlayerState {
   readonly answers: Map<string, AnswerVO>;
   readonly didNotVote: Map<string, DidNotVoteReason>;
   readonly points: Map<string, PredictionPoints>;
+  /** Whether each dilemma the player reported was offensive. */
+  readonly reports: Map<string, boolean>;
   currentSince: Date | null;
   left: boolean;
 }
@@ -247,6 +253,7 @@ export class Game {
         answers: new Map(),
         didNotVote: new Map(),
         points: new Map(),
+        reports: new Map(),
         currentSince: new Date(at),
         left: false,
       });
@@ -314,7 +321,32 @@ export class Game {
   }
 
   /**
-   * The player skips the dilemma they are on by reporting it as offensive: it is recorded as
+   * The player reported a dilemma of the game, once. Reported as offensive, they may skip it; the
+   * report itself is for Moderation.
+   */
+  recordReport(playerId: string, dilemmaId: string, offensive: boolean): void {
+    this.#ensureDecisionPhase();
+    const state = this.#stateOf(playerId);
+    this.#dilemmaOf(dilemmaId);
+    if (state.reports.has(dilemmaId)) throw new DilemmaAlreadyReportedError(dilemmaId);
+
+    state.reports.set(dilemmaId, offensive);
+    this.#version += 1;
+  }
+
+  /** The dilemmas the player reported, in the order of the dilemmas. */
+  reportsOf(
+    playerId: string,
+  ): readonly { readonly dilemmaId: string; readonly offensive: boolean }[] {
+    const { reports } = this.#stateOf(playerId);
+    return this.#dilemmas.flatMap(({ dilemmaId }) => {
+      const offensive = reports.get(dilemmaId);
+      return offensive === undefined ? [] : [{ dilemmaId, offensive }];
+    });
+  }
+
+  /**
+   * The player skips the dilemma they are on, which they reported as offensive: it is recorded as
    * "did not vote" and counts as progress, and they cannot come back to it.
    */
   skip(playerId: string, dilemmaId: string, at: Date): void {
@@ -322,6 +354,9 @@ export class Game {
     const state = this.#stateOf(playerId);
     const dilemma = this.#dilemmaOf(dilemmaId);
     if (state.didNotVote.has(dilemmaId)) return;
+    if (state.reports.get(dilemmaId) !== true) {
+      throw new DilemmaNotReportedAsOffensiveError(dilemmaId);
+    }
     if (dilemma !== this.#currentOf(playerId)) throw new DilemmaNotReachedError(dilemmaId);
 
     const progressBefore = this.progressOf(playerId);
@@ -497,6 +532,7 @@ export class Game {
         answers: this.answersOf(playerId),
         didNotVote: this.didNotVoteOf(playerId),
         points: this.pointsOf(playerId),
+        reports: this.reportsOf(playerId),
       })),
     };
   }
@@ -531,6 +567,7 @@ export class Game {
         points: new Map(
           player.points.map(({ dilemmaId, match, votes }) => [dilemmaId, { match, votes }]),
         ),
+        reports: new Map(player.reports.map(({ dilemmaId, offensive }) => [dilemmaId, offensive])),
         currentSince: player.currentSince && new Date(player.currentSince),
         left: player.left,
       });

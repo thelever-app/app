@@ -20,7 +20,7 @@ import { SystemClock } from '../rooms/system-clock.ts';
 import { TotalTimeTimers } from '../rooms/total-time-timers.ts';
 import { decisionPhaseCommandHandlers } from '../rooms/sockets/decision-phase-commands.ts';
 import { LeaveRoomHandler } from '../rooms/sockets/leave-room.handler.ts';
-import { ReportDilemmaHandler } from '../rooms/sockets/report-dilemma.handler.ts';
+import { OwnStateCommandHandler } from '../rooms/sockets/own-state-command.handler.ts';
 import type { RunCommand } from '../rooms/run-command.ts';
 import { AnswerDilemmaHandler } from '../rooms/sockets/answer-dilemma.handler.ts';
 import { ConnectHandler } from '../rooms/sockets/connect.handler.ts';
@@ -190,7 +190,28 @@ function roomSocketServer(
     ...lobbyCommandHandlers(commands, roomLock, runCommand),
     ...decisionPhaseCommandHandlers(commands, roomLock, runCommand),
     new LeaveRoomHandler(commands.leaveRoom, socketNotifier, roomLock, runCommand),
-    new ReportDilemmaHandler(commands.reportDilemma, roomLock, stateSender, runCommand),
+    new OwnStateCommandHandler(
+      'report-dilemma',
+      ({ dilemmaId, reason, comment }, { roomId, playerId }) =>
+        commands.reportDilemma.execute({
+          roomId,
+          playerId,
+          dilemmaId,
+          reason,
+          ...(comment !== undefined && { comment }),
+        }),
+      roomLock,
+      stateSender,
+      runCommand,
+    ),
+    new OwnStateCommandHandler(
+      'skip-dilemma',
+      ({ dilemmaId }, { roomId, playerId }) =>
+        commands.skipDilemma.execute({ roomId, playerId, dilemmaId }),
+      roomLock,
+      stateSender,
+      runCommand,
+    ),
   ];
   return new RoomSocketServer(handlers, disconnect, errorCodeOf, pingIntervalMs, logger);
 }

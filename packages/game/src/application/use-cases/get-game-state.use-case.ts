@@ -52,6 +52,8 @@ export interface GetGameStateOutput {
     readonly matchPrediction: number | null;
     readonly votePredictions: readonly VotePrediction[];
   }[];
+  /** The dilemmas the player who asks reported, and whether as offensive, so they may skip it. */
+  readonly reports: readonly { readonly dilemmaId: string; readonly offensive: boolean }[];
   /** The dilemmas the player who asks is recorded as "did not vote" for. */
   readonly didNotVote: readonly { readonly dilemmaId: string; readonly reason: DidNotVoteReason }[];
 }
@@ -137,6 +139,7 @@ export class GetGameStateUseCase {
       dilemmas,
       players,
       answers,
+      reports: game.reportsOf(playerId),
       didNotVote: game.didNotVoteOf(playerId),
     };
   }

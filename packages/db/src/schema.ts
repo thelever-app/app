@@ -153,6 +153,8 @@ export interface Database {
     option_order: string[];
     prediction_subset: string[];
     did_not_vote: DidNotVoteReason | null;
+    /** Whether the player reported the dilemma, as offensive or for another reason. */
+    reported: 'offensive' | 'other' | null;
     /** Whether the predictions were scored, which only happens at the reveal of a nominal room. */
     scored: boolean;
     match_points: number | null;

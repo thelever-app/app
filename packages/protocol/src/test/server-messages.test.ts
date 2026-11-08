@@ -67,6 +67,7 @@ const gameState = {
       votePredictions: [{ playerId: 'player-1', vote: 'option-2' }],
     },
   ],
+  reports: [],
   didNotVote: [],
 };
 

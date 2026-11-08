@@ -1,6 +1,8 @@
 import {
   AddingDilemmasNotAllowedError,
   AnswerIncompleteError,
+  DilemmaAlreadyReportedError,
+  DilemmaNotReportedAsOffensiveError,
   DecisionPhaseOverError,
   DilemmaSkippedError,
   DuplicateVotePredictionError,
@@ -79,6 +81,8 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [DuplicateVotePredictionError, 'duplicate-vote-prediction'],
   [AnswerIncompleteError, 'answer-incomplete'],
   [DilemmaSkippedError, 'dilemma-skipped'],
+  [DilemmaAlreadyReportedError, 'dilemma-already-reported'],
+  [DilemmaNotReportedAsOffensiveError, 'dilemma-not-reported-as-offensive'],
 ];
 
 /** The code to answer with, or undefined if the error is not one a client can cause. */

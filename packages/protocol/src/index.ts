@@ -38,6 +38,7 @@ export {
   LeaveRoomDto,
   ReportReasonDto,
   ReportDilemmaDto,
+  SkipDilemmaDto,
   GAP_MARKER,
   TraceparentDto,
 } from './client-messages.ts';

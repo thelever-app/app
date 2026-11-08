@@ -111,6 +111,8 @@ export function describeGameRepositoryContract(
           ANA_SEAL,
           answeredAt,
         );
+        game.recordReport('TestAnaId', second.dilemmaId, true);
+        game.recordReport('TestLuisId', second.dilemmaId, false);
         game.skip('TestAnaId', second.dilemmaId, new Date(answeredAt.getTime() + 5 * SECOND));
         game.answer(
           'TestLuisId',

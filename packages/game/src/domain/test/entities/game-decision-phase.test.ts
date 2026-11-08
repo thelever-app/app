@@ -3,7 +3,9 @@ import { Game, type GameSettings } from '../../entities/game.ts';
 import { Player } from '../../entities/player.ts';
 import { AnswerIncompleteError } from '../../errors/answer-incomplete.error.ts';
 import { DecisionPhaseOverError } from '../../errors/decision-phase-over.error.ts';
+import { DilemmaAlreadyReportedError } from '../../errors/dilemma-already-reported.error.ts';
 import { DilemmaNotReachedError } from '../../errors/dilemma-not-reached.error.ts';
+import { DilemmaNotReportedAsOffensiveError } from '../../errors/dilemma-not-reported-as-offensive.error.ts';
 import { DilemmaSkippedError } from '../../errors/dilemma-skipped.error.ts';
 import { DuplicateVotePredictionError } from '../../errors/duplicate-vote-prediction.error.ts';
 import { InvalidMatchPredictionError } from '../../errors/invalid-match-prediction.error.ts';
@@ -311,10 +313,41 @@ describe('Game, in the decision phase', () => {
     });
   });
 
+  describe('recordReport', () => {
+    it('should keep the dilemmas the player reported, and whether as offensive', () => {
+      // Arrange
+      const game = gameOfThree();
+
+      // Act
+      game.recordReport('Luis', 'TestDilemma2', false);
+      game.recordReport('Luis', 'TestDilemma1', true);
+
+      // Assert
+      expect(game.reportsOf('Luis')).toEqual([
+        { dilemmaId: 'TestDilemma1', offensive: true },
+        { dilemmaId: 'TestDilemma2', offensive: false },
+      ]);
+      expect(game.reportsOf('Ana')).toEqual([]);
+    });
+
+    it('should take one report of each dilemma by player', () => {
+      // Arrange
+      const game = gameOfThree();
+      game.recordReport('Luis', 'TestDilemma1', false);
+
+      // Act & Assert
+      expect(() => game.recordReport('Luis', 'TestDilemma1', true)).toThrow(
+        DilemmaAlreadyReportedError,
+      );
+    });
+  });
+
   describe('skip', () => {
     it('should record the dilemma as "did not vote" and count it as progress', () => {
       // Arrange
       const game = gameOfThree();
+      game.recordReport('Luis', 'TestDilemma1', true);
+      game.pullEvents();
 
       // Act
       game.skip('Luis', 'TestDilemma1', AT);
@@ -324,12 +357,27 @@ describe('Game, in the decision phase', () => {
         { dilemmaId: 'TestDilemma1', reason: 'reported' },
       ]);
       expect(game.progressOf('Luis')).toBe(1);
-      expect(game.pullEvents()).toEqual([new ProgressUpdatedEvent('TestGameId', 'Luis', 1, 2)]);
+      expect(game.pullEvents()).toEqual([new ProgressUpdatedEvent('TestGameId', 'Luis', 1, 3)]);
+    });
+
+    it('should only skip a dilemma the player reported as offensive', () => {
+      // Arrange
+      const game = gameOfThree();
+      game.recordReport('Luis', 'TestDilemma1', false);
+
+      // Act & Assert
+      expect(() => game.skip('Luis', 'TestDilemma1', AT)).toThrow(
+        DilemmaNotReportedAsOffensiveError,
+      );
+      expect(() => game.skip('Ana', 'TestDilemma1', AT)).toThrow(
+        DilemmaNotReportedAsOffensiveError,
+      );
     });
 
     it('should not let the player answer the skipped dilemma', () => {
       // Arrange
       const game = gameOfThree();
+      game.recordReport('Luis', 'TestDilemma1', true);
       game.skip('Luis', 'TestDilemma1', AT);
 
       // Act & Assert
@@ -341,6 +389,8 @@ describe('Game, in the decision phase', () => {
     it('should only skip the dilemma the player is on', () => {
       // Arrange
       const game = gameOfThree();
+
+      game.recordReport('Luis', 'TestDilemma2', true);
 
       // Act & Assert
       expect(() => game.skip('Luis', 'TestDilemma2', AT)).toThrow(DilemmaNotReachedError);
@@ -484,6 +534,7 @@ describe('Game, in the decision phase', () => {
       // Arrange
       const game = gameOfThree();
       finish(game, 'Ana', after(SECOND));
+      game.recordReport('Luis', 'TestDilemma1', true);
       game.skip('Luis', 'TestDilemma1', after(2 * SECOND));
       game.runOutTotalTime(after(6 * MINUTE));
       game.leave('Marta');

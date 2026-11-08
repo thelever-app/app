@@ -6,6 +6,7 @@ import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
 import { LeaveRoomUseCase } from '../../use-cases/leave-room.use-case.ts';
 import { ReportDilemmaUseCase } from '../../use-cases/report-dilemma.use-case.ts';
 import { RunOutTotalTimeUseCase } from '../../use-cases/run-out-total-time.use-case.ts';
+import { SkipDilemmaUseCase } from '../../use-cases/skip-dilemma.use-case.ts';
 import { StartRevealUseCase } from '../../use-cases/start-reveal.use-case.ts';
 import { InvalidReportReasonError } from '../../errors/invalid-report-reason.error.ts';
 import { NotHostError } from '../../../domain/errors/not-host.error.ts';
@@ -59,6 +60,7 @@ async function arrange() {
     ),
     leaveRoom: new LeaveRoomUseCase(game.roomRepository, game.gameRepository, notifier),
     reportDilemma: new ReportDilemmaUseCase({ ...ports, reports }),
+    skipDilemma: new SkipDilemmaUseCase(ports),
     disconnectPlayer: new DisconnectPlayerUseCase(
       game.roomRepository,
       game.gameRepository,
@@ -219,10 +221,18 @@ describe('Decision phase commands', () => {
   });
 
   describe('ReportDilemmaUseCase', () => {
-    it('should hand the report to Moderation and skip an offensive dilemma', async () => {
+    it('should hand the report to Moderation and let an offensive dilemma be skipped', async () => {
       // Arrange
-      const { reportDilemma, reports, gameRepository, roomId, gameId, luisId, dilemmaIds } =
-        await arrange();
+      const {
+        reportDilemma,
+        skipDilemma,
+        reports,
+        gameRepository,
+        roomId,
+        gameId,
+        luisId,
+        dilemmaIds,
+      } = await arrange();
 
       // Act
       await reportDilemma.execute({
@@ -243,7 +253,9 @@ describe('Decision phase commands', () => {
           identity: 'TestLuisIdentity',
         },
       ]);
+      await skipDilemma.execute({ roomId, playerId: luisId, dilemmaId: dilemmaIds[0]! });
       const game = await gameRepository.findById(gameId);
+      expect(game?.reportsOf(luisId)).toEqual([{ dilemmaId: dilemmaIds[0], offensive: true }]);
       expect(game?.didNotVoteOf(luisId)).toEqual([
         { dilemmaId: dilemmaIds[0], reason: 'reported' },
       ]);

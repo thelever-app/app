@@ -119,7 +119,7 @@ describe('the decision phase over the room sockets', () => {
     expect(after.players.find(({ playerId }) => playerId === states[0]!.playerId)?.left).toBe(true);
   });
 
-  it('should skip a dilemma reported as offensive', async () => {
+  it('should let a player skip a dilemma they reported as offensive', async () => {
     // Arrange
     server = await startRoomServer();
     const { roomId, dilemmas } = await gameInDecisionPhase(server);
@@ -127,8 +127,11 @@ describe('the decision phase over the room sockets', () => {
 
     // Act
     luis.send({ type: 'report-dilemma', dilemmaId: dilemmas[0]!.dilemmaId, reason: 'offensive' });
+    const reported = await luis.next('game-state');
+    luis.send({ type: 'skip-dilemma', dilemmaId: dilemmas[0]!.dilemmaId });
 
     // Assert
+    expect(reported.reports).toEqual([{ dilemmaId: dilemmas[0]!.dilemmaId, offensive: true }]);
     const state = await luis.next('game-state');
     expect(state.didNotVote).toEqual([{ dilemmaId: dilemmas[0]!.dilemmaId, reason: 'reported' }]);
   });

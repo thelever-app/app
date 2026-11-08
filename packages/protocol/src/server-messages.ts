@@ -79,6 +79,8 @@ export const GameStateDto = z.strictObject({
       ),
     }),
   ),
+  /** The dilemmas the player who receives the message reported; as offensive, they may skip it. */
+  reports: z.array(z.strictObject({ dilemmaId: z.string().min(1), offensive: z.boolean() })),
   /** The dilemmas the player who receives the message is recorded as "did not vote" for. */
   didNotVote: z.array(
     z.strictObject({
@@ -193,6 +195,8 @@ export const ErrorCodeDto = z.enum([
   'duplicate-vote-prediction',
   'answer-incomplete',
   'dilemma-skipped',
+  'dilemma-already-reported',
+  'dilemma-not-reported-as-offensive',
 ]);
 
 /** The answer to a rejected message, on the same connection. */

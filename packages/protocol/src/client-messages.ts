@@ -130,12 +130,19 @@ export const LeaveRoomDto = z.strictObject({
 /** Why a player reports a dilemma; only an offensive one lets them skip it. */
 export const ReportReasonDto = z.enum(['offensive', 'confusing', 'mistranslated', 'other']);
 
-/** The player reports a dilemma of the game to Moderation. */
+/** The player reports a dilemma of the game to Moderation, once. */
 export const ReportDilemmaDto = z.strictObject({
   type: z.literal('report-dilemma'),
   dilemmaId: z.string().min(1),
   reason: ReportReasonDto,
-  comment: z.string().max(500).optional(),
+  comment: z.string().max(280).optional(),
+  traceparent: TraceparentDto.optional(),
+});
+
+/** The player skips the dilemma they are on, which they reported as offensive. */
+export const SkipDilemmaDto = z.strictObject({
+  type: z.literal('skip-dilemma'),
+  dilemmaId: z.string().min(1),
   traceparent: TraceparentDto.optional(),
 });
 
@@ -203,6 +210,7 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   StartRevealDto,
   LeaveRoomDto,
   ReportDilemmaDto,
+  SkipDilemmaDto,
 ]);
 
 /** The type of every message a player sends, so the server can say which one it rejected. */
@@ -219,6 +227,7 @@ export const ClientMessageTypeDto = z.enum([
   'start-reveal',
   'leave-room',
   'report-dilemma',
+  'skip-dilemma',
 ]);
 
 export type LanguageDto = z.infer<typeof LanguageDto>;
@@ -241,5 +250,6 @@ export type StartRevealDto = z.infer<typeof StartRevealDto>;
 export type LeaveRoomDto = z.infer<typeof LeaveRoomDto>;
 export type ReportReasonDto = z.infer<typeof ReportReasonDto>;
 export type ReportDilemmaDto = z.infer<typeof ReportDilemmaDto>;
+export type SkipDilemmaDto = z.infer<typeof SkipDilemmaDto>;
 export type ClientMessageDto = z.infer<typeof ClientMessageDto>;
 export type ClientMessageTypeDto = z.infer<typeof ClientMessageTypeDto>;

@@ -204,6 +204,7 @@ export class PostgresGameRepository implements GameRepository {
       .onConflict((conflict) =>
         conflict.columns(['game_id', 'player_id', 'dilemma_id']).doUpdateSet((eb) => ({
           did_not_vote: eb.ref('excluded.did_not_vote'),
+          reported: eb.ref('excluded.reported'),
           scored: eb.ref('excluded.scored'),
           match_points: eb.ref('excluded.match_points'),
           vote_points: eb.ref('excluded.vote_points'),
@@ -392,6 +393,9 @@ function snapshotOf(row: GameRow): GameSnapshot {
         points: ofPlayer.flatMap(({ dilemma_id, scored, match_points, vote_points }) =>
           scored ? [{ dilemmaId: dilemma_id, match: match_points, votes: vote_points }] : [],
         ),
+        reports: ofPlayer.flatMap(({ dilemma_id, reported }) =>
+          reported ? [{ dilemmaId: dilemma_id, offensive: reported === 'offensive' }] : [],
+        ),
       };
     }),
   };
@@ -467,6 +471,9 @@ function playerDilemmaRowsOf({ id, players }: GameSnapshot): PlayerDilemmaRow[] 
       player.didNotVote.map(({ dilemmaId, reason }) => [dilemmaId, reason]),
     );
     const points = new Map(player.points.map(({ dilemmaId, ...scored }) => [dilemmaId, scored]));
+    const reports = new Map(
+      player.reports.map(({ dilemmaId, offensive }) => [dilemmaId, offensive]),
+    );
     const subsets = new Map(
       player.predictionSubsets.map(({ dilemmaId, predictionSubset }) => [
         dilemmaId,
@@ -480,6 +487,7 @@ function playerDilemmaRowsOf({ id, players }: GameSnapshot): PlayerDilemmaRow[] 
       option_order: [...optionOrder],
       prediction_subset: [...(subsets.get(dilemmaId) ?? [])],
       did_not_vote: didNotVote.get(dilemmaId) ?? null,
+      reported: reportOf(reports.get(dilemmaId)),
       scored: points.has(dilemmaId),
       match_points: points.get(dilemmaId)?.match ?? null,
       vote_points: points.get(dilemmaId)?.votes ?? null,
@@ -517,4 +525,9 @@ function answerKey({ player_id, dilemma_id }: { player_id: string; dilemma_id: s
 
 function playerKey({ player_id }: PlayerRow): string {
   return player_id;
+}
+
+function reportOf(offensive: boolean | undefined): 'offensive' | 'other' | null {
+  if (offensive === undefined) return null;
+  return offensive ? 'offensive' : 'other';
 }

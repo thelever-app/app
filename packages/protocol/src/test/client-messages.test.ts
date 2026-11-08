@@ -194,6 +194,9 @@ describe('the messages of the decision phase', () => {
     expect(ClientMessageDto.safeParse({ type: 'start-reveal' }).success).toBe(true);
     expect(ClientMessageDto.safeParse({ type: 'leave-room' }).success).toBe(true);
     expect(
+      ClientMessageDto.safeParse({ type: 'skip-dilemma', dilemmaId: 'dilemma-1' }).success,
+    ).toBe(true);
+    expect(
       ClientMessageDto.safeParse({
         type: 'report-dilemma',
         dilemmaId: 'dilemma-1',
@@ -209,6 +212,6 @@ describe('the messages of the decision phase', () => {
 
     // Act & Assert
     expect(ReportDilemmaDto.safeParse({ ...report, reason: 'boring' }).success).toBe(false);
-    expect(ReportDilemmaDto.safeParse({ ...report, comment: 'x'.repeat(501) }).success).toBe(false);
+    expect(ReportDilemmaDto.safeParse({ ...report, comment: 'x'.repeat(281) }).success).toBe(false);
   });
 });

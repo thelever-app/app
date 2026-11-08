@@ -592,6 +592,7 @@ describe('Game', () => {
             answers: [],
             didNotVote: [],
             points: [],
+            reports: [],
           },
           {
             id: 'TestLuisId',
@@ -613,6 +614,7 @@ describe('Game', () => {
             ],
             didNotVote: [],
             points: [],
+            reports: [],
           },
         ],
       });

@@ -103,6 +103,8 @@ export { PlayerNotInPredictionSubsetError } from './domain/errors/player-not-in-
 export { DuplicateVotePredictionError } from './domain/errors/duplicate-vote-prediction.error.ts';
 export { AnswerIncompleteError } from './domain/errors/answer-incomplete.error.ts';
 export { DilemmaSkippedError } from './domain/errors/dilemma-skipped.error.ts';
+export { DilemmaAlreadyReportedError } from './domain/errors/dilemma-already-reported.error.ts';
+export { DilemmaNotReportedAsOffensiveError } from './domain/errors/dilemma-not-reported-as-offensive.error.ts';
 export { GameNotInProgressError } from './domain/errors/game-not-in-progress.error.ts';
 
 // Application
@@ -221,3 +223,7 @@ export {
   ReportDilemmaUseCase,
   type ReportDilemmaInput,
 } from './application/use-cases/report-dilemma.use-case.ts';
+export {
+  SkipDilemmaUseCase,
+  type SkipDilemmaInput,
+} from './application/use-cases/skip-dilemma.use-case.ts';
