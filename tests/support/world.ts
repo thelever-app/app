@@ -30,6 +30,9 @@ export class GameWorld extends World {
   /** Everyone in the room, by the name the scenario gives them, in the order they entered. */
   readonly inRoom = new Set<string>();
 
+  /** Who left the game or is disconnected now: their screen does not follow the game. */
+  readonly away = new Set<string>();
+
   /** The configuration a step changed, to compare with what a later step sees. */
   changes: Partial<SettingsView> = {};
 
@@ -127,6 +130,11 @@ export class GameWorld extends World {
   beforeTheGame(): void {
     if (this.#gameStarted) throw new Error('A step sets up the game after it started');
     if (!this.#gameRequested) throw new Error('A step sets up a game the scenario does not play');
+  }
+
+  /** Who in the room follows the game on their screen now. */
+  present(): string[] {
+    return [...this.inRoom].filter((player) => !this.away.has(player));
   }
 
   /** The players in the room other than its host. */

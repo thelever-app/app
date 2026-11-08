@@ -63,6 +63,18 @@ export const TEST_DILEMMAS: readonly TestDilemma[] = [
   ...dilemmas('three-options', 1, { category: 'loyalty', options: THREE_OPTION_TEXTS }),
 ];
 
+/**
+ * The ids of the dilemmas of the test data with the two usual options and no gap, suitable from
+ * 16, enough for the largest game: those a game plays when its scenario names those options.
+ */
+export const TWO_OPTION_DILEMMA_IDS = TEST_DILEMMAS.filter(
+  ({ text, minimumAge, status, options }) =>
+    options === OPTION_TEXTS &&
+    !text.includes(GAP_MARKER) &&
+    minimumAge === 16 &&
+    status === 'in-catalog',
+).map(({ dilemmaId }) => dilemmaId);
+
 /** The ids of the dilemmas of the test data with the gap. */
 export const GAP_DILEMMA_IDS = TEST_DILEMMAS.filter(({ text }) => text.includes(GAP_MARKER)).map(
   ({ dilemmaId }) => dilemmaId,

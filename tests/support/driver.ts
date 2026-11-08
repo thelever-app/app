@@ -251,6 +251,8 @@ export interface GameDriver {
 
   /** `player` reports the dilemma they are on. */
   report(player: string, reason: ReportReason): Promise<void>;
+  /** `player` takes the skip the screen offers once they reported the dilemma as offensive. */
+  skipReportedDilemma(player: string): Promise<void>;
   startReveal(host: string): Promise<void>;
   /** Whether `player` has a way to start the reveal now. */
   canStartReveal(player: string): Promise<boolean>;

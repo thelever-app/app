@@ -1,6 +1,8 @@
-import { type Database, ConsoleLogger, openDatabase } from '@thelever-app/db';
+import { type Database, type DatabaseClient, ConsoleLogger, openDatabase } from '@thelever-app/db';
+import { PREDICTION_LIMIT } from '@thelever-app/game';
 import {
   ClientMessageDto,
+  GAP_MARKER,
   JoinRoomResponseDto,
   ServerMessageDto,
   type GameStateDto,
@@ -21,12 +23,14 @@ import type {
   InvitationMethod,
   JoinRefusal,
   PlayerView,
+  RecordedAnswer,
+  ReportReason,
   RoomChoices,
   RoomPreview,
   SettingsView,
 } from './driver.ts';
 import type { E2eStack } from './e2e-stack.ts';
-import { catalogEntryOf, explorationSlotsFor } from './test-catalog.ts';
+import { catalogEntryOf, explorationSlotsFor, TWO_OPTION_DILEMMA_IDS } from './test-catalog.ts';
 
 /** What the driver looks for on screen, in the language of the browsers: es.json of the web. */
 const SCREEN = {
@@ -109,6 +113,22 @@ const SCREEN = {
   disconnected: 'desconectado',
   back: 'Volver al dilema anterior',
   continue: 'Continuar',
+  choose: 'Elige una opción',
+  predictQuestion: '¿Y qué votó cada uno?',
+  matchValue: (count: number, total: number) => `${count} de ${total}`,
+  voteOf: (nickname: string) => `El voto de ${nickname}`,
+  next: 'Siguiente dilema',
+  moreOptions: 'Más opciones',
+  report: 'Reportar este dilema',
+  reasons: { offensive: 'Ofensivo', confusing: 'Confuso' },
+  sendReport: 'Enviar reporte',
+  skip: 'Saltar dilema',
+  launchReveal: 'Lanzar el reveal',
+  launchRevealNow: 'Lanzar el reveal ya',
+  leave: 'Salir de la partida',
+  reveal: 'Reveal',
+  timeUp: 'Se acabó el tiempo',
+  pending: /^Faltan? · /,
 } as const;
 
 /** Where the web keeps the last nickname on the device (identity/last-nickname.ts). */
@@ -276,7 +296,14 @@ export class E2eDriver implements GameDriver {
   }
 
   async openInvitation(player: string, method: InvitationMethod): Promise<void> {
-    const code = await this.roomCodeSeenBy(this.#hostName());
+    // Once the game started, the lobby that showed the code is gone: it is the one it showed.
+    const lobby = screenOf(this.#playerCalled(this.#hostName())).received.findLast(
+      (message): message is RoomStateDto => message.type === 'room-state',
+    );
+    const code =
+      lastGameOf(this.#playerCalled(this.#hostName())) && lobby
+        ? lobby.code
+        : await this.roomCodeSeenBy(this.#hostName());
     if (method === 'code') {
       await this.typeRoomCode(player, code);
       return;
@@ -306,11 +333,21 @@ export class E2eDriver implements GameDriver {
 
   async confirmNickname(player: string, nickname: string): Promise<void> {
     const joiner = this.#playerCalled(player);
-    const { page } = screenOf(joiner);
+    const { page, received } = screenOf(joiner);
+    const statesBefore = received.filter(isState).length;
     await page.getByRole('textbox', { name: SCREEN.nickname }).fill(nickname);
     await page.getByRole('button', { name: SCREEN.enter }).click();
 
-    await page.locator('[data-testid="room-code"], [role="alert"] h1').first().waitFor();
+    // Who comes back to a game in progress, having left it, gets the game instead of the lobby.
+    const inGame = page.getByText(SCREEN.position);
+    await page.locator('[data-testid="room-code"], [role="alert"] h1').or(inGame).first().waitFor();
+    if ((await inGame.count()) > 0) {
+      await waitUntil(
+        () => received.filter(isState).length > statesBefore || undefined,
+        `${player} gets the game again`,
+      );
+      return;
+    }
     const refusal = await this.#refusalOn(page);
     joiner.refusal = refusal;
     if (refusal) return;
@@ -669,14 +706,29 @@ export class E2eDriver implements GameDriver {
 
   // Decision phase
 
+  /**
+   * By categories, the game would also draw the dilemmas of the seed the database starts with,
+   * whose options are not those the scenarios name: unless a step picked them, the host picks as
+   * many of the test data as the room plays.
+   */
   async startDecisionPhase(): Promise<void> {
-    await this.startGame(this.#hostName());
+    const host = this.#hostName();
+    const { pickedDilemmas, settings } = this.#lobbyOf(host);
+    if (pickedDilemmas.length === 0) {
+      await this.pickDilemmas(host, TWO_OPTION_DILEMMA_IDS.slice(0, settings.dilemmaCount));
+    }
+    await this.startGame(host);
   }
 
-  /** Answers the first `count` dilemmas of the game, in order, with their first option. */
+  /**
+   * Answers the first `count` dilemmas of the game, in order, with their first option: on screen,
+   * from the first one the player has not completed yet.
+   */
   async answerDilemmas(player: string, count: number): Promise<void> {
     const answerer = this.#playerCalled(player);
-    for (const { dilemmaId, options } of this.#gameOf(player).dilemmas.slice(0, count)) {
+    const game = this.#gameOf(player);
+    const done = game.players.find(({ playerId }) => playerId === answerer.playerId)?.progress ?? 0;
+    for (const { dilemmaId, options } of game.dilemmas.slice(done, count)) {
       const [first] = options;
       if (!first) throw new Error(`The dilemma ${dilemmaId} has no options`);
       await this.#answer(answerer, dilemmaId, first.optionId);
@@ -798,6 +850,348 @@ export class E2eDriver implements GameDriver {
 
   async votesCastBy(player: string): Promise<string[]> {
     return (this.#votes.get(player) ?? []).map(({ vote }) => vote);
+  }
+
+  /** `player` answers on screen up to the dilemma in that position, or goes back to it. */
+  async #reach(player: E2ePlayer, position: number): Promise<Page> {
+    const { page } = screenOf(player);
+    for (let at = await positionOn(page); at !== position; at = await positionOn(page)) {
+      if (at > position) {
+        await page.getByRole('button', { name: SCREEN.back }).click();
+        continue;
+      }
+      const dilemma = this.#gameOf(player.name).dilemmas[at - 1];
+      if (!dilemma) throw new Error(`The game has no dilemma in position ${at}`);
+      await this.#answer(player, dilemma.dilemmaId, dilemma.options[0]!.optionId);
+    }
+    return page;
+  }
+
+  /** What the heading of the dilemma says on screen, with the nickname in the gap. */
+  async dilemmaTextSeenBy(player: string, position: number): Promise<string> {
+    const page = await this.#reach(this.#playerCalled(player), position);
+    return steady(async () => (await page.getByRole('heading', { level: 1 }).textContent()) ?? '');
+  }
+
+  async optionsSeenBy(player: string, position: number): Promise<string[]> {
+    const page = await this.#reach(this.#playerCalled(player), position);
+    return steady(() => page.getByRole('main').getByRole('radio').allTextContents());
+  }
+
+  async peopleInTheGap(): Promise<Map<number, string>> {
+    const { dilemmas } = this.#gameOf(this.#hostName());
+    return new Map(
+      dilemmas.flatMap(({ personInTheGap }, index) =>
+        personInTheGap ? [[index + 1, this.#nameOf(personInTheGap)] as const] : [],
+      ),
+    );
+  }
+
+  async textKeptFor(): Promise<string> {
+    throw new Error('Only the application keeps the text: the scenario must not be @ui');
+  }
+
+  /** As the game keeps it in the database, with the texts the player got of each option. */
+  async answerRecordedFor(player: string, position: number): Promise<RecordedAnswer | undefined> {
+    const answerer = this.#playerCalled(player);
+    const dilemmaId = this.#dilemmaIdAt(position);
+    const { gameId } = this.#gameOf(player);
+    const row = await this.#withDatabase((db) =>
+      db
+        .selectFrom('answers')
+        .selectAll()
+        .where('game_id', '=', gameId)
+        .where('player_id', '=', this.#playerIdOf(answerer))
+        .where('dilemma_id', '=', dilemmaId)
+        .executeTakeFirst(),
+    );
+    if (!row) return undefined;
+    const textOf = (optionId: string) =>
+      this.#dilemmaOn(answerer, dilemmaId).options.find((option) => option.optionId === optionId)
+        ?.text ?? optionId;
+    return {
+      vote: textOf(row.vote),
+      matchPrediction: row.match_prediction,
+      votePredictions: row.vote_predictions.map((prediction) => ({
+        player: this.#nameOf(prediction.playerId),
+        vote: textOf(prediction.vote),
+      })),
+      optionOrder: row.option_order.map(textOf),
+      responseTimeSeconds: row.response_time_ms === null ? null : row.response_time_ms / 1000,
+      voterInTheGap: row.voter_in_the_gap,
+      researchConsent: row.research_consent_version !== null,
+      commercialLicenceConsent: row.commercial_licence_consent_version !== null,
+      underEighteen: row.under_eighteen,
+    };
+  }
+
+  /** What the room server last told `player` it records as "did not vote" for them. */
+  async didNotVoteRecordedFor(player: string): Promise<number[]> {
+    const game = this.#gameOf(player);
+    const order = game.dilemmas.map(({ dilemmaId }) => dilemmaId);
+    return game.didNotVote.map(({ dilemmaId }) => order.indexOf(dilemmaId) + 1);
+  }
+
+  async everythingPlayersSee(): Promise<object[]> {
+    throw new Error('The scenario looks at everything the application gives: it must not be @ui');
+  }
+
+  async declare(): Promise<void> {
+    throw new Error('The first access does not exist yet: the scenario must not be @ui');
+  }
+
+  async letTimePass(): Promise<void> {
+    throw new Error('Time only passes at will in the application: the scenario must not be @ui');
+  }
+
+  /**
+   * The end of the total time comes now in the database of the run, and a screen opens the room
+   * again: the room server finds the time over, as its timer would, and tells everyone.
+   */
+  async runOutTotalTime(): Promise<void> {
+    const { gameId } = this.#gameOf(this.#hostName());
+    await this.#withDatabase((db) =>
+      db
+        .updateTable('games')
+        .set({ total_time_ends_at: new Date() })
+        .where('id', '=', gameId)
+        .execute(),
+    );
+    const online = this.#withScreens().filter(({ screen }) => screen?.link);
+    const [opener] = online;
+    if (!opener) throw new Error('Nobody has the game open to notice the time is over');
+    await screenOf(opener).page.reload();
+    await waitUntil(
+      () => online.every((player) => lastGameOf(player)?.totalTimeRanOut) || undefined,
+      'everyone hears the total time ran out',
+      RECONNECTION_TIMEOUT_MS,
+    );
+  }
+
+  /** Who `viewer` sees still to finish once the screen says the time ran out. */
+  async stragglersSeenBy(viewer: string): Promise<string[]> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    await page.getByText(SCREEN.timeUp, { exact: true }).first().waitFor();
+    const showAll = page.getByRole('button', { name: SCREEN.showAll });
+    const inSheet = (await showAll.count()) > 0;
+    if (inSheet) await showAll.click();
+    const where = inSheet ? page.getByRole('dialog') : page;
+    const pending = where.getByRole('region', { name: SCREEN.pending });
+    const text =
+      (await steady(async () =>
+        (await pending.count()) === 0 ? '' : await pending.textContent(),
+      )) ?? '';
+    if (inSheet) {
+      await where.getByRole('button', { name: SCREEN.close, exact: true }).click();
+      await page.getByRole('dialog').waitFor({ state: 'hidden' });
+    }
+    return [...this.#players.values()]
+      .filter(({ nickname }) => text.includes(nickname))
+      .map(({ name }) => name);
+  }
+
+  async vote(player: string, option?: string): Promise<void> {
+    const voter = this.#playerCalled(player);
+    const { page } = screenOf(voter);
+    const dilemma = this.#gameOf(player).dilemmas[(await positionOn(page)) - 1];
+    if (!dilemma) throw new Error(`${player} is on no dilemma`);
+    const chosen = option
+      ? dilemma.options.find(({ text }) => text.toLowerCase() === option.toLowerCase())
+      : dilemma.options[0];
+    if (!chosen) throw new Error(`The dilemma has no option "${option}"`);
+    await page.getByRole('radio', { name: chosen.text, exact: true }).click();
+    await page.getByRole('button', { name: SCREEN.continue }).click();
+    this.#votes.set(player, [
+      ...(this.#votes.get(player) ?? []),
+      { dilemmaId: dilemma.dilemmaId, vote: chosen.optionId },
+    ]);
+    await this.#untilRoomKeeps(
+      voter,
+      dilemma.dilemmaId,
+      (answer) => answer.vote === chosen.optionId,
+    );
+  }
+
+  /** The screen offers no prediction before a vote: there is nothing to tap but the options. */
+  async canMakePredictions(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    return steady(
+      async () =>
+        (await page.getByText(SCREEN.predictQuestion).count()) > 0 ||
+        (await page.getByRole('button', { name: SCREEN.choose }).count()) === 0,
+    );
+  }
+
+  async predictMatch(player: string, count: number): Promise<void> {
+    const predictor = this.#playerCalled(player);
+    const { page } = screenOf(predictor);
+    const others = this.#gameOf(player).players.length - 1;
+    await page.getByRole('radio', { name: SCREEN.matchValue(count, others), exact: true }).click();
+    const dilemmaId = this.#dilemmaIdAt(await positionOn(page));
+    await this.#untilRoomKeeps(predictor, dilemmaId, (answer) => answer.matchPrediction === count);
+  }
+
+  async predictVotes(
+    player: string,
+    predictions: readonly { readonly player: string; readonly vote: string }[],
+  ): Promise<void> {
+    const predictor = this.#playerCalled(player);
+    const { page } = screenOf(predictor);
+    const dilemmaId = this.#dilemmaIdAt(await positionOn(page));
+    const dilemma = this.#dilemmaOn(predictor, dilemmaId);
+    for (const prediction of predictions) {
+      const { nickname } = this.#playerCalled(prediction.player);
+      const option = dilemma.options.find(
+        ({ text }) => text.toLowerCase() === prediction.vote.toLowerCase(),
+      );
+      if (!option) throw new Error(`The dilemma has no option "${prediction.vote}"`);
+      await page
+        .getByRole('radiogroup', { name: SCREEN.voteOf(nickname) })
+        .getByRole('radio', { name: option.text, exact: true })
+        .click();
+    }
+    await this.#untilRoomKeeps(
+      predictor,
+      dilemmaId,
+      (answer) => answer.votePredictions.length >= predictions.length,
+    );
+  }
+
+  async predictionSubsetOf(): Promise<string[]> {
+    throw new Error('The scenario counts the subsets of the application: it must not be @ui');
+  }
+
+  predictionLimit(): number {
+    return PREDICTION_LIMIT;
+  }
+
+  async timesEachPlayerWasPredicted(): Promise<Map<string, number>> {
+    throw new Error('The scenario counts the subsets of the application: it must not be @ui');
+  }
+
+  async pointsOf(): Promise<
+    { readonly position: number; readonly match: number | null; readonly votes: number | null }[]
+  > {
+    throw new Error('The scenario reads the points of the application: it must not be @ui');
+  }
+
+  async report(player: string, reason: ReportReason): Promise<void> {
+    const reporter = this.#playerCalled(player);
+    const { page } = screenOf(reporter);
+    const dilemmaId = this.#dilemmaIdAt(await positionOn(page));
+    await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+    await page.getByRole('button', { name: SCREEN.report }).click();
+    await page.getByRole('radio', { name: SCREEN.reasons[reason], exact: true }).click();
+    await page.getByRole('button', { name: SCREEN.sendReport }).click();
+    await waitUntil(
+      () => lastGameOf(reporter)?.reports.some((report) => report.dilemmaId === dilemmaId),
+      `the room keeps the report of ${player}`,
+    );
+  }
+
+  async skipReportedDilemma(player: string): Promise<void> {
+    const skipper = this.#playerCalled(player);
+    const { page } = screenOf(skipper);
+    const dilemmaId = this.#dilemmaIdAt(await positionOn(page));
+    await page.getByRole('button', { name: SCREEN.skip }).click();
+    await waitUntil(
+      () => lastGameOf(skipper)?.didNotVote.some((record) => record.dilemmaId === dilemmaId),
+      `the room records that ${player} skipped the dilemma`,
+    );
+  }
+
+  /** From the waiting screen, or from the menu of a dilemma, and confirmed. */
+  async startReveal(host: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const fromWaiting = page.getByRole('button', { name: SCREEN.launchReveal, exact: true });
+    if ((await fromWaiting.count()) === 0) {
+      await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+    }
+    await page.getByRole('button', { name: SCREEN.launchReveal, exact: true }).click();
+    await page.getByRole('button', { name: SCREEN.launchRevealNow }).click();
+    await waitUntil(
+      () =>
+        this.#withScreens()
+          .filter(({ screen }) => screen?.link)
+          .every((player) => lastGameOf(player)?.phase === 'reveal') || undefined,
+      'everyone gets the reveal',
+    );
+  }
+
+  async canStartReveal(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const launch = page.getByRole('button', { name: SCREEN.launchReveal, exact: true });
+    if (await steady(async () => (await launch.count()) > 0)) return true;
+    await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+    const offered = await steady(async () => (await launch.count()) > 0);
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state: 'hidden' });
+    return offered;
+  }
+
+  async isInTheReveal(viewer: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    // Its screens come with the reveal itself: for now the region is there, empty.
+    const reveal = page.getByRole('main', { name: SCREEN.reveal });
+    await reveal.waitFor({ state: 'attached' }).catch(() => undefined);
+    return (await reveal.count()) > 0;
+  }
+
+  /** Who the room server last told `viewer` hosts the game, once it stops changing. */
+  async hostSeenBy(viewer: string): Promise<string> {
+    const watcher = this.#playerCalled(viewer);
+    return steady(async () => this.#nameOf(this.#gameOf(watcher.name).hostId));
+  }
+
+  /** From the menu of a dilemma: the screen goes back home, and the others hear it. */
+  async leave(player: string): Promise<void> {
+    const leaver = this.#playerCalled(player);
+    const { page } = screenOf(leaver);
+    const playerId = this.#playerIdOf(leaver);
+    await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+    await page.getByRole('button', { name: SCREEN.leave }).click();
+    await page.getByRole('button', { name: SCREEN.create }).waitFor();
+    await waitUntil(
+      () =>
+        this.#othersThan(leaver).every((other) => {
+          if (!other.screen?.link) return true;
+          return lastGameOf(other)?.players.some((seen) => seen.playerId === playerId && seen.left);
+        }) || undefined,
+      `everyone else hears that ${player} left`,
+    );
+  }
+
+  async #untilRoomKeeps(
+    player: E2ePlayer,
+    dilemmaId: string,
+    kept: (answer: GameStateDto['answers'][number]) => boolean,
+  ): Promise<void> {
+    await waitUntil(
+      () =>
+        lastGameOf(player)?.answers.some(
+          (answer) => answer.dilemmaId === dilemmaId && kept(answer),
+        ),
+      `the room keeps the answer of ${player.name} for ${dilemmaId}`,
+    );
+  }
+
+  async #withDatabase<T>(work: (db: DatabaseClient) => Promise<T>): Promise<T> {
+    const { db, close } = await openDatabase<Database>(
+      { kind: 'url', url: this.#stack.databaseUrl },
+      { maxConnections: 1, logger: new ConsoleLogger() },
+    );
+    try {
+      return await work(db);
+    } finally {
+      await close();
+    }
+  }
+
+  /** The name the scenario gives the player with that id. */
+  #nameOf(playerId: string): string {
+    const found = [...this.#players.values()].find((player) => player.playerId === playerId);
+    if (!found) throw new Error(`No player of the scenario has the id ${playerId}`);
+    return found.name;
   }
 
   /** The player of that name, with a browser of their own, opened the first time they need it. */
@@ -1028,18 +1422,18 @@ export class E2eDriver implements GameDriver {
 
     const isNew = !lastGameOf(player)?.answers.some((answer) => answer.dilemmaId === dilemmaId);
     const { page } = screenOf(player);
-    await page.getByRole('heading', { level: 1, name: dilemma.text }).waitFor();
-    await page.getByRole('radio', { name: option.text, exact: true }).click();
+    await page
+      .getByRole('heading', { level: 1, name: textOnScreen(dilemma, lastGameOf(player)) })
+      .waitFor();
+    await page
+      .getByRole('radio', { name: textOnScreen(option, lastGameOf(player)), exact: true })
+      .click();
     await page.getByRole('button', { name: SCREEN.continue }).click();
     this.#votes.set(player.name, [...(this.#votes.get(player.name) ?? []), { dilemmaId, vote }]);
 
-    await waitUntil(
-      () =>
-        lastGameOf(player)?.answers.some(
-          (answer) => answer.dilemmaId === dilemmaId && answer.vote === vote,
-        ),
-      `the room keeps the vote of ${player.name} for ${dilemmaId}`,
-    );
+    await this.#untilRoomKeeps(player, dilemmaId, (answer) => answer.vote === vote);
+    // In a nominal room, every prediction, and on to the next dilemma.
+    if (dilemma.predictionSubset.length > 0) await this.#predictAll(player, dilemma, vote);
     // A changed vote tells the others nothing: only a new answer moves the progress they see.
     if (!isNew) return;
     const progress = heardAbout(player, this.#playerIdOf(player))?.progress;
@@ -1048,6 +1442,42 @@ export class E2eDriver implements GameDriver {
       `has answered ${progress} dilemmas`,
       (heard) => heard.progress === progress,
     );
+  }
+
+  /** The match prediction and a vote for each player of the subset, as the player taps them. */
+  async #predictAll(
+    player: E2ePlayer,
+    dilemma: GameStateDto['dilemmas'][number],
+    vote: string,
+  ): Promise<void> {
+    const { page } = screenOf(player);
+    const game = this.#gameOf(player.name);
+    const kept = game.answers.find((answer) => answer.dilemmaId === dilemma.dilemmaId);
+    const others = game.players.length - 1;
+    if (kept?.matchPrediction === null || kept?.matchPrediction === undefined) {
+      await page.getByRole('radio', { name: SCREEN.matchValue(0, others), exact: true }).click();
+    }
+    const option = dilemma.options.find(({ optionId }) => optionId === vote)!;
+    for (const playerId of dilemma.predictionSubset) {
+      if (kept?.votePredictions.some((prediction) => prediction.playerId === playerId)) continue;
+      const predicted = game.players.find((seen) => seen.playerId === playerId)!;
+      await page
+        .getByRole('radiogroup', { name: SCREEN.voteOf(predicted.nickname) })
+        .getByRole('radio', { name: textOnScreen(option, game), exact: true })
+        .click();
+    }
+    await this.#untilRoomKeeps(
+      player,
+      dilemma.dilemmaId,
+      (answer) =>
+        answer.matchPrediction !== null &&
+        answer.votePredictions.length === dilemma.predictionSubset.length,
+    );
+    // Completing the last dilemma takes the screen on by itself, to wait for the others.
+    const self = lastGameOf(player)?.players.find(({ playerId }) => playerId === player.playerId);
+    if ((self?.progress ?? 0) < game.dilemmas.length) {
+      await page.getByRole('button', { name: SCREEN.next }).click();
+    }
   }
 
   /** Waits until every other player with the game open has heard that about `player`. */
@@ -1234,4 +1664,18 @@ async function steady<T>(read: () => Promise<T>): Promise<T> {
     previous = current;
   }
   return previous;
+}
+
+/** A text of a dilemma or an option as the screen shows it, with the nickname in the gap. */
+function textOnScreen(
+  { text }: { readonly text: string },
+  game: GameStateDto | undefined,
+  dilemma?: GameStateDto['dilemmas'][number],
+): string {
+  if (!text.includes(GAP_MARKER)) return text;
+  const personId =
+    dilemma?.personInTheGap ??
+    game?.dilemmas.find((candidate) => candidate.text === text)?.personInTheGap;
+  const person = game?.players.find(({ playerId }) => playerId === personId)?.nickname;
+  return person ? text.replaceAll(GAP_MARKER, person) : text;
 }

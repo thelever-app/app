@@ -90,6 +90,7 @@ Given(
 When('{string} disconnects', async function (this: GameWorld, player: string) {
   await this.game();
   await this.driver.disconnect(player);
+  this.away.add(player);
 });
 
 When(
@@ -97,6 +98,7 @@ When(
   async function (this: GameWorld, player: string) {
     await this.game();
     await this.driver.reconnect(player);
+    this.away.delete(player);
     this.reconnectedPlayer = player;
   },
 );
@@ -451,6 +453,8 @@ Given('{string} is on the second dilemma', async function (this: GameWorld, play
 
 When('{string} reports it as offensive', async function (this: GameWorld, player: string) {
   await this.driver.report(player, 'offensive');
+  // The screen offers to skip a dilemma reported as offensive, and the player takes it.
+  await this.driver.skipReportedDilemma(player);
 });
 
 When('{string} reports it as confusing', async function (this: GameWorld, player: string) {
@@ -486,10 +490,8 @@ When('every player has answered every dilemma', async function (this: GameWorld)
 });
 
 Then('the game moves to the reveal', async function (this: GameWorld) {
-  for (const player of this.inRoom) {
-    if (await this.driver.isInTheRoom(player)) {
-      assert.ok(await this.driver.isInTheReveal(player), `${player} is not in the reveal`);
-    }
+  for (const player of this.present()) {
+    assert.ok(await this.driver.isInTheReveal(player), `${player} is not in the reveal`);
   }
 });
 
@@ -533,7 +535,7 @@ When('the total time runs out', async function (this: GameWorld) {
 Then(
   'everyone sees that {string} has not finished',
   async function (this: GameWorld, player: string) {
-    for (const viewer of this.inRoom) {
+    for (const viewer of this.present()) {
       assert.ok((await this.driver.stragglersSeenBy(viewer)).includes(player));
     }
   },
@@ -583,15 +585,19 @@ Given(
 When('{string} leaves the game', async function (this: GameWorld, player: string) {
   await this.game();
   await this.driver.leave(player);
+  this.away.add(player);
 });
 
 Then('{string} becomes the host', async function (this: GameWorld, player: string) {
-  for (const viewer of this.inRoom) assert.equal(await this.driver.hostSeenBy(viewer), player);
+  for (const viewer of this.present()) {
+    assert.equal(await this.driver.hostSeenBy(viewer), player);
+  }
 });
 
 Given('{string} has disconnected', async function (this: GameWorld, player: string) {
   await this.game();
   await this.driver.disconnect(player);
+  this.away.add(player);
 });
 
 When(
@@ -608,6 +614,7 @@ Given(
   async function (this: GameWorld, host: string, successor: string) {
     await this.game();
     await this.driver.disconnect(host);
+    this.away.add(host);
     await this.driver.runOutTotalTime();
     assert.equal(await this.driver.hostSeenBy(successor), successor);
   },
@@ -615,10 +622,13 @@ Given(
 
 When('{string} reconnects during the game', async function (this: GameWorld, player: string) {
   await this.driver.reconnect(player);
+  this.away.delete(player);
 });
 
 Then('{string} is the host again', async function (this: GameWorld, player: string) {
-  for (const viewer of this.inRoom) assert.equal(await this.driver.hostSeenBy(viewer), player);
+  for (const viewer of this.present()) {
+    assert.equal(await this.driver.hostSeenBy(viewer), player);
+  }
 });
 
 Given(
@@ -626,16 +636,20 @@ Given(
   async function (this: GameWorld, host: string, successor: string) {
     await this.game();
     await this.driver.leave(host);
+    this.away.add(host);
     assert.equal(await this.driver.hostSeenBy(successor), successor);
   },
 );
 
 When('{string} joins the room again', async function (this: GameWorld, player: string) {
   await this.driver.joinRoom(player);
+  this.away.delete(player);
 });
 
 Then('{string} is still the host', async function (this: GameWorld, player: string) {
-  for (const viewer of this.inRoom) assert.equal(await this.driver.hostSeenBy(viewer), player);
+  for (const viewer of this.present()) {
+    assert.equal(await this.driver.hostSeenBy(viewer), player);
+  }
 });
 
 // Predictions in a nominal room

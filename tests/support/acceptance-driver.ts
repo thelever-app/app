@@ -13,6 +13,7 @@ import {
   PREDICTION_LIMIT,
   ReportDilemmaUseCase,
   RunOutTotalTimeUseCase,
+  SkipDilemmaUseCase,
   StartRevealUseCase,
   VoteMissingError,
   type Seal,
@@ -174,6 +175,7 @@ export class AcceptanceDriver implements GameDriver {
   readonly #runOutTotalTime: RunOutTotalTimeUseCase;
   readonly #leaveRoom: LeaveRoomUseCase;
   readonly #reportDilemma: ReportDilemmaUseCase;
+  readonly #skipDilemma: SkipDilemmaUseCase;
   /** What each player is answering of the dilemma they are on, as the screen holds it. */
   readonly #drafts = new Map<
     string,
@@ -246,6 +248,12 @@ export class AcceptanceDriver implements GameDriver {
     this.#startReveal = new StartRevealUseCase(rooms, games, notifier);
     this.#runOutTotalTime = new RunOutTotalTimeUseCase(rooms, games, notifier, clock);
     this.#leaveRoom = new LeaveRoomUseCase(rooms, games, notifier);
+    this.#skipDilemma = new SkipDilemmaUseCase({
+      roomRepository: rooms,
+      gameRepository: games,
+      notifier,
+      clock,
+    });
     this.#reportDilemma = new ReportDilemmaUseCase({
       roomRepository: rooms,
       gameRepository: games,
@@ -692,7 +700,7 @@ export class AcceptanceDriver implements GameDriver {
     const game = await this.#currentGame();
     const played = game.dilemmas[position - 1];
     if (!played) throw new Error(`The game has no dilemma in position ${position}`);
-    const [content] = await this.#catalog.findContents([played], 'es');
+    const [content] = await this.#catalog.findContents([played]);
     return content!.text;
   }
 
@@ -856,6 +864,14 @@ export class AcceptanceDriver implements GameDriver {
       playerId: this.#playerIdOf(player),
       dilemmaId: await this.#dilemmaIdAt(await this.dilemmaShownTo(player)),
       reason,
+    });
+  }
+
+  async skipReportedDilemma(player: string): Promise<void> {
+    await this.#skipDilemma.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+      dilemmaId: await this.#dilemmaIdAt(await this.dilemmaShownTo(player)),
     });
   }
 
