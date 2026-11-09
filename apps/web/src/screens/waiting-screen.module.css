@@ -6,8 +6,16 @@
   background: var(--color-surface);
 }
 
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .position {
   composes: signage from '../styles/typography.module.css';
+  flex-grow: 1;
+  margin: 0;
   color: var(--color-ink-muted);
 }
 
@@ -34,6 +42,8 @@
 
 .title {
   composes: title from '../styles/typography.module.css';
+  font-size: 29px;
+  line-height: 34px;
 }
 
 .mascot {
@@ -73,4 +83,31 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.launch {
+  composes: primary from '../styles/buttons.module.css';
+}
+
+.caption {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-ink-muted);
+}
+
+.guest {
+  margin: 0;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  color: var(--color-ink-muted);
+  text-align: center;
 }

@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { RoomNotices } from '../components/room-notices.tsx';
+import { NewHostNotice } from '../game/new-host-notice.tsx';
 import { LobbyScreen } from '../lobby/lobby-screen.tsx';
 import { DecisionPhase } from '../phases/decision-phase.tsx';
+import { RevealPhase } from '../phases/reveal-phase.tsx';
 import { RoomApiProvider } from '../room/room-api-context.tsx';
 import type { ConnectedRoom } from '../room/connect-room.ts';
 import { useOpenRoom } from '../room/open-room-context.tsx';
@@ -66,6 +68,12 @@ export function RoomScreen() {
 }
 
 function RoomContent() {
-  const { lobby } = useRoom();
-  return lobby ? <LobbyScreen /> : <DecisionPhase />;
+  const { lobby, game } = useRoom();
+  if (lobby) return <LobbyScreen />;
+  return (
+    <>
+      {game?.round.phase === 'reveal' ? <RevealPhase /> : <DecisionPhase />}
+      <NewHostNotice />
+    </>
+  );
 }

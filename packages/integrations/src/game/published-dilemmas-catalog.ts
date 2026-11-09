@@ -1,5 +1,6 @@
 import {
   DilemmaNotFoundError as DilemmasNotFoundError,
+  GAP_MARKER as DILEMMAS_GAP_MARKER,
   type GetDilemmas,
   type GetDilemmasInput,
   type GetDilemmasOutput,
@@ -10,6 +11,7 @@ import {
   type DilemmaCatalog,
   type DilemmaContent,
   DilemmaNotFoundError,
+  GAP_MARKER,
   type DilemmaSearch,
   type GameDilemma,
 } from '@thelever-app/game';
@@ -30,10 +32,11 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
     // The structure does not depend on the language: ask for the original content.
     const found = await this.#find({ dilemmas: dilemmaIds.map((dilemmaId) => ({ dilemmaId })) });
-    return found.map(({ dilemmaId, version, options }) => ({
+    return found.map(({ dilemmaId, version, options, hasGap }) => ({
       dilemmaId,
       version,
       optionIds: options.map(({ optionId }) => optionId),
+      hasGap,
     }));
   }
 
@@ -42,7 +45,11 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
     language: string,
   ): Promise<readonly DilemmaContent[]> {
     const found = await this.#find({ dilemmas, language });
-    return found.map(({ dilemmaId, text, options }) => ({ dilemmaId, text, options }));
+    return found.map(({ dilemmaId, text, options }) => ({
+      dilemmaId,
+      text: withGameGap(text),
+      options: options.map((option) => ({ ...option, text: withGameGap(option.text) })),
+    }));
   }
 
   async search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]> {
@@ -68,4 +75,9 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
       throw error;
     }
   }
+}
+
+/** The gap as Game marks it, in a text where Dilemmas marked it its own way. */
+function withGameGap(text: string): string {
+  return text.replaceAll(DILEMMAS_GAP_MARKER, GAP_MARKER);
 }

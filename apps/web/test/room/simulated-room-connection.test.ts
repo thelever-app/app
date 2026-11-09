@@ -5,13 +5,13 @@ import {
   type SimulatedRoomOptions,
 } from '../../src/room/simulated-room-connection.ts';
 
-/** Luis joins after a second and Marta after two; once playing, each answers every second. */
+/** Luis joins after a second and Marta after two; once playing, each answers a second into each round. */
 const OPTIONS: SimulatedRoomOptions = {
   nickname: 'Ana',
   language: 'es',
   others: [
-    { nickname: 'Luis', joinAfterMs: 1000, answerEveryMs: 1000 },
-    { nickname: 'Marta', joinAfterMs: 2000, answerEveryMs: 1000 },
+    { nickname: 'Luis', joinAfterMs: 1000, answerAfterMs: 1000 },
+    { nickname: 'Marta', joinAfterMs: 2000, answerAfterMs: 1000 },
   ],
   dilemmas: [
     { text: 'TestText1', options: ['TestOptionA', 'TestOptionB'] },
@@ -140,17 +140,48 @@ describe('SimulatedRoomConnection', () => {
   });
 
   describe('game', () => {
-    it('should send the game once the host starts it, with the dilemmas of the catalog', async () => {
+    /** The answer of the player using the screen to the dilemma of the round, with every prediction. */
+    function answerTheRound(received: readonly ServerMessageDto[]) {
+      const game = lastGame(received);
+      const dilemma = game.dilemmas[game.round.position]!;
+      const vote = dilemma.options[0]!.optionId;
+      const votePredictions = game.playersToPredict.map((playerId) => ({ playerId, vote }));
+      connection!.send({
+        type: 'answer-dilemma',
+        dilemmaId: dilemma.dilemmaId,
+        vote,
+        votePredictions,
+      });
+      return { dilemmaId: dilemma.dilemmaId, vote, votePredictions };
+    }
+
+    it('should send the game once the host starts it, on the decision of its first round', async () => {
       // Arrange & Act
       const { received } = await playing();
 
       // Assert
       const game = lastGame(received);
       expect(game.dilemmas.map(({ text }) => text).sort()).toEqual(['TestText1', 'TestText2']);
-      expect(game.players.map(({ progress }) => progress)).toEqual([0, 0, 0]);
+      expect(game.round).toMatchObject({ position: 0, phase: 'decision' });
+      expect(game.players.map(({ answered }) => answered)).toEqual([false, false, false]);
     });
 
-    it('should send the progress of each fake player as they answer, until they finish', async () => {
+    it('should send who answered as each fake player answers the round, once', async () => {
+      // Arrange
+      const { received } = await playing();
+      const ids = lastGame(received).players.map(({ playerId }) => playerId);
+
+      // Act
+      await vi.advanceTimersByTimeAsync(5000);
+
+      // Assert
+      const answered = received
+        .filter((message) => message.type === 'player-answered')
+        .map(({ playerId }) => playerId);
+      expect(answered).toEqual([ids[1], ids[2]]);
+    });
+
+    it('should never send the votes of a fake player before the reveal', async () => {
       // Arrange
       const { received } = await playing();
 
@@ -158,44 +189,69 @@ describe('SimulatedRoomConnection', () => {
       await vi.advanceTimersByTimeAsync(5000);
 
       // Assert
-      const progress = received
-        .filter((message) => message.type === 'progress-updated')
-        .map(({ progress: value }) => value);
-      expect(progress).toEqual([1, 1, 2, 2]);
-    });
-
-    it('should never send the votes of a fake player', async () => {
-      // Arrange
-      const { received } = await playing();
-
-      // Act
-      await vi.advanceTimersByTimeAsync(5000);
-
-      // Assert
-      expect(received.filter(({ type }) => type === 'progress-updated')).not.toHaveLength(0);
+      expect(received.filter(({ type }) => type === 'player-answered')).not.toHaveLength(0);
       for (const message of received) expect(message).not.toHaveProperty('vote');
-      expect(lastGame(received).answers).toEqual([]);
+      expect(lastGame(received).reveal).toBeNull();
     });
 
-    it('should answer for the player and send back their answer and progress', async () => {
-      // Arrange
+    it('should answer for the player and reveal the dilemma once everyone answered', async () => {
+      // Arrange: a nominal room, where the answer is the vote with every prediction.
       const { received } = await playing();
-      const [first] = lastGame(received).dilemmas;
+      await vi.advanceTimersByTimeAsync(1000);
 
       // Act
-      connection!.send({
-        type: 'answer-dilemma',
-        dilemmaId: first!.dilemmaId,
-        vote: first!.options[0]!.optionId,
-      });
+      const { dilemmaId, vote, votePredictions } = answerTheRound(received);
       await vi.advanceTimersByTimeAsync(0);
 
       // Assert
       const game = lastGame(received);
-      expect(game.answers).toEqual([
-        { dilemmaId: first!.dilemmaId, vote: first!.options[0]!.optionId },
-      ]);
-      expect(game.players.find(({ playerId }) => playerId === game.playerId)?.progress).toBe(1);
+      expect(game.answers).toEqual([{ dilemmaId, vote, votePredictions }]);
+      expect(game.round).toMatchObject({ position: 0, phase: 'reveal', revealedBy: 'everyone' });
+      expect(game.reveal?.votes).toHaveLength(3);
+    });
+
+    it('should reveal the dilemma when the time of the round runs out', async () => {
+      // Arrange
+      const { received } = await playing();
+
+      // Act
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      // Assert
+      expect(lastGame(received).round).toMatchObject({ phase: 'reveal', revealedBy: 'time' });
+    });
+
+    it('should reveal the dilemma early when the host asks', async () => {
+      // Arrange
+      const { received } = await playing();
+
+      // Act
+      connection!.send({ type: 'reveal-early' });
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Assert
+      expect(lastGame(received).round).toMatchObject({ phase: 'reveal', revealedBy: 'host' });
+    });
+
+    it('should move everyone on to the next round, where the fake players answer again', async () => {
+      // Arrange
+      const { received } = await playing();
+      connection!.send({ type: 'reveal-early' });
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Act
+      connection!.send({ type: 'move-on', fromPosition: 0 });
+      await vi.advanceTimersByTimeAsync(0);
+      const moved = lastGame(received);
+      await vi.advanceTimersByTimeAsync(1000);
+
+      // Assert
+      expect(moved.round).toMatchObject({ position: 1, phase: 'decision' });
+      expect(moved.round.movedOnBy).toBe(moved.playerId);
+      const answeredSince = received
+        .slice(received.indexOf(moved))
+        .filter(({ type }) => type === 'player-answered');
+      expect(answeredSince).toHaveLength(2);
     });
 
     it('should stop the fake players and send nothing more once closed', async () => {
@@ -205,7 +261,7 @@ describe('SimulatedRoomConnection', () => {
 
       // Act
       connection!.close();
-      await vi.advanceTimersByTimeAsync(5000);
+      await vi.advanceTimersByTimeAsync(60_000);
 
       // Assert
       expect(received).toHaveLength(before);

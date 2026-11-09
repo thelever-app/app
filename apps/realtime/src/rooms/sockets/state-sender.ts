@@ -1,4 +1,5 @@
 import {
+  type Clock,
   type GetGameStateUseCase,
   type GetRoomStateUseCase,
   PlayerNotInGameError,
@@ -17,10 +18,20 @@ export type Delivered = 'sent' | 'expelled';
 export class StateSender {
   readonly #getRoomState: GetRoomStateUseCase;
   readonly #getGameState: GetGameStateUseCase;
+  readonly #clock: Clock;
+  /** Whoever sends a round in its decision phase makes sure its time runs out here. */
+  readonly #onDecisionPhase: (roomId: string, roundEndsAt: Date) => void;
 
-  constructor(getRoomState: GetRoomStateUseCase, getGameState: GetGameStateUseCase) {
+  constructor(
+    getRoomState: GetRoomStateUseCase,
+    getGameState: GetGameStateUseCase,
+    clock: Clock,
+    onDecisionPhase: (roomId: string, roundEndsAt: Date) => void,
+  ) {
     this.#getRoomState = getRoomState;
     this.#getGameState = getGameState;
+    this.#clock = clock;
+    this.#onDecisionPhase = onDecisionPhase;
   }
 
   async send(connection: RoomConnection, session: Session): Promise<Delivered> {
@@ -42,7 +53,13 @@ export class StateSender {
           playerId,
           language,
         });
-        connection.send({ type: 'game-state', ...game });
+        if (game.round.phase === 'decision') this.#onDecisionPhase(roomId, game.round.endsAt);
+        connection.send({
+          type: 'game-state',
+          ...game,
+          round: { ...game.round, endsAt: game.round.endsAt.toISOString() },
+          serverTime: this.#clock.now().toISOString(),
+        });
         return 'sent';
       } catch (error) {
         // Who joins once the game started waits in the lobby: that game is not theirs.

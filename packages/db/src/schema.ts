@@ -8,10 +8,14 @@ import type {
   Place,
   PlayerColor,
   RoomVariant,
-  TotalTimeInMinutes,
+  TimePerDilemmaSeconds,
   DilemmasPerPlayer,
+  DidNotVoteReason,
+  RevealedBy,
+  RoundPhase,
+  VotePrediction,
 } from '@thelever-app/game';
-import type { Generated, Kysely } from 'kysely';
+import type { ColumnType, Generated, Kysely } from 'kysely';
 
 /** The tables, as the migrations leave them; the checks of the database guarantee the unions. */
 export interface Database {
@@ -57,10 +61,12 @@ export interface Database {
     /** Null, every category; an empty list, none. */
     categories: string[] | null;
     dilemma_count: DilemmaCount;
-    total_time_in_minutes: TotalTimeInMinutes;
+    time_per_dilemma_seconds: TimePerDilemmaSeconds;
     new_dilemmas: boolean;
     dilemmas_per_player: DilemmasPerPlayer;
     current_game_id: string | null;
+    /** The host who lost the role while disconnected, and gets it back on connecting again. */
+    absent_host_player_id: string | null;
     created_at: Generated<Date>;
   };
   room_players: {
@@ -71,6 +77,7 @@ export interface Database {
     identity: string;
     avatar_face: AvatarFace;
     avatar_color: PlayerColor;
+    has_left: Generated<boolean>;
   };
   room_expelled_identities: {
     room_id: string;
@@ -102,13 +109,19 @@ export interface Database {
   games: {
     id: string;
     room_id: string;
-    in_decision_phase: boolean;
+    /** The round in progress: all null before the game starts. */
+    round_position: number | null;
+    round_phase: RoundPhase | null;
+    round_started_at: Date | null;
+    round_ends_at: Date | null;
+    round_revealed_by: RevealedBy | null;
+    round_moved_on_by: string | null;
     version: number;
     variant: RoomVariant;
     group_nature: GroupNature;
     place: Place;
     dilemma_language: DilemmaLanguage;
-    total_time_in_minutes: TotalTimeInMinutes;
+    time_per_dilemma_seconds: TimePerDilemmaSeconds;
   };
   game_dilemmas: {
     game_id: string;
@@ -116,6 +129,10 @@ export interface Database {
     dilemma_id: string;
     dilemma_version: number;
     origin: DilemmaOrigin;
+    has_gap: boolean;
+    person_in_the_gap: string | null;
+    /** The player who added it in the lobby; null for the others. */
+    added_by_player_id: string | null;
   };
   /** The options of each dilemma a game plays, copied when it starts: Game reads only its own tables. */
   game_dilemma_options: {
@@ -128,6 +145,24 @@ export interface Database {
     game_id: string;
     player_id: string;
     position: number;
+    has_left: boolean;
+  };
+  /**
+   * Each dilemma as each player plays it: the order of its options, given when the game starts,
+   * and whether they did not vote it and what their vote predictions scored.
+   */
+  game_player_dilemmas: {
+    game_id: string;
+    player_id: string;
+    dilemma_id: string;
+    option_order: string[];
+    did_not_vote: DidNotVoteReason | null;
+    /** Whether the player reported the dilemma, as offensive or for another reason. */
+    reported: 'offensive' | 'other' | null;
+    /** Whether the predictions were scored, which happens at the reveal of each dilemma of a nominal room. */
+    scored: boolean;
+    /** Null when scored without any vote prediction made. */
+    points: number | null;
   };
   answers: {
     game_id: string;
@@ -140,6 +175,10 @@ export interface Database {
     commercial_licence_consent_version: string | null;
     under_eighteen: boolean;
     voter_in_the_gap: boolean;
+    /** Written as JSON text: the driver would turn an array into a PostgreSQL array. */
+    vote_predictions: ColumnType<VotePrediction[], string, string>;
+    option_order: string[];
+    response_time_ms: number | null;
   };
 }
 
@@ -163,6 +202,7 @@ export type GameTables = Pick<
   | 'game_dilemmas'
   | 'game_dilemma_options'
   | 'game_players'
+  | 'game_player_dilemmas'
   | 'answers'
 >;
 

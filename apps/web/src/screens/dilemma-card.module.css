@@ -98,27 +98,12 @@
   padding: var(--space-3) var(--space-4) var(--space-6);
 }
 
-.back {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  flex: none;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
-  cursor: pointer;
-}
-
 .continue {
   composes: primary from '../styles/buttons.module.css';
   flex-grow: 1;
 }
 
-/* Disabled, both buttons look the same: no ring, the surface and muted ink. */
-.back:disabled,
+/* Disabled: no ring, the surface and muted ink. */
 .continue:disabled {
   background: var(--color-surface);
   color: var(--color-ink-muted);

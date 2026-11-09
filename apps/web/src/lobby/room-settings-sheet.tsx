@@ -22,7 +22,7 @@ interface RoomSettingsSheetProps {
 type Mode = 'categories' | 'hand';
 
 const DILEMMA_COUNTS = [6, 8, 10, 12] as const;
-const TOTAL_TIMES = [4, 6, 8, 10] as const;
+const TIMES_PER_DILEMMA = [30, 45, 60, 90] as const;
 const DILEMMAS_PER_PLAYER = [0, 1, 2, 3] as const;
 
 /** What changed between the settings the room has and the ones on screen. */
@@ -241,20 +241,21 @@ export function RoomSettingsSheet({
             )}
 
             <fieldset className={styles.group}>
-              <legend className={styles.legend}>{t('settings.totalTime')}</legend>
+              <legend className={styles.legend}>{t('settings.timePerDilemma')}</legend>
               <div className={styles.options}>
-                {TOTAL_TIMES.map((totalTimeInMinutes) => (
-                  <label key={totalTimeInMinutes} className={styles.option}>
+                {TIMES_PER_DILEMMA.map((timePerDilemmaSeconds) => (
+                  <label key={timePerDilemmaSeconds} className={styles.option}>
                     <input
                       type="radio"
-                      name="totalTime"
-                      checked={draft.totalTimeInMinutes === totalTimeInMinutes}
-                      onChange={() => change({ totalTimeInMinutes })}
+                      name="timePerDilemma"
+                      checked={draft.timePerDilemmaSeconds === timePerDilemmaSeconds}
+                      onChange={() => change({ timePerDilemmaSeconds })}
                     />
-                    {t('settings.minutes', { count: totalTimeInMinutes })}
+                    {t('settings.seconds', { count: timePerDilemmaSeconds })}
                   </label>
                 ))}
               </div>
+              <span className={sheet.hint}>{t('settings.timeHint')}</span>
             </fieldset>
 
             <fieldset className={`${styles.group} ${styles.section}`}>

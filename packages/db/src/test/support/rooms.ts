@@ -7,7 +7,7 @@ export const TEST_GAME_SETTINGS: GameSettings = {
   groupNature: 'friends',
   place: 'together',
   dilemmaLanguage: 'es',
-  totalTimeInMinutes: 6,
+  timePerDilemmaSeconds: 60,
 };
 
 /**

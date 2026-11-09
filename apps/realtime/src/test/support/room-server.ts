@@ -111,6 +111,9 @@ export async function gameInDecisionPhase(server: {
 }) {
   const { roomId } = await lobbyOfThree(server.http);
   const ana = await TestClient.connected(server.url, 'ana', roomId, 'room-state');
+  // Anonymous, so an answer is only the vote.
+  ana.send({ type: 'change-settings', changes: { variant: 'anonymous' } });
+  await ana.next('room-state');
   ana.send({ type: 'pick-dilemmas', dilemmaIds: SEED_DILEMMAS.map(({ id }) => id) });
   await ana.next('room-state');
   ana.send({ type: 'start-game' });

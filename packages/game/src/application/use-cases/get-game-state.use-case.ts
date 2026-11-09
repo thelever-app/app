@@ -1,5 +1,8 @@
+import type { DidNotVoteReason, DilemmaReveal, Round } from '../../domain/entities/game.ts';
+import type { VotePrediction } from '../../domain/vos/answer.vo.ts';
 import { GameNotFoundError } from '../errors/game-not-found.error.ts';
 import { RoomNotFoundError } from '../errors/room-not-found.error.ts';
+import { DecisionPhaseNotStartedError } from '../../domain/errors/decision-phase-not-started.error.ts';
 import type { DilemmaCatalog, DilemmaContent } from '../ports/dilemma-catalog.port.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
@@ -19,20 +22,48 @@ export interface GetGameStateOutput {
   /** The version of the connections of the room this state was computed from. */
   readonly roomVersion: number;
   readonly playerId: string;
-  /** Their content, in the order every player gets them. */
-  readonly dilemmas: readonly DilemmaContent[];
+  /** The round in progress: which dilemma, its phase and when its time runs out. */
+  readonly round: Omit<Round, 'dilemmaId' | 'startedAt'>;
+  /** Who may reveal the dilemma of the round early now. */
+  readonly hostId: string;
+  /** How many have answered the dilemma of the round; all an anonymous room tells about it. */
+  readonly answeredCount: number;
+  /** What the reveal of the dilemma of the round shows, once revealed; null in its decision phase. */
+  readonly reveal: DilemmaReveal | null;
+  /**
+   * Their content, in the order every player gets them, with the options in the order of the player
+   * who asks and who takes the gap, if it has one.
+   */
+  readonly dilemmas: readonly (DilemmaContent & { readonly personInTheGap: string | null })[];
+  /** The players whose vote the player who asks predicts in each dilemma; none in an anonymous room. */
+  readonly playersToPredict: readonly string[];
   readonly players: readonly {
     readonly playerId: string;
     readonly nickname: string;
     readonly avatar: { readonly face: string; readonly color: string };
-    readonly progress: number;
+    /** Whether they answered the dilemma of the round; null in an anonymous room, which never tells who. */
+    readonly answered: boolean | null;
     readonly connected: boolean;
+    /** Left the game on purpose: nobody waits for them. */
+    readonly left: boolean;
   }[];
-  /** Only the answers of the player who asks, never anybody else's. */
-  readonly answers: readonly { readonly dilemmaId: string; readonly vote: string }[];
+  /** Only the answers of the player who asks, never anybody else's, complete or not yet. */
+  readonly answers: readonly {
+    readonly dilemmaId: string;
+    readonly vote: string;
+    readonly votePredictions: readonly VotePrediction[];
+  }[];
+  /** The dilemmas the player who asks reported, and whether as offensive, so they may skip it. */
+  readonly reports: readonly { readonly dilemmaId: string; readonly offensive: boolean }[];
+  /** The dilemmas the player who asks is recorded as "did not vote" for. */
+  readonly didNotVote: readonly { readonly dilemmaId: string; readonly reason: DidNotVoteReason }[];
 }
 
-/** What a player may know about a game: everyone's progress and connection, and their own answers. */
+/**
+ * What a player may know about a game: the round in progress and, once revealed, what its reveal
+ * shows; who answered it (in an anonymous room, only how many) and who is connected; and their own
+ * answers, options order and whose votes they predict. Never anyone's response time.
+ */
 export class GetGameStateUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #gameRepository: GameRepository;
@@ -55,7 +86,12 @@ export class GetGameStateUseCase {
     if (!room) throw new RoomNotFoundError(game.roomId);
 
     // Throws if the player does not play this game, before anything about it is returned.
-    const answers = game.answersOf(playerId);
+    const answers = game
+      .answersOf(playerId)
+      .map(({ dilemmaId, vote, votePredictions }) => ({ dilemmaId, vote, votePredictions }));
+    const round = game.round;
+    if (!round) throw new DecisionPhaseNotStartedError();
+    const anonymous = game.settings.variant === 'anonymous';
 
     // Nicknames live in the room; the game only knows who plays it.
     const players = room.players
@@ -64,24 +100,49 @@ export class GetGameStateUseCase {
         playerId: player.id,
         nickname: player.nickname,
         avatar: { face: player.avatar.face, color: player.avatar.color },
-        progress: game.progressOf(player.id),
+        answered: anonymous ? null : game.hasAnswered(player.id),
         connected: room.isConnected(player.id),
+        left: room.hasLeft(player.id),
       }));
 
     // The versions the game plays, even if a dilemma got a new one since it started.
-    const dilemmas = await this.#dilemmaCatalog.findContents(
+    const contents = await this.#dilemmaCatalog.findContents(
       game.dilemmas.map(({ dilemmaId, version }) => ({ dilemmaId, version })),
       language,
     );
+    const dilemmas = contents.map((content) => {
+      const optionOrder = game.optionOrderOf(playerId, content.dilemmaId);
+      const options = optionOrder.map((optionId) =>
+        content.options.find((option) => option.optionId === optionId)!,
+      );
+      return {
+        ...content,
+        options,
+        personInTheGap: game.personInTheGap(content.dilemmaId),
+      };
+    });
 
     return {
       gameId: game.id,
       gameVersion: game.version,
       roomVersion: room.version,
       playerId,
+      round: {
+        position: round.position,
+        phase: round.phase,
+        endsAt: round.endsAt,
+        revealedBy: round.revealedBy,
+        movedOnBy: round.movedOnBy,
+      },
+      hostId: room.host.id,
+      answeredCount: game.answeredCount,
+      reveal: round.phase === 'reveal' ? game.revealOf(round.position) : null,
       dilemmas,
+      playersToPredict: game.playersToPredictBy(playerId),
       players,
       answers,
+      reports: game.reportsOf(playerId),
+      didNotVote: game.didNotVoteOf(playerId),
     };
   }
 }

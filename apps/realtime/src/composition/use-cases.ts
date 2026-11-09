@@ -20,6 +20,13 @@ import {
   GetRoomStateUseCase,
   type IdGenerator,
   JoinRoomUseCase,
+  LeaveRoomUseCase,
+  ReportDilemmaUseCase,
+  MoveOnUseCase,
+  RevealEarlyUseCase,
+  RunOutRoundUseCase,
+  SkipDilemmaUseCase,
+  type Clock,
   type ExplorationSlots,
   PickDilemmasUseCase,
   type PlayerNotifier,
@@ -30,8 +37,9 @@ import {
   StartGameUseCase,
 } from '@thelever-app/game';
 import { CachedDilemmaCatalog } from '@thelever-app/game/cache';
-import { InMemorySealProvider } from '@thelever-app/game/in-memory';
+import { InMemoryDilemmaReports, InMemorySealProvider } from '@thelever-app/game/in-memory';
 import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
+import type { RoundUseCases } from '../rooms/sockets/round-commands.ts';
 import type { LobbyUseCases } from '../rooms/sockets/lobby-commands.ts';
 
 /** The dilemmas Game plays with, read through what Dilemmas publishes. */
@@ -78,6 +86,7 @@ export interface GameCommandsDependencies extends GameQueriesDependencies {
   readonly notifier: PlayerNotifier;
   readonly idGenerator: IdGenerator;
   readonly randomness: Randomness;
+  readonly clock: Clock;
 }
 
 /**
@@ -91,13 +100,17 @@ const EXPLORATION_SLOTS: ExplorationSlots = [
 ];
 
 /** The commands of Game: each one changes a room or a game and notifies its players. */
-export interface GameCommands extends LobbyUseCases {
+export interface GameCommands extends LobbyUseCases, RoundUseCases {
   readonly createRoom: CreateRoomUseCase;
   readonly joinRoom: JoinRoomUseCase;
   readonly connectPlayer: ConnectPlayerUseCase;
   readonly disconnectPlayer: DisconnectPlayerUseCase;
   readonly disconnectConnections: DisconnectConnectionsUseCase;
   readonly answerDilemma: AnswerDilemmaUseCase;
+  readonly runOutRound: RunOutRoundUseCase;
+  readonly leaveRoom: LeaveRoomUseCase;
+  readonly reportDilemma: ReportDilemmaUseCase;
+  readonly skipDilemma: SkipDilemmaUseCase;
 }
 
 export function gameCommands({
@@ -107,12 +120,19 @@ export function gameCommands({
   notifier,
   idGenerator,
   randomness,
+  clock,
 }: GameCommandsDependencies): GameCommands {
   return {
     createRoom: new CreateRoomUseCase(roomRepository, idGenerator, randomness),
-    joinRoom: new JoinRoomUseCase(roomRepository, notifier, idGenerator, randomness),
-    connectPlayer: new ConnectPlayerUseCase(roomRepository, notifier, idGenerator),
-    disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, notifier),
+    joinRoom: new JoinRoomUseCase({
+      roomRepository,
+      gameRepository,
+      notifier,
+      idGenerator,
+      randomness,
+    }),
+    connectPlayer: new ConnectPlayerUseCase(roomRepository, gameRepository, notifier, idGenerator),
+    disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier, clock),
     disconnectConnections: new DisconnectConnectionsUseCase(roomRepository, notifier),
     changeAvatar: new ChangeAvatarUseCase(roomRepository, notifier),
     changeSettings: new ChangeRoomSettingsUseCase(roomRepository, notifier),
@@ -128,15 +148,30 @@ export function gameCommands({
         notifier,
         idGenerator,
         randomness,
+        clock,
       },
       EXPLORATION_SLOTS,
     ),
     // Until the first access exists, every answer carries the seal of before it.
-    answerDilemma: new AnswerDilemmaUseCase(
+    answerDilemma: new AnswerDilemmaUseCase({
       roomRepository,
       gameRepository,
       notifier,
-      new InMemorySealProvider(),
-    ),
+      sealProvider: new InMemorySealProvider(),
+      clock,
+    }),
+    revealEarly: new RevealEarlyUseCase(roomRepository, gameRepository, notifier, clock),
+    moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock),
+    runOutRound: new RunOutRoundUseCase(roomRepository, gameRepository, notifier, clock),
+    leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier, clock),
+    // Until Moderation keeps them, the reports stay in the memory of the instance that took them.
+    skipDilemma: new SkipDilemmaUseCase({ roomRepository, gameRepository, notifier, clock }),
+    reportDilemma: new ReportDilemmaUseCase({
+      roomRepository,
+      gameRepository,
+      reports: new InMemoryDilemmaReports(),
+      notifier,
+      clock,
+    }),
   };
 }

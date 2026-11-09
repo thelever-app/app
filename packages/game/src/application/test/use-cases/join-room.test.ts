@@ -8,12 +8,13 @@ import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
 async function arrange() {
   const lobby = await lobbyOfThree();
   const notifier = new InMemoryPlayerNotifier();
-  const joinRoom = new JoinRoomUseCase(
-    lobby.roomRepository,
+  const joinRoom = new JoinRoomUseCase({
+    roomRepository: lobby.roomRepository,
+    gameRepository: lobby.gameRepository,
     notifier,
-    lobby.idGenerator,
-    lobby.randomness,
-  );
+    idGenerator: lobby.idGenerator,
+    randomness: lobby.randomness,
+  });
   return { ...lobby, notifier, joinRoom };
 }
 

@@ -3,6 +3,7 @@ import { act, render, renderHook, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RoomConnection } from '../../src/room/room-connection.ts';
+import { useRemainingSeconds } from '../../src/game/remaining-time.ts';
 import { RoomProvider, useGame, useLobby, useRoom } from '../../src/room/room-provider.tsx';
 import { SimulatedRoomConnection } from '../../src/room/simulated-room-connection.ts';
 import { fakeConnection } from '../support/fake-connection.ts';
@@ -14,9 +15,21 @@ const GAME_STATE: GameStateDto = {
   gameVersion: 1,
   roomVersion: 3,
   playerId: 'test-player-id-0',
+  round: {
+    position: 0,
+    phase: 'decision',
+    endsAt: '2026-11-09T10:01:00.000Z',
+    revealedBy: null,
+    movedOnBy: null,
+  },
+  hostId: 'test-player-id-0',
+  serverTime: '2026-11-09T10:00:00.000Z',
+  answeredCount: 0,
+  reveal: null,
   dilemmas: [
     {
       dilemmaId: 'test-dilemma-id',
+      personInTheGap: null,
       text: 'TestText1',
       options: [
         { optionId: 'TestOptionA', text: 'TestOptionTextA' },
@@ -24,30 +37,36 @@ const GAME_STATE: GameStateDto = {
       ],
     },
   ],
+  playersToPredict: [],
   players: [
     {
       playerId: 'test-player-id-0',
       nickname: 'Ana',
       avatar: { face: 'face-01', color: 'teal' },
-      progress: 0,
+      answered: false,
       connected: true,
+      left: false,
     },
     {
       playerId: 'test-player-id-1',
       nickname: 'Luis',
       avatar: { face: 'face-02', color: 'rust' },
-      progress: 0,
+      answered: false,
       connected: true,
+      left: false,
     },
     {
       playerId: 'test-player-id-2',
       nickname: 'Natalia',
       avatar: { face: 'face-03', color: 'olive' },
-      progress: 0,
+      answered: false,
       connected: true,
+      left: false,
     },
   ],
   answers: [],
+  reports: [],
+  didNotVote: [],
 };
 
 function wrapperFor(connection: RoomConnection) {
@@ -97,6 +116,25 @@ describe('RoomProvider', () => {
     // Assert
     expect(screen.getByText('TestScreen')).toBeDefined();
     expect(screen.queryByText('TestConnecting')).toBeNull();
+  });
+
+  it('should note the clock of the server as soon as each state arrives', () => {
+    // Arrange
+    vi.useFakeTimers({ now: new Date('2026-11-09T10:00:00Z') });
+    const fake = fakeConnection();
+    const state = { ...GAME_STATE, serverTime: '2026-11-09T10:00:20.000Z' };
+    const { result } = renderHook(() => useRoom().game, { wrapper: wrapperFor(fake.connection) });
+
+    // Act
+    act(() => fake.deliver(state));
+    vi.advanceTimersByTime(5000);
+
+    // Assert: 40 s were left by the server when it arrived, 5 s ago.
+    const remaining = renderHook(() =>
+      useRemainingSeconds(state.round.endsAt, result.current!.serverTime),
+    );
+    expect(remaining.result.current).toBe(35);
+    vi.useRealTimers();
   });
 
   it('should show why the room rejected the player instead of the fallback, before any game', () => {
@@ -223,7 +261,7 @@ describe('useRoom', () => {
     expect(result.current.game).toBe(GAME_STATE);
   });
 
-  it('should apply the progress of another player on top of the game', () => {
+  it('should apply that another player answered on top of the game', () => {
     // Arrange
     const fake = fakeConnection();
     const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(fake.connection) });
@@ -232,15 +270,18 @@ describe('useRoom', () => {
     // Act
     act(() =>
       fake.deliver({
-        type: 'progress-updated',
+        type: 'player-answered',
         gameVersion: 2,
         playerId: 'test-player-id-1',
-        progress: 1,
       }),
     );
 
     // Assert
-    expect(result.current.game?.players.map(({ progress }) => progress)).toEqual([0, 1, 0]);
+    expect(result.current.game?.players.map(({ answered }) => answered)).toEqual([
+      false,
+      true,
+      false,
+    ]);
   });
 
   it('should show what the server rejected until the player dismisses it', () => {
@@ -251,13 +292,13 @@ describe('useRoom', () => {
 
     // Act
     act(() =>
-      fake.deliver({ type: 'error', command: 'answer-dilemma', code: 'dilemma-not-reached' }),
+      fake.deliver({ type: 'error', command: 'answer-dilemma', code: 'dilemma-not-in-round' }),
     );
     const shown = result.current.rejection;
     act(() => result.current.dismissRejection());
 
     // Assert
-    expect(shown?.code).toBe('dilemma-not-reached');
+    expect(shown?.code).toBe('dilemma-not-in-round');
     expect(result.current.rejection).toBeUndefined();
   });
 
@@ -330,7 +371,7 @@ describe('useRoom', () => {
     act(() => fake.deliver(GAME_STATE));
 
     // Act
-    result.current.answerDilemma('TestDilemma1', 'TestOption');
+    result.current.answerDilemma({ dilemmaId: 'TestDilemma1', vote: 'TestOption' });
 
     // Assert
     expect(fake.connection.send).toHaveBeenCalledWith({
@@ -379,8 +420,8 @@ describe('useRoom', () => {
       nickname: 'Ana',
       language: 'es',
       others: [
-        { nickname: 'Luis', joinAfterMs: 10, answerEveryMs: 1000 },
-        { nickname: 'Marta', joinAfterMs: 10, answerEveryMs: 1000 },
+        { nickname: 'Luis', joinAfterMs: 10, answerAfterMs: 1000 },
+        { nickname: 'Marta', joinAfterMs: 10, answerAfterMs: 1000 },
       ],
       dilemmas: [
         { text: 'TestText1', options: ['TestOptionA', 'TestOptionB'] },
@@ -397,7 +438,11 @@ describe('useRoom', () => {
 
     // Assert
     expect(playersInTheLobby).toBe(3);
-    expect(result.current.game?.players.map(({ progress }) => progress)).toEqual([0, 1, 1]);
+    expect(result.current.game?.players.map(({ answered }) => answered)).toEqual([
+      false,
+      true,
+      true,
+    ]);
     connection.close();
   });
 });

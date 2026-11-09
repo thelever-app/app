@@ -1,4 +1,5 @@
 import { Game } from '../../domain/entities/game.ts';
+import type { Clock } from '../../domain/ports/clock.port.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import type { Randomness } from '../../domain/ports/randomness.port.ts';
 import { composeGame, type ExplorationSlots } from '../../domain/services/compose-game.ts';
@@ -21,7 +22,7 @@ export interface StartGameOutput {
 
 /**
  * The host starts the game the lobby got ready: it is put together from the settings of the room
- * and goes straight into the decision phase with everyone in the room.
+ * and goes straight into the decision phase with everyone in the room, and its total time starts.
  */
 export class StartGameUseCase {
   readonly #roomRepository: RoomRepository;
@@ -30,6 +31,7 @@ export class StartGameUseCase {
   readonly #notifier: PlayerNotifier;
   readonly #idGenerator: IdGenerator;
   readonly #randomness: Randomness;
+  readonly #clock: Clock;
   readonly #explorationSlots: ExplorationSlots;
 
   constructor(
@@ -40,6 +42,7 @@ export class StartGameUseCase {
       readonly notifier: PlayerNotifier;
       readonly idGenerator: IdGenerator;
       readonly randomness: Randomness;
+      readonly clock: Clock;
     },
     explorationSlots: ExplorationSlots,
   ) {
@@ -49,6 +52,7 @@ export class StartGameUseCase {
     this.#notifier = ports.notifier;
     this.#idGenerator = ports.idGenerator;
     this.#randomness = ports.randomness;
+    this.#clock = ports.clock;
     this.#explorationSlots = explorationSlots;
   }
 
@@ -94,19 +98,22 @@ export class StartGameUseCase {
         dilemmas: structures.map((structure, index) => ({
           ...structure,
           origin: composed[index]!.origin,
+          addedBy:
+            room.addedDilemmas.find(({ dilemmaId }) => dilemmaId === structure.dilemmaId)
+              ?.playerId ?? null,
         })),
         settings: {
           variant: settings.variant,
           groupNature: room.groupNature,
           place: room.place,
           dilemmaLanguage: settings.dilemmaLanguage,
-          totalTimeInMinutes: settings.totalTimeInMinutes,
+          timePerDilemmaSeconds: settings.timePerDilemmaSeconds,
         },
       },
       this.#idGenerator,
     );
     room.startGame(playerId, game.id);
-    game.startDecisionPhase(room.players);
+    game.start(room.players, this.#clock.now(), this.#randomness);
     const events = room.pullEvents();
     await this.#gameRepository.save(game);
     await this.#roomRepository.save(room);

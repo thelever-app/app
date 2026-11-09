@@ -5,6 +5,7 @@ import { InvalidLanguageError } from '../../../domain/errors/invalid-language.er
 import { Dilemma } from '../../../domain/entities/dilemma.ts';
 import { InMemoryDilemmaRepository } from '../../../adapters/in-memory/in-memory-dilemma-repository.ts';
 import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
+import { GAP_MARKER } from '../../../domain/vos/gap.ts';
 
 const CLASSIFICATION = { language: 'es', category: 'honesty', tags: [], minimumAge: 16 };
 
@@ -45,6 +46,37 @@ async function catalogWithTwoDilemmas() {
 
 describe('GetDilemmasUseCase', () => {
   describe('execute', () => {
+    it('should say whether the text or an option of each dilemma has the gap', async () => {
+      // Arrange
+      const repository = new InMemoryDilemmaRepository();
+      const texts = [
+        { text: `TestText about ${GAP_MARKER}`, options: ['TestOptionA', 'TestOptionB'] },
+        { text: 'TestText', options: [`Save ${GAP_MARKER}`, 'TestOptionB'] },
+        { text: 'TestText', options: ['TestOptionA', 'TestOptionB'] },
+      ];
+      for (const [index, content] of texts.entries()) {
+        await repository.save(
+          Dilemma.create(
+            { ...CLASSIFICATION, ...content },
+            new FixedIdGenerator(
+              `TestDilemma${index}`,
+              `TestOption${index}A`,
+              `TestOption${index}B`,
+            ),
+          ),
+        );
+      }
+
+      // Act
+      const { dilemmas } = await new GetDilemmasUseCase(repository).execute({
+        dilemmas: texts.map((_, index) => ({ dilemmaId: `TestDilemma${index}` })),
+      });
+
+      // Assert
+      expect(dilemmas.map(({ hasGap }) => hasGap)).toEqual([true, true, false]);
+      expect(dilemmas[0]?.text).toBe(`TestText about ${GAP_MARKER}`);
+    });
+
     it('should return the current version of each dilemma, in the order asked for', async () => {
       // Arrange
       const getDilemmas = await catalogWithTwoDilemmas();
@@ -66,6 +98,7 @@ describe('GetDilemmasUseCase', () => {
             { optionId: 'TestOption2D', text: 'TestOptionD' },
             { optionId: 'TestOption2E', text: 'TestOptionE' },
           ],
+          hasGap: false,
         },
         {
           dilemmaId: 'TestDilemma1',
@@ -75,6 +108,7 @@ describe('GetDilemmasUseCase', () => {
             { optionId: 'TestOption1A', text: 'TestOptionA' },
             { optionId: 'TestOption1B', text: 'TestOptionB' },
           ],
+          hasGap: false,
         },
       ]);
     });

@@ -8,6 +8,18 @@ import {
   CreateRoomUseCase,
   DisconnectPlayerUseCase,
   ExpelPlayerUseCase,
+  GAP_MARKER,
+  LeaveRoomUseCase,
+  ReportDilemmaUseCase,
+  MoveOnUseCase,
+  RevealEarlyUseCase,
+  RunOutRoundUseCase,
+  SkipDilemmaUseCase,
+  DecisionPhaseOverError,
+  DilemmaSkippedError,
+  VoteMissingError,
+  type Seal,
+  type VotePrediction,
   GetGameStateUseCase,
   GetRoomPreviewUseCase,
   GetRoomStateUseCase,
@@ -30,7 +42,9 @@ import {
 } from '@thelever-app/game';
 import {
   InMemoryDilemmaCatalog,
+  InMemoryDilemmaReports,
   InMemoryGameRepository,
+  ManualClock,
   InMemoryPlayerNotifier,
   InMemoryRoomRepository,
   InMemorySealProvider,
@@ -39,12 +53,17 @@ import {
   type InMemoryDilemma,
 } from '@thelever-app/game/in-memory';
 import type {
+  AnswerPlan,
   CatalogEntry,
+  Declaration,
   GameDriver,
   GameSettingsView,
   InvitationMethod,
   JoinRefusal,
   PlayerView,
+  RecordedAnswer,
+  ReportReason,
+  RevealView,
   RoomChoices,
   RoomPreview,
   SettingsView,
@@ -53,13 +72,13 @@ import {
   catalogEntryOf,
   EXPLORATION_SLOTS,
   explorationSlotsFor,
-  OPTION_TEXTS,
   TEST_DILEMMAS,
+  TWO_OPTION_DILEMMA_IDS,
 } from './test-catalog.ts';
 
-/** Test data: the vote the driver casts when a step does not say which one. */
+/** Test data: the vote the driver casts when a step does not say which one; the first option. */
 const VOTE = 'option-1';
-/** Test data: the vote the driver changes to; the other option of every dilemma. */
+/** Test data: the vote the driver changes to; the second option of every dilemma. */
 const OTHER_VOTE = 'option-2';
 
 /** Test data: what the creation screen gets when a step does not choose. */
@@ -67,13 +86,10 @@ const DEFAULT_CHOICES = { groupNature: 'friends', place: 'together', deviceLangu
 
 /** The test data, as the catalog of Game keeps it: every dilemma with the same two options. */
 const DILEMMAS: readonly InMemoryDilemma[] = TEST_DILEMMAS.map(
-  ({ dilemmaId, text, minimumAge, category, tags, status }) => ({
+  ({ dilemmaId, text, minimumAge, category, tags, status, options }) => ({
     dilemmaId,
     text,
-    options: [
-      { optionId: VOTE, text: OPTION_TEXTS[0] },
-      { optionId: OTHER_VOTE, text: OPTION_TEXTS[1] },
-    ],
+    options: options.map((option, index) => ({ optionId: `option-${index + 1}`, text: option })),
     minimumAge: minimumAge as 16 | 18,
     category,
     tags,
@@ -88,6 +104,23 @@ function identityOf(player: string): string {
 
 function avatarText({ face, color }: { readonly face: string; readonly color: string }): string {
   return `${face}/${color}`;
+}
+
+/** The option of the dilemma with that text, in any case. */
+function optionIdOf(dilemmaId: string, text: string): string {
+  const option = DILEMMAS.find((dilemma) => dilemma.dilemmaId === dilemmaId)?.options.find(
+    (candidate) => candidate.text.toLowerCase() === text.toLowerCase(),
+  );
+  if (!option) throw new Error(`Dilemma ${dilemmaId} has no option "${text}"`);
+  return option.optionId;
+}
+
+function optionTextOf(dilemmaId: string, optionId: string): string {
+  const option = DILEMMAS.find((dilemma) => dilemma.dilemmaId === dilemmaId)?.options.find(
+    (candidate) => candidate.optionId === optionId,
+  );
+  if (!option) throw new Error(`Dilemma ${dilemmaId} has no option ${optionId}`);
+  return option.text;
 }
 
 /** One player of the scenario, as the driver knows them. */
@@ -120,6 +153,10 @@ export class AcceptanceDriver implements GameDriver {
   readonly #gameRepository = new InMemoryGameRepository();
   /** Kept with its concrete type to read what each player received. */
   readonly #notifier = new InMemoryPlayerNotifier();
+  readonly #clock = new ManualClock();
+  /** What each identity declared and consented to, which the seal provider hands out. */
+  readonly #seals = new Map<string, Seal>();
+  readonly #reports = new InMemoryDilemmaReports();
 
   readonly #createRoom: CreateRoomUseCase;
   readonly #getRoomPreview: GetRoomPreviewUseCase;
@@ -137,6 +174,21 @@ export class AcceptanceDriver implements GameDriver {
   readonly #getGameState: GetGameStateUseCase;
   readonly #connectPlayer: ConnectPlayerUseCase;
   readonly #disconnectPlayer: DisconnectPlayerUseCase;
+  readonly #revealEarly: RevealEarlyUseCase;
+  readonly #runOutRound: RunOutRoundUseCase;
+  readonly #moveOn: MoveOnUseCase;
+  readonly #leaveRoom: LeaveRoomUseCase;
+  readonly #reportDilemma: ReportDilemmaUseCase;
+  readonly #skipDilemma: SkipDilemmaUseCase;
+  /** What each player is answering of the dilemma they are on, as the screen holds it. */
+  readonly #drafts = new Map<
+    string,
+    {
+      readonly dilemmaId: string;
+      vote: string;
+      votePredictions: VotePrediction[];
+    }
+  >();
 
   /** In the order the scenario introduced them. */
   readonly #players = new Map<string, AcceptancePlayer>();
@@ -154,10 +206,18 @@ export class AcceptanceDriver implements GameDriver {
     const rooms = this.#roomRepository;
     const notifier = this.#notifier;
     const catalog = this.#catalog;
+    const games = this.#gameRepository;
+    const clock = this.#clock;
 
     this.#createRoom = new CreateRoomUseCase(rooms, idGenerator, randomness);
     this.#getRoomPreview = new GetRoomPreviewUseCase(rooms);
-    this.#joinRoom = new JoinRoomUseCase(rooms, notifier, idGenerator, randomness);
+    this.#joinRoom = new JoinRoomUseCase({
+      roomRepository: rooms,
+      gameRepository: games,
+      notifier,
+      idGenerator,
+      randomness,
+    });
     this.#getRoomState = new GetRoomStateUseCase(rooms, catalog);
     this.#changeAvatar = new ChangeAvatarUseCase(rooms, notifier);
     this.#changeRoomSettings = new ChangeRoomSettingsUseCase(rooms, notifier);
@@ -174,18 +234,37 @@ export class AcceptanceDriver implements GameDriver {
         notifier,
         idGenerator,
         randomness,
+        clock,
       },
       EXPLORATION_SLOTS,
     );
-    this.#answerDilemma = new AnswerDilemmaUseCase(
-      rooms,
-      this.#gameRepository,
+    this.#answerDilemma = new AnswerDilemmaUseCase({
+      roomRepository: rooms,
+      gameRepository: games,
       notifier,
-      new InMemorySealProvider(),
-    );
+      sealProvider: new InMemorySealProvider(this.#seals),
+      clock,
+    });
     this.#getGameState = new GetGameStateUseCase(rooms, this.#gameRepository, catalog);
-    this.#connectPlayer = new ConnectPlayerUseCase(rooms, notifier, idGenerator);
-    this.#disconnectPlayer = new DisconnectPlayerUseCase(rooms, notifier);
+    this.#connectPlayer = new ConnectPlayerUseCase(rooms, games, notifier, idGenerator);
+    this.#disconnectPlayer = new DisconnectPlayerUseCase(rooms, games, notifier, clock);
+    this.#revealEarly = new RevealEarlyUseCase(rooms, games, notifier, clock);
+    this.#runOutRound = new RunOutRoundUseCase(rooms, games, notifier, clock);
+    this.#moveOn = new MoveOnUseCase(rooms, games, notifier, clock);
+    this.#leaveRoom = new LeaveRoomUseCase(rooms, games, notifier, clock);
+    this.#skipDilemma = new SkipDilemmaUseCase({
+      roomRepository: rooms,
+      gameRepository: games,
+      notifier,
+      clock,
+    });
+    this.#reportDilemma = new ReportDilemmaUseCase({
+      roomRepository: rooms,
+      gameRepository: games,
+      reports: this.#reports,
+      notifier,
+      clock,
+    });
   }
 
   async start(): Promise<void> {
@@ -493,29 +572,73 @@ export class AcceptanceDriver implements GameDriver {
     return explorationSlotsFor(dilemmaCount);
   }
 
-  // Decision phase
+  // Rounds
 
-  async startDecisionPhase(): Promise<void> {
-    await this.startGame(this.#hostName());
+  async startDecisionPhase(dilemmaCount?: number): Promise<void> {
+    const host = this.#hostName();
+    const { pickedDilemmas, addedDilemmas } = await this.#roomStateOf(host);
+    if (dilemmaCount !== undefined && pickedDilemmas.length === 0 && addedDilemmas.length === 0) {
+      await this.pickDilemmas(host, TWO_OPTION_DILEMMA_IDS.slice(0, dilemmaCount));
+    }
+    await this.startGame(host);
 
-    // Every player has the game open, as their device would after the phase starts.
+    // Every player has the game open, as their device would after the game starts.
     for (const player of this.#players.keys()) {
       if (this.#players.get(player)?.playerId) await this.reconnect(player);
     }
   }
 
-  /** Answers the first `count` dilemmas of the game, in order. */
-  async answerDilemmas(player: string, count: number): Promise<void> {
-    for (const dilemmaId of (await this.dilemmasOfTheGame()).slice(0, count)) {
-      await this.#answer(player, dilemmaId, VOTE);
-    }
+  async messagesReceivedByOthers(player: string): Promise<object[]> {
+    const playerId = this.#playerIdOf(player);
+    return [...this.#players.values()]
+      .map((other) => other.playerId)
+      .filter((id): id is string => id !== undefined && id !== playerId)
+      .flatMap((id) => this.#notifier.receivedBy(id));
   }
 
-  async changeVote(player: string, position: number): Promise<void> {
-    const [previous] = (await this.votesCastFor(player, position)).slice(-1);
+  async votesCastBy(player: string): Promise<string[]> {
+    return (this.#votes.get(player) ?? []).map(({ vote }) => vote);
+  }
+
+  async answer(player: string, plan: AnswerPlan = {}): Promise<void> {
+    const dilemma = await this.#roundDilemmaOf(player);
+    const { playersToPredict } = await this.#gameStateOf(player);
+    const draft = {
+      dilemmaId: dilemma.dilemmaId,
+      vote: plan.vote ? optionIdOf(dilemma.dilemmaId, plan.vote) : VOTE,
+      votePredictions:
+        plan.votePredictions === false
+          ? []
+          : playersToPredict.map((playerId) => ({ playerId, vote: VOTE })),
+    };
+    this.#drafts.set(player, draft);
+    await this.#send(player, draft);
+  }
+
+  async vote(player: string, option?: string): Promise<void> {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    const draft = {
+      dilemmaId,
+      vote: option ? optionIdOf(dilemmaId, option) : VOTE,
+      votePredictions: [],
+    };
+    this.#drafts.set(player, draft);
+    await this.#send(player, draft);
+  }
+
+  /** The screen keeps the predictions made and sends them again with the new vote. */
+  async changeVote(player: string, option?: string): Promise<void> {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    const { answers } = await this.#gameStateOf(player);
+    const previous = answers.find((answer) => answer.dilemmaId === dilemmaId);
     if (!previous) throw new Error(`The scenario changes a vote ${player} never cast`);
-    const dilemmaId = await this.#dilemmaIdAt(position);
-    await this.#answer(player, dilemmaId, previous === VOTE ? OTHER_VOTE : VOTE);
+    const draft = {
+      dilemmaId,
+      vote: option ? optionIdOf(dilemmaId, option) : previous.vote === VOTE ? OTHER_VOTE : VOTE,
+      votePredictions: [...previous.votePredictions],
+    };
+    this.#drafts.set(player, draft);
+    await this.#send(player, draft);
   }
 
   async votesCastFor(player: string, position: number): Promise<string[]> {
@@ -531,9 +654,60 @@ export class AcceptanceDriver implements GameDriver {
     return answers.find((answer) => answer.dilemmaId === dilemmaId)?.vote;
   }
 
-  async votesRecordedFor(player: string): Promise<string[]> {
-    const { answers } = await this.#gameStateOf(player);
-    return answers.map(({ vote }) => vote);
+  /** Whether the application takes an answer of the player for the dilemma of the round. */
+  async canAnswer(player: string): Promise<boolean> {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    return this.#accepts(
+      () =>
+        this.#answerDilemma.execute({
+          roomId: this.#currentRoomId(),
+          playerId: this.#playerIdOf(player),
+          dilemmaId,
+          vote: VOTE,
+        }),
+      DecisionPhaseOverError,
+      DilemmaSkippedError,
+    );
+  }
+
+  async hasAnswered(player: string): Promise<boolean> {
+    return (await this.#currentGame()).hasAnswered(this.#playerIdOf(player));
+  }
+
+  async answeredSeenBy(viewer: string, player: string): Promise<boolean | null> {
+    const { players } = await this.#gameStateOf(viewer);
+    const seen = players.find(({ playerId }) => playerId === this.#playerIdOf(player));
+    if (!seen) throw new Error(`${viewer} does not see ${player} in the game`);
+    return seen.answered;
+  }
+
+  async answeredCountSeenBy(viewer: string): Promise<number> {
+    return (await this.#gameStateOf(viewer)).answeredCount;
+  }
+
+  /** Who answered travels as the progress of a player, or as whether each one answered. */
+  async whoAnsweredIsSent(): Promise<boolean> {
+    for (const [name, { playerId }] of this.#players) {
+      if (!playerId) continue;
+      if (
+        this.#notifier.receivedBy(playerId).some((event) => event instanceof ProgressUpdatedEvent)
+      ) {
+        return true;
+      }
+      const { players } = await this.#gameStateOf(name);
+      if (players.some(({ answered }) => answered !== null)) return true;
+    }
+    return false;
+  }
+
+  async isWaiting(player: string): Promise<boolean> {
+    const { round } = await this.#gameStateOf(player);
+    return round.phase === 'decision' && (await this.hasAnswered(player));
+  }
+
+  async timeLeftSeenBy(viewer: string): Promise<number> {
+    const { round } = await this.#gameStateOf(viewer);
+    return Math.round((round.endsAt.getTime() - this.#clock.now().getTime()) / 1000);
   }
 
   async disconnect(player: string): Promise<void> {
@@ -559,9 +733,7 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async dilemmaShownTo(player: string): Promise<number> {
-    const { dilemmas: played, answers } = await this.#gameStateOf(player);
-    const answered = new Set(answers.map(({ dilemmaId }) => dilemmaId));
-    return played.findIndex(({ dilemmaId }) => !answered.has(dilemmaId)) + 1;
+    return (await this.#gameStateOf(player)).round.position + 1;
   }
 
   /** What `viewer` knows about the connection of `player`: the last change they received. */
@@ -574,31 +746,301 @@ export class AcceptanceDriver implements GameDriver {
     return changes.at(-1)?.connected;
   }
 
-  /** What `viewer` knows about the progress of `player`: the last update they received. */
-  async progressSeenBy(viewer: string, player: string): Promise<number | undefined> {
-    const playerId = this.#playerIdOf(player);
-    const updates = this.#notifier
-      .receivedBy(this.#playerIdOf(viewer))
-      .filter((event) => event instanceof ProgressUpdatedEvent)
-      .filter((event) => event.playerId === playerId);
-    return updates.at(-1)?.progress;
+  async dilemmaTextSeenBy(player: string, position: number): Promise<string> {
+    const state = await this.#gameStateOf(player);
+    const dilemma = state.dilemmas[position - 1];
+    if (!dilemma) throw new Error(`The game has no dilemma in position ${position}`);
+    const person = state.players.find(({ playerId }) => playerId === dilemma.personInTheGap);
+    return person ? dilemma.text.replaceAll(GAP_MARKER, person.nickname) : dilemma.text;
   }
 
-  async messagesReceivedByOthers(player: string): Promise<object[]> {
-    const playerId = this.#playerIdOf(player);
-    return [...this.#players.values()]
-      .map((other) => other.playerId)
-      .filter((id): id is string => id !== undefined && id !== playerId)
-      .flatMap((id) => this.#notifier.receivedBy(id));
+  async optionsSeenBy(player: string, position: number): Promise<string[]> {
+    const dilemma = (await this.#gameStateOf(player)).dilemmas[position - 1];
+    if (!dilemma) throw new Error(`The game has no dilemma in position ${position}`);
+    return dilemma.options.map(({ text }) => text);
   }
 
-  async votesCastBy(player: string): Promise<string[]> {
-    return (this.#votes.get(player) ?? []).map(({ vote }) => vote);
+  async peopleInTheGap(): Promise<Map<number, string>> {
+    const { dilemmas } = await this.#gameStateOf(this.#hostName());
+    return new Map(
+      dilemmas.flatMap(({ personInTheGap }, index) =>
+        personInTheGap ? [[index + 1, this.#nameOf(personInTheGap)] as const] : [],
+      ),
+    );
   }
 
-  async #answer(player: string, dilemmaId: string, vote: string): Promise<void> {
+  async positionAddedBy(player: string): Promise<number> {
     const playerId = this.#playerIdOf(player);
-    await this.#answerDilemma.execute({ roomId: this.#currentRoomId(), playerId, dilemmaId, vote });
+    const index = (await this.#currentGame()).dilemmas.findIndex(
+      ({ addedBy }) => addedBy === playerId,
+    );
+    if (index === -1) throw new Error(`${player} added no dilemma of the game`);
+    return index + 1;
+  }
+
+  /** The game keeps the id of the dilemma; its text stays in Dilemmas, as it was written. */
+  async textKeptFor(position: number): Promise<string> {
+    const game = await this.#currentGame();
+    const played = game.dilemmas[position - 1];
+    if (!played) throw new Error(`The game has no dilemma in position ${position}`);
+    const [content] = await this.#catalog.findContents([played]);
+    return content!.text;
+  }
+
+  async answerRecordedFor(player: string, position: number): Promise<RecordedAnswer | undefined> {
+    const game = await this.#currentGame();
+    const dilemmaId = await this.#dilemmaIdAt(position);
+    const answer = game
+      .answersOf(this.#playerIdOf(player))
+      .find((recorded) => recorded.dilemmaId === dilemmaId);
+    if (!answer) return undefined;
+    return {
+      vote: optionTextOf(dilemmaId, answer.vote),
+      votePredictions: answer.votePredictions.map((prediction) => ({
+        player: this.#nameOf(prediction.playerId),
+        vote: optionTextOf(dilemmaId, prediction.vote),
+      })),
+      optionOrder: answer.optionOrder.map((optionId) => optionTextOf(dilemmaId, optionId)),
+      responseTimeSeconds: answer.responseTimeMs === null ? null : answer.responseTimeMs / 1000,
+      voterInTheGap: answer.voterInTheGap,
+      researchConsent: answer.seal.researchConsentVersion !== null,
+      commercialLicenceConsent: answer.seal.commercialLicenceConsentVersion !== null,
+      underEighteen: answer.seal.underEighteen,
+    };
+  }
+
+  async didNotVoteRecordedFor(player: string): Promise<number[]> {
+    const game = await this.#currentGame();
+    const positions = game.dilemmas.map(({ dilemmaId }) => dilemmaId);
+    return game
+      .didNotVoteOf(this.#playerIdOf(player))
+      .map(({ dilemmaId }) => positions.indexOf(dilemmaId) + 1);
+  }
+
+  async everythingPlayersSee(): Promise<object[]> {
+    const seen: object[] = [];
+    for (const [name, { playerId }] of this.#players) {
+      if (!playerId) continue;
+      seen.push(...this.#notifier.receivedBy(playerId), await this.#gameStateOf(name));
+    }
+    return seen;
+  }
+
+  /** The seal the player gets from now on, as the first access would leave it. */
+  async declare(player: string, { underEighteen, researchConsent }: Declaration): Promise<void> {
+    this.#seals.set(this.#playerCalled(player).identity, {
+      gameConsentVersion: '1',
+      researchConsentVersion: researchConsent ? '1' : null,
+      commercialLicenceConsentVersion: null,
+      underEighteen,
+    });
+  }
+
+  async letTimePass(seconds: number): Promise<void> {
+    this.#clock.advance(seconds * 1000);
+  }
+
+  /** The time is over, and the room server runs it out as its timer would. */
+  async runOutRound(): Promise<void> {
+    const endsAt = (await this.#currentGame()).round?.endsAt;
+    if (!endsAt) throw new Error('The game has no round in progress');
+    this.#clock.advance(Math.max(0, endsAt.getTime() - this.#clock.now().getTime()));
+    await this.#runOutRound.execute({ roomId: this.#currentRoomId() });
+  }
+
+  async revealEarly(host: string): Promise<void> {
+    await this.#revealEarly.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(host),
+    });
+  }
+
+  /** The application lets the host reveal a dilemma early: the screen offers it to them. */
+  async canRevealEarly(player: string): Promise<boolean> {
+    const { hostId, playerId } = await this.#gameStateOf(player);
+    return hostId === playerId;
+  }
+
+  async revealSeenBy(viewer: string): Promise<RevealView | undefined> {
+    const { reveal } = await this.#gameStateOf(viewer);
+    if (!reveal) return undefined;
+    const { dilemmaId } = reveal;
+    return {
+      position: reveal.position + 1,
+      distribution:
+        reveal.distribution?.map(({ optionId, count }) => ({
+          option: optionTextOf(dilemmaId, optionId),
+          count,
+        })) ?? null,
+      tooFewVotes: reveal.tooFewVotes,
+      didNotVoteCount: reveal.didNotVoteCount,
+      votes: reveal.votes.map(({ playerId, vote }) => ({
+        player: this.#nameOf(playerId),
+        vote: vote && optionTextOf(dilemmaId, vote),
+      })),
+      votePredictions: reveal.votePredictions.map(({ playerId, aboutId, right }) => ({
+        player: this.#nameOf(playerId),
+        about: this.#nameOf(aboutId),
+        right,
+      })),
+      personInTheGap: reveal.personInTheGap && this.#nameOf(reveal.personInTheGap),
+      addedBy: reveal.addedBy && this.#nameOf(reveal.addedBy),
+      showsPoints: /points/i.test(JSON.stringify(reveal)),
+    };
+  }
+
+  async moveOn(player: string): Promise<void> {
+    const { round } = await this.#gameStateOf(player);
+    await this.#moveOn.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+      fromPosition: round.position,
+    });
+  }
+
+  /** Both tap at once, from the round each of them sees. */
+  async moveOnTogether(players: readonly string[]): Promise<void> {
+    const moves = await Promise.all(
+      players.map(async (player) => ({
+        playerId: this.#playerIdOf(player),
+        fromPosition: (await this.#gameStateOf(player)).round.position,
+      })),
+    );
+    await Promise.all(
+      moves.map((move) => this.#moveOn.execute({ roomId: this.#currentRoomId(), ...move })),
+    );
+  }
+
+  async movedOnSeenBy(viewer: string): Promise<string | null> {
+    const { movedOnBy } = (await this.#gameStateOf(viewer)).round;
+    return movedOnBy && this.#nameOf(movedOnBy);
+  }
+
+  async moveOnNoticeCoversNothing(): Promise<boolean> {
+    throw new Error('The scenario checks the screen: it must be @screen');
+  }
+
+  async moveOnNoticeDisappears(): Promise<boolean> {
+    throw new Error('The scenario checks the screen: it must be @screen');
+  }
+
+  /** The application has no command to go back to a past round, and only gives the round in progress. */
+  async canGoBack(): Promise<boolean> {
+    return false;
+  }
+
+  /** The application turns down predictions without a vote: the screen offers none. */
+  async canMakePredictions(player: string): Promise<boolean> {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    const { playersToPredict } = await this.#gameStateOf(player);
+    return this.#accepts(
+      () =>
+        this.#answerDilemma.execute({
+          roomId: this.#currentRoomId(),
+          playerId: this.#playerIdOf(player),
+          dilemmaId,
+          vote: '',
+          votePredictions: playersToPredict.map((playerId) => ({ playerId, vote: VOTE })),
+        }),
+      VoteMissingError,
+    );
+  }
+
+  async predictVotes(
+    player: string,
+    predictions: readonly { readonly player: string; readonly vote: string }[],
+  ): Promise<void> {
+    const draft = this.#draftOf(player);
+    draft.votePredictions = predictions.map((prediction) => ({
+      playerId: this.#playerIdOf(prediction.player),
+      vote: optionIdOf(draft.dilemmaId, prediction.vote),
+    }));
+    await this.#send(player, draft);
+  }
+
+  async playersToPredictBy(player: string): Promise<string[]> {
+    const { playersToPredict } = await this.#gameStateOf(player);
+    return playersToPredict.map((playerId) => this.#nameOf(playerId));
+  }
+
+  async pointsOf(
+    player: string,
+  ): Promise<{ readonly position: number; readonly points: number | null }[]> {
+    const game = await this.#currentGame();
+    const positions = game.dilemmas.map(({ dilemmaId }) => dilemmaId);
+    return game.pointsOf(this.#playerIdOf(player)).map(({ dilemmaId, points }) => ({
+      position: positions.indexOf(dilemmaId) + 1,
+      points,
+    }));
+  }
+
+  async report(player: string, reason: ReportReason): Promise<void> {
+    await this.#reportDilemma.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+      dilemmaId: (await this.#roundDilemmaOf(player)).dilemmaId,
+      reason,
+    });
+  }
+
+  async skipReportedDilemma(player: string): Promise<void> {
+    await this.#skipDilemma.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+      dilemmaId: (await this.#roundDilemmaOf(player)).dilemmaId,
+    });
+  }
+
+  async hostSeenBy(viewer: string): Promise<string> {
+    return this.#nameOf((await this.#gameStateOf(viewer)).hostId);
+  }
+
+  async leave(player: string): Promise<void> {
+    await this.#leaveRoom.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+    });
+    this.#playerCalled(player).connectionId = undefined;
+  }
+
+  /** The dilemma of the round in progress, as `player` gets it. */
+  async #roundDilemmaOf(player: string) {
+    const { dilemmas, round } = await this.#gameStateOf(player);
+    const dilemma = dilemmas[round.position];
+    if (!dilemma) throw new Error('The game has no dilemma for the round in progress');
+    return dilemma;
+  }
+
+  #draftOf(player: string) {
+    const draft = this.#drafts.get(player);
+    if (!draft) throw new Error(`The scenario has ${player} predict before voting`);
+    return draft;
+  }
+
+  async #currentGame() {
+    const game = await this.#gameRepository.findById(this.#currentGameId());
+    if (!game) throw new Error('The game of the room is not saved');
+    return game;
+  }
+
+  /** The name the scenario gives the player with that id. */
+  #nameOf(playerId: string): string {
+    const found = [...this.#players].find(([, known]) => known.playerId === playerId);
+    if (!found) throw new Error(`No player of the scenario has the id ${playerId}`);
+    return found[0];
+  }
+
+  async #send(
+    player: string,
+    draft: {
+      readonly dilemmaId: string;
+      readonly vote: string;
+      readonly votePredictions: readonly VotePrediction[];
+    },
+  ): Promise<void> {
+    const playerId = this.#playerIdOf(player);
+    await this.#answerDilemma.execute({ roomId: this.#currentRoomId(), playerId, ...draft });
+    const { dilemmaId, vote } = draft;
     this.#votes.set(player, [...(this.#votes.get(player) ?? []), { dilemmaId, vote }]);
   }
 

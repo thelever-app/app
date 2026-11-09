@@ -1,57 +1,191 @@
-import type { GameStateDto } from '@thelever-app/protocol';
+import type { GameStateDto, ReportReasonDto } from '@thelever-app/protocol';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { GroupProgressSheet } from '../components/group-progress-sheet.tsx';
+import { isAnonymous } from '../components/players.ts';
 import { ProgressStrip } from '../components/progress-strip.tsx';
+import { personInTheGapOf } from '../game/dilemma-text.tsx';
+import { GameMenu } from '../game/game-menu.tsx';
+import { GameToast } from '../game/game-toast.tsx';
+import { PredictCard, type Predictions } from '../game/predict-card.tsx';
+import { ReportSheet } from '../game/report-sheet.tsx';
+import type { AnswerDraft } from '../room/room-provider.tsx';
 import { DilemmaCard } from './dilemma-card.tsx';
 import styles from './screen.module.css';
+import toast from './dilemma-screen.module.css';
 
 interface DilemmaScreenProps {
   readonly game: GameStateDto;
-  /** Where to start; by default, the first dilemma the player has not answered. */
-  readonly initialPosition?: number | undefined;
-  readonly onAnswer: (dilemmaId: string, vote: string) => void;
-  /** The player moved on from the last dilemma. */
+  readonly onAnswer: (answer: AnswerDraft) => void;
+  /** The player confirmed their answer with «Listo». */
   readonly onDone: () => void;
+  /** Only for the host: opens «¿Revelar el dilema ya?». */
+  readonly onRevealEarly: (() => void) | undefined;
+  readonly onReport: (dilemmaId: string, reason: ReportReasonDto, comment: string) => void;
+  readonly onSkip: (dilemmaId: string) => void;
+  readonly onLeave: () => void;
 }
 
-export function DilemmaScreen({ game, initialPosition, onAnswer, onDone }: DilemmaScreenProps) {
-  const votes = new Map(game.answers.map(({ dilemmaId, vote }) => [dilemmaId, vote]));
-  const firstUnanswered = game.dilemmas.findIndex(({ dilemmaId }) => !votes.has(dilemmaId));
-  const lastPosition = game.dilemmas.length - 1;
+const NO_PREDICTIONS: Predictions = { votePredictions: [] };
 
-  const [position, setPosition] = useState(
-    () => initialPosition ?? (firstUnanswered === -1 ? lastPosition : firstUnanswered),
-  );
-  const [isSendingLast, setIsSendingLast] = useState(false);
+function samePredictions(a: Predictions, b: Predictions): boolean {
+  const votesOf = ({ votePredictions }: Predictions) =>
+    votePredictions
+      .map(({ playerId, vote }) => `${playerId}:${vote}`)
+      .sort()
+      .join();
+  return votesOf(a) === votesOf(b);
+}
 
+/**
+ * The dilemma of the round: the vote and, in a nominal room, the predictions on a step of their
+ * own. The vote goes to the room on «Continuar», so it counts even if the time runs out while
+ * predicting; the predictions go when the player leaves their step, with «Listo» or back to the
+ * vote, never with each tap. «Listo» also confirms the vote of an anonymous room.
+ */
+export function DilemmaScreen({
+  game,
+  onAnswer,
+  onDone,
+  onRevealEarly,
+  onReport,
+  onSkip,
+  onLeave,
+}: DilemmaScreenProps) {
+  const { t } = useTranslation();
+  const { position } = game.round;
   const dilemma = game.dilemmas[position]!;
-  const savedVote = votes.get(dilemma.dilemmaId);
+  const { dilemmaId } = dilemma;
+  const saved = game.answers.find((answer) => answer.dilemmaId === dilemmaId);
+  const anonymous = isAnonymous(game);
+  const person = personInTheGapOf(game, dilemma);
+  const total = game.dilemmas.length;
+
+  const [step, setStep] = useState<'vote' | 'predict'>('vote');
+  const [vote, setVote] = useState(saved?.vote);
+  const [predictions, setPredictions] = useState<Predictions>(saved ?? NO_PREDICTIONS);
+  const [isSending, setIsSending] = useState(false);
+  const [isGroupOpen, setIsGroupOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportedHere, setReportedHere] = useState<{ readonly offensive: boolean } | undefined>(
+    undefined,
+  );
+  const reported =
+    reportedHere !== undefined || game.reports.some((r) => r.dilemmaId === dilemmaId);
+
+  const confirm = (answer: AnswerDraft) => {
+    onAnswer(answer);
+    // The waiting screen comes with the state the room sends back; until then, no second send.
+    setIsSending(true);
+    onDone();
+  };
+
+  const menu = (
+    <GameMenu
+      onRevealEarly={onRevealEarly}
+      reported={reported}
+      onShowGroup={() => setIsGroupOpen(true)}
+      onReport={() => setIsReportOpen(true)}
+      onLeave={onLeave}
+    />
+  );
 
   return (
     <div className={styles.screen}>
       <ProgressStrip
-        position={position}
-        players={game.players}
-        dilemmaCount={game.dilemmas.length}
+        game={game}
+        label={t(step === 'vote' ? 'progressStrip.position' : 'progressStrip.predicting', {
+          position: position + 1,
+          total,
+        })}
+        menu={step === 'vote' ? menu : undefined}
+        showGroup={step === 'vote'}
       />
-      <DilemmaCard
-        // A new card when the dilemma changes, and again when the room confirms its vote.
-        key={`${dilemma.dilemmaId}:${savedVote ?? ''}`}
-        dilemma={dilemma}
-        savedVote={savedVote}
-        canGoBack={position > 0}
-        isSending={position === lastPosition && isSendingLast}
-        onBack={() => setPosition(position - 1)}
-        onContinue={(vote) => {
-          if (vote !== savedVote) onAnswer(dilemma.dilemmaId, vote);
-          if (position < lastPosition) {
-            setPosition(position + 1);
-            return;
+      {step === 'vote' ? (
+        <DilemmaCard
+          dilemma={dilemma}
+          personInTheGap={person}
+          savedVote={vote}
+          anonymous={anonymous}
+          isSending={anonymous && isSending}
+          onContinue={(chosen) => {
+            setVote(chosen);
+            if (anonymous) {
+              confirm({ dilemmaId, vote: chosen });
+              return;
+            }
+            if (chosen !== saved?.vote) {
+              onAnswer({
+                dilemmaId,
+                vote: chosen,
+                votePredictions: [...predictions.votePredictions],
+              });
+            }
+            setStep('predict');
+          }}
+        />
+      ) : (
+        <PredictCard
+          dilemma={dilemma}
+          vote={vote ?? ''}
+          predictions={predictions}
+          playersToPredict={game.playersToPredict}
+          players={game.players}
+          personInTheGap={person}
+          isSending={isSending}
+          onChange={setPredictions}
+          onBack={() => {
+            if (!samePredictions(predictions, saved ?? NO_PREDICTIONS)) {
+              onAnswer({
+                dilemmaId,
+                vote: vote ?? '',
+                votePredictions: [...predictions.votePredictions],
+              });
+            }
+            setStep('vote');
+          }}
+          onNext={() =>
+            confirm({
+              dilemmaId,
+              vote: vote ?? '',
+              votePredictions: [...predictions.votePredictions],
+            })
           }
-          // The waiting screen comes with the state the room sends back; until then, no second send.
-          if (vote !== savedVote) setIsSendingLast(true);
-          onDone();
+        />
+      )}
+      <GroupProgressSheet game={game} open={isGroupOpen} onOpenChange={setIsGroupOpen} />
+      <ReportSheet
+        open={isReportOpen}
+        onOpenChange={setIsReportOpen}
+        onSend={(reason, comment) => {
+          onReport(dilemmaId, reason, comment);
+          setReportedHere({ offensive: reason === 'offensive' });
+          setIsReportOpen(false);
         }}
       />
+      {reportedHere && (
+        <GameToast>
+          <p className={toast.thanks}>
+            <strong className={toast.signal}>{t('reportSent.thanks')}</strong>{' '}
+            {t('reportSent.text')}
+          </p>
+          {reportedHere.offensive && (
+            <p className={toast.skipRow}>
+              <span className={toast.muted}>{t('reportSent.canSkip')}</span>
+              <button
+                type="button"
+                className={toast.skip}
+                onClick={() => {
+                  onSkip(dilemmaId);
+                  setReportedHere(undefined);
+                }}
+              >
+                {t('reportSent.skip')}
+              </button>
+            </p>
+          )}
+        </GameToast>
+      )}
     </div>
   );
 }

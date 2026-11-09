@@ -3,7 +3,8 @@ import { InvalidRoomSettingError } from '../errors/invalid-room-setting.error.ts
 /** The languages of the app, in which a room can play its dilemmas. */
 export const DILEMMA_LANGUAGES = ['es', 'en', 'fr', 'de', 'it', 'pt', 'ca'] as const;
 export const DILEMMA_COUNTS = [6, 8, 10, 12] as const;
-export const TOTAL_TIMES_IN_MINUTES = [4, 6, 8, 10] as const;
+/** How long each round gives to answer its dilemma; when it runs out, the dilemma is revealed. */
+export const TIMES_PER_DILEMMA_IN_SECONDS = [30, 45, 60, 90] as const;
 /** How many dilemmas each player may add in the lobby; none, and nobody adds any. */
 export const DILEMMAS_PER_PLAYER = [0, 1, 2, 3] as const;
 
@@ -11,7 +12,7 @@ export const DILEMMAS_PER_PLAYER = [0, 1, 2, 3] as const;
 export type RoomVariant = 'nominal' | 'anonymous';
 export type DilemmaLanguage = (typeof DILEMMA_LANGUAGES)[number];
 export type DilemmaCount = (typeof DILEMMA_COUNTS)[number];
-export type TotalTimeInMinutes = (typeof TOTAL_TIMES_IN_MINUTES)[number];
+export type TimePerDilemmaSeconds = (typeof TIMES_PER_DILEMMA_IN_SECONDS)[number];
 export type DilemmasPerPlayer = (typeof DILEMMAS_PER_PLAYER)[number];
 
 export interface RoomSettingsSnapshot {
@@ -24,7 +25,7 @@ export interface RoomSettingsSnapshot {
    */
   readonly categories: readonly string[] | null;
   readonly dilemmaCount: DilemmaCount;
-  readonly totalTimeInMinutes: TotalTimeInMinutes;
+  readonly timePerDilemmaSeconds: TimePerDilemmaSeconds;
   /** Whether a game by categories keeps room for dilemmas in exploration. */
   readonly newDilemmas: boolean;
   readonly dilemmasPerPlayer: DilemmasPerPlayer;
@@ -47,8 +48,10 @@ export class RoomSettingsVO {
     if (!(DILEMMA_COUNTS as readonly number[]).includes(settings.dilemmaCount)) {
       throw new InvalidRoomSettingError('number of dilemmas', settings.dilemmaCount);
     }
-    if (!(TOTAL_TIMES_IN_MINUTES as readonly number[]).includes(settings.totalTimeInMinutes)) {
-      throw new InvalidRoomSettingError('total time', settings.totalTimeInMinutes);
+    if (
+      !(TIMES_PER_DILEMMA_IN_SECONDS as readonly number[]).includes(settings.timePerDilemmaSeconds)
+    ) {
+      throw new InvalidRoomSettingError('time per dilemma', settings.timePerDilemmaSeconds);
     }
     if (!(DILEMMAS_PER_PLAYER as readonly number[]).includes(settings.dilemmasPerPlayer)) {
       throw new InvalidRoomSettingError('dilemmas per player', settings.dilemmasPerPlayer);
@@ -64,7 +67,7 @@ export class RoomSettingsVO {
       dilemmaLanguage: dilemmaLanguage as DilemmaLanguage,
       categories: null,
       dilemmaCount: 8,
-      totalTimeInMinutes: 6,
+      timePerDilemmaSeconds: 60,
       newDilemmas: true,
       dilemmasPerPlayer: 0,
     });
@@ -90,8 +93,8 @@ export class RoomSettingsVO {
     return this.#settings.dilemmaCount;
   }
 
-  get totalTimeInMinutes(): TotalTimeInMinutes {
-    return this.#settings.totalTimeInMinutes;
+  get timePerDilemmaSeconds(): TimePerDilemmaSeconds {
+    return this.#settings.timePerDilemmaSeconds;
   }
 
   get newDilemmas(): boolean {

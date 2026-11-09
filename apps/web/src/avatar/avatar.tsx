@@ -5,8 +5,11 @@ import { type CSSProperties, useMemo } from 'react';
 import { FACES } from './faces.ts';
 import styles from './avatar.module.css';
 
-/** sm for lists, md for the picker and the forms, lg for the face that is being chosen. */
-export type AvatarSize = 'sm' | 'md' | 'lg';
+/**
+ * xs (28 px) for the predictions, the chips and the dialogs of the game, s (32 px) for its strip and
+ * its lists, sm for the lobby, md for the picker and the forms, lg for the face that is being chosen.
+ */
+export type AvatarSize = 'xs' | 's' | 'sm' | 'md' | 'lg';
 
 interface AvatarProps {
   readonly avatar: AvatarDto;

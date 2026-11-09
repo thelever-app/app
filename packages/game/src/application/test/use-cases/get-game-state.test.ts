@@ -1,3 +1,4 @@
+import { KeepOrderRandomness } from '../../../domain/test/support/keep-order-randomness.ts';
 import { describe, expect, it } from 'vitest';
 import { AnswerDilemmaUseCase } from '../../use-cases/answer-dilemma.use-case.ts';
 import { GetGameStateUseCase } from '../../use-cases/get-game-state.use-case.ts';
@@ -5,6 +6,7 @@ import { GameNotFoundError } from '../../errors/game-not-found.error.ts';
 import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
 import { PlayerNotInGameError } from '../../../domain/errors/player-not-in-game.error.ts';
 import { Game } from '../../../domain/entities/game.ts';
+import type { RoomVariant } from '../../../domain/vos/room-settings.vo.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
@@ -16,17 +18,18 @@ import {
   TEST_GAME_SETTINGS,
 } from '../support/game-in-decision-phase.ts';
 
-/** Ana hosts a room with Luis and Marta, and the game is in the decision phase. */
-async function gameInDecisionPhase() {
-  const game = await sharedGameInDecisionPhase();
+/** Ana hosts a room with Luis and Marta, and the game is in the decision phase; anonymous unless asked. */
+async function gameInDecisionPhase(variant: RoomVariant = 'anonymous') {
+  const game = await sharedGameInDecisionPhase(new InMemoryPlayerNotifier(), variant);
   return {
     ...game,
-    answerDilemma: new AnswerDilemmaUseCase(
-      game.roomRepository,
-      game.gameRepository,
-      new InMemoryPlayerNotifier(),
-      new InMemorySealProvider(),
-    ),
+    answerDilemma: new AnswerDilemmaUseCase({
+      roomRepository: game.roomRepository,
+      gameRepository: game.gameRepository,
+      notifier: new InMemoryPlayerNotifier(),
+      sealProvider: new InMemorySealProvider(),
+      clock: game.clock,
+    }),
     getGameState: new GetGameStateUseCase(game.roomRepository, game.gameRepository, game.catalog),
   };
 }
@@ -35,7 +38,7 @@ describe('GetGameStateUseCase', () => {
   describe('execute', () => {
     it('should return the game, the player who asks and the content of the dilemmas in order', async () => {
       // Arrange
-      const { getGameState, gameId, luisId } = await gameInDecisionPhase();
+      const { getGameState, gameId, anaId, luisId } = await gameInDecisionPhase();
 
       // Act
       const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
@@ -48,11 +51,27 @@ describe('GetGameStateUseCase', () => {
           dilemmaId,
           text: `TextOf${dilemmaId}`,
           options: TEST_OPTION_IDS.map((optionId) => ({ optionId, text: `TextOf${optionId}` })),
+          personInTheGap: null,
         })),
       );
+      expect(state.round).toMatchObject({ position: 0, phase: 'decision', revealedBy: null });
+      expect(state.hostId).toBe(anaId);
+      expect(state.reveal).toBeNull();
+      expect(state.playersToPredict).toEqual([]);
     });
 
-    it('should return every player with their nickname, avatar and progress', async () => {
+    it('should return every other player to predict in a nominal room', async () => {
+      // Arrange
+      const { getGameState, gameId, anaId, luisId, martaId } = await gameInDecisionPhase('nominal');
+
+      // Act
+      const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
+
+      // Assert
+      expect(state.playersToPredict).toEqual([anaId, martaId]);
+    });
+
+    it('should return every player with their nickname and avatar, and only how many answered in an anonymous room', async () => {
       // Arrange
       const {
         getGameState,
@@ -75,12 +94,6 @@ describe('GetGameStateUseCase', () => {
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
       });
-      await answerDilemma.execute({
-        roomId,
-        playerId: luisId,
-        dilemmaId: 'TestDilemma2',
-        vote: 'TestOption',
-      });
 
       // Act
       const state = await getGameState.execute({ gameId, playerId: anaId, language: 'es' });
@@ -91,32 +104,37 @@ describe('GetGameStateUseCase', () => {
           playerId: anaId,
           nickname: 'Ana',
           avatar: avatarOf(anaId),
-          progress: 0,
+          answered: null,
           connected: false,
+          left: false,
         },
         {
           playerId: luisId,
           nickname: 'Luis',
           avatar: avatarOf(luisId),
-          progress: 2,
+          answered: null,
           connected: false,
+          left: false,
         },
         {
           playerId: martaId,
           nickname: 'Marta',
           avatar: avatarOf(martaId),
-          progress: 0,
+          answered: null,
           connected: false,
+          left: false,
         },
       ]);
+      expect(state.answeredCount).toBe(1);
     });
 
     it('should return whether each player is connected', async () => {
       // Arrange
-      const { getGameState, roomRepository, roomId, gameId, anaId, luisId } =
+      const { getGameState, roomRepository, gameRepository, roomId, gameId, anaId, luisId } =
         await gameInDecisionPhase();
       const connectPlayer = new ConnectPlayerUseCase(
         roomRepository,
+        gameRepository,
         new InMemoryPlayerNotifier(),
         new FixedIdGenerator('TestConnectionId'),
       );
@@ -133,8 +151,15 @@ describe('GetGameStateUseCase', () => {
 
     it('should return the version of the game and of the room it was computed from', async () => {
       // Arrange
-      const { getGameState, answerDilemma, roomRepository, roomId, gameId, luisId } =
-        await gameInDecisionPhase();
+      const {
+        getGameState,
+        answerDilemma,
+        roomRepository,
+        gameRepository,
+        roomId,
+        gameId,
+        luisId,
+      } = await gameInDecisionPhase();
       await answerDilemma.execute({
         roomId,
         playerId: luisId,
@@ -143,6 +168,7 @@ describe('GetGameStateUseCase', () => {
       });
       await new ConnectPlayerUseCase(
         roomRepository,
+        gameRepository,
         new InMemoryPlayerNotifier(),
         new FixedIdGenerator('TestConnectionId'),
       ).execute({ roomId, identity: 'TestLuisIdentity' });
@@ -169,7 +195,13 @@ describe('GetGameStateUseCase', () => {
       const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
 
       // Assert
-      expect(state.answers).toEqual([{ dilemmaId: 'TestDilemma1', vote: 'TestOption' }]);
+      expect(state.answers).toEqual([
+        {
+          dilemmaId: 'TestDilemma1',
+          vote: 'TestOption',
+          votePredictions: [],
+        },
+      ]);
     });
 
     it('should never return the answers of the other players', async () => {
@@ -190,11 +222,12 @@ describe('GetGameStateUseCase', () => {
       expect(state.answers).toEqual([]);
       for (const player of state.players) {
         expect(Object.keys(player).sort()).toEqual([
+          'answered',
           'avatar',
           'connected',
+          'left',
           'nickname',
           'playerId',
-          'progress',
         ]);
       }
     });
@@ -231,14 +264,16 @@ describe('GetGameStateUseCase', () => {
               dilemmaId: 'TestGoneDilemma',
               version: 1,
               optionIds: TEST_OPTION_IDS,
+              hasGap: false,
               origin: 'picked-by-the-host',
+              addedBy: null,
             },
           ],
           settings: TEST_GAME_SETTINGS,
         },
         new FixedIdGenerator('TestGoneGameId'),
       );
-      game.startDecisionPhase(room.players);
+      game.start(room.players, new Date(), new KeepOrderRandomness());
       await gameRepository.save(game);
 
       // Act & Assert
@@ -260,14 +295,16 @@ describe('GetGameStateUseCase', () => {
               dilemmaId: dilemmaId!,
               version: 2,
               optionIds: TEST_OPTION_IDS,
+              hasGap: false,
               origin: 'picked-by-the-host',
+              addedBy: null,
             },
           ],
           settings: TEST_GAME_SETTINGS,
         },
         new FixedIdGenerator('TestLaterVersionGameId'),
       );
-      game.startDecisionPhase(room.players);
+      game.start(room.players, new Date(), new KeepOrderRandomness());
       await gameRepository.save(game);
 
       // Act & Assert: the test catalog only has the first version of its dilemmas.
@@ -286,7 +323,9 @@ describe('GetGameStateUseCase', () => {
             dilemmaId,
             version: 1,
             optionIds: TEST_OPTION_IDS,
+            hasGap: false,
             origin: 'picked-by-the-host' as const,
+            addedBy: null,
           })),
           settings: TEST_GAME_SETTINGS,
         },

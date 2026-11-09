@@ -883,6 +883,8 @@ describe('Room', () => {
         addedDilemmas: [],
         pickedDilemmas: [],
         currentGameId: null,
+        absentHostId: null,
+        leftPlayerIds: [],
       });
     });
 

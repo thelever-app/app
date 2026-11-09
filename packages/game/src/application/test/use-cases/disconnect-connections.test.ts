@@ -13,7 +13,12 @@ import {
 async function arrange() {
   const game = await gameInDecisionPhase();
   const notifier = new InMemoryPlayerNotifier();
-  const connectPlayer = new ConnectPlayerUseCase(game.roomRepository, notifier, game.idGenerator);
+  const connectPlayer = new ConnectPlayerUseCase(
+    game.roomRepository,
+    game.gameRepository,
+    notifier,
+    game.idGenerator,
+  );
   const ana = await connectPlayer.execute({ roomId: game.roomId, identity: 'TestAnaIdentity' });
   const luis1 = await connectPlayer.execute({ roomId: game.roomId, identity: 'TestLuisIdentity' });
   const luis2 = await connectPlayer.execute({ roomId: game.roomId, identity: 'TestLuisIdentity' });

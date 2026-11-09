@@ -17,7 +17,7 @@ const settings = {
   dilemmaLanguage: 'es',
   categories: ['life-and-death', 'honesty'],
   dilemmaCount: 8,
-  totalTimeInMinutes: 6,
+  timePerDilemmaSeconds: 60,
   newDilemmas: true,
   dilemmasPerPlayer: 2,
 };
@@ -170,8 +170,10 @@ describe('the commands of the lobby', () => {
         .success,
     ).toBe(false);
     expect(
-      ChangeSettingsDto.safeParse({ type: 'change-settings', changes: { totalTimeInMinutes: 5 } })
-        .success,
+      ChangeSettingsDto.safeParse({
+        type: 'change-settings',
+        changes: { timePerDilemmaSeconds: 5 },
+      }).success,
     ).toBe(false);
   });
 

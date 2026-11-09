@@ -4,12 +4,8 @@ import { GroupProgressSheet } from '../../src/components/group-progress-sheet.ts
 import { renderWithProviders } from '../support/render.tsx';
 import { aGame } from '../support/game.ts';
 
-async function renderSheet() {
-  const game = aGame();
-  const result = await renderWithProviders(
-    <GroupProgressSheet players={game.players} dilemmaCount={game.dilemmas.length} />,
-    { game },
-  );
+async function renderSheet(game = aGame()) {
+  const result = await renderWithProviders(<GroupProgressSheet game={game} />, { game });
   const trigger = screen.getByRole('button', { name: result.t('progressStrip.showAll') });
   return { ...result, trigger };
 }
@@ -37,6 +33,20 @@ describe('GroupProgressSheet', () => {
     expect(
       within(dialog).getByRole('region', { name: t('playerList.pending', { count: 2 }) }),
     ).toBeDefined();
+  });
+
+  it('should say in an anonymous room that nobody sees who answered', async () => {
+    // Arrange
+    const game = aGame();
+    const anonymous = aGame({ players: game.players.map((p) => ({ ...p, answered: null })) });
+    const { t, trigger } = await renderSheet(anonymous);
+
+    // Act
+    fireEvent.click(trigger);
+
+    // Assert
+    const dialog = screen.getByRole('dialog', { name: t('groupSheet.title') });
+    expect(within(dialog).getByText(t('groupSheet.summaryAnonymous', { count: 2 }))).toBeDefined();
   });
 
   it('should move the focus into the dialog when it opens', async () => {

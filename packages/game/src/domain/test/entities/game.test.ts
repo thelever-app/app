@@ -6,16 +6,17 @@ import { DilemmasMissingError } from '../../errors/dilemmas-missing.error.ts';
 import { DecisionPhaseNotStartedError } from '../../errors/decision-phase-not-started.error.ts';
 import { PlayerNotInGameError } from '../../errors/player-not-in-game.error.ts';
 import { DilemmaNotInGameError } from '../../errors/dilemma-not-in-game.error.ts';
-import { ProgressUpdatedEvent } from '../../events/progress-updated.event.ts';
+import { AnsweredCountChangedEvent } from '../../events/answered-count-changed.event.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 import { DuplicateDilemmaError } from '../../errors/duplicate-dilemma.error.ts';
 import { PlayersMissingError } from '../../errors/players-missing.error.ts';
 import { DecisionPhaseAlreadyStartedError } from '../../errors/decision-phase-already-started.error.ts';
 import { OptionNotInDilemmaError } from '../../errors/option-not-in-dilemma.error.ts';
-import { DilemmaNotReachedError } from '../../errors/dilemma-not-reached.error.ts';
+import { DilemmaNotInRoundError } from '../../errors/dilemma-not-in-round.error.ts';
 import { OptionsMissingError } from '../../errors/options-missing.error.ts';
 import { InvalidDilemmaVersionError } from '../../errors/invalid-dilemma-version.error.ts';
 import { AvatarVO } from '../../vos/avatar.vo.ts';
+import { KeepOrderRandomness } from '../support/keep-order-randomness.ts';
 
 const OPTION_IDS = ['TestOption', 'TestOtherOption', 'TestSecretOption'];
 const SEAL = {
@@ -28,16 +29,21 @@ const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId
   dilemmaId,
   version: index + 1,
   optionIds: OPTION_IDS,
+  hasGap: false,
   origin: 'picked-by-the-system' as const,
+  addedBy: null,
 }));
 const SETTINGS = {
-  variant: 'nominal',
+  variant: 'anonymous',
   groupNature: 'friends',
   place: 'remote',
   dilemmaLanguage: 'es',
-  totalTimeInMinutes: 6,
+  timePerDilemmaSeconds: 60,
 } as const;
 const AVATAR = new AvatarVO('face-01', 'khaki');
+const AT = new Date('2026-11-09T10:00:00Z');
+const KEEP_ORDER = new KeepOrderRandomness();
+const LATER = new Date('2026-11-09T10:00:40Z');
 
 function gameInDecisionPhase(): { game: Game; ana: Player; luis: Player } {
   const ana = Player.create(
@@ -52,9 +58,16 @@ function gameInDecisionPhase(): { game: Game; ana: Player; luis: Player } {
     { roomId: 'TestRoomId', dilemmas: DILEMMAS, settings: SETTINGS },
     new FixedIdGenerator('TestId'),
   );
-  game.startDecisionPhase([ana, luis]);
+  game.start([ana, luis], AT, KEEP_ORDER);
   game.pullEvents();
   return { game, ana, luis };
+}
+
+/** The host reveals the dilemma of the round and Ana takes everyone to the next one. */
+function nextRound(game: Game): void {
+  const position = game.round?.position as number;
+  game.reveal('host');
+  game.moveOn('TestAnaId', position, AT);
 }
 
 describe('Game', () => {
@@ -131,7 +144,9 @@ describe('Game', () => {
         dilemmaId: 'TestIntruderDilemma',
         version: 1,
         optionIds: OPTION_IDS,
+        hasGap: false,
         origin: 'picked-by-the-host',
+        addedBy: null,
       });
 
       // Assert
@@ -148,12 +163,16 @@ describe('Game', () => {
       );
 
       // Act
-      game.startDecisionPhase([
-        Player.create(
-          { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
-          new FixedIdGenerator('TestAnaId'),
-        ),
-      ]);
+      game.start(
+        [
+          Player.create(
+            { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
+            new FixedIdGenerator('TestAnaId'),
+          ),
+        ],
+        AT,
+        KEEP_ORDER,
+      );
 
       // Assert
       expect(game.isInDecisionPhase).toBe(true);
@@ -171,7 +190,7 @@ describe('Game', () => {
       );
 
       // Act
-      game.startDecisionPhase([ana]);
+      game.start([ana], AT, KEEP_ORDER);
 
       // Assert
       expect(game.progressOf(ana.id)).toBe(0);
@@ -184,9 +203,11 @@ describe('Game', () => {
       const { game, luis } = gameInDecisionPhase();
 
       // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
-      game.answer(luis.id, 'TestDilemma2', 'TestOption', SEAL);
-      game.answer(luis.id, 'TestDilemma3', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
+      nextRound(game);
+      game.answer(luis.id, 'TestDilemma2', { vote: 'TestOption' }, SEAL, AT);
+      nextRound(game);
+      game.answer(luis.id, 'TestDilemma3', { vote: 'TestOption' }, SEAL, AT);
 
       // Assert
       expect(game.progressOf(luis.id)).toBe(3);
@@ -197,7 +218,7 @@ describe('Game', () => {
       const { game, ana, luis } = gameInDecisionPhase();
 
       // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Assert
       expect(game.progressOf(ana.id)).toBe(0);
@@ -206,27 +227,27 @@ describe('Game', () => {
     it('should not increase the progress when the player changes an answer', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestOtherOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOtherOption' }, SEAL, AT);
 
       // Assert
       expect(game.progressOf(luis.id)).toBe(1);
     });
 
-    it('should record a progress updated event with the new progress', () => {
+    it('should record how many have answered, in an anonymous room', () => {
       // Arrange
-      const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      const { game, ana, luis } = gameInDecisionPhase();
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Act
-      game.answer(luis.id, 'TestDilemma2', 'TestOption', SEAL);
+      game.answer(ana.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Assert
       expect(game.pullEvents()).toEqual([
-        new ProgressUpdatedEvent(game.id, luis.id, 1, 2),
-        new ProgressUpdatedEvent(game.id, luis.id, 2, 3),
+        new AnsweredCountChangedEvent(game.id, 1, 2),
+        new AnsweredCountChangedEvent(game.id, 2, 3),
       ]);
     });
 
@@ -235,7 +256,7 @@ describe('Game', () => {
       const { game, luis } = gameInDecisionPhase();
 
       // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestSecretOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestSecretOption' }, SEAL, AT);
 
       // Assert
       const [event] = game.pullEvents();
@@ -246,11 +267,11 @@ describe('Game', () => {
     it('should not record an event when the progress does not change', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
       game.pullEvents();
 
       // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestOtherOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOtherOption' }, SEAL, AT);
 
       // Assert
       expect(game.pullEvents()).toEqual([]);
@@ -264,9 +285,9 @@ describe('Game', () => {
       );
 
       // Act & Assert
-      expect(() => game.answer('TestLuisId', 'TestDilemma1', 'TestOption', SEAL)).toThrow(
-        DecisionPhaseNotStartedError,
-      );
+      expect(() =>
+        game.answer('TestLuisId', 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT),
+      ).toThrow(DecisionPhaseNotStartedError);
     });
 
     it('should throw an error if the player is not in the game', () => {
@@ -274,9 +295,9 @@ describe('Game', () => {
       const { game } = gameInDecisionPhase();
 
       // Act & Assert
-      expect(() => game.answer('TestStrangerId', 'TestDilemma1', 'TestOption', SEAL)).toThrow(
-        PlayerNotInGameError,
-      );
+      expect(() =>
+        game.answer('TestStrangerId', 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT),
+      ).toThrow(PlayerNotInGameError);
     });
 
     it('should throw an error if the dilemma is not in the game', () => {
@@ -284,9 +305,9 @@ describe('Game', () => {
       const { game, luis } = gameInDecisionPhase();
 
       // Act & Assert
-      expect(() => game.answer(luis.id, 'TestOtherDilemma', 'TestOption', SEAL)).toThrow(
-        DilemmaNotInGameError,
-      );
+      expect(() =>
+        game.answer(luis.id, 'TestOtherDilemma', { vote: 'TestOption' }, SEAL, AT),
+      ).toThrow(DilemmaNotInGameError);
     });
 
     it('should throw an error if the vote is not one of the options of the dilemma', () => {
@@ -294,39 +315,22 @@ describe('Game', () => {
       const { game, luis } = gameInDecisionPhase();
 
       // Act & Assert
-      expect(() => game.answer(luis.id, 'TestDilemma1', 'TestUnknownOption', SEAL)).toThrow(
-        OptionNotInDilemmaError,
-      );
+      expect(() =>
+        game.answer(luis.id, 'TestDilemma1', { vote: 'TestUnknownOption' }, SEAL, AT),
+      ).toThrow(OptionNotInDilemmaError);
       expect(game.progressOf(luis.id)).toBe(0);
     });
 
-    it('should throw an error if the player skips a dilemma they have not answered', () => {
+    it('should throw an error if the dilemma is not the one of the round', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Act & Assert
-      expect(() => game.answer(luis.id, 'TestDilemma3', 'TestOption', SEAL)).toThrow(
-        DilemmaNotReachedError,
+      expect(() => game.answer(luis.id, 'TestDilemma3', { vote: 'TestOption' }, SEAL, AT)).toThrow(
+        DilemmaNotInRoundError,
       );
       expect(game.progressOf(luis.id)).toBe(1);
-    });
-
-    it('should let the player go back and change an earlier answer', () => {
-      // Arrange
-      const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
-      game.answer(luis.id, 'TestDilemma2', 'TestOption', SEAL);
-
-      // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestOtherOption', SEAL);
-
-      // Assert
-      expect(game.answersOf(luis.id)[0]).toEqual({
-        dilemmaId: 'TestDilemma1',
-        vote: 'TestOtherOption',
-      });
-      expect(game.progressOf(luis.id)).toBe(2);
     });
 
     it('should keep the seal of the answer, and that the voter was not the person in the gap', () => {
@@ -334,10 +338,10 @@ describe('Game', () => {
       const { game, luis } = gameInDecisionPhase();
 
       // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Assert
-      expect(game.toSnapshot().players[1]?.answers).toEqual([
+      expect(game.toSnapshot().players[1]?.answers).toMatchObject([
         { dilemmaId: 'TestDilemma1', vote: 'TestOption', seal: SEAL, voterInTheGap: false },
       ]);
     });
@@ -345,11 +349,11 @@ describe('Game', () => {
     it('should seal again an answer the player changes', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
       const later = { ...SEAL, researchConsentVersion: null };
 
       // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestOtherOption', later);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOtherOption' }, later, AT);
 
       // Assert
       expect(game.toSnapshot().players[1]?.answers[0]?.seal).toEqual(later);
@@ -375,33 +379,16 @@ describe('Game', () => {
       expect(game.answersOf(luis.id)).toEqual([]);
     });
 
-    it('should list the answers of the player in the order of the dilemmas', () => {
-      // Arrange
-      const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
-      game.answer(luis.id, 'TestDilemma2', 'TestOtherOption', SEAL);
-      game.answer(luis.id, 'TestDilemma1', 'TestSecretOption', SEAL);
-
-      // Act
-      const answers = game.answersOf(luis.id);
-
-      // Assert
-      expect(answers).toEqual([
-        { dilemmaId: 'TestDilemma1', vote: 'TestSecretOption' },
-        { dilemmaId: 'TestDilemma2', vote: 'TestOtherOption' },
-      ]);
-    });
-
     it('should list only the new vote of a changed answer', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestOtherOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOtherOption' }, SEAL, AT);
 
       // Assert
-      expect(game.answersOf(luis.id)).toEqual([
+      expect(game.answersOf(luis.id)).toMatchObject([
         { dilemmaId: 'TestDilemma1', vote: 'TestOtherOption' },
       ]);
     });
@@ -409,7 +396,7 @@ describe('Game', () => {
     it('should not include the answers of the other players', () => {
       // Arrange
       const { game, ana, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Act & Assert
       expect(game.answersOf(ana.id)).toEqual([]);
@@ -444,12 +431,16 @@ describe('Game', () => {
       );
 
       // Act
-      game.startDecisionPhase([
-        Player.create(
-          { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
-          new FixedIdGenerator('TestAnaId'),
-        ),
-      ]);
+      game.start(
+        [
+          Player.create(
+            { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
+            new FixedIdGenerator('TestAnaId'),
+          ),
+        ],
+        AT,
+        KEEP_ORDER,
+      );
 
       // Assert
       expect(game.version).toBe(1);
@@ -460,8 +451,8 @@ describe('Game', () => {
       const { game, luis } = gameInDecisionPhase();
 
       // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
-      game.answer(luis.id, 'TestDilemma1', 'TestOtherOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOtherOption' }, SEAL, AT);
 
       // Assert
       expect(game.version).toBe(3);
@@ -472,31 +463,31 @@ describe('Game', () => {
       const { game, luis } = gameInDecisionPhase();
 
       // Act
-      expect(() => game.answer(luis.id, 'TestDilemma2', 'TestOption', SEAL)).toThrow(
-        DilemmaNotReachedError,
+      expect(() => game.answer(luis.id, 'TestDilemma2', { vote: 'TestOption' }, SEAL, AT)).toThrow(
+        DilemmaNotInRoundError,
       );
 
       // Assert
       expect(game.version).toBe(1);
     });
 
-    it('should be the version the progress updated event carries', () => {
+    it('should be the version the event of the answer carries', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
 
       // Act
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Assert
       const [event] = game.pullEvents();
-      expect(event).toBeInstanceOf(ProgressUpdatedEvent);
-      expect((event as ProgressUpdatedEvent).gameVersion).toBe(game.version);
+      expect(event).toBeInstanceOf(AnsweredCountChangedEvent);
+      expect((event as AnsweredCountChangedEvent).gameVersion).toBe(game.version);
     });
 
     it('should be kept when the game is restored', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Act
       const restored = Game.restore(game.toSnapshot());
@@ -510,7 +501,7 @@ describe('Game', () => {
     it('should empty the recorded events', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Act
       game.pullEvents();
@@ -545,26 +536,59 @@ describe('Game', () => {
     it('should return its state as plain data', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, LATER);
 
       // Act
       const snapshot = game.toSnapshot();
 
       // Assert
+      const optionOrders = DILEMMAS.map(({ dilemmaId }) => ({
+        dilemmaId,
+        optionOrder: OPTION_IDS,
+      }));
       expect(snapshot).toEqual({
         id: 'TestId',
         roomId: 'TestRoomId',
         dilemmas: DILEMMAS,
         settings: SETTINGS,
-        inDecisionPhase: true,
         version: 2,
+        round: {
+          position: 0,
+          phase: 'decision',
+          startedAt: AT,
+          endsAt: new Date('2026-11-09T10:01:00Z'),
+          revealedBy: null,
+          movedOnBy: null,
+        },
+        peopleInTheGap: [],
         players: [
-          { id: 'TestAnaId', answers: [] },
+          {
+            id: 'TestAnaId',
+            left: false,
+            optionOrders,
+            answers: [],
+            didNotVote: [],
+            points: [],
+            reports: [],
+          },
           {
             id: 'TestLuisId',
+            left: false,
+            optionOrders,
             answers: [
-              { dilemmaId: 'TestDilemma1', vote: 'TestOption', seal: SEAL, voterInTheGap: false },
+              {
+                dilemmaId: 'TestDilemma1',
+                vote: 'TestOption',
+                votePredictions: [],
+                optionOrder: OPTION_IDS,
+                responseTimeMs: 40_000,
+                seal: SEAL,
+                voterInTheGap: false,
+              },
             ],
+            didNotVote: [],
+            points: [],
+            reports: [],
           },
         ],
       });
@@ -575,8 +599,9 @@ describe('Game', () => {
     it('should rebuild the game from its snapshot', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
-      game.answer(luis.id, 'TestDilemma2', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
+      nextRound(game);
+      game.answer(luis.id, 'TestDilemma2', { vote: 'TestOption' }, SEAL, AT);
 
       // Act
       const restored = Game.restore(game.toSnapshot());
@@ -604,7 +629,7 @@ describe('Game', () => {
     it('should not record any event', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Act
       const restored = Game.restore(game.toSnapshot());
@@ -616,14 +641,14 @@ describe('Game', () => {
     it('should go on from the restored progress', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
       const restored = Game.restore(game.toSnapshot());
 
       // Act
-      restored.answer(luis.id, 'TestDilemma2', 'TestOption', SEAL);
+      restored.answer('TestAnaId', 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Assert
-      expect(restored.pullEvents()).toEqual([new ProgressUpdatedEvent('TestId', luis.id, 2, 3)]);
+      expect(restored.pullEvents()).toEqual([new AnsweredCountChangedEvent('TestId', 2, 3)]);
     });
   });
 
@@ -639,7 +664,9 @@ describe('Game', () => {
                 dilemmaId: 'TestDilemma1',
                 version: 1,
                 optionIds: [],
+                hasGap: false,
                 origin: 'picked-by-the-host',
+                addedBy: null,
               },
             ],
             settings: SETTINGS,
@@ -661,7 +688,9 @@ describe('Game', () => {
                   dilemmaId: 'TestDilemma1',
                   version,
                   optionIds: OPTION_IDS,
+                  hasGap: false,
                   origin: 'picked-by-the-host',
+                  addedBy: null,
                 },
               ],
               settings: SETTINGS,
@@ -682,7 +711,9 @@ describe('Game', () => {
               dilemmaId,
               version: 1,
               optionIds: OPTION_IDS,
+              hasGap: false,
               origin: 'picked-by-the-host' as const,
+              addedBy: null,
             })),
             settings: SETTINGS,
           },
@@ -699,17 +730,19 @@ describe('Game', () => {
       );
 
       // Act & Assert
-      expect(() => game.startDecisionPhase([])).toThrow(PlayersMissingError);
+      expect(() => game.start([], AT, KEEP_ORDER)).toThrow(PlayersMissingError);
       expect(game.isInDecisionPhase).toBe(false);
     });
 
     it('should throw an error if the decision phase starts twice, keeping the answers', () => {
       // Arrange
       const { game, ana, luis } = gameInDecisionPhase();
-      game.answer(luis.id, 'TestDilemma1', 'TestOption', SEAL);
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption' }, SEAL, AT);
 
       // Act & Assert
-      expect(() => game.startDecisionPhase([ana, luis])).toThrow(DecisionPhaseAlreadyStartedError);
+      expect(() => game.start([ana, luis], AT, KEEP_ORDER)).toThrow(
+        DecisionPhaseAlreadyStartedError,
+      );
       expect(game.progressOf(luis.id)).toBe(1);
     });
   });

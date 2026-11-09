@@ -4,9 +4,20 @@ import { useRoom } from '../room/room-provider.tsx';
 
 type Player = GameStateDto['players'][number];
 
-/** A player has finished once their progress, as the server sends it, reaches every dilemma. */
-export function hasFinished(player: Player, dilemmaCount: number): boolean {
-  return player.progress >= dilemmaCount;
+/** Whether the player answered the dilemma of the round, as the server sends it; never known in an anonymous room. */
+export function hasAnswered(player: Player): boolean {
+  return player.answered === true;
+}
+
+/** Whether the game is of an anonymous room, which never tells who answered, only how many. */
+export function isAnonymous(game: Pick<GameStateDto, 'players'>): boolean {
+  return game.players.some(({ answered }) => answered === null);
+}
+
+/** How many of those still in the game have not answered the dilemma of the round yet. */
+export function pendingCountOf(game: Pick<GameStateDto, 'players' | 'answeredCount'>): number {
+  const inGame = game.players.filter(({ left }) => !left).length;
+  return Math.max(0, inGame - game.answeredCount);
 }
 
 /** The id of the player using the screen, as the room says, in the lobby or in the game. */

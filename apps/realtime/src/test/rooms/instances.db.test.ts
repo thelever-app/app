@@ -128,10 +128,7 @@ describe('the room server on several instances', () => {
       playerId: luis.playerId,
       connected: true,
     });
-    expect(await ana.client.next('progress-updated')).toMatchObject({
-      playerId: luis.playerId,
-      progress: 1,
-    });
+    expect(await ana.client.next('answered-count')).toMatchObject({ answeredCount: 1 });
   });
 
   it('should show the players of an instance that dies as disconnected', async () => {
@@ -208,5 +205,42 @@ describe('the room server on several instances', () => {
 
     // Assert
     expect(await ana.client.next('game-state', 5000)).toMatchObject({ gameId });
+  });
+});
+
+describe('the room server on PostgreSQL', () => {
+  it('should reveal the dilemma of a round whose time is over when an answer comes after it', async () => {
+    // Arrange: the timer of the instance would run the round out in a minute, but its time is over.
+    const a = await instance();
+    const { roomId, gameId, dilemmas } = await gameInDecisionPhase(a);
+    const ana = await connect(a.url, 'ana', roomId);
+    const luis = await connect(a.url, 'luis', roomId);
+    const now = Date.now();
+    await database
+      .db()
+      .updateTable('games')
+      .set({ round_started_at: new Date(now - 61_000), round_ends_at: new Date(now - 1000) })
+      .where('id', '=', gameId)
+      .execute();
+    ana.client.received.length = 0;
+
+    // Act
+    const [first] = dilemmas;
+    luis.client.send({
+      type: 'answer-dilemma',
+      dilemmaId: first!.dilemmaId,
+      vote: first!.options[0]!.optionId,
+    });
+
+    // Assert
+    const revealed = await ana.client.next('game-state', 3000);
+    expect(revealed.round).toMatchObject({ position: 0, phase: 'reveal', revealedBy: 'time' });
+    const saved = await database
+      .db()
+      .selectFrom('games')
+      .select(['round_phase', 'round_revealed_by'])
+      .where('id', '=', gameId)
+      .executeTakeFirstOrThrow();
+    expect(saved).toEqual({ round_phase: 'reveal', round_revealed_by: 'time' });
   });
 });

@@ -17,7 +17,7 @@ export function aRoom(overrides: Partial<RoomStateDto> = {}): RoomStateDto {
       dilemmaLanguage: 'es',
       categories: null,
       dilemmaCount: 8,
-      totalTimeInMinutes: 6,
+      timePerDilemmaSeconds: 60,
       newDilemmas: true,
       dilemmasPerPlayer: 0,
     },

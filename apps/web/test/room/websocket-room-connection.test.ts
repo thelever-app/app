@@ -16,9 +16,21 @@ const GAME_STATE: GameStateDto = {
   gameVersion: 1,
   roomVersion: 1,
   playerId: 'test-ana-id',
+  round: {
+    position: 0,
+    phase: 'decision',
+    endsAt: '2026-11-09T10:01:00.000Z',
+    revealedBy: null,
+    movedOnBy: null,
+  },
+  hostId: 'test-ana-id',
+  serverTime: '2026-11-09T10:00:00.000Z',
+  answeredCount: 0,
+  reveal: null,
   dilemmas: [
     {
       dilemmaId: 'test-dilemma-1',
+      personInTheGap: null,
       text: 'TestText1',
       options: [
         { optionId: 'test-option-a', text: 'TestOptionA' },
@@ -26,16 +38,20 @@ const GAME_STATE: GameStateDto = {
       ],
     },
   ],
+  playersToPredict: [],
   players: [
     {
       playerId: 'test-ana-id',
       nickname: 'Ana',
       avatar: { face: 'face-01', color: 'teal' },
-      progress: 0,
+      answered: false,
       connected: true,
+      left: false,
     },
   ],
   answers: [],
+  reports: [],
+  didNotVote: [],
 };
 
 const TEST_TRACEPARENT = '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01';

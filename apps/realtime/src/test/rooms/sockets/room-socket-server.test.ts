@@ -98,7 +98,9 @@ describe('RoomSocketServer', () => {
       // Assert
       const state = await luis.next('game-state');
       expect(state.gameId).toBe(gameId);
-      expect(state.dilemmas).toEqual(dilemmas);
+      expect(state.dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(
+        dilemmas.map(({ dilemmaId }) => dilemmaId),
+      );
       expect(state.dilemmas.map(({ dilemmaId }) => dilemmaId).sort()).toEqual(
         SEED_DILEMMAS.map(({ id }) => id).sort(),
       );
@@ -187,7 +189,7 @@ describe('RoomSocketServer', () => {
   });
 
   describe('answer-dilemma', () => {
-    it('should send a fresh state to whoever answers and the new progress to the others', async () => {
+    it('should send a fresh state to whoever answers and how many answered to everyone', async () => {
       // Arrange
       server = await startRoomServer();
       const { roomId, dilemmas } = await gameInDecisionPhase(server);
@@ -202,14 +204,17 @@ describe('RoomSocketServer', () => {
       // Assert
       const state = await luis.next('game-state');
       expect(state.answers).toEqual(
-        [firstVoteOf(first)].map(({ dilemmaId, vote }) => ({ dilemmaId, vote })),
+        [firstVoteOf(first)].map(({ dilemmaId, vote }) => ({
+          dilemmaId,
+          vote,
+          votePredictions: [],
+        })),
       );
-      const progress = await ana.next('progress-updated');
-      expect(progress).toEqual({
-        type: 'progress-updated',
+      const count = await ana.next('answered-count');
+      expect(count).toEqual({
+        type: 'answered-count',
         gameVersion: state.gameVersion,
-        playerId: state.playerId,
-        progress: 1,
+        answeredCount: 1,
       });
     });
 
@@ -217,11 +222,15 @@ describe('RoomSocketServer', () => {
       // Arrange
       server = await startRoomServer();
       const { roomId, dilemmas } = await gameInDecisionPhase(server);
+      // Ana is connected and has not answered, so the round waits for her.
+      await TestClient.connected(server.url, 'ana', roomId);
       const luis = await TestClient.connected(server.url, 'luis', roomId);
+      const [first] = dilemmas;
+      const other = { dilemmaId: first!.dilemmaId, vote: first!.options[1]!.optionId };
 
-      // Act
-      for (const dilemma of dilemmas.slice(0, 3)) {
-        luis.send({ type: 'answer-dilemma', ...firstVoteOf(dilemma) });
+      // Act: he changes his mind twice before the dilemma is revealed.
+      for (const answer of [firstVoteOf(first), other, firstVoteOf(first)]) {
+        luis.send({ type: 'answer-dilemma', ...answer });
       }
 
       // Assert
@@ -257,14 +266,14 @@ describe('RoomSocketServer', () => {
       const { roomId, dilemmas } = await gameInDecisionPhase(server);
       const luis = await TestClient.connected(server.url, 'luis', roomId);
 
-      // Act: the second dilemma before the first.
+      // Act: the second dilemma during the first round.
       luis.send({ type: 'answer-dilemma', ...firstVoteOf(dilemmas[1]) });
 
       // Assert
       expect(await luis.next('error')).toEqual({
         type: 'error',
         command: 'answer-dilemma',
-        code: 'dilemma-not-reached',
+        code: 'dilemma-not-in-round',
       });
     });
   });
@@ -342,7 +351,7 @@ describe('RoomSocketServer', () => {
   describe('messages that cannot be read', () => {
     it.each([
       ['text that is not JSON', 'not json', null],
-      ['a type no schema knows', { type: 'start-reveal' }, null],
+      ['a type no schema knows', { type: 'move-reveal' }, null],
       [
         'a known type with a wrong shape',
         { type: 'answer-dilemma', dilemmaId: '' },

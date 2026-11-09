@@ -4,6 +4,7 @@ import type {
   ErrorDto,
   GameStateDto,
   RoomStateDto,
+  AnswerDilemmaDto,
 } from '@thelever-app/protocol';
 import {
   createContext,
@@ -15,11 +16,15 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { noteServerTime } from '../game/remaining-time.ts';
 import type { RoomConnection, RoomConnectionStatus } from './room-connection.ts';
 import { INITIAL_ROOM_STATE, roomReducer } from './room-reducer.ts';
 
 /** What a player sends once in the room: anything but saying who connects. */
 export type RoomCommandDto = Exclude<ClientMessageDto, { readonly type: 'connect' }>;
+
+/** The answer to a dilemma as the screen holds it, complete or not yet. */
+export type AnswerDraft = Omit<AnswerDilemmaDto, 'type' | 'traceparent'>;
 
 interface Room {
   /** The room while the player is in its lobby. */
@@ -31,7 +36,8 @@ interface Room {
   /** The last message the server rejected, until the next state or until the player dismisses it. */
   readonly rejection: ErrorDto | undefined;
   readonly send: (command: RoomCommandDto) => void;
-  readonly answerDilemma: (dilemmaId: string, vote: string) => void;
+  /** The answer to a dilemma as it stands: the vote and, in a nominal room, the predictions made. */
+  readonly answerDilemma: (answer: AnswerDraft) => void;
   readonly dismissRejection: () => void;
 }
 
@@ -53,7 +59,14 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
     INITIAL_ROOM_STATE,
   );
 
-  useEffect(() => connection.subscribe(dispatch), [connection]);
+  useEffect(
+    () =>
+      connection.subscribe((message) => {
+        if (message.type === 'game-state') noteServerTime(message.serverTime);
+        dispatch(message);
+      }),
+    [connection],
+  );
 
   // The status lives in the connection, not in React: React reads it as it renders, so it is never stale.
   const subscribeStatus = useCallback(
@@ -71,8 +84,8 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
   );
 
   const answerDilemma = useCallback(
-    (dilemmaId: string, vote: string) => {
-      send({ type: 'answer-dilemma', dilemmaId, vote });
+    (answer: AnswerDraft) => {
+      send({ type: 'answer-dilemma', ...answer });
     },
     [send],
   );

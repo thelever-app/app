@@ -48,12 +48,12 @@ Feature: Create a room
     Given a host whose device is in English
     When the host creates a room
     Then the dilemmas of the room are in English
-    And the room has default categories, number of dilemmas and total time
+    And the room has default categories, number of dilemmas and time per dilemma
 
   @ui
   Scenario: The host changes the configuration before starting
     Given a host in the lobby
-    When the host changes the dilemma language, the categories, the number of dilemmas or the total time
+    When the host changes the dilemma language, the categories, the number of dilemmas or the time per dilemma
     Then the game uses the new configuration
 
   @ui

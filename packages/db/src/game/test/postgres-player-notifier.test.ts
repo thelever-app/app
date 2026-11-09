@@ -4,7 +4,12 @@ import { W3CTraceContextPropagator } from '@opentelemetry/core';
 import { context, propagation, trace, TraceFlags } from '@opentelemetry/api';
 import {
   ConnectionChangedEvent,
+  HostChangedEvent,
   LobbyChangedEvent,
+  PlayerLeftEvent,
+  AnsweredCountChangedEvent,
+  DilemmaRevealedEvent,
+  RoundStartedEvent,
   ProgressUpdatedEvent,
   type DomainEvent,
 } from '@thelever-app/game';
@@ -84,6 +89,29 @@ describe('PostgresPlayerNotifier', () => {
       expect(received[0]?.event).toBeInstanceOf(ProgressUpdatedEvent);
       expect(received[1]?.event).toBeInstanceOf(ConnectionChangedEvent);
       expect(received[2]?.event).toBeInstanceOf(LobbyChangedEvent);
+    });
+
+    it('should deliver the events of the decision phase, rebuilt', async () => {
+      // Arrange
+      const received = await listening();
+      const notifier = new PostgresPlayerNotifier(database.db());
+      const events = [
+        new AnsweredCountChangedEvent('TestGameId', 2, 8),
+        new DilemmaRevealedEvent('TestGameId', 0, 9),
+        new RoundStartedEvent('TestGameId', 1, 'TestMartaId', 10),
+        new HostChangedEvent('TestRoomId', 'TestLuisId', 5),
+        new PlayerLeftEvent('TestRoomId', 'TestAnaId', true, 6),
+      ];
+
+      // Act
+      for (const event of events) await notifier.notify(['TestLuisId'], event);
+
+      // Assert
+      await until(() => received.length === events.length);
+      expect(received.map(({ event }) => event)).toEqual(events);
+      received.forEach(({ event }, index) =>
+        expect(event).toBeInstanceOf(events[index]!.constructor),
+      );
     });
 
     it('should deliver what a command notifies only once it commits', async () => {

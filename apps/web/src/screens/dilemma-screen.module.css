@@ -1,0 +1,36 @@
+.thanks {
+  margin: 0;
+}
+
+/* The signal yellow on the ink of the card. */
+.signal {
+  color: #ffd23f;
+  font-weight: 600;
+}
+
+.skipRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+}
+
+.muted {
+  font-size: 13px;
+  line-height: 18px;
+  color: #b8af9c;
+}
+
+.skip {
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 10px;
+  background: #ffd23f;
+  color: #17140f;
+  font-size: var(--type-label-size);
+  font-weight: 600;
+  cursor: pointer;
+}

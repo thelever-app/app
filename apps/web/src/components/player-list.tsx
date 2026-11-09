@@ -1,27 +1,31 @@
 import type { GameStateDto } from '@thelever-app/protocol';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from './icon.tsx';
-import { hasFinished, usePlayerName } from './players.ts';
+import { hasAnswered, pendingCountOf, usePlayerName } from './players.ts';
 import styles from './player-list.module.css';
 
 type Player = GameStateDto['players'][number];
 
 interface PlayerListProps {
-  readonly players: readonly Player[];
-  readonly dilemmaCount: number;
+  readonly game: Pick<GameStateDto, 'players' | 'answeredCount'>;
+  /** In an anonymous room nobody sees who answered, only how many. */
+  readonly anonymous: boolean;
 }
 
-export function PlayerList({ players, dilemmaCount }: PlayerListProps) {
+/** Who answered the dilemma of the round and who is still to; never what anybody answered. */
+export function PlayerList({ game, anonymous }: PlayerListProps) {
+  return anonymous ? <AnsweredCount game={game} /> : <WhoAnswered players={game.players} />;
+}
+
+function WhoAnswered({ players }: { readonly players: readonly Player[] }) {
   const { t } = useTranslation();
   const pendingId = useId();
   const doneId = useId();
-
   const nameOf = usePlayerName();
-  const pending = players
-    .filter((player) => !hasFinished(player, dilemmaCount))
-    .toSorted((a, b) => a.progress - b.progress);
-  const done = players.filter((player) => hasFinished(player, dilemmaCount));
+  const pending = players.filter((player) => !player.left && !hasAnswered(player));
+  const done = players.filter(hasAnswered);
 
   return (
     <div className={styles.list}>
@@ -30,33 +34,9 @@ export function PlayerList({ players, dilemmaCount }: PlayerListProps) {
           <h2 id={pendingId} className={styles.heading}>
             {t('playerList.pending', { count: pending.length })}
           </h2>
-          <ul className={styles.pending}>
+          <ul className={styles.players}>
             {pending.map((player) => (
-              <li key={player.playerId} className={styles.pendingPlayer}>
-                <div className={styles.pendingLine}>
-                  <span className={styles.name}>
-                    {nameOf(player)}
-                    {!player.connected && (
-                      <span className={styles.disconnected}>
-                        {' · '}
-                        {t('playerList.disconnected')}
-                      </span>
-                    )}
-                  </span>
-                  <span className={styles.count}>
-                    {t('playerList.progressCount', {
-                      progress: player.progress,
-                      total: dilemmaCount,
-                    })}
-                  </span>
-                </div>
-                <progress
-                  className={styles.bar}
-                  max={dilemmaCount}
-                  value={player.progress}
-                  aria-label={t('playerList.progressOf', { name: nameOf(player) })}
-                />
-              </li>
+              <PlayerRow key={player.playerId} player={player} name={nameOf(player)} />
             ))}
           </ul>
         </section>
@@ -68,8 +48,15 @@ export function PlayerList({ players, dilemmaCount }: PlayerListProps) {
         <ul className={styles.done}>
           {done.map((player) => (
             <li key={player.playerId} className={styles.donePlayer}>
+              <Avatar avatar={player.avatar} size="xs" dimmed={!player.connected} />
               {nameOf(player)}
-              <span role="img" aria-label={t('playerList.finished')} className={styles.finished}>
+              {!player.connected && (
+                <span className={styles.disconnected}>
+                  {' · '}
+                  {t('playerList.disconnected')}
+                </span>
+              )}
+              <span role="img" aria-label={t('playerList.answered')} className={styles.answered}>
                 <Icon name="checkCircle" size={18} />
               </span>
             </li>
@@ -77,5 +64,59 @@ export function PlayerList({ players, dilemmaCount }: PlayerListProps) {
         </ul>
       </section>
     </div>
+  );
+}
+
+function AnsweredCount({
+  game,
+}: {
+  readonly game: Pick<GameStateDto, 'players' | 'answeredCount'>;
+}) {
+  const { t } = useTranslation();
+  const roomId = useId();
+  const nameOf = usePlayerName();
+  const inRoom = game.players.filter(({ left }) => !left);
+  const pending = pendingCountOf(game);
+
+  return (
+    <div className={styles.list}>
+      <section className={styles.count}>
+        <p className={styles.countLine}>
+          <span className={styles.countNumber}>{game.answeredCount}</span>{' '}
+          {t('playerList.anonymousAnswered', { count: game.answeredCount })}
+          {' · '}
+          {t('playerList.anonymousPending', { count: pending })}
+        </p>
+        <p className={styles.note}>{t('playerList.anonymousNote')}</p>
+      </section>
+      <section className={styles.section} aria-labelledby={roomId}>
+        <h2 id={roomId} className={styles.heading}>
+          {t('playerList.inRoom', { count: inRoom.length })}
+        </h2>
+        <ul className={styles.players}>
+          {inRoom.map((player) => (
+            <PlayerRow key={player.playerId} player={player} name={nameOf(player)} />
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function PlayerRow({ player, name }: { readonly player: Player; readonly name: string }) {
+  const { t } = useTranslation();
+  return (
+    <li className={styles.player}>
+      <Avatar avatar={player.avatar} size="s" dimmed={!player.connected} />
+      <span className={styles.name}>
+        {name}
+        {!player.connected && (
+          <span className={styles.disconnected}>
+            {' · '}
+            {t('playerList.disconnected')}
+          </span>
+        )}
+      </span>
+    </li>
   );
 }

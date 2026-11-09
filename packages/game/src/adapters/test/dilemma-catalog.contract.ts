@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { DilemmaNotFoundError } from '../../application/errors/dilemma-not-found.error.ts';
-import type {
-  CatalogDilemma,
-  DilemmaCatalog,
-  DilemmaContent,
-  DilemmaSearch,
+import {
+  GAP_MARKER,
+  type CatalogDilemma,
+  type DilemmaCatalog,
+  type DilemmaContent,
+  type DilemmaSearch,
 } from '../../application/ports/dilemma-catalog.port.ts';
 
 /**
  * The public dilemmas every implementation stores before each test: their ids are its own. The
- * first one is for everyone, the second one for adults and the third one is in exploration.
+ * first one is for everyone, the second one for adults, with the gap, and the third one is in exploration.
  */
 export const CONTRACT_DILEMMAS = [
   {
@@ -21,7 +22,7 @@ export const CONTRACT_DILEMMAS = [
     status: 'in-catalog',
   },
   {
-    text: 'TestText2',
+    text: `TestText2 about ${GAP_MARKER}`,
     options: ['TestOptionC', 'TestOptionD', 'TestOptionE'],
     category: 'loyalty',
     tags: [],
@@ -67,7 +68,7 @@ export function describeDilemmaCatalogContract(
 ): void {
   describe(`${name} (DilemmaCatalog contract)`, () => {
     describe('findOptionIds', () => {
-      it('should return the current version and the ids of the options of each dilemma, in the order asked for', async () => {
+      it('should return the current version, the ids of the options and whether it has the gap of each dilemma, in the order asked for', async () => {
         // Arrange
         const { catalog, stored } = await create();
         const [first, second] = stored as [DilemmaContent, DilemmaContent];
@@ -81,11 +82,13 @@ export function describeDilemmaCatalogContract(
             dilemmaId: second.dilemmaId,
             version: 1,
             optionIds: second.options.map(({ optionId }) => optionId),
+            hasGap: true,
           },
           {
             dilemmaId: first.dilemmaId,
             version: 1,
             optionIds: first.options.map(({ optionId }) => optionId),
+            hasGap: false,
           },
         ]);
       });
@@ -118,7 +121,7 @@ export function describeDilemmaCatalogContract(
 
         // Assert
         expect(contents).toEqual([second, first]);
-        expect(contents.map(({ text }) => text)).toEqual(['TestText2', 'TestText1']);
+        expect(contents.map(({ text }) => text)).toEqual([CONTRACT_DILEMMAS[1].text, 'TestText1']);
         expect(first.options.map(({ text }) => text)).toEqual(['TestOptionA', 'TestOptionB']);
       });
 

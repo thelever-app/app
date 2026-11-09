@@ -22,6 +22,7 @@ async function arrange() {
       notifier,
       idGenerator: lobby.idGenerator,
       randomness: lobby.randomness,
+      clock: lobby.clock,
     },
     EXPLORATION_SLOTS,
   );
@@ -138,7 +139,7 @@ describe('StartGameUseCase', () => {
       await changeSettings.execute({
         roomId,
         playerId: anaId,
-        changes: { variant: 'anonymous', totalTimeInMinutes: 10, dilemmaLanguage: 'ca' },
+        changes: { variant: 'anonymous', timePerDilemmaSeconds: 60, dilemmaLanguage: 'ca' },
       });
 
       // Act
@@ -150,7 +151,7 @@ describe('StartGameUseCase', () => {
         groupNature: 'friends',
         place: 'together',
         dilemmaLanguage: 'ca',
-        totalTimeInMinutes: 10,
+        timePerDilemmaSeconds: 60,
       });
     });
 

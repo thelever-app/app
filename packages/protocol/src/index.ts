@@ -10,7 +10,8 @@ export {
   ErrorDto,
   ExpelledDto,
   GameStateDto,
-  ProgressUpdatedDto,
+  PlayerAnsweredDto,
+  AnsweredCountDto,
   RoomStateDto,
   ServerMessageDto,
 } from './server-messages.ts';
@@ -34,6 +35,13 @@ export {
   RemoveAddedDilemmaDto,
   RoomSettingsDto,
   StartGameDto,
+  RevealEarlyDto,
+  MoveOnDto,
+  LeaveRoomDto,
+  ReportReasonDto,
+  ReportDilemmaDto,
+  SkipDilemmaDto,
+  GAP_MARKER,
   TraceparentDto,
 } from './client-messages.ts';
 export { CreateRoomRequestDto, CreateRoomResponseDto } from './http/create-room.ts';

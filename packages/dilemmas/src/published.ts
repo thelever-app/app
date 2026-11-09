@@ -15,3 +15,4 @@ export {
   type SearchDilemmasOutput,
 } from './application/use-cases/search-dilemmas.use-case.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
+export { GAP_MARKER } from './domain/vos/gap.ts';

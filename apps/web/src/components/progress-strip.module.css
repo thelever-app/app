@@ -6,15 +6,24 @@
   background: var(--color-surface);
 }
 
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .position {
   composes: signage from '../styles/typography.module.css';
+  flex-grow: 1;
+  margin: 0;
   color: var(--color-ink-muted);
 }
 
 .group {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2);
+  min-height: 36px;
 }
 
 .players {
@@ -24,34 +33,49 @@
 }
 
 .player {
+  position: relative;
   display: flex;
-  flex-direction: column;
+  border-radius: var(--radius-full);
+}
+
+/* Who moved everyone on to the round wears an ink ring while the strip says so. */
+.player[data-mover] {
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-ink);
+}
+
+/* Whoever answered the dilemma of the round has a check on their avatar. */
+.check {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  min-width: 36px;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  box-shadow: 0 0 0 2px var(--color-surface);
 }
 
-/* Until the avatars arrive, the nickname stands in their place. */
+/* The avatar says who it is on screen; the nickname and whether they answered are there for whoever cannot see it. */
 .name {
-  max-width: 64px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  clip-path: inset(50%);
   white-space: nowrap;
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line-height);
+}
+
+.answeredCount {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
   font-weight: 500;
-}
-
-.count {
-  composes: caption from '../styles/typography.module.css';
-  font-weight: 400;
-  color: var(--color-ink-muted);
-}
-
-/* Whoever has finished has their counter in ink and bold. */
-.count[data-finished='true'] {
-  font-weight: 600;
-  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
 }
 
 .more {
@@ -68,7 +92,20 @@
   font-weight: 500;
 }
 
-.showAll {
+.showAll,
+.movedOn {
   margin-left: auto;
-  align-self: center;
+}
+
+.movedOn {
+  composes: caption from '../styles/typography.module.css';
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-weight: 600;
+  white-space: nowrap;
 }

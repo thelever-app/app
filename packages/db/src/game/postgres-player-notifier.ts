@@ -1,11 +1,16 @@
 import { context, propagation } from '@opentelemetry/api';
 import {
+  AnsweredCountChangedEvent,
   ConnectionChangedEvent,
+  DilemmaRevealedEvent,
   type DomainEvent,
+  HostChangedEvent,
   type LobbyChange,
   LobbyChangedEvent,
+  PlayerLeftEvent,
   type PlayerNotifier,
   ProgressUpdatedEvent,
+  RoundStartedEvent,
 } from '@thelever-app/game';
 import { type Kysely, sql } from 'kysely';
 import type { GameTables } from '../schema.ts';
@@ -76,6 +81,46 @@ export function readNotification(payload: string): Notification {
           Number(event.roomVersion),
         ),
       };
+    default:
+      return { playerIds, trace, publishedAt, event: decisionPhaseEventOf(event) };
+  }
+}
+
+/** The events of the rounds, rebuilt from their plain fields. */
+function decisionPhaseEventOf(event: Record<string, unknown>): DomainEvent {
+  switch (event.type) {
+    case 'AnsweredCountChanged':
+      return new AnsweredCountChangedEvent(
+        String(event.gameId),
+        Number(event.answeredCount),
+        Number(event.gameVersion),
+      );
+    case 'DilemmaRevealed':
+      return new DilemmaRevealedEvent(
+        String(event.gameId),
+        Number(event.position),
+        Number(event.gameVersion),
+      );
+    case 'RoundStarted':
+      return new RoundStartedEvent(
+        String(event.gameId),
+        Number(event.position),
+        String(event.movedOnBy),
+        Number(event.gameVersion),
+      );
+    case 'HostChanged':
+      return new HostChangedEvent(
+        String(event.roomId),
+        String(event.hostId),
+        Number(event.roomVersion),
+      );
+    case 'PlayerLeft':
+      return new PlayerLeftEvent(
+        String(event.roomId),
+        String(event.playerId),
+        Boolean(event.left),
+        Number(event.roomVersion),
+      );
     default:
       throw new Error(`no event of type ${String(event.type)} travels between instances`);
   }

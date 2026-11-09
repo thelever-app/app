@@ -1,7 +1,12 @@
 import {
+  AnsweredCountChangedEvent,
   ConnectionChangedEvent,
+  DilemmaRevealedEvent,
+  HostChangedEvent,
   LobbyChangedEvent,
+  PlayerLeftEvent,
   ProgressUpdatedEvent,
+  RoundStartedEvent,
   type DomainEvent,
   type PlayerNotifier,
 } from '@thelever-app/game';
@@ -12,11 +17,13 @@ import type { StateSender } from './state-sender.ts';
 /** The message a player receives for each event, or undefined if the event never leaves the server as is. */
 function messageFor(event: DomainEvent): ServerMessageDto | undefined {
   if (event instanceof ProgressUpdatedEvent) {
+    return { type: 'player-answered', gameVersion: event.gameVersion, playerId: event.playerId };
+  }
+  if (event instanceof AnsweredCountChangedEvent) {
     return {
-      type: 'progress-updated',
+      type: 'answered-count',
       gameVersion: event.gameVersion,
-      playerId: event.playerId,
-      progress: event.progress,
+      answeredCount: event.answeredCount,
     };
   }
   if (event instanceof ConnectionChangedEvent) {
@@ -31,9 +38,18 @@ function messageFor(event: DomainEvent): ServerMessageDto | undefined {
 }
 
 /**
- * Delivers the events of the use cases to the connections of each player in this instance. A change
- * of the lobby reaches each player as the state they may see after it, which differs per player.
+ * The events that reach each player as the state they may see after them, which differs per
+ * player: a change of the lobby, and the changes of the rounds that redraw the screen.
  */
+const SENT_AS_STATE = [
+  LobbyChangedEvent,
+  DilemmaRevealedEvent,
+  RoundStartedEvent,
+  HostChangedEvent,
+  PlayerLeftEvent,
+] as const;
+
+/** Delivers the events of the use cases to the connections of each player in this instance. */
 export class SocketNotifier implements PlayerNotifier {
   readonly #connections = new Map<string, Set<RoomConnection>>();
   readonly #stateSender: Pick<StateSender, 'send'>;
@@ -55,7 +71,13 @@ export class SocketNotifier implements PlayerNotifier {
   }
 
   async notify(playerIds: readonly string[], event: DomainEvent): Promise<void> {
-    if (event instanceof LobbyChangedEvent) {
+    if (event instanceof PlayerLeftEvent && event.left) {
+      // Every connection of who left closes, here and in every instance that hears of it.
+      this.#closeAll(event.playerId);
+      await this.#sendStates(playerIds.filter((playerId) => playerId !== event.playerId));
+      return;
+    }
+    if (SENT_AS_STATE.some((type) => event instanceof type)) {
       await this.#sendStates(playerIds);
       return;
     }
@@ -77,6 +99,14 @@ export class SocketNotifier implements PlayerNotifier {
     if (delivered === 'sent') return;
     this.unregister(session.playerId, connection);
     connection.socket.close(1000, 'expelled');
+  }
+
+  #closeAll(playerId: string): void {
+    for (const connection of [...(this.#connections.get(playerId) ?? [])]) {
+      this.unregister(playerId, connection);
+      connection.session = undefined;
+      connection.socket.close(1000, 'left');
+    }
   }
 
   async #sendStates(playerIds: readonly string[]): Promise<void> {

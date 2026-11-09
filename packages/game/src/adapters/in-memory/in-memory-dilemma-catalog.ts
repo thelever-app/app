@@ -1,9 +1,10 @@
 import { DilemmaNotFoundError } from '../../application/errors/dilemma-not-found.error.ts';
-import type {
-  CatalogDilemma,
-  DilemmaCatalog,
-  DilemmaContent,
-  DilemmaSearch,
+import {
+  GAP_MARKER,
+  type CatalogDilemma,
+  type DilemmaCatalog,
+  type DilemmaContent,
+  type DilemmaSearch,
 } from '../../application/ports/dilemma-catalog.port.ts';
 import type { GameDilemma } from '../../domain/entities/game.ts';
 
@@ -38,11 +39,17 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
   }
 
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
-    return dilemmaIds.map((dilemmaId) => ({
-      dilemmaId,
-      version: VERSION,
-      optionIds: this.#dilemmaOf(dilemmaId).options.map(({ optionId }) => optionId),
-    }));
+    return dilemmaIds.map((dilemmaId) => {
+      const { text, options } = this.#dilemmaOf(dilemmaId);
+      return {
+        dilemmaId,
+        version: VERSION,
+        optionIds: options.map(({ optionId }) => optionId),
+        hasGap: [text, ...options.map((option) => option.text)].some((field) =>
+          field.includes(GAP_MARKER),
+        ),
+      };
+    });
   }
 
   async findContents(

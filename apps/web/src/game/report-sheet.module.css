@@ -1,0 +1,100 @@
+.overlay {
+  composes: overlay from './sheet.module.css';
+}
+
+.sheet {
+  composes: sheet from './sheet.module.css';
+  gap: var(--space-4);
+}
+
+.handle {
+  composes: handle from './sheet.module.css';
+}
+
+.title {
+  font-family: var(--type-title-family);
+  font-size: 25px;
+  line-height: 30px;
+  font-weight: 600;
+}
+
+.reasons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.reason {
+  min-height: 48px;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reason[data-state='checked'] {
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+.commentLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 500;
+}
+
+.comment {
+  padding: var(--space-3) 14px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 400;
+  resize: none;
+}
+
+.hint {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: -6px 0 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-ink-muted);
+}
+
+.counter {
+  font-variant-numeric: tabular-nums;
+}
+
+.send {
+  composes: primary from '../styles/buttons.module.css';
+  min-height: 52px;
+}
+
+.send:disabled {
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  box-shadow: none;
+  cursor: default;
+}
+
+.note {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-ink-muted);
+  text-align: center;
+}

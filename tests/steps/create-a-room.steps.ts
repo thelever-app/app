@@ -14,7 +14,7 @@ const NEW_CONFIGURATION: Partial<SettingsView> = {
   dilemmaLanguage: 'fr',
   categories: ['honesty'],
   dilemmaCount: 6,
-  totalTimeInMinutes: 4,
+  timePerDilemmaSeconds: 30,
 };
 
 function codeOf(language: string): string {
@@ -132,12 +132,12 @@ Then('the dilemmas of the room are in {word}', async function (this: GameWorld, 
 });
 
 Then(
-  'the room has default categories, number of dilemmas and total time',
+  'the room has default categories, number of dilemmas and time per dilemma',
   async function (this: GameWorld) {
     const settings = await this.driver.settingsSeenBy(await this.host());
     assert.equal(settings.categories, null, 'the room does not start with every category');
     assert.ok(settings.dilemmaCount > 0, 'the room has no number of dilemmas');
-    assert.ok(settings.totalTimeInMinutes > 0, 'the room has no total time');
+    assert.ok(settings.timePerDilemmaSeconds > 0, 'the room has no time per dilemma');
   },
 );
 
@@ -146,7 +146,7 @@ Given('a host in the lobby', async function (this: GameWorld) {
 });
 
 When(
-  'the host changes the dilemma language, the categories, the number of dilemmas or the total time',
+  'the host changes the dilemma language, the categories, the number of dilemmas or the time per dilemma',
   async function (this: GameWorld) {
     this.changes = NEW_CONFIGURATION;
     await this.driver.changeSettings(await this.host(), this.changes);
@@ -158,7 +158,7 @@ Then('the game uses the new configuration', async function (this: GameWorld) {
   const settings = await this.driver.settingsOfTheGame();
 
   assert.equal(settings.dilemmaLanguage, this.changes.dilemmaLanguage);
-  assert.equal(settings.totalTimeInMinutes, this.changes.totalTimeInMinutes);
+  assert.equal(settings.timePerDilemmaSeconds, this.changes.timePerDilemmaSeconds);
   assert.equal(dilemmas.length, this.changes.dilemmaCount);
   for (const dilemmaId of dilemmas) {
     assert.ok(this.changes.categories?.includes(this.driver.catalogEntryOf(dilemmaId).category));
@@ -175,7 +175,7 @@ Given(
 
 When('{string} changes the configuration', async function (this: GameWorld, host: string) {
   await this.hostIs(host);
-  this.changes = { variant: 'anonymous', categories: ['honesty'], totalTimeInMinutes: 8 };
+  this.changes = { variant: 'anonymous', categories: ['honesty'], timePerDilemmaSeconds: 90 };
   await this.driver.changeSettings(host, this.changes);
 });
 
