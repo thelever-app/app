@@ -12,9 +12,12 @@ import {
   LeaveRoomUseCase,
   PREDICTION_LIMIT,
   ReportDilemmaUseCase,
-  RunOutTotalTimeUseCase,
+  MoveOnUseCase,
+  RevealEarlyUseCase,
+  RunOutRoundUseCase,
   SkipDilemmaUseCase,
-  StartRevealUseCase,
+  DecisionPhaseOverError,
+  DilemmaSkippedError,
   VoteMissingError,
   type Seal,
   type VotePrediction,
@@ -51,6 +54,7 @@ import {
   type InMemoryDilemma,
 } from '@thelever-app/game/in-memory';
 import type {
+  AnswerPlan,
   CatalogEntry,
   Declaration,
   GameDriver,
@@ -60,6 +64,7 @@ import type {
   PlayerView,
   RecordedAnswer,
   ReportReason,
+  RevealView,
   RoomChoices,
   RoomPreview,
   SettingsView,
@@ -69,6 +74,7 @@ import {
   EXPLORATION_SLOTS,
   explorationSlotsFor,
   TEST_DILEMMAS,
+  TWO_OPTION_DILEMMA_IDS,
 } from './test-catalog.ts';
 
 /** Test data: the vote the driver casts when a step does not say which one; the first option. */
@@ -171,8 +177,9 @@ export class AcceptanceDriver implements GameDriver {
   readonly #getGameState: GetGameStateUseCase;
   readonly #connectPlayer: ConnectPlayerUseCase;
   readonly #disconnectPlayer: DisconnectPlayerUseCase;
-  readonly #startReveal: StartRevealUseCase;
-  readonly #runOutTotalTime: RunOutTotalTimeUseCase;
+  readonly #revealEarly: RevealEarlyUseCase;
+  readonly #runOutRound: RunOutRoundUseCase;
+  readonly #moveOn: MoveOnUseCase;
   readonly #leaveRoom: LeaveRoomUseCase;
   readonly #reportDilemma: ReportDilemmaUseCase;
   readonly #skipDilemma: SkipDilemmaUseCase;
@@ -243,10 +250,11 @@ export class AcceptanceDriver implements GameDriver {
       clock,
     });
     this.#getGameState = new GetGameStateUseCase(rooms, this.#gameRepository, catalog);
-    this.#connectPlayer = new ConnectPlayerUseCase(rooms, notifier, idGenerator);
+    this.#connectPlayer = new ConnectPlayerUseCase(rooms, games, notifier, idGenerator);
     this.#disconnectPlayer = new DisconnectPlayerUseCase(rooms, games, notifier);
-    this.#startReveal = new StartRevealUseCase(rooms, games, notifier);
-    this.#runOutTotalTime = new RunOutTotalTimeUseCase(rooms, games, notifier, clock);
+    this.#revealEarly = new RevealEarlyUseCase(rooms, games, notifier, clock);
+    this.#runOutRound = new RunOutRoundUseCase(rooms, games, notifier, clock);
+    this.#moveOn = new MoveOnUseCase(rooms, games, notifier, clock);
     this.#leaveRoom = new LeaveRoomUseCase(rooms, games, notifier);
     this.#skipDilemma = new SkipDilemmaUseCase({
       roomRepository: rooms,
@@ -568,29 +576,80 @@ export class AcceptanceDriver implements GameDriver {
     return explorationSlotsFor(dilemmaCount);
   }
 
-  // Decision phase
+  // Rounds
 
-  async startDecisionPhase(): Promise<void> {
-    await this.startGame(this.#hostName());
+  async startDecisionPhase(dilemmaCount?: number): Promise<void> {
+    const host = this.#hostName();
+    const { pickedDilemmas, addedDilemmas } = await this.#roomStateOf(host);
+    if (dilemmaCount !== undefined && pickedDilemmas.length === 0 && addedDilemmas.length === 0) {
+      await this.pickDilemmas(host, TWO_OPTION_DILEMMA_IDS.slice(0, dilemmaCount));
+    }
+    await this.startGame(host);
 
-    // Every player has the game open, as their device would after the phase starts.
+    // Every player has the game open, as their device would after the game starts.
     for (const player of this.#players.keys()) {
       if (this.#players.get(player)?.playerId) await this.reconnect(player);
     }
   }
 
-  /** Answers the first `count` dilemmas of the game, in order. */
-  async answerDilemmas(player: string, count: number): Promise<void> {
-    for (const dilemmaId of (await this.dilemmasOfTheGame()).slice(0, count)) {
-      await this.#answer(player, dilemmaId, VOTE);
-    }
+  async messagesReceivedByOthers(player: string): Promise<object[]> {
+    const playerId = this.#playerIdOf(player);
+    return [...this.#players.values()]
+      .map((other) => other.playerId)
+      .filter((id): id is string => id !== undefined && id !== playerId)
+      .flatMap((id) => this.#notifier.receivedBy(id));
   }
 
-  async changeVote(player: string, position: number): Promise<void> {
-    const [previous] = (await this.votesCastFor(player, position)).slice(-1);
+  async votesCastBy(player: string): Promise<string[]> {
+    return (this.#votes.get(player) ?? []).map(({ vote }) => vote);
+  }
+
+  async answer(player: string, plan: AnswerPlan = {}): Promise<void> {
+    const dilemma = await this.#roundDilemmaOf(player);
+    const nominal = (await this.settingsOfTheGame()).variant === 'nominal';
+    const draft = {
+      dilemmaId: dilemma.dilemmaId,
+      vote: plan.vote ? optionIdOf(dilemma.dilemmaId, plan.vote) : VOTE,
+      matchPrediction: nominal
+        ? plan.matchPrediction === undefined
+          ? MATCH_PREDICTION
+          : plan.matchPrediction
+        : null,
+      votePredictions:
+        nominal && plan.votePredictions !== false
+          ? dilemma.predictionSubset.map((playerId) => ({ playerId, vote: VOTE }))
+          : [],
+    };
+    this.#drafts.set(player, draft);
+    await this.#send(player, draft);
+  }
+
+  async vote(player: string, option?: string): Promise<void> {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    const draft = {
+      dilemmaId,
+      vote: option ? optionIdOf(dilemmaId, option) : VOTE,
+      matchPrediction: null,
+      votePredictions: [],
+    };
+    this.#drafts.set(player, draft);
+    await this.#send(player, draft);
+  }
+
+  /** The screen keeps the predictions made and sends them again with the new vote. */
+  async changeVote(player: string, option?: string): Promise<void> {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    const { answers } = await this.#gameStateOf(player);
+    const previous = answers.find((answer) => answer.dilemmaId === dilemmaId);
     if (!previous) throw new Error(`The scenario changes a vote ${player} never cast`);
-    const dilemmaId = await this.#dilemmaIdAt(position);
-    await this.#answer(player, dilemmaId, previous === VOTE ? OTHER_VOTE : VOTE);
+    const draft = {
+      dilemmaId,
+      vote: option ? optionIdOf(dilemmaId, option) : previous.vote === VOTE ? OTHER_VOTE : VOTE,
+      matchPrediction: previous.matchPrediction,
+      votePredictions: [...previous.votePredictions],
+    };
+    this.#drafts.set(player, draft);
+    await this.#send(player, draft);
   }
 
   async votesCastFor(player: string, position: number): Promise<string[]> {
@@ -606,9 +665,60 @@ export class AcceptanceDriver implements GameDriver {
     return answers.find((answer) => answer.dilemmaId === dilemmaId)?.vote;
   }
 
-  async votesRecordedFor(player: string): Promise<string[]> {
-    const { answers } = await this.#gameStateOf(player);
-    return answers.map(({ vote }) => vote);
+  /** Whether the application takes an answer of the player for the dilemma of the round. */
+  async canAnswer(player: string): Promise<boolean> {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    return this.#accepts(
+      () =>
+        this.#answerDilemma.execute({
+          roomId: this.#currentRoomId(),
+          playerId: this.#playerIdOf(player),
+          dilemmaId,
+          vote: VOTE,
+        }),
+      DecisionPhaseOverError,
+      DilemmaSkippedError,
+    );
+  }
+
+  async hasAnswered(player: string): Promise<boolean> {
+    return (await this.#currentGame()).hasAnswered(this.#playerIdOf(player));
+  }
+
+  async answeredSeenBy(viewer: string, player: string): Promise<boolean | null> {
+    const { players } = await this.#gameStateOf(viewer);
+    const seen = players.find(({ playerId }) => playerId === this.#playerIdOf(player));
+    if (!seen) throw new Error(`${viewer} does not see ${player} in the game`);
+    return seen.answered;
+  }
+
+  async answeredCountSeenBy(viewer: string): Promise<number> {
+    return (await this.#gameStateOf(viewer)).answeredCount;
+  }
+
+  /** Who answered travels as the progress of a player, or as whether each one answered. */
+  async whoAnsweredIsSent(): Promise<boolean> {
+    for (const [name, { playerId }] of this.#players) {
+      if (!playerId) continue;
+      if (
+        this.#notifier.receivedBy(playerId).some((event) => event instanceof ProgressUpdatedEvent)
+      ) {
+        return true;
+      }
+      const { players } = await this.#gameStateOf(name);
+      if (players.some(({ answered }) => answered !== null)) return true;
+    }
+    return false;
+  }
+
+  async isWaiting(player: string): Promise<boolean> {
+    const { round } = await this.#gameStateOf(player);
+    return round.phase === 'decision' && (await this.hasAnswered(player));
+  }
+
+  async timeLeftSeenBy(viewer: string): Promise<number> {
+    const { round } = await this.#gameStateOf(viewer);
+    return Math.round((round.endsAt.getTime() - this.#clock.now().getTime()) / 1000);
   }
 
   async disconnect(player: string): Promise<void> {
@@ -633,11 +743,8 @@ export class AcceptanceDriver implements GameDriver {
     connecting.connectionId = connectionId;
   }
 
-  /** Dilemmas are completed or skipped in order: the next one after their progress. */
   async dilemmaShownTo(player: string): Promise<number> {
-    const state = await this.#gameStateOf(player);
-    const progress = state.players.find(({ playerId }) => playerId === state.playerId)?.progress;
-    return (progress ?? 0) + 1;
+    return (await this.#gameStateOf(player)).round.position + 1;
   }
 
   /** What `viewer` knows about the connection of `player`: the last change they received. */
@@ -648,28 +755,6 @@ export class AcceptanceDriver implements GameDriver {
       .filter((event) => event instanceof ConnectionChangedEvent)
       .filter((event) => event.playerId === playerId);
     return changes.at(-1)?.connected;
-  }
-
-  /** What `viewer` knows about the progress of `player`: the last update they received. */
-  async progressSeenBy(viewer: string, player: string): Promise<number | undefined> {
-    const playerId = this.#playerIdOf(player);
-    const updates = this.#notifier
-      .receivedBy(this.#playerIdOf(viewer))
-      .filter((event) => event instanceof ProgressUpdatedEvent)
-      .filter((event) => event.playerId === playerId);
-    return updates.at(-1)?.progress;
-  }
-
-  async messagesReceivedByOthers(player: string): Promise<object[]> {
-    const playerId = this.#playerIdOf(player);
-    return [...this.#players.values()]
-      .map((other) => other.playerId)
-      .filter((id): id is string => id !== undefined && id !== playerId)
-      .flatMap((id) => this.#notifier.receivedBy(id));
-  }
-
-  async votesCastBy(player: string): Promise<string[]> {
-    return (this.#votes.get(player) ?? []).map(({ vote }) => vote);
   }
 
   async dilemmaTextSeenBy(player: string, position: number): Promise<string> {
@@ -693,6 +778,15 @@ export class AcceptanceDriver implements GameDriver {
         personInTheGap ? [[index + 1, this.#nameOf(personInTheGap)] as const] : [],
       ),
     );
+  }
+
+  async positionAddedBy(player: string): Promise<number> {
+    const playerId = this.#playerIdOf(player);
+    const index = (await this.#currentGame()).dilemmas.findIndex(
+      ({ addedBy }) => addedBy === playerId,
+    );
+    if (index === -1) throw new Error(`${player} added no dilemma of the game`);
+    return index + 1;
   }
 
   /** The game keeps the id of the dilemma; its text stays in Dilemmas, as it was written. */
@@ -759,36 +853,102 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   /** The time is over, and the room server runs it out as its timer would. */
-  async runOutTotalTime(): Promise<void> {
-    const endsAt = (await this.#currentGame()).totalTimeEndsAt;
-    if (!endsAt) throw new Error('The game has no total time running');
+  async runOutRound(): Promise<void> {
+    const endsAt = (await this.#currentGame()).round?.endsAt;
+    if (!endsAt) throw new Error('The game has no round in progress');
     this.#clock.advance(Math.max(0, endsAt.getTime() - this.#clock.now().getTime()));
-    await this.#runOutTotalTime.execute({ roomId: this.#currentRoomId() });
+    await this.#runOutRound.execute({ roomId: this.#currentRoomId() });
   }
 
-  async stragglersSeenBy(viewer: string): Promise<string[]> {
-    const { totalTimeRanOut, players, dilemmas } = await this.#gameStateOf(viewer);
-    if (!totalTimeRanOut) return [];
-    return players
-      .filter(({ progress, left }) => !left && progress < dilemmas.length)
-      .map(({ playerId }) => this.#nameOf(playerId));
+  async revealEarly(host: string): Promise<void> {
+    await this.#revealEarly.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(host),
+    });
   }
 
-  async vote(player: string, option?: string): Promise<void> {
-    const dilemmaId = await this.#dilemmaIdAt(await this.dilemmaShownTo(player));
-    const draft = {
-      dilemmaId,
-      vote: option ? optionIdOf(dilemmaId, option) : VOTE,
-      matchPrediction: null,
-      votePredictions: [],
+  /** The application lets the host reveal a dilemma early: the screen offers it to them. */
+  async canRevealEarly(player: string): Promise<boolean> {
+    const { hostId, playerId } = await this.#gameStateOf(player);
+    return hostId === playerId;
+  }
+
+  async revealSeenBy(viewer: string): Promise<RevealView | undefined> {
+    const { reveal } = await this.#gameStateOf(viewer);
+    if (!reveal) return undefined;
+    const { dilemmaId } = reveal;
+    return {
+      position: reveal.position + 1,
+      distribution:
+        reveal.distribution?.map(({ optionId, count }) => ({
+          option: optionTextOf(dilemmaId, optionId),
+          count,
+        })) ?? null,
+      tooFewVotes: reveal.tooFewVotes,
+      didNotVoteCount: reveal.didNotVoteCount,
+      votes: reveal.votes.map(({ playerId, vote }) => ({
+        player: this.#nameOf(playerId),
+        vote: vote && optionTextOf(dilemmaId, vote),
+      })),
+      matchPredictions: reveal.matchPredictions.map(({ playerId, distance }) => ({
+        player: this.#nameOf(playerId),
+        distance,
+      })),
+      closest: reveal.closestIds.map((playerId) => this.#nameOf(playerId)),
+      votePredictions: reveal.votePredictions.map(({ playerId, aboutId, right }) => ({
+        player: this.#nameOf(playerId),
+        about: this.#nameOf(aboutId),
+        right,
+      })),
+      personInTheGap: reveal.personInTheGap && this.#nameOf(reveal.personInTheGap),
+      addedBy: reveal.addedBy && this.#nameOf(reveal.addedBy),
+      showsPoints: /points/i.test(JSON.stringify(reveal)),
     };
-    this.#drafts.set(player, draft);
-    await this.#send(player, draft);
+  }
+
+  async moveOn(player: string): Promise<void> {
+    const { round } = await this.#gameStateOf(player);
+    await this.#moveOn.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+      fromPosition: round.position,
+    });
+  }
+
+  /** Both tap at once, from the round each of them sees. */
+  async moveOnTogether(players: readonly string[]): Promise<void> {
+    const moves = await Promise.all(
+      players.map(async (player) => ({
+        playerId: this.#playerIdOf(player),
+        fromPosition: (await this.#gameStateOf(player)).round.position,
+      })),
+    );
+    await Promise.all(
+      moves.map((move) => this.#moveOn.execute({ roomId: this.#currentRoomId(), ...move })),
+    );
+  }
+
+  async movedOnSeenBy(viewer: string): Promise<string | null> {
+    const { movedOnBy } = (await this.#gameStateOf(viewer)).round;
+    return movedOnBy && this.#nameOf(movedOnBy);
+  }
+
+  async moveOnNoticeCoversNothing(): Promise<boolean> {
+    throw new Error('The scenario checks the screen: it must be @screen');
+  }
+
+  async moveOnNoticeDisappears(): Promise<boolean> {
+    throw new Error('The scenario checks the screen: it must be @screen');
+  }
+
+  /** The application has no command to go back to a past round, and only gives the round in progress. */
+  async canGoBack(): Promise<boolean> {
+    return false;
   }
 
   /** The application turns down predictions without a vote: the screen offers none. */
   async canMakePredictions(player: string): Promise<boolean> {
-    const dilemmaId = await this.#dilemmaIdAt(await this.dilemmaShownTo(player));
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
     return this.#accepts(
       () =>
         this.#answerDilemma.execute({
@@ -862,7 +1022,7 @@ export class AcceptanceDriver implements GameDriver {
     await this.#reportDilemma.execute({
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(player),
-      dilemmaId: await this.#dilemmaIdAt(await this.dilemmaShownTo(player)),
+      dilemmaId: (await this.#roundDilemmaOf(player)).dilemmaId,
       reason,
     });
   }
@@ -871,25 +1031,8 @@ export class AcceptanceDriver implements GameDriver {
     await this.#skipDilemma.execute({
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(player),
-      dilemmaId: await this.#dilemmaIdAt(await this.dilemmaShownTo(player)),
+      dilemmaId: (await this.#roundDilemmaOf(player)).dilemmaId,
     });
-  }
-
-  async startReveal(host: string): Promise<void> {
-    await this.#startReveal.execute({
-      roomId: this.#currentRoomId(),
-      playerId: this.#playerIdOf(host),
-    });
-  }
-
-  /** The application lets the host start it during the decision phase: the screen offers it then. */
-  async canStartReveal(player: string): Promise<boolean> {
-    const { hostId, phase, playerId } = await this.#gameStateOf(player);
-    return phase === 'decision' && hostId === playerId;
-  }
-
-  async isInTheReveal(viewer: string): Promise<boolean> {
-    return (await this.#gameStateOf(viewer)).phase === 'reveal';
   }
 
   async hostSeenBy(viewer: string): Promise<string> {
@@ -902,6 +1045,14 @@ export class AcceptanceDriver implements GameDriver {
       playerId: this.#playerIdOf(player),
     });
     this.#playerCalled(player).connectionId = undefined;
+  }
+
+  /** The dilemma of the round in progress, as `player` gets it. */
+  async #roundDilemmaOf(player: string) {
+    const { dilemmas, round } = await this.#gameStateOf(player);
+    const dilemma = dilemmas[round.position];
+    if (!dilemma) throw new Error('The game has no dilemma for the round in progress');
+    return dilemma;
   }
 
   #draftOf(player: string) {
@@ -921,19 +1072,6 @@ export class AcceptanceDriver implements GameDriver {
     const found = [...this.#players].find(([, known]) => known.playerId === playerId);
     if (!found) throw new Error(`No player of the scenario has the id ${playerId}`);
     return found[0];
-  }
-
-  /** A complete answer: the vote and, in a nominal room, every prediction its subset asks for. */
-  async #answer(player: string, dilemmaId: string, vote: string): Promise<void> {
-    const { dilemmas } = await this.#gameStateOf(player);
-    const subset = dilemmas.find((dilemma) => dilemma.dilemmaId === dilemmaId)?.predictionSubset;
-    const nominal = (await this.settingsOfTheGame()).variant === 'nominal';
-    await this.#send(player, {
-      dilemmaId,
-      vote,
-      matchPrediction: nominal ? MATCH_PREDICTION : null,
-      votePredictions: (subset ?? []).map((playerId) => ({ playerId, vote: VOTE })),
-    });
   }
 
   async #send(

@@ -1,6 +1,6 @@
 import { setWorldConstructor, World, type IWorldOptions } from '@cucumber/cucumber';
 import { AcceptanceDriver } from './acceptance-driver.ts';
-import type { GameDriver, RoomChoices, SettingsView } from './driver.ts';
+import type { AnswerPlan, GameDriver, RoomChoices, SettingsView } from './driver.ts';
 import { E2eDriver } from './e2e-driver.ts';
 import { e2eStack } from './e2e-stack.ts';
 
@@ -58,6 +58,15 @@ export class GameWorld extends World {
 
   /** The vote predictions a step made. */
   predictions: readonly { readonly player: string; readonly vote: string }[] = [];
+
+  /** How many dilemmas the game plays when no step picks or adds them; the room decides if unset. */
+  dilemmaCount: number | undefined;
+
+  /**
+   * How each player answers the dilemma in each position (from 1) when a step brings the game to
+   * its reveal: their plan, or null for who does not vote. Who is not in it answers in full.
+   */
+  readonly plans = new Map<number, Map<string, AnswerPlan | null>>();
 
   #host: string | undefined;
   #choices: RoomChoices = {};
@@ -122,8 +131,45 @@ export class GameWorld extends World {
   async game(): Promise<void> {
     if (this.#gameStarted) return;
     await this.host();
-    await this.driver.startDecisionPhase();
+    await this.driver.startDecisionPhase(this.dilemmaCount);
     this.#gameStarted = true;
+  }
+
+  /** The plan of `player` for the dilemma in that position, which a later step follows. */
+  plan(position: number, player: string, plan: AnswerPlan | null): void {
+    const plans = this.plans.get(position) ?? new Map<string, AnswerPlan | null>();
+    plans.set(player, plan);
+    this.plans.set(position, plans);
+  }
+
+  /**
+   * The game is on the decision phase of the round of the dilemma in that position (from 1): each
+   * earlier round is revealed, as its plans say, and the host moves everyone on.
+   */
+  async toRound(position: number): Promise<void> {
+    await this.game();
+    const host = await this.host();
+    for (let current = await this.driver.dilemmaShownTo(host); current < position; current += 1) {
+      await this.toRevealOf(current);
+      await this.driver.moveOn(host);
+    }
+  }
+
+  /**
+   * The game is on the reveal of the dilemma in that position (from 1): whoever is present and has
+   * not answered answers as their plan says, and the host reveals it if someone did not vote.
+   */
+  async toRevealOf(position: number): Promise<void> {
+    await this.toRound(position);
+    const host = await this.host();
+    if ((await this.driver.revealSeenBy(host))?.position === position) return;
+    const plans = this.plans.get(position);
+    for (const player of this.present()) {
+      const plan = plans?.get(player);
+      if (plan === null || (await this.driver.hasAnswered(player))) continue;
+      await this.driver.answer(player, plan);
+    }
+    if (!(await this.driver.revealSeenBy(host))) await this.driver.revealEarly(host);
   }
 
   /** A step that sets up the game, so it must come before anything starts it. */

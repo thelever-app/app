@@ -11,34 +11,72 @@ Given(
   },
 );
 
-Given('the game is in the decision phase', function (this: GameWorld) {
+Given('the game has started', function (this: GameWorld) {
   this.requestGame();
 });
 
-When('{string} answers his third dilemma', async function (this: GameWorld, player: string) {
+When('the first round starts', async function (this: GameWorld) {
   await this.game();
-  await this.driver.answerDilemmas(player, 3);
 });
 
-Given(
-  '{string} has answered the first two dilemmas',
-  async function (this: GameWorld, player: string) {
+// Answering the dilemma of the round
+
+When('{string} answers the first dilemma', async function (this: GameWorld, player: string) {
+  await this.game();
+  await this.driver.answer(player);
+  this.player = player;
+});
+
+Given('{string} has answered the first dilemma', async function (this: GameWorld, player: string) {
+  await this.game();
+  await this.driver.answer(player);
+  this.player = player;
+});
+
+When(
+  '{string}, {string} and {string} answer the first dilemma',
+  async function (this: GameWorld, first: string, second: string, third: string) {
     await this.game();
-    await this.driver.answerDilemmas(player, 2);
+    for (const player of [first, second, third]) await this.driver.answer(player);
   },
 );
 
 When(
-  '{string} goes back to the first dilemma and changes his vote',
+  '{string} and {string} answer it',
+  async function (this: GameWorld, firstPlayer: string, secondPlayer: string) {
+    await this.toRound(this.position ?? 1);
+    await this.driver.answer(firstPlayer);
+    await this.driver.answer(secondPlayer);
+  },
+);
+
+Then(
+  '{string} waits for the others on the first dilemma',
   async function (this: GameWorld, player: string) {
-    await this.game();
-    await this.driver.changeVote(player, 1);
+    assert.equal(await this.driver.dilemmaShownTo(player), 1);
+    assert.ok(await this.driver.isWaiting(player), `${player} is not waiting for the others`);
+  },
+);
+
+Then(
+  'nobody gets the second dilemma before the first one is revealed',
+  async function (this: GameWorld) {
+    for (const player of this.present()) {
+      assert.equal(await this.driver.dilemmaShownTo(player), 1);
+      assert.equal(await this.driver.revealSeenBy(player), undefined);
+    }
+  },
+);
+
+When(
+  '{string} changes his vote before it is revealed',
+  async function (this: GameWorld, player: string) {
+    await this.driver.changeVote(player);
     this.changedAnswer = { player, position: 1 };
   },
 );
 
 Then('only his new vote counts for that dilemma', async function (this: GameWorld) {
-  await this.game();
   assert.ok(this.changedAnswer, 'no step changed an answer before');
   const { player, position } = this.changedAnswer;
   const [previous, current] = await this.driver.votesCastFor(player, position);
@@ -48,17 +86,22 @@ Then('only his new vote counts for that dilemma', async function (this: GameWorl
   assert.notEqual(recorded, previous);
 });
 
+Given('the first dilemma has been revealed', async function (this: GameWorld) {
+  await this.toRevealOf(1);
+});
+
+Then('no player can answer it or change their answer', async function (this: GameWorld) {
+  for (const player of this.present()) {
+    assert.equal(await this.driver.canAnswer(player), false, `${player} can still answer`);
+  }
+});
+
 Then(
-  '{string} and {string} see that {string} has answered {int} dilemmas',
-  async function (
-    this: GameWorld,
-    firstViewer: string,
-    secondViewer: string,
-    player: string,
-    answered: number,
-  ) {
-    assert.equal(await this.driver.progressSeenBy(firstViewer, player), answered);
-    assert.equal(await this.driver.progressSeenBy(secondViewer, player), answered);
+  '{string} and {string} see that {string} has answered it',
+  async function (this: GameWorld, firstViewer: string, secondViewer: string, player: string) {
+    for (const viewer of [firstViewer, secondViewer]) {
+      assert.equal(await this.driver.answeredSeenBy(viewer, player), true);
+    }
   },
 );
 
@@ -79,64 +122,80 @@ Then(
   },
 );
 
+// The time for the dilemma
+
 Given(
-  '{string} has answered {int} dilemmas',
-  async function (this: GameWorld, player: string, count: number) {
+  'the first dilemma started {int} seconds ago with a time per dilemma of {int} seconds',
+  async function (this: GameWorld, seconds: number, timePerDilemma: number) {
+    this.beforeTheGame();
+    await this.driver.changeSettings(await this.host(), { timePerDilemmaSeconds: timePerDilemma });
     await this.game();
-    await this.driver.answerDilemmas(player, count);
-  },
-);
-
-When('{string} disconnects', async function (this: GameWorld, player: string) {
-  await this.game();
-  await this.driver.disconnect(player);
-  this.away.add(player);
-});
-
-When(
-  '{string} reconnects during the decision phase',
-  async function (this: GameWorld, player: string) {
-    await this.game();
-    await this.driver.reconnect(player);
-    this.away.delete(player);
-    this.reconnectedPlayer = player;
-  },
-);
-
-Then('{string} is on his fourth dilemma', async function (this: GameWorld, player: string) {
-  await this.game();
-  assert.equal(await this.driver.dilemmaShownTo(player), 4);
-});
-
-Then('keeps his answers', async function (this: GameWorld) {
-  await this.game();
-  assert.ok(this.reconnectedPlayer, 'no step reconnected a player before');
-  const cast = await this.driver.votesCastBy(this.reconnectedPlayer);
-  assert.ok(cast.length > 0, `${this.reconnectedPlayer} did not vote`);
-
-  assert.deepEqual(await this.driver.votesRecordedFor(this.reconnectedPlayer), cast);
-});
-
-Then(
-  '{string} and {string} see {string} as disconnected',
-  async function (this: GameWorld, firstViewer: string, secondViewer: string, player: string) {
-    await this.game();
-    assert.equal(await this.driver.connectionSeenBy(firstViewer, player), false);
-    assert.equal(await this.driver.connectionSeenBy(secondViewer, player), false);
-    this.viewers = [firstViewer, secondViewer];
+    await this.driver.letTimePass(seconds);
   },
 );
 
 Then(
-  'they still see that {string} has answered {int} dilemmas',
-  async function (this: GameWorld, player: string, answered: number) {
-    await this.game();
-    assert.ok(this.viewers.length > 0, 'no step said who is looking');
-    for (const viewer of this.viewers) {
-      assert.equal(await this.driver.progressSeenBy(viewer, player), answered);
+  'every player sees that {int} seconds are left for the first dilemma',
+  async function (this: GameWorld, seconds: number) {
+    for (const player of this.present()) {
+      assert.equal(await this.driver.dilemmaShownTo(player), 1);
+      assert.equal(await this.driver.timeLeftSeenBy(player), seconds);
     }
   },
 );
+
+Given(
+  '{string} has not answered the first dilemma',
+  async function (this: GameWorld, player: string) {
+    await this.game();
+    assert.equal(await this.driver.hasAnswered(player), false);
+  },
+);
+
+Then(
+  'the first dilemma does not count as answered by {string}',
+  async function (this: GameWorld, player: string) {
+    assert.equal(await this.driver.hasAnswered(player), false);
+  },
+);
+
+When('the time for the dilemma runs out', async function (this: GameWorld) {
+  await this.game();
+  await this.driver.runOutRound();
+});
+
+When('{string} reveals it early', async function (this: GameWorld, host: string) {
+  await this.game();
+  await this.driver.revealEarly(host);
+});
+
+When('the first dilemma is revealed', async function (this: GameWorld) {
+  await this.game();
+  await this.driver.runOutRound();
+});
+
+When('the dilemma is revealed', async function (this: GameWorld) {
+  await this.game();
+  await this.driver.runOutRound();
+});
+
+Then('the first dilemma is revealed to every player', async function (this: GameWorld) {
+  // Who is away gets it on coming back; with nobody connected, the game still has it for everyone.
+  const present = this.present();
+  for (const player of present.length > 0 ? present : this.inRoom) {
+    assert.equal((await this.driver.revealSeenBy(player))?.position, 1, `${player} sees no reveal`);
+  }
+});
+
+Then(
+  '{string} is recorded as {string} for the first dilemma',
+  async function (this: GameWorld, player: string, recorded: string) {
+    assert.equal(recorded, 'did not vote');
+    assert.deepEqual(await this.driver.didNotVoteRecordedFor(player), [1]);
+  },
+);
+
+// The game, put together
 
 Given(
   'a game of {int} dilemmas chosen by category with new dilemmas included',
@@ -216,10 +275,6 @@ Given(
 
 // The order of the dilemmas and of their options
 
-When('the decision phase starts', async function (this: GameWorld) {
-  await this.game();
-});
-
 Then('every player gets the first dilemma of the game', async function (this: GameWorld) {
   for (const player of this.inRoom) assert.equal(await this.driver.dilemmaShownTo(player), 1);
 });
@@ -263,7 +318,7 @@ Then('each of them sees the three options in a random order', async function (th
 Then('the order each of them saw is recorded with their answer', async function (this: GameWorld) {
   for (const viewer of this.viewers) {
     const seen = await this.driver.optionsSeenBy(viewer, 1);
-    await this.driver.answerDilemmas(viewer, 1);
+    await this.driver.answer(viewer);
     assert.deepEqual((await this.driver.answerRecordedFor(viewer, 1))?.optionOrder, seen);
   }
 });
@@ -300,7 +355,8 @@ Given('{string} is chosen at random for it', async function (this: GameWorld, pe
 });
 
 When('the players get that dilemma', async function (this: GameWorld) {
-  await this.game();
+  assert.ok(this.position, 'no step said which dilemma');
+  await this.toRound(this.position);
 });
 
 When('the players get those dilemmas', async function (this: GameWorld) {
@@ -323,15 +379,6 @@ Then(
   async function (this: GameWorld, first: string, second: string, third: string) {
     const chosen = [...(await this.driver.peopleInTheGap()).values()].sort();
     assert.deepEqual(chosen, [first, second, third].sort());
-  },
-);
-
-When(
-  '{string} and {string} answer it',
-  async function (this: GameWorld, firstPlayer: string, secondPlayer: string) {
-    assert.ok(this.position, 'no step said which dilemma');
-    await this.driver.answerDilemmas(firstPlayer, this.position);
-    await this.driver.answerDilemmas(secondPlayer, this.position);
   },
 );
 
@@ -385,24 +432,24 @@ async function positionOfTheDilemmaAbout(world: GameWorld, person: string): Prom
 // What each answer records
 
 Given(
-  '{string} declared a birth year that makes him {int} and has given the research consent',
+  '{string} declared a birth year that makes him {int}',
   async function (this: GameWorld, player: string, age: number) {
     this.beforeTheGame();
-    await this.driver.declare(player, { underEighteen: age < 18, researchConsent: true });
+    await this.driver.declare(player, { underEighteen: age < 18, researchConsent: false });
   },
 );
 
 When('{string} answers a dilemma', async function (this: GameWorld, player: string) {
   await this.game();
-  await this.driver.answerDilemmas(player, 1);
+  await this.driver.answer(player);
   this.player = player;
 });
 
 Then(
-  'his answer records the version of the research consent and that there is no commercial licence consent',
+  'his answer records that there is no research consent and no commercial licence consent',
   async function (this: GameWorld) {
     const answer = await this.driver.answerRecordedFor(this.player, 1);
-    assert.equal(answer?.researchConsent, true);
+    assert.equal(answer?.researchConsent, false);
     assert.equal(answer?.commercialLicenceConsent, false);
   },
 );
@@ -421,7 +468,7 @@ Given(
 );
 
 When('{string} answers it', async function (this: GameWorld, player: string) {
-  await this.driver.answerDilemmas(player, 1);
+  await this.driver.answer(player);
   this.player = player;
 });
 
@@ -446,28 +493,22 @@ Then('no player sees that time', async function (this: GameWorld) {
 // Reporting a dilemma
 
 Given('{string} is on the second dilemma', async function (this: GameWorld, player: string) {
-  await this.game();
-  await this.driver.answerDilemmas(player, 1);
+  await this.toRound(2);
   assert.equal(await this.driver.dilemmaShownTo(player), 2);
+  this.player = player;
 });
 
-When('{string} reports it as offensive', async function (this: GameWorld, player: string) {
-  await this.driver.report(player, 'offensive');
-  // The screen offers to skip a dilemma reported as offensive, and the player takes it.
-  await this.driver.skipReportedDilemma(player);
-});
+When(
+  '{string} reports it as offensive and skips it',
+  async function (this: GameWorld, player: string) {
+    await this.driver.report(player, 'offensive');
+    await this.driver.skipReportedDilemma(player);
+  },
+);
 
 When('{string} reports it as confusing', async function (this: GameWorld, player: string) {
   await this.driver.report(player, 'confusing');
 });
-
-Then(
-  '{string} gets the third dilemma without voting the second',
-  async function (this: GameWorld, player: string) {
-    assert.equal(await this.driver.dilemmaShownTo(player), 3);
-    assert.equal(await this.driver.answerRecordedFor(player, 2), undefined);
-  },
-);
 
 Then(
   '{string} is recorded as {string} for the second dilemma',
@@ -477,99 +518,106 @@ Then(
   },
 );
 
-Then('{string} is still on the second dilemma', async function (this: GameWorld, player: string) {
-  assert.equal(await this.driver.dilemmaShownTo(player), 2);
-});
-
-// The reveal
-
-When('every player has answered every dilemma', async function (this: GameWorld) {
-  await this.game();
-  const count = (await this.driver.dilemmasOfTheGame()).length;
-  for (const player of this.inRoom) await this.driver.answerDilemmas(player, count);
-});
-
-Then('the game moves to the reveal', async function (this: GameWorld) {
-  for (const player of this.present()) {
-    assert.ok(await this.driver.isInTheReveal(player), `${player} is not in the reveal`);
+Then('the round does not wait for {string}', async function (this: GameWorld, player: string) {
+  for (const other of this.present().filter((present) => present !== player)) {
+    await this.driver.answer(other);
   }
+  assert.equal((await this.driver.revealSeenBy(player))?.position, 2);
 });
+
+Then(
+  '{string} can still answer the second dilemma',
+  async function (this: GameWorld, player: string) {
+    assert.equal(await this.driver.dilemmaShownTo(player), 2);
+    assert.ok(await this.driver.canAnswer(player), `${player} cannot answer`);
+  },
+);
+
+// Disconnecting and coming back
 
 Given(
-  '{string} has answered {int} of {int} dilemmas',
-  async function (this: GameWorld, player: string, answered: number, count: number) {
-    this.beforeTheGame();
-    await this.driver.changeSettings(await this.host(), { dilemmaCount: count });
+  'every player has disconnected without answering the first dilemma',
+  async function (this: GameWorld) {
     await this.game();
-    await this.driver.answerDilemmas(player, answered);
-    this.player = player;
-  },
-);
-
-When('{string} starts the reveal', async function (this: GameWorld, host: string) {
-  await this.game();
-  await this.driver.startReveal(host);
-});
-
-Then(
-  '{string} is recorded as {string} for the {int} dilemmas she did not answer',
-  async function (this: GameWorld, player: string, recorded: string, count: number) {
-    assert.equal(recorded, 'did not vote');
-    assert.equal((await this.driver.didNotVoteRecordedFor(player)).length, count);
-  },
-);
-
-// The total time
-
-Given('{string} has not finished', async function (this: GameWorld, player: string) {
-  await this.game();
-  const count = (await this.driver.dilemmasOfTheGame()).length;
-  assert.ok((await this.driver.dilemmaShownTo(player)) <= count);
-});
-
-When('the total time runs out', async function (this: GameWorld) {
-  await this.game();
-  await this.driver.runOutTotalTime();
-});
-
-Then(
-  'everyone sees that {string} has not finished',
-  async function (this: GameWorld, player: string) {
-    for (const viewer of this.present()) {
-      assert.ok((await this.driver.stragglersSeenBy(viewer)).includes(player));
-    }
-  },
-);
-
-Then('{string} can keep answering', async function (this: GameWorld, player: string) {
-  const before = await this.driver.dilemmaShownTo(player);
-  await this.driver.answerDilemmas(player, before);
-  assert.equal(await this.driver.dilemmaShownTo(player), before + 1);
-});
-
-Then(
-  '{string} can start the reveal at any moment',
-  async function (this: GameWorld, player: string) {
-    assert.ok(await this.driver.canStartReveal(player));
-  },
-);
-
-Given(
-  'the total time has run out and only {string} has not finished',
-  async function (this: GameWorld, straggler: string) {
-    await this.game();
-    const count = (await this.driver.dilemmasOfTheGame()).length;
     for (const player of this.inRoom) {
-      await this.driver.answerDilemmas(player, player === straggler ? count - 1 : count);
+      await this.driver.disconnect(player);
+      this.away.add(player);
     }
-    await this.driver.runOutTotalTime();
   },
 );
 
-When('{string} answers her last dilemma', async function (this: GameWorld, player: string) {
-  const count = (await this.driver.dilemmasOfTheGame()).length;
-  await this.driver.answerDilemmas(player, count);
+Given(
+  '{string} has disconnected without answering the first dilemma',
+  async function (this: GameWorld, player: string) {
+    await this.game();
+    await this.driver.disconnect(player);
+    this.away.add(player);
+  },
+);
+
+When('{string} disconnects', async function (this: GameWorld, player: string) {
+  await this.game();
+  await this.driver.disconnect(player);
+  this.away.add(player);
 });
+
+When(
+  '{string} reconnects before the first dilemma is revealed',
+  async function (this: GameWorld, player: string) {
+    await this.driver.reconnect(player);
+    this.away.delete(player);
+    this.reconnectedPlayer = player;
+  },
+);
+
+Then('{string} is on the first dilemma', async function (this: GameWorld, player: string) {
+  await this.game();
+  assert.equal(await this.driver.dilemmaShownTo(player), 1);
+  assert.equal(await this.driver.revealSeenBy(player), undefined);
+});
+
+Then('keeps his answer', async function (this: GameWorld) {
+  assert.ok(this.reconnectedPlayer, 'no step reconnected a player before');
+  const [cast] = await this.driver.votesCastFor(this.reconnectedPlayer, 1);
+  assert.ok(cast, `${this.reconnectedPlayer} did not vote`);
+  assert.equal(await this.driver.voteRecordedFor(this.reconnectedPlayer, 1), cast);
+});
+
+When(
+  'the first dilemma is revealed and {string} reconnects',
+  async function (this: GameWorld, player: string) {
+    await this.toRevealOf(1);
+    await this.driver.reconnect(player);
+    this.away.delete(player);
+  },
+);
+
+Then(
+  '{string} sees the reveal of the first dilemma',
+  async function (this: GameWorld, player: string) {
+    assert.equal((await this.driver.revealSeenBy(player))?.position, 1);
+  },
+);
+
+Then(
+  '{string} and {string} see {string} as disconnected',
+  async function (this: GameWorld, firstViewer: string, secondViewer: string, player: string) {
+    await this.game();
+    assert.equal(await this.driver.connectionSeenBy(firstViewer, player), false);
+    assert.equal(await this.driver.connectionSeenBy(secondViewer, player), false);
+    this.viewers = [firstViewer, secondViewer];
+  },
+);
+
+Then(
+  'they still see that {string} has answered the first dilemma',
+  async function (this: GameWorld, player: string) {
+    assert.ok(this.viewers.length > 0, 'no step said who is looking');
+    for (const viewer of this.viewers) {
+      assert.equal(await this.driver.answeredSeenBy(viewer, player), true);
+    }
+  },
+);
 
 // The host
 
@@ -589,7 +637,9 @@ When('{string} leaves the game', async function (this: GameWorld, player: string
 });
 
 Then('{string} becomes the host', async function (this: GameWorld, player: string) {
-  for (const viewer of this.present()) {
+  const viewers = this.present();
+  // With nobody else connected, the game tells it to whoever looks at it.
+  for (const viewer of viewers.length > 0 ? viewers : [player]) {
     assert.equal(await this.driver.hostSeenBy(viewer), player);
   }
 });
@@ -600,12 +650,21 @@ Given('{string} has disconnected', async function (this: GameWorld, player: stri
   this.away.add(player);
 });
 
-When(
-  '{string} and {string} have answered every dilemma',
-  async function (this: GameWorld, firstPlayer: string, secondPlayer: string) {
-    const count = (await this.driver.dilemmasOfTheGame()).length;
-    await this.driver.answerDilemmas(firstPlayer, count);
-    await this.driver.answerDilemmas(secondPlayer, count);
+Given(
+  '{string} and {string} have disconnected',
+  async function (this: GameWorld, first: string, second: string) {
+    await this.game();
+    for (const player of [first, second]) {
+      await this.driver.disconnect(player);
+      this.away.add(player);
+    }
+  },
+);
+
+Then(
+  '{string} can reveal the next dilemma early',
+  async function (this: GameWorld, player: string) {
+    assert.ok(await this.driver.canRevealEarly(player), `${player} cannot reveal early`);
   },
 );
 
@@ -615,7 +674,7 @@ Given(
     await this.game();
     await this.driver.disconnect(host);
     this.away.add(host);
-    await this.driver.runOutTotalTime();
+    await this.driver.runOutRound();
     assert.equal(await this.driver.hostSeenBy(successor), successor);
   },
 );
@@ -654,21 +713,19 @@ Then('{string} is still the host', async function (this: GameWorld, player: stri
 
 // Predictions in a nominal room
 
-Given('{string} is on the first dilemma', async function (this: GameWorld, player: string) {
-  await this.game();
-  assert.equal(await this.driver.dilemmaShownTo(player), 1);
-});
-
 When(
   '{string} votes and makes all his predictions',
   async function (this: GameWorld, player: string) {
-    await this.driver.answerDilemmas(player, 1);
+    await this.driver.answer(player);
   },
 );
 
-Then('{string} gets the second dilemma', async function (this: GameWorld, player: string) {
-  assert.equal(await this.driver.dilemmaShownTo(player), 2);
-});
+Then(
+  'the first dilemma counts as answered by {string}',
+  async function (this: GameWorld, player: string) {
+    assert.ok(await this.driver.hasAnswered(player), `${player} has not answered`);
+  },
+);
 
 Given(
   '{string} has voted the first dilemma but not made all his predictions',
@@ -678,10 +735,6 @@ Given(
     await this.driver.predictMatch(player, 1);
   },
 );
-
-Then('{string} cannot get the second dilemma', async function (this: GameWorld, player: string) {
-  assert.equal(await this.driver.dilemmaShownTo(player), 1);
-});
 
 Given(
   '{string} has not voted the current dilemma',
@@ -761,6 +814,38 @@ Then(
 );
 
 Given(
+  '{string} has voted {string} and made all his predictions on the first dilemma',
+  async function (this: GameWorld, player: string, option: string) {
+    await this.game();
+    await this.driver.answer(player, { vote: option });
+    this.player = player;
+  },
+);
+
+When(
+  '{string} changes his vote to {string} before it is revealed',
+  async function (this: GameWorld, player: string, option: string) {
+    const before = await this.driver.answerRecordedFor(player, 1);
+    this.predictions = before?.votePredictions ?? [];
+    await this.driver.changeVote(player, option);
+  },
+);
+
+Then('his predictions are kept', async function (this: GameWorld) {
+  const answer = await this.driver.answerRecordedFor(this.player, 1);
+  assert.ok(this.predictions.length > 0, 'no step made vote predictions before');
+  assert.deepEqual(answer?.votePredictions, this.predictions);
+  assert.notEqual(answer?.matchPrediction, null);
+});
+
+Then(
+  'the first dilemma still counts as answered by {string}',
+  async function (this: GameWorld, player: string) {
+    assert.ok(await this.driver.hasAnswered(player), `${player} no longer counts as answered`);
+  },
+);
+
+Given(
   '{string} has voted the current dilemma and made her match prediction but none of her vote predictions',
   async function (this: GameWorld, player: string) {
     await this.game();
@@ -770,9 +855,9 @@ Given(
   },
 );
 
-When('the reveal starts', async function (this: GameWorld) {
-  await this.game();
-  await this.driver.startReveal(await this.host());
+Then('her vote counts', async function (this: GameWorld) {
+  assert.notEqual(await this.driver.voteRecordedFor(this.player, 1), undefined);
+  assert.deepEqual(await this.driver.didNotVoteRecordedFor(this.player), []);
 });
 
 Then('only her match prediction can score', async function (this: GameWorld) {
@@ -782,18 +867,19 @@ Then('only her match prediction can score', async function (this: GameWorld) {
   assert.equal(points?.votes, null);
 });
 
-When('the decision phase ends', async function (this: GameWorld) {
-  await this.game();
-  const count = (await this.driver.dilemmasOfTheGame()).length;
-  for (const player of this.inRoom) await this.driver.answerDilemmas(player, count);
-});
-
-Then('the points of every player are calculated', async function (this: GameWorld) {
-  const count = (await this.driver.dilemmasOfTheGame()).length;
-  for (const player of this.inRoom) {
-    assert.equal((await this.driver.pointsOf(player)).length, count, `${player} has no points`);
-  }
-});
+Then(
+  'the points of every player for the first dilemma are calculated',
+  async function (this: GameWorld) {
+    for (const player of this.inRoom) {
+      const points = await this.driver.pointsOf(player);
+      assert.deepEqual(
+        points.map(({ position }) => position),
+        [1],
+        `${player} has no points for the first dilemma`,
+      );
+    }
+  },
+);
 
 // Prediction subsets in a nominal room
 
@@ -818,6 +904,12 @@ Given(
 
 When('a player gets a dilemma', async function (this: GameWorld) {
   await this.game();
+});
+
+When('every dilemma has been revealed', async function (this: GameWorld) {
+  await this.game();
+  const count = (await this.driver.dilemmasOfTheGame()).length;
+  await this.toRevealOf(count);
 });
 
 Then(
@@ -850,15 +942,28 @@ async function bringInPlayers(world: GameWorld, count: number): Promise<void> {
 // An anonymous room
 
 When('{string} votes', async function (this: GameWorld, player: string) {
-  await this.driver.answerDilemmas(player, 1);
+  await this.driver.answer(player);
 });
 
 Then(
-  '{string} gets the second dilemma without making any prediction',
+  '{string} has answered the first dilemma without making any prediction',
   async function (this: GameWorld, player: string) {
-    assert.equal(await this.driver.dilemmaShownTo(player), 2);
+    assert.ok(await this.driver.hasAnswered(player), `${player} has not answered`);
     const answer = await this.driver.answerRecordedFor(player, 1);
     assert.equal(answer?.matchPrediction, null);
     assert.deepEqual(answer?.votePredictions, []);
   },
 );
+
+Then(
+  '{string} and {string} see that {int} player has answered it',
+  async function (this: GameWorld, firstViewer: string, secondViewer: string, count: number) {
+    for (const viewer of [firstViewer, secondViewer]) {
+      assert.equal(await this.driver.answeredCountSeenBy(viewer), count);
+    }
+  },
+);
+
+Then('no player receives who has answered', async function (this: GameWorld) {
+  assert.equal(await this.driver.whoAnsweredIsSent(), false);
+});
