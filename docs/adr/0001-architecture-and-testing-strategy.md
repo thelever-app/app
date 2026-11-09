@@ -7,7 +7,7 @@
 
 ## Context
 
-TheLever is a real-time party game whose rules are subtle (private votes, predictions over balanced subsets, a host role that moves on disconnection, progress that must never reveal answers) and whose data feeds a research dataset. The rules are already written as Gherkin scenarios in business language, one Feature per use case, with Notion as the source. Several scenarios cannot be observed in the user interface: the option order recorded with each answer, balanced prediction subsets, points calculated before the reveal. The project is built by one developer who is also learning React and Express, and who will later hand part of the work to an agentic coding flow, so the structure must make the rules easy to find and safe to change.
+TheLever is a real-time party game whose rules are subtle (private votes, predictions over balanced subsets, a host role that moves on disconnection, progress that must never reveal answers) and whose data feeds a research dataset. The rules are already written as Gherkin scenarios in business language, one Feature per use case, with Notion as the source. Several scenarios cannot be observed in the user interface: the option order recorded with each answer, balanced prediction subsets, points calculated before the reveal. The structure must make the rules easy to find and safe to change.
 
 Forces:
 
