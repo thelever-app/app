@@ -94,6 +94,7 @@ describe('PostgresGameRepository inside a command', () => {
           dilemmaId: dilemma.id,
           version: dilemma.version,
           origin: 'picked-by-the-system',
+          addedBy: null,
           optionIds: dilemma.options.map(({ id }) => id),
           hasGap: false,
         })),
@@ -101,10 +102,13 @@ describe('PostgresGameRepository inside a command', () => {
       },
       ids,
     );
-    game.startDecisionPhase(room.players, STARTED_AT, new SequentialRandomness());
+    game.start(room.players, STARTED_AT, new SequentialRandomness());
     const [ana, luis] = room.players as [Player, Player];
     answer(game, ana.id, first.id, first.options[0]!.id);
     answer(game, luis.id, first.id, first.options[0]!.id);
+    // Both answered: the first dilemma is revealed, and Ana moves everyone on to the second.
+    game.revealIfEveryoneAnswered([ana.id, luis.id]);
+    game.moveOn(ana.id, 0, STARTED_AT);
     const games = new PostgresGameRepository(database.db());
     await games.save(game);
     return { games, gameId: game.id, ana: ana.id, luis: luis.id, first, second };
@@ -179,7 +183,7 @@ describe('PostgresGameRepository inside a command', () => {
     // Act
     await inTransaction(db, async () => {
       const game = (await games.findById(gameId))!;
-      answer(game, ana, first.id, first.options[1]!.id);
+      answer(game, ana, second.id, second.options[0]!.id);
       await games.save(game);
       answer(game, luis, second.id, second.options[1]!.id);
       await games.save(game);
@@ -188,7 +192,8 @@ describe('PostgresGameRepository inside a command', () => {
     // Assert
     const found = await games.findById(gameId);
     expect(found?.answersOf(ana)).toMatchObject([
-      { dilemmaId: first.id, vote: first.options[1]!.id },
+      { dilemmaId: first.id, vote: first.options[0]!.id },
+      { dilemmaId: second.id, vote: second.options[0]!.id },
     ]);
     expect(found?.answersOf(luis)).toMatchObject([
       { dilemmaId: first.id, vote: first.options[0]!.id },
@@ -265,6 +270,7 @@ describe('PostgresGameRepository inside a command', () => {
         dilemmaId: 'TestDilemma1',
         version: 3,
         origin: 'added-by-a-player',
+        addedBy: 'TestAnaId',
         optionIds: ['TestOptionB', 'TestOptionA'],
         hasGap: true,
       },
@@ -272,6 +278,7 @@ describe('PostgresGameRepository inside a command', () => {
         dilemmaId: 'TestDilemma2',
         version: 1,
         origin: 'picked-by-the-host',
+        addedBy: null,
         optionIds: ['TestOptionC', 'TestOptionD'],
         hasGap: false,
       },
@@ -304,6 +311,7 @@ describe('PostgresGameRepository outside a command', () => {
         dilemmaId: 'TestDilemma1',
         version: 1,
         origin: 'picked-by-the-system',
+        addedBy: null,
         optionIds: ['TestOptionA'],
         hasGap: false,
       },

@@ -99,14 +99,16 @@ export class PostgresGameRepository implements GameRepository {
   /** What the game copied of its room when it started never changes either. */
   async #saveGame(
     db: Transaction<GameTables>,
-    { id, roomId, phase, version, settings, totalTime }: GameSnapshot,
+    { id, roomId, version, settings, round }: GameSnapshot,
   ): Promise<void> {
     const changing = {
-      phase,
       version,
-      started_at: totalTime?.startedAt ?? null,
-      total_time_ends_at: totalTime?.endsAt ?? null,
-      total_time_ran_out: totalTime?.ranOut ?? false,
+      round_position: round?.position ?? null,
+      round_phase: round?.phase ?? null,
+      round_started_at: round?.startedAt ?? null,
+      round_ends_at: round?.endsAt ?? null,
+      round_revealed_by: round?.revealedBy ?? null,
+      round_moved_on_by: round?.movedOnBy ?? null,
     };
     await db
       .insertInto('games')
@@ -118,7 +120,7 @@ export class PostgresGameRepository implements GameRepository {
         group_nature: settings.groupNature,
         place: settings.place,
         dilemma_language: settings.dilemmaLanguage,
-        total_time_in_minutes: settings.totalTimeInMinutes,
+        time_per_dilemma_seconds: settings.timePerDilemmaSeconds,
       })
       .onConflict((conflict) => conflict.column('id').doUpdateSet(changing))
       .execute();
@@ -126,7 +128,7 @@ export class PostgresGameRepository implements GameRepository {
 
   /**
    * The dilemmas of a game, and the options it copied of each, never change once it exists; who
-   * takes the gap of each is chosen when the decision phase starts.
+   * takes the gap of each is chosen when the game starts.
    */
   async #saveDilemmas(
     db: Transaction<GameTables>,
@@ -136,12 +138,13 @@ export class PostgresGameRepository implements GameRepository {
     await db
       .insertInto('game_dilemmas')
       .values(
-        dilemmas.map(({ dilemmaId, version, origin, hasGap }, position) => ({
+        dilemmas.map(({ dilemmaId, version, origin, addedBy, hasGap }, position) => ({
           game_id: id,
           position,
           dilemma_id: dilemmaId,
           dilemma_version: version,
           origin,
+          added_by_player_id: addedBy,
           has_gap: hasGap,
           person_in_the_gap: people.get(dilemmaId) ?? null,
         })),
@@ -187,7 +190,6 @@ export class PostgresGameRepository implements GameRepository {
       .onConflict((conflict) =>
         conflict.columns(['game_id', 'player_id']).doUpdateSet((eb) => ({
           has_left: eb.ref('excluded.has_left'),
-          current_since: eb.ref('excluded.current_since'),
         })),
       )
       .execute();
@@ -285,6 +287,7 @@ function readGame(db: Kysely<GameTables>, id: string) {
             'game_dilemmas.dilemma_id as dilemmaId',
             'game_dilemmas.dilemma_version as version',
             'game_dilemmas.origin',
+            'game_dilemmas.added_by_player_id as addedBy',
             'game_dilemmas.has_gap as hasGap',
             'game_dilemmas.person_in_the_gap as personInTheGap',
             'game_dilemma_options.option_id as optionId',
@@ -296,7 +299,7 @@ function readGame(db: Kysely<GameTables>, id: string) {
       jsonArrayFrom(
         eb
           .selectFrom('game_players')
-          .select(['game_players.player_id', 'game_players.has_left', 'game_players.current_since'])
+          .select(['game_players.player_id', 'game_players.has_left'])
           .whereRef('game_players.game_id', '=', 'games.id')
           .orderBy('game_players.position'),
       ).as('players'),
@@ -336,32 +339,35 @@ function snapshotOf(row: GameRow): GameSnapshot {
   return {
     id: row.id,
     roomId: row.room_id,
-    phase: row.phase,
     version: row.version,
     settings: {
       variant: row.variant,
       groupNature: row.group_nature,
       place: row.place,
       dilemmaLanguage: row.dilemma_language,
-      totalTimeInMinutes: row.total_time_in_minutes,
+      timePerDilemmaSeconds: row.time_per_dilemma_seconds,
     },
-    totalTime:
-      row.started_at && row.total_time_ends_at
+    round:
+      row.round_position !== null &&
+      row.round_phase !== null &&
+      row.round_started_at !== null &&
+      row.round_ends_at !== null
         ? {
-            startedAt: row.started_at,
-            endsAt: row.total_time_ends_at,
-            ranOut: row.total_time_ran_out,
+            position: row.round_position,
+            phase: row.round_phase,
+            startedAt: row.round_started_at,
+            endsAt: row.round_ends_at,
+            revealedBy: row.round_revealed_by,
+            movedOnBy: row.round_moved_on_by,
           }
         : null,
     dilemmas,
     peopleInTheGap,
-    players: row.players.map(({ player_id, has_left, current_since }) => {
+    players: row.players.map(({ player_id, has_left }) => {
       const ofPlayer = row.playerDilemmas.filter((dilemma) => dilemma.player_id === player_id);
       return {
         id: player_id,
         left: has_left,
-        // Inside JSON, a time comes as text.
-        currentSince: current_since === null ? null : new Date(current_since),
         optionOrders: ofPlayer.map(({ dilemma_id, option_order }) => ({
           dilemmaId: dilemma_id,
           optionOrder: option_order,
@@ -410,15 +416,17 @@ function dilemmasOf(
     {
       version: number;
       origin: GameRow['options'][number]['origin'];
+      addedBy: string | null;
       hasGap: boolean;
       personInTheGap: string | null;
       optionIds: string[];
     }
   >();
-  for (const { dilemmaId, version, origin, hasGap, personInTheGap, optionId } of options) {
+  for (const { dilemmaId, version, origin, addedBy, hasGap, personInTheGap, optionId } of options) {
     const dilemma = dilemmas.get(dilemmaId) ?? {
       version,
       origin,
+      addedBy,
       hasGap,
       personInTheGap,
       optionIds: [],
@@ -427,12 +435,13 @@ function dilemmasOf(
     dilemmas.set(dilemmaId, dilemma);
   }
   return {
-    dilemmas: [...dilemmas].map(([dilemmaId, { version, origin, hasGap, optionIds }]) => ({
+    dilemmas: [...dilemmas].map(([dilemmaId, { version, origin, addedBy, hasGap, optionIds }]) => ({
       dilemmaId,
       version,
       optionIds,
       hasGap,
       origin,
+      addedBy,
     })),
     peopleInTheGap: [...dilemmas].flatMap(([dilemmaId, { personInTheGap }]) =>
       personInTheGap ? [{ dilemmaId, playerId: personInTheGap }] : [],
@@ -460,7 +469,6 @@ function playerRowsOf({ id, players }: GameSnapshot): PlayerRow[] {
     player_id: player.id,
     position,
     has_left: player.left,
-    current_since: player.currentSince,
   }));
 }
 

@@ -7,8 +7,9 @@ import {
   HostChangedEvent,
   LobbyChangedEvent,
   PlayerLeftEvent,
-  RevealStartedEvent,
-  TotalTimeRanOutEvent,
+  AnsweredCountChangedEvent,
+  DilemmaRevealedEvent,
+  RoundStartedEvent,
   ProgressUpdatedEvent,
   type DomainEvent,
 } from '@thelever-app/game';
@@ -95,8 +96,9 @@ describe('PostgresPlayerNotifier', () => {
       const received = await listening();
       const notifier = new PostgresPlayerNotifier(database.db());
       const events = [
-        new TotalTimeRanOutEvent('TestGameId', ['TestMartaId'], 9),
-        new RevealStartedEvent('TestGameId', 10),
+        new AnsweredCountChangedEvent('TestGameId', 2, 8),
+        new DilemmaRevealedEvent('TestGameId', 0, 9),
+        new RoundStartedEvent('TestGameId', 1, 'TestMartaId', 10),
         new HostChangedEvent('TestRoomId', 'TestLuisId', 5),
         new PlayerLeftEvent('TestRoomId', 'TestAnaId', true, 6),
       ];

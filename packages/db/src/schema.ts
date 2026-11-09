@@ -8,10 +8,11 @@ import type {
   Place,
   PlayerColor,
   RoomVariant,
-  TotalTimeInMinutes,
+  TimePerDilemmaSeconds,
   DilemmasPerPlayer,
   DidNotVoteReason,
-  GamePhase,
+  RevealedBy,
+  RoundPhase,
   VotePrediction,
 } from '@thelever-app/game';
 import type { ColumnType, Generated, Kysely } from 'kysely';
@@ -60,7 +61,7 @@ export interface Database {
     /** Null, every category; an empty list, none. */
     categories: string[] | null;
     dilemma_count: DilemmaCount;
-    total_time_in_minutes: TotalTimeInMinutes;
+    time_per_dilemma_seconds: TimePerDilemmaSeconds;
     new_dilemmas: boolean;
     dilemmas_per_player: DilemmasPerPlayer;
     current_game_id: string | null;
@@ -108,16 +109,19 @@ export interface Database {
   games: {
     id: string;
     room_id: string;
-    phase: GamePhase | null;
-    started_at: Date | null;
-    total_time_ends_at: Date | null;
-    total_time_ran_out: boolean;
+    /** The round in progress: all null before the game starts. */
+    round_position: number | null;
+    round_phase: RoundPhase | null;
+    round_started_at: Date | null;
+    round_ends_at: Date | null;
+    round_revealed_by: RevealedBy | null;
+    round_moved_on_by: string | null;
     version: number;
     variant: RoomVariant;
     group_nature: GroupNature;
     place: Place;
     dilemma_language: DilemmaLanguage;
-    total_time_in_minutes: TotalTimeInMinutes;
+    time_per_dilemma_seconds: TimePerDilemmaSeconds;
   };
   game_dilemmas: {
     game_id: string;
@@ -127,6 +131,8 @@ export interface Database {
     origin: DilemmaOrigin;
     has_gap: boolean;
     person_in_the_gap: string | null;
+    /** The player who added it in the lobby; null for the others. */
+    added_by_player_id: string | null;
   };
   /** The options of each dilemma a game plays, copied when it starts: Game reads only its own tables. */
   game_dilemma_options: {
@@ -140,11 +146,10 @@ export interface Database {
     player_id: string;
     position: number;
     has_left: boolean;
-    current_since: Date | null;
   };
   /**
    * Each dilemma as each player plays it: the order of its options and their prediction subset,
-   * given when the decision phase starts, and whether they did not vote it and what they scored.
+   * given when the game starts, and whether they did not vote it and what they scored.
    */
   game_player_dilemmas: {
     game_id: string;
@@ -155,7 +160,7 @@ export interface Database {
     did_not_vote: DidNotVoteReason | null;
     /** Whether the player reported the dilemma, as offensive or for another reason. */
     reported: 'offensive' | 'other' | null;
-    /** Whether the predictions were scored, which only happens at the reveal of a nominal room. */
+    /** Whether the predictions were scored, which happens at the reveal of each dilemma of a nominal room. */
     scored: boolean;
     match_points: number | null;
     vote_points: number | null;

@@ -94,8 +94,8 @@ async function countOf(db: Kysely<Database>, table: string): Promise<number> {
   return Number(rows[0]?.count);
 }
 
-describe('the migration of the whole decision phase', () => {
-  it('should delete the games from before and take their rooms back to the lobby, keeping the players', async () => {
+describe('the migration of the game by rounds', () => {
+  it('should delete the games from before and take their rooms back to the lobby, at a minute per dilemma', async () => {
     // Arrange
     const db = await databaseAt(BEFORE);
     await gameInProgressBefore(db);
@@ -109,9 +109,14 @@ describe('the migration of the whole decision phase', () => {
     expect(await countOf(db, 'game_players')).toBe(0);
     const room = await db
       .selectFrom('rooms')
-      .select(['id', 'current_game_id', 'absent_host_player_id'])
+      .select(['id', 'current_game_id', 'absent_host_player_id', 'time_per_dilemma_seconds'])
       .executeTakeFirst();
-    expect(room).toEqual({ id: 'TestRoom', current_game_id: null, absent_host_player_id: null });
+    expect(room).toEqual({
+      id: 'TestRoom',
+      current_game_id: null,
+      absent_host_player_id: null,
+      time_per_dilemma_seconds: 60,
+    });
     const players = await db.selectFrom('room_players').select(['id', 'has_left']).execute();
     expect(players).toEqual([{ id: 'TestAna', has_left: false }]);
   });

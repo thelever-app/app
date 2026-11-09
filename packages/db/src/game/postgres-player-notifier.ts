@@ -1,6 +1,8 @@
 import { context, propagation } from '@opentelemetry/api';
 import {
+  AnsweredCountChangedEvent,
   ConnectionChangedEvent,
+  DilemmaRevealedEvent,
   type DomainEvent,
   HostChangedEvent,
   type LobbyChange,
@@ -8,8 +10,7 @@ import {
   PlayerLeftEvent,
   type PlayerNotifier,
   ProgressUpdatedEvent,
-  RevealStartedEvent,
-  TotalTimeRanOutEvent,
+  RoundStartedEvent,
 } from '@thelever-app/game';
 import { type Kysely, sql } from 'kysely';
 import type { GameTables } from '../schema.ts';
@@ -85,17 +86,28 @@ export function readNotification(payload: string): Notification {
   }
 }
 
-/** The events of the decision phase, rebuilt from their plain fields. */
+/** The events of the rounds, rebuilt from their plain fields. */
 function decisionPhaseEventOf(event: Record<string, unknown>): DomainEvent {
   switch (event.type) {
-    case 'TotalTimeRanOut':
-      return new TotalTimeRanOutEvent(
+    case 'AnsweredCountChanged':
+      return new AnsweredCountChangedEvent(
         String(event.gameId),
-        (event.stragglerIds as unknown[]).map(String),
+        Number(event.answeredCount),
         Number(event.gameVersion),
       );
-    case 'RevealStarted':
-      return new RevealStartedEvent(String(event.gameId), Number(event.gameVersion));
+    case 'DilemmaRevealed':
+      return new DilemmaRevealedEvent(
+        String(event.gameId),
+        Number(event.position),
+        Number(event.gameVersion),
+      );
+    case 'RoundStarted':
+      return new RoundStartedEvent(
+        String(event.gameId),
+        Number(event.position),
+        String(event.movedOnBy),
+        Number(event.gameVersion),
+      );
     case 'HostChanged':
       return new HostChangedEvent(
         String(event.roomId),
