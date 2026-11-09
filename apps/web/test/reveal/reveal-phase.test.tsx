@@ -105,12 +105,17 @@ describe('RevealPhase', () => {
   });
 
   describe('nominal room', () => {
-    it('should show how many chose each option and what each player voted', async () => {
+    it('should show each option in the order the player saw it, how many chose it and who', async () => {
       // Act
       const { t } = await renderReveal(revealed(NOMINAL_REVEAL));
 
       // Assert
+      const options = screen
+        .getAllByRole('heading', { level: 3 })
+        .map((heading) => heading.textContent);
+      expect(options).toEqual(['Opción 1A', 'Opción 1B']);
       const pulled = screen.getByRole('heading', { name: 'Opción 1A' }).closest('section')!;
+      expect(within(pulled).getByText('A')).toBeDefined();
       expect(
         within(pulled).getByText(t('reveal.optionCount', { count: 2, percent: '67%' })),
       ).toBeDefined();
@@ -119,24 +124,104 @@ describe('RevealPhase', () => {
           .getAllByRole('listitem')
           .map((item) => item.getAttribute('aria-label')),
       ).toEqual([
-        t('reveal.voterHits', { name: t('playerList.you', { name: 'Ana' }), count: 2 }),
-        t('reveal.voterHits', { name: 'Marta', count: 0 }),
+        t('playerList.you', { name: 'Ana' }),
+        t('reveal.voterMissed', { name: 'Marta', letter: 'B' }),
       ]);
       const nothing = screen.getByRole('heading', { name: 'Opción 1B' }).closest('section')!;
       expect(within(nothing).getByRole('listitem').getAttribute('aria-label')).toBe(
-        t('reveal.voterHits', { name: 'Luis', count: 1 }),
+        t('reveal.voterRight', { name: 'Luis' }),
       );
     });
 
-    it('should say which predictions of the player were right and who read them right', async () => {
+    it('should tell the player what they said about whoever they missed, next to their vote', async () => {
       // Act
       const { t } = await renderReveal(revealed(NOMINAL_REVEAL));
 
       // Assert
-      expect(screen.getByText(t('reveal.yourHits', { right: 1, count: 2 }))).toBeDefined();
+      const marta = screen.getByRole('listitem', {
+        name: t('reveal.voterMissed', { name: 'Marta', letter: 'B' }),
+      });
       expect(
-        screen.getByText(t('reveal.readYou', { names: 'Marta y Luis' }), { exact: false }),
+        within(marta).getByText(t('reveal.guessed', { letter: 'B' }), { exact: false }),
       ).toBeDefined();
+    });
+
+    it('should sum up the predictions about those who voted, naming who the player missed', async () => {
+      // Arrange: Ana also predicted Pablo, who did not vote: that one does not count.
+      const reveal = {
+        ...NOMINAL_REVEAL,
+        votePredictions: [
+          ...NOMINAL_REVEAL.votePredictions,
+          {
+            playerId: 'test-ana-id',
+            aboutId: 'test-pablo-id',
+            vote: 'test-option-1a',
+            right: false,
+          },
+        ],
+      };
+
+      // Act
+      const { t } = await renderReveal(revealed(reveal));
+
+      // Assert
+      const summary = screen.getByRole('region', { name: t('reveal.yourHitsRegion') });
+      expect(
+        within(summary).getByText(t('reveal.hitsCount', { right: 1, count: 2 })),
+      ).toBeDefined();
+      expect(within(summary).getByText(t('reveal.missedOne', { name: 'Marta' }))).toBeDefined();
+    });
+
+    it('should celebrate when the player read everyone right', async () => {
+      // Arrange
+      const votePredictions = NOMINAL_REVEAL.votePredictions.map((prediction) =>
+        prediction.aboutId === 'test-marta-id'
+          ? { ...prediction, vote: 'test-option-1a', right: true }
+          : prediction,
+      );
+
+      // Act
+      const { t } = await renderReveal(revealed({ ...NOMINAL_REVEAL, votePredictions }));
+
+      // Assert
+      const summary = screen.getByRole('region', { name: t('reveal.yourHitsRegion') });
+      expect(summary.getAttribute('data-all')).toBe('true');
+      expect(within(summary).getByText(t('reveal.hitsAll'))).toBeDefined();
+      expect(
+        within(summary).getByText(t('reveal.hitsCount', { right: 2, count: 2 })),
+      ).toBeDefined();
+    });
+
+    it('should say so when the player read nobody right', async () => {
+      // Arrange
+      const votePredictions = NOMINAL_REVEAL.votePredictions.map((prediction) =>
+        prediction.playerId === 'test-ana-id' ? { ...prediction, right: false } : prediction,
+      );
+
+      // Act
+      const { t } = await renderReveal(revealed({ ...NOMINAL_REVEAL, votePredictions }));
+
+      // Assert
+      const summary = screen.getByRole('region', { name: t('reveal.yourHitsRegion') });
+      expect(within(summary).getByText(t('reveal.missedAll'))).toBeDefined();
+    });
+
+    it('should say so of an option nobody chose', async () => {
+      // Arrange
+      const distribution = [
+        { optionId: 'test-option-1a', count: 3 },
+        { optionId: 'test-option-1b', count: 0 },
+      ];
+      const votes = NOMINAL_REVEAL.votes.map((vote) =>
+        vote.vote === 'test-option-1b' ? { ...vote, vote: 'test-option-1a' } : vote,
+      );
+
+      // Act
+      const { t } = await renderReveal(revealed({ ...NOMINAL_REVEAL, distribution, votes }));
+
+      // Assert
+      const nothing = screen.getByRole('heading', { name: 'Opción 1B' }).closest('section')!;
+      expect(within(nothing).getByText(t('reveal.nobodyChose'))).toBeDefined();
     });
 
     it('should say who did not vote, apart from the distribution', async () => {
