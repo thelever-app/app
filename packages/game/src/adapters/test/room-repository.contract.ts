@@ -144,7 +144,7 @@ export function describeRoomRepositoryContract(
           dilemmaLanguage: 'ca',
           categories: ['honesty', 'loyalty'],
           dilemmaCount: 12,
-          totalTimeInMinutes: 10,
+          timePerDilemmaSeconds: 60,
           newDilemmas: false,
           dilemmasPerPlayer: 2,
         });

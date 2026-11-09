@@ -5,7 +5,7 @@ import { PlayerNotInRoomError } from '../../../domain/errors/player-not-in-room.
 import { GameNotInProgressError } from '../../../domain/errors/game-not-in-progress.error.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
-import { ProgressUpdatedEvent } from '../../../domain/events/progress-updated.event.ts';
+import { AnsweredCountChangedEvent } from '../../../domain/events/answered-count-changed.event.ts';
 import type { PlayerNotifier } from '../../ports/player-notifier.port.ts';
 import {
   gameInDecisionPhase as sharedGameInDecisionPhase,
@@ -62,7 +62,7 @@ describe('AnswerDilemmaUseCase', () => {
       expect(game?.progressOf(luisId)).toBe(1);
     });
 
-    it('should notify the other players of the new progress', async () => {
+    it('should tell everyone how many have answered, never who, in an anonymous room', async () => {
       // Arrange
       const { notifier, answerDilemma, roomId, gameId, anaId, luisId, martaId } =
         await gameInDecisionPhase();
@@ -76,25 +76,10 @@ describe('AnswerDilemmaUseCase', () => {
       });
 
       // Assert
-      const expected = [new ProgressUpdatedEvent(gameId, luisId, 1, 2)];
-      expect(notifier.receivedBy(anaId)).toEqual(expected);
-      expect(notifier.receivedBy(martaId)).toEqual(expected);
-    });
-
-    it('should not notify the player who answered', async () => {
-      // Arrange
-      const { notifier, answerDilemma, roomId, luisId } = await gameInDecisionPhase();
-
-      // Act
-      await answerDilemma.execute({
-        roomId,
-        playerId: luisId,
-        dilemmaId: 'TestDilemma1',
-        vote: 'TestOption',
-      });
-
-      // Assert
-      expect(notifier.receivedBy(luisId)).toEqual([]);
+      const expected = [new AnsweredCountChangedEvent(gameId, 1, 2)];
+      for (const playerId of [anaId, luisId, martaId]) {
+        expect(notifier.receivedBy(playerId)).toEqual(expected);
+      }
     });
 
     it('should keep the answer and succeed when the notification fails', async () => {

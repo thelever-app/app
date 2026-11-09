@@ -2,11 +2,13 @@ import type { VotePrediction } from '../../domain/vos/answer.vo.ts';
 import { PlayerNotInRoomError } from '../../domain/errors/player-not-in-room.error.ts';
 import type { Clock } from '../../domain/ports/clock.port.ts';
 import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
+import { revealIfEveryoneAnswered } from '../../domain/services/reveal-if-everyone-answered.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import type { SealProvider } from '../ports/seal-provider.port.ts';
 import { findCurrentGame } from './find-current-game.ts';
+import { runOutRoundFirst } from './run-out-round-first.ts';
 import { notifyGame } from './notify-game.ts';
 
 export interface AnswerDilemmaInput {
@@ -56,8 +58,17 @@ export class AnswerDilemmaUseCase {
     if (!player) throw new PlayerNotInRoomError(playerId);
     const at = this.#clock.now();
 
-    game.runOutTotalTime(at);
+    await runOutRoundFirst(
+      { room, game },
+      {
+        roomRepository: this.#roomRepository,
+        gameRepository: this.#gameRepository,
+        notifier: this.#notifier,
+      },
+      at,
+    );
     game.answer(playerId, dilemmaId, draft, await this.#sealProvider.sealFor(player.identity), at);
+    revealIfEveryoneAnswered(room, game);
     handOverHostIfAway(room, game);
     const gameEvents = game.pullEvents();
     const roomEvents = room.pullEvents();

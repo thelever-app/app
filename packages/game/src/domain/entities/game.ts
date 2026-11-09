@@ -4,22 +4,26 @@ import { DecisionPhaseNotStartedError } from '../errors/decision-phase-not-start
 import { DecisionPhaseOverError } from '../errors/decision-phase-over.error.ts';
 import { DilemmaAlreadyReportedError } from '../errors/dilemma-already-reported.error.ts';
 import { DilemmaNotInGameError } from '../errors/dilemma-not-in-game.error.ts';
+import { DilemmaNotInRoundError } from '../errors/dilemma-not-in-round.error.ts';
 import { DilemmaNotReportedAsOffensiveError } from '../errors/dilemma-not-reported-as-offensive.error.ts';
-import { DilemmaNotReachedError } from '../errors/dilemma-not-reached.error.ts';
+import { DilemmaNotRevealedError } from '../errors/dilemma-not-revealed.error.ts';
 import { DilemmaSkippedError } from '../errors/dilemma-skipped.error.ts';
 import { DilemmasMissingError } from '../errors/dilemmas-missing.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { DuplicateVotePredictionError } from '../errors/duplicate-vote-prediction.error.ts';
 import { InvalidMatchPredictionError } from '../errors/invalid-match-prediction.error.ts';
+import { NoNextRoundError } from '../errors/no-next-round.error.ts';
 import { OptionNotInDilemmaError } from '../errors/option-not-in-dilemma.error.ts';
+import { PlayerLeftGameError } from '../errors/player-left-game.error.ts';
 import { PlayerNotInGameError } from '../errors/player-not-in-game.error.ts';
 import { PlayerNotInPredictionSubsetError } from '../errors/player-not-in-prediction-subset.error.ts';
 import { PlayersMissingError } from '../errors/players-missing.error.ts';
 import { PredictionsNotAllowedError } from '../errors/predictions-not-allowed.error.ts';
+import { AnsweredCountChangedEvent } from '../events/answered-count-changed.event.ts';
+import { DilemmaRevealedEvent } from '../events/dilemma-revealed.event.ts';
 import type { DomainEvent } from '../events/domain-event.ts';
 import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
-import { RevealStartedEvent } from '../events/reveal-started.event.ts';
-import { TotalTimeRanOutEvent } from '../events/total-time-ran-out.event.ts';
+import { RoundStartedEvent } from '../events/round-started.event.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
 import type { DilemmaOrigin } from '../services/compose-game.ts';
@@ -32,7 +36,11 @@ import { DilemmaVO } from '../vos/dilemma.vo.ts';
 import type { GroupNature, Place } from '../vos/group.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { VoteVO } from '../vos/vote.vo.ts';
-import type { DilemmaLanguage, RoomVariant, TotalTimeInMinutes } from '../vos/room-settings.vo.ts';
+import type {
+  DilemmaLanguage,
+  RoomVariant,
+  TimePerDilemmaSeconds,
+} from '../vos/room-settings.vo.ts';
 import type { Player } from './player.ts';
 
 /** A dilemma of the game: its id, the version played, the ids of its options and whether it has the gap. */
@@ -43,9 +51,11 @@ export interface GameDilemma {
   readonly hasGap: boolean;
 }
 
-/** A dilemma as the game plays it: what the catalog gives, and how it got into the game. */
+/** A dilemma as the game plays it: what the catalog gives, how it got into the game and who added it. */
 export interface PlayedDilemma extends GameDilemma {
   readonly origin: DilemmaOrigin;
+  /** The player who added it in the lobby; null for the others. */
+  readonly addedBy: string | null;
 }
 
 /** What the game copies from its room when it starts, and keeps even if the room changes. */
@@ -54,13 +64,31 @@ export interface GameSettings {
   readonly groupNature: GroupNature;
   readonly place: Place;
   readonly dilemmaLanguage: DilemmaLanguage;
-  readonly totalTimeInMinutes: TotalTimeInMinutes;
+  readonly timePerDilemmaSeconds: TimePerDilemmaSeconds;
 }
 
-/** The decision phase, until the reveal; then the reveal. */
-export type GamePhase = 'decision' | 'reveal';
+/** Each round answers its dilemma in the decision phase, then shows it in the reveal. */
+export type RoundPhase = 'decision' | 'reveal';
 
-/** Why a dilemma is recorded as "did not vote": unanswered when the reveal started, or skipped by reporting it. */
+/** What revealed the dilemma of a round: everyone answered, its time ran out, or the host. */
+export type RevealedBy = 'everyone' | 'time' | 'host';
+
+/** The round in progress: one dilemma, played by everyone at the same time. */
+export interface Round {
+  /** The position of its dilemma in the game, from 0. */
+  readonly position: number;
+  readonly dilemmaId: string;
+  readonly phase: RoundPhase;
+  readonly startedAt: Date;
+  /** When its time per dilemma runs out. */
+  readonly endsAt: Date;
+  /** Null until the dilemma is revealed. */
+  readonly revealedBy: RevealedBy | null;
+  /** Who moved on to this round from the reveal of the previous one; null for the first. */
+  readonly movedOnBy: string | null;
+}
+
+/** Why a dilemma is recorded as "did not vote": unanswered when it was revealed, or skipped by reporting it. */
 export type DidNotVoteReason = 'not-answered' | 'reported';
 
 /** What a player answers of a dilemma, complete or not yet: the vote and the predictions made so far. */
@@ -70,24 +98,53 @@ export interface AnswerDraft {
   readonly votePredictions?: readonly VotePrediction[];
 }
 
+/** In an anonymous room, a dilemma voted by fewer players shows no distribution: it would give their votes away. */
+export const MINIMUM_VOTES_TO_SHOW = 3;
+
+/**
+ * What the reveal of a dilemma shows. In an anonymous room only the distribution and the count of
+ * who did not vote; the rest is empty.
+ */
+export interface DilemmaReveal {
+  readonly position: number;
+  readonly dilemmaId: string;
+  /** How many chose each option, in the order of the dilemma; null when too few voted to show it. */
+  readonly distribution: readonly { readonly optionId: string; readonly count: number }[] | null;
+  readonly tooFewVotes: boolean;
+  readonly didNotVoteCount: number;
+  /** What each player voted, null for who did not vote. */
+  readonly votes: readonly { readonly playerId: string; readonly vote: string | null }[];
+  /** Each match prediction made by a player who voted, against how many of the others chose the same. */
+  readonly matchPredictions: readonly {
+    readonly playerId: string;
+    readonly predicted: number;
+    readonly actual: number;
+    readonly distance: number;
+  }[];
+  /** Who was closest with their match prediction; a tie shares it. */
+  readonly closestIds: readonly string[];
+  /** Each vote prediction made, and whether it was right. */
+  readonly votePredictions: readonly {
+    readonly playerId: string;
+    readonly aboutId: string;
+    readonly vote: string;
+    readonly right: boolean;
+  }[];
+  readonly personInTheGap: string | null;
+  readonly addedBy: string | null;
+}
+
 export interface GameSnapshot {
   readonly id: string;
   readonly roomId: string;
   readonly dilemmas: readonly PlayedDilemma[];
   readonly settings: GameSettings;
-  readonly phase: GamePhase | null;
   readonly version: number;
-  readonly totalTime: {
-    readonly startedAt: Date;
-    readonly endsAt: Date;
-    readonly ranOut: boolean;
-  } | null;
+  readonly round: Omit<Round, 'dilemmaId'> | null;
   readonly peopleInTheGap: readonly { readonly dilemmaId: string; readonly playerId: string }[];
   readonly players: readonly {
     readonly id: string;
     readonly left: boolean;
-    /** When the player got the dilemma they are on; null once they have none left. */
-    readonly currentSince: Date | null;
     /** The options of each dilemma in the order the player sees them. */
     readonly optionOrders: readonly {
       readonly dilemmaId: string;
@@ -117,24 +174,34 @@ interface PlayerState {
   readonly points: Map<string, PredictionPoints>;
   /** Whether each dilemma the player reported was offensive. */
   readonly reports: Map<string, boolean>;
-  currentSince: Date | null;
   left: boolean;
 }
 
-const MS_PER_MINUTE = 60_000;
+interface RoundState {
+  readonly position: number;
+  phase: RoundPhase;
+  readonly startedAt: Date;
+  readonly endsAt: Date;
+  revealedBy: RevealedBy | null;
+  readonly movedOnBy: string | null;
+}
+
+const MS_PER_SECOND = 1000;
 
 export class Game {
   readonly #id: IdVO;
   readonly #roomId: IdVO;
   readonly #dilemmas: readonly DilemmaVO[];
-  readonly #origins: ReadonlyMap<string, DilemmaOrigin>;
+  readonly #origins: ReadonlyMap<
+    string,
+    { readonly origin: DilemmaOrigin; readonly addedBy: string | null }
+  >;
   readonly #settings: GameSettings;
-  #phase: GamePhase | null = null;
+  #round: RoundState | null = null;
   /** Goes up with every change, so the clients can drop what is older than what they hold. */
   #version = 0;
-  #totalTime: { startedAt: Date; endsAt: Date; ranOut: boolean } | null = null;
   #peopleInTheGap = new Map<string, string>();
-  /** In the order of the players of the decision phase. */
+  /** In the order of the players of the game. */
   readonly #players = new Map<string, PlayerState>();
   #events: DomainEvent[] = [];
 
@@ -155,7 +222,9 @@ export class Game {
       ({ dilemmaId, version, optionIds, hasGap }) =>
         new DilemmaVO(dilemmaId, version, optionIds, hasGap),
     );
-    this.#origins = new Map(dilemmas.map(({ dilemmaId, origin }) => [dilemmaId, origin]));
+    this.#origins = new Map(
+      dilemmas.map(({ dilemmaId, origin, addedBy }) => [dilemmaId, { origin, addedBy }]),
+    );
     this.#settings = { ...settings };
   }
 
@@ -184,13 +253,13 @@ export class Game {
 
   /** In the order every player gets them. */
   get dilemmas(): readonly PlayedDilemma[] {
-    return this.#dilemmas.map(({ dilemmaId, version, optionIds, hasGap }) => ({
-      dilemmaId,
-      version,
-      optionIds,
-      hasGap,
-      origin: this.#origins.get(dilemmaId) as DilemmaOrigin,
-    }));
+    return this.#dilemmas.map(({ dilemmaId, version, optionIds, hasGap }) => {
+      const { origin, addedBy } = this.#origins.get(dilemmaId) as {
+        origin: DilemmaOrigin;
+        addedBy: string | null;
+      };
+      return { dilemmaId, version, optionIds, hasGap, origin, addedBy };
+    });
   }
 
   get settings(): GameSettings {
@@ -201,34 +270,37 @@ export class Game {
     return [...this.#players.keys()];
   }
 
-  get phase(): GamePhase | null {
-    return this.#phase;
+  /** The round in progress; null before the game starts. */
+  get round(): Round | null {
+    if (!this.#round) return null;
+    return {
+      ...this.#round,
+      dilemmaId: this.#roundDilemma().dilemmaId,
+      startedAt: new Date(this.#round.startedAt),
+      endsAt: new Date(this.#round.endsAt),
+    };
+  }
+
+  /** The phase of the round in progress; null before the game starts. */
+  get phase(): RoundPhase | null {
+    return this.#round?.phase ?? null;
   }
 
   get isInDecisionPhase(): boolean {
-    return this.#phase === 'decision';
+    return this.#round?.phase === 'decision';
   }
 
   get version(): number {
     return this.#version;
   }
 
-  /** When the total time of the decision phase runs out; null before it starts. */
-  get totalTimeEndsAt(): Date | null {
-    return this.#totalTime && new Date(this.#totalTime.endsAt);
-  }
-
-  get totalTimeRanOut(): boolean {
-    return this.#totalTime?.ranOut ?? false;
-  }
-
   /**
-   * Everyone gets the dilemmas in the same order. Each player gets the options of each dilemma in
-   * an order of their own and, in a nominal room, their prediction subset; each dilemma with the
-   * gap gets its person. The total time starts now.
+   * The game starts with its first round. Everyone gets the dilemmas in the same order; each player
+   * gets the options of each dilemma in an order of their own and, in a nominal room, their
+   * prediction subset; each dilemma with the gap gets its person.
    */
-  startDecisionPhase(players: readonly Player[], at: Date, randomness: Randomness): void {
-    if (this.#phase !== null) throw new DecisionPhaseAlreadyStartedError();
+  start(players: readonly Player[], at: Date, randomness: Randomness): void {
+    if (this.#round !== null) throw new DecisionPhaseAlreadyStartedError();
     if (players.length === 0) throw new PlayersMissingError();
 
     const playerIds = players.map(({ id }) => id);
@@ -254,7 +326,6 @@ export class Game {
         didNotVote: new Map(),
         points: new Map(),
         reports: new Map(),
-        currentSince: new Date(at),
         left: false,
       });
     }
@@ -263,29 +334,21 @@ export class Game {
       playerIds,
       randomness,
     );
-    const endsAt = new Date(at.getTime() + this.#settings.totalTimeInMinutes * MS_PER_MINUTE);
-    this.#totalTime = { startedAt: new Date(at), endsAt, ranOut: false };
-    this.#phase = 'decision';
+    this.#round = this.#roundAt(0, at, null);
     this.#version += 1;
   }
 
   /**
-   * The player answers the dilemma they are on, or changes one they completed. A complete answer
-   * is the vote in an anonymous room, and the vote with every prediction in a nominal one; only a
-   * complete answer raises their progress and takes them to the next dilemma. The seal is the one
-   * in force now, also when the player changes an answer.
+   * The player answers the dilemma of the round, or changes their answer, until it is revealed. A
+   * complete answer is the vote in an anonymous room, and the vote with every prediction in a
+   * nominal one; once complete, the player has answered the round. The seal is the one in force
+   * now, also when the player changes an answer.
    */
   answer(playerId: string, dilemmaId: string, draft: AnswerDraft, seal: Seal, at: Date): void {
-    this.#ensureDecisionPhase();
-    const state = this.#stateOf(playerId);
-    const dilemma = this.#dilemmaOf(dilemmaId);
+    const dilemma = this.#decisionDilemma(dilemmaId);
+    const state = this.#activeStateOf(playerId);
     const vote = new VoteVO(draft.vote).value;
     if (state.didNotVote.has(dilemmaId)) throw new DilemmaSkippedError(dilemmaId);
-    const previous = state.answers.get(dilemmaId);
-    const wasComplete = previous !== undefined && this.#isComplete(playerId, dilemmaId, previous);
-    if (!wasComplete && dilemma !== this.#currentOf(playerId)) {
-      throw new DilemmaNotReachedError(dilemmaId);
-    }
     if (!dilemma.hasOption(vote)) throw new OptionNotInDilemmaError(vote, dilemmaId);
     const matchPrediction = draft.matchPrediction ?? null;
     const votePredictions = draft.votePredictions ?? [];
@@ -296,6 +359,8 @@ export class Game {
       votePredictions,
     );
 
+    const previous = state.answers.get(dilemmaId);
+    const wasComplete = previous !== undefined && this.#isComplete(playerId, dilemmaId, previous);
     let answer = new AnswerVO({
       vote,
       matchPrediction,
@@ -308,26 +373,21 @@ export class Game {
     const isComplete = this.#isComplete(playerId, dilemmaId, answer);
     if (wasComplete && !isComplete) throw new AnswerIncompleteError(dilemmaId);
 
-    const progressBefore = this.progressOf(playerId);
     if (isComplete && !wasComplete) {
-      answer = answer.completedIn(at.getTime() - (state.currentSince as Date).getTime());
-      state.answers.set(dilemmaId, answer);
-      state.currentSince = this.#currentOf(playerId) ? new Date(at) : null;
-    } else {
-      state.answers.set(dilemmaId, answer);
+      answer = answer.completedIn(at.getTime() - (this.#round as RoundState).startedAt.getTime());
     }
+    state.answers.set(dilemmaId, answer);
     this.#version += 1;
-    this.#afterProgress(playerId, progressBefore);
+    if (isComplete && !wasComplete) this.#afterAnswered(playerId);
   }
 
   /**
-   * The player reported a dilemma of the game, once. Reported as offensive, they may skip it; the
-   * report itself is for Moderation.
+   * The player reported the dilemma of the round, once. Reported as offensive, they may skip it;
+   * the report itself is for Moderation.
    */
   recordReport(playerId: string, dilemmaId: string, offensive: boolean): void {
-    this.#ensureDecisionPhase();
-    const state = this.#stateOf(playerId);
-    this.#dilemmaOf(dilemmaId);
+    this.#decisionDilemma(dilemmaId);
+    const state = this.#activeStateOf(playerId);
     if (state.reports.has(dilemmaId)) throw new DilemmaAlreadyReportedError(dilemmaId);
 
     state.reports.set(dilemmaId, offensive);
@@ -346,72 +406,97 @@ export class Game {
   }
 
   /**
-   * The player skips the dilemma they are on, which they reported as offensive: it is recorded as
-   * "did not vote" and counts as progress, and they cannot come back to it.
+   * The player skips the dilemma of the round, which they reported as offensive: it is recorded as
+   * "did not vote", for good, and the round does not wait for them.
    */
-  skip(playerId: string, dilemmaId: string, at: Date): void {
-    this.#ensureDecisionPhase();
-    const state = this.#stateOf(playerId);
-    const dilemma = this.#dilemmaOf(dilemmaId);
+  skip(playerId: string, dilemmaId: string): void {
+    this.#decisionDilemma(dilemmaId);
+    const state = this.#activeStateOf(playerId);
     if (state.didNotVote.has(dilemmaId)) return;
     if (state.reports.get(dilemmaId) !== true) {
       throw new DilemmaNotReportedAsOffensiveError(dilemmaId);
     }
-    if (dilemma !== this.#currentOf(playerId)) throw new DilemmaNotReachedError(dilemmaId);
 
-    const progressBefore = this.progressOf(playerId);
+    const wasAnswered = this.hasAnswered(playerId);
     state.answers.delete(dilemmaId);
     state.didNotVote.set(dilemmaId, 'reported');
-    state.currentSince = this.#currentOf(playerId) ? new Date(at) : null;
     this.#version += 1;
-    this.#afterProgress(playerId, progressBefore);
+    if (!wasAnswered) this.#afterAnswered(playerId);
   }
 
   /**
-   * Once the total time is over, the game records it and tells everyone who had not finished; it
-   * goes on. It does nothing before the time is over, after the decision phase or a second time,
-   * so anyone may call it whenever they find the time over.
+   * Reveals the dilemma of the round once every player who is connected and has not left has
+   * answered it. With nobody connected it waits for its time. Whether it revealed it.
    */
-  runOutTotalTime(at: Date): boolean {
-    if (this.#phase !== 'decision' || !this.#totalTime || this.#totalTime.ranOut) return false;
-    if (at.getTime() < this.#totalTime.endsAt.getTime()) return false;
-
-    this.#totalTime.ranOut = true;
-    this.#version += 1;
-    this.#events.push(new TotalTimeRanOutEvent(this.id, this.stragglerIds, this.#version));
+  revealIfEveryoneAnswered(connectedPlayerIds: readonly string[]): boolean {
+    if (!this.isInDecisionPhase) return false;
+    const connected = new Set(connectedPlayerIds);
+    const present = this.#activePlayerIds().filter((playerId) => connected.has(playerId));
+    if (present.length === 0 || !present.every((playerId) => this.hasAnswered(playerId))) {
+      return false;
+    }
+    this.reveal('everyone');
     return true;
   }
 
   /**
-   * The decision phase ends: whatever a player did not vote is recorded as "did not vote", and in
-   * a nominal room the predictions made are scored. Who may start it is up to the room.
+   * Once the time for the dilemma of the round is over, reveals it. It does nothing before, nor
+   * once revealed, so anyone may call it whenever they find the time over. Whether it revealed it.
    */
-  startReveal(): void {
-    this.#ensureDecisionPhase();
-    for (const state of this.#players.values()) {
-      for (const { dilemmaId } of this.#dilemmas) {
-        if (!state.answers.has(dilemmaId) && !state.didNotVote.has(dilemmaId)) {
-          state.didNotVote.set(dilemmaId, 'not-answered');
-        }
-      }
-      state.currentSince = null;
-    }
-    if (this.#settings.variant === 'nominal') this.#score();
-    this.#phase = 'reveal';
-    this.#version += 1;
-    this.#events.push(new RevealStartedEvent(this.id, this.#version));
+  runOutRound(at: Date): boolean {
+    if (!this.#round || this.#round.phase !== 'decision') return false;
+    if (at.getTime() < this.#round.endsAt.getTime()) return false;
+    this.reveal('time');
+    return true;
   }
 
-  /** The player leaves on purpose: they keep their answers, and nobody waits for them any more. */
+  /**
+   * The decision phase of the round ends: whoever has no vote for its dilemma is recorded as "did
+   * not vote", nobody can answer it any more and, in a nominal room, the predictions made are
+   * scored. Who may ask for it is up to the room.
+   */
+  reveal(by: RevealedBy): void {
+    const { dilemmaId } = this.#decisionDilemma(this.#roundDilemma().dilemmaId);
+    for (const state of this.#players.values()) {
+      if (!state.answers.has(dilemmaId) && !state.didNotVote.has(dilemmaId)) {
+        state.didNotVote.set(dilemmaId, 'not-answered');
+      }
+    }
+    if (this.#settings.variant === 'nominal') this.#score(dilemmaId);
+    const round = this.#round as RoundState;
+    round.phase = 'reveal';
+    round.revealedBy = by;
+    this.#version += 1;
+    this.#events.push(new DilemmaRevealedEvent(this.id, round.position, this.#version));
+  }
+
+  /**
+   * From the reveal of the round at that position, the player takes everyone to the next round.
+   * Asked from a round that is no longer in its reveal, it does nothing, so two players who move on
+   * at once move one round. Whether it moved on.
+   */
+  moveOn(playerId: string, fromPosition: number, at: Date): boolean {
+    this.#activeStateOf(playerId);
+    const round = this.#round;
+    if (!round || round.position !== fromPosition || round.phase !== 'reveal') return false;
+    if (round.position === this.#dilemmas.length - 1) throw new NoNextRoundError();
+
+    const next = this.#roundAt(round.position + 1, at, playerId);
+    this.#round = next;
+    this.#version += 1;
+    this.#events.push(new RoundStartedEvent(this.id, next.position, playerId, this.#version));
+    return true;
+  }
+
+  /** The player leaves on purpose: they keep their answers, and no round waits for them any more. */
   leave(playerId: string): void {
     const state = this.#stateOf(playerId);
     if (state.left) return;
     state.left = true;
     this.#version += 1;
-    if (this.#phase === 'decision' && this.#everyoneFinished()) this.startReveal();
   }
 
-  /** A player who had left comes back to the game where they were. */
+  /** A player who had left comes back to the game where it is. */
   rejoin(playerId: string): void {
     const state = this.#stateOf(playerId);
     if (!state.left) return;
@@ -432,18 +517,19 @@ export class Game {
     ).length;
   }
 
-  hasFinished(playerId: string): boolean {
-    return this.progressOf(playerId) === this.#dilemmas.length;
+  /** Whether the player has completed or skipped the dilemma of the round. */
+  hasAnswered(playerId: string): boolean {
+    if (!this.#round) return false;
+    const { dilemmaId } = this.#roundDilemma();
+    return (
+      this.#stateOf(playerId).didNotVote.get(dilemmaId) === 'reported' ||
+      this.#isCompleted(playerId, dilemmaId)
+    );
   }
 
-  /** Whether everyone who has not left, but that player, has finished. */
-  everyoneElseFinished(playerId: string): boolean {
-    return this.#activePlayerIds().every((id) => id === playerId || this.hasFinished(id));
-  }
-
-  /** The players who have not left and have not finished. */
-  get stragglerIds(): readonly string[] {
-    return this.#activePlayerIds().filter((playerId) => !this.hasFinished(playerId));
+  /** How many players have answered the dilemma of the round, which is all an anonymous room tells. */
+  get answeredCount(): number {
+    return this.playerIds.filter((playerId) => this.hasAnswered(playerId)).length;
   }
 
   /** The options of the dilemma in the order the player sees them. */
@@ -484,13 +570,73 @@ export class Game {
     });
   }
 
-  /** What the predictions of the player scored in each dilemma; empty until the reveal starts. */
+  /** What the predictions of the player scored in each dilemma revealed so far. */
   pointsOf(playerId: string): readonly ({ readonly dilemmaId: string } & PredictionPoints)[] {
     const { points } = this.#stateOf(playerId);
     return this.#dilemmas.flatMap(({ dilemmaId }) => {
       const scored = points.get(dilemmaId);
       return scored ? [{ dilemmaId, ...scored }] : [];
     });
+  }
+
+  /** What the reveal of the dilemma at that position shows, once it has been revealed. */
+  revealOf(position: number): DilemmaReveal {
+    const round = this.#round;
+    const revealed =
+      round !== null &&
+      (position < round.position || (position === round.position && round.phase === 'reveal'));
+    const dilemma = this.#dilemmas[position];
+    if (!revealed || !dilemma) throw new DilemmaNotRevealedError(position);
+
+    const { dilemmaId } = dilemma;
+    const nominal = this.#settings.variant === 'nominal';
+    const answerOf = (playerId: string) => this.#stateOf(playerId).answers.get(dilemmaId);
+    const voteOf = (playerId: string) => answerOf(playerId)?.vote ?? null;
+    const voters = this.playerIds.filter((playerId) => voteOf(playerId) !== null);
+    const tooFewVotes = !nominal && voters.length < MINIMUM_VOTES_TO_SHOW;
+    const matchPredictions = nominal
+      ? voters.flatMap((playerId) => {
+          const predicted = answerOf(playerId)?.matchPrediction ?? null;
+          if (predicted === null) return [];
+          const actual = voters.filter(
+            (other) => other !== playerId && voteOf(other) === voteOf(playerId),
+          ).length;
+          return [{ playerId, predicted, actual, distance: Math.abs(predicted - actual) }];
+        })
+      : [];
+    const closest = Math.min(...matchPredictions.map(({ distance }) => distance));
+
+    return {
+      position,
+      dilemmaId,
+      distribution: tooFewVotes
+        ? null
+        : dilemma.optionIds.map((optionId) => ({
+            optionId,
+            count: voters.filter((playerId) => voteOf(playerId) === optionId).length,
+          })),
+      tooFewVotes,
+      didNotVoteCount: this.playerIds.length - voters.length,
+      votes: nominal
+        ? this.playerIds.map((playerId) => ({ playerId, vote: voteOf(playerId) }))
+        : [],
+      matchPredictions,
+      closestIds: matchPredictions
+        .filter(({ distance }) => distance === closest)
+        .map(({ playerId }) => playerId),
+      votePredictions: nominal
+        ? voters.flatMap((playerId) =>
+            (answerOf(playerId)?.votePredictions ?? []).map(({ playerId: aboutId, vote }) => ({
+              playerId,
+              aboutId,
+              vote,
+              right: voteOf(aboutId) === vote,
+            })),
+          )
+        : [],
+      personInTheGap: this.#peopleInTheGap.get(dilemmaId) ?? null,
+      addedBy: nominal ? (this.#origins.get(dilemmaId)?.addedBy ?? null) : null,
+    };
   }
 
   /** Returns the events recorded since the last call and forgets them. */
@@ -506,12 +652,11 @@ export class Game {
       roomId: this.roomId,
       dilemmas: this.dilemmas,
       settings: this.settings,
-      phase: this.#phase,
       version: this.#version,
-      totalTime: this.#totalTime && {
-        startedAt: new Date(this.#totalTime.startedAt),
-        endsAt: new Date(this.#totalTime.endsAt),
-        ranOut: this.#totalTime.ranOut,
+      round: this.#round && {
+        ...this.#round,
+        startedAt: new Date(this.#round.startedAt),
+        endsAt: new Date(this.#round.endsAt),
       },
       peopleInTheGap: [...this.#peopleInTheGap].map(([dilemmaId, playerId]) => ({
         dilemmaId,
@@ -520,7 +665,6 @@ export class Game {
       players: [...this.#players].map(([playerId, state]) => ({
         id: playerId,
         left: state.left,
-        currentSince: state.currentSince && new Date(state.currentSince),
         optionOrders: [...state.optionOrders].map(([dilemmaId, optionOrder]) => ({
           dilemmaId,
           optionOrder: [...optionOrder],
@@ -539,12 +683,11 @@ export class Game {
 
   static restore(snapshot: GameSnapshot): Game {
     const game = new Game(snapshot.id, snapshot.roomId, snapshot.dilemmas, snapshot.settings);
-    game.#phase = snapshot.phase;
     game.#version = snapshot.version;
-    game.#totalTime = snapshot.totalTime && {
-      startedAt: new Date(snapshot.totalTime.startedAt),
-      endsAt: new Date(snapshot.totalTime.endsAt),
-      ranOut: snapshot.totalTime.ranOut,
+    game.#round = snapshot.round && {
+      ...snapshot.round,
+      startedAt: new Date(snapshot.round.startedAt),
+      endsAt: new Date(snapshot.round.endsAt),
     };
     game.#peopleInTheGap = new Map(
       snapshot.peopleInTheGap.map(({ dilemmaId, playerId }) => [dilemmaId, playerId]),
@@ -568,16 +711,42 @@ export class Game {
           player.points.map(({ dilemmaId, match, votes }) => [dilemmaId, { match, votes }]),
         ),
         reports: new Map(player.reports.map(({ dilemmaId, offensive }) => [dilemmaId, offensive])),
-        currentSince: player.currentSince && new Date(player.currentSince),
         left: player.left,
       });
     }
     return game;
   }
 
-  #ensureDecisionPhase(): void {
-    if (this.#phase === null) throw new DecisionPhaseNotStartedError();
-    if (this.#phase === 'reveal') throw new DecisionPhaseOverError();
+  #roundAt(position: number, at: Date, movedOnBy: string | null): RoundState {
+    return {
+      position,
+      phase: 'decision',
+      startedAt: new Date(at),
+      endsAt: new Date(at.getTime() + this.#settings.timePerDilemmaSeconds * MS_PER_SECOND),
+      revealedBy: null,
+      movedOnBy,
+    };
+  }
+
+  #roundDilemma(): DilemmaVO {
+    if (!this.#round) throw new DecisionPhaseNotStartedError();
+    return this.#dilemmas[this.#round.position] as DilemmaVO;
+  }
+
+  /** The dilemma, which must be the one of the round, while the round is in its decision phase. */
+  #decisionDilemma(dilemmaId: string): DilemmaVO {
+    const dilemma = this.#dilemmaOf(dilemmaId);
+    if (!this.#round) throw new DecisionPhaseNotStartedError();
+    if (dilemma !== this.#roundDilemma()) throw new DilemmaNotInRoundError(dilemmaId);
+    if (this.#round.phase === 'reveal') throw new DecisionPhaseOverError();
+    return dilemma;
+  }
+
+  /** A player who left plays nothing until they come back. */
+  #activeStateOf(playerId: string): PlayerState {
+    const state = this.#stateOf(playerId);
+    if (state.left) throw new PlayerLeftGameError(playerId);
+    return state;
   }
 
   #stateOf(playerId: string): PlayerState {
@@ -590,15 +759,6 @@ export class Game {
     const dilemma = this.#dilemmas.find((candidate) => candidate.dilemmaId === dilemmaId);
     if (!dilemma) throw new DilemmaNotInGameError(dilemmaId);
     return dilemma;
-  }
-
-  /** The dilemma the player is on: the first one they have neither completed nor skipped. */
-  #currentOf(playerId: string): DilemmaVO | undefined {
-    const state = this.#stateOf(playerId);
-    return this.#dilemmas.find(
-      ({ dilemmaId }) =>
-        !state.didNotVote.has(dilemmaId) && !this.#isCompleted(playerId, dilemmaId),
-    );
   }
 
   #isCompleted(playerId: string, dilemmaId: string): boolean {
@@ -648,33 +808,29 @@ export class Game {
     }
   }
 
-  #afterProgress(playerId: string, progressBefore: number): void {
-    const progress = this.progressOf(playerId);
-    if (progress > progressBefore) {
-      this.#events.push(new ProgressUpdatedEvent(this.id, playerId, progress, this.#version));
+  /** In a nominal room the others learn who answered; in an anonymous one, only how many. */
+  #afterAnswered(playerId: string): void {
+    if (this.#settings.variant === 'anonymous') {
+      this.#events.push(new AnsweredCountChangedEvent(this.id, this.answeredCount, this.#version));
+      return;
     }
-    if (this.#everyoneFinished()) this.startReveal();
+    this.#events.push(
+      new ProgressUpdatedEvent(this.id, playerId, this.progressOf(playerId), this.#version),
+    );
   }
 
   #activePlayerIds(): string[] {
     return [...this.#players].filter(([, state]) => !state.left).map(([playerId]) => playerId);
   }
 
-  #everyoneFinished(): boolean {
-    return this.#activePlayerIds().every((playerId) => this.hasFinished(playerId));
-  }
-
-  #score(): void {
-    const playerIds = this.playerIds;
-    for (const { dilemmaId } of this.#dilemmas) {
-      const points = scorePredictions({
-        playerIds,
-        answerOf: (playerId) => this.#stateOf(playerId).answers.get(dilemmaId),
-        subsetOf: (playerId) => this.predictionSubsetOf(playerId, dilemmaId),
-      });
-      for (const [playerId, scored] of points) {
-        this.#stateOf(playerId).points.set(dilemmaId, scored);
-      }
+  #score(dilemmaId: string): void {
+    const points = scorePredictions({
+      playerIds: this.playerIds,
+      answerOf: (playerId) => this.#stateOf(playerId).answers.get(dilemmaId),
+      subsetOf: (playerId) => this.predictionSubsetOf(playerId, dilemmaId),
+    });
+    for (const [playerId, scored] of points) {
+      this.#stateOf(playerId).points.set(dilemmaId, scored);
     }
   }
 }

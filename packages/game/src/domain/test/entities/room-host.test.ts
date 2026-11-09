@@ -52,6 +52,19 @@ describe('Room, host and leaving', () => {
       expect(room.hasLeft('Ana')).toBe(true);
     });
 
+    it('should pass the role of a host who leaves even when nobody else is connected', () => {
+      // Arrange
+      const room = roomInGame();
+      room.disconnect('Luis', 'LuisConnection');
+      room.disconnect('Marta', 'MartaConnection');
+
+      // Act
+      room.leave('Ana');
+
+      // Assert
+      expect(room.host.id).toBe('Luis');
+    });
+
     it('should close the connections of who leaves and tell the room', () => {
       // Arrange
       const room = roomInGame();
@@ -108,6 +121,19 @@ describe('Room, host and leaving', () => {
       expect(room.pullEvents()).toEqual([
         new PlayerLeftEvent('TestRoomId', 'Ana', false, room.version),
       ]);
+    });
+  });
+
+  describe('connectedPlayerIds', () => {
+    it('should list who has a connection open, in the order they joined', () => {
+      // Arrange
+      const room = roomInGame();
+
+      // Act
+      room.disconnect('Luis', 'LuisConnection');
+
+      // Assert
+      expect(room.connectedPlayerIds).toEqual(['Ana', 'Marta']);
     });
   });
 

@@ -15,7 +15,7 @@ describe('RoomSettingsVO', () => {
         dilemmaLanguage: 'en',
         categories: null,
         dilemmaCount: 8,
-        totalTimeInMinutes: 6,
+        timePerDilemmaSeconds: 60,
         newDilemmas: true,
         dilemmasPerPlayer: 0,
       });
@@ -48,7 +48,7 @@ describe('RoomSettingsVO', () => {
       { dilemmasPerPlayer: 4 },
       { dilemmasPerPlayer: -1 },
       { dilemmaCount: 7 },
-      { totalTimeInMinutes: 5 },
+      { timePerDilemmaSeconds: 5 },
       { dilemmaLanguage: 'ja' },
     ])('should throw an error for %o', (change) => {
       // Act & Assert

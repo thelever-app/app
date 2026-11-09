@@ -7,17 +7,16 @@ import { GameNotFoundError } from '../errors/game-not-found.error.ts';
 import { findRoom } from './find-room.ts';
 import { notifyGame } from './notify-game.ts';
 
-export interface RunOutTotalTimeInput {
+export interface RunOutRoundInput {
   readonly roomId: string;
 }
 
 /**
- * Whoever finds the total time of the game in progress over records it: everyone learns who has
- * not finished, and an away host loses the role. It does nothing before the time is over, a
- * second time or without a game in progress, so every instance that holds players of the room may
- * run it whenever it likes.
+ * Whoever finds the time for the dilemma of the round over reveals it, and an away host loses the
+ * role. It does nothing before the time is over, once revealed or without a game in progress, so
+ * every instance that holds players of the room may run it whenever it likes.
  */
-export class RunOutTotalTimeUseCase {
+export class RunOutRoundUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
@@ -35,13 +34,13 @@ export class RunOutTotalTimeUseCase {
     this.#clock = clock;
   }
 
-  async execute({ roomId }: RunOutTotalTimeInput): Promise<void> {
+  async execute({ roomId }: RunOutRoundInput): Promise<void> {
     const room = await findRoom(this.#roomRepository, roomId);
     const gameId = room.currentGameId;
     if (!gameId) return;
     const game = await this.#gameRepository.findById(gameId);
     if (!game) throw new GameNotFoundError(gameId);
-    if (!game.runOutTotalTime(this.#clock.now())) return;
+    if (!game.runOutRound(this.#clock.now())) return;
 
     handOverHostIfAway(room, game);
     const gameEvents = game.pullEvents();

@@ -21,7 +21,11 @@ export {
   type PlayedDilemma,
   type GameSettings,
   type GameSnapshot,
-  type GamePhase,
+  type RoundPhase,
+  type Round,
+  type RevealedBy,
+  type DilemmaReveal,
+  MINIMUM_VOTES_TO_SHOW,
   type DidNotVoteReason,
   type AnswerDraft,
 } from './domain/entities/game.ts';
@@ -37,13 +41,13 @@ export {
   RoomSettingsVO,
   DILEMMA_LANGUAGES,
   DILEMMA_COUNTS,
-  TOTAL_TIMES_IN_MINUTES,
+  TIMES_PER_DILEMMA_IN_SECONDS,
   DILEMMAS_PER_PLAYER,
   type RoomSettingsSnapshot,
   type RoomVariant,
   type DilemmaLanguage,
   type DilemmaCount,
-  type TotalTimeInMinutes,
+  type TimePerDilemmaSeconds,
   type DilemmasPerPlayer,
 } from './domain/vos/room-settings.vo.ts';
 export { GROUP_NATURES, PLACES, type GroupNature, type Place } from './domain/vos/group.vo.ts';
@@ -59,8 +63,9 @@ export type { DomainEvent } from './domain/events/domain-event.ts';
 export { ProgressUpdatedEvent } from './domain/events/progress-updated.event.ts';
 export { ConnectionChangedEvent } from './domain/events/connection-changed.event.ts';
 export { LobbyChangedEvent, type LobbyChange } from './domain/events/lobby-changed.event.ts';
-export { TotalTimeRanOutEvent } from './domain/events/total-time-ran-out.event.ts';
-export { RevealStartedEvent } from './domain/events/reveal-started.event.ts';
+export { DilemmaRevealedEvent } from './domain/events/dilemma-revealed.event.ts';
+export { RoundStartedEvent } from './domain/events/round-started.event.ts';
+export { AnsweredCountChangedEvent } from './domain/events/answered-count-changed.event.ts';
 export { HostChangedEvent } from './domain/events/host-changed.event.ts';
 export { PlayerLeftEvent } from './domain/events/player-left.event.ts';
 export type { IdGenerator } from './domain/ports/id-generator.port.ts';
@@ -82,7 +87,10 @@ export { DecisionPhaseAlreadyStartedError } from './domain/errors/decision-phase
 export { OptionsMissingError } from './domain/errors/options-missing.error.ts';
 export { InvalidDilemmaVersionError } from './domain/errors/invalid-dilemma-version.error.ts';
 export { OptionNotInDilemmaError } from './domain/errors/option-not-in-dilemma.error.ts';
-export { DilemmaNotReachedError } from './domain/errors/dilemma-not-reached.error.ts';
+export { DilemmaNotInRoundError } from './domain/errors/dilemma-not-in-round.error.ts';
+export { DilemmaNotRevealedError } from './domain/errors/dilemma-not-revealed.error.ts';
+export { NoNextRoundError } from './domain/errors/no-next-round.error.ts';
+export { PlayerLeftGameError } from './domain/errors/player-left-game.error.ts';
 export { InvalidAvatarError } from './domain/errors/invalid-avatar.error.ts';
 export { InvalidRoomCodeError } from './domain/errors/invalid-room-code.error.ts';
 export { InvalidRoomSettingError } from './domain/errors/invalid-room-setting.error.ts';
@@ -208,13 +216,14 @@ export {
   type GetGameStateOutput,
 } from './application/use-cases/get-game-state.use-case.ts';
 export {
-  StartRevealUseCase,
-  type StartRevealInput,
-} from './application/use-cases/start-reveal.use-case.ts';
+  RevealEarlyUseCase,
+  type RevealEarlyInput,
+} from './application/use-cases/reveal-early.use-case.ts';
+export { MoveOnUseCase, type MoveOnInput } from './application/use-cases/move-on.use-case.ts';
 export {
-  RunOutTotalTimeUseCase,
-  type RunOutTotalTimeInput,
-} from './application/use-cases/run-out-total-time.use-case.ts';
+  RunOutRoundUseCase,
+  type RunOutRoundInput,
+} from './application/use-cases/run-out-round.use-case.ts';
 export {
   LeaveRoomUseCase,
   type LeaveRoomInput,

@@ -12,6 +12,7 @@ import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findCurrentGame } from './find-current-game.ts';
+import { runOutRoundFirst } from './run-out-round-first.ts';
 import { notifyGame } from './notify-game.ts';
 
 export interface ReportDilemmaInput {
@@ -68,7 +69,15 @@ export class ReportDilemmaUseCase {
     if (!dilemma) throw new DilemmaNotInGameError(dilemmaId);
 
     const at = this.#clock.now();
-    game.runOutTotalTime(at);
+    await runOutRoundFirst(
+      { room, game },
+      {
+        roomRepository: this.#roomRepository,
+        gameRepository: this.#gameRepository,
+        notifier: this.#notifier,
+      },
+      at,
+    );
     game.recordReport(playerId, dilemmaId, reason === 'offensive');
     handOverHostIfAway(room, game);
     const gameEvents = game.pullEvents();

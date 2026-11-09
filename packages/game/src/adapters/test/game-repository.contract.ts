@@ -31,7 +31,7 @@ const ANONYMOUS: GameSettings = {
   groupNature: 'family',
   place: 'remote',
   dilemmaLanguage: 'ca',
-  totalTimeInMinutes: 10,
+  timePerDilemmaSeconds: 60,
 };
 
 /**
@@ -74,7 +74,11 @@ export function describeGameRepositoryContract(
     const game = Game.create(
       {
         roomId: room.id,
-        dilemmas: dilemmas.map((dilemma, index) => ({ ...dilemma, origin: origins[index % 3]! })),
+        dilemmas: dilemmas.map((dilemma, index) => ({
+          ...dilemma,
+          origin: origins[index % 3]!,
+          addedBy: index % 3 === 0 ? 'TestLuisId' : null,
+        })),
         settings,
       },
       new FixedIdGenerator('TestGameId'),
@@ -94,7 +98,7 @@ export function describeGameRepositoryContract(
 
   /** Options and subsets in an order other than the one given, so a repository that sorts them fails. */
   function start(game: Game, room: Room): void {
-    game.startDecisionPhase(room.players, STARTED_AT, new FixedRandomness(0, 0, 1, 0, 1));
+    game.start(room.players, STARTED_AT, new FixedRandomness(0, 0, 1, 0, 1));
   }
 
   describe(`${name} (GameRepository contract)`, () => {
@@ -111,9 +115,6 @@ export function describeGameRepositoryContract(
           ANA_SEAL,
           answeredAt,
         );
-        game.recordReport('TestAnaId', second.dilemmaId, true);
-        game.recordReport('TestLuisId', second.dilemmaId, false);
-        game.skip('TestAnaId', second.dilemmaId, new Date(answeredAt.getTime() + 5 * SECOND));
         game.answer(
           'TestLuisId',
           first.dilemmaId,
@@ -121,7 +122,11 @@ export function describeGameRepositoryContract(
           LUIS_SEAL,
           answeredAt,
         );
-        game.runOutTotalTime(new Date(STARTED_AT.getTime() + 10 * MINUTE));
+        game.runOutRound(new Date(STARTED_AT.getTime() + 10 * MINUTE));
+        game.moveOn('TestLuisId', 0, new Date(STARTED_AT.getTime() + 11 * MINUTE));
+        game.recordReport('TestAnaId', second.dilemmaId, true);
+        game.recordReport('TestLuisId', second.dilemmaId, false);
+        game.skip('TestAnaId', second.dilemmaId);
         game.leave('TestLuisId');
         await games.save(game);
 
@@ -130,7 +135,8 @@ export function describeGameRepositoryContract(
 
         // Assert
         expect(found?.toSnapshot()).toEqual(game.toSnapshot());
-        expect(found?.totalTimeRanOut).toBe(true);
+        expect(found?.round?.movedOnBy).toBe('TestLuisId');
+        expect(found?.revealOf(0).tooFewVotes).toBe(true);
       });
 
       it('should find a saved nominal game in the reveal, with its predictions, its points and the person in the gap', async () => {
@@ -158,7 +164,7 @@ export function describeGameRepositoryContract(
           LUIS_SEAL,
           new Date(STARTED_AT.getTime() + 20 * SECOND),
         );
-        game.startReveal();
+        game.reveal('host');
         await games.save(game);
 
         // Act

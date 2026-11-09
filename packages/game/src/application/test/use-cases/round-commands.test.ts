@@ -5,19 +5,22 @@ import { DisconnectPlayerUseCase } from '../../use-cases/disconnect-player.use-c
 import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
 import { LeaveRoomUseCase } from '../../use-cases/leave-room.use-case.ts';
 import { ReportDilemmaUseCase } from '../../use-cases/report-dilemma.use-case.ts';
-import { RunOutTotalTimeUseCase } from '../../use-cases/run-out-total-time.use-case.ts';
+import { MoveOnUseCase } from '../../use-cases/move-on.use-case.ts';
+import { RevealEarlyUseCase } from '../../use-cases/reveal-early.use-case.ts';
+import { RunOutRoundUseCase } from '../../use-cases/run-out-round.use-case.ts';
 import { SkipDilemmaUseCase } from '../../use-cases/skip-dilemma.use-case.ts';
-import { StartRevealUseCase } from '../../use-cases/start-reveal.use-case.ts';
 import { InvalidReportReasonError } from '../../errors/invalid-report-reason.error.ts';
 import { NotHostError } from '../../../domain/errors/not-host.error.ts';
 import { HostChangedEvent } from '../../../domain/events/host-changed.event.ts';
-import { RevealStartedEvent } from '../../../domain/events/reveal-started.event.ts';
-import { TotalTimeRanOutEvent } from '../../../domain/events/total-time-ran-out.event.ts';
+import { DecisionPhaseOverError } from '../../../domain/errors/decision-phase-over.error.ts';
+import { DilemmaRevealedEvent } from '../../../domain/events/dilemma-revealed.event.ts';
+import { RoundStartedEvent } from '../../../domain/events/round-started.event.ts';
 import { InMemoryDilemmaReports } from '../../../adapters/in-memory/in-memory-dilemma-reports.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { gameInDecisionPhase } from '../support/game-in-decision-phase.ts';
 
+/** The time per dilemma of the room: a minute. */
 const MINUTE = 60_000;
 
 /** Ana hosts Luis and Marta in an anonymous game, all three connected. */
@@ -31,7 +34,12 @@ async function arrange() {
     clock: game.clock,
   };
   const reports = new InMemoryDilemmaReports();
-  const connectPlayer = new ConnectPlayerUseCase(game.roomRepository, notifier, game.idGenerator);
+  const connectPlayer = new ConnectPlayerUseCase(
+    game.roomRepository,
+    game.gameRepository,
+    notifier,
+    game.idGenerator,
+  );
   const connections = new Map<string, string>();
   for (const [name, playerId] of [
     ['Ana', game.anaId],
@@ -51,13 +59,19 @@ async function arrange() {
     connections,
     connectPlayer,
     answerDilemma: new AnswerDilemmaUseCase({ ...ports, sealProvider: new InMemorySealProvider() }),
-    startReveal: new StartRevealUseCase(game.roomRepository, game.gameRepository, notifier),
-    runOutTotalTime: new RunOutTotalTimeUseCase(
+    revealEarly: new RevealEarlyUseCase(
       game.roomRepository,
       game.gameRepository,
       notifier,
       game.clock,
     ),
+    runOutRound: new RunOutRoundUseCase(
+      game.roomRepository,
+      game.gameRepository,
+      notifier,
+      game.clock,
+    ),
+    moveOn: new MoveOnUseCase(game.roomRepository, game.gameRepository, notifier, game.clock),
     leaveRoom: new LeaveRoomUseCase(game.roomRepository, game.gameRepository, notifier),
     reportDilemma: new ReportDilemmaUseCase({ ...ports, reports }),
     skipDilemma: new SkipDilemmaUseCase(ports),
@@ -74,131 +88,161 @@ async function arrange() {
   };
 }
 
-async function finish(
+/** Each player votes the dilemma of the round, in the order given. */
+async function vote(
   { answerDilemma, roomId, dilemmaIds }: Awaited<ReturnType<typeof arrange>>,
-  playerId: string,
+  position: number,
+  ...playerIds: string[]
 ): Promise<void> {
-  for (const dilemmaId of dilemmaIds) {
-    await answerDilemma.execute({ roomId, playerId, dilemmaId, vote: 'TestOption' });
+  for (const playerId of playerIds) {
+    await answerDilemma.execute({
+      roomId,
+      playerId,
+      dilemmaId: dilemmaIds[position]!,
+      vote: 'TestOption',
+    });
   }
 }
 
-describe('Decision phase commands', () => {
-  describe('StartRevealUseCase', () => {
-    it('should let the host move the game to the reveal and tell everyone', async () => {
+describe('Round commands', () => {
+  describe('AnswerDilemmaUseCase', () => {
+    it('should reveal the dilemma once everyone connected has answered, and tell everyone', async () => {
       // Arrange
-      const { startReveal, gameRepository, notifier, roomId, gameId, anaId, martaId } =
-        await arrange();
+      const arranged = await arrange();
+      const { gameRepository, notifier, gameId, anaId, luisId, martaId } = arranged;
+      await vote(arranged, 0, anaId, luisId);
 
       // Act
-      await startReveal.execute({ roomId, playerId: anaId });
+      await vote(arranged, 0, martaId);
+
+      // Assert
+      const game = await gameRepository.findById(gameId);
+      expect(game?.round).toMatchObject({ position: 0, phase: 'reveal', revealedBy: 'everyone' });
+      expect(notifier.receivedBy(anaId).at(-1)).toBeInstanceOf(DilemmaRevealedEvent);
+    });
+
+    it('should find the time for the dilemma over before taking a late answer', async () => {
+      // Arrange
+      const { answerDilemma, gameRepository, clock, roomId, gameId, luisId, dilemmaIds } =
+        await arrange();
+      clock.advance(MINUTE);
+
+      // Act & Assert
+      await expect(
+        answerDilemma.execute({
+          roomId,
+          playerId: luisId,
+          dilemmaId: dilemmaIds[0]!,
+          vote: 'TestOption',
+        }),
+      ).rejects.toThrow(DecisionPhaseOverError);
+      expect((await gameRepository.findById(gameId))?.round?.revealedBy).toBe('time');
+    });
+  });
+
+  describe('DisconnectPlayerUseCase', () => {
+    it('should not let the round wait for who disconnects without answering', async () => {
+      // Arrange
+      const arranged = await arrange();
+      const { disconnectPlayer, gameRepository, connections, roomId, gameId } = arranged;
+      const { anaId, luisId, martaId } = arranged;
+      await vote(arranged, 0, anaId, luisId);
+
+      // Act
+      await disconnectPlayer.execute({
+        roomId,
+        playerId: martaId,
+        connectionId: connections.get(martaId)!,
+      });
 
       // Assert
       const game = await gameRepository.findById(gameId);
       expect(game?.phase).toBe('reveal');
-      expect(game?.didNotVoteOf(martaId)).toHaveLength(3);
-      expect(notifier.receivedBy(martaId).at(-1)).toBeInstanceOf(RevealStartedEvent);
-    });
-
-    it('should not let anyone else start it', async () => {
-      // Arrange
-      const { startReveal, roomId, luisId } = await arrange();
-
-      // Act & Assert
-      await expect(startReveal.execute({ roomId, playerId: luisId })).rejects.toThrow(NotHostError);
+      expect(game?.didNotVoteOf(martaId)).toEqual([
+        { dilemmaId: arranged.dilemmaIds[0], reason: 'not-answered' },
+      ]);
     });
   });
 
-  describe('RunOutTotalTimeUseCase', () => {
-    it('should do nothing before the total time is over', async () => {
+  describe('RunOutRoundUseCase', () => {
+    it('should do nothing before the time for the dilemma is over', async () => {
       // Arrange
-      const { runOutTotalTime, gameRepository, clock, roomId, gameId } = await arrange();
-      clock.advance(6 * MINUTE - 1);
+      const { runOutRound, gameRepository, clock, roomId, gameId } = await arrange();
+      clock.advance(MINUTE - 1);
 
       // Act
-      await runOutTotalTime.execute({ roomId });
+      await runOutRound.execute({ roomId });
 
       // Assert
-      expect((await gameRepository.findById(gameId))?.totalTimeRanOut).toBe(false);
+      expect((await gameRepository.findById(gameId))?.isInDecisionPhase).toBe(true);
     });
 
-    it('should tell everyone who has not finished, and pass the role of an away host', async () => {
+    it('should reveal the dilemma once its time is over, and pass the role of an away host', async () => {
       // Arrange
       const arranged = await arrange();
-      const { runOutTotalTime, disconnectPlayer, roomRepository, notifier, clock, connections } =
+      const { runOutRound, disconnectPlayer, roomRepository, notifier, clock, connections } =
         arranged;
       const { roomId, anaId, luisId, martaId } = arranged;
-      await finish(arranged, luisId);
       await disconnectPlayer.execute({
         roomId,
         playerId: anaId,
         connectionId: connections.get(anaId)!,
       });
-      clock.advance(6 * MINUTE);
+      clock.advance(MINUTE);
 
       // Act
-      await runOutTotalTime.execute({ roomId });
+      await runOutRound.execute({ roomId });
 
       // Assert
       const received = notifier.receivedBy(martaId);
-      expect(received.find((event) => event instanceof TotalTimeRanOutEvent)).toMatchObject({
-        stragglerIds: [anaId, martaId],
-      });
+      expect(received.some((event) => event instanceof DilemmaRevealedEvent)).toBe(true);
       expect(received).toContainEqual(new HostChangedEvent(roomId, luisId, expect.any(Number)));
       expect((await roomRepository.findById(roomId))?.host.id).toBe(luisId);
     });
   });
 
-  describe('AnswerDilemmaUseCase', () => {
-    it('should pass the role of a disconnected host when everyone else has finished', async () => {
+  describe('RevealEarlyUseCase', () => {
+    it('should let the host reveal the dilemma early and tell everyone', async () => {
       // Arrange
-      const arranged = await arrange();
-      const { disconnectPlayer, roomRepository, connections, roomId, anaId, luisId, martaId } =
-        arranged;
-      await disconnectPlayer.execute({
-        roomId,
-        playerId: anaId,
-        connectionId: connections.get(anaId)!,
-      });
-      await finish(arranged, luisId);
-
-      // Act
-      await finish(arranged, martaId);
-
-      // Assert
-      expect((await roomRepository.findById(roomId))?.host.id).toBe(luisId);
-    });
-
-    it('should move the game to the reveal when everyone has finished', async () => {
-      // Arrange
-      const arranged = await arrange();
-      const { gameRepository, gameId, anaId, luisId, martaId } = arranged;
-      await finish(arranged, anaId);
-      await finish(arranged, luisId);
-
-      // Act
-      await finish(arranged, martaId);
-
-      // Assert
-      expect((await gameRepository.findById(gameId))?.phase).toBe('reveal');
-    });
-
-    it('should find the total time over before taking a late answer', async () => {
-      // Arrange
-      const { answerDilemma, gameRepository, clock, roomId, gameId, luisId, dilemmaIds } =
+      const { revealEarly, gameRepository, notifier, roomId, gameId, anaId, martaId } =
         await arrange();
-      clock.advance(7 * MINUTE);
 
       // Act
-      await answerDilemma.execute({
-        roomId,
-        playerId: luisId,
-        dilemmaId: dilemmaIds[0]!,
-        vote: 'TestOption',
-      });
+      await revealEarly.execute({ roomId, playerId: anaId });
 
       // Assert
-      expect((await gameRepository.findById(gameId))?.totalTimeRanOut).toBe(true);
+      const game = await gameRepository.findById(gameId);
+      expect(game?.round?.revealedBy).toBe('host');
+      expect(game?.didNotVoteOf(martaId)).toHaveLength(1);
+      expect(notifier.receivedBy(martaId).at(-1)).toBeInstanceOf(DilemmaRevealedEvent);
+    });
+
+    it('should not let anyone else reveal it', async () => {
+      // Arrange
+      const { revealEarly, roomId, luisId } = await arrange();
+
+      // Act & Assert
+      await expect(revealEarly.execute({ roomId, playerId: luisId })).rejects.toThrow(NotHostError);
+    });
+  });
+
+  describe('MoveOnUseCase', () => {
+    it('should take everyone to the next round, only once for two players at once', async () => {
+      // Arrange
+      const arranged = await arrange();
+      const { moveOn, gameRepository, notifier, roomId, gameId, anaId, luisId, martaId } = arranged;
+      await vote(arranged, 0, anaId, luisId, martaId);
+
+      // Act
+      await moveOn.execute({ roomId, playerId: martaId, fromPosition: 0 });
+      await moveOn.execute({ roomId, playerId: luisId, fromPosition: 0 });
+
+      // Assert
+      const game = await gameRepository.findById(gameId);
+      expect(game?.round).toMatchObject({ position: 1, phase: 'decision', movedOnBy: martaId });
+      expect(notifier.receivedBy(anaId).at(-1)).toEqual(
+        new RoundStartedEvent(gameId, 1, martaId, expect.any(Number)),
+      );
     });
   });
 

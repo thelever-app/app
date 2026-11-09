@@ -117,7 +117,7 @@ describe('ChangeRoomSettingsUseCase', () => {
         dilemmaLanguage: 'en',
         categories: ['honesty', 'loyalty'],
         dilemmaCount: 6,
-        totalTimeInMinutes: 4,
+        timePerDilemmaSeconds: 60,
       },
     });
 
@@ -127,7 +127,7 @@ describe('ChangeRoomSettingsUseCase', () => {
       dilemmaLanguage: 'en',
       categories: ['honesty', 'loyalty'],
       dilemmaCount: 6,
-      totalTimeInMinutes: 4,
+      timePerDilemmaSeconds: 60,
     });
     expect(notifier.receivedBy(luisId)).toEqual([
       new LobbyChangedEvent(roomId, 'settings-changed', 3),

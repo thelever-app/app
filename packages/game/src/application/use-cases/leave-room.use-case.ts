@@ -1,3 +1,5 @@
+import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
+import { revealIfEveryoneAnswered } from '../../domain/services/reveal-if-everyone-answered.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
@@ -36,12 +38,18 @@ export class LeaveRoomUseCase {
     );
 
     room.leave(playerId);
-    if (game.playerIds.includes(playerId)) game.leave(playerId);
+    if (game.playerIds.includes(playerId)) {
+      game.leave(playerId);
+      // The round does not wait for who leaves.
+      revealIfEveryoneAnswered(room, game);
+    }
+    handOverHostIfAway(room, game);
     const roomEvents = room.pullEvents();
     const gameEvents = game.pullEvents();
     await this.#roomRepository.save(room);
     await this.#gameRepository.save(game);
 
-    await notifyGame({ room, game }, { roomEvents, gameEvents }, this.#notifier, playerId);
+    // Who left hears it too: their other connections, in this or another instance, close.
+    await notifyGame({ room, game }, { roomEvents, gameEvents }, this.#notifier);
   }
 }

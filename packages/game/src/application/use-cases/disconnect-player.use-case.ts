@@ -1,8 +1,10 @@
 import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
+import { revealIfEveryoneAnswered } from '../../domain/services/reveal-if-everyone-answered.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findRoom } from './find-room.ts';
+import { notifyGame } from './notify-game.ts';
 
 export interface DisconnectPlayerInput {
   readonly roomId: string;
@@ -37,11 +39,23 @@ export class DisconnectPlayerUseCase {
     room.disconnect(playerId, connectionId);
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
+    if (game?.playerIds.includes(playerId) && game.isInDecisionPhase) {
+      // The round does not wait for who disconnects.
+      revealIfEveryoneAnswered(room, game);
+    }
     if (game) handOverHostIfAway(room, game);
-    const events = room.pullEvents();
+    const roomEvents = room.pullEvents();
+    const gameEvents = game?.pullEvents() ?? [];
     await this.#roomRepository.save(room);
+    if (game && gameEvents.length > 0) await this.#gameRepository.save(game);
 
+    if (game) {
+      await notifyGame({ room, game }, { roomEvents, gameEvents }, this.#notifier, playerId);
+      return;
+    }
     const otherPlayerIds = room.players.map(({ id }) => id).filter((id) => id !== playerId);
-    await Promise.allSettled(events.map((event) => this.#notifier.notify(otherPlayerIds, event)));
+    await Promise.allSettled(
+      roomEvents.map((event) => this.#notifier.notify(otherPlayerIds, event)),
+    );
   }
 }

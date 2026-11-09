@@ -362,7 +362,8 @@ export class Room {
 
   /**
    * The player leaves the game in progress on purpose: their connections close and, if they were
-   * the host, the role passes on for good. They keep their place in the room and can join again.
+   * the host, the role passes on for good, also to a player who is not connected. They keep their
+   * place in the room and can join again.
    */
   leave(playerId: string): void {
     this.#player(playerId);
@@ -373,7 +374,7 @@ export class Room {
     if (this.#connections.delete(playerId)) this.#changeConnection(playerId, false);
     this.#version += 1;
     this.#events.push(new PlayerLeftEvent(this.id, playerId, true, this.#version));
-    if (playerId === this.#hostId) this.#handOverHost();
+    if (playerId === this.#hostId) this.#passHostOnFor(playerId);
     if (playerId === this.#absentHostId) this.#absentHostId = null;
   }
 
@@ -403,6 +404,11 @@ export class Room {
 
     this.#connections.delete(playerId);
     this.#changeConnection(playerId, false);
+  }
+
+  /** Who has a connection open, in the order they joined. */
+  get connectedPlayerIds(): readonly string[] {
+    return this.#players.filter(({ id }) => this.#connections.has(id)).map(({ id }) => id);
   }
 
   isConnected(playerId: string): boolean {
@@ -498,6 +504,14 @@ export class Room {
     if (!successor) return false;
     this.#changeHost(successor.id);
     return true;
+  }
+
+  /** For good, to the player who has been in the room longest and has not left, connected or not. */
+  #passHostOnFor(playerId: string): void {
+    const successor = this.#players.find(
+      ({ id }) => id !== playerId && !this.#leftPlayerIds.has(id),
+    );
+    if (successor) this.#changeHost(successor.id);
   }
 
   #changeHost(hostId: string): void {

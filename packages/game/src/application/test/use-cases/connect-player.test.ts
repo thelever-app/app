@@ -12,7 +12,12 @@ import {
 async function arrange() {
   const game = await gameInDecisionPhase();
   const notifier = new InMemoryPlayerNotifier();
-  const connectPlayer = new ConnectPlayerUseCase(game.roomRepository, notifier, game.idGenerator);
+  const connectPlayer = new ConnectPlayerUseCase(
+    game.roomRepository,
+    game.gameRepository,
+    notifier,
+    game.idGenerator,
+  );
   return { ...game, notifier, connectPlayer };
 }
 

@@ -98,19 +98,22 @@ export class StartGameUseCase {
         dilemmas: structures.map((structure, index) => ({
           ...structure,
           origin: composed[index]!.origin,
+          addedBy:
+            room.addedDilemmas.find(({ dilemmaId }) => dilemmaId === structure.dilemmaId)
+              ?.playerId ?? null,
         })),
         settings: {
           variant: settings.variant,
           groupNature: room.groupNature,
           place: room.place,
           dilemmaLanguage: settings.dilemmaLanguage,
-          totalTimeInMinutes: settings.totalTimeInMinutes,
+          timePerDilemmaSeconds: settings.timePerDilemmaSeconds,
         },
       },
       this.#idGenerator,
     );
     room.startGame(playerId, game.id);
-    game.startDecisionPhase(room.players, this.#clock.now(), this.#randomness);
+    game.start(room.players, this.#clock.now(), this.#randomness);
     const events = room.pullEvents();
     await this.#gameRepository.save(game);
     await this.#roomRepository.save(room);
