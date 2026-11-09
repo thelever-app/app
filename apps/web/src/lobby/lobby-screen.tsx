@@ -256,7 +256,8 @@ export function LobbyScreen() {
         )}
       </footer>
 
-      {open.sheet === 'settings' && (
+      {/* Picking dilemmas opens over the settings, which keep what the host changed meanwhile. */}
+      {(open.sheet === 'settings' || open.sheet === 'pick') && (
         <RoomSettingsSheet
           settings={settings}
           pickedCount={lobby.pickedDilemmas.length}

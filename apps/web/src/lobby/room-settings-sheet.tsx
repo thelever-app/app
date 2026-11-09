@@ -59,23 +59,23 @@ export function RoomSettingsSheet({
 }: RoomSettingsSheetProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(settings);
-  const [mode, setMode] = useState<Mode>(pickedCount > 0 ? 'hand' : 'categories');
+  const modeOf = (count: number): Mode => (count > 0 ? 'hand' : 'categories');
+  const [mode, setMode] = useState<Mode>(modeOf(pickedCount));
   const change = (changes: Partial<RoomSettingsDto>) => setDraft({ ...draft, ...changes });
 
+  // Once the room has the dilemmas the host picked, or has none left, the settings say how.
+  const [seenPickedCount, setSeenPickedCount] = useState(pickedCount);
+  if (pickedCount !== seenPickedCount) {
+    setSeenPickedCount(pickedCount);
+    setMode(modeOf(pickedCount));
+  }
+
   /** Sends what changed: the settings, and leaving the picked dilemmas if the host went back. */
-  const send = () => {
+  const save = () => {
     const changes = changesBetween(settings, draft);
     if (Object.keys(changes).length > 0) onSave(changes);
     if (mode === 'categories' && pickedCount > 0) onPlayByCategories();
-  };
-  const save = () => {
-    send();
     onClose();
-  };
-  // Picking happens in a sheet of its own: what the host changed here is kept first.
-  const pick = () => {
-    send();
-    onPickDilemmas();
   };
 
   return (
@@ -221,7 +221,7 @@ export function RoomSettingsSheet({
                   />
                 </label>
 
-                <button type="button" className={styles.link} onClick={pick}>
+                <button type="button" className={styles.link} onClick={onPickDilemmas}>
                   {t('settings.pick')}
                   <Icon name="chevronRight" size={22} />
                 </button>
@@ -234,7 +234,7 @@ export function RoomSettingsSheet({
                       ? t('settings.picked', { count: pickedCount })
                       : t('settings.noPicked')}
                   </span>
-                  <button type="button" className={styles.change} onClick={pick}>
+                  <button type="button" className={styles.change} onClick={onPickDilemmas}>
                     {pickedCount > 0 ? t('settings.changePicked') : t('settings.choosePicked')}
                   </button>
                 </div>
