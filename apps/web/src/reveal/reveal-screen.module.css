@@ -1,21 +1,36 @@
+/* Its header and its action stay put, and the result between them scrolls. */
 .screen {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100dvh;
+}
+
+.screen > header,
+.screen > footer {
+  flex-shrink: 0;
+}
+
+.screen > main {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.screen > main > * {
+  flex-shrink: 0;
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) var(--space-3);
+  gap: 10px;
+  padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
 }
 
 .top {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .position {
@@ -28,7 +43,8 @@
 .players {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
+  min-height: 32px;
 }
 
 .avatars {
@@ -37,9 +53,19 @@
 }
 
 .more {
-  composes: caption from '../styles/typography.module.css';
+  width: 28px;
+  height: 28px;
+  flex: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  font-size: 11px;
   font-weight: 500;
-  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
 }
 
 .hidden {
@@ -59,8 +85,13 @@
   padding: var(--space-6) var(--space-4) var(--space-4);
 }
 
+.main[data-variant='nominal'] {
+  gap: 20px;
+  padding: 20px var(--space-4) var(--space-4);
+}
+
 .text {
-  composes: dilemma from '../styles/typography.module.css';
+  composes: dilemmaReveal from '../styles/typography.module.css';
 }
 
 .chips {
@@ -82,22 +113,160 @@
   font-weight: 600;
 }
 
-.hits {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-}
-
-.option,
 .anonymousOption {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+/* How the predictions of the player went: on the surface, or the inverted sign when all are right. */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 14px var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.summary[data-all='true'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.summaryHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.summaryText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summaryTitle {
+  composes: titleSheet from '../styles/typography.module.css';
+}
+
+.summaryLine {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-ink-muted);
+}
+
+.summary[data-all='true'] .summaryLine {
+  color: var(--color-bg);
+}
+
+.segments {
+  display: flex;
+  gap: 6px;
+}
+
+.segment {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+}
+
+.segment[data-right],
+.progressBar {
+  background: currentColor;
+}
+
+.progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.progressBar {
+  width: var(--share);
+  height: 100%;
+}
+
+.whoVoted {
+  composes: signage from '../styles/typography.module.css';
+  margin-bottom: -8px;
+  color: var(--color-ink-muted);
+}
+
+/* Each option is a card, with its letter in its colour by position, as the player saw it. */
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.letter {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--option);
+  color: var(--color-on-option);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.nobody {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-ink-muted);
+}
+
+.voters {
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/* Each one who voted, with how the prediction of the player about them went. */
+.voter {
+  min-height: 44px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 4px;
+  border: 1.5px solid var(--color-ink);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-raised);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.voter[data-result='missed'] {
+  border-style: dashed;
+  border-color: var(--color-border-strong);
+  background: transparent;
+}
+
+.voter[data-result='self'] {
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+.voter[data-result='none'] {
+  border-color: var(--color-border);
+}
+
+.guess {
+  font-weight: 500;
+  color: var(--color-ink-muted);
 }
 
 .distribution {
@@ -108,14 +277,20 @@
 
 .optionHead {
   display: flex;
-  justify-content: space-between;
-  gap: var(--space-2);
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .optionText {
+  flex-grow: 1;
   font-size: 16px;
   line-height: 22px;
   font-weight: 600;
+}
+
+.option .optionText,
+.option .optionCount {
+  margin-top: 3px;
 }
 
 .optionCount {
@@ -140,47 +315,6 @@
   background: var(--option);
 }
 
-.voters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding-top: var(--space-1);
-}
-
-.voter {
-  position: relative;
-  display: inline-flex;
-  border-radius: var(--radius-full);
-}
-
-/* The player using the screen finds their own vote by its ink ring. */
-.voter[data-self] {
-  box-shadow:
-    0 0 0 2px var(--color-bg),
-    0 0 0 4px var(--color-ink);
-}
-
-/* How many predicted the vote of each one, on their avatar. */
-.voterHits {
-  position: absolute;
-  right: -6px;
-  bottom: -6px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-full);
-  background: var(--color-ink);
-  color: var(--color-bg);
-  box-shadow: 0 0 0 2px var(--color-bg);
-  font-size: 12px;
-  line-height: 1;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
 .absent {
   display: flex;
   align-items: center;
@@ -193,11 +327,12 @@
 .absentAvatars {
   display: inline-flex;
   gap: 4px;
-  opacity: 0.6;
+  opacity: 0.4;
 }
 
-.hint {
-  composes: caption from '../styles/typography.module.css';
+.anonymousHint {
+  font-size: 14px;
+  line-height: 20px;
   color: var(--color-ink-muted);
 }
 
@@ -206,7 +341,7 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-4);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
 }
 
@@ -230,7 +365,7 @@
 
 .footer {
   display: flex;
-  padding: var(--space-3) var(--space-4) var(--space-6);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   border-top: 1px solid var(--color-border);
 }
 

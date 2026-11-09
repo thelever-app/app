@@ -2,6 +2,7 @@ import { Dialog } from 'radix-ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
+import { DilemmaText } from '../game/dilemma-text.tsx';
 import { useDilemmaSearch } from './use-dilemma-search.ts';
 import sheet from './sheet.module.css';
 
@@ -53,11 +54,13 @@ export function AddDilemmaSheet({ roomId, onAdd, onClose }: AddDilemmaSheetProps
                 }}
               >
                 <span className={sheet.dilemmaText}>
-                  <span className={sheet.dilemmaTitle}>{dilemma.text}</span>
+                  <span className={sheet.dilemmaTitle}>
+                    <DilemmaText text={dilemma.text} personInTheGap={t('pickDilemmas.someone')} />
+                  </span>
                   <span className={sheet.dilemmaMeta}>
                     {[
                       t(`categories.${dilemma.category}`, { defaultValue: dilemma.category }),
-                      ...dilemma.tags.map((tag) => `#${tag}`),
+                      t('pickDilemmas.options', { count: dilemma.optionCount }),
                     ].join(' · ')}
                   </span>
                 </span>

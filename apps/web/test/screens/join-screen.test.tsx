@@ -9,7 +9,13 @@ const PREVIEW = {
   hostNickname: 'Ana',
   variant: 'anonymous' as const,
   adultsOnly: true,
-  playerCount: 4,
+  players: [
+    { nickname: 'Ana', avatar: { face: 'face-01' as const, color: 'teal' as const } },
+    { nickname: 'Luis', avatar: { face: 'face-02' as const, color: 'khaki' as const } },
+    { nickname: 'Marta', avatar: { face: 'face-03' as const, color: 'olive' as const } },
+    { nickname: 'Pablo', avatar: { face: 'face-04' as const, color: 'rust' as const } },
+  ],
+  suggestedAvatar: { face: 'face-05' as const, color: 'cyan' as const },
 };
 
 async function renderJoin(
@@ -24,7 +30,7 @@ async function renderJoin(
 }
 
 describe('JoinScreen', () => {
-  it('should show whose room it is, how many are in it and what kind it is, before joining', async () => {
+  it('should show whose room it is, who and how many are in it and what kind it is, before joining', async () => {
     // Act
     const { t } = await renderJoin(async () => PREVIEW);
 
@@ -36,12 +42,19 @@ describe('JoinScreen', () => {
     expect(screen.getByTestId('player-count').textContent).toBe(
       t('joinRoom.inTheRoom', { count: 4 }),
     );
+    const avatars = screen.getByTestId('room-avatars').querySelectorAll('[data-face]');
+    expect([...avatars].map((avatar) => avatar.getAttribute('data-face'))).toEqual([
+      'face-01',
+      'face-02',
+      'face-03',
+      'face-04',
+    ]);
     expect(screen.getByTestId('room-variant').textContent).toContain(t('variant.anonymous.name'));
     expect(screen.getByTestId('room-adults-only').textContent).toBe(t('joinRoom.adultsOnly'));
     expect(screen.getByRole('textbox', { name: t('joinRoom.nickname') })).toBeDefined();
   });
 
-  it('should tell the player when no room has that code, and take them back to the start', async () => {
+  it('should tell the player when no room has that code, and take them back to type another', async () => {
     // Arrange
     const { t, location } = await renderJoin(async () => {
       throw new RoomApiError('room-code-not-found');
@@ -57,6 +70,30 @@ describe('JoinScreen', () => {
 
     // Assert
     expect(heading).toBeDefined();
+    expect(location()).toBe('/join');
+  });
+
+  it('should take whoever typed the code to the start when the room turns them away on joining', async () => {
+    // Arrange
+    const { t, location } = await renderAtRoute(<JoinScreen />, {
+      api: fakeRoomApi({
+        previewRoom: vi.fn(async () => PREVIEW),
+        joinRoom: vi.fn(async () => {
+          throw new RoomApiError('room-full');
+        }),
+      }),
+      at: { pathname: '/join/K7M2Q', state: { fromCode: true } },
+      path: '/join/:code',
+    });
+    fireEvent.change(await screen.findByRole('textbox', { name: t('joinRoom.nickname') }), {
+      target: { value: 'Luis' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: t('joinRoom.submit') }));
+
+    // Act
+    fireEvent.click(await screen.findByRole('button', { name: t('joinRefusal.room-full.action') }));
+
+    // Assert
     expect(location()).toBe('/');
   });
 

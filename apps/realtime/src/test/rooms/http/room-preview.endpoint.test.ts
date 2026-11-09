@@ -1,6 +1,12 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { bearer, composedHttpServer, ROOM_CHOICES, WEB_ORIGIN } from '../../support/room-server.ts';
+import {
+  bearer,
+  composedHttpServer,
+  JOIN_AVATAR,
+  ROOM_CHOICES,
+  WEB_ORIGIN,
+} from '../../support/room-server.ts';
 
 async function roomOfAna() {
   const server = await composedHttpServer();
@@ -11,12 +17,12 @@ async function roomOfAna() {
   await request(server)
     .post(`/rooms/${body.roomId}/players`)
     .set('Authorization', bearer('luis'))
-    .send({ nickname: 'Luis' });
+    .send({ nickname: 'Luis', avatar: JOIN_AVATAR });
   return { server, roomId: body.roomId as string, code: body.code as string };
 }
 
 describe('GET /rooms/by-code/:code', () => {
-  it('should show whose the room is, its type and how many are in, typed in any case', async () => {
+  it('should show whose the room is, its type, who is in and a free avatar, typed in any case', async () => {
     // Arrange
     const { server, roomId, code } = await roomOfAna();
 
@@ -27,13 +33,22 @@ describe('GET /rooms/by-code/:code', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({
+    expect(response.body).toMatchObject({
       roomId,
       hostNickname: 'Ana',
       variant: 'nominal',
       adultsOnly: false,
-      playerCount: 2,
+      players: [
+        { nickname: 'Ana', avatar: ROOM_CHOICES.avatar },
+        { nickname: 'Luis', avatar: JOIN_AVATAR },
+      ],
     });
+    // Nothing that tells who each one is beyond what they show: no ids, no identities.
+    for (const player of response.body.players) {
+      expect(Object.keys(player).sort()).toEqual(['avatar', 'nickname']);
+    }
+    const { suggestedAvatar } = response.body;
+    expect([ROOM_CHOICES.avatar, JOIN_AVATAR]).not.toContainEqual(suggestedAvatar);
   });
 
   it('should answer room-code-not-found for a code no room has', async () => {

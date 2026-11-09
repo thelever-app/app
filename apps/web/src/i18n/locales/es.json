@@ -37,7 +37,8 @@
     "playerAnswered": "{{name}} · ha respondido",
     "playerPending": "{{name}} · aún no ha respondido",
     "playerDisconnected": "{{name}} (desconectado)",
-    "movedOn": "{{name}} pasó al siguiente"
+    "movedOn": "{{name}} pasó al siguiente",
+    "playerMovedOn": "{{label}} · pasó al siguiente"
   },
   "groupSheet": {
     "title": "El grupo",
@@ -133,14 +134,22 @@
     "position": "Dilema {{position, number}} de {{total, number}} · Reveal",
     "addedBy": "Lo añadió {{name}}",
     "about": "Este dilema era sobre {{name}}",
-    "yourHits": "Acertaste {{right, number}} de {{count, number}}.",
-    "readYou": "Te leyeron bien {{names}}.",
+    "yourHitsRegion": "Tus aciertos",
+    "hitsAll": "¡Los leíste a todos!",
+    "hitsCount": "Acertaste {{right, number}} de {{count, number}}",
+    "missedOne": "Solo fallaste con {{name}}",
+    "missedSome": "Fallaste con {{names}}",
+    "missedMany": "Fallaste con {{names}} y {{count, number}} más",
+    "missedAll": "Hoy no los has leído",
+    "whoVoted": "Qué votó cada uno",
+    "nobodyChose": "Nadie la eligió",
+    "guessed": "· dijiste {{letter}}",
+    "voterRight": "{{name}}, acertaste",
+    "voterMissed": "{{name}}, fallaste: dijiste {{letter}}",
     "optionCount": "{{count, number}} · {{percent}}",
-    "voterHits_one": "{{name}}, {{count}} le acertó",
-    "voterHits_many": "{{name}}, {{count, number}} le acertaron",
-    "voterHits_other": "{{name}}, {{count, number}} le acertaron",
-    "didNotVote": "No votó · {{names}}",
-    "hitsHint": "El número de cada avatar es cuántos le acertaron.",
+    "didNotVote_one": "No votó · {{names}}",
+    "didNotVote_many": "No votaron · {{names}}",
+    "didNotVote_other": "No votaron · {{names}}",
     "next": "Siguiente dilema",
     "anonymousDidNotVote_one": "{{count}} persona no votó.",
     "anonymousDidNotVote_many": "{{count, number}} personas no votaron.",
@@ -230,7 +239,10 @@
     "submitting": "Entrando…",
     "loading": "Buscando la sala…",
     "inTheRoom_many": "{{count}} en la sala",
-    "missingNickname": "Escribe tu apodo"
+    "missingNickname": "Escribe tu apodo",
+    "namesake": "{{nickname}} ya está en la sala; os distinguirá el avatar.",
+    "missingAvatar": "Elige otro avatar",
+    "lookalikeJustJoined": "Alguien acaba de entrar como {{nickname}} con este avatar. Elige otro."
   },
   "roomErrors": {
     "nickname-missing": "Escribe un apodo.",
@@ -239,7 +251,8 @@
     "room-code-not-found": "No hay ninguna sala con ese código.",
     "room-not-found": "Esa sala ya no existe.",
     "unknown": "No ha salido bien. Inténtalo otra vez.",
-    "dilemmas-missing": "No hay dilemas para esta configuración. Prueba con otras categorías."
+    "dilemmas-missing": "No hay dilemas para esta configuración. Prueba con otras categorías.",
+    "nickname-and-avatar-taken": "Alguien que se llama como tú ya lleva ese avatar. Elige otro."
   },
   "home": {
     "title": "¿Jugamos?",
@@ -252,7 +265,12 @@
     "title": "Escribe el código de la sala",
     "text": "Son 5 caracteres. Te lo puede dictar quien ha creado la sala.",
     "label": "Código de la sala",
-    "hint": "Entra solo al completar el código. También puedes pegarlo."
+    "hint": "Entra solo al completar el código. También puedes pegarlo.",
+    "entering": "Entrando…",
+    "enter": "Entrar",
+    "missing_one": "Falta {{count}} carácter",
+    "missing_many": "Faltan {{count, number}} caracteres",
+    "missing_other": "Faltan {{count, number}} caracteres"
   },
   "variant": {
     "nominal": {
@@ -265,6 +283,7 @@
     }
   },
   "joinRefusal": {
+    "illustration": "La Palanca, dudando, junto a un final de vía",
     "room-code-not-found": {
       "title": "Esa sala no existe",
       "text": "Revisa el código: son 5 caracteres. Pídeselo de nuevo a quien ha creado la sala.",
@@ -407,7 +426,11 @@
     "empty": "No hay dilemas aptos con esa búsqueda.",
     "tags": "#{{tags}}",
     "play_many": "Jugar estos {{count}}",
-    "byCategory": "Volver a jugar por categorías"
+    "byCategory": "Volver a jugar por categoría",
+    "options_one": "{{count}} opción",
+    "options_many": "{{count, number}} opciones",
+    "options_other": "{{count, number}} opciones",
+    "someone": "alguien del grupo"
   },
   "addDilemma": {
     "title": "Añade un dilema",
@@ -425,7 +448,7 @@
   "avatarPicker": {
     "title": "Elige tu avatar",
     "face": "Cara {{number}}",
-    "hint": "Las combinaciones que ya usa alguien de la sala aparecen desactivadas.",
+    "hint": "Las que ya lleva alguien que se llama como tú aparecen desactivadas.",
     "use": "Usar este",
     "close": "Cerrar",
     "colors": {
@@ -437,12 +460,15 @@
       "rust": "Óxido",
       "olive": "Oliva",
       "stone": "Piedra"
-    }
+    },
+    "change": "Cambiar avatar",
+    "changeCurrent": "Cambiar avatar: cara {{face}}, {{color}}"
   },
   "qr": {
     "title": "Apunta con la cámara para entrar",
     "close": "Cerrar",
     "label": "Código QR de la sala {{code}}",
-    "or": "o entra en {{host}} y escribe el código"
+    "or": "o entra en {{host}} y escribe el código",
+    "code": "Código {{code}}"
   }
 }

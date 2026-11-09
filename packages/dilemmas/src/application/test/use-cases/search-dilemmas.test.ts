@@ -59,6 +59,7 @@ describe('SearchDilemmasUseCase', () => {
           minimumAge: 16,
           category: 'honesty',
           tags: ['testfamily'],
+          optionCount: 2,
         },
         {
           dilemmaId: 'TestDilemma2',
@@ -67,6 +68,7 @@ describe('SearchDilemmasUseCase', () => {
           minimumAge: 18,
           category: 'honesty',
           tags: [],
+          optionCount: 2,
         },
       ]);
     });

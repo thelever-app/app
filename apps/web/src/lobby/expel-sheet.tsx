@@ -19,7 +19,7 @@ export function ExpelSheet({ player, onExpel, onClose }: ExpelSheetProps) {
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className={sheet.overlay} />
-        <Dialog.Content className={sheet.sheet}>
+        <Dialog.Content className={`${sheet.sheet} ${sheet.roomy}`}>
           <div aria-hidden="true" className={sheet.handle} />
           <div className={styles.heading}>
             <Avatar avatar={player.avatar} size="md" />

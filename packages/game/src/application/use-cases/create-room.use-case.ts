@@ -1,6 +1,7 @@
 import { Room } from '../../domain/entities/room.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import type { Randomness } from '../../domain/ports/randomness.port.ts';
+import { AvatarVO } from '../../domain/vos/avatar.vo.ts';
 import { RoomCodeVO } from '../../domain/vos/room-code.vo.ts';
 import { RoomCodeUnavailableError } from '../errors/room-code-unavailable.error.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
@@ -12,6 +13,8 @@ export interface CreateRoomInput {
   readonly hostNickname: string;
   /** Who creates the room, from their verified token. */
   readonly hostIdentity: string;
+  /** The avatar the host chose before creating the room. */
+  readonly hostAvatar: { readonly face: string; readonly color: string };
   readonly groupNature: string;
   readonly place: string;
   /** The language of the device of the host. */
@@ -38,7 +41,9 @@ export class CreateRoomUseCase {
 
   async execute(input: CreateRoomInput): Promise<CreateRoomOutput> {
     const code = await this.#freeCode();
-    const room = Room.create({ ...input, code }, this.#idGenerator, this.#randomness);
+    const { face, color } = input.hostAvatar;
+    const hostAvatar = new AvatarVO(face, color);
+    const room = Room.create({ ...input, hostAvatar, code }, this.#idGenerator);
 
     await this.#roomRepository.save(room);
 

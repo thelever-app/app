@@ -28,8 +28,8 @@ function Location() {
 
 interface RouteOptions {
   readonly api?: RoomApi;
-  /** The address the screen opens at; / by default. */
-  readonly at?: string;
+  /** The address the screen opens at, and what the history keeps with it; / by default. */
+  readonly at?: string | { readonly pathname: string; readonly state: unknown };
   /** The path of the route that shows `ui`, with its parameters; any address by default. */
   readonly path?: string;
 }

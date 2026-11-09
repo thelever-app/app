@@ -37,13 +37,7 @@ export async function lobbyOfThree(
   const idGenerator = new SequentialIdGenerator();
   const randomness = new SequentialRandomness();
   const clock = new ManualClock();
-  const joinRoom = new JoinRoomUseCase({
-    roomRepository,
-    gameRepository,
-    notifier,
-    idGenerator,
-    randomness,
-  });
+  const joinRoom = new JoinRoomUseCase({ roomRepository, gameRepository, notifier, idGenerator });
 
   const { roomId, hostId: anaId } = await new CreateRoomUseCase(
     roomRepository,
@@ -52,6 +46,7 @@ export async function lobbyOfThree(
   ).execute({
     hostNickname: 'Ana',
     hostIdentity: 'TestAnaIdentity',
+    hostAvatar: { face: 'face-01', color: 'khaki' },
     groupNature: 'friends',
     place: 'together',
     dilemmaLanguage: 'es',
@@ -60,11 +55,13 @@ export async function lobbyOfThree(
     roomId,
     nickname: 'Luis',
     identity: 'TestLuisIdentity',
+    avatar: { face: 'face-02', color: 'teal' },
   });
   const { playerId: martaId } = await joinRoom.execute({
     roomId,
     nickname: 'Marta',
     identity: 'TestMartaIdentity',
+    avatar: { face: 'face-03', color: 'brown' },
   });
   if (variant !== 'nominal') {
     await new ChangeRoomSettingsUseCase(roomRepository, notifier).execute({

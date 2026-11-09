@@ -41,6 +41,7 @@ describe('httpRoomApi', () => {
       // Act
       const created = await apiWith(fetch, 'app-check-token').createRoom({
         nickname: 'Ana',
+        avatar: { face: 'face-01', color: 'teal' },
         groupNature: 'friends',
         place: 'remote',
         dilemmaLanguage: 'es',
@@ -55,6 +56,7 @@ describe('httpRoomApi', () => {
       expect(new Headers(call?.init.headers).get('X-Firebase-AppCheck')).toBe('app-check-token');
       expect(JSON.parse(String(call?.init.body))).toEqual({
         nickname: 'Ana',
+        avatar: { face: 'face-01', color: 'teal' },
         groupNature: 'friends',
         place: 'remote',
         dilemmaLanguage: 'es',
@@ -68,6 +70,7 @@ describe('httpRoomApi', () => {
       // Act
       await apiWith(fetch).createRoom({
         nickname: 'Ana',
+        avatar: { face: 'face-01', color: 'teal' },
         groupNature: 'friends',
         place: 'together',
         dilemmaLanguage: 'es',
@@ -84,6 +87,7 @@ describe('httpRoomApi', () => {
       // Act
       const creating = apiWith(fetch).createRoom({
         nickname: ' ',
+        avatar: { face: 'face-01', color: 'teal' },
         groupNature: 'friends',
         place: 'together',
         dilemmaLanguage: 'es',
@@ -102,7 +106,8 @@ describe('httpRoomApi', () => {
         hostNickname: 'Ana',
         variant: 'nominal',
         adultsOnly: false,
-        playerCount: 3,
+        players: [{ nickname: 'Ana', avatar: { face: 'face-01', color: 'teal' } }],
+        suggestedAvatar: { face: 'face-02', color: 'teal' },
       };
       const { fetch, calls } = answering(200, preview);
 
@@ -127,17 +132,18 @@ describe('httpRoomApi', () => {
   });
 
   describe('joinRoom', () => {
-    it('should join the room with the nickname', async () => {
+    it('should join the room with the nickname and the avatar', async () => {
       // Arrange
       const { fetch, calls } = answering(201, { playerId: 'player-2' });
+      const avatar = { face: 'face-02', color: 'khaki' } as const;
 
       // Act
-      const joined = await apiWith(fetch).joinRoom('room-1', 'Luis');
+      const joined = await apiWith(fetch).joinRoom('room-1', 'Luis', avatar);
 
       // Assert
       expect(joined).toEqual({ playerId: 'player-2' });
       expect(calls[0]?.url).toBe('https://realtime.example/rooms/room-1/players');
-      expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ nickname: 'Luis' });
+      expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ nickname: 'Luis', avatar });
     });
   });
 

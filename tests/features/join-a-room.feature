@@ -19,6 +19,12 @@ Feature: Join a room
       | QR              |
 
   @ui
+  Scenario: The player sees who is in the room before joining
+    Given a room with "Ana" and "Marta"
+    When a player opens its invitation link
+    Then the player sees the avatars of "Ana" and "Marta" before entering
+
+  @ui
   Scenario: The player sees the type of room before joining
     Given a nominal room created by "Ana"
     When a player opens its invitation link
@@ -107,14 +113,48 @@ Feature: Join a room
   @ui
   Scenario: Each player gets a random avatar not used in the room
     Given a room where some avatars are already taken
-    When a player joins the room
-    Then the player gets a random avatar that nobody else in the room has
+    When a player opens its invitation link
+    Then the player sees a random avatar that nobody in the room has
+    And enters the room with it if they do not change it
 
   @ui
-  Scenario: The player chooses another available avatar
+  Scenario: The player chooses another avatar before joining
+    Given a player who has opened an invitation link
+    When the player chooses another avatar
+    And joins the room
+    Then everyone in the lobby sees the player with that avatar
+
+  @ui
+  Scenario: The player changes the avatar in the lobby
     Given a player in the lobby
-    When the player chooses another avatar that nobody else in the room has
+    When the player chooses another avatar
     Then everyone in the lobby sees the new avatar
+
+  @ui
+  Scenario: Two players can share an avatar
+    Given a lobby with a player called "Ana"
+    When "Luis" joins with the avatar of "Ana"
+    Then both players are in the room with the same avatar
+
+  @ui @screen
+  Scenario: The player is told the nickname is already in the room
+    Given a lobby with a player called "Ana"
+    When another player opens its invitation link and types the nickname "ana"
+    Then the player is told that someone called "Ana" is already in the room
+    And can still join
+
+  @ui
+  Scenario Outline: Nobody has both the nickname and the avatar of another player
+    Given a lobby with a player called "Ana"
+    When a player called "<nickname>" tries to take the avatar of "Ana" <moment>
+    Then the player does not get that avatar
+    And is asked to choose another one
+
+    Examples:
+      | nickname | moment       |
+      | Ana      | when joining |
+      | ana      | when joining |
+      | Aná      | in the lobby |
 
   @ui
   Scenario: Two players can share a nickname

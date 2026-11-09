@@ -38,7 +38,7 @@ export function DilemmaCard({
 
   return (
     <>
-      <main className={styles.main}>
+      <main className={styles.main} tabIndex={0}>
         <h1 id={textId} className={styles.text}>
           <DilemmaText text={dilemma.text} personInTheGap={personInTheGap} />
         </h1>

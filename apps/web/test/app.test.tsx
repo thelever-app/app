@@ -19,7 +19,8 @@ describe('App', () => {
       hostNickname: 'Ana',
       variant: 'nominal' as const,
       adultsOnly: false,
-      playerCount: 3,
+      players: [{ nickname: 'Ana', avatar: { face: 'face-01' as const, color: 'teal' as const } }],
+      suggestedAvatar: { face: 'face-02' as const, color: 'teal' as const },
     }));
 
     // Act

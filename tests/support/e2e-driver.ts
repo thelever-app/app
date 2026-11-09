@@ -3,6 +3,7 @@ import {
   ClientMessageDto,
   GAP_MARKER,
   JoinRoomResponseDto,
+  RoomPreviewResponseDto,
   ServerMessageDto,
   type GameStateDto,
   type RoomStateDto,
@@ -43,6 +44,13 @@ const SCREEN = {
   places: { together: 'En el mismo sitio', remote: 'A distancia' },
   code: 'Código de la sala',
   enter: 'Entrar en la sala',
+  settingsTitle: 'Ajustes de la partida',
+  someoneInTheGroup: 'alguien del grupo',
+  predictionRight: /^(.+), acertaste$/,
+  predictionMissed: /^(.+), fallaste: dijiste [A-D]$/,
+  changeAvatar: 'Cambiar avatar',
+  missingAvatar: 'Elige otro avatar',
+  namesake: /^(.+) ya está en la sala; os distinguirá el avatar\.$/,
   host: 'Anfitrión',
   share: 'Compartir enlace',
   copied: 'Enlace copiado',
@@ -185,6 +193,10 @@ interface E2ePlayer {
   readonly screen: PlayerScreen | undefined;
   preview: RoomPreview | undefined;
   refusal: JoinRefusal | undefined;
+  /** Whether the screen asked them to choose another avatar, since someone with their nickname has it. */
+  askedForAnotherAvatar: boolean;
+  /** Whether they are on the screen to create a room, which they opened before creating it. */
+  creatingRoom: boolean;
 }
 
 /**
@@ -229,11 +241,20 @@ export class E2eDriver implements GameDriver {
 
   // Lobby
 
-  async createRoom(host: string, choices: RoomChoices = {}): Promise<void> {
-    const player = await this.#withScreen(host, LOCALES[choices.deviceLanguage ?? 'es'] ?? SPANISH);
+  async openRoomCreation(host: string, deviceLanguage = 'es'): Promise<void> {
+    const player = await this.#withScreen(host, LOCALES[deviceLanguage] ?? SPANISH);
+    if (player.creatingRoom) return;
     const { page } = screenOf(player);
     await page.goto(`${this.#stack.webUrl}/`);
     await page.getByRole('button', { name: SCREEN.create }).click();
+    await page.getByRole('button', { name: SCREEN.changeAvatar }).waitFor();
+    player.creatingRoom = true;
+  }
+
+  async createRoom(host: string, choices: RoomChoices = {}): Promise<void> {
+    await this.openRoomCreation(host, choices.deviceLanguage);
+    const player = this.#playerCalled(host);
+    const { page } = screenOf(player);
 
     const nickname = page.getByRole('textbox', { name: SCREEN.nickname });
     const natures = page.getByRole('group', { name: SCREEN.natureGroup });
@@ -245,6 +266,7 @@ export class E2eDriver implements GameDriver {
 
     await page.waitForURL(/\/rooms\//);
     await waitUntil(() => lastLobbyOf(player), `${host} gets the lobby of their room`);
+    player.creatingRoom = false;
     player.nickname = host;
     this.#host = host;
   }
@@ -344,11 +366,29 @@ export class E2eDriver implements GameDriver {
     return this.#playerCalled(player).preview;
   }
 
+  async typeNickname(player: string, nickname: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(player));
+    await page.getByRole('textbox', { name: SCREEN.nickname }).fill(nickname);
+  }
+
+  async namesakeWarningSeenBy(player: string): Promise<string | undefined> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const warning = page.getByTestId('namesake');
+    if (!(await steady(async () => (await warning.count()) > 0))) return undefined;
+    return (await warning.textContent())?.match(SCREEN.namesake)?.[1];
+  }
+
   async confirmNickname(player: string, nickname: string): Promise<void> {
     const joiner = this.#playerCalled(player);
     const { page, received } = screenOf(joiner);
     const statesBefore = received.filter(isState).length;
     await page.getByRole('textbox', { name: SCREEN.nickname }).fill(nickname);
+    // Someone with that nickname has the avatar: the button asks for another one instead.
+    const askedForAvatar = page.getByRole('button', { name: SCREEN.missingAvatar });
+    if (await askedForAvatar.isVisible()) {
+      joiner.askedForAnotherAvatar = true;
+      return;
+    }
     await page.getByRole('button', { name: SCREEN.enter }).click();
 
     // Who comes back to a game in progress, having left it, gets the game instead of the lobby.
@@ -420,33 +460,67 @@ export class E2eDriver implements GameDriver {
     );
   }
 
-  /** In the picker: the first colour and face that nobody in the room shows, the player included. */
-  async chooseAnotherFreeAvatar(player: string): Promise<string> {
-    const chooser = this.#playerCalled(player);
-    const { page } = screenOf(chooser);
-    const taken = new Set((await this.playersSeenBy(player)).map(({ avatar }) => avatar));
-    await page.getByRole('button', { name: SCREEN.toChangeAvatar }).click();
-    const picker = page.getByRole('dialog');
+  /** In the room, the avatar of their row; before entering, the one on the button that changes it. */
+  async avatarSeenBy(player: string): Promise<string> {
+    const seen = this.#playerCalled(player);
+    const { page } = screenOf(seen);
+    const avatar = seen.playerId
+      ? page.locator(`li[data-player-id="${seen.playerId}"] [data-face]`).first()
+      : page.getByRole('button', { name: SCREEN.changeAvatar });
+    return `${await avatar.getAttribute('data-face')}/${await avatar.getAttribute('data-color')}`;
+  }
 
-    for (const [color, colorName] of Object.entries(SCREEN.colors)) {
-      await picker.getByRole('button', { name: colorName, exact: true }).click();
+  /** In the picker: the first colour and face that nobody in the room shows, the player included. */
+  async chooseAnotherAvatar(player: string): Promise<string> {
+    const chooser = this.#playerCalled(player);
+    const inside = chooser.playerId
+      ? (await this.playersSeenBy(player)).map(({ avatar }) => avatar)
+      : (chooser.preview?.avatars ?? []);
+    const taken = new Set([...inside, await this.avatarSeenBy(player)]);
+    for (const color of Object.keys(SCREEN.colors)) {
       for (let number = 1; number <= 12; number += 1) {
         const avatar = `face-${String(number).padStart(2, '0')}/${color}`;
-        const face = picker.getByRole('button', { name: SCREEN.face(number), exact: true });
-        if (taken.has(avatar) || (await face.isDisabled())) continue;
-        await face.click();
-        await picker.getByRole('button', { name: SCREEN.useAvatar }).click();
-        const playerId = this.#playerIdOf(chooser);
-        await this.#untilEveryoneSees(`${player} has the avatar ${avatar}`, (lobby) =>
-          lobby.players.some(
-            (seen) =>
-              seen.playerId === playerId && `${seen.avatar.face}/${seen.avatar.color}` === avatar,
-          ),
-        );
+        if (taken.has(avatar)) continue;
+        await this.chooseAvatar(player, avatar);
+        if (chooser.askedForAnotherAvatar) continue;
         return avatar;
       }
     }
     throw new Error('The room has no free avatar left');
+  }
+
+  /** In the picker, which leaves out the avatars of whoever has the same nickname. */
+  async chooseAvatar(player: string, avatar: string): Promise<void> {
+    const chooser = this.#playerCalled(player);
+    const { page } = screenOf(chooser);
+    const [face = '', color = ''] = avatar.split('/');
+    const opener = chooser.playerId ? SCREEN.toChangeAvatar : SCREEN.changeAvatar;
+    await page.getByRole('button', { name: opener }).click();
+    const picker = page.getByRole('dialog');
+    const colorName = SCREEN.colors[color as keyof typeof SCREEN.colors];
+    await picker.getByRole('button', { name: colorName, exact: true }).click();
+    const number = Number(face.replace('face-', ''));
+    const button = picker.getByRole('button', { name: SCREEN.face(number), exact: true });
+    chooser.askedForAnotherAvatar = await button.isDisabled();
+    if (chooser.askedForAnotherAvatar) {
+      await page.keyboard.press('Escape');
+      await picker.waitFor({ state: 'hidden' });
+      return;
+    }
+    await button.click();
+    await picker.getByRole('button', { name: SCREEN.useAvatar }).click();
+    if (!chooser.playerId) return;
+    const playerId = chooser.playerId;
+    await this.#untilEveryoneSees(`${player} has the avatar ${avatar}`, (lobby) =>
+      lobby.players.some(
+        (seen) =>
+          seen.playerId === playerId && `${seen.avatar.face}/${seen.avatar.color}` === avatar,
+      ),
+    );
+  }
+
+  async askedToChooseAnotherAvatar(player: string): Promise<boolean> {
+    return this.#playerCalled(player).askedForAnotherAvatar;
   }
 
   /** As the lobby on the device has it, from the last state the room server sent. */
@@ -524,7 +598,7 @@ export class E2eDriver implements GameDriver {
 
     await page
       .getByRole('dialog')
-      .getByRole('button', { name: new RegExp(`^${escaped(first.text)}`) })
+      .getByRole('button', { name: new RegExp(`^${escaped(listedText(first))}`) })
       .click();
     await waitUntil(
       () => lastLobbyOf(adder)?.ownAddedDilemmaIds.includes(first.dilemmaId),
@@ -592,8 +666,9 @@ export class E2eDriver implements GameDriver {
     }
     const sheet = page.getByRole('dialog');
     const [first] = found;
-    if (first) await sheet.getByText(first.text, { exact: true }).waitFor();
+    if (first) await sheet.getByText(listedText(first), { exact: true }).waitFor();
     await page.keyboard.press('Escape');
+    if (player === this.#hostName()) await this.#leaveTheSettings(player);
     await sheet.waitFor({ state: 'hidden' });
     return found.map(({ dilemmaId }) => dilemmaId);
   }
@@ -608,15 +683,27 @@ export class E2eDriver implements GameDriver {
     for (const dilemmaId of dilemmaIds) {
       const dilemma = found.find((candidate) => candidate.dilemmaId === dilemmaId);
       if (!dilemma) throw new Error(`The search of the host does not offer ${dilemmaId}`);
-      await sheet.getByRole('checkbox', { name: new RegExp(`^${escaped(dilemma.text)}`) }).click();
+      await sheet
+        .getByRole('checkbox', { name: new RegExp(`^${escaped(listedText(dilemma))}`) })
+        .click();
     }
     await sheet.getByRole('button', { name: SCREEN.play(dilemmaIds.length) }).click();
+    await this.#leaveTheSettings(host);
     await this.#untilEveryoneSees('the picked dilemmas', (lobby) =>
       isDeepStrictEqual(
         lobby.pickedDilemmas.map(({ dilemmaId }) => dilemmaId).toSorted(),
         dilemmaIds.toSorted(),
       ),
     );
+  }
+
+  /** Leaving the screen to pick dilemmas goes back to the settings, which the host closes. */
+  async #leaveTheSettings(host: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const settings = page.getByRole('dialog', { name: SCREEN.settingsTitle });
+    await settings.waitFor();
+    await page.keyboard.press('Escape');
+    await settings.waitFor({ state: 'hidden' });
   }
 
   /** «Por categorías» in the settings leaves the picked dilemmas in one tap. */
@@ -1154,6 +1241,27 @@ export class E2eDriver implements GameDriver {
    * Once the screen of `viewer` shows the reveal of a dilemma, what the room server sent it of that
    * reveal, by the names of the scenario; and whether the screen says anything about points.
    */
+  /** The chips of the reveal of `viewer`: «Luis, acertaste» or «Luis, fallaste: dijiste B». */
+  async ownPredictionsSeenBy(viewer: string): Promise<{ about: string; right: boolean }[]> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const region = page.getByRole('main', { name: SCREEN.reveal });
+    await region.waitFor();
+    const labels = await region
+      .getByRole('listitem')
+      .evaluateAll((items) => items.map((item) => item.getAttribute('aria-label') ?? ''));
+    return labels.flatMap((label) => {
+      const right = label.match(SCREEN.predictionRight)?.[1];
+      const missed = label.match(SCREEN.predictionMissed)?.[1];
+      const nickname = right ?? missed;
+      if (nickname === undefined) return [];
+      const about = [...this.#players.values()].find((player) => player.nickname === nickname);
+      if (!about) {
+        throw new Error(`${viewer} sees a prediction about ${nickname}, who is not in the room`);
+      }
+      return [{ about: about.name, right: right !== undefined }];
+    });
+  }
+
   async revealSeenBy(viewer: string): Promise<RevealView | undefined> {
     const watcher = this.#playerCalled(viewer);
     const { page } = screenOf(watcher);
@@ -1601,6 +1709,8 @@ export class E2eDriver implements GameDriver {
       screen,
       preview: undefined,
       refusal: undefined,
+      askedForAnotherAvatar: false,
+      creatingRoom: false,
     };
     this.#players.set(name, player);
 
@@ -1638,11 +1748,16 @@ export class E2eDriver implements GameDriver {
       },
     );
     const { idToken } = (await signUp.json()) as { readonly idToken: string };
-    const { roomId } = this.#lobbyOf(this.#hostName());
+    const { roomId, code } = this.#lobbyOf(this.#hostName());
+    const authorization = { Authorization: `Bearer ${idToken}` };
+    const previewed = await fetch(`${this.#stack.realtimeUrl}/rooms/by-code/${code}`, {
+      headers: authorization,
+    });
+    const { suggestedAvatar } = RoomPreviewResponseDto.parse(await previewed.json());
     const joined = await fetch(`${this.#stack.realtimeUrl}/rooms/${roomId}/players`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname }),
+      headers: { ...authorization, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname, avatar: suggestedAvatar }),
     });
     if (!joined.ok) throw new Error(`${name} could not join: ${await joined.text()}`);
     const { playerId } = JoinRoomResponseDto.parse(await joined.json());
@@ -1653,6 +1768,8 @@ export class E2eDriver implements GameDriver {
       screen: undefined,
       preview: undefined,
       refusal: undefined,
+      askedForAnotherAvatar: false,
+      creatingRoom: false,
     });
     await this.#untilEveryoneSees(`${name} is in the room`, (lobby) =>
       lobby.players.some((seen) => seen.playerId === playerId),
@@ -1705,9 +1822,16 @@ export class E2eDriver implements GameDriver {
     const roomOf = (await page.getByTestId('room-of').textContent()) ?? '';
     const count = (await page.getByTestId('player-count').textContent()) ?? '';
     const variant = (await page.getByTestId('room-variant').textContent()) ?? '';
+    const avatars = await page
+      .getByTestId('room-avatars')
+      .locator('[data-face]')
+      .evaluateAll((faces) =>
+        faces.map((face) => `${face.getAttribute('data-face')}/${face.getAttribute('data-color')}`),
+      );
     opener.preview = {
       host: roomOf.match(SCREEN.roomOf)?.[1] ?? '',
       playerCount: Number(count.match(SCREEN.inTheRoom)?.[1]),
+      avatars,
       variant: variant.includes(SCREEN.anonymous) ? 'anonymous' : 'nominal',
       adultsOnly: (await page.getByTestId('room-adults-only').count()) > 0,
     };
@@ -2016,6 +2140,11 @@ async function steady<T>(read: () => Promise<T>): Promise<T> {
     previous = current;
   }
   return previous;
+}
+
+/** A dilemma as the lists of the lobby show it: with «alguien del grupo» in its gap. */
+function listedText({ text }: { readonly text: string }): string {
+  return text.replaceAll(GAP_MARKER, SCREEN.someoneInTheGroup);
 }
 
 /** A text of a dilemma or an option as the screen shows it, with the nickname in the gap. */

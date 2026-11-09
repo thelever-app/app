@@ -1,0 +1,26 @@
+.button {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  cursor: pointer;
+}
+
+/* The sign that the avatar changes, on the corner of the face. */
+.badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  box-shadow: 0 0 0 1.5px var(--color-ink);
+  color: var(--color-ink);
+}

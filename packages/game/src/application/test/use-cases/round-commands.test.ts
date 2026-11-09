@@ -80,11 +80,7 @@ async function arrange() {
       notifier,
       game.clock,
     ),
-    joinRoom: new JoinRoomUseCase({
-      ...ports,
-      idGenerator: game.idGenerator,
-      randomness: game.randomness,
-    }),
+    joinRoom: new JoinRoomUseCase({ ...ports, idGenerator: game.idGenerator }),
   };
 }
 
@@ -279,7 +275,12 @@ describe('Round commands', () => {
 
       // Act
       await leaveRoom.execute({ roomId, playerId: anaId });
-      await joinRoom.execute({ roomId, nickname: 'Ana', identity: 'TestAnaIdentity' });
+      await joinRoom.execute({
+        roomId,
+        nickname: 'Ana',
+        identity: 'TestAnaIdentity',
+        avatar: { face: 'face-01', color: 'khaki' },
+      });
 
       // Assert
       const room = await roomRepository.findById(roomId);

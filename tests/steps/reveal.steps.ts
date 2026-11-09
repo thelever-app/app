@@ -180,12 +180,25 @@ Then('all players see what each player voted', async function (this: GameWorld) 
   }
 });
 
-Then('all players see which predictions were right', async function (this: GameWorld) {
-  for (const viewer of this.present()) {
-    const { votePredictions } = await revealSeenBy(this, viewer);
-    assert.ok(votePredictions.length > 0, `${viewer} sees no vote predictions`);
-  }
-});
+Then(
+  'each player sees which of their own predictions were right',
+  async function (this: GameWorld) {
+    for (const viewer of this.present()) {
+      const seen = await this.driver.ownPredictionsSeenBy(viewer);
+      const { votePredictions, votes } = await revealSeenBy(this, viewer);
+      const voted = new Set(votes.flatMap(({ player, vote }) => (vote === null ? [] : player)));
+      const own = votePredictions
+        .filter(({ player, about }) => player === viewer && voted.has(about))
+        .map(({ about, right }) => ({ about, right }));
+      assert.ok(seen.length > 0, `${viewer} sees none of their predictions`);
+      assert.deepEqual(
+        seen.toSorted((a, b) => a.about.localeCompare(b.about)),
+        own.toSorted((a, b) => a.about.localeCompare(b.about)),
+        `${viewer} does not see how their own predictions went`,
+      );
+    }
+  },
+);
 
 Then('no player sees the points of anyone so far', async function (this: GameWorld) {
   for (const viewer of this.present()) {

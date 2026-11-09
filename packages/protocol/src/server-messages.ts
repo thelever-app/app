@@ -218,7 +218,7 @@ export const ErrorCodeDto = z.enum([
   'room-full',
   'player-expelled',
   'host-cannot-be-expelled',
-  'avatar-taken',
+  'nickname-and-avatar-taken',
   'not-enough-players',
   'adding-dilemmas-not-allowed',
   'too-many-added-dilemmas',

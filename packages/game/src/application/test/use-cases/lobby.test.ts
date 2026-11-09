@@ -5,6 +5,7 @@ import { ChangeRoomSettingsUseCase } from '../../use-cases/change-room-settings.
 import { ExpelPlayerUseCase } from '../../use-cases/expel-player.use-case.ts';
 import { GetRoomPreviewUseCase } from '../../use-cases/get-room-preview.use-case.ts';
 import { GetRoomStateUseCase } from '../../use-cases/get-room-state.use-case.ts';
+import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
 import { PickDilemmasUseCase } from '../../use-cases/pick-dilemmas.use-case.ts';
 import { RemoveAddedDilemmaUseCase } from '../../use-cases/remove-added-dilemma.use-case.ts';
 import { SearchDilemmasUseCase } from '../../use-cases/search-dilemmas.use-case.ts';
@@ -13,11 +14,13 @@ import { RoomCodeNotFoundError } from '../../errors/room-code-not-found.error.ts
 import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
 import { IdentityNotInRoomError } from '../../errors/identity-not-in-room.error.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
-import { AvatarTakenError } from '../../../domain/errors/avatar-taken.error.ts';
+import { NicknameAndAvatarTakenError } from '../../../domain/errors/nickname-and-avatar-taken.error.ts';
 import { DilemmaNotSuitableError } from '../../../domain/errors/dilemma-not-suitable.error.ts';
 import { NotHostError } from '../../../domain/errors/not-host.error.ts';
 import { PlayerNotInRoomError } from '../../../domain/errors/player-not-in-room.error.ts';
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
+import { FixedRandomness } from '../../../domain/test/support/fixed-randomness.ts';
+import { AvatarVO } from '../../../domain/vos/avatar.vo.ts';
 import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
 import { lobbyCatalog } from '../support/test-catalog.ts';
 
@@ -43,28 +46,76 @@ async function arrange() {
     removeAddedDilemma: new RemoveAddedDilemmaUseCase(roomRepository, notifier),
     expelPlayer: new ExpelPlayerUseCase(roomRepository, notifier),
     searchDilemmas: new SearchDilemmasUseCase(roomRepository, catalog),
-    getRoomPreview: new GetRoomPreviewUseCase(roomRepository),
+    getRoomPreview: new GetRoomPreviewUseCase(roomRepository, new FixedRandomness()),
+    joinRoom: new JoinRoomUseCase({ ...lobby, notifier }),
     getRoomState: new GetRoomStateUseCase(roomRepository, catalog),
   };
 }
 
 describe('GetRoomPreviewUseCase', () => {
-  it('should show whose room it is, its type and how many are in it, from its code', async () => {
+  it('should show whose room it is and its type, from its code', async () => {
     // Arrange
     const { getRoomPreview, roomRepository, roomId } = await arrange();
     const { code } = (await roomRepository.findById(roomId))!;
 
     // Act
-    const preview = await getRoomPreview.execute({ code: code.toLowerCase() });
+    const preview = await getRoomPreview.execute({
+      code: code.toLowerCase(),
+      identity: 'TestPabloIdentity',
+    });
 
     // Assert
-    expect(preview).toEqual({
+    expect(preview).toMatchObject({
       roomId,
       hostNickname: 'Ana',
       variant: 'nominal',
       adultsOnly: false,
-      playerCount: 3,
     });
+  });
+
+  it('should show the nickname and the avatar of everyone inside, in the order they came in', async () => {
+    // Arrange
+    const { getRoomPreview, roomRepository, roomId } = await arrange();
+    const { code } = (await roomRepository.findById(roomId))!;
+
+    // Act
+    const { players } = await getRoomPreview.execute({ code, identity: 'TestPabloIdentity' });
+
+    // Assert
+    expect(players).toEqual([
+      { nickname: 'Ana', avatar: { face: 'face-01', color: 'khaki' } },
+      { nickname: 'Luis', avatar: { face: 'face-02', color: 'teal' } },
+      { nickname: 'Marta', avatar: { face: 'face-03', color: 'brown' } },
+    ]);
+  });
+
+  it('should leave out the player of whoever asks, who is already inside', async () => {
+    // Arrange
+    const { getRoomPreview, roomRepository, roomId } = await arrange();
+    const { code } = (await roomRepository.findById(roomId))!;
+
+    // Act
+    const { players } = await getRoomPreview.execute({ code, identity: 'TestLuisIdentity' });
+
+    // Assert
+    expect(players.map(({ nickname }) => nickname)).toEqual(['Ana', 'Marta']);
+  });
+
+  it('should suggest, at random, an avatar nobody inside has', async () => {
+    // Arrange: Ana wears the first avatar, so the free ones start at the second.
+    const { roomRepository, roomId } = await arrange();
+    const { code } = (await roomRepository.findById(roomId))!;
+    const getRoomPreview = new GetRoomPreviewUseCase(roomRepository, new FixedRandomness(0));
+
+    // Act
+    const { suggestedAvatar } = await getRoomPreview.execute({
+      code,
+      identity: 'TestPabloIdentity',
+    });
+
+    // Assert
+    const [, second] = AvatarVO.all();
+    expect(suggestedAvatar).toEqual({ face: second?.face, color: second?.color });
   });
 
   it('should throw an error if no open room has that code', async () => {
@@ -72,7 +123,9 @@ describe('GetRoomPreviewUseCase', () => {
     const { getRoomPreview } = await arrange();
 
     // Act & Assert
-    await expect(getRoomPreview.execute({ code: 'ZZZZZ' })).rejects.toThrow(RoomCodeNotFoundError);
+    await expect(
+      getRoomPreview.execute({ code: 'ZZZZZ', identity: 'TestPabloIdentity' }),
+    ).rejects.toThrow(RoomCodeNotFoundError);
   });
 });
 
@@ -92,15 +145,32 @@ describe('ChangeAvatarUseCase', () => {
     ]);
   });
 
-  it('should throw an error if another player has that avatar', async () => {
+  it('should let a player take the avatar of someone with another nickname', async () => {
     // Arrange
     const { changeAvatar, roomRepository, roomId, luisId } = await arrange();
-    const { face, color } = (await roomRepository.findById(roomId))!.host.avatar;
+
+    // Act
+    await changeAvatar.execute({ roomId, playerId: luisId, face: 'face-01', color: 'khaki' });
+
+    // Assert
+    const luis = (await roomRepository.findById(roomId))?.players.find(({ id }) => id === luisId);
+    expect(luis?.avatar).toMatchObject({ face: 'face-01', color: 'khaki' });
+  });
+
+  it('should throw an error if someone with the same nickname has that avatar', async () => {
+    // Arrange: a second Ana joins, and tries to take the avatar of the first one.
+    const { changeAvatar, joinRoom, roomId } = await arrange();
+    const { playerId } = await joinRoom.execute({
+      roomId,
+      nickname: 'ana',
+      identity: 'TestOtherAnaIdentity',
+      avatar: { face: 'face-04', color: 'slate' },
+    });
 
     // Act & Assert
-    await expect(changeAvatar.execute({ roomId, playerId: luisId, face, color })).rejects.toThrow(
-      AvatarTakenError,
-    );
+    await expect(
+      changeAvatar.execute({ roomId, playerId, face: 'face-01', color: 'khaki' }),
+    ).rejects.toThrow(NicknameAndAvatarTakenError);
   });
 });
 

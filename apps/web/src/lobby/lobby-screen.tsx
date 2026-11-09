@@ -2,7 +2,9 @@ import type { AvatarDto, RoomSettingsDto } from '@thelever-app/protocol';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
+import mascotWaiting from '../assets/brand/mascot-waiting.svg';
 import { Avatar } from '../avatar/avatar.tsx';
+import { namesakesOf } from '../avatar/namesakes.ts';
 import { Icon } from '../components/icon.tsx';
 import { useLobby } from '../room/room-provider.tsx';
 import { AddDilemmaSheet } from './add-dilemma-sheet.tsx';
@@ -226,11 +228,16 @@ export function LobbyScreen() {
           </ul>
         </section>
 
-        {missing > 0 && <p className={styles.muted}>{t('lobby.waiting')}</p>}
+        {missing > 0 && (
+          <p className={styles.waiting}>
+            <img src={mascotWaiting} alt="" width={64} height={64} />
+            {t('lobby.waiting')}
+          </p>
+        )}
       </main>
 
       <footer className={styles.footer}>
-        {rejection?.command === 'start-game' && (
+        {(rejection?.command === 'start-game' || rejection?.command === 'change-avatar') && (
           <p role="alert" className={styles.rejection}>
             {t(`roomErrors.${rejection.code}`, { defaultValue: t('roomErrors.unknown') })}
           </p>
@@ -264,7 +271,7 @@ export function LobbyScreen() {
           roomId={lobby.roomId}
           picked={lobby.pickedDilemmas.map(({ dilemmaId }) => dilemmaId)}
           onPick={(dilemmaIds) => send({ type: 'pick-dilemmas', dilemmaIds: [...dilemmaIds] })}
-          onClose={close}
+          onClose={() => setOpen({ sheet: 'settings' })}
         />
       )}
       {open.sheet === 'add' && (
@@ -277,9 +284,10 @@ export function LobbyScreen() {
       {open.sheet === 'avatar' && self && (
         <AvatarPickerSheet
           current={self.avatar}
-          taken={lobby.players
-            .filter(({ playerId }) => playerId !== lobby.playerId)
-            .map(({ avatar }) => avatar)}
+          taken={namesakesOf(
+            self.nickname,
+            lobby.players.filter(({ playerId }) => playerId !== lobby.playerId),
+          ).map(({ avatar }) => avatar)}
           onChoose={({ face, color }: AvatarDto) => send({ type: 'change-avatar', face, color })}
           onClose={close}
         />

@@ -45,7 +45,7 @@ export function QrScreen({ code, onClose }: QrScreenProps) {
               <path d={pathOf(data)} fill="currentColor" />
             </svg>
           </div>
-          <p className={styles.code} aria-label={spelled(code)}>
+          <p className={styles.code} aria-label={t('qr.code', { code: spelled(code) })}>
             {code}
           </p>
           <p className={styles.or}>{t('qr.or', { host: window.location.host })}</p>

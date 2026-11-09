@@ -160,58 +160,159 @@ Then('the player does not enter the room', async function (this: GameWorld) {
 
 // Avatars and nicknames
 
+Given(
+  'a room with {string} and {string}',
+  async function (this: GameWorld, host: string, guest: string) {
+    await this.hostIs(host);
+    await this.isInTheRoom(guest);
+  },
+);
+
+Then(
+  'the player sees the avatars of {string} and {string} before entering',
+  async function (this: GameWorld, first: string, second: string) {
+    const inside = await this.driver.playersSeenBy(await this.host());
+    const avatarOf = (nickname: string) =>
+      inside.find((seen) => seen.nickname === nickname)?.avatar;
+    const preview = await this.driver.roomPreviewSeenBy(this.player);
+    assert.deepEqual(preview?.avatars, [avatarOf(first), avatarOf(second)]);
+    assert.equal(await this.driver.isInTheRoom(this.player), false);
+  },
+);
+
 Given('a room where some avatars are already taken', async function (this: GameWorld) {
   await this.isInTheRoom('Luis');
   await this.isInTheRoom('Marta');
 });
 
-When('a player joins the room', async function (this: GameWorld) {
-  this.player = SOMEONE.player;
-  await this.isInTheRoom(this.player);
-});
-
 Then(
-  'the player gets a random avatar that nobody else in the room has',
+  'the player sees a random avatar that nobody in the room has',
   async function (this: GameWorld) {
-    const seen = await this.driver.playersSeenBy(this.player);
-    const own = seen.find(({ nickname }) => nickname === this.player)?.avatar;
-    assert.ok(own, `${this.player} has no avatar`);
-    const others = seen.filter(({ nickname }) => nickname !== this.player);
-    assert.ok(others.length > 0, 'nobody else is in the room');
+    this.avatar = await this.driver.avatarSeenBy(this.player);
+    const inside = await this.driver.playersSeenBy(await this.host());
+    assert.ok(inside.length > 1, 'nobody else is in the room');
     assert.ok(
-      others.every(({ avatar }) => avatar !== own),
-      'someone else has the same avatar',
+      inside.every(({ avatar }) => avatar !== this.avatar),
+      'someone in the room has the same avatar',
     );
   },
 );
+
+Then('enters the room with it if they do not change it', async function (this: GameWorld) {
+  await this.driver.confirmNickname(this.player, this.player);
+  this.inRoom.add(this.player);
+  const own = (await this.driver.playersSeenBy(this.player)).find(
+    ({ nickname }) => nickname === this.player,
+  );
+  assert.equal(own?.avatar, this.avatar);
+});
+
+Given('a player who has opened an invitation link', async function (this: GameWorld) {
+  this.player = SOMEONE.anotherPlayer;
+  await this.host();
+  await this.driver.openInvitation(this.player, 'invitation link');
+});
 
 Given('a player in the lobby', async function (this: GameWorld) {
   this.player = SOMEONE.player;
   await this.isInTheRoom(this.player);
 });
 
-When(
-  'the player chooses another avatar that nobody else in the room has',
+When('the player chooses another avatar', async function (this: GameWorld) {
+  const before = await this.driver.avatarSeenBy(this.player);
+  this.avatar = await this.driver.chooseAnotherAvatar(this.player);
+  assert.notEqual(this.avatar, before, 'the avatar did not change');
+});
+
+When('joins the room', async function (this: GameWorld) {
+  await this.driver.confirmNickname(this.player, this.player);
+  this.inRoom.add(this.player);
+});
+
+Then(
+  /^everyone in the lobby sees (?:the new avatar|the player with that avatar)$/,
   async function (this: GameWorld) {
-    const before = await this.driver.playersSeenBy(this.player);
-    this.avatar = await this.driver.chooseAnotherFreeAvatar(this.player);
-    assert.ok(
-      before.every(({ avatar }) => avatar !== this.avatar),
-      'the avatar was not free',
-    );
+    for (const viewer of this.inRoom) {
+      const seen = await this.driver.playersSeenBy(viewer);
+      const avatar = seen.find(({ nickname }) => nickname === this.player)?.avatar;
+      assert.equal(avatar, this.avatar, `${viewer} does not see the avatar of ${this.player}`);
+    }
   },
 );
 
-Then('everyone in the lobby sees the new avatar', async function (this: GameWorld) {
-  for (const viewer of this.inRoom) {
-    const seen = await this.driver.playersSeenBy(viewer);
-    const avatar = seen.find(({ nickname }) => nickname === this.player)?.avatar;
-    assert.equal(avatar, this.avatar, `${viewer} does not see the new avatar`);
+Given('a lobby with a player called {string}', async function (this: GameWorld, nickname: string) {
+  await this.isInTheRoom(nickname);
+});
+
+When(
+  '{string} joins with the avatar of {string}',
+  async function (this: GameWorld, player: string, owner: string) {
+    this.player = player;
+    this.avatar = await this.avatarOf(owner);
+    await this.driver.openInvitation(player, 'invitation link');
+    await this.driver.chooseAvatar(player, this.avatar);
+    await this.driver.confirmNickname(player, player);
+    this.inRoom.add(player);
+    this.viewers = [owner, player];
+  },
+);
+
+Then('both players are in the room with the same avatar', async function (this: GameWorld) {
+  const inside = await this.driver.playersSeenBy(await this.host());
+  for (const player of this.viewers) {
+    const seen = inside.find(({ nickname }) => nickname === player);
+    assert.ok(seen, `${player} is not in the room`);
+    assert.equal(seen.avatar, this.avatar, `${player} does not have the shared avatar`);
   }
 });
 
-Given('a lobby with a player called {string}', async function (this: GameWorld, nickname: string) {
-  await this.isInTheRoom(nickname);
+When(
+  'another player opens its invitation link and types the nickname {string}',
+  async function (this: GameWorld, nickname: string) {
+    this.player = SOMEONE.anotherPlayer;
+    await this.driver.openInvitation(this.player, 'invitation link');
+    await this.driver.typeNickname(this.player, nickname);
+    this.nickname = nickname;
+  },
+);
+
+Then(
+  'the player is told that someone called {string} is already in the room',
+  async function (this: GameWorld, nickname: string) {
+    assert.equal(await this.driver.namesakeWarningSeenBy(this.player), nickname);
+  },
+);
+
+Then('can still join', async function (this: GameWorld) {
+  assert.ok(this.nickname, 'no step typed a nickname');
+  await this.driver.confirmNickname(this.player, this.nickname);
+  assert.ok(await this.driver.isInTheRoom(this.player), `${this.player} could not join`);
+});
+
+When(
+  /^a player called "([^"]*)" tries to take the avatar of "([^"]*)" (when joining|in the lobby)$/,
+  async function (this: GameWorld, nickname: string, owner: string, moment: string) {
+    this.player = namesakeOf(owner);
+    this.avatar = await this.avatarOf(owner);
+    if (moment === 'when joining') {
+      await this.driver.openInvitation(this.player, 'invitation link');
+      await this.driver.chooseAvatar(this.player, this.avatar);
+      await this.driver.confirmNickname(this.player, nickname);
+    } else {
+      await this.isInTheRoom(this.player, nickname);
+      await this.driver.chooseAvatar(this.player, this.avatar);
+    }
+  },
+);
+
+Then('the player does not get that avatar', async function (this: GameWorld) {
+  const inside = await this.driver.playersSeenBy(await this.host());
+  const lookalikes = inside.filter(({ avatar }) => avatar === this.avatar);
+  assert.equal(lookalikes.length, 1, 'two players share the nickname and the avatar');
+});
+
+Then('is asked to choose another one', async function (this: GameWorld) {
+  assert.ok(await this.driver.askedToChooseAnotherAvatar(this.player));
 });
 
 When('another player joins as {string}', async function (this: GameWorld, nickname: string) {

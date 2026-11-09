@@ -31,8 +31,24 @@
   padding: 28px var(--space-4) var(--space-4);
 }
 
+/* La Palanca greets next to the title, over the top of the first button. */
+.greeting {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: -30px;
+  pointer-events: none;
+}
+
+.mascot {
+  display: block;
+  margin-right: var(--space-2);
+}
+
 .title {
-  margin: 0 0 var(--space-2);
+  margin: 0 0 38px;
   font-family: var(--font-display);
   font-size: 34px;
   line-height: 38px;
@@ -95,16 +111,24 @@
 }
 
 .stepTitle {
+  composes: title from '../styles/typography.module.css';
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 31px;
-  line-height: 36px;
-  font-weight: 600;
 }
 
 .lead {
   margin: -8px 0 0;
   color: var(--color-ink-muted);
+}
+
+/* The create step separates its blocks a little more than the code step. */
+.step[data-step='create'] {
+  gap: var(--space-6);
+}
+
+.submit {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .hint {

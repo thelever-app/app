@@ -24,8 +24,8 @@
 .player {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  min-height: 48px;
+  gap: var(--space-3);
+  min-height: 44px;
 }
 
 .name {
@@ -49,7 +49,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
   border-radius: var(--radius-full);
   background: var(--color-surface);
   font-size: var(--type-label-size);
@@ -64,29 +64,47 @@
 .count {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 10px;
   padding: var(--space-4);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
 }
 
 .countLine {
   margin: 0;
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 16px;
+  line-height: 22px;
   font-weight: 500;
 }
 
 .countNumber {
   font-family: var(--font-display);
-  font-size: 32px;
-  line-height: 36px;
+  font-size: 40px;
+  line-height: 44px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.note {
-  composes: caption from '../styles/typography.module.css';
+/* How many of those in the room have answered, as a share. */
+.countTrack {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.countBar {
+  width: var(--share);
+  height: 100%;
+  background: var(--color-ink);
+}
+
+.countNote {
   margin: 0;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--color-ink-muted);
 }

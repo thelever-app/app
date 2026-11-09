@@ -140,6 +140,9 @@ async function post<T>(
   return parse(await response.json());
 }
 
+/** Every player of the load test wears the same avatar: their nicknames already tell them apart. */
+const LOAD_AVATAR = { face: 'face-01', color: 'khaki' };
+
 /** Sets up one room with every player in it, in the lobby; returns the room. */
 async function setUpRoom(target: Target, players: readonly LoadPlayer[]): Promise<string> {
   const [host, ...others] = players;
@@ -147,12 +150,24 @@ async function setUpRoom(target: Target, players: readonly LoadPlayer[]): Promis
     target,
     '/rooms',
     host!.token,
-    { nickname: 'Host', groupNature: 'friends', place: 'together', dilemmaLanguage: 'es' },
+    {
+      nickname: 'Host',
+      avatar: LOAD_AVATAR,
+      groupNature: 'friends',
+      place: 'together',
+      dilemmaLanguage: 'es',
+    },
     (value) => CreateRoomResponseDto.parse(value),
   );
   await Promise.all(
     others.map((player, index) =>
-      post(target, `/rooms/${roomId}/players`, player.token, { nickname: `P${index}` }, () => {}),
+      post(
+        target,
+        `/rooms/${roomId}/players`,
+        player.token,
+        { nickname: `P${index}`, avatar: LOAD_AVATAR },
+        () => {},
+      ),
     ),
   );
   return roomId;

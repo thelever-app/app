@@ -47,8 +47,11 @@ export class GameWorld extends World {
   /** Whether the last thing a step tried was accepted. */
   accepted: boolean | undefined;
 
-  /** The avatar a step chose. */
+  /** The avatar a step chose or saw. */
   avatar: string | undefined;
+
+  /** The nickname a step typed, before confirming it. */
+  nickname: string | undefined;
 
   /** The position (from 1) of the dilemma a step talks about as "it" or "that dilemma". */
   position: number | undefined;
@@ -120,6 +123,14 @@ export class GameWorld extends World {
     if (this.inRoom.has(player)) return;
     await this.driver.joinRoom(player, nickname);
     this.inRoom.add(player);
+  }
+
+  /** The avatar of a player of the room, by their nickname, as the host sees it. */
+  async avatarOf(nickname: string): Promise<string> {
+    const seen = await this.driver.playersSeenBy(await this.host());
+    const avatar = seen.find((player) => player.nickname === nickname)?.avatar;
+    if (!avatar) throw new Error(`Nobody called ${nickname} is in the room`);
+    return avatar;
   }
 
   /** The scenario plays a game; it starts once a step needs it, so earlier steps can set it up. */

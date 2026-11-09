@@ -7,6 +7,7 @@ import { Icon } from '../components/icon.tsx';
 import { isAnonymous, usePlayerName } from '../components/players.ts';
 import { DilemmaText, personInTheGapOf } from '../game/dilemma-text.tsx';
 import { GameMenu } from '../game/game-menu.tsx';
+import { missedOf } from './missed.ts';
 import styles from './reveal-screen.module.css';
 
 type Game = GameStateDto;
@@ -26,7 +27,7 @@ interface RevealScreenProps {
 
 /**
  * The reveal of the dilemma of the round: how many chose each option and, in a nominal room, what
- * each one voted and who predicted it right; in an anonymous room, only the distribution, or that
+ * each one voted, with how the predictions of the player went next to each vote; in an anonymous room, only the distribution, or that
  * there were too few votes to show it.
  */
 export function RevealScreen({ game, reveal, onMoveOn, onLeave }: RevealScreenProps) {
@@ -48,9 +49,15 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave }: RevealScreenPr
           </p>
           <GameMenu onShowGroup={() => setIsGroupOpen(true)} onLeave={onLeave} />
         </div>
-        <Players players={game.players} />
+        <Players players={game.players} selfId={game.playerId} />
       </header>
-      <main className={styles.main} aria-label={t('reveal.region')}>
+      <main
+        className={styles.main}
+        data-variant={anonymous ? 'anonymous' : 'nominal'}
+        aria-label={t('reveal.region')}
+        // It scrolls between the header and the action: a keyboard must be able to reach it.
+        tabIndex={0}
+      >
         <h1 className={styles.text}>
           <DilemmaText text={dilemma.text} personInTheGap={person} />
         </h1>
@@ -88,10 +95,20 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave }: RevealScreenPr
   );
 }
 
-function Players({ players }: { readonly players: readonly Player[] }) {
+/** Who is in the game, the player first, as on the strip of the decision. */
+function Players({
+  players,
+  selfId,
+}: {
+  readonly players: readonly Player[];
+  readonly selfId: string;
+}) {
   const { t } = useTranslation();
   const nameOf = usePlayerName();
-  const inGame = players.filter(({ left }) => !left);
+  const inGame = [
+    ...players.filter(({ left, playerId }) => !left && playerId === selfId),
+    ...players.filter(({ left, playerId }) => !left && playerId !== selfId),
+  ];
   const visible = inGame.slice(0, VISIBLE_PLAYERS);
   const hidden = inGame.length - visible.length;
   return (
@@ -118,19 +135,38 @@ interface ResultProps {
   readonly person: string | undefined;
 }
 
-/** Each option of the dilemma with how many chose it, in the order of the catalog. */
-function optionsOf({ reveal, dilemma }: Pick<ResultProps, 'reveal' | 'dilemma'>) {
+/** How many hits a segment each fit in the summary; with more, a single bar. */
+const MAX_SEGMENTS = 6;
+
+/**
+ * Each option of the dilemma with how many chose it, its letter and its colour by position: in the
+ * order this player saw them when voting, or in the order of the catalog for an anonymous room.
+ */
+function optionsOf(
+  { reveal, dilemma }: Pick<ResultProps, 'reveal' | 'dilemma'>,
+  order: 'player' | 'catalog',
+) {
   const counts = reveal.distribution ?? [];
   const total = counts.reduce((sum, { count }) => sum + count, 0);
-  const layout = counts.length === 2 ? 'pair' : 'list';
-  return counts.map(({ optionId, count }, index) => ({
-    optionId,
-    count,
-    text: dilemma.options.find((option) => option.optionId === optionId)?.text ?? '',
-    percent: `${total === 0 ? 0 : Math.round((count / total) * 100)}%`,
-    color:
-      layout === 'pair' ? `var(--color-option-${'ab'[index]})` : `var(--color-option-${index + 1})`,
-  }));
+  const ids =
+    order === 'player'
+      ? dilemma.options.map(({ optionId }) => optionId)
+      : counts.map(({ optionId }) => optionId);
+  const layout = ids.length === 2 ? 'pair' : 'list';
+  return ids.map((optionId, index) => {
+    const count = counts.find((option) => option.optionId === optionId)?.count ?? 0;
+    return {
+      optionId,
+      count,
+      letter: String.fromCharCode(65 + index),
+      text: dilemma.options.find((option) => option.optionId === optionId)?.text ?? '',
+      percent: `${total === 0 ? 0 : Math.round((count / total) * 100)}%`,
+      color:
+        layout === 'pair'
+          ? `var(--color-option-${'ab'[index]})`
+          : `var(--color-option-${index + 1})`,
+    };
+  });
 }
 
 function Bar({ percent, color }: { readonly percent: string; readonly color: string }) {
@@ -142,6 +178,58 @@ function Bar({ percent, color }: { readonly percent: string; readonly color: str
   );
 }
 
+/** How the predictions of the player went on those who voted: right ones, and who they missed. */
+function HitsSummary({
+  right,
+  missed,
+}: {
+  readonly right: number;
+  readonly missed: readonly string[];
+}) {
+  const { t, i18n } = useTranslation();
+  const count = right + missed.length;
+  const all = missed.length === 0;
+  const list = (names: readonly string[]) =>
+    new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(names);
+  const named = missedOf(missed);
+  const text = all
+    ? t('reveal.hitsCount', { right, count })
+    : right === 0
+      ? t('reveal.missedAll')
+      : named.key === 'one'
+        ? t('reveal.missedOne', { name: named.name })
+        : named.key === 'some'
+          ? t('reveal.missedSome', { names: list(named.names) })
+          : named.key === 'many'
+            ? t('reveal.missedMany', { names: named.names.join(', '), count: named.more })
+            : '';
+  const share = { '--share': `${count === 0 ? 0 : (right / count) * 100}%` } as CSSProperties;
+  return (
+    <section className={styles.summary} aria-label={t('reveal.yourHitsRegion')} data-all={all}>
+      <div className={styles.summaryHead}>
+        <Icon name={all ? 'checkCircle' : 'target'} size={32} />
+        <div className={styles.summaryText}>
+          <p className={styles.summaryTitle}>
+            {all ? t('reveal.hitsAll') : t('reveal.hitsCount', { right, count })}
+          </p>
+          <p className={styles.summaryLine}>{text}</p>
+        </div>
+      </div>
+      {count <= MAX_SEGMENTS ? (
+        <div aria-hidden="true" className={styles.segments}>
+          {Array.from({ length: count }, (_, index) => (
+            <span key={index} className={styles.segment} data-right={index < right || undefined} />
+          ))}
+        </div>
+      ) : (
+        <div aria-hidden="true" className={styles.progress}>
+          <div className={styles.progressBar} style={share} />
+        </div>
+      )}
+    </section>
+  );
+}
+
 function NominalResult({ game, reveal, dilemma, person }: ResultProps) {
   const { t, i18n } = useTranslation();
   const nameOf = usePlayerName();
@@ -149,63 +237,87 @@ function NominalResult({ game, reveal, dilemma, person }: ResultProps) {
     new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(names);
   const playerOf = (playerId: string) =>
     game.players.find((player) => player.playerId === playerId);
-  const hitsOn = (playerId: string) =>
-    reveal.votePredictions.filter(({ aboutId, right }) => aboutId === playerId && right).length;
+  const options = optionsOf({ reveal, dilemma }, 'player');
+  const letterOf = (optionId: string) =>
+    options.find((option) => option.optionId === optionId)?.letter ?? '';
 
-  const own = reveal.votePredictions.filter(({ playerId }) => playerId === game.playerId);
-  const readers = reveal.votePredictions
-    .filter(({ aboutId, right }) => aboutId === game.playerId && right)
-    .flatMap(({ playerId }) => playerOf(playerId)?.nickname ?? []);
+  // What the player said of each one who voted; nobody predicts who did not vote.
+  const voted = new Set(
+    reveal.votes.flatMap(({ playerId, vote }) => (vote === null ? [] : playerId)),
+  );
+  const said = new Map(
+    reveal.votePredictions
+      .filter(({ playerId, aboutId }) => playerId === game.playerId && voted.has(aboutId))
+      .map((prediction) => [prediction.aboutId, prediction]),
+  );
+  const missed = [...said.values()]
+    .filter(({ right }) => !right)
+    .flatMap(({ aboutId }) => playerOf(aboutId)?.nickname ?? []);
   const absent = reveal.votes.flatMap(({ playerId, vote }) =>
     vote === null ? (playerOf(playerId) ?? []) : [],
   );
 
   return (
     <>
-      {own.length > 0 && (
-        <div className={styles.hits}>
-          <Icon name="target" size={22} />
-          <p>
-            <strong>
-              {t('reveal.yourHits', {
-                right: own.filter(({ right }) => right).length,
-                count: own.length,
-              })}
-            </strong>
-            {readers.length > 0 && <> {t('reveal.readYou', { names: list(readers) })}</>}
-          </p>
-        </div>
-      )}
-      {optionsOf({ reveal, dilemma }).map((option) => {
+      {said.size > 0 && <HitsSummary right={said.size - missed.length} missed={missed} />}
+      <h2 className={styles.whoVoted}>{t('reveal.whoVoted')}</h2>
+      {options.map((option) => {
         const voters = reveal.votes.flatMap(({ playerId, vote }) =>
           vote === option.optionId ? (playerOf(playerId) ?? []) : [],
         );
+        const style = { '--option': option.color } as CSSProperties;
         return (
           <section key={option.optionId} className={styles.option}>
             <div className={styles.optionHead}>
-              <h2 className={styles.optionText}>
+              <span aria-hidden="true" className={styles.letter} style={style}>
+                {option.letter}
+              </span>
+              <h3 className={styles.optionText}>
                 <DilemmaText text={option.text} personInTheGap={person} />
-              </h2>
+              </h3>
               <span className={styles.optionCount}>
                 {t('reveal.optionCount', { count: option.count, percent: option.percent })}
               </span>
             </div>
             <Bar percent={option.percent} color={option.color} />
-            {voters.length > 0 && (
+            {voters.length === 0 ? (
+              <p className={styles.nobody}>{t('reveal.nobodyChose')}</p>
+            ) : (
               <ul className={styles.voters}>
                 {voters.map((voter) => {
-                  const hits = hitsOn(voter.playerId);
+                  const prediction = said.get(voter.playerId);
+                  const result =
+                    voter.playerId === game.playerId
+                      ? 'self'
+                      : prediction === undefined
+                        ? 'none'
+                        : prediction.right
+                          ? 'right'
+                          : 'missed';
+                  const letter = prediction ? letterOf(prediction.vote) : '';
+                  const label =
+                    result === 'right'
+                      ? t('reveal.voterRight', { name: nameOf(voter) })
+                      : result === 'missed'
+                        ? t('reveal.voterMissed', { name: nameOf(voter), letter })
+                        : nameOf(voter);
                   return (
                     <li
                       key={voter.playerId}
                       className={styles.voter}
-                      data-self={voter.playerId === game.playerId || undefined}
-                      aria-label={t('reveal.voterHits', { name: nameOf(voter), count: hits })}
+                      data-result={result}
+                      aria-label={label}
                     >
                       <Avatar avatar={voter.avatar} size="s" />
-                      <span aria-hidden="true" className={styles.voterHits}>
-                        {hits}
-                      </span>
+                      <span aria-hidden="true">{nameOf(voter)}</span>
+                      {result === 'missed' && (
+                        <span aria-hidden="true" className={styles.guess}>
+                          {t('reveal.guessed', { letter })}
+                        </span>
+                      )}
+                      {(result === 'right' || result === 'missed') && (
+                        <Icon name={result === 'right' ? 'check' : 'close'} size={18} />
+                      )}
                     </li>
                   );
                 })}
@@ -221,10 +333,12 @@ function NominalResult({ game, reveal, dilemma, person }: ResultProps) {
               <Avatar key={player.playerId} avatar={player.avatar} size="xs" />
             ))}
           </span>
-          {t('reveal.didNotVote', { names: list(absent.map((player) => nameOf(player))) })}
+          {t('reveal.didNotVote', {
+            count: absent.length,
+            names: list(absent.map((player) => nameOf(player))),
+          })}
         </p>
       )}
-      {reveal.votePredictions.length > 0 && <p className={styles.hint}>{t('reveal.hitsHint')}</p>}
     </>
   );
 }
@@ -251,7 +365,7 @@ function AnonymousResult({ game, reveal, dilemma, person }: ResultProps) {
   }
   return (
     <div className={styles.distribution}>
-      {optionsOf({ reveal, dilemma }).map((option) => (
+      {optionsOf({ reveal, dilemma }, 'catalog').map((option) => (
         <section key={option.optionId} className={styles.anonymousOption}>
           <div className={styles.optionHead}>
             <h2 className={styles.optionText}>
@@ -264,7 +378,7 @@ function AnonymousResult({ game, reveal, dilemma, person }: ResultProps) {
           <Bar percent={option.percent} color={option.color} />
         </section>
       ))}
-      <p className={styles.hint}>
+      <p className={styles.anonymousHint}>
         {didNot > 0 && <>{t('reveal.anonymousDidNotVote', { count: didNot })} </>}
         {t('reveal.anonymousNote')}
       </p>

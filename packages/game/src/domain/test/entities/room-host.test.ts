@@ -3,33 +3,39 @@ import { Room } from '../../entities/room.ts';
 import { GameNotInProgressError } from '../../errors/game-not-in-progress.error.ts';
 import { HostChangedEvent } from '../../events/host-changed.event.ts';
 import { PlayerLeftEvent } from '../../events/player-left.event.ts';
+import { FixedRandomness } from '../support/fixed-randomness.ts';
+import { AvatarVO } from '../../vos/avatar.vo.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
-import { SequentialRandomness } from '../../../adapters/in-memory/sequential-randomness.ts';
 
 /** Ana hosts, Luis joined before Marta, all three connected, and a game in progress they play. */
 function roomInGame(): Room {
-  const randomness = new SequentialRandomness();
   const room = Room.create(
     {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
+      hostAvatar: new AvatarVO('face-01', 'khaki'),
       groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
     },
     new FixedIdGenerator('TestRoomId', 'Ana'),
-    randomness,
   );
   room.join(
-    { nickname: 'Luis', identity: 'TestLuisIdentity' },
+    {
+      nickname: 'Luis',
+      identity: 'TestLuisIdentity',
+      avatar: room.suggestAvatar(new FixedRandomness()),
+    },
     new FixedIdGenerator('Luis'),
-    randomness,
   );
   room.join(
-    { nickname: 'Marta', identity: 'TestMartaIdentity' },
+    {
+      nickname: 'Marta',
+      identity: 'TestMartaIdentity',
+      avatar: room.suggestAvatar(new FixedRandomness()),
+    },
     new FixedIdGenerator('Marta'),
-    randomness,
   );
   room.startGame('Ana', 'TestGameId');
   for (const playerId of ['Ana', 'Luis', 'Marta']) room.connect(playerId, `${playerId}Connection`);
@@ -43,9 +49,12 @@ const PLAYERS = ['Ana', 'Luis', 'Marta'];
 /** Pedro joins once the game has started, so he waits in the room and does not play it. */
 function pedroJoins(room: Room): void {
   room.join(
-    { nickname: 'Pedro', identity: 'TestPedroIdentity' },
+    {
+      nickname: 'Pedro',
+      identity: 'TestPedroIdentity',
+      avatar: room.suggestAvatar(new FixedRandomness()),
+    },
     new FixedIdGenerator('Pedro'),
-    new SequentialRandomness(),
   );
   room.connect('Pedro', 'PedroConnection');
   room.pullEvents();
@@ -114,13 +123,13 @@ describe('Room, host and leaving', () => {
         {
           hostNickname: 'Ana',
           hostIdentity: 'TestAnaIdentity',
+          hostAvatar: new AvatarVO('face-01', 'khaki'),
           groupNature: 'friends',
           place: 'together',
           dilemmaLanguage: 'es',
           code: 'K7M2Q',
         },
         new FixedIdGenerator('TestRoomId', 'Ana'),
-        new SequentialRandomness(),
       );
 
       // Act & Assert
@@ -137,9 +146,12 @@ describe('Room, host and leaving', () => {
 
       // Act
       const ana = room.join(
-        { nickname: 'Ana', identity: 'TestAnaIdentity' },
+        {
+          nickname: 'Ana',
+          identity: 'TestAnaIdentity',
+          avatar: room.suggestAvatar(new FixedRandomness()),
+        },
         new FixedIdGenerator('Unused'),
-        new SequentialRandomness(),
       );
 
       // Assert

@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
+import mascotWaving from '../assets/brand/mascot-waving.svg';
 import { Icon } from '../components/icon.tsx';
-import { CodeField } from './code-field.tsx';
 import { CreateRoomForm } from './create-room-form.tsx';
 import screen from './screen.module.css';
 import styles from './home-screen.module.css';
 
-/** Creating a room and typing a code are steps of the start, without an address of their own. */
-type Step = 'start' | 'create' | 'code';
+/** Creating a room is a step of the start, without an address of its own; the code has /join. */
+type Step = 'start' | 'create';
 
 /** /: create a room, or join one with its code. */
 export function HomeScreen() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('start');
   const back = (
     <button
@@ -27,24 +29,10 @@ export function HomeScreen() {
   if (step === 'create') {
     return (
       <div className={screen.screen}>
-        <div className={styles.step}>
+        <div className={styles.step} data-step="create">
           {back}
           <h1 className={styles.stepTitle}>{t('createRoom.title')}</h1>
           <CreateRoomForm />
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 'code') {
-    return (
-      <div className={screen.screen}>
-        <div className={styles.step}>
-          {back}
-          <h1 className={styles.stepTitle}>{t('joinCode.title')}</h1>
-          <p className={styles.lead}>{t('joinCode.text')}</p>
-          <CodeField />
-          <p className={styles.hint}>{t('joinCode.hint')}</p>
         </div>
       </div>
     );
@@ -57,12 +45,21 @@ export function HomeScreen() {
       </header>
       <div aria-hidden="true" className={styles.stripe} />
       <main className={styles.main}>
-        <h1 className={styles.title}>{t('home.title')}</h1>
+        <div className={styles.greeting}>
+          <h1 className={styles.title}>{t('home.title')}</h1>
+          <img
+            className={styles.mascot}
+            src={mascotWaving}
+            alt={t('home.mascot')}
+            width={104}
+            height={104}
+          />
+        </div>
         <button type="button" className={styles.create} onClick={() => setStep('create')}>
           <Icon name="addCircle" size={26} />
           {t('home.create')}
         </button>
-        <button type="button" className={styles.join} onClick={() => setStep('code')}>
+        <button type="button" className={styles.join} onClick={() => void navigate('/join')}>
           <Icon name="pin" />
           {t('home.joinWithCode')}
         </button>

@@ -125,9 +125,13 @@ function WhoAnswered({
           const name = player.connected
             ? nameOf(player)
             : t('progressStrip.playerDisconnected', { name: nameOf(player) });
-          const label = hasAnswered(player)
+          const answered = hasAnswered(player)
             ? t('progressStrip.playerAnswered', { name })
             : t('progressStrip.playerPending', { name });
+          const label =
+            player.playerId === mover
+              ? t('progressStrip.playerMovedOn', { label: answered })
+              : answered;
           return (
             <li
               key={player.playerId}
@@ -138,7 +142,7 @@ function WhoAnswered({
               <Avatar avatar={player.avatar} size="s" dimmed={!player.connected} />
               {hasAnswered(player) && (
                 <span aria-hidden="true" className={styles.check}>
-                  <Icon name="check" size={14} />
+                  <Icon name="check" size={12} />
                 </span>
               )}
               <span className={styles.name}>{label}</span>

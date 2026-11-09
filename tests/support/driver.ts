@@ -25,6 +25,8 @@ export interface RoomPreview {
   readonly variant: string;
   readonly adultsOnly: boolean;
   readonly playerCount: number;
+  /** The avatars of who is inside, in the order they came in, as `PlayerView` writes them. */
+  readonly avatars: readonly string[];
 }
 
 /** A player of the room as another one sees them in the lobby. */
@@ -123,7 +125,12 @@ export interface GameDriver {
 
   // Lobby
 
-  /** `host` creates a room from the home screen, with a nickname, the nature of the group and the place. */
+  /** `host` opens the screen to create a room, which shows them a random avatar. */
+  openRoomCreation(host: string): Promise<void>;
+  /**
+   * `host` creates a room from the home screen, with a nickname, the nature of the group and the
+   * place, and the avatar the screen shows them.
+   */
   createRoom(host: string, choices?: RoomChoices): Promise<void>;
   /** Whether `host` gave their nickname and the nature of the group on the same screen. */
   nicknameAndGroupNatureAskedTogether(host: string): Promise<boolean>;
@@ -148,7 +155,14 @@ export interface GameDriver {
   /** `player` types a code on the join screen, without pressing any button. */
   typeRoomCode(player: string, code: string): Promise<void>;
   roomPreviewSeenBy(player: string): Promise<RoomPreview | undefined>;
-  /** `player` confirms a nickname for the room they opened, and tries to enter. */
+  /** `player` types a nickname on the screen to join, without confirming it. Only on the device (@screen). */
+  typeNickname(player: string, nickname: string): Promise<void>;
+  /**
+   * The nickname of whoever `player` is told already has the nickname they typed, if anyone. Only
+   * on the device (@screen): the screen warns, the room decides nothing until they join.
+   */
+  namesakeWarningSeenBy(player: string): Promise<string | undefined>;
+  /** `player` confirms a nickname for the room they opened, and tries to enter with their avatar. */
   confirmNickname(player: string, nickname: string): Promise<void>;
   /** `player` opens the room by its code and enters with a nickname, their name unless given. */
   joinRoom(player: string, nickname?: string): Promise<void>;
@@ -160,8 +174,17 @@ export interface GameDriver {
   isInTheLobby(player: string): Promise<boolean>;
   /** Who is in the room, as `viewer` sees it after the last change they were told about. */
   playersSeenBy(viewer: string): Promise<PlayerView[]>;
-  /** `player` takes an avatar nobody else in the room has; it returns that avatar. */
-  chooseAnotherFreeAvatar(player: string): Promise<string>;
+  /** The avatar `player` sees as theirs: on the screen to create or join a room, or in the room. */
+  avatarSeenBy(player: string): Promise<string>;
+  /**
+   * `player` takes, on the screen they are on, another avatar that nobody in the room has; it
+   * returns that avatar.
+   */
+  chooseAnotherAvatar(player: string): Promise<string>;
+  /** `player` tries to take that avatar, as `PlayerView` writes it, on the screen they are on. */
+  chooseAvatar(player: string, avatar: string): Promise<void>;
+  /** Whether `player` is asked to choose another avatar, since someone with their nickname has it. */
+  askedToChooseAnotherAvatar(player: string): Promise<boolean>;
 
   settingsSeenBy(viewer: string): Promise<SettingsView>;
   changeSettings(host: string, changes: Partial<SettingsView>): Promise<void>;
@@ -281,6 +304,13 @@ export interface GameDriver {
   canRevealEarly(player: string): Promise<boolean>;
   /** What `viewer` sees of the reveal of the dilemma of the round; undefined in its decision phase. */
   revealSeenBy(viewer: string): Promise<RevealView | undefined>;
+  /**
+   * How each prediction of `viewer` about someone who voted went, as their reveal shows it next to
+   * each vote; the reveal never shows them the predictions of anyone else.
+   */
+  ownPredictionsSeenBy(
+    viewer: string,
+  ): Promise<{ readonly about: string; readonly right: boolean }[]>;
   /** `player` moves on from the reveal of the round to the next one. */
   moveOn(player: string): Promise<void>;
   /** The players move on from the reveal of the round at the same time. */

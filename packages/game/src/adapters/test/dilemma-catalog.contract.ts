@@ -41,10 +41,10 @@ export const CONTRACT_DILEMMAS = [
 
 /** What a search finds of the contract dilemma at that position (from 0), with its id as stored. */
 function foundAt(stored: readonly DilemmaContent[], position: 0 | 1 | 2): CatalogDilemma {
-  const { text, category, tags, minimumAge } = CONTRACT_DILEMMAS[position];
+  const { text, category, tags, minimumAge, options } = CONTRACT_DILEMMAS[position];
   const dilemmaId = stored[position]?.dilemmaId;
   if (!dilemmaId) throw new Error(`The catalog stored no dilemma at position ${position}`);
-  return { dilemmaId, text, category, tags, minimumAge };
+  return { dilemmaId, text, category, tags, minimumAge, optionCount: options.length };
 }
 
 const FOR_EVERYONE: DilemmaSearch = {

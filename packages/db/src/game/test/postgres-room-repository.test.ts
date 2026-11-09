@@ -179,9 +179,12 @@ describe('PostgresRoomRepository', () => {
       // Arrange
       const { room, idGenerator } = await savedRoom();
       room.join(
-        { nickname: 'Marta', identity: 'TestMartaIdentity' },
+        {
+          nickname: 'Marta',
+          identity: 'TestMartaIdentity',
+          avatar: room.suggestAvatar(new SequentialRandomness()),
+        },
         idGenerator,
-        new SequentialRandomness(),
       );
       const game = Game.create(
         {
@@ -215,9 +218,12 @@ describe('PostgresRoomRepository', () => {
       // Arrange
       const { room, idGenerator } = await savedRoom();
       room.join(
-        { nickname: 'Marta', identity: 'TestMartaIdentity' },
+        {
+          nickname: 'Marta',
+          identity: 'TestMartaIdentity',
+          avatar: room.suggestAvatar(new SequentialRandomness()),
+        },
         idGenerator,
-        new SequentialRandomness(),
       );
       room.startGame(room.host.id, 'TestGameOfNoRoom');
 

@@ -1,5 +1,5 @@
 import type { GameStateDto } from '@thelever-app/protocol';
-import { useId } from 'react';
+import { type CSSProperties, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from './icon.tsx';
@@ -77,25 +77,42 @@ function AnsweredCount({
   const nameOf = usePlayerName();
   const inRoom = game.players.filter(({ left }) => !left);
   const pending = pendingCountOf(game);
+  const share = {
+    '--share': `${inRoom.length === 0 ? 0 : (game.answeredCount / inRoom.length) * 100}%`,
+  } as CSSProperties;
 
   return (
     <div className={styles.list}>
       <section className={styles.count}>
         <p className={styles.countLine}>
           <span className={styles.countNumber}>{game.answeredCount}</span>{' '}
-          {t('playerList.anonymousAnswered', { count: game.answeredCount })}
-          {' · '}
-          {t('playerList.anonymousPending', { count: pending })}
+          <span>
+            {t('playerList.anonymousAnswered', { count: game.answeredCount })}
+            {' · '}
+            {t('playerList.anonymousPending', { count: pending })}
+          </span>
         </p>
-        <p className={styles.note}>{t('playerList.anonymousNote')}</p>
+        <div aria-hidden="true" className={styles.countTrack}>
+          <div className={styles.countBar} style={share} />
+        </div>
+        <p className={styles.countNote}>{t('playerList.anonymousNote')}</p>
       </section>
       <section className={styles.section} aria-labelledby={roomId}>
         <h2 id={roomId} className={styles.heading}>
           {t('playerList.inRoom', { count: inRoom.length })}
         </h2>
-        <ul className={styles.players}>
+        <ul className={styles.done}>
           {inRoom.map((player) => (
-            <PlayerRow key={player.playerId} player={player} name={nameOf(player)} />
+            <li key={player.playerId} className={styles.donePlayer}>
+              <Avatar avatar={player.avatar} size="xs" dimmed={!player.connected} />
+              {nameOf(player)}
+              {!player.connected && (
+                <span className={styles.disconnected}>
+                  {' · '}
+                  {t('playerList.disconnected')}
+                </span>
+              )}
+            </li>
           ))}
         </ul>
       </section>

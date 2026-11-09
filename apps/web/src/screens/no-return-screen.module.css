@@ -21,7 +21,7 @@
 }
 
 .title {
-  composes: title from '../styles/typography.module.css';
+  composes: titleStatus from '../styles/typography.module.css';
   flex: 1;
   min-width: 0;
 }
@@ -38,9 +38,18 @@
 
 /* Its black body disappears on the asphalt of dark mode, so there it sits on a ticket-cream disc.
    The drawing reaches the corners of its square: inside the disc it is smaller, so none is cut. */
+.mascot img {
+  display: block;
+}
+
 @media (prefers-color-scheme: dark) {
   .mascot {
     background: #fbf6ec;
+  }
+
+  .mascot img {
+    width: 64px;
+    height: 64px;
   }
 }
 

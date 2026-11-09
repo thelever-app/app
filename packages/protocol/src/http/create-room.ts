@@ -1,9 +1,11 @@
 import { z } from 'zod';
-import { GroupNatureDto, LanguageDto, PlaceDto } from '../client-messages.ts';
+import { AvatarDto, GroupNatureDto, LanguageDto, PlaceDto } from '../client-messages.ts';
 
 /** POST /rooms: whoever calls creates a room and becomes its host. Who calls comes from their token. */
 export const CreateRoomRequestDto = z.strictObject({
   nickname: z.string().min(1),
+  /** The avatar the host chose before creating the room. */
+  avatar: AvatarDto,
   groupNature: GroupNatureDto,
   place: PlaceDto,
   /** The language of the device, which the room takes for its dilemmas. */

@@ -74,12 +74,13 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
           dilemma.minimumAge <= criteria.maximumMinimumAge &&
           dilemma.status === criteria.status,
       )
-      .map(({ dilemmaId, text, minimumAge, category, tags }) => ({
+      .map(({ dilemmaId, text, minimumAge, category, tags, options }) => ({
         dilemmaId,
         text,
         minimumAge,
         category,
         tags,
+        optionCount: options.length,
       }));
   }
 

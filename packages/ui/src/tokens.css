@@ -37,14 +37,34 @@
   --type-display-letter-spacing: normal;
   --type-dilemma-family: var(--font-display);
   --type-dilemma-size: 25px;
-  --type-dilemma-line-height: 29px;
+  --type-dilemma-line-height: 31px;
   --type-dilemma-weight: 600;
   --type-dilemma-letter-spacing: normal;
+  --type-dilemma-reveal-family: var(--font-display);
+  --type-dilemma-reveal-size: 22px;
+  --type-dilemma-reveal-line-height: 29px;
+  --type-dilemma-reveal-weight: 600;
+  --type-dilemma-reveal-letter-spacing: normal;
   --type-title-family: var(--font-display);
-  --type-title-size: 24px;
-  --type-title-line-height: 28px;
-  --type-title-weight: 700;
+  --type-title-size: 31px;
+  --type-title-line-height: 36px;
+  --type-title-weight: 600;
   --type-title-letter-spacing: normal;
+  --type-title-status-family: var(--font-display);
+  --type-title-status-size: 29px;
+  --type-title-status-line-height: 34px;
+  --type-title-status-weight: 600;
+  --type-title-status-letter-spacing: normal;
+  --type-title-sheet-family: var(--font-display);
+  --type-title-sheet-size: 25px;
+  --type-title-sheet-line-height: 30px;
+  --type-title-sheet-weight: 600;
+  --type-title-sheet-letter-spacing: normal;
+  --type-title-small-family: var(--font-display);
+  --type-title-small-size: 22px;
+  --type-title-small-line-height: 28px;
+  --type-title-small-weight: 600;
+  --type-title-small-letter-spacing: normal;
   --type-body-family: var(--font-text);
   --type-body-size: 16px;
   --type-body-line-height: 24px;
@@ -73,7 +93,8 @@
   --space-8: 32px;
   --radius-sm: 6px;
   --radius-md: 12px;
-  --radius-lg: 20px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
   --radius-full: 999px;
 }
 

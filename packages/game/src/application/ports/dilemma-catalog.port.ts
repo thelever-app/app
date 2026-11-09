@@ -20,6 +20,8 @@ export interface CatalogDilemma {
   readonly minimumAge: 16 | 18;
   readonly category: string;
   readonly tags: readonly string[];
+  /** How many options it has, which the lobby says next to it. */
+  readonly optionCount: number;
 }
 
 /** Which dilemmas to look for; every criterion given must hold. */

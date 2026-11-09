@@ -48,6 +48,7 @@ describe('GET /rooms/:roomId/dilemmas', () => {
       minimumAge: trolley!.minimumAge,
       category: trolley!.category,
       tags: trolley!.tags,
+      optionCount: trolley!.options.length,
     });
     expect(
       response.body.dilemmas.every(

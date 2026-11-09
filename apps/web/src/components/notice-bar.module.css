@@ -39,7 +39,8 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-full);
-  background: var(--color-bg);
+  /* Ticket cream in both themes: on asphalt the black body of La Palanca would disappear. */
+  background: #fbf6ec;
 }
 
 .text {

@@ -1,3 +1,63 @@
+/* A full screen over the lobby, within the column of the app. */
+.screen {
+  position: fixed;
+  inset: 0;
+  max-width: 480px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+
+/* The title, the search and the categories stay on top, on the surface. */
+.header {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.back {
+  width: 44px;
+  height: 44px;
+  margin-left: -12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3) var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
 .searchField {
   display: flex;
   align-items: center;
@@ -29,8 +89,8 @@
 
 .chip {
   flex: none;
-  min-height: 32px;
   padding: 6px 12px;
+  line-height: 16px;
   border: 0;
   border-radius: var(--radius-full);
   background: var(--color-surface-raised);

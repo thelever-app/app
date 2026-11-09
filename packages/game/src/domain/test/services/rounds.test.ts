@@ -3,6 +3,7 @@ import { Game } from '../../entities/game.ts';
 import { Room } from '../../entities/room.ts';
 import { handOverHostIfAway } from '../../services/host-handover.ts';
 import { revealIfEveryoneAnswered } from '../../services/reveal-if-everyone-answered.ts';
+import { AvatarVO } from '../../vos/avatar.vo.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 import { KeepOrderRandomness } from '../support/keep-order-randomness.ts';
 import { SequentialRandomness } from '../../../adapters/in-memory/sequential-randomness.ts';
@@ -22,19 +23,18 @@ function roomAndGame(): { room: Room; game: Game } {
     {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
+      hostAvatar: new AvatarVO('face-01', 'khaki'),
       groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
     },
     new FixedIdGenerator('TestRoomId', 'Ana'),
-    randomness,
   );
   for (const nickname of ['Luis', 'Marta']) {
     room.join(
-      { nickname, identity: `Test${nickname}Identity` },
+      { nickname, identity: `Test${nickname}Identity`, avatar: room.suggestAvatar(randomness) },
       new FixedIdGenerator(nickname),
-      randomness,
     );
   }
   room.startGame('Ana', 'TestGameId');

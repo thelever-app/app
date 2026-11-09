@@ -41,9 +41,7 @@
 }
 
 .title {
-  composes: title from '../styles/typography.module.css';
-  font-size: 29px;
-  line-height: 34px;
+  composes: titleStatus from '../styles/typography.module.css';
 }
 
 .mascot {
@@ -102,6 +100,7 @@
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line-height);
   color: var(--color-ink-muted);
+  text-align: center;
 }
 
 .guest {

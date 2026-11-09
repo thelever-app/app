@@ -52,14 +52,16 @@ export function RevealEarlyDialog({
               <span className={styles.names}>{names}</span>
             </div>
           )}
-          <button type="button" className={styles.launch} onClick={onReveal}>
-            {t('revealEarly.reveal')}
-          </button>
-          <Dialog.Close asChild>
-            <button type="button" className={styles.wait}>
-              {t('revealEarly.wait')}
+          <div className={styles.actions}>
+            <button type="button" className={styles.launch} onClick={onReveal}>
+              {t('revealEarly.reveal')}
             </button>
-          </Dialog.Close>
+            <Dialog.Close asChild>
+              <button type="button" className={styles.wait}>
+                {t('revealEarly.wait')}
+              </button>
+            </Dialog.Close>
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

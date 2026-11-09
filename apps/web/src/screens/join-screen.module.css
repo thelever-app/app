@@ -29,6 +29,22 @@
   background: var(--color-surface);
 }
 
+/* The avatars of who is inside, before how many there are. */
+.inside {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.avatars {
+  display: flex;
+  gap: 6px;
+}
+
+.inside .count {
+  margin-left: 4px;
+}
+
 .signage {
   font-size: var(--type-signage-size);
   line-height: var(--type-signage-line-height);

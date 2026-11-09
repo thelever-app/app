@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { HomeScreen } from './screens/home-screen.tsx';
+import { JoinCodeScreen } from './screens/join-code-screen.tsx';
 import { JoinScreen } from './screens/join-screen.tsx';
 import { RoomScreen } from './screens/room-screen.tsx';
 
@@ -11,6 +12,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<HomeScreen />} />
+      <Route path="/join" element={<JoinCodeScreen />} />
       <Route path="/join/:code" element={<JoinScreen />} />
       <Route path="/rooms/:roomId" element={<RoomScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />

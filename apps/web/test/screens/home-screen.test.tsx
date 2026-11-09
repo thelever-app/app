@@ -19,15 +19,22 @@ describe('HomeScreen', () => {
     expect(location()).toBe('/');
   });
 
-  it('should ask for the code of a room as a step of the start', async () => {
+  it('should take the player to the screen of the code', async () => {
     // Arrange
-    const { t } = await renderAtRoute(<HomeScreen />);
+    const { t, location } = await renderAtRoute(<HomeScreen />);
 
     // Act
     fireEvent.click(screen.getByRole('button', { name: t('home.joinWithCode') }));
 
     // Assert
-    expect(screen.getByRole('heading', { name: t('joinCode.title') })).toBeDefined();
-    expect(screen.getByRole('textbox', { name: t('joinCode.label') })).toBeDefined();
+    expect(location()).toBe('/join');
+  });
+
+  it('should greet with La Palanca next to the title', async () => {
+    // Act
+    const { t } = await renderAtRoute(<HomeScreen />);
+
+    // Assert
+    expect(screen.getByRole('img', { name: t('home.mascot') })).toBeDefined();
   });
 });
