@@ -157,6 +157,21 @@ Feature: Join a room
 
   @ui @todo
   Scenario: Joining a game that has already started
-    Given a game in the decision phase
+    Given a game on the decision phase of its third round
     When a player joins the room
-    Then the player can answer the dilemmas from the first one until the reveal starts
+    Then the player can answer the third dilemma
+    And the player is recorded as "did not vote" for the first two dilemmas
+
+  @ui @todo
+  Scenario: Joining a game during the reveal of a round
+    Given a game on the reveal of its second round
+    When a player joins the room
+    Then the player sees the reveal of the second dilemma
+
+  @todo
+  Scenario: A player who joins a nominal game late only votes
+    Given a nominal game that has already started
+    When a player joins the room
+    Then the player makes no predictions and nobody predicts their vote
+    And the player is never the person in the gap
+    And the player has no points in the game results
