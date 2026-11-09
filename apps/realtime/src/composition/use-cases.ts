@@ -132,7 +132,7 @@ export function gameCommands({
       randomness,
     }),
     connectPlayer: new ConnectPlayerUseCase(roomRepository, gameRepository, notifier, idGenerator),
-    disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier),
+    disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier, clock),
     disconnectConnections: new DisconnectConnectionsUseCase(roomRepository, notifier),
     changeAvatar: new ChangeAvatarUseCase(roomRepository, notifier),
     changeSettings: new ChangeRoomSettingsUseCase(roomRepository, notifier),
@@ -163,7 +163,7 @@ export function gameCommands({
     revealEarly: new RevealEarlyUseCase(roomRepository, gameRepository, notifier, clock),
     moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock),
     runOutRound: new RunOutRoundUseCase(roomRepository, gameRepository, notifier, clock),
-    leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier),
+    leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier, clock),
     // Until Moderation keeps them, the reports stay in the memory of the instance that took them.
     skipDilemma: new SkipDilemmaUseCase({ roomRepository, gameRepository, notifier, clock }),
     reportDilemma: new ReportDilemmaUseCase({

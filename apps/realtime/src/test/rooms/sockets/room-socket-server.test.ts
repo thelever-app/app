@@ -207,7 +207,6 @@ describe('RoomSocketServer', () => {
         [firstVoteOf(first)].map(({ dilemmaId, vote }) => ({
           dilemmaId,
           vote,
-          matchPrediction: null,
           votePredictions: [],
         })),
       );

@@ -28,7 +28,7 @@ describe('the rounds over the room sockets', () => {
     server = undefined;
   });
 
-  it('should send each player the first round, its time, the time of the server and their prediction subset', async () => {
+  it('should send each player the first round, its time, the time of the server and who they predict', async () => {
     // Arrange
     server = await startRoomServer();
 
@@ -42,10 +42,8 @@ describe('the rounds over the room sockets', () => {
       expect(left).toBeGreaterThan(55_000);
       expect(left).toBeLessThanOrEqual(60_000);
       expect(state.reveal).toBeNull();
-      for (const dilemma of state.dilemmas) {
-        expect(dilemma.predictionSubset).toHaveLength(2);
-        expect(dilemma.predictionSubset).not.toContain(state.playerId);
-      }
+      expect(state.playersToPredict).toHaveLength(2);
+      expect(state.playersToPredict).not.toContain(state.playerId);
     }
   });
 
@@ -57,20 +55,25 @@ describe('the rounds over the room sockets', () => {
     const vote = first!.options[0]!.optionId;
 
     // Act
-    luis.send({ type: 'answer-dilemma', dilemmaId: first!.dilemmaId, vote, matchPrediction: 1 });
+    const [someone, ...rest] = states[1]!.playersToPredict;
+    luis.send({
+      type: 'answer-dilemma',
+      dilemmaId: first!.dilemmaId,
+      vote,
+      votePredictions: [{ playerId: someone!, vote }],
+    });
     const draft = await luis.next('game-state');
     luis.send({
       type: 'answer-dilemma',
       dilemmaId: first!.dilemmaId,
       vote,
-      matchPrediction: 1,
-      votePredictions: first!.predictionSubset.map((playerId) => ({ playerId, vote })),
+      votePredictions: [someone!, ...rest].map((playerId) => ({ playerId, vote })),
     });
     await luis.next('game-state');
 
     // Assert
     expect(draft.answers).toEqual([
-      { dilemmaId: first!.dilemmaId, vote, matchPrediction: 1, votePredictions: [] },
+      { dilemmaId: first!.dilemmaId, vote, votePredictions: [{ playerId: someone, vote }] },
     ]);
     expect(await ana.next('player-answered')).toMatchObject({ playerId: states[1]!.playerId });
   });

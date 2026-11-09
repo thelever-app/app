@@ -32,7 +32,7 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
   }
 
   async handle(
-    { dilemmaId, vote, matchPrediction, votePredictions }: AnswerDilemmaDto,
+    { dilemmaId, vote, votePredictions }: AnswerDilemmaDto,
     connection: RoomConnection,
   ): Promise<void> {
     const session = connection.session;
@@ -46,7 +46,6 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
           playerId: session.playerId,
           dilemmaId,
           vote,
-          ...(matchPrediction !== undefined && { matchPrediction }),
           ...(votePredictions && { votePredictions }),
         }),
       );
