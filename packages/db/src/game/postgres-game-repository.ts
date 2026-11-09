@@ -208,8 +208,7 @@ export class PostgresGameRepository implements GameRepository {
           did_not_vote: eb.ref('excluded.did_not_vote'),
           reported: eb.ref('excluded.reported'),
           scored: eb.ref('excluded.scored'),
-          match_points: eb.ref('excluded.match_points'),
-          vote_points: eb.ref('excluded.vote_points'),
+          points: eb.ref('excluded.points'),
         })),
       )
       .execute();
@@ -238,7 +237,6 @@ export class PostgresGameRepository implements GameRepository {
         conflict.columns(['game_id', 'player_id', 'dilemma_id']).doUpdateSet((eb) => ({
           dilemma_version: eb.ref('excluded.dilemma_version'),
           vote: eb.ref('excluded.vote'),
-          match_prediction: eb.ref('excluded.match_prediction'),
           vote_predictions: eb.ref('excluded.vote_predictions'),
           option_order: eb.ref('excluded.option_order'),
           response_time_ms: eb.ref('excluded.response_time_ms'),
@@ -372,16 +370,11 @@ function snapshotOf(row: GameRow): GameSnapshot {
           dilemmaId: dilemma_id,
           optionOrder: option_order,
         })),
-        predictionSubsets: ofPlayer.map(({ dilemma_id, prediction_subset }) => ({
-          dilemmaId: dilemma_id,
-          predictionSubset: prediction_subset,
-        })),
         answers: row.answers
           .filter((answer) => answer.player_id === player_id)
           .map((answer) => ({
             dilemmaId: answer.dilemma_id,
             vote: answer.vote,
-            matchPrediction: answer.match_prediction,
             votePredictions: answer.vote_predictions,
             optionOrder: answer.option_order,
             responseTimeMs: answer.response_time_ms,
@@ -396,8 +389,8 @@ function snapshotOf(row: GameRow): GameSnapshot {
         didNotVote: ofPlayer.flatMap(({ dilemma_id, did_not_vote }) =>
           did_not_vote ? [{ dilemmaId: dilemma_id, reason: did_not_vote }] : [],
         ),
-        points: ofPlayer.flatMap(({ dilemma_id, scored, match_points, vote_points }) =>
-          scored ? [{ dilemmaId: dilemma_id, match: match_points, votes: vote_points }] : [],
+        points: ofPlayer.flatMap(({ dilemma_id, scored, points }) =>
+          scored ? [{ dilemmaId: dilemma_id, points }] : [],
         ),
         reports: ofPlayer.flatMap(({ dilemma_id, reported }) =>
           reported ? [{ dilemmaId: dilemma_id, offensive: reported === 'offensive' }] : [],
@@ -478,27 +471,19 @@ function playerDilemmaRowsOf({ id, players }: GameSnapshot): PlayerDilemmaRow[] 
     const didNotVote = new Map(
       player.didNotVote.map(({ dilemmaId, reason }) => [dilemmaId, reason]),
     );
-    const points = new Map(player.points.map(({ dilemmaId, ...scored }) => [dilemmaId, scored]));
+    const points = new Map(player.points.map(({ dilemmaId, points }) => [dilemmaId, points]));
     const reports = new Map(
       player.reports.map(({ dilemmaId, offensive }) => [dilemmaId, offensive]),
-    );
-    const subsets = new Map(
-      player.predictionSubsets.map(({ dilemmaId, predictionSubset }) => [
-        dilemmaId,
-        predictionSubset,
-      ]),
     );
     return player.optionOrders.map(({ dilemmaId, optionOrder }) => ({
       game_id: id,
       player_id: player.id,
       dilemma_id: dilemmaId,
       option_order: [...optionOrder],
-      prediction_subset: [...(subsets.get(dilemmaId) ?? [])],
       did_not_vote: didNotVote.get(dilemmaId) ?? null,
       reported: reportOf(reports.get(dilemmaId)),
       scored: points.has(dilemmaId),
-      match_points: points.get(dilemmaId)?.match ?? null,
-      vote_points: points.get(dilemmaId)?.votes ?? null,
+      points: points.get(dilemmaId) ?? null,
     }));
   });
 }
@@ -513,7 +498,6 @@ function answerRowsOf({ id, dilemmas, players }: GameSnapshot): AnswerRow[] {
       dilemma_id: answer.dilemmaId,
       dilemma_version: versions.get(answer.dilemmaId) ?? 0,
       vote: answer.vote,
-      match_prediction: answer.matchPrediction,
       vote_predictions: JSON.stringify(answer.votePredictions),
       option_order: [...answer.optionOrder],
       response_time_ms: answer.responseTimeMs,

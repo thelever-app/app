@@ -104,13 +104,12 @@ export const AnswerDilemmaDto = z.strictObject({
   dilemmaId: z.string().min(1),
   vote: z.string().min(1),
   /**
-   * In a nominal room, the predictions made so far, sent again with every change: how many of the
-   * others chose the same, and the vote of each player of the subset predicted.
+   * In a nominal room, the vote predictions made so far, sent again with every change: at most one
+   * about each of the other players of a room of 50.
    */
-  matchPrediction: z.number().int().nonnegative().nullable().optional(),
   votePredictions: z
     .array(z.strictObject({ playerId: z.string().min(1), vote: z.string().min(1) }))
-    .max(10)
+    .max(49)
     .optional(),
   traceparent: TraceparentDto.optional(),
 });

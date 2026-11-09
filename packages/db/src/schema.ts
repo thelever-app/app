@@ -148,22 +148,21 @@ export interface Database {
     has_left: boolean;
   };
   /**
-   * Each dilemma as each player plays it: the order of its options and their prediction subset,
-   * given when the game starts, and whether they did not vote it and what they scored.
+   * Each dilemma as each player plays it: the order of its options, given when the game starts,
+   * and whether they did not vote it and what their vote predictions scored.
    */
   game_player_dilemmas: {
     game_id: string;
     player_id: string;
     dilemma_id: string;
     option_order: string[];
-    prediction_subset: string[];
     did_not_vote: DidNotVoteReason | null;
     /** Whether the player reported the dilemma, as offensive or for another reason. */
     reported: 'offensive' | 'other' | null;
     /** Whether the predictions were scored, which happens at the reveal of each dilemma of a nominal room. */
     scored: boolean;
-    match_points: number | null;
-    vote_points: number | null;
+    /** Null when scored without any vote prediction made. */
+    points: number | null;
   };
   answers: {
     game_id: string;
@@ -176,7 +175,6 @@ export interface Database {
     commercial_licence_consent_version: string | null;
     under_eighteen: boolean;
     voter_in_the_gap: boolean;
-    match_prediction: number | null;
     /** Written as JSON text: the driver would turn an array into a PostgreSQL array. */
     vote_predictions: ColumnType<VotePrediction[], string, string>;
     option_order: string[];

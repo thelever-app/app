@@ -63,15 +63,6 @@ export const GameStateDto = z.strictObject({
       votes: z.array(
         z.strictObject({ playerId: z.string().min(1), vote: z.string().min(1).nullable() }),
       ),
-      matchPredictions: z.array(
-        z.strictObject({
-          playerId: z.string().min(1),
-          predicted: z.number().int().nonnegative(),
-          actual: z.number().int().nonnegative(),
-          distance: z.number().int().nonnegative(),
-        }),
-      ),
-      closestIds: z.array(z.string().min(1)),
       votePredictions: z.array(
         z.strictObject({
           playerId: z.string().min(1),
@@ -96,13 +87,13 @@ export const GameStateDto = z.strictObject({
         options: z
           .array(z.strictObject({ optionId: z.string().min(1), text: z.string().min(1) }))
           .min(1),
-        /** The players whose vote this player predicts; none in an anonymous room. */
-        predictionSubset: z.array(z.string().min(1)),
         /** Who takes the gap "someone in the group", the same for everyone; null without it. */
         personInTheGap: z.string().min(1).nullable(),
       }),
     )
     .min(1),
+  /** The players whose vote this player predicts in each dilemma: every other one, none in an anonymous room. */
+  playersToPredict: z.array(z.string().min(1)),
   players: z
     .array(
       z.strictObject({
@@ -123,7 +114,6 @@ export const GameStateDto = z.strictObject({
     z.strictObject({
       dilemmaId: z.string().min(1),
       vote: z.string().min(1),
-      matchPrediction: z.number().int().nonnegative().nullable(),
       votePredictions: z.array(
         z.strictObject({ playerId: z.string().min(1), vote: z.string().min(1) }),
       ),
@@ -250,8 +240,7 @@ export const ErrorCodeDto = z.enum([
   'decision-phase-over',
   'vote-missing',
   'predictions-not-allowed',
-  'invalid-match-prediction',
-  'player-not-in-prediction-subset',
+  'player-not-predictable',
   'duplicate-vote-prediction',
   'answer-incomplete',
   'dilemma-skipped',

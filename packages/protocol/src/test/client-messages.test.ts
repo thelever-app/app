@@ -173,20 +173,27 @@ describe('the messages of the rounds', () => {
     expect(
       AnswerDilemmaDto.safeParse({
         ...answer,
-        matchPrediction: 2,
         votePredictions: [{ playerId: 'player-1', vote: 'option-2' }],
       }).success,
     ).toBe(true);
-    expect(AnswerDilemmaDto.safeParse({ ...answer, matchPrediction: null }).success).toBe(true);
   });
 
-  it('should reject a match prediction below 0 or not whole', () => {
+  it('should take a vote prediction about each of the other 49 players of a full room, and no more', () => {
     // Arrange
     const answer = { type: 'answer-dilemma', dilemmaId: 'dilemma-1', vote: 'option-1' };
+    const about = (count: number) =>
+      Array.from({ length: count }, (_, index) => ({
+        playerId: `player-${index}`,
+        vote: 'option-1',
+      }));
 
     // Act & Assert
-    expect(AnswerDilemmaDto.safeParse({ ...answer, matchPrediction: -1 }).success).toBe(false);
-    expect(AnswerDilemmaDto.safeParse({ ...answer, matchPrediction: 0.5 }).success).toBe(false);
+    expect(AnswerDilemmaDto.safeParse({ ...answer, votePredictions: about(49) }).success).toBe(
+      true,
+    );
+    expect(AnswerDilemmaDto.safeParse({ ...answer, votePredictions: about(50) }).success).toBe(
+      false,
+    );
   });
 
   it('should accept starting the reveal, leaving and reporting a dilemma', () => {

@@ -37,8 +37,6 @@ const gameState = {
       { playerId: 'player-1', vote: 'option-2' },
       { playerId: 'player-2', vote: 'option-1' },
     ],
-    matchPredictions: [{ playerId: 'player-2', predicted: 1, actual: 0, distance: 1 }],
-    closestIds: ['player-2'],
     votePredictions: [{ playerId: 'player-2', aboutId: 'player-1', vote: 'option-2', right: true }],
     personInTheGap: null,
     addedBy: null,
@@ -51,7 +49,6 @@ const gameState = {
         { optionId: 'option-1', text: 'Pull the lever' },
         { optionId: 'option-2', text: 'Do nothing' },
       ],
-      predictionSubset: ['player-1'],
       personInTheGap: null,
     },
     {
@@ -62,10 +59,10 @@ const gameState = {
         { optionId: 'option-4', text: 'Save the doctor' },
         { optionId: 'option-5', text: 'Save the athlete' },
       ],
-      predictionSubset: ['player-1'],
       personInTheGap: 'player-1',
     },
   ],
+  playersToPredict: ['player-1'],
   players: [
     {
       playerId: 'player-1',
@@ -88,7 +85,6 @@ const gameState = {
     {
       dilemmaId: 'dilemma-1',
       vote: 'option-1',
-      matchPrediction: 1,
       votePredictions: [{ playerId: 'player-1', vote: 'option-2' }],
     },
   ],
@@ -215,7 +211,7 @@ describe('GameStateDto', () => {
     };
     const emptyVote = {
       ...gameState,
-      answers: [{ dilemmaId: 'dilemma-1', vote: '', matchPrediction: null, votePredictions: [] }],
+      answers: [{ dilemmaId: 'dilemma-1', vote: '', votePredictions: [] }],
     };
 
     // Act & Assert
