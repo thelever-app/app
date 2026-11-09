@@ -17,7 +17,7 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-4) var(--space-6);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   background: var(--color-bg);
   color: var(--color-ink);
 }
@@ -43,7 +43,7 @@
 }
 
 .title {
-  composes: title from '../styles/typography.module.css';
+  composes: titleSheet from '../styles/typography.module.css';
   margin: 0;
 }
 

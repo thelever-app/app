@@ -29,11 +29,8 @@
 }
 
 .heading {
+  composes: titleSmall from '../styles/typography.module.css';
   margin: 0;
-  font-family: var(--type-title-family);
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 600;
 }
 
 .players {

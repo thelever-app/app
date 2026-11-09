@@ -46,7 +46,7 @@
   gap: var(--space-3);
   padding: 0 18px;
   border: 0;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   font: inherit;
   text-align: left;
   color: var(--color-ink);
@@ -95,11 +95,8 @@
 }
 
 .stepTitle {
+  composes: title from '../styles/typography.module.css';
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 31px;
-  line-height: 36px;
-  font-weight: 600;
 }
 
 .lead {

@@ -60,7 +60,7 @@
 }
 
 .text {
-  composes: dilemma from '../styles/typography.module.css';
+  composes: dilemmaReveal from '../styles/typography.module.css';
 }
 
 .chips {
@@ -87,7 +87,7 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--color-surface);
   font-size: var(--type-label-size);
   line-height: var(--type-label-line-height);
@@ -206,7 +206,7 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-4);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--color-surface);
 }
 

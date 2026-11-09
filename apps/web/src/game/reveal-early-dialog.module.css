@@ -27,10 +27,7 @@
 }
 
 .title {
-  font-family: var(--type-title-family);
-  font-size: 25px;
-  line-height: 30px;
-  font-weight: 600;
+  composes: titleSheet from '../styles/typography.module.css';
 }
 
 .body {

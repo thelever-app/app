@@ -21,7 +21,7 @@
 }
 
 .title {
-  composes: title from '../styles/typography.module.css';
+  composes: titleStatus from '../styles/typography.module.css';
   flex: 1;
   min-width: 0;
 }
