@@ -11,9 +11,9 @@ import {
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
 
 /**
- * Load test of the room server: many rooms at once, every player answering every dilemma, and the
- * time from a player sending an answer to their progress reaching each of the others, measured in
- * this one process, with one clock. `pnpm --filter @thelever-app/tests load`, against the local
+ * Load test of the room server: many rooms at once, every player answering every round, and the
+ * time from a player sending an answer to the news that they answered reaching each of the others,
+ * measured in this one process, with one clock. The host moves everyone on from each reveal. `pnpm --filter @thelever-app/tests load`, against the local
  * stack (LOAD_TARGET=local, the default) or dev (LOAD_TARGET=dev, with APP_CHECK_DEBUG_TOKEN).
  */
 
@@ -30,8 +30,10 @@ interface Target {
  */
 const ROOMS = Number(process.env.LOAD_ROOMS ?? 3);
 const PLAYERS = Number(process.env.LOAD_PLAYERS ?? 50);
-/** How long a player reads, votes and predicts each dilemma, at random within this range. */
+/** How long a player reads, votes and predicts each dilemma, at random within this range, within its minute. */
 const THINK_MS = [15000, 45000] as const;
+/** How long the group comments on each reveal before the host moves on. */
+const REVEAL_MS = 5000;
 /** How many rooms are set up at once, so the setup does not measure itself. */
 const SETUP_IN_PARALLEL = 10;
 
@@ -98,9 +100,12 @@ interface LoadPlayer {
   readonly token: string;
   socket?: WebSocket;
   playerId?: string;
+  /** The last state of the game the player got. */
   state?: GameStateDto;
   /** Resolves once the player has the state of the game, when the host starts it. */
   started?: Promise<void>;
+  /** Called with every new state of the game, to wait for a round or its reveal. */
+  onState?: (() => void) | undefined;
 }
 
 /** What the run measured. */
@@ -110,7 +115,7 @@ let socketFailures = 0;
 /** Frames that do not follow the contract: they are counted, never thrown from a listener. */
 let unreadableMessages = 0;
 let answersSent = 0;
-/** When each player sent each answer, by `playerId:progress`. */
+/** When each player sent each answer, by `playerId:position` of the round. */
 const sentAt = new Map<string, number>();
 
 async function post<T>(
@@ -168,7 +173,7 @@ function startGame([host]: readonly LoadPlayer[]): void {
 
 /**
  * Connects one player to the room and resolves once they see the lobby; `started` resolves with
- * the state of the game. Every progress of another is timed.
+ * the state of the game. Every answer of another is timed.
  */
 async function connect(target: Target, player: LoadPlayer, roomId: string): Promise<void> {
   const socket = new WebSocket(target.realtime.replace(/^http/, 'ws'));
@@ -202,11 +207,12 @@ async function connect(target: Target, player: LoadPlayer, roomId: string): Prom
       if (message.type === 'room-state') {
         player.playerId = message.playerId;
         resolve();
-      } else if (message.type === 'game-state' && !player.state) {
+      } else if (message.type === 'game-state') {
         player.state = message;
         gameStarted();
-      } else if (message.type === 'progress-updated') {
-        const at = sentAt.get(`${message.playerId}:${message.progress}`);
+        player.onState?.();
+      } else if (message.type === 'player-answered') {
+        const at = sentAt.get(`${message.playerId}:${player.state?.round.position}`);
         if (at !== undefined) latencies.push(performance.now() - at);
       } else if (message.type === 'error') {
         rejections.set(message.code, (rejections.get(message.code) ?? 0) + 1);
@@ -225,20 +231,47 @@ function readMessage(data: unknown): ServerMessage | undefined {
   }
 }
 
-/** Answers every dilemma of the game in order, thinking a while before each one. */
-async function play(player: LoadPlayer): Promise<void> {
-  for (const [index, dilemma] of player.state!.dilemmas.entries()) {
+/** Resolves once the last state of the game the player got is such. */
+function until(player: LoadPlayer, reached: (state: GameStateDto) => boolean): Promise<void> {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (!player.state || !reached(player.state)) return;
+      player.onState = undefined;
+      resolve();
+    };
+    player.onState = check;
+    check();
+  });
+}
+
+/**
+ * Answers every round in full, thinking a while before each one: the vote and, in this nominal
+ * room, every prediction. The host moves everyone on from each reveal, but the last.
+ */
+async function play(player: LoadPlayer, isHost: boolean): Promise<void> {
+  const { dilemmas } = player.state!;
+  for (const [position, dilemma] of dilemmas.entries()) {
+    await until(player, ({ round }) => round.position === position);
     const [min, max] = THINK_MS;
     await new Promise((resolve) => setTimeout(resolve, min + Math.random() * (max - min)));
-    sentAt.set(`${player.playerId}:${index + 1}`, performance.now());
+    const vote = dilemma.options[0]!.optionId;
+    sentAt.set(`${player.playerId}:${position}`, performance.now());
     answersSent += 1;
     player.socket!.send(
       JSON.stringify({
         type: 'answer-dilemma',
         dilemmaId: dilemma.dilemmaId,
-        vote: dilemma.options[0]!.optionId,
+        vote,
+        matchPrediction: 0,
+        votePredictions: dilemma.predictionSubset.map((playerId) => ({ playerId, vote })),
         traceparent: traceparent(),
       }),
+    );
+    await until(player, ({ round }) => round.position === position && round.phase === 'reveal');
+    if (!isHost || position === dilemmas.length - 1) continue;
+    await new Promise((resolve) => setTimeout(resolve, REVEAL_MS));
+    player.socket!.send(
+      JSON.stringify({ type: 'move-on', fromPosition: position, traceparent: traceparent() }),
     );
   }
 }
@@ -274,8 +307,10 @@ await Promise.all(rooms.flat().map((player) => player.started));
 console.log(`started ${ROOMS} games`);
 
 const playing = performance.now();
-await Promise.all(rooms.flat().map((player) => play(player)));
-// Room for the last progress to arrive.
+await Promise.all(
+  rooms.flatMap((players) => players.map((player, index) => play(player, index === 0))),
+);
+// Room for the last answers to be heard.
 await new Promise((resolve) => setTimeout(resolve, 3000));
 for (const player of rooms.flat()) player.socket?.close();
 
