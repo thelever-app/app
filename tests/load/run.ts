@@ -262,8 +262,7 @@ async function play(player: LoadPlayer, isHost: boolean): Promise<void> {
         type: 'answer-dilemma',
         dilemmaId: dilemma.dilemmaId,
         vote,
-        matchPrediction: 0,
-        votePredictions: dilemma.predictionSubset.map((playerId) => ({ playerId, vote })),
+        votePredictions: player.state!.playersToPredict.map((playerId) => ({ playerId, vote })),
         traceparent: traceparent(),
       }),
     );

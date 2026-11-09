@@ -1,5 +1,4 @@
 import { type Database, type DatabaseClient, ConsoleLogger, openDatabase } from '@thelever-app/db';
-import { PREDICTION_LIMIT } from '@thelever-app/game';
 import {
   ClientMessageDto,
   GAP_MARKER,
@@ -129,8 +128,7 @@ const SCREEN = {
   back: 'Volver a tu voto',
   continue: 'Continuar',
   choose: 'Elige una opción',
-  predictQuestion: '¿Y qué votó cada uno?',
-  matchValue: (count: number, total: number) => `${count} de ${total}`,
+  predictQuestion: '¿Qué votó cada uno?',
   voteOf: (nickname: string) => `El voto de ${nickname}`,
   next: 'Siguiente dilema',
   moreOptions: 'Más opciones',
@@ -758,25 +756,23 @@ export class E2eDriver implements GameDriver {
     const wasAnswered = await this.hasAnswered(player);
     const heard = this.#answeredCountsHeardByOthers(answerer);
     await this.#chooseAndContinue(answerer, dilemma, option.optionId);
-    if (dilemma.predictionSubset.length === 0) {
+    const { playersToPredict } = this.#gameOf(player);
+    if (playersToPredict.length === 0) {
       if (!wasAnswered) await this.#untilOthersHearAnswer(answerer, heard);
       return;
     }
 
     const { page } = screenOf(answerer);
-    const match = plan.matchPrediction === undefined ? 0 : plan.matchPrediction;
-    if (match !== null) await this.#tapMatch(answerer, match);
-    if (plan.votePredictions !== false) {
-      for (const playerId of dilemma.predictionSubset) {
+    const complete = plan.votePredictions !== false;
+    if (complete) {
+      for (const playerId of playersToPredict) {
         await this.#tapVotePrediction(answerer, dilemma, playerId, option.optionId);
       }
     }
-    const complete = match !== null && plan.votePredictions !== false;
     await page.getByRole('button', { name: complete ? SCREEN.done : SCREEN.back }).click();
     await this.#untilRoomKeeps(answerer, dilemma.dilemmaId, (answer) =>
       complete
-        ? answer.matchPrediction === match &&
-          answer.votePredictions.length === dilemma.predictionSubset.length
+        ? answer.votePredictions.length === playersToPredict.length
         : answer.vote === option.optionId,
     );
     if (complete && !wasAnswered) await this.#untilOthersHearAnswer(answerer, heard);
@@ -790,7 +786,7 @@ export class E2eDriver implements GameDriver {
     const wasAnswered = await this.hasAnswered(player);
     const heard = this.#answeredCountsHeardByOthers(voter);
     await this.#chooseAndContinue(voter, dilemma, chosen.optionId);
-    const anonymous = dilemma.predictionSubset.length === 0;
+    const anonymous = this.#gameOf(player).playersToPredict.length === 0;
     if (anonymous && !wasAnswered) await this.#untilOthersHearAnswer(voter, heard);
   }
 
@@ -816,7 +812,7 @@ export class E2eDriver implements GameDriver {
     if ((await change.count()) > 0) await change.click();
     else if ((await back.count()) > 0) await back.click();
     await this.#chooseAndContinue(voter, dilemma, chosen.optionId);
-    if (dilemma.predictionSubset.length === 0) return;
+    if (this.#gameOf(player).playersToPredict.length === 0) return;
     await this.#leavePredictions(voter);
   }
 
@@ -1026,7 +1022,6 @@ export class E2eDriver implements GameDriver {
         ?.text ?? optionId;
     return {
       vote: textOf(row.vote),
-      matchPrediction: row.match_prediction,
       votePredictions: row.vote_predictions.map((prediction) => ({
         player: this.#nameOf(prediction.playerId),
         vote: textOf(prediction.vote),
@@ -1108,8 +1103,12 @@ export class E2eDriver implements GameDriver {
     const online = this.#withScreens().filter(({ screen }) => screen?.link);
     const [opener] = online;
     if (!opener) throw new Error('Nobody has the game open to notice the time is over');
-    await screenOf(opener).page.reload();
+    // A second tab of the same player notices it on connecting; reloading would disconnect them.
+    const { page } = screenOf(opener);
+    const tab = await page.context().newPage();
+    await tab.goto(page.url());
     await this.#untilEveryoneGetsTheReveal();
+    await tab.close();
   }
 
   /** From the waiting screen, or from the menu of the dilemma, and confirmed. */
@@ -1181,11 +1180,6 @@ export class E2eDriver implements GameDriver {
         player: this.#nameOf(playerId),
         vote: vote && textOf(vote),
       })),
-      matchPredictions: reveal.matchPredictions.map(({ playerId, distance }) => ({
-        player: this.#nameOf(playerId),
-        distance,
-      })),
-      closest: reveal.closestIds.map((playerId) => this.#nameOf(playerId)),
       votePredictions: reveal.votePredictions.map(({ playerId, aboutId, right }) => ({
         player: this.#nameOf(playerId),
         about: this.#nameOf(aboutId),
@@ -1273,20 +1267,6 @@ export class E2eDriver implements GameDriver {
     );
   }
 
-  /** On the predictions, and back to the vote, which sends them as they are. */
-  async predictMatch(player: string, count: number): Promise<void> {
-    const predictor = this.#playerCalled(player);
-    const dilemma = await this.#roundDilemmaOn(predictor);
-    await this.#toPredictions(predictor);
-    await this.#tapMatch(predictor, count);
-    await screenOf(predictor).page.getByRole('button', { name: SCREEN.back }).click();
-    await this.#untilRoomKeeps(
-      predictor,
-      dilemma.dilemmaId,
-      (answer) => answer.matchPrediction === count,
-    );
-  }
-
   /** On the predictions; then «Listo» if the answer is complete, or back to the vote if not. */
   async predictVotes(
     player: string,
@@ -1313,21 +1293,12 @@ export class E2eDriver implements GameDriver {
     );
   }
 
-  async predictionSubsetOf(): Promise<string[]> {
-    throw new Error('The scenario counts the subsets of the application: it must not be @ui');
+  /** As the room server last told `player`. */
+  async playersToPredictBy(player: string): Promise<string[]> {
+    return this.#gameOf(player).playersToPredict.map((playerId) => this.#nameOf(playerId));
   }
 
-  predictionLimit(): number {
-    return PREDICTION_LIMIT;
-  }
-
-  async timesEachPlayerWasPredicted(): Promise<Map<string, number>> {
-    throw new Error('The scenario counts the subsets of the application: it must not be @ui');
-  }
-
-  async pointsOf(): Promise<
-    { readonly position: number; readonly match: number | null; readonly votes: number | null }[]
-  > {
+  async pointsOf(): Promise<{ readonly position: number; readonly points: number | null }[]> {
     throw new Error('The scenario reads the points of the application: it must not be @ui');
   }
 
@@ -1413,7 +1384,7 @@ export class E2eDriver implements GameDriver {
     await page
       .getByRole('radio', { name: textOnScreen(option, game, dilemma), exact: true })
       .click();
-    const anonymous = dilemma.predictionSubset.length === 0;
+    const anonymous = (game?.playersToPredict.length ?? 0) === 0;
     await page.getByRole('button', { name: anonymous ? SCREEN.done : SCREEN.continue }).click();
     this.#votes.set(player.name, [
       ...(this.#votes.get(player.name) ?? []),
@@ -1438,12 +1409,6 @@ export class E2eDriver implements GameDriver {
     const done = page.getByRole('button', { name: SCREEN.done, exact: true });
     const back = page.getByRole('button', { name: SCREEN.back });
     await ((await done.count()) > 0 ? done : back).click();
-  }
-
-  async #tapMatch(player: E2ePlayer, count: number): Promise<void> {
-    const { page } = screenOf(player);
-    const others = this.#gameOf(player.name).players.length - 1;
-    await page.getByRole('radio', { name: SCREEN.matchValue(count, others), exact: true }).click();
   }
 
   async #tapVotePrediction(

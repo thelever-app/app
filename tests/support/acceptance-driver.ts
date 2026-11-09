@@ -10,7 +10,6 @@ import {
   ExpelPlayerUseCase,
   GAP_MARKER,
   LeaveRoomUseCase,
-  PREDICTION_LIMIT,
   ReportDilemmaUseCase,
   MoveOnUseCase,
   RevealEarlyUseCase,
@@ -81,8 +80,6 @@ import {
 const VOTE = 'option-1';
 /** Test data: the vote the driver changes to; the second option of every dilemma. */
 const OTHER_VOTE = 'option-2';
-/** Test data: the match prediction the driver makes when a step does not say which one. */
-const MATCH_PREDICTION = 0;
 
 /** Test data: what the creation screen gets when a step does not choose. */
 const DEFAULT_CHOICES = { groupNature: 'friends', place: 'together', deviceLanguage: 'es' };
@@ -189,7 +186,6 @@ export class AcceptanceDriver implements GameDriver {
     {
       readonly dilemmaId: string;
       vote: string;
-      matchPrediction: number | null;
       votePredictions: VotePrediction[];
     }
   >();
@@ -251,11 +247,11 @@ export class AcceptanceDriver implements GameDriver {
     });
     this.#getGameState = new GetGameStateUseCase(rooms, this.#gameRepository, catalog);
     this.#connectPlayer = new ConnectPlayerUseCase(rooms, games, notifier, idGenerator);
-    this.#disconnectPlayer = new DisconnectPlayerUseCase(rooms, games, notifier);
+    this.#disconnectPlayer = new DisconnectPlayerUseCase(rooms, games, notifier, clock);
     this.#revealEarly = new RevealEarlyUseCase(rooms, games, notifier, clock);
     this.#runOutRound = new RunOutRoundUseCase(rooms, games, notifier, clock);
     this.#moveOn = new MoveOnUseCase(rooms, games, notifier, clock);
-    this.#leaveRoom = new LeaveRoomUseCase(rooms, games, notifier);
+    this.#leaveRoom = new LeaveRoomUseCase(rooms, games, notifier, clock);
     this.#skipDilemma = new SkipDilemmaUseCase({
       roomRepository: rooms,
       gameRepository: games,
@@ -606,19 +602,14 @@ export class AcceptanceDriver implements GameDriver {
 
   async answer(player: string, plan: AnswerPlan = {}): Promise<void> {
     const dilemma = await this.#roundDilemmaOf(player);
-    const nominal = (await this.settingsOfTheGame()).variant === 'nominal';
+    const { playersToPredict } = await this.#gameStateOf(player);
     const draft = {
       dilemmaId: dilemma.dilemmaId,
       vote: plan.vote ? optionIdOf(dilemma.dilemmaId, plan.vote) : VOTE,
-      matchPrediction: nominal
-        ? plan.matchPrediction === undefined
-          ? MATCH_PREDICTION
-          : plan.matchPrediction
-        : null,
       votePredictions:
-        nominal && plan.votePredictions !== false
-          ? dilemma.predictionSubset.map((playerId) => ({ playerId, vote: VOTE }))
-          : [],
+        plan.votePredictions === false
+          ? []
+          : playersToPredict.map((playerId) => ({ playerId, vote: VOTE })),
     };
     this.#drafts.set(player, draft);
     await this.#send(player, draft);
@@ -629,7 +620,6 @@ export class AcceptanceDriver implements GameDriver {
     const draft = {
       dilemmaId,
       vote: option ? optionIdOf(dilemmaId, option) : VOTE,
-      matchPrediction: null,
       votePredictions: [],
     };
     this.#drafts.set(player, draft);
@@ -645,7 +635,6 @@ export class AcceptanceDriver implements GameDriver {
     const draft = {
       dilemmaId,
       vote: option ? optionIdOf(dilemmaId, option) : previous.vote === VOTE ? OTHER_VOTE : VOTE,
-      matchPrediction: previous.matchPrediction,
       votePredictions: [...previous.votePredictions],
     };
     this.#drafts.set(player, draft);
@@ -807,7 +796,6 @@ export class AcceptanceDriver implements GameDriver {
     if (!answer) return undefined;
     return {
       vote: optionTextOf(dilemmaId, answer.vote),
-      matchPrediction: answer.matchPrediction,
       votePredictions: answer.votePredictions.map((prediction) => ({
         player: this.#nameOf(prediction.playerId),
         vote: optionTextOf(dilemmaId, prediction.vote),
@@ -890,11 +878,6 @@ export class AcceptanceDriver implements GameDriver {
         player: this.#nameOf(playerId),
         vote: vote && optionTextOf(dilemmaId, vote),
       })),
-      matchPredictions: reveal.matchPredictions.map(({ playerId, distance }) => ({
-        player: this.#nameOf(playerId),
-        distance,
-      })),
-      closest: reveal.closestIds.map((playerId) => this.#nameOf(playerId)),
       votePredictions: reveal.votePredictions.map(({ playerId, aboutId, right }) => ({
         player: this.#nameOf(playerId),
         about: this.#nameOf(aboutId),
@@ -949,6 +932,7 @@ export class AcceptanceDriver implements GameDriver {
   /** The application turns down predictions without a vote: the screen offers none. */
   async canMakePredictions(player: string): Promise<boolean> {
     const { dilemmaId } = await this.#roundDilemmaOf(player);
+    const { playersToPredict } = await this.#gameStateOf(player);
     return this.#accepts(
       () =>
         this.#answerDilemma.execute({
@@ -956,16 +940,10 @@ export class AcceptanceDriver implements GameDriver {
           playerId: this.#playerIdOf(player),
           dilemmaId,
           vote: '',
-          matchPrediction: MATCH_PREDICTION,
+          votePredictions: playersToPredict.map((playerId) => ({ playerId, vote: VOTE })),
         }),
       VoteMissingError,
     );
-  }
-
-  async predictMatch(player: string, count: number): Promise<void> {
-    const draft = this.#draftOf(player);
-    draft.matchPrediction = count;
-    await this.#send(player, draft);
   }
 
   async predictVotes(
@@ -980,41 +958,19 @@ export class AcceptanceDriver implements GameDriver {
     await this.#send(player, draft);
   }
 
-  async predictionSubsetOf(player: string, position: number): Promise<string[]> {
-    const dilemma = (await this.#gameStateOf(player)).dilemmas[position - 1];
-    if (!dilemma) throw new Error(`The game has no dilemma in position ${position}`);
-    return dilemma.predictionSubset.map((playerId) => this.#nameOf(playerId));
-  }
-
-  predictionLimit(): number {
-    return PREDICTION_LIMIT;
-  }
-
-  async timesEachPlayerWasPredicted(): Promise<Map<string, number>> {
-    const game = await this.#currentGame();
-    const times = new Map(game.playerIds.map((playerId) => [this.#nameOf(playerId), 0]));
-    for (const playerId of game.playerIds) {
-      for (const { dilemmaId } of game.dilemmas) {
-        for (const predicted of game.predictionSubsetOf(playerId, dilemmaId)) {
-          const name = this.#nameOf(predicted);
-          times.set(name, (times.get(name) ?? 0) + 1);
-        }
-      }
-    }
-    return times;
+  async playersToPredictBy(player: string): Promise<string[]> {
+    const { playersToPredict } = await this.#gameStateOf(player);
+    return playersToPredict.map((playerId) => this.#nameOf(playerId));
   }
 
   async pointsOf(
     player: string,
-  ): Promise<
-    { readonly position: number; readonly match: number | null; readonly votes: number | null }[]
-  > {
+  ): Promise<{ readonly position: number; readonly points: number | null }[]> {
     const game = await this.#currentGame();
     const positions = game.dilemmas.map(({ dilemmaId }) => dilemmaId);
-    return game.pointsOf(this.#playerIdOf(player)).map(({ dilemmaId, match, votes }) => ({
+    return game.pointsOf(this.#playerIdOf(player)).map(({ dilemmaId, points }) => ({
       position: positions.indexOf(dilemmaId) + 1,
-      match,
-      votes,
+      points,
     }));
   }
 
@@ -1079,7 +1035,6 @@ export class AcceptanceDriver implements GameDriver {
     draft: {
       readonly dilemmaId: string;
       readonly vote: string;
-      readonly matchPrediction: number | null;
       readonly votePredictions: readonly VotePrediction[];
     },
   ): Promise<void> {

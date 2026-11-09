@@ -2,6 +2,9 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import type { GameWorld } from '../support/world.ts';
 
+/** Test data: the option a step predicts when the scenario does not say which, as the test dilemmas write it. */
+const PREDICTED_VOTE = 'do nothing';
+
 Given(
   '{string} hosts a room with {string} and {string}',
   async function (this: GameWorld, host: string, firstPlayer: string, secondPlayer: string) {
@@ -732,7 +735,8 @@ Given(
   async function (this: GameWorld, player: string) {
     await this.game();
     await this.driver.vote(player);
-    await this.driver.predictMatch(player, 1);
+    const [first] = await this.driver.playersToPredictBy(player);
+    await this.driver.predictVotes(player, [{ player: first!, vote: PREDICTED_VOTE }]);
   },
 );
 
@@ -762,24 +766,6 @@ Given('{string} has voted', async function (this: GameWorld, player: string) {
   await this.driver.vote(player);
   this.player = player;
 });
-
-When(
-  '{string} makes the match prediction that {int} of the other {int} players chose the same as him',
-  async function (this: GameWorld, player: string, count: number, others: number) {
-    assert.equal(others, this.inRoom.size - 1);
-    await this.driver.predictMatch(player, count);
-  },
-);
-
-Then(
-  'his match prediction is that {int} of the other {int} players chose {string}',
-  async function (this: GameWorld, count: number, others: number, option: string) {
-    assert.equal(others, this.inRoom.size - 1);
-    const answer = await this.driver.answerRecordedFor(this.player, 1);
-    assert.equal(answer?.matchPrediction, count);
-    assert.equal(answer?.vote.toLowerCase(), option);
-  },
-);
 
 When(
   '{string} makes the vote predictions that {string} voted {string} and {string} voted {string}',
@@ -835,7 +821,6 @@ Then('his predictions are kept', async function (this: GameWorld) {
   const answer = await this.driver.answerRecordedFor(this.player, 1);
   assert.ok(this.predictions.length > 0, 'no step made vote predictions before');
   assert.deepEqual(answer?.votePredictions, this.predictions);
-  assert.notEqual(answer?.matchPrediction, null);
 });
 
 Then(
@@ -846,11 +831,13 @@ Then(
 );
 
 Given(
-  '{string} has voted the current dilemma and made her match prediction but none of her vote predictions',
-  async function (this: GameWorld, player: string) {
+  '{string} has voted the current dilemma and made her vote prediction about {string} but not the one about {string}',
+  async function (this: GameWorld, player: string, about: string, notAbout: string) {
     await this.game();
+    const predicted = await this.driver.playersToPredictBy(player);
+    assert.deepEqual([...predicted].sort(), [about, notAbout].sort());
     await this.driver.vote(player);
-    await this.driver.predictMatch(player, 1);
+    await this.driver.predictVotes(player, [{ player: about, vote: PREDICTED_VOTE }]);
     this.player = player;
   },
 );
@@ -860,12 +847,19 @@ Then('her vote counts', async function (this: GameWorld) {
   assert.deepEqual(await this.driver.didNotVoteRecordedFor(this.player), []);
 });
 
-Then('only her match prediction can score', async function (this: GameWorld) {
-  const [points] = await this.driver.pointsOf(this.player);
-  assert.equal(points?.position, 1);
-  assert.notEqual(points?.match, null);
-  assert.equal(points?.votes, null);
-});
+Then(
+  'only her vote prediction about {string} can score',
+  async function (this: GameWorld, about: string) {
+    const answer = await this.driver.answerRecordedFor(this.player, 1);
+    assert.deepEqual(
+      answer?.votePredictions.map(({ player }) => player),
+      [about],
+    );
+    const [points] = await this.driver.pointsOf(this.player);
+    assert.equal(points?.position, 1);
+    assert.notEqual(points?.points, null);
+  },
+);
 
 Then(
   'the points of every player for the first dilemma are calculated',
@@ -881,54 +875,25 @@ Then(
   },
 );
 
-// Prediction subsets in a nominal room
+// Who each player predicts in a nominal room
 
-Given(
-  'a game with {int} players and a prediction limit of {int}',
-  async function (this: GameWorld, players: number, limit: number) {
-    assert.equal(limit, this.driver.predictionLimit());
-    await bringInPlayers(this, players);
-    this.requestGame();
-  },
-);
-
-Given(
-  'a game with {int} players, a prediction limit of {int} and {int} dilemmas',
-  async function (this: GameWorld, players: number, limit: number, dilemmas: number) {
-    assert.equal(limit, this.driver.predictionLimit());
-    await bringInPlayers(this, players);
-    await this.driver.changeSettings(await this.host(), { dilemmaCount: dilemmas });
-    this.requestGame();
-  },
-);
+Given('a game with {int} players', async function (this: GameWorld, players: number) {
+  await bringInPlayers(this, players);
+  this.requestGame();
+});
 
 When('a player gets a dilemma', async function (this: GameWorld) {
   await this.game();
 });
 
-When('every dilemma has been revealed', async function (this: GameWorld) {
-  await this.game();
-  const count = (await this.driver.dilemmasOfTheGame()).length;
-  await this.toRevealOf(count);
-});
-
 Then(
-  'the prediction subset of the player has {int} players',
-  async function (this: GameWorld, predicted: number) {
+  'the player predicts the vote of the other {int} players',
+  async function (this: GameWorld, others: number) {
     for (const player of this.inRoom) {
-      assert.equal((await this.driver.predictionSubsetOf(player, 1)).length, predicted);
+      const predicted = await this.driver.playersToPredictBy(player);
+      assert.equal(predicted.length, others);
+      assert.ok(!predicted.includes(player), `${player} predicts their own vote`);
     }
-  },
-);
-
-Then(
-  'the number of times any two players have been predicted differs by at most {int}',
-  async function (this: GameWorld, difference: number) {
-    const times = [...(await this.driver.timesEachPlayerWasPredicted()).values()];
-    assert.ok(
-      Math.max(...times) - Math.min(...times) <= difference,
-      `predicted ${times.join(', ')}`,
-    );
   },
 );
 
@@ -950,7 +915,6 @@ Then(
   async function (this: GameWorld, player: string) {
     assert.ok(await this.driver.hasAnswered(player), `${player} has not answered`);
     const answer = await this.driver.answerRecordedFor(player, 1);
-    assert.equal(answer?.matchPrediction, null);
     assert.deepEqual(answer?.votePredictions, []);
   },
 );

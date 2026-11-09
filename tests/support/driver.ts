@@ -54,7 +54,6 @@ export interface CatalogEntry {
 export interface RecordedAnswer {
   /** The text of the option voted, as the test data writes it. */
   readonly vote: string;
-  readonly matchPrediction: number | null;
   /** By the name the scenario gives each predicted player, with the text of the option. */
   readonly votePredictions: readonly { readonly player: string; readonly vote: string }[];
   /** The texts of the options in the order the voter saw them. */
@@ -90,9 +89,7 @@ export type JoinRefusal = 'room-does-not-exist' | 'room-full' | 'expelled';
 /** How a step wants a player to answer the dilemma of the round; the driver fills in the rest. */
 export interface AnswerPlan {
   readonly vote?: string;
-  /** Null makes no match prediction, which leaves the answer incomplete in a nominal room. */
-  readonly matchPrediction?: number | null;
-  /** False makes no vote prediction. */
+  /** False makes no vote prediction, which leaves the answer incomplete in a nominal room. */
   readonly votePredictions?: boolean;
 }
 
@@ -106,9 +103,6 @@ export interface RevealView {
   readonly didNotVoteCount: number;
   /** What each player voted, null for who did not vote; empty in an anonymous room. */
   readonly votes: readonly { readonly player: string; readonly vote: string | null }[];
-  /** How far each match prediction was from what the others chose. */
-  readonly matchPredictions: readonly { readonly player: string; readonly distance: number }[];
-  readonly closest: readonly string[];
   /** Whether each vote prediction was right. */
   readonly votePredictions: readonly {
     readonly player: string;
@@ -224,7 +218,7 @@ export interface GameDriver {
 
   /**
    * `player` answers the dilemma of the round in full: the vote given or the first option and, in a
-   * nominal room, the match prediction given or one, and the first option for each vote prediction.
+   * nominal room, the first option for each vote prediction.
    */
   answer(player: string, plan?: AnswerPlan): Promise<void>;
   /** `player` votes the dilemma of the round, with the option given or the first one. */
@@ -302,23 +296,16 @@ export interface GameDriver {
 
   /** As `vote`, on a dilemma they have not voted; whether they could predict anything. */
   canMakePredictions(player: string): Promise<boolean>;
-  predictMatch(player: string, count: number): Promise<void>;
   predictVotes(
     player: string,
     predictions: readonly { readonly player: string; readonly vote: string }[],
   ): Promise<void>;
-  /** The players whose vote `player` predicts in the dilemma in that position, by name. */
-  predictionSubsetOf(player: string, position: number): Promise<string[]>;
-  /** How many players each player predicts at most, as the game is set up. */
-  predictionLimit(): number;
-  /** How many times each player was in the subset of anyone, over the whole game. */
-  timesEachPlayerWasPredicted(): Promise<Map<string, number>>;
-  /** What the predictions of `player` scored in each dilemma revealed so far. */
+  /** The players whose vote `player` predicts in each dilemma, by name, as the room tells them. */
+  playersToPredictBy(player: string): Promise<string[]>;
+  /** What the vote predictions of `player` scored in each dilemma revealed so far; null for none made. */
   pointsOf(
     player: string,
-  ): Promise<
-    { readonly position: number; readonly match: number | null; readonly votes: number | null }[]
-  >;
+  ): Promise<{ readonly position: number; readonly points: number | null }[]>;
 
   /** `player` reports the dilemma of the round. */
   report(player: string, reason: ReportReason): Promise<void>;
