@@ -307,7 +307,7 @@ function categoriesOf({ categories }: RoomSettingsDto, t: Translate): string {
   return t('lobby.categories.some', { count: categories.length });
 }
 
-/** «8 dilemas · 6 min · Español · Amigos»; with dilemmas picked, they say how many there are. */
+/** «8 dilemas · 60 s por dilema · Español · Amigos»; with dilemmas picked, they say how many there are. */
 function summaryOf(
   settings: RoomSettingsDto,
   groupNature: string,
@@ -316,7 +316,7 @@ function summaryOf(
 ): string {
   const values = {
     count: settings.dilemmaCount,
-    minutes: settings.totalTimeInMinutes,
+    seconds: settings.timePerDilemmaSeconds,
     language: t(`languages.${settings.dilemmaLanguage}`),
     nature: t(`createRoom.groupNature.${groupNature as 'friends'}`),
   };

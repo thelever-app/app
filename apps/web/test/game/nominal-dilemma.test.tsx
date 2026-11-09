@@ -18,7 +18,7 @@ async function renderNominal() {
 }
 
 describe('a dilemma of a nominal room', () => {
-  it('should ask for the predictions once the player votes, and send each change', async () => {
+  it('should ask for the predictions once the player votes, and not send them until «Listo»', async () => {
     // Arrange
     const { connection, t } = await renderNominal();
     fireEvent.click(screen.getByRole('radio', { name: 'Opción 1A' }));
@@ -34,6 +34,22 @@ describe('a dilemma of a nominal room', () => {
       'disabled',
       true,
     );
+    expect(connection.send).toHaveBeenCalledOnce();
+  });
+
+  it('should send the predictions made so far when the player goes back to their vote', async () => {
+    // Arrange
+    const { connection, t } = await renderNominal();
+    fireEvent.click(screen.getByRole('radio', { name: 'Opción 1A' }));
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
+    fireEvent.click(
+      screen.getByRole('radio', { name: t('predict.matchValue', { count: 1, total: 1 }) }),
+    );
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('predict.back') }));
+
+    // Assert
     expect(connection.send).toHaveBeenLastCalledWith({
       type: 'answer-dilemma',
       dilemmaId: 'test-dilemma-1',
@@ -43,29 +59,19 @@ describe('a dilemma of a nominal room', () => {
     });
   });
 
-  it('should take the player to the next dilemma once every prediction is made', async () => {
+  it('should let the player go back to their vote from the predictions', async () => {
     // Arrange
-    const { connection, t } = await renderNominal();
+    const { t } = await renderNominal();
     fireEvent.click(screen.getByRole('radio', { name: 'Opción 1A' }));
     fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
-    fireEvent.click(
-      screen.getByRole('radio', { name: t('predict.matchValue', { count: 0, total: 1 }) }),
-    );
-    const luis = screen.getByRole('radiogroup', { name: t('predict.voteOf', { name: 'Luis' }) });
 
     // Act
-    fireEvent.click(luis.querySelector('[role="radio"]')!);
-    fireEvent.click(screen.getByRole('button', { name: t('predict.next') }));
+    fireEvent.click(screen.getByRole('button', { name: t('predict.back') }));
 
     // Assert
-    expect(connection.send).toHaveBeenLastCalledWith({
-      type: 'answer-dilemma',
-      dilemmaId: 'test-dilemma-1',
-      vote: 'test-option-1a',
-      matchPrediction: 0,
-      votePredictions: [{ playerId: 'test-luis-id', vote: 'test-option-1a' }],
-    });
-    expect(screen.getByRole('heading', { name: 'Texto del dilema 2' })).toBeDefined();
+    expect(screen.getByRole('radio', { name: 'Opción 1A' }).getAttribute('aria-checked')).toBe(
+      'true',
+    );
   });
 
   it('should not let the player predict before voting', async () => {

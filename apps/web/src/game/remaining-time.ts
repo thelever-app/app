@@ -36,11 +36,11 @@ function offsetFor(serverTime: string): number {
   return offset;
 }
 
-/** The whole seconds left of the total time, by the clock of the server; 0 once it is over. */
-export function useRemainingSeconds(totalTimeEndsAt: string, serverTime: string): number {
+/** The whole seconds left until `endsAt`, by the clock of the server; 0 once it is over. */
+export function useRemainingSeconds(endsAt: string, serverTime: string): number {
   const second = useSyncExternalStore(subscribe, currentSecond);
   const serverNow = second * 1000 + offsetFor(serverTime);
-  return Math.max(0, Math.ceil((Date.parse(totalTimeEndsAt) - serverNow) / 1000));
+  return Math.max(0, Math.ceil((Date.parse(endsAt) - serverNow) / 1000));
 }
 
 /** As the header shows it: m:ss. */

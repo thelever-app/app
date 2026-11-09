@@ -5,13 +5,13 @@ import { formatRemaining, useRemainingSeconds } from './remaining-time.ts';
 import styles from './game-timer.module.css';
 
 interface GameTimerProps {
-  readonly game: Pick<GameStateDto, 'totalTimeEndsAt' | 'serverTime'>;
+  readonly game: Pick<GameStateDto, 'round' | 'serverTime'>;
 }
 
-/** The total time left, in m:ss with tabular numbers so it does not jump. */
+/** The time left for the dilemma of the round, in m:ss with tabular numbers so it does not jump. */
 export function GameTimer({ game }: GameTimerProps) {
   const { t } = useTranslation();
-  const seconds = useRemainingSeconds(game.totalTimeEndsAt, game.serverTime);
+  const seconds = useRemainingSeconds(game.round.endsAt, game.serverTime);
   const shown = formatRemaining(seconds);
   return (
     <p role="timer" className={styles.timer} aria-label={t('game.timeLeft', { time: shown })}>

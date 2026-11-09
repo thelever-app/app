@@ -3,7 +3,8 @@ import type {
   ConnectionChangedDto,
   ErrorDto,
   GameStateDto,
-  ProgressUpdatedDto,
+  AnsweredCountDto,
+  PlayerAnsweredDto,
 } from '@thelever-app/protocol';
 import { INITIAL_ROOM_STATE, roomReducer, type RoomState } from '../../src/room/room-reducer.ts';
 import { aRoom } from '../support/room.ts';
@@ -17,11 +18,17 @@ const GAME_STATE: GameStateDto = {
   gameVersion: 1,
   roomVersion: 2,
   playerId: 'TestAnaId',
-  phase: 'decision',
+  round: {
+    position: 0,
+    phase: 'decision',
+    endsAt: '2026-11-09T10:01:00.000Z',
+    revealedBy: null,
+    movedOnBy: null,
+  },
   hostId: 'TestAnaId',
-  totalTimeEndsAt: '2026-11-09T10:06:00.000Z',
   serverTime: '2026-11-09T10:00:00.000Z',
-  totalTimeRanOut: false,
+  answeredCount: 0,
+  reveal: null,
   dilemmas: [
     {
       dilemmaId: 'TestDilemma1',
@@ -49,7 +56,7 @@ const GAME_STATE: GameStateDto = {
       playerId: 'TestAnaId',
       nickname: 'Ana',
       avatar: ANA_AVATAR,
-      progress: 0,
+      answered: false,
       connected: true,
       left: false,
     },
@@ -57,7 +64,7 @@ const GAME_STATE: GameStateDto = {
       playerId: 'TestLuisId',
       nickname: 'Luis',
       avatar: LUIS_AVATAR,
-      progress: 0,
+      answered: false,
       connected: true,
       left: false,
     },
@@ -70,7 +77,7 @@ const GAME_STATE: GameStateDto = {
 const ERROR: ErrorDto = {
   type: 'error',
   command: 'answer-dilemma',
-  code: 'dilemma-not-reached',
+  code: 'dilemma-not-in-round',
 };
 
 /** The room once the first state has arrived. */
@@ -149,7 +156,7 @@ describe('roomReducer', () => {
             playerId: 'TestAnaId',
             nickname: 'Ana',
             avatar: ANA_AVATAR,
-            progress: 1,
+            answered: true,
             connected: true,
             left: false,
           },
@@ -157,7 +164,7 @@ describe('roomReducer', () => {
             playerId: 'TestLuisId',
             nickname: 'Luis',
             avatar: LUIS_AVATAR,
-            progress: 2,
+            answered: false,
             connected: true,
             left: false,
           },
@@ -201,37 +208,31 @@ describe('roomReducer', () => {
     });
   });
 
-  describe('progress-updated', () => {
-    const luisAnswered: ProgressUpdatedDto = {
-      type: 'progress-updated',
+  describe('player-answered', () => {
+    const luisAnswered: PlayerAnsweredDto = {
+      type: 'player-answered',
       gameVersion: 2,
       playerId: 'TestLuisId',
-      progress: 1,
     };
 
-    it('should change the progress of that player and leave the others as they were', () => {
+    it('should mark that player as answered, count them and leave the others as they were', () => {
       // Act
       const { game } = roomReducer(WITH_GAME, luisAnswered);
 
       // Assert
-      expect(game?.players).toEqual([
-        {
-          playerId: 'TestAnaId',
-          nickname: 'Ana',
-          avatar: ANA_AVATAR,
-          progress: 0,
-          connected: true,
-          left: false,
-        },
-        {
-          playerId: 'TestLuisId',
-          nickname: 'Luis',
-          avatar: LUIS_AVATAR,
-          progress: 1,
-          connected: true,
-          left: false,
-        },
-      ]);
+      expect(game?.players.map(({ answered }) => answered)).toEqual([false, true]);
+      expect(game?.answeredCount).toBe(1);
+    });
+
+    it('should not count again a player who had already answered', () => {
+      // Arrange
+      const once = roomReducer(WITH_GAME, luisAnswered);
+
+      // Act
+      const { game } = roomReducer(once, { ...luisAnswered, gameVersion: 3 });
+
+      // Assert
+      expect(game?.answeredCount).toBe(1);
     });
 
     it('should keep the version of the game it carries', () => {
@@ -254,7 +255,7 @@ describe('roomReducer', () => {
       expect(previous).toEqual(WITH_GAME);
     });
 
-    it('should drop a progress the state already includes or that is older', () => {
+    it('should drop an answer the state already includes or that is older', () => {
       // Act & Assert
       expect(roomReducer(WITH_GAME, { ...luisAnswered, gameVersion: 1 })).toBe(WITH_GAME);
       expect(roomReducer(WITH_GAME, { ...luisAnswered, gameVersion: 0 })).toBe(WITH_GAME);
@@ -271,6 +272,7 @@ describe('roomReducer', () => {
 
       // Assert
       expect(game?.players).toEqual(GAME_STATE.players);
+      expect(game?.answeredCount).toBe(0);
     });
 
     it('should keep the rejection, which is about the player and not about the others', () => {
@@ -282,6 +284,34 @@ describe('roomReducer', () => {
 
       // Assert
       expect(rejection).toBe(ERROR);
+    });
+  });
+
+  describe('answered-count', () => {
+    const twoAnswered: AnsweredCountDto = {
+      type: 'answered-count',
+      gameVersion: 2,
+      answeredCount: 2,
+    };
+
+    it('should keep how many answered and the version of the game it carries', () => {
+      // Act
+      const { game } = roomReducer(WITH_GAME, twoAnswered);
+
+      // Assert
+      expect(game?.answeredCount).toBe(2);
+      expect(game?.gameVersion).toBe(2);
+      expect(game?.players).toEqual(GAME_STATE.players);
+    });
+
+    it('should drop a count the state already includes or that is older', () => {
+      // Act & Assert
+      expect(roomReducer(WITH_GAME, { ...twoAnswered, gameVersion: 1 })).toBe(WITH_GAME);
+    });
+
+    it('should do nothing when no state has arrived yet', () => {
+      // Act & Assert
+      expect(roomReducer(INITIAL_ROOM_STATE, twoAnswered)).toBe(INITIAL_ROOM_STATE);
     });
   });
 
@@ -303,7 +333,7 @@ describe('roomReducer', () => {
           playerId: 'TestAnaId',
           nickname: 'Ana',
           avatar: ANA_AVATAR,
-          progress: 0,
+          answered: false,
           connected: true,
           left: false,
         },
@@ -311,7 +341,7 @@ describe('roomReducer', () => {
           playerId: 'TestLuisId',
           nickname: 'Luis',
           avatar: LUIS_AVATAR,
-          progress: 0,
+          answered: false,
           connected: false,
           left: false,
         },

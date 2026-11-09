@@ -54,7 +54,7 @@ describe('RoomNotices', () => {
   it('should show that the answer was not saved until the player dismisses it', async () => {
     // Arrange
     const { deliver, t } = await renderNotices();
-    act(() => deliver({ type: 'error', command: 'answer-dilemma', code: 'dilemma-not-reached' }));
+    act(() => deliver({ type: 'error', command: 'answer-dilemma', code: 'dilemma-not-in-round' }));
     const shown = screen.queryByRole('alert')?.textContent;
 
     // Act

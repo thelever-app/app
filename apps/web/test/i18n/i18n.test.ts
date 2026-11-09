@@ -16,9 +16,11 @@ describe('createI18n', () => {
     const i18n = await createI18n('es');
 
     // Assert
-    expect(i18n.t('playerList.pending', { count: 1 })).toBe('Falta · 1');
-    expect(i18n.t('playerList.pending', { count: 3 })).toBe('Faltan · 3');
-    expect(i18n.t('playerList.pending', { count: 1_000_000 })).toBe('Faltan · 1.000.000');
+    expect(i18n.t('playerList.pending', { count: 1 })).toBe('Falta por responder · 1');
+    expect(i18n.t('playerList.pending', { count: 3 })).toBe('Faltan por responder · 3');
+    expect(i18n.t('playerList.pending', { count: 1_000_000 })).toBe(
+      'Faltan por responder · 1.000.000',
+    );
   });
 
   it('should fall back to Spanish for a language without a catalog', async () => {

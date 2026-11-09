@@ -19,13 +19,6 @@
   color: var(--color-ink-muted);
 }
 
-/* The hazard stripe of the time that ran out. */
-.hazard {
-  height: 8px;
-  border-radius: 4px;
-  background: repeating-linear-gradient(135deg, #ffd23f 0 12px, #17140f 12px 24px);
-}
-
 .main {
   flex-grow: 1;
   display: flex;

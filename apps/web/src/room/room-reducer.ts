@@ -1,8 +1,9 @@
 import type {
+  AnsweredCountDto,
   ConnectionChangedDto,
   ErrorDto,
   GameStateDto,
-  ProgressUpdatedDto,
+  PlayerAnsweredDto,
   RoomStateDto,
   ServerMessageDto,
 } from '@thelever-app/protocol';
@@ -41,8 +42,10 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       return applyRoomState(state, action);
     case 'game-state':
       return applyGameState(state, action);
-    case 'progress-updated':
-      return applyProgress(state, action);
+    case 'player-answered':
+      return applyPlayerAnswered(state, action);
+    case 'answered-count':
+      return applyAnsweredCount(state, action);
     case 'connection-changed':
       return applyConnection(state, action);
     case 'expelled':
@@ -77,20 +80,36 @@ function applyGameState(state: RoomState, message: GameStateDto): RoomState {
   return { ...state, lobby: undefined, game: message, rejection: undefined };
 }
 
-/** The new progress of a player, unless the game the screen holds already includes it. */
-function applyProgress(state: RoomState, message: ProgressUpdatedDto): RoomState {
+/** That a player answered the dilemma of the round, unless the game the screen holds already includes it. */
+function applyPlayerAnswered(state: RoomState, message: PlayerAnsweredDto): RoomState {
   const { game } = state;
   if (!game || message.gameVersion <= game.gameVersion) return state;
+  // Only who had not answered yet adds one to the count.
+  const isNew = game.players.some(
+    ({ playerId, answered }) => playerId === message.playerId && answered === false,
+  );
 
   return {
     ...state,
     game: {
       ...game,
       gameVersion: message.gameVersion,
+      answeredCount: game.answeredCount + (isNew ? 1 : 0),
       players: game.players.map((player) =>
-        player.playerId === message.playerId ? { ...player, progress: message.progress } : player,
+        player.playerId === message.playerId ? { ...player, answered: true } : player,
       ),
     },
+  };
+}
+
+/** How many answered the dilemma of the round, unless the game the screen holds already includes it. */
+function applyAnsweredCount(state: RoomState, message: AnsweredCountDto): RoomState {
+  const { game } = state;
+  if (!game || message.gameVersion <= game.gameVersion) return state;
+
+  return {
+    ...state,
+    game: { ...game, gameVersion: message.gameVersion, answeredCount: message.answeredCount },
   };
 }
 

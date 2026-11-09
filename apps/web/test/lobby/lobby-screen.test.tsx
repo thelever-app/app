@@ -76,7 +76,7 @@ describe('LobbyScreen', () => {
       expect(screen.getByText(t('variant.anonymous.name'))).toBeDefined();
       expect(screen.getByTestId('room-dilemmas').textContent).toBe('Todas las categorías');
       expect(screen.getByTestId('room-settings').textContent).toBe(
-        '8 dilemas · 6 min · Español · Amigos',
+        '8 dilemas · 60 s por dilema · Español · Amigos',
       );
     });
 
@@ -105,7 +105,9 @@ describe('LobbyScreen', () => {
 
       // Assert
       expect(screen.getByTestId('room-dilemmas').textContent).toBe('2 dilemas elegidos');
-      expect(screen.getByTestId('room-settings').textContent).toBe('6 min · Español · Amigos');
+      expect(screen.getByTestId('room-settings').textContent).toBe(
+        '60 s por dilema · Español · Amigos',
+      );
     });
 
     it('should advise a video call to a group that plays remotely', async () => {

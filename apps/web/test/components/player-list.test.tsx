@@ -5,13 +5,13 @@ import { PlayerList } from '../../src/components/player-list.tsx';
 import { aGame } from '../support/game.ts';
 import { renderWithProviders } from '../support/render.tsx';
 
-/** Ana is the player using the screen; Luis has finished; Marta goes last. */
+/** Ana is the player using the screen; Luis answered the dilemma of the round; Pablo left. */
 const PLAYERS: GameStateDto['players'] = [
   {
     playerId: 'test-ana-id',
     nickname: 'Ana',
     avatar: { face: 'face-01', color: 'teal' },
-    progress: 2,
+    answered: false,
     connected: true,
     left: false,
   },
@@ -19,7 +19,7 @@ const PLAYERS: GameStateDto['players'] = [
     playerId: 'test-luis-id',
     nickname: 'Luis',
     avatar: { face: 'face-02', color: 'rust' },
-    progress: 6,
+    answered: true,
     connected: true,
     left: false,
   },
@@ -27,20 +27,36 @@ const PLAYERS: GameStateDto['players'] = [
     playerId: 'test-marta-id',
     nickname: 'Marta',
     avatar: { face: 'face-03', color: 'olive' },
-    progress: 1,
+    answered: false,
     connected: true,
     left: false,
   },
+  {
+    playerId: 'test-pablo-id',
+    nickname: 'Pablo',
+    avatar: { face: 'face-04', color: 'cyan' },
+    answered: false,
+    connected: false,
+    left: true,
+  },
 ];
 
-function renderList(players = PLAYERS) {
-  return renderWithProviders(<PlayerList players={players} dilemmaCount={6} />, {
-    game: aGame({ playerId: 'test-ana-id' }),
-  });
+function renderList(players = PLAYERS, anonymous = false) {
+  const answeredCount = players.filter(({ answered }) => answered).length;
+  return renderWithProviders(
+    <PlayerList game={{ players, answeredCount }} anonymous={anonymous} />,
+    { game: aGame({ playerId: 'test-ana-id' }) },
+  );
 }
 
+const anonymized = (answeredCount: number) =>
+  renderList(
+    PLAYERS.map((player) => ({ ...player, answered: null })),
+    true,
+  ).then((result) => ({ ...result, answeredCount }));
+
 describe('PlayerList', () => {
-  it('should list who has not finished, the least advanced first', async () => {
+  it('should list who has not answered the round, leaving out who left', async () => {
     // Act
     const { t } = await renderList();
 
@@ -50,13 +66,10 @@ describe('PlayerList', () => {
       within(pending)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual([
-      `Marta${t('playerList.progressCount', { progress: 1, total: 6 })}`,
-      `${t('playerList.you', { name: 'Ana' })}${t('playerList.progressCount', { progress: 2, total: 6 })}`,
-    ]);
+    ).toEqual([t('playerList.you', { name: 'Ana' }), 'Marta']);
   });
 
-  it('should say who has not finished and is disconnected, after their name', async () => {
+  it('should say who has not answered and is disconnected, after their name', async () => {
     // Arrange
     const players = PLAYERS.map((player) =>
       player.nickname === 'Marta' ? { ...player, connected: false } : player,
@@ -67,49 +80,39 @@ describe('PlayerList', () => {
 
     // Assert
     const pending = screen.getByRole('region', { name: t('playerList.pending', { count: 2 }) });
-    const [marta, ana] = within(pending).getAllByRole('listitem');
-    expect(marta?.textContent).toContain(`Marta · ${t('playerList.disconnected')}`);
+    const [ana, marta] = within(pending).getAllByRole('listitem');
+    expect(marta?.textContent).toBe(`Marta · ${t('playerList.disconnected')}`);
     expect(ana?.textContent).not.toContain(t('playerList.disconnected'));
   });
 
-  it('should show the progress of each one as a bar', async () => {
-    // Act
-    const { t } = await renderList();
-
-    // Assert
-    const bar = screen.getByRole<HTMLProgressElement>('progressbar', {
-      name: t('playerList.progressOf', { name: 'Marta' }),
-    });
-    expect([bar.value, bar.max]).toEqual([1, 6]);
-  });
-
-  it('should list who has finished', async () => {
+  it('should list who has answered', async () => {
     // Act
     const { t } = await renderList();
 
     // Assert
     const done = screen.getByRole('region', { name: t('playerList.done', { count: 1 }) });
     expect(within(done).getByRole('listitem').textContent).toContain('Luis');
-    expect(within(done).getByRole('img', { name: t('playerList.finished') })).toBeDefined();
+    expect(within(done).getByRole('img', { name: t('playerList.answered') })).toBeDefined();
   });
 
-  it('should call the player by the word for "you", not by their nickname', async () => {
+  it('should not show who is missing when everyone has answered', async () => {
     // Act
-    const { t } = await renderList();
-
-    // Assert
-    expect(screen.queryByText('Ana')).toBeNull();
-    expect(screen.getByText(t('playerList.you', { name: 'Ana' }))).toBeDefined();
-  });
-
-  it('should not show who is missing when everyone has finished', async () => {
-    // Act
-    const { t } = await renderList(
-      PLAYERS.map((player) => ({ ...player, progress: 6, connected: true })),
-    );
+    const { t } = await renderList(PLAYERS.map((player) => ({ ...player, answered: true })));
 
     // Assert
     expect(screen.getAllByRole('region')).toHaveLength(1);
-    expect(screen.getByRole('region', { name: t('playerList.done', { count: 3 }) })).toBeDefined();
+    expect(screen.getByRole('region', { name: t('playerList.done', { count: 4 }) })).toBeDefined();
+  });
+
+  it('should only say how many answered in an anonymous room, and who is in it', async () => {
+    // Act
+    const { t } = await anonymized(0);
+
+    // Assert
+    expect(screen.queryByRole('img', { name: t('playerList.answered') })).toBeNull();
+    expect(screen.queryByText(t('playerList.pending', { count: 3 }))).toBeNull();
+    expect(screen.getByText(t('playerList.anonymousNote'))).toBeDefined();
+    const inRoom = screen.getByRole('region', { name: t('playerList.inRoom', { count: 3 }) });
+    expect(within(inRoom).getAllByRole('listitem')).toHaveLength(3);
   });
 });

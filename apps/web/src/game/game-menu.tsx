@@ -5,20 +5,20 @@ import { Icon, type IconName } from '../components/icon.tsx';
 import styles from './game-menu.module.css';
 
 interface GameMenuProps {
-  readonly isHost: boolean;
-  /** Whether the player already reported the dilemma on screen; undefined without one. */
-  readonly reported: boolean | undefined;
-  readonly onLaunchReveal: () => void;
+  /** Only for the host, in the decision of a round: reveals its dilemma without waiting. */
+  readonly onRevealEarly?: (() => void) | undefined;
+  /** Whether the player already reported the dilemma on screen. */
+  readonly reported?: boolean;
   readonly onShowGroup: () => void;
-  readonly onReport: () => void;
+  /** Where the dilemma on screen can be reported: in the decision of its round, not in its reveal. */
+  readonly onReport?: (() => void) | undefined;
   readonly onLeave: () => void;
 }
 
 /** «Más opciones» and the menu of the game it opens. */
 export function GameMenu({
-  isHost,
+  onRevealEarly,
   reported,
-  onLaunchReveal,
   onShowGroup,
   onReport,
   onLeave,
@@ -38,16 +38,16 @@ export function GameMenu({
           <div aria-hidden="true" className={styles.handle} />
           <Dialog.Title className={styles.hidden}>{t('gameMenu.title')}</Dialog.Title>
           <ul className={styles.items}>
-            {isHost && (
+            {onRevealEarly && (
               <MenuItem
-                icon="playCircle"
-                title={t('gameMenu.launchReveal')}
+                icon="visibilityOutline"
+                title={t('gameMenu.revealEarly')}
                 subtitle={t('gameMenu.onlyHost')}
-                onSelect={onLaunchReveal}
+                onSelect={onRevealEarly}
               />
             )}
             <MenuItem icon="groups" title={t('gameMenu.showGroup')} onSelect={onShowGroup} />
-            {reported === false && (
+            {onReport && !reported && (
               <MenuItem
                 icon="flag"
                 title={t('gameMenu.report')}
@@ -55,7 +55,7 @@ export function GameMenu({
                 onSelect={onReport}
               />
             )}
-            {reported === true && (
+            {onReport && reported && (
               <li>
                 <span className={styles.done} aria-disabled="true">
                   <Icon name="checkCircle" size={22} />

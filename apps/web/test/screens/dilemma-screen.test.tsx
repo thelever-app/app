@@ -5,16 +5,15 @@ import { DilemmaScreen } from '../../src/screens/dilemma-screen.tsx';
 import { renderWithProviders } from '../support/render.tsx';
 import { aGame } from '../support/game.ts';
 
-async function renderScreen(game: GameStateDto = aGame(), initialPosition?: number) {
+async function renderScreen(game: GameStateDto = aGame()) {
   const onAnswer = vi.fn();
   const onDone = vi.fn();
   const result = await renderWithProviders(
     <DilemmaScreen
       game={game}
-      initialPosition={initialPosition}
       onAnswer={onAnswer}
       onDone={onDone}
-      onLaunchReveal={vi.fn()}
+      onRevealEarly={vi.fn()}
       onReport={vi.fn()}
       onSkip={vi.fn()}
       onLeave={vi.fn()}
@@ -24,28 +23,16 @@ async function renderScreen(game: GameStateDto = aGame(), initialPosition?: numb
   return { onAnswer, onDone, ...result };
 }
 
-const answeredFirst = aGame({
-  answers: [
-    {
-      dilemmaId: 'test-dilemma-1',
-      vote: 'test-option-1b',
-      matchPrediction: null,
-      votePredictions: [],
-    },
-  ],
-  players: aGame().players.map((player) =>
-    player.playerId === 'test-ana-id' ? { ...player, progress: 1 } : player,
-  ),
-});
+const ANONYMOUS = aGame({ players: aGame().players.map((p) => ({ ...p, answered: null })) });
 
 function option(name: string) {
   return screen.getByRole('radio', { name });
 }
 
 describe('DilemmaScreen', () => {
-  it('should start on the first dilemma the player has not answered', async () => {
+  it('should show the dilemma of the round and say which one it is', async () => {
     // Act
-    const { t } = await renderScreen(answeredFirst);
+    const { t } = await renderScreen(aGame({ round: { ...aGame().round, position: 1 } }));
 
     // Assert
     expect(screen.getByRole('heading', { name: 'Texto del dilema 2' })).toBeDefined();
@@ -84,137 +71,44 @@ describe('DilemmaScreen', () => {
     expect(option('Opción 1B').getAttribute('aria-checked')).toBe('false');
   });
 
-  it('should send the answer and show the next dilemma when the player continues', async () => {
-    // Arrange
-    const { onAnswer, t } = await renderScreen();
-    fireEvent.click(option('Opción 1A'));
-
+  it('should start from the vote the room has', async () => {
     // Act
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
+    await renderScreen(
+      aGame({
+        answers: [
+          {
+            dilemmaId: 'test-dilemma-1',
+            vote: 'test-option-1b',
+            matchPrediction: null,
+            votePredictions: [],
+          },
+        ],
+      }),
+    );
 
     // Assert
-    expect(onAnswer).toHaveBeenCalledWith({
-      dilemmaId: 'test-dilemma-1',
-      vote: 'test-option-1a',
-      matchPrediction: null,
-      votePredictions: [],
-    });
-    expect(screen.getByRole('heading', { name: 'Texto del dilema 2' })).toBeDefined();
-    expect(screen.getByRole('button', { name: t('dilemma.choose') })).toBeDefined();
-  });
-
-  it('should go back to the previous dilemma with the vote already given', async () => {
-    // Arrange
-    const { t } = await renderScreen(answeredFirst);
-
-    // Act
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.back') }));
-
-    // Assert
-    expect(screen.getByRole('heading', { name: 'Texto del dilema 1' })).toBeDefined();
     expect(option('Opción 1B').getAttribute('aria-checked')).toBe('true');
   });
 
-  it('should send the new vote when the player changes an answer', async () => {
+  it('should offer no way back to a past round', async () => {
+    // Act
+    await renderScreen(aGame({ round: { ...aGame().round, position: 1 } }));
+
+    // Assert
+    expect(screen.queryByRole('button', { name: /anterior|volver/i })).toBeNull();
+  });
+
+  it('should say in an anonymous room that the vote is never shown, and confirm it with «Listo»', async () => {
     // Arrange
-    const { onAnswer, t } = await renderScreen(answeredFirst, 0);
+    const { onAnswer, onDone, t } = await renderScreen(ANONYMOUS);
     fireEvent.click(option('Opción 1A'));
 
     // Act
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.done') }));
 
     // Assert
-    expect(onAnswer).toHaveBeenCalledWith({
-      dilemmaId: 'test-dilemma-1',
-      vote: 'test-option-1a',
-      matchPrediction: null,
-      votePredictions: [],
-    });
-  });
-
-  it('should not send anything when the player continues without changing the vote', async () => {
-    // Arrange
-    const { onAnswer, t } = await renderScreen(answeredFirst, 0);
-
-    // Act
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
-
-    // Assert
-    expect(onAnswer).not.toHaveBeenCalled();
-    expect(screen.getByRole('heading', { name: 'Texto del dilema 2' })).toBeDefined();
-  });
-
-  it('should not let the player go back from the first dilemma', async () => {
-    // Act
-    const { t } = await renderScreen();
-
-    // Assert
-    expect(screen.getByRole('button', { name: t('dilemma.back') })).toHaveProperty(
-      'disabled',
-      true,
-    );
-  });
-
-  it('should show the vote once the room confirms it, even if the player went back before', async () => {
-    // Arrange
-    const { rerender, t } = await renderScreen();
-    fireEvent.click(option('Opción 1A'));
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.back') }));
-
-    // Act
-    rerender(
-      <DilemmaScreen
-        game={aGame({
-          answers: [
-            {
-              dilemmaId: 'test-dilemma-1',
-              vote: 'test-option-1a',
-              matchPrediction: null,
-              votePredictions: [],
-            },
-          ],
-        })}
-        onAnswer={vi.fn()}
-        onDone={vi.fn()}
-        onLaunchReveal={vi.fn()}
-        onReport={vi.fn()}
-        onSkip={vi.fn()}
-        onLeave={vi.fn()}
-      />,
-    );
-
-    // Assert
-    expect(screen.getByRole('heading', { name: 'Texto del dilema 1' })).toBeDefined();
-    expect(option('Opción 1A').getAttribute('aria-checked')).toBe('true');
-  });
-
-  it('should not let the player send the last answer twice while the room confirms it', async () => {
-    // Arrange
-    const { onAnswer, t } = await renderScreen(aGame(), 2);
-    fireEvent.click(option('Opción 3A'));
-
-    // Act
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
-
-    // Assert
-    expect(onAnswer).toHaveBeenCalledOnce();
-    expect(screen.getByRole('button', { name: t('dilemma.continue') })).toHaveProperty(
-      'disabled',
-      true,
-    );
-  });
-
-  it('should tell when the player moves on from the last dilemma', async () => {
-    // Arrange
-    const { onDone, t } = await renderScreen(aGame(), 2);
-    fireEvent.click(option('Opción 3A'));
-
-    // Act
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
-
-    // Assert
+    expect(screen.getByText(t('dilemma.privacyAnonymous'))).toBeDefined();
+    expect(onAnswer).toHaveBeenCalledWith({ dilemmaId: 'test-dilemma-1', vote: 'test-option-1a' });
     expect(onDone).toHaveBeenCalledOnce();
   });
 
@@ -231,8 +125,7 @@ describe('DilemmaScreen', () => {
 
   it('should lay out two options side by side and more as a list', async () => {
     // Arrange
-    const threeOptions = aGame();
-    const [first] = threeOptions.dilemmas;
+    const [first] = aGame().dilemmas;
     const game = aGame({
       dilemmas: [
         {

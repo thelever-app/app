@@ -5,60 +5,71 @@
   },
   "playerList": {
     "you": "{{name}} (tú)",
-    "pending_one": "Falta · {{count}}",
-    "pending_many": "Faltan · {{count, number}}",
-    "pending_other": "Faltan · {{count, number}}",
-    "done_one": "Ha terminado · {{count}}",
-    "done_many": "Han terminado · {{count, number}}",
-    "done_other": "Han terminado · {{count, number}}",
-    "progressOf": "Progreso de {{name}}",
-    "progressCount": "{{progress, number}}/{{total, number}}",
-    "finished": "ha terminado",
-    "disconnected": "desconectado"
+    "disconnected": "desconectado",
+    "pending_one": "Falta por responder · {{count}}",
+    "pending_many": "Faltan por responder · {{count, number}}",
+    "pending_other": "Faltan por responder · {{count, number}}",
+    "done_one": "Ha respondido · {{count}}",
+    "done_many": "Han respondido · {{count, number}}",
+    "done_other": "Han respondido · {{count, number}}",
+    "answered": "ha respondido",
+    "anonymousAnswered_one": "ha respondido",
+    "anonymousAnswered_many": "han respondido",
+    "anonymousAnswered_other": "han respondido",
+    "anonymousPending_one": "falta {{count}}",
+    "anonymousPending_many": "faltan {{count, number}}",
+    "anonymousPending_other": "faltan {{count, number}}",
+    "anonymousNote": "En sala anónima nadie ve quién ha respondido, solo cuántos.",
+    "inRoom_one": "En la sala · {{count}}",
+    "inRoom_many": "En la sala · {{count, number}}",
+    "inRoom_other": "En la sala · {{count, number}}"
   },
   "progressStrip": {
     "position": "Dilema {{position, number}} de {{total, number}}",
-    "group": "Progreso del grupo",
+    "group": "Quién ha respondido",
     "more": "+{{count, number}}",
     "showAll": "Ver todos",
-    "predicting": "Dilema {{position, number}} de {{total, number}} · Predice"
+    "predicting": "Dilema {{position, number}} de {{total, number}} · Predice",
+    "anonymousGroup": "Cuántos han respondido",
+    "anonymousCount_one": "Ha respondido {{count}} · faltan {{pending, number}}",
+    "anonymousCount_many": "Han respondido {{count, number}} · faltan {{pending, number}}",
+    "anonymousCount_other": "Han respondido {{count, number}} · faltan {{pending, number}}",
+    "playerAnswered": "{{name}} · ha respondido",
+    "playerPending": "{{name}} · aún no ha respondido",
+    "playerDisconnected": "{{name}} (desconectado)",
+    "movedOn": "{{name}} pasó al siguiente"
   },
   "groupSheet": {
     "title": "El grupo",
-    "summary_one": "{{count}} jugador · nadie ve qué ha respondido nadie",
-    "summary_many": "{{count, number}} jugadores · nadie ve qué ha respondido nadie",
-    "summary_other": "{{count, number}} jugadores · nadie ve qué ha respondido nadie",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "summary_one": "{{count}} jugador · se ve quién ha respondido, no qué",
+    "summary_many": "{{count, number}} jugadores · se ve quién ha respondido, no qué",
+    "summary_other": "{{count, number}} jugadores · se ve quién ha respondido, no qué",
+    "summaryAnonymous_one": "{{count}} jugador · nadie ve quién ha respondido",
+    "summaryAnonymous_many": "{{count, number}} jugadores · nadie ve quién ha respondido",
+    "summaryAnonymous_other": "{{count, number}} jugadores · nadie ve quién ha respondido"
   },
   "dilemma": {
     "privacy": "Nadie del grupo verá tu voto hasta el reveal. Puedes cambiarlo mientras tanto.",
-    "back": "Volver al dilema anterior",
     "choose": "Elige una opción",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "privacyAnonymous": "Nadie del grupo verá tu voto, tampoco en el reveal. Puedes cambiarlo hasta que se revele el dilema.",
+    "done": "Listo"
   },
   "waiting": {
-    "finished": "Has terminado · {{progress, number}} de {{total, number}}",
+    "position": "Dilema {{position, number}} de {{total, number}} · Has respondido",
     "title": "Esperando a los demás",
-    "subtitle": "Cuando terminen todos, llega el reveal. Mientras tanto, puedes repasar o cambiar tus respuestas.",
-    "review": "Repasar mis respuestas",
+    "subtitle": "El dilema se revela cuando respondáis todos o se acabe su tiempo. Hasta entonces puedes cambiar tu respuesta.",
+    "change": "Cambiar mi respuesta",
     "mascotWaiting": "La Palanca, esperando",
-    "mascotDoubting": "La Palanca, dudando",
-    "launchReveal": "Lanzar el reveal",
-    "launchCaption_one": "Falta {{count}}. Lo que no haya respondido quedará como «no votó».",
-    "launchCaption_many": "Faltan {{count, number}}. Lo que no hayan respondido quedará como «no votó».",
-    "launchCaption_other": "Faltan {{count, number}}. Lo que no hayan respondido quedará como «no votó».",
-    "guest": "{{host}} puede lanzar el reveal; si no, empieza solo cuando terminéis todos.",
-    "guestTimeUp": "Si el último termina antes, el reveal empieza solo."
+    "revealEarly": "Revelar ya",
+    "revealCaption_one": "Falta {{count}}. En este dilema quedará como «no votó».",
+    "revealCaption_many": "Faltan {{count, number}}. En este dilema quedarán como «no votó».",
+    "revealCaption_other": "Faltan {{count, number}}. En este dilema quedarán como «no votó».",
+    "guest": "{{host}} puede revelarlo antes; si no, se revela cuando respondáis todos o se acabe su tiempo."
   },
   "game": {
     "timeLeft": "Quedan {{time}}"
-  },
-  "timeUp": {
-    "title": "Se acabó el tiempo",
-    "subtitleHost": "Quienes faltan pueden terminar. Tú decides cuándo empieza el reveal.",
-    "subtitleGuest": "Quienes faltan pueden terminar. {{host}} decide cuándo empieza el reveal.",
-    "straggler": "Puedes terminar, pero {{host}} puede lanzar el reveal en cualquier momento.",
-    "stragglerHost": "Puedes terminar; tú decides cuándo empieza el reveal, desde el menú ⋮."
   },
   "predict": {
     "voted": "Votaste «",
@@ -75,12 +86,12 @@
     "missing_one": "Falta {{count}} respuesta",
     "missing_many": "Faltan {{count, number}} respuestas",
     "missing_other": "Faltan {{count, number}} respuestas",
-    "next": "Siguiente dilema"
+    "next": "Listo"
   },
   "gameMenu": {
     "open": "Más opciones",
     "title": "Menú de la partida",
-    "launchReveal": "Lanzar el reveal",
+    "revealEarly": "Revelar ya",
     "onlyHost": "Solo el anfitrión",
     "showGroup": "Ver el grupo",
     "report": "Reportar este dilema",
@@ -110,21 +121,58 @@
     "canSkip": "Si prefieres no responderlo, puedes saltarlo.",
     "skip": "Saltar dilema"
   },
-  "launchReveal": {
-    "title": "¿Lanzar el reveal ya?",
-    "body_one": "Falta {{count}} jugador por terminar. Los dilemas que no haya respondido quedarán como «no votó» y no puntuarán.",
-    "body_many": "Faltan {{count, number}} jugadores por terminar. Los dilemas que no hayan respondido quedarán como «no votó» y no puntuarán.",
-    "body_other": "Faltan {{count, number}} jugadores por terminar. Los dilemas que no hayan respondido quedarán como «no votó» y no puntuarán.",
-    "launch": "Lanzar el reveal ya",
+  "revealEarly": {
+    "title": "¿Revelar el dilema ya?",
+    "body_one": "Falta {{count}} jugador por responder. En este dilema quedará como «no votó» y ya no podrá responderlo.",
+    "body_many": "Faltan {{count, number}} jugadores por responder. En este dilema quedarán como «no votó» y ya no podrán responderlo.",
+    "body_other": "Faltan {{count, number}} jugadores por responder. En este dilema quedarán como «no votó» y ya no podrán responderlo.",
+    "reveal": "Revelar ya",
     "wait": "Seguir esperando"
   },
   "newHost": {
     "title": "Ahora eres el anfitrión",
-    "disconnected": "{{host}} ha perdido la conexión. Tus opciones están en el menú ⋮.",
+    "disconnected": "{{host}} sigue sin conexión. Desde la próxima ronda puedes revelar antes de tiempo en el menú ⋮. Si vuelve, recupera el rol.",
     "left": "{{host}} ha salido de la partida. Tus opciones están en el menú ⋮."
   },
   "reveal": {
-    "region": "Reveal"
+    "region": "Reveal",
+    "position": "Dilema {{position, number}} de {{total, number}} · Reveal",
+    "addedBy": "Lo añadió {{name}}",
+    "about": "Este dilema era sobre {{name}}",
+    "yourHits": "Acertaste {{right, number}} de {{count, number}}.",
+    "readYou": "Te leyeron bien {{names}}.",
+    "optionCount": "{{count, number}} · {{percent}}",
+    "voterHits_one": "{{name}}, {{count}} le acertó",
+    "voterHits_many": "{{name}}, {{count, number}} le acertaron",
+    "voterHits_other": "{{name}}, {{count, number}} le acertaron",
+    "didNotVote": "No votó · {{names}}",
+    "hitsHint": "El número de cada avatar es cuántos le acertaron.",
+    "closestTitle": "¿Quién se acercó más?",
+    "exact": "Exacta",
+    "away": "A {{count, number}}",
+    "closest": "Más cerca",
+    "next": "Siguiente dilema",
+    "anonymousDidNotVote_one": "{{count}} persona no votó.",
+    "anonymousDidNotVote_many": "{{count, number}} personas no votaron.",
+    "anonymousDidNotVote_other": "{{count, number}} personas no votaron.",
+    "anonymousNote": "En esta sala nadie ve quién votó qué.",
+    "fewVotesTitle": "Muy pocos votos para mostrar el reparto",
+    "fewVotesVoted_one": "Solo votó {{count}} persona",
+    "fewVotesVoted_many": "Solo votaron {{count, number}} personas",
+    "fewVotesVoted_other": "Solo votaron {{count, number}} personas",
+    "fewVotesNobody": "Nadie votó",
+    "fewVotesDidNot_one": "y {{count}} no votó",
+    "fewVotesDidNot_many": "y {{count, number}} no votaron",
+    "fewVotesDidNot_other": "y {{count, number}} no votaron",
+    "fewVotesWhy": "Con menos de 3 votos, el reparto dejaría adivinar quién votó qué.",
+    "introPosition": "Dilema {{position, number}} de {{total, number}} · Fin de la decisión",
+    "introTitle": "Se revela el dilema",
+    "introMascot": "La Palanca, celebrando",
+    "introAnswered_one": "Ha respondido {{count}} de {{total, number}}.",
+    "introAnswered_many": "Habéis respondido {{count, number}} de {{total, number}}.",
+    "introAnswered_other": "Habéis respondido {{count, number}} de {{total, number}}.",
+    "introNominal": "Ahora sí: vais a ver qué ha votado cada uno.",
+    "introAnonymous": "Ahora sí: vais a ver cuántos eligieron cada opción."
   },
   "notices": {
     "reconnecting": "Reconectando… tus respuestas están guardadas",
@@ -255,7 +303,7 @@
     "shareText": "Únete a mi sala de TheLever con el código {{code}}",
     "copied": "Enlace copiado",
     "showQr": "Mostrar QR",
-    "summary": "{{count}} dilemas · {{minutes}} min · {{language}} · {{nature}}",
+    "summary": "{{count}} dilemas · {{seconds}} s por dilema · {{language}} · {{nature}}",
     "change": "Cambiar",
     "adultsOnly": "Solo para mayores de 18",
     "remote": "Jugáis a distancia: mejor en videollamada, para comentar el reveal en directo.",
@@ -294,7 +342,7 @@
     "pickedCount_one": "{{count}} dilema elegido",
     "pickedCount_other": "{{count}} dilemas elegidos",
     "pickedCount_many": "{{count}} dilemas elegidos",
-    "summaryPicked": "{{minutes}} min · {{language}} · {{nature}}"
+    "summaryPicked": "{{seconds}} s por dilema · {{language}} · {{nature}}"
   },
   "languages": {
     "es": "Español",
@@ -334,8 +382,9 @@
     "allCategories": "Todas",
     "categoriesHint": "La partida mezcla dilemas de las categorías marcadas.",
     "dilemmaCount": "Dilemas",
-    "totalTime": "Tiempo total",
-    "minutes": "{{count}} min",
+    "timePerDilemma": "Tiempo por dilema",
+    "seconds": "{{count}} s",
+    "timeHint": "Cada dilema se revela cuando responden todos o se acaba su tiempo.",
     "newDilemmas": {
       "label": "Incluir dilemas nuevos",
       "hint": "Ayudáis a valorar dilemas recién llegados al catálogo."

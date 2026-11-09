@@ -14,11 +14,17 @@ const GAME_STATE: GameStateDto = {
   gameVersion: 1,
   roomVersion: 3,
   playerId: 'test-player-id-0',
-  phase: 'decision',
+  round: {
+    position: 0,
+    phase: 'decision',
+    endsAt: '2026-11-09T10:01:00.000Z',
+    revealedBy: null,
+    movedOnBy: null,
+  },
   hostId: 'test-player-id-0',
-  totalTimeEndsAt: '2026-11-09T10:06:00.000Z',
   serverTime: '2026-11-09T10:00:00.000Z',
-  totalTimeRanOut: false,
+  answeredCount: 0,
+  reveal: null,
   dilemmas: [
     {
       dilemmaId: 'test-dilemma-id',
@@ -36,7 +42,7 @@ const GAME_STATE: GameStateDto = {
       playerId: 'test-player-id-0',
       nickname: 'Ana',
       avatar: { face: 'face-01', color: 'teal' },
-      progress: 0,
+      answered: false,
       connected: true,
       left: false,
     },
@@ -44,7 +50,7 @@ const GAME_STATE: GameStateDto = {
       playerId: 'test-player-id-1',
       nickname: 'Luis',
       avatar: { face: 'face-02', color: 'rust' },
-      progress: 0,
+      answered: false,
       connected: true,
       left: false,
     },
@@ -52,7 +58,7 @@ const GAME_STATE: GameStateDto = {
       playerId: 'test-player-id-2',
       nickname: 'Natalia',
       avatar: { face: 'face-03', color: 'olive' },
-      progress: 0,
+      answered: false,
       connected: true,
       left: false,
     },
@@ -235,7 +241,7 @@ describe('useRoom', () => {
     expect(result.current.game).toBe(GAME_STATE);
   });
 
-  it('should apply the progress of another player on top of the game', () => {
+  it('should apply that another player answered on top of the game', () => {
     // Arrange
     const fake = fakeConnection();
     const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(fake.connection) });
@@ -244,15 +250,18 @@ describe('useRoom', () => {
     // Act
     act(() =>
       fake.deliver({
-        type: 'progress-updated',
+        type: 'player-answered',
         gameVersion: 2,
         playerId: 'test-player-id-1',
-        progress: 1,
       }),
     );
 
     // Assert
-    expect(result.current.game?.players.map(({ progress }) => progress)).toEqual([0, 1, 0]);
+    expect(result.current.game?.players.map(({ answered }) => answered)).toEqual([
+      false,
+      true,
+      false,
+    ]);
   });
 
   it('should show what the server rejected until the player dismisses it', () => {
@@ -263,13 +272,13 @@ describe('useRoom', () => {
 
     // Act
     act(() =>
-      fake.deliver({ type: 'error', command: 'answer-dilemma', code: 'dilemma-not-reached' }),
+      fake.deliver({ type: 'error', command: 'answer-dilemma', code: 'dilemma-not-in-round' }),
     );
     const shown = result.current.rejection;
     act(() => result.current.dismissRejection());
 
     // Assert
-    expect(shown?.code).toBe('dilemma-not-reached');
+    expect(shown?.code).toBe('dilemma-not-in-round');
     expect(result.current.rejection).toBeUndefined();
   });
 
@@ -391,8 +400,8 @@ describe('useRoom', () => {
       nickname: 'Ana',
       language: 'es',
       others: [
-        { nickname: 'Luis', joinAfterMs: 10, answerEveryMs: 1000 },
-        { nickname: 'Marta', joinAfterMs: 10, answerEveryMs: 1000 },
+        { nickname: 'Luis', joinAfterMs: 10, answerAfterMs: 1000 },
+        { nickname: 'Marta', joinAfterMs: 10, answerAfterMs: 1000 },
       ],
       dilemmas: [
         { text: 'TestText1', options: ['TestOptionA', 'TestOptionB'] },
@@ -409,7 +418,11 @@ describe('useRoom', () => {
 
     // Assert
     expect(playersInTheLobby).toBe(3);
-    expect(result.current.game?.players.map(({ progress }) => progress)).toEqual([0, 1, 1]);
+    expect(result.current.game?.players.map(({ answered }) => answered)).toEqual([
+      false,
+      true,
+      true,
+    ]);
     connection.close();
   });
 });

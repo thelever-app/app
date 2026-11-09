@@ -3,25 +3,22 @@ import { Dialog } from 'radix-ui';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './icon.tsx';
 import { PlayerList } from './player-list.tsx';
+import { isAnonymous } from './players.ts';
 import styles from './group-progress-sheet.module.css';
 
 interface GroupProgressSheetProps {
-  readonly players: GameStateDto['players'];
-  readonly dilemmaCount: number;
+  readonly game: Pick<GameStateDto, 'players' | 'answeredCount'>;
   /** Opened from elsewhere, such as the menu of the game: then it has no «Ver todos» of its own. */
   readonly open?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
 }
 
-/** «Ver todos» and the sheet it opens: everyone's progress, never what they answered. */
-export function GroupProgressSheet({
-  players,
-  dilemmaCount,
-  open,
-  onOpenChange,
-}: GroupProgressSheetProps) {
+/** «Ver todos» and the sheet it opens: who answered the dilemma of the round, never what. */
+export function GroupProgressSheet({ game, open, onOpenChange }: GroupProgressSheetProps) {
   const { t } = useTranslation();
   const controlled = open !== undefined;
+  const anonymous = isAnonymous(game);
+  const count = game.players.length;
 
   return (
     <Dialog.Root {...(controlled && { open, onOpenChange })}>
@@ -41,7 +38,9 @@ export function GroupProgressSheet({
             <div className={styles.heading}>
               <Dialog.Title className={styles.title}>{t('groupSheet.title')}</Dialog.Title>
               <Dialog.Description className={styles.summary}>
-                {t('groupSheet.summary', { count: players.length })}
+                {anonymous
+                  ? t('groupSheet.summaryAnonymous', { count })
+                  : t('groupSheet.summary', { count })}
               </Dialog.Description>
             </div>
             <Dialog.Close className={styles.close} aria-label={t('groupSheet.close')}>
@@ -49,7 +48,7 @@ export function GroupProgressSheet({
             </Dialog.Close>
           </div>
           <div className={styles.content}>
-            <PlayerList players={players} dilemmaCount={dilemmaCount} />
+            <PlayerList game={game} anonymous={anonymous} />
           </div>
         </Dialog.Content>
       </Dialog.Portal>

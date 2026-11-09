@@ -2,6 +2,7 @@ import type { GameStateDto, ReportReasonDto } from '@thelever-app/protocol';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GroupProgressSheet } from '../components/group-progress-sheet.tsx';
+import { isAnonymous } from '../components/players.ts';
 import { ProgressStrip } from '../components/progress-strip.tsx';
 import { personInTheGapOf } from '../game/dilemma-text.tsx';
 import { GameMenu } from '../game/game-menu.tsx';
@@ -15,101 +16,74 @@ import toast from './dilemma-screen.module.css';
 
 interface DilemmaScreenProps {
   readonly game: GameStateDto;
-  /** Where to start; by default, the first dilemma the player has neither completed nor skipped. */
-  readonly initialPosition?: number | undefined;
   readonly onAnswer: (answer: AnswerDraft) => void;
-  /** The player moved on from the last dilemma. */
+  /** The player confirmed their answer with «Listo». */
   readonly onDone: () => void;
-  readonly onLaunchReveal: () => void;
+  /** Only for the host: opens «¿Revelar el dilema ya?». */
+  readonly onRevealEarly: (() => void) | undefined;
   readonly onReport: (dilemmaId: string, reason: ReportReasonDto, comment: string) => void;
   readonly onSkip: (dilemmaId: string) => void;
   readonly onLeave: () => void;
 }
 
-/** What the screen holds of the answer to each dilemma, from what the room keeps. */
-type Drafts = ReadonlyMap<string, { readonly vote: string } & Predictions>;
+const NO_PREDICTIONS: Predictions = { matchPrediction: null, votePredictions: [] };
 
-function draftsOf(game: GameStateDto): Drafts {
-  return new Map(
-    game.answers.map(({ dilemmaId, vote, matchPrediction, votePredictions }) => [
-      dilemmaId,
-      { vote, matchPrediction, votePredictions },
-    ]),
-  );
+function samePredictions(a: Predictions, b: Predictions): boolean {
+  const votesOf = ({ votePredictions }: Predictions) =>
+    votePredictions
+      .map(({ playerId, vote }) => `${playerId}:${vote}`)
+      .sort()
+      .join();
+  return a.matchPrediction === b.matchPrediction && votesOf(a) === votesOf(b);
 }
 
 /**
- * The dilemmas one by one: the vote and, in a nominal room, the predictions on a step of their
- * own. The screen moves on before the room confirms, and sends the answer with every change.
+ * The dilemma of the round: the vote and, in a nominal room, the predictions on a step of their
+ * own. The vote goes to the room on «Continuar», so it counts even if the time runs out while
+ * predicting; the predictions go when the player leaves their step, with «Listo» or back to the
+ * vote, never with each tap. «Listo» also confirms the vote of an anonymous room.
  */
 export function DilemmaScreen({
   game,
-  initialPosition,
   onAnswer,
   onDone,
-  onLaunchReveal,
+  onRevealEarly,
   onReport,
   onSkip,
   onLeave,
 }: DilemmaScreenProps) {
   const { t } = useTranslation();
-  const skipped = new Set(
-    game.didNotVote.filter(({ reason }) => reason === 'reported').map(({ dilemmaId }) => dilemmaId),
-  );
-  const playable = game.dilemmas
-    .map((dilemma, index) => ({ dilemma, index }))
-    .filter(({ dilemma }) => !skipped.has(dilemma.dilemmaId))
-    .map(({ index }) => index);
-  const self = game.players.find(({ playerId }) => playerId === game.playerId);
-  const lastPosition = game.dilemmas.length - 1;
-
-  const [position, setPosition] = useState(
-    () => initialPosition ?? Math.min(self?.progress ?? 0, lastPosition),
-  );
-  const [step, setStep] = useState<'vote' | 'predict'>('vote');
-  const [drafts, setDrafts] = useState<Drafts>(() => draftsOf(game));
-  const [isSendingLast, setIsSendingLast] = useState(false);
-  const [isGroupOpen, setIsGroupOpen] = useState(false);
-  const [isReportOpen, setIsReportOpen] = useState(false);
-  const [reportedHere, setReportedHere] = useState<
-    { readonly dilemmaId: string; readonly offensive: boolean } | undefined
-  >(undefined);
-
+  const { position } = game.round;
   const dilemma = game.dilemmas[position]!;
   const { dilemmaId } = dilemma;
-  const draft = drafts.get(dilemmaId);
-  const savedVote = game.answers.find((answer) => answer.dilemmaId === dilemmaId)?.vote;
-  const isNominal = dilemma.predictionSubset.length > 0;
-  const isHost = game.hostId === game.playerId;
+  const saved = game.answers.find((answer) => answer.dilemmaId === dilemmaId);
+  const anonymous = isAnonymous(game);
   const person = personInTheGapOf(game, dilemma);
-  const previous = playable.filter((index) => index < position).at(-1);
-  const next = playable.find((index) => index > position);
+  const total = game.dilemmas.length;
+
+  const [step, setStep] = useState<'vote' | 'predict'>('vote');
+  const [vote, setVote] = useState(saved?.vote);
+  const [predictions, setPredictions] = useState<Predictions>(saved ?? NO_PREDICTIONS);
+  const [isSending, setIsSending] = useState(false);
+  const [isGroupOpen, setIsGroupOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportedHere, setReportedHere] = useState<{ readonly offensive: boolean } | undefined>(
+    undefined,
+  );
   const reported =
-    reportedHere?.dilemmaId === dilemmaId ||
-    game.reports.some((report) => report.dilemmaId === dilemmaId);
-  const hostName = game.players.find(({ playerId }) => playerId === game.hostId)?.nickname ?? '';
+    reportedHere !== undefined || game.reports.some((r) => r.dilemmaId === dilemmaId);
 
-  const keep = (answer: { readonly vote: string } & Predictions) => {
-    setDrafts(new Map(drafts).set(dilemmaId, answer));
-    onAnswer({ dilemmaId, ...answer, votePredictions: [...answer.votePredictions] });
-  };
-
-  const moveOn = (sending: boolean) => {
-    setStep('vote');
-    if (next !== undefined) {
-      setPosition(next);
-      return;
-    }
+  const confirm = (answer: AnswerDraft) => {
+    onAnswer(answer);
     // The waiting screen comes with the state the room sends back; until then, no second send.
-    if (sending) setIsSendingLast(true);
+    setIsSending(true);
     onDone();
   };
 
   const menu = (
     <GameMenu
-      isHost={isHost}
+      onRevealEarly={onRevealEarly}
       reported={reported}
-      onLaunchReveal={onLaunchReveal}
       onShowGroup={() => setIsGroupOpen(true)}
       onReport={() => setIsReportOpen(true)}
       onLeave={onLeave}
@@ -119,64 +93,79 @@ export function DilemmaScreen({
   return (
     <div className={styles.screen}>
       <ProgressStrip
-        position={position}
-        players={game.players}
-        dilemmaCount={game.dilemmas.length}
         game={game}
+        label={t(step === 'vote' ? 'progressStrip.position' : 'progressStrip.predicting', {
+          position: position + 1,
+          total,
+        })}
         menu={step === 'vote' ? menu : undefined}
-        step={step}
+        showGroup={step === 'vote'}
       />
       {step === 'vote' ? (
         <DilemmaCard
-          // A new card when the dilemma changes, and again when the room confirms its vote.
-          key={`${dilemmaId}:${savedVote ?? ''}`}
           dilemma={dilemma}
           personInTheGap={person}
-          savedVote={draft?.vote ?? savedVote}
-          canGoBack={previous !== undefined}
-          isSending={next === undefined && !isNominal && isSendingLast}
-          onBack={() => {
-            if (previous === undefined) return;
-            setPosition(previous);
-          }}
-          onContinue={(vote) => {
-            const changed = vote !== draft?.vote;
-            const predictions = draft ?? { matchPrediction: null, votePredictions: [] };
-            if (changed) keep({ ...predictions, vote });
-            if (isNominal) setStep('predict');
-            else moveOn(changed);
+          savedVote={vote}
+          anonymous={anonymous}
+          isSending={anonymous && isSending}
+          onContinue={(chosen) => {
+            setVote(chosen);
+            if (anonymous) {
+              confirm({ dilemmaId, vote: chosen });
+              return;
+            }
+            if (chosen !== saved?.vote) {
+              onAnswer({
+                dilemmaId,
+                vote: chosen,
+                matchPrediction: predictions.matchPrediction,
+                votePredictions: [...predictions.votePredictions],
+              });
+            }
+            setStep('predict');
           }}
         />
       ) : (
         <PredictCard
-          key={dilemmaId}
           dilemma={dilemma}
-          vote={draft?.vote ?? ''}
-          predictions={draft ?? { matchPrediction: null, votePredictions: [] }}
+          vote={vote ?? ''}
+          predictions={predictions}
           players={game.players}
           personInTheGap={person}
-          isSending={next === undefined && isSendingLast}
-          onChange={(predictions) => keep({ vote: draft?.vote ?? '', ...predictions })}
-          onBack={() => setStep('vote')}
-          onNext={() => moveOn(true)}
+          isSending={isSending}
+          onChange={setPredictions}
+          onBack={() => {
+            if (!samePredictions(predictions, saved ?? NO_PREDICTIONS)) {
+              onAnswer({
+                dilemmaId,
+                vote: vote ?? '',
+                matchPrediction: predictions.matchPrediction,
+                votePredictions: [...predictions.votePredictions],
+              });
+            }
+            setStep('vote');
+          }}
+          onNext={() =>
+            confirm({
+              dilemmaId,
+              vote: vote ?? '',
+              matchPrediction: predictions.matchPrediction,
+              votePredictions: [...predictions.votePredictions],
+            })
+          }
         />
       )}
-      <GroupProgressSheet
-        players={game.players}
-        dilemmaCount={game.dilemmas.length}
-        open={isGroupOpen}
-        onOpenChange={setIsGroupOpen}
-      />
+      <GroupProgressSheet game={game} open={isGroupOpen} onOpenChange={setIsGroupOpen} />
       <ReportSheet
         open={isReportOpen}
         onOpenChange={setIsReportOpen}
         onSend={(reason, comment) => {
           onReport(dilemmaId, reason, comment);
-          setReportedHere({ dilemmaId, offensive: reason === 'offensive' });
+          setReportedHere({ offensive: reason === 'offensive' });
           setIsReportOpen(false);
         }}
       />
-      {reportedHere?.dilemmaId === dilemmaId ? (
+      {reportedHere && (
         <GameToast>
           <p className={toast.thanks}>
             <strong className={toast.signal}>{t('reportSent.thanks')}</strong>{' '}
@@ -191,7 +180,6 @@ export function DilemmaScreen({
                 onClick={() => {
                   onSkip(dilemmaId);
                   setReportedHere(undefined);
-                  moveOn(true);
                 }}
               >
                 {t('reportSent.skip')}
@@ -199,15 +187,6 @@ export function DilemmaScreen({
             </p>
           )}
         </GameToast>
-      ) : (
-        game.totalTimeRanOut && (
-          <GameToast hazard>
-            <strong className={toast.signal}>{t('timeUp.title')}</strong>
-            <span>
-              {isHost ? t('timeUp.stragglerHost') : t('timeUp.straggler', { host: hostName })}
-            </span>
-          </GameToast>
-        )
       )}
     </div>
   );
