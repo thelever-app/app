@@ -150,29 +150,6 @@ Feature: Reveal
       When the reveal is on the first dilemma
       Then all players see that "Luis" added it
 
-    @ui
-    Scenario: Each dilemma shows how close every prediction was
-      Given "Ana" and "Marta" voted "pull the lever" and "Luis" voted "do nothing"
-      And "Ana" predicted that 1 of the other 2 players chose the same as her
-      And "Luis" predicted that 2 of the other 2 players chose the same as him
-      And "Marta" predicted that 0 of the other 2 players chose the same as her
-      When the reveal is on the first dilemma
-      Then all players see that "Ana" was exact, "Marta" was 1 away and "Luis" was 2 away
-      And all players see that "Ana" was the closest
-
-    @ui
-    Scenario: The closest prediction is shared in case of a tie
-      Given "Ana" and "Luis" were both 1 away in the first dilemma
-      And nobody was closer
-      When the reveal is on the first dilemma
-      Then "Ana" and "Luis" are both shown as the closest
-
-    @ui
-    Scenario: A player who did not make a prediction is left out
-      Given "Marta" voted the first dilemma but did not make a prediction
-      When the reveal is on the first dilemma
-      Then "Marta" does not appear in the comparison
-
     @ui @todo
     Scenario: A player reacts to the vote of a specific person
       Given the reveal is on the first dilemma

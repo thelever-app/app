@@ -216,13 +216,7 @@ Feature: Decision phase
       Then "Luis" cannot make predictions
 
     @ui
-    Scenario: The player makes a match prediction
-      Given "Luis" has voted "pull the lever"
-      When "Luis" makes the match prediction that 1 of the other 2 players chose the same as him
-      Then his match prediction is that 1 of the other 2 players chose "pull the lever"
-
-    @ui
-    Scenario: The player makes a vote prediction for each person in their prediction subset
+    Scenario: The player makes a vote prediction for every other player
       Given "Luis" has voted
       When "Luis" makes the vote predictions that "Ana" voted "do nothing" and "Marta" voted "pull the lever"
       Then his vote predictions about "Ana" and "Marta" are recorded
@@ -235,35 +229,24 @@ Feature: Decision phase
       And the first dilemma still counts as answered by "Luis"
 
     Scenario: Only the predictions made count
-      Given "Marta" has voted the current dilemma and made her match prediction but none of her vote predictions
+      Given "Marta" has voted the current dilemma and made her vote prediction about "Ana" but not the one about "Luis"
       When the dilemma is revealed
       Then her vote counts
-      And only her match prediction can score
+      And only her vote prediction about "Ana" can score
 
     Scenario: Points are calculated when each dilemma is revealed
       When the first dilemma is revealed
       Then the points of every player for the first dilemma are calculated
 
-  Rule: Prediction subsets in a nominal room
+  Rule: Predictions in a nominal room
 
     Background:
       Given the room is nominal
 
-    Scenario Outline: Size of the prediction subset
-      Given a game with <players> players and a prediction limit of <limit>
+    Scenario: A player predicts the vote of every other player
+      Given a game with 10 players
       When a player gets a dilemma
-      Then the prediction subset of the player has <predicted> players
-
-      Examples:
-        | players | limit | predicted |
-        | 4       | 4     | 3         |
-        | 5       | 4     | 4         |
-        | 10      | 4     | 4         |
-
-    Scenario: Prediction subsets are balanced across the game
-      Given a game with 10 players, a prediction limit of 4 and 6 dilemmas
-      When every dilemma has been revealed
-      Then the number of times any two players have been predicted differs by at most 1
+      Then the player predicts the vote of the other 9 players
 
   Rule: Anonymous room
 
