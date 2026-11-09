@@ -20,12 +20,13 @@ export class JoinRoomEndpoint implements HttpEndpoint {
   }
 
   async handle(req: Request, res: Response): Promise<void> {
-    const { nickname } = parseBody(JoinRoomRequestDto, req.body);
+    const { nickname, avatar } = parseBody(JoinRoomRequestDto, req.body);
     const { playerId } = await this.#runCommand(() =>
       this.#joinRoom.execute({
         roomId: String(req.params.roomId),
         nickname,
         identity: identityOf(res),
+        avatar,
       }),
     );
     res.status(201).json(JoinRoomResponseDto.parse({ playerId }));

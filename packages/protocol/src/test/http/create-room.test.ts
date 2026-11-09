@@ -4,12 +4,13 @@ import { CreateRoomRequestDto, CreateRoomResponseDto } from '../../http/create-r
 describe('CreateRoomRequestDto', () => {
   const request = {
     nickname: 'Ana',
+    avatar: { face: 'face-01', color: 'khaki' },
     groupNature: 'friends',
     place: 'remote',
     dilemmaLanguage: 'es',
   };
 
-  it('should accept the nickname of the host, the nature of the group, the place and the language', () => {
+  it('should accept the nickname and the avatar of the host, the nature of the group, the place and the language', () => {
     // Act & Assert
     expect(CreateRoomRequestDto.parse(request)).toEqual(request);
   });
@@ -18,6 +19,15 @@ describe('CreateRoomRequestDto', () => {
     // Act & Assert
     expect(CreateRoomRequestDto.safeParse({ ...request, nickname: '' }).success).toBe(false);
     expect(CreateRoomRequestDto.safeParse({ ...request, identity: 'uid' }).success).toBe(false);
+  });
+
+  it('should reject a missing avatar', () => {
+    // Arrange
+    const { avatar, ...withoutAvatar } = request;
+    void avatar;
+
+    // Act & Assert
+    expect(CreateRoomRequestDto.safeParse(withoutAvatar).success).toBe(false);
   });
 
   it('should reject a nature of the group, a place or a language it does not know', () => {

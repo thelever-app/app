@@ -17,7 +17,15 @@ import { FakeTokenVerifier, tokenOf } from './fake-token-verifier.ts';
 export const WEB_ORIGIN = 'http://localhost:5173';
 
 /** What a test room is created with when the test does not say. */
-export const ROOM_CHOICES = { groupNature: 'friends', place: 'together', dilemmaLanguage: 'es' };
+export const ROOM_CHOICES = {
+  avatar: { face: 'face-01', color: 'khaki' },
+  groupNature: 'friends',
+  place: 'together',
+  dilemmaLanguage: 'es',
+};
+
+/** The avatar every test player chooses before joining, which nobody else with their nickname has. */
+export const JOIN_AVATAR = { face: 'face-02', color: 'teal' };
 
 /** The HTTP server of the room server, as the composition root builds it but with the fake token verifier. */
 export async function composedHttpServer() {
@@ -94,8 +102,11 @@ export async function post(
 /** Ana hosts a room with Luis and Marta, all of them in the lobby and nobody connected. */
 export async function lobbyOfThree(http: string) {
   const { roomId, code } = await post(`${http}/rooms`, 'ana', { nickname: 'Ana', ...ROOM_CHOICES });
-  await post(`${http}/rooms/${roomId}/players`, 'luis', { nickname: 'Luis' });
-  await post(`${http}/rooms/${roomId}/players`, 'marta', { nickname: 'Marta' });
+  await post(`${http}/rooms/${roomId}/players`, 'luis', { nickname: 'Luis', avatar: JOIN_AVATAR });
+  await post(`${http}/rooms/${roomId}/players`, 'marta', {
+    nickname: 'Marta',
+    avatar: JOIN_AVATAR,
+  });
   return { roomId: roomId!, code: code! };
 }
 

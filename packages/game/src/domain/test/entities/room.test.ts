@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAXIMUM_PLAYERS, Room, type RoomSnapshot } from '../../entities/room.ts';
 import { AddingDilemmasNotAllowedError } from '../../errors/adding-dilemmas-not-allowed.error.ts';
-import { AvatarTakenError } from '../../errors/avatar-taken.error.ts';
 import { DilemmaNotSuitableError } from '../../errors/dilemma-not-suitable.error.ts';
 import { DuplicateDilemmaError } from '../../errors/duplicate-dilemma.error.ts';
 import { GameInProgressError } from '../../errors/game-in-progress.error.ts';
@@ -10,6 +9,7 @@ import { HostMissingError } from '../../errors/host-missing.error.ts';
 import { IdMissingError } from '../../errors/id-missing.error.ts';
 import { InvalidRoomCodeError } from '../../errors/invalid-room-code.error.ts';
 import { InvalidRoomSettingError } from '../../errors/invalid-room-setting.error.ts';
+import { NicknameAndAvatarTakenError } from '../../errors/nickname-and-avatar-taken.error.ts';
 import { NicknameMissingError } from '../../errors/nickname-missing.error.ts';
 import { NotEnoughPlayersError } from '../../errors/not-enough-players.error.ts';
 import { NotHostError } from '../../errors/not-host.error.ts';
@@ -23,27 +23,36 @@ import { AvatarVO } from '../../vos/avatar.vo.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 import { FixedRandomness } from '../support/fixed-randomness.ts';
 
+const ANA_AVATAR = new AvatarVO('face-01', 'khaki');
+
 function roomHostedByAna(): Room {
   return Room.create(
     {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
+      hostAvatar: ANA_AVATAR,
       groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
     },
     new FixedIdGenerator('TestId', 'TestHostId'),
-    new FixedRandomness(),
   );
 }
 
-/** Each test player has its own identity, derived from its id: TestLuisId is TestLuisIdentity. */
-function join(room: Room, id: string, nickname: string, ...randomNumbers: number[]): void {
+/**
+ * Each test player has its own identity, derived from its id: TestLuisId is TestLuisIdentity. Unless
+ * the test gives one, the player takes the first avatar nobody in the room has.
+ */
+function join(
+  room: Room,
+  id: string,
+  nickname: string,
+  avatar = room.suggestAvatar(new FixedRandomness()),
+): void {
   room.join(
-    { nickname, identity: id.replace(/Id$/, 'Identity') },
+    { nickname, identity: id.replace(/Id$/, 'Identity'), avatar },
     new FixedIdGenerator(id),
-    new FixedRandomness(...randomNumbers),
   );
 }
 
@@ -72,23 +81,12 @@ describe('Room', () => {
       expect(room.host.nickname).toBe('Ana');
     });
 
-    it('should give the host the avatar the randomness picks', () => {
+    it('should give the host the avatar they chose', () => {
       // Act
-      const room = Room.create(
-        {
-          hostNickname: 'Ana',
-          hostIdentity: 'TestAnaIdentity',
-          groupNature: 'friends',
-          place: 'together',
-          dilemmaLanguage: 'es',
-          code: 'K7M2Q',
-        },
-        new FixedIdGenerator('TestId', 'TestHostId'),
-        new FixedRandomness(9),
-      );
+      const room = roomHostedByAna();
 
       // Assert
-      expect(room.host.avatar).toEqual(AvatarVO.all()[9]);
+      expect(room.host.avatar).toEqual(ANA_AVATAR);
     });
 
     it('should keep the nature of the group and where it plays', () => {
@@ -123,6 +121,7 @@ describe('Room', () => {
           {
             hostNickname: 'Ana',
             hostIdentity: 'TestAnaIdentity',
+            hostAvatar: ANA_AVATAR,
             groupNature: 'friends',
             place: 'together',
             dilemmaLanguage: 'es',
@@ -130,7 +129,6 @@ describe('Room', () => {
             ...change,
           },
           new FixedIdGenerator('TestId', 'TestHostId'),
-          new FixedRandomness(),
         ),
       ).toThrow(error);
     });
@@ -142,13 +140,13 @@ describe('Room', () => {
           {
             hostNickname: 'Ana',
             hostIdentity: 'TestAnaIdentity',
+            hostAvatar: ANA_AVATAR,
             groupNature: 'friends',
             place: 'together',
             dilemmaLanguage: 'es',
             code: 'K7M2Q',
           },
           new FixedIdGenerator('', 'TestHostId'),
-          new FixedRandomness(),
         ),
       ).toThrow(IdMissingError);
     });
@@ -168,18 +166,42 @@ describe('Room', () => {
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'player-joined', 1)]);
     });
 
-    it('should give the player a random avatar among those nobody in the room has', () => {
-      // Arrange: the host wears the first avatar, so the first free one is the second.
+    it('should give the player the avatar they chose', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      const avatar = new AvatarVO('face-07', 'rust');
+
+      // Act
+      join(room, 'TestLuisId', 'Luis', avatar);
+
+      // Assert
+      expect(room.playerWith('TestLuisIdentity')?.avatar).toEqual(avatar);
+    });
+
+    it('should let a player take the avatar of someone with another nickname', () => {
+      // Arrange
       const room = roomHostedByAna();
 
       // Act
-      join(room, 'TestLuisId', 'Luis', 0);
+      join(room, 'TestLuisId', 'Luis', ANA_AVATAR);
 
       // Assert
-      const luis = room.playerWith('TestLuisIdentity');
-      expect(luis?.avatar).toEqual(AvatarVO.all()[1]);
-      expect(luis?.avatar.equals(room.host.avatar)).toBe(false);
+      expect(room.playerWith('TestLuisIdentity')?.avatar).toEqual(ANA_AVATAR);
     });
+
+    it.each(['Ana', 'ana', 'Aná'])(
+      'should throw an error if %s takes the avatar of Ana',
+      (nickname) => {
+        // Arrange
+        const room = roomHostedByAna();
+
+        // Act & Assert
+        expect(() => join(room, 'TestOtherAnaId', nickname, ANA_AVATAR)).toThrow(
+          NicknameAndAvatarTakenError,
+        );
+        expect(room.players).toHaveLength(1);
+      },
+    );
 
     it('should give back the player of an identity already in the room, without changing anything', () => {
       // Arrange
@@ -187,9 +209,8 @@ describe('Room', () => {
 
       // Act
       const player = room.join(
-        { nickname: 'Luis again', identity: 'TestLuisIdentity' },
+        { nickname: 'Luis again', identity: 'TestLuisIdentity', avatar: ANA_AVATAR },
         new FixedIdGenerator('TestOtherId'),
-        new FixedRandomness(),
       );
 
       // Assert
@@ -230,6 +251,32 @@ describe('Room', () => {
     });
   });
 
+  describe('suggestAvatar', () => {
+    it('should suggest, at random, an avatar nobody in the room has', () => {
+      // Arrange: Ana wears the first avatar, so the free ones start at the second.
+      const room = Room.create(
+        {
+          hostNickname: 'Ana',
+          hostIdentity: 'TestAnaIdentity',
+          hostAvatar: AvatarVO.all()[0] as AvatarVO,
+          groupNature: 'friends',
+          place: 'together',
+          dilemmaLanguage: 'es',
+          code: 'K7M2Q',
+        },
+        new FixedIdGenerator('TestId', 'TestHostId'),
+      );
+
+      // Act
+      const first = room.suggestAvatar(new FixedRandomness(0));
+      const tenth = room.suggestAvatar(new FixedRandomness(9));
+
+      // Assert
+      expect(first).toEqual(AvatarVO.all()[1]);
+      expect(tenth).toEqual(AvatarVO.all()[10]);
+    });
+  });
+
   describe('changeAvatar', () => {
     it('should change the avatar of the player and record that the lobby changed', () => {
       // Arrange
@@ -244,12 +291,26 @@ describe('Room', () => {
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'avatar-changed', 3)]);
     });
 
-    it('should throw an error if another player of the room has that avatar', () => {
+    it('should let the player take the avatar of someone with another nickname', () => {
       // Arrange
       const room = lobbyOfThree();
 
+      // Act
+      room.changeAvatar('TestLuisId', ANA_AVATAR);
+
+      // Assert
+      expect(room.playerWith('TestLuisIdentity')?.avatar).toEqual(ANA_AVATAR);
+    });
+
+    it('should throw an error if someone with the same nickname has that avatar', () => {
+      // Arrange
+      const room = lobbyOfThree();
+      join(room, 'TestOtherAnaId', 'aná');
+
       // Act & Assert
-      expect(() => room.changeAvatar('TestLuisId', room.host.avatar)).toThrow(AvatarTakenError);
+      expect(() => room.changeAvatar('TestOtherAnaId', ANA_AVATAR)).toThrow(
+        NicknameAndAvatarTakenError,
+      );
     });
 
     it('should change nothing if the player already has that avatar', () => {

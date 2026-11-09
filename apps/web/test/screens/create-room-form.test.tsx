@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { CreateRoomRequestDto } from '@thelever-app/protocol';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { lastNickname } from '../../src/identity/last-nickname.ts';
@@ -7,6 +7,18 @@ import { CreateRoomForm } from '../../src/screens/create-room-form.tsx';
 import { fakeRoomApi, renderAtRoute } from '../support/routing.tsx';
 
 const CREATED = { roomId: 'test-room-id', code: 'K7M2Q', playerId: 'test-ana-id' };
+
+/** The avatar the form shows, as its button tells it. */
+function shownAvatar() {
+  const button = document.querySelector<HTMLElement>('button[data-face]');
+  return { face: button?.dataset.face, color: button?.dataset.color };
+}
+
+function submitButton(): HTMLElement {
+  const button = document.querySelector<HTMLElement>('button[type="submit"]');
+  if (!button) throw new Error('The form has no submit button');
+  return button;
+}
 
 async function renderForm(createRoom: (request: CreateRoomRequestDto) => Promise<typeof CREATED>) {
   const api = fakeRoomApi({ createRoom: vi.fn(createRoom) });
@@ -78,6 +90,7 @@ describe('CreateRoomForm', () => {
     await waitFor(() => expect(location()).toBe('/rooms/test-room-id'));
     expect(api.createRoom).toHaveBeenCalledWith({
       nickname: ' Ana ',
+      avatar: shownAvatar(),
       groupNature: 'friends',
       place: 'remote',
       dilemmaLanguage: 'es',
@@ -85,10 +98,32 @@ describe('CreateRoomForm', () => {
     expect(lastNickname()).toBe('Ana');
   });
 
+  it('should create the room with the avatar the host chose instead of the random one', async () => {
+    // Arrange
+    const { t, api, fill, submit } = await renderForm(async () => CREATED);
+    fill();
+    fireEvent.click(screen.getByRole('button', { name: t('avatarPicker.change') }));
+    const picker = screen.getByRole('dialog');
+
+    // Act
+    fireEvent.click(within(picker).getByRole('button', { name: t('avatarPicker.colors.olive') }));
+    fireEvent.click(
+      within(picker).getByRole('button', { name: t('avatarPicker.face', { number: 7 }) }),
+    );
+    fireEvent.click(within(picker).getByRole('button', { name: t('avatarPicker.use') }));
+    submit();
+
+    // Assert
+    await waitFor(() => expect(api.createRoom).toHaveBeenCalled());
+    expect(api.createRoom).toHaveBeenCalledWith(
+      expect.objectContaining({ avatar: { face: 'face-07', color: 'olive' } }),
+    );
+  });
+
   it('should not let the room be created, and say what is missing, until everything is chosen', async () => {
     // Arrange
     const { t } = await renderForm(async () => CREATED);
-    const button = () => screen.getByRole('button');
+    const button = () => submitButton();
     const missing: string[] = [];
 
     // Act

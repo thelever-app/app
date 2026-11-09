@@ -43,6 +43,7 @@ import {
   type PlayerNotifier,
   type Randomness,
   type RoomSettingsSnapshot,
+  AvatarVO,
 } from '@thelever-app/game';
 import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
 import {
@@ -122,6 +123,13 @@ const MATH_RANDOMNESS: Randomness = {
 /** The clock of the browser, as the room server reads its own. */
 const BROWSER_CLOCK: Clock = { now: () => new Date() };
 
+/** The host wears the first avatar and each fake player the next one, so all of them look apart. */
+function avatarNumber(index: number): { readonly face: string; readonly color: string } {
+  const avatar = AvatarVO.all()[index];
+  if (!avatar) throw new Error(`There is no avatar number ${index}`);
+  return { face: avatar.face, color: avatar.color };
+}
+
 /** The parts of the configuration a message changes: those it carries, none left undefined. */
 function onlyGiven(changes: ChangeSettingsDto['changes']): Partial<RoomSettingsSnapshot> {
   return Object.fromEntries(
@@ -172,7 +180,6 @@ export class SimulatedRoomConnection implements RoomConnection {
         gameRepository: games,
         notifier,
         idGenerator,
-        randomness: MATH_RANDOMNESS,
       }),
       connectPlayer: new ConnectPlayerUseCase(rooms, games, notifier, idGenerator),
       getRoomState: new GetRoomStateUseCase(rooms, catalog),
@@ -289,6 +296,7 @@ export class SimulatedRoomConnection implements RoomConnection {
     const { roomId, hostId } = await this.#useCases.createRoom.execute({
       hostNickname: this.#options.nickname,
       hostIdentity: SELF_IDENTITY,
+      hostAvatar: avatarNumber(0),
       groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: this.#options.language,
@@ -300,7 +308,12 @@ export class SimulatedRoomConnection implements RoomConnection {
     this.#options.others.forEach(({ nickname, joinAfterMs, answerAfterMs }, index) => {
       this.#after(joinAfterMs, async () => {
         const identity = `simulated-${index + 1}`;
-        const { playerId } = await this.#useCases.joinRoom.execute({ roomId, nickname, identity });
+        const { playerId } = await this.#useCases.joinRoom.execute({
+          roomId,
+          nickname,
+          identity,
+          avatar: avatarNumber(index + 1),
+        });
         await this.#useCases.connectPlayer.execute({ roomId, identity });
         this.#fakePlayers.push({ playerId, answerAfterMs });
       });

@@ -2,6 +2,7 @@ import type { RoomPreviewResponseDto } from '@thelever-app/protocol';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
+import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
 import { RoomApiError } from '../room/room-api.ts';
 import { useRoomApi } from '../room/room-api-context.tsx';
@@ -16,9 +17,12 @@ type Preview =
   | { readonly status: 'refused'; readonly code: JoinRefusalCode }
   | { readonly status: 'failed' };
 
+/** How many of those inside the card of the room draws; the count says how many there are. */
+const VISIBLE_PLAYERS = 5;
+
 /**
- * /join/:code, where the link, the QR and the code field lead: whose room it is and what kind
- * before entering, and the nickname to enter with. A room that turns the player away, before or
+ * /join/:code, where the link, the QR and the code field lead: whose room it is, what kind and who
+ * is inside before entering, and the avatar and the nickname to enter with. A room that turns the player away, before or
  * on joining, leaves the screen to the reason why.
  */
 export function JoinScreen() {
@@ -72,9 +76,18 @@ export function JoinScreen() {
               <span className={styles.signage} data-testid="room-of">
                 {t('joinRoom.roomOf', { host: preview.room.hostNickname, code })}
               </span>
-              <span className={styles.count} data-testid="player-count">
-                {t('joinRoom.inTheRoom', { count: preview.room.playerCount })}
-              </span>
+              <div className={styles.inside}>
+                <ul className={styles.avatars} data-testid="room-avatars">
+                  {preview.room.players.slice(0, VISIBLE_PLAYERS).map(({ avatar }, index) => (
+                    <li key={index}>
+                      <Avatar avatar={avatar} size="xs" />
+                    </li>
+                  ))}
+                </ul>
+                <span className={styles.count} data-testid="player-count">
+                  {t('joinRoom.inTheRoom', { count: preview.room.players.length })}
+                </span>
+              </div>
               <p className={styles.line} data-testid="room-variant">
                 <Icon
                   name={preview.room.variant === 'nominal' ? 'visibility' : 'visibilityOff'}
@@ -93,6 +106,8 @@ export function JoinScreen() {
             </section>
             <JoinRoomForm
               roomId={preview.room.roomId}
+              players={preview.room.players}
+              suggestedAvatar={preview.room.suggestedAvatar}
               onRefused={(refusal) =>
                 setAnswer({ code, preview: { status: 'refused', code: refusal } })
               }

@@ -2,7 +2,10 @@ import { GroupNatureDto, PlaceDto } from '@thelever-app/protocol';
 import { useActionState, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
+import { AvatarButton } from '../avatar/avatar-button.tsx';
+import { randomAvatar } from '../avatar/random-avatar.ts';
 import { Icon, type IconName } from '../components/icon.tsx';
+import { AvatarPickerSheet } from '../lobby/avatar-picker-sheet.tsx';
 import { SubmitButton } from '../components/submit-button.tsx';
 import { lastNickname, rememberNickname } from '../identity/last-nickname.ts';
 import { deviceLanguage } from '../i18n/i18n.ts';
@@ -38,8 +41,9 @@ const PLACES: readonly (readonly [PlaceDto, IconName])[] = [
 ];
 
 /**
- * Creating a room: the nickname, the nature of the group and the place, each one a single
- * choice, on the same screen. The dilemmas take the language of the device; the host changes it
+ * Creating a room: the avatar, the nickname, the nature of the group and the place, each one a
+ * single choice, on the same screen. The avatar starts at random and may be any: nobody is in the
+ * room yet. The dilemmas take the language of the device; the host changes it
  * in the lobby. The button says what is still missing, and creates the room once nothing is.
  * Once created, the host enters its lobby.
  */
@@ -53,6 +57,8 @@ export function CreateRoomForm() {
     groupNature: undefined,
     place: undefined,
   }));
+  const [avatar, setAvatar] = useState(() => randomAvatar());
+  const [pickingAvatar, setPickingAvatar] = useState(false);
   const missing = missingOf(choices);
   // React resets the form once its action ends, and a radio goes back to its defaultChecked: the
   // radios carry the choice there, and tell it with onChange, instead of being controlled.
@@ -64,6 +70,7 @@ export function CreateRoomForm() {
     try {
       const { roomId } = await api.createRoom({
         nickname,
+        avatar,
         groupNature,
         place,
         dilemmaLanguage: deviceLanguage(i18n),
@@ -78,19 +85,22 @@ export function CreateRoomForm() {
 
   return (
     <form action={formAction} className={styles.form}>
-      <label className={styles.field}>
-        {t('createRoom.nickname')}
-        <input
-          className={styles.input}
-          name="nickname"
-          required
-          maxLength={20}
-          autoComplete="nickname"
-          placeholder={t('createRoom.nicknamePlaceholder')}
-          value={choices.nickname}
-          onChange={(event) => setChoices({ ...choices, nickname: event.target.value })}
-        />
-      </label>
+      <div className={styles.identity}>
+        <AvatarButton avatar={avatar} onClick={() => setPickingAvatar(true)} />
+        <label className={styles.field}>
+          {t('createRoom.nickname')}
+          <input
+            className={styles.input}
+            name="nickname"
+            required
+            maxLength={20}
+            autoComplete="nickname"
+            placeholder={t('createRoom.nicknamePlaceholder')}
+            value={choices.nickname}
+            onChange={(event) => setChoices({ ...choices, nickname: event.target.value })}
+          />
+        </label>
+      </div>
 
       <fieldset className={styles.choice}>
         <legend className={styles.legend}>{t('createRoom.groupNature.label')}</legend>
@@ -153,6 +163,14 @@ export function CreateRoomForm() {
           }
         />
       </div>
+      {pickingAvatar && (
+        <AvatarPickerSheet
+          current={avatar}
+          taken={[]}
+          onChoose={setAvatar}
+          onClose={() => setPickingAvatar(false)}
+        />
+      )}
     </form>
   );
 }

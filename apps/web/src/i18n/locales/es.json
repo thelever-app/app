@@ -230,7 +230,10 @@
     "submitting": "Entrando…",
     "loading": "Buscando la sala…",
     "inTheRoom_many": "{{count}} en la sala",
-    "missingNickname": "Escribe tu apodo"
+    "missingNickname": "Escribe tu apodo",
+    "namesake": "{{nickname}} ya está en la sala; os distinguirá el avatar.",
+    "missingAvatar": "Elige otro avatar",
+    "lookalikeJustJoined": "Alguien acaba de entrar como {{nickname}} con este avatar. Elige otro."
   },
   "roomErrors": {
     "nickname-missing": "Escribe un apodo.",
@@ -239,7 +242,8 @@
     "room-code-not-found": "No hay ninguna sala con ese código.",
     "room-not-found": "Esa sala ya no existe.",
     "unknown": "No ha salido bien. Inténtalo otra vez.",
-    "dilemmas-missing": "No hay dilemas para esta configuración. Prueba con otras categorías."
+    "dilemmas-missing": "No hay dilemas para esta configuración. Prueba con otras categorías.",
+    "nickname-and-avatar-taken": "Alguien que se llama como tú ya lleva ese avatar. Elige otro."
   },
   "home": {
     "title": "¿Jugamos?",
@@ -425,7 +429,7 @@
   "avatarPicker": {
     "title": "Elige tu avatar",
     "face": "Cara {{number}}",
-    "hint": "Las combinaciones que ya usa alguien de la sala aparecen desactivadas.",
+    "hint": "Las que ya lleva alguien que se llama como tú aparecen desactivadas.",
     "use": "Usar este",
     "close": "Cerrar",
     "colors": {
@@ -437,7 +441,8 @@
       "rust": "Óxido",
       "olive": "Oliva",
       "stone": "Piedra"
-    }
+    },
+    "change": "Cambiar avatar"
   },
   "qr": {
     "title": "Apunta con la cámara para entrar",

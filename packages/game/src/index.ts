@@ -36,6 +36,7 @@ export {
   type AvatarFace,
   type PlayerColor,
 } from './domain/vos/avatar.vo.ts';
+export { NicknameVO } from './domain/vos/nickname.vo.ts';
 export { RoomCodeVO } from './domain/vos/room-code.vo.ts';
 export {
   RoomSettingsVO,
@@ -97,7 +98,7 @@ export { NotHostError } from './domain/errors/not-host.error.ts';
 export { GameInProgressError } from './domain/errors/game-in-progress.error.ts';
 export { RoomFullError } from './domain/errors/room-full.error.ts';
 export { PlayerExpelledError } from './domain/errors/player-expelled.error.ts';
-export { AvatarTakenError } from './domain/errors/avatar-taken.error.ts';
+export { NicknameAndAvatarTakenError } from './domain/errors/nickname-and-avatar-taken.error.ts';
 export { NotEnoughPlayersError } from './domain/errors/not-enough-players.error.ts';
 export { AddingDilemmasNotAllowedError } from './domain/errors/adding-dilemmas-not-allowed.error.ts';
 export { TooManyAddedDilemmasError } from './domain/errors/too-many-added-dilemmas.error.ts';

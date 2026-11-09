@@ -25,6 +25,8 @@ import {
   GetRoomStateUseCase,
   JoinRoomUseCase,
   LobbyChangedEvent,
+  NicknameAndAvatarTakenError,
+  NicknameVO,
   PickDilemmasUseCase,
   GameInProgressError,
   NotEnoughPlayersError,
@@ -102,8 +104,19 @@ function identityOf(player: string): string {
   return `identity-of-${player}`;
 }
 
-function avatarText({ face, color }: { readonly face: string; readonly color: string }): string {
+interface Avatar {
+  readonly face: string;
+  readonly color: string;
+}
+
+function avatarText({ face, color }: Avatar): string {
   return `${face}/${color}`;
+}
+
+function avatarFrom(text: string): Avatar {
+  const [face, color] = text.split('/');
+  if (!face || !color) throw new Error(`"${text}" is not an avatar`);
+  return { face, color };
 }
 
 /** The option of the dilemma with that text, in any case. */
@@ -130,6 +143,14 @@ interface AcceptancePlayer {
   /** The room this player opened and has not entered yet, or entered. */
   roomId: string | undefined;
   preview: RoomPreview | undefined;
+  /** Who is inside the room this player opened, as the screen to join knows them. */
+  previewPlayers: readonly { readonly nickname: string; readonly avatar: Avatar }[];
+  /** The avatar the screen to create or join a room shows as theirs, before they enter. */
+  avatar: Avatar | undefined;
+  /** What they typed in the nickname field, before confirming it. */
+  typedNickname: string | undefined;
+  /** Whether they were asked to choose another avatar, since someone with their nickname has it. */
+  askedForAnotherAvatar: boolean;
   refusal: JoinRefusal | undefined;
   /** The open connection of the player, as a socket of the room server would hold it. */
   connectionId: string | undefined;
@@ -210,13 +231,12 @@ export class AcceptanceDriver implements GameDriver {
     const clock = this.#clock;
 
     this.#createRoom = new CreateRoomUseCase(rooms, idGenerator, randomness);
-    this.#getRoomPreview = new GetRoomPreviewUseCase(rooms);
+    this.#getRoomPreview = new GetRoomPreviewUseCase(rooms, randomness);
     this.#joinRoom = new JoinRoomUseCase({
       roomRepository: rooms,
       gameRepository: games,
       notifier,
       idGenerator,
-      randomness,
     });
     this.#getRoomState = new GetRoomStateUseCase(rooms, catalog);
     this.#changeAvatar = new ChangeAvatarUseCase(rooms, notifier);
@@ -277,12 +297,20 @@ export class AcceptanceDriver implements GameDriver {
 
   // Lobby
 
+  /** The screen shows any avatar: nobody is in a room that does not exist yet. */
+  async openRoomCreation(host: string): Promise<void> {
+    const player = this.#introduce(host);
+    player.avatar ??= AvatarVO.all()[0];
+  }
+
   async createRoom(host: string, choices: RoomChoices = {}): Promise<void> {
     const { groupNature, place, deviceLanguage } = { ...DEFAULT_CHOICES, ...choices };
-    const player = this.#introduce(host);
+    await this.openRoomCreation(host);
+    const player = this.#playerCalled(host);
     const { roomId, hostId } = await this.#createRoom.execute({
       hostNickname: host,
       hostIdentity: player.identity,
+      hostAvatar: this.#avatarOnScreen(host),
       groupNature,
       place,
       dilemmaLanguage: deviceLanguage,
@@ -354,8 +382,11 @@ export class AcceptanceDriver implements GameDriver {
         host: preview.hostNickname,
         variant: preview.variant,
         adultsOnly: preview.adultsOnly,
-        playerCount: preview.playerCount,
+        playerCount: preview.players.length,
+        avatars: preview.players.map(({ avatar }) => avatarText(avatar)),
       };
+      opener.previewPlayers = preview.players;
+      opener.avatar = preview.suggestedAvatar;
       opener.refusal = undefined;
     } catch (error) {
       if (!(error instanceof RoomCodeNotFoundError)) throw error;
@@ -368,6 +399,18 @@ export class AcceptanceDriver implements GameDriver {
     return this.#playerCalled(player).preview;
   }
 
+  async typeNickname(player: string, nickname: string): Promise<void> {
+    this.#playerCalled(player).typedNickname = nickname;
+  }
+
+  /** The screen to join compares what was typed with who is inside, as the room compares them. */
+  async namesakeWarningSeenBy(player: string): Promise<string | undefined> {
+    const { typedNickname, previewPlayers } = this.#playerCalled(player);
+    if (!typedNickname?.trim()) return undefined;
+    const typed = new NicknameVO(typedNickname);
+    return previewPlayers.find(({ nickname }) => new NicknameVO(nickname).sameAs(typed))?.nickname;
+  }
+
   async confirmNickname(player: string, nickname: string): Promise<void> {
     const joiner = this.#playerCalled(player);
     if (!joiner.roomId) throw new Error(`The scenario has ${player} enter without opening a room`);
@@ -376,13 +419,16 @@ export class AcceptanceDriver implements GameDriver {
         roomId: joiner.roomId,
         nickname,
         identity: joiner.identity,
+        avatar: this.#avatarOnScreen(player),
       });
       joiner.playerId = playerId;
       joiner.refusal = undefined;
+      joiner.askedForAnotherAvatar = false;
       await this.#screenOf(player);
     } catch (error) {
       if (error instanceof RoomFullError) joiner.refusal = 'room-full';
       else if (error instanceof PlayerExpelledError) joiner.refusal = 'expelled';
+      else if (error instanceof NicknameAndAvatarTakenError) joiner.askedForAnotherAvatar = true;
       else throw error;
     }
   }
@@ -419,19 +465,50 @@ export class AcceptanceDriver implements GameDriver {
     return players.map(({ nickname, avatar }) => ({ nickname, avatar: avatarText(avatar) }));
   }
 
-  async chooseAnotherFreeAvatar(player: string): Promise<string> {
-    const { players } = await this.#roomStateOf(player);
-    const taken = new Set(players.map(({ avatar }) => avatarText(avatar)));
+  async avatarSeenBy(player: string): Promise<string> {
+    if (!this.#playerCalled(player).playerId) return avatarText(this.#avatarOnScreen(player));
+    const state = await this.#roomStateOf(player);
+    const own = state.players.find(({ playerId }) => playerId === state.playerId);
+    if (!own) throw new Error(`${player} is not in the room`);
+    return avatarText(own.avatar);
+  }
+
+  async chooseAnotherAvatar(player: string): Promise<string> {
+    const { playerId, previewPlayers } = this.#playerCalled(player);
+    const inside = playerId
+      ? (await this.#roomStateOf(player)).players.map(({ avatar }) => avatar)
+      : previewPlayers.map(({ avatar }) => avatar);
+    const taken = new Set([...inside.map(avatarText), await this.avatarSeenBy(player)]);
     const free = AvatarVO.all().find((avatar) => !taken.has(avatarText(avatar)));
     if (!free) throw new Error('The room has no free avatar left');
 
-    await this.#changeAvatar.execute({
-      roomId: this.#currentRoomId(),
-      playerId: this.#playerIdOf(player),
-      face: free.face,
-      color: free.color,
-    });
+    await this.chooseAvatar(player, avatarText(free));
     return avatarText(free);
+  }
+
+  /** Before entering, the screen keeps it; in the room, the room decides. */
+  async chooseAvatar(player: string, avatar: string): Promise<void> {
+    const chooser = this.#playerCalled(player);
+    const chosen = avatarFrom(avatar);
+    if (!chooser.playerId) {
+      chooser.avatar = chosen;
+      return;
+    }
+    try {
+      await this.#changeAvatar.execute({
+        roomId: this.#currentRoomId(),
+        playerId: chooser.playerId,
+        ...chosen,
+      });
+      chooser.askedForAnotherAvatar = false;
+    } catch (error) {
+      if (!(error instanceof NicknameAndAvatarTakenError)) throw error;
+      chooser.askedForAnotherAvatar = true;
+    }
+  }
+
+  async askedToChooseAnotherAvatar(player: string): Promise<boolean> {
+    return this.#playerCalled(player).askedForAnotherAvatar;
   }
 
   async settingsSeenBy(viewer: string): Promise<SettingsView> {
@@ -1141,12 +1218,22 @@ export class AcceptanceDriver implements GameDriver {
       playerId: undefined,
       roomId: undefined,
       preview: undefined,
+      previewPlayers: [],
+      avatar: undefined,
+      typedNickname: undefined,
+      askedForAnotherAvatar: false,
       refusal: undefined,
       connectionId: undefined,
       screen: undefined,
     };
     this.#players.set(player, introduced);
     return introduced;
+  }
+
+  #avatarOnScreen(player: string): Avatar {
+    const { avatar } = this.#playerCalled(player);
+    if (!avatar) throw new Error(`${player} is on no screen that shows an avatar`);
+    return avatar;
   }
 
   #hostName(): string {

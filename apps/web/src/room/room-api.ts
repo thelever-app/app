@@ -1,4 +1,5 @@
 import {
+  type AvatarDto,
   type CreateRoomRequestDto,
   CreateRoomResponseDto,
   type ErrorCodeDto,
@@ -25,7 +26,7 @@ export interface RoomApi {
   createRoom(request: CreateRoomRequestDto): Promise<CreateRoomResponseDto>;
   /** The room of a code, as the player typed it or as the link carries it. */
   previewRoom(code: string): Promise<RoomPreviewResponseDto>;
-  joinRoom(roomId: string, nickname: string): Promise<JoinRoomResponseDto>;
+  joinRoom(roomId: string, nickname: string, avatar: AvatarDto): Promise<JoinRoomResponseDto>;
   searchDilemmas(
     roomId: string,
     /** One category, or every one; what the player typed, looked for in the text and the tags. */
@@ -88,9 +89,10 @@ export function httpRoomApi({
     createRoom: (request) => call('POST', '/rooms', CreateRoomResponseDto, request),
     previewRoom: (code) =>
       call('GET', `/rooms/by-code/${encodeURIComponent(code)}`, RoomPreviewResponseDto),
-    joinRoom: (roomId, nickname) =>
+    joinRoom: (roomId, nickname, avatar) =>
       call('POST', `/rooms/${encodeURIComponent(roomId)}/players`, JoinRoomResponseDto, {
         nickname,
+        avatar,
       }),
     searchDilemmas: async (roomId, { category, q }) => {
       const query = new URLSearchParams();

@@ -8,8 +8,15 @@ Feature: Create a room
     Given a player on the home screen
     When the player creates a room
     Then the player becomes the host of that room
-    And the host gets a random avatar
+    And the host plays with the random avatar shown before creating the room
     And the host is asked for a nickname and the nature of the group on the same screen
+
+  @ui
+  Scenario: The host changes the avatar before creating the room
+    Given a player creating a room
+    When the player chooses another avatar
+    And creates the room
+    Then the host enters the lobby with that avatar
 
   @ui
   Scenario: The host declares the nature of the group with a single choice

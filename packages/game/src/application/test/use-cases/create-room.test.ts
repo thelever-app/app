@@ -4,12 +4,14 @@ import { RoomCodeUnavailableError } from '../../errors/room-code-unavailable.err
 import { InMemoryRoomRepository } from '../../../adapters/in-memory/in-memory-room-repository.ts';
 import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
 import { SequentialRandomness } from '../../../adapters/in-memory/sequential-randomness.ts';
+import { InvalidAvatarError } from '../../../domain/errors/invalid-avatar.error.ts';
 import { NicknameMissingError } from '../../../domain/errors/nickname-missing.error.ts';
 import { FixedRandomness } from '../../../domain/test/support/fixed-randomness.ts';
 
 const ANA = {
   hostNickname: 'Ana',
   hostIdentity: 'TestAnaIdentity',
+  hostAvatar: { face: 'face-05', color: 'cyan' },
   groupNature: 'friends',
   place: 'remote',
   dilemmaLanguage: 'en',
@@ -33,6 +35,7 @@ describe('CreateRoomUseCase', () => {
       const room = await roomRepository.findById(roomId);
       expect(room?.host.id).toBe(hostId);
       expect(room?.host.nickname).toBe('Ana');
+      expect(room?.host.avatar).toMatchObject({ face: 'face-05', color: 'cyan' });
       expect(room?.code).toBe(code);
       expect(room?.groupNature).toBe('friends');
       expect(room?.place).toBe('remote');
@@ -72,6 +75,20 @@ describe('CreateRoomUseCase', () => {
       await expect(
         new CreateRoomUseCase(roomRepository, idGenerator, new FixedRandomness()).execute(ANA),
       ).rejects.toThrow(RoomCodeUnavailableError);
+    });
+
+    it('should throw an error if the avatar is not one of the closed list', async () => {
+      // Arrange
+      const createRoom = new CreateRoomUseCase(
+        new InMemoryRoomRepository(),
+        new SequentialIdGenerator(),
+        new SequentialRandomness(),
+      );
+
+      // Act & Assert
+      await expect(
+        createRoom.execute({ ...ANA, hostAvatar: { face: 'face-99', color: 'cyan' } }),
+      ).rejects.toThrow(InvalidAvatarError);
     });
 
     it('should throw an error if the nickname is missing', async () => {

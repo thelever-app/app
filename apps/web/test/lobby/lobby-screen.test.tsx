@@ -489,7 +489,7 @@ describe('LobbyScreen', () => {
       expect(within(card).getByRole('button', { name: t('lobby.add.action') })).toBeDefined();
     });
 
-    it('should take an avatar nobody else in the room has', async () => {
+    it('should take any avatar, also one that someone else in the room has', async () => {
       // Arrange
       const { t, send } = await renderLobby(aRoom(AS_LUIS));
       fireEvent.click(
@@ -498,13 +498,43 @@ describe('LobbyScreen', () => {
 
       // Act: Ana has the first face in teal.
       fireEvent.click(screen.getByRole('button', { name: t('avatarPicker.colors.teal') }));
-      const taken = screen.getByRole('button', { name: t('avatarPicker.face', { number: 1 }) });
-      fireEvent.click(screen.getByRole('button', { name: t('avatarPicker.face', { number: 4 }) }));
+      fireEvent.click(screen.getByRole('button', { name: t('avatarPicker.face', { number: 1 }) }));
       fireEvent.click(screen.getByRole('button', { name: t('avatarPicker.use') }));
 
       // Assert
-      expect(taken).toHaveProperty('disabled', true);
-      expect(send).toHaveBeenCalledWith({ type: 'change-avatar', face: 'face-04', color: 'teal' });
+      expect(send).toHaveBeenCalledWith({ type: 'change-avatar', face: 'face-01', color: 'teal' });
+    });
+
+    it('should leave out the avatar of someone with the same nickname', async () => {
+      // Arrange: Luis renames himself «ana» in this lobby, where Ana has the first face in teal.
+      const room = aRoom(AS_LUIS);
+      const players = room.players.map((player) =>
+        player.playerId === AS_LUIS.playerId ? { ...player, nickname: 'ana' } : player,
+      );
+      const { t } = await renderLobby({ ...room, players });
+      fireEvent.click(
+        screen.getByRole('button', { name: t('lobby.toChangeAvatar', { name: 'ana' }) }),
+      );
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('avatarPicker.colors.teal') }));
+
+      // Assert
+      const anas = screen.getByRole('button', { name: t('avatarPicker.face', { number: 1 }) });
+      expect(anas).toHaveProperty('disabled', true);
+    });
+
+    it('should say so when someone with the same nickname took that avatar meanwhile', async () => {
+      // Arrange
+      const { t, deliver } = await renderLobby(aRoom(AS_LUIS));
+
+      // Act
+      act(() =>
+        deliver({ type: 'error', code: 'nickname-and-avatar-taken', command: 'change-avatar' }),
+      );
+
+      // Assert
+      expect(screen.getByRole('alert').textContent).toBe(t('roomErrors.nickname-and-avatar-taken'));
     });
   });
 });

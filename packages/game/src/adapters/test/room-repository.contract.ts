@@ -10,22 +10,25 @@ function room(id = 'TestRoomId', hostId = 'TestAnaId', code = 'K7M2Q'): Room {
     {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
+      hostAvatar: new AvatarVO('face-01', 'khaki'),
       groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code,
     },
     new FixedIdGenerator(id, hostId),
-    new FixedRandomness(),
   );
 }
 
 /** A new player joins with the next free avatar. */
 function join(saved: Room, name: string): void {
   saved.join(
-    { nickname: name, identity: `Test${name}Identity` },
+    {
+      nickname: name,
+      identity: `Test${name}Identity`,
+      avatar: saved.suggestAvatar(new FixedRandomness()),
+    },
     new FixedIdGenerator(`Test${name}Id`),
-    new FixedRandomness(),
   );
 }
 
@@ -162,6 +165,24 @@ export function describeRoomRepositoryContract(
         // Assert
         const found = await repository.findById('TestRoomId');
         expect(comparable(found?.toSnapshot())).toEqual(comparable(saved.toSnapshot()));
+      });
+
+      it('should keep two players with the same avatar and different nicknames', async () => {
+        // Arrange
+        const repository = await create();
+        const saved = room();
+        saved.join(
+          { nickname: 'Luis', identity: 'TestLuisIdentity', avatar: saved.host.avatar },
+          new FixedIdGenerator('TestLuisId'),
+        );
+
+        // Act
+        await repository.save(saved);
+
+        // Assert
+        const found = await repository.findById('TestRoomId');
+        const [ana, luis] = found?.players ?? [];
+        expect(luis?.avatar.equals(ana!.avatar)).toBe(true);
       });
 
       it('should keep only the last save of a room', async () => {

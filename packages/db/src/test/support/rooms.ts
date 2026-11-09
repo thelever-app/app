@@ -1,4 +1,4 @@
-import { Room, type GameSettings, type IdGenerator } from '@thelever-app/game';
+import { AvatarVO, Room, type GameSettings, type IdGenerator } from '@thelever-app/game';
 import { SequentialRandomness } from '@thelever-app/game/in-memory';
 
 /** What a test game copies from its room. */
@@ -25,16 +25,19 @@ export function roomOf(
     {
       hostNickname: host,
       hostIdentity: `Test${host}Identity`,
+      hostAvatar: new AvatarVO('face-01', 'khaki'),
       groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code,
     },
     idGenerator,
-    randomness,
   );
   for (const guest of guests) {
-    room.join({ nickname: guest, identity: `Test${guest}Identity` }, idGenerator, randomness);
+    room.join(
+      { nickname: guest, identity: `Test${guest}Identity`, avatar: room.suggestAvatar(randomness) },
+      idGenerator,
+    );
   }
   return room;
 }

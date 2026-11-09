@@ -2,6 +2,7 @@ import { CONTRACT_VERSION } from '@thelever-app/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import { tokenOf } from '../../support/fake-token-verifier.ts';
 import {
+  JOIN_AVATAR,
   lobbyOfThree,
   post,
   ROOM_CHOICES,
@@ -94,7 +95,10 @@ describe('the lobby over the room sockets', () => {
     const { server: started, roomId, ana } = await connectedLobby();
 
     // Act
-    await post(`${started.http}/rooms/${roomId}/players`, 'pablo', { nickname: 'Pablo' });
+    await post(`${started.http}/rooms/${roomId}/players`, 'pablo', {
+      nickname: 'Pablo',
+      avatar: JOIN_AVATAR,
+    });
 
     // Assert
     const state = await ana.next('room-state');
@@ -135,22 +139,18 @@ describe('the lobby over the room sockets', () => {
     });
   });
 
-  it('should show everyone the avatar a player takes, and refuse one already taken', async () => {
+  it('should show everyone the avatar a player takes, even one someone else has', async () => {
     // Arrange
     const { server: started, roomId, ana, luis } = await connectedLobby();
     const before = await stateSeenBy(started.url, 'ana', roomId);
-    const taken = before.players.find(({ nickname }) => nickname === 'Ana')!.avatar;
-    const free = { face: 'face-12', color: 'stone' } as const;
+    const anas = before.players.find(({ nickname }) => nickname === 'Ana')!.avatar;
 
     // Act
-    luis.send({ type: 'change-avatar', ...free });
+    luis.send({ type: 'change-avatar', ...anas });
     const seen = await ana.next('room-state');
-    luis.received.length = 0;
-    luis.send({ type: 'change-avatar', ...taken });
 
     // Assert
-    expect(seen.players.find(({ nickname }) => nickname === 'Luis')?.avatar).toEqual(free);
-    expect((await luis.next('error')).code).toBe('avatar-taken');
+    expect(seen.players.find(({ nickname }) => nickname === 'Luis')?.avatar).toEqual(anas);
   });
 
   it('should let a player add a dilemma that nobody can tell is theirs, and the host remove it', async () => {

@@ -78,7 +78,8 @@ export async function composeRealtimeServer(
   // phase sets the timer of its round in this instance.
   const clock = new SystemClock();
   const roomLock = new KeyedLock();
-  const queries = gameQueries({ ...repositories, catalog });
+  const randomness = new CryptoRandomness();
+  const queries = gameQueries({ ...repositories, catalog, randomness });
   const timers = new RoundTimers(
     (roomId) => commands.runOutRound.execute({ roomId }),
     clock,
@@ -100,7 +101,7 @@ export async function composeRealtimeServer(
     catalog,
     notifier: notifierFor(socketNotifier),
     idGenerator: new RandomIdGenerator(),
-    randomness: new CryptoRandomness(),
+    randomness,
     clock,
   });
 

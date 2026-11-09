@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { Avatar } from '../avatar/avatar.tsx';
+import { namesakesOf } from '../avatar/namesakes.ts';
 import { Icon } from '../components/icon.tsx';
 import { useLobby } from '../room/room-provider.tsx';
 import { AddDilemmaSheet } from './add-dilemma-sheet.tsx';
@@ -230,7 +231,7 @@ export function LobbyScreen() {
       </main>
 
       <footer className={styles.footer}>
-        {rejection?.command === 'start-game' && (
+        {(rejection?.command === 'start-game' || rejection?.command === 'change-avatar') && (
           <p role="alert" className={styles.rejection}>
             {t(`roomErrors.${rejection.code}`, { defaultValue: t('roomErrors.unknown') })}
           </p>
@@ -277,9 +278,10 @@ export function LobbyScreen() {
       {open.sheet === 'avatar' && self && (
         <AvatarPickerSheet
           current={self.avatar}
-          taken={lobby.players
-            .filter(({ playerId }) => playerId !== lobby.playerId)
-            .map(({ avatar }) => avatar)}
+          taken={namesakesOf(
+            self.nickname,
+            lobby.players.filter(({ playerId }) => playerId !== lobby.playerId),
+          ).map(({ avatar }) => avatar)}
           onChoose={({ face, color }: AvatarDto) => send({ type: 'change-avatar', face, color })}
           onClose={close}
         />

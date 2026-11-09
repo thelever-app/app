@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RoomSettingsDto } from '../client-messages.ts';
+import { AvatarDto, RoomSettingsDto } from '../client-messages.ts';
 
 /** GET /rooms/by-code/:code: what a player sees of a room before entering it. */
 export const RoomPreviewResponseDto = z.strictObject({
@@ -7,7 +7,10 @@ export const RoomPreviewResponseDto = z.strictObject({
   hostNickname: z.string().min(1),
   variant: RoomSettingsDto.shape.variant,
   adultsOnly: z.boolean(),
-  playerCount: z.number().int().positive(),
+  /** Who is inside, in the order they came in, without their ids or identities. */
+  players: z.array(z.strictObject({ nickname: z.string().min(1), avatar: AvatarDto })).min(1),
+  /** An avatar nobody inside has, for whoever is about to join. */
+  suggestedAvatar: AvatarDto,
 });
 
 export type RoomPreviewResponseDto = z.infer<typeof RoomPreviewResponseDto>;

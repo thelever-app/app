@@ -1,11 +1,11 @@
 import { AddingDilemmasNotAllowedError } from '../errors/adding-dilemmas-not-allowed.error.ts';
-import { AvatarTakenError } from '../errors/avatar-taken.error.ts';
 import { DilemmaNotSuitableError } from '../errors/dilemma-not-suitable.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { GameInProgressError } from '../errors/game-in-progress.error.ts';
 import { GameNotInProgressError } from '../errors/game-not-in-progress.error.ts';
 import { HostCannotBeExpelledError } from '../errors/host-cannot-be-expelled.error.ts';
 import { HostMissingError } from '../errors/host-missing.error.ts';
+import { NicknameAndAvatarTakenError } from '../errors/nickname-and-avatar-taken.error.ts';
 import { NotEnoughPlayersError } from '../errors/not-enough-players.error.ts';
 import { NotHostError } from '../errors/not-host.error.ts';
 import { PlayerExpelledError } from '../errors/player-expelled.error.ts';
@@ -23,6 +23,7 @@ import { pickOne } from '../services/random-choice.ts';
 import { AvatarVO } from '../vos/avatar.vo.ts';
 import { toGroupNature, toPlace, type GroupNature, type Place } from '../vos/group.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
+import { NicknameVO } from '../vos/nickname.vo.ts';
 import { RoomCodeVO } from '../vos/room-code.vo.ts';
 import {
   RoomSettingsVO,
@@ -75,6 +76,7 @@ export interface RoomSnapshot {
 export interface CreateRoomProps {
   readonly hostNickname: string;
   readonly hostIdentity: string;
+  readonly hostAvatar: AvatarVO;
   readonly groupNature: string;
   readonly place: string;
   /** The language of the device of the host, which the dilemmas use until the host changes it. */
@@ -125,15 +127,11 @@ export class Room {
   }
 
   /** The room is born with its host, who is its first player, and the default settings. */
-  static create(props: CreateRoomProps, idGenerator: IdGenerator, randomness: Randomness): Room {
+  static create(props: CreateRoomProps, idGenerator: IdGenerator): Room {
     const id = idGenerator.generate();
     const settings = RoomSettingsVO.defaults(props.dilemmaLanguage).toSnapshot();
     const host = Player.create(
-      {
-        nickname: props.hostNickname,
-        identity: props.hostIdentity,
-        avatar: pickOne(AvatarVO.all(), randomness),
-      },
+      { nickname: props.hostNickname, identity: props.hostIdentity, avatar: props.hostAvatar },
       idGenerator,
     );
     const { code, groupNature, place } = props;
@@ -190,13 +188,16 @@ export class Room {
   }
 
   /**
-   * A new player joins with a random avatar nobody in the room has. Whoever is already in the room
-   * gets their player back, so joining twice changes nothing.
+   * A new player joins with the avatar they chose. Whoever is already in the room gets their player
+   * back, so joining twice changes nothing.
    */
   join(
-    { nickname, identity }: { readonly nickname: string; readonly identity: string },
+    {
+      nickname,
+      identity,
+      avatar,
+    }: { readonly nickname: string; readonly identity: string; readonly avatar: AvatarVO },
     idGenerator: IdGenerator,
-    randomness: Randomness,
   ): Player {
     const existing = this.playerWith(identity);
     if (existing) {
@@ -210,11 +211,9 @@ export class Room {
     if (this.#expelledIdentities.has(identity)) throw new PlayerExpelledError(this.id);
     if (this.#players.length >= MAXIMUM_PLAYERS) throw new RoomFullError(this.id);
 
-    const free = AvatarVO.all().filter((avatar) => !this.#isWorn(avatar));
-    const player = Player.create(
-      { nickname, identity, avatar: pickOne(free, randomness) },
-      idGenerator,
-    );
+    this.#ensureNobodyLooksTheSame(new NicknameVO(nickname), avatar);
+
+    const player = Player.create({ nickname, identity, avatar }, idGenerator);
     this.#players.push(player);
     this.#changeLobby('player-joined');
     return player;
@@ -229,11 +228,17 @@ export class Room {
     return this.#players.find((player) => player.identity === identity);
   }
 
-  /** The player changes to an avatar nobody else in the room has. */
+  /** At random, an avatar nobody in the room has, for whoever is about to join. */
+  suggestAvatar(randomness: Randomness): AvatarVO {
+    const free = AvatarVO.all().filter((avatar) => !this.#isWorn(avatar));
+    return pickOne(free, randomness);
+  }
+
+  /** The player changes to any avatar but one that someone with the same nickname has. */
   changeAvatar(playerId: string, avatar: AvatarVO): void {
     const player = this.#player(playerId);
     if (player.avatar.equals(avatar)) return;
-    if (this.#isWorn(avatar)) throw new AvatarTakenError(avatar.face, avatar.color);
+    this.#ensureNobodyLooksTheSame(new NicknameVO(player.nickname), avatar, playerId);
 
     player.wear(avatar);
     this.#changeLobby('avatar-changed');
@@ -486,6 +491,17 @@ export class Room {
 
   #isWorn(avatar: AvatarVO): boolean {
     return this.#players.some((player) => player.avatar.equals(avatar));
+  }
+
+  /** Two players never share both the nickname and the avatar, so they can always be told apart. */
+  #ensureNobodyLooksTheSame(nickname: NicknameVO, avatar: AvatarVO, playerId?: string): void {
+    const lookalike = this.#players.some(
+      (other) =>
+        other.id !== playerId &&
+        other.avatar.equals(avatar) &&
+        new NicknameVO(other.nickname).sameAs(nickname),
+    );
+    if (lookalike) throw new NicknameAndAvatarTakenError(nickname.value, avatar.face, avatar.color);
   }
 
   #suits(dilemma: LobbyDilemma): boolean {

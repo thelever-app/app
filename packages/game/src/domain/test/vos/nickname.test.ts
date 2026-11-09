@@ -36,4 +36,26 @@ describe('NicknameVO', () => {
       expect(vo.value).toBe('Ana');
     });
   });
+
+  describe('sameAs', () => {
+    it.each([
+      ['Ana', 'Ana'],
+      ['Ana', 'ana'],
+      ['Ana', 'Aná'],
+      ['José', 'JOSE'],
+      ['Ana', '  ana '],
+    ])('should take %s and %s for the same nickname', (one, other) => {
+      // Act & Assert
+      expect(new NicknameVO(one).sameAs(new NicknameVO(other))).toBe(true);
+    });
+
+    it.each([
+      ['Ana', 'Anna'],
+      ['Ana', 'Ana María'],
+      ['Luis', 'Lu'],
+    ])('should tell %s from %s', (one, other) => {
+      // Act & Assert
+      expect(new NicknameVO(one).sameAs(new NicknameVO(other))).toBe(false);
+    });
+  });
 });

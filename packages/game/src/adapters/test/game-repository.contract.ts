@@ -3,6 +3,7 @@ import type { GameRepository } from '../../application/ports/game-repository.por
 import type { RoomRepository } from '../../application/ports/room-repository.port.ts';
 import { Game, type GameDilemma, type GameSettings } from '../../domain/entities/game.ts';
 import { Room } from '../../domain/entities/room.ts';
+import { AvatarVO } from '../../domain/vos/avatar.vo.ts';
 import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.ts';
 import { FixedRandomness } from '../../domain/test/support/fixed-randomness.ts';
 
@@ -55,18 +56,21 @@ export function describeGameRepositoryContract(
       {
         hostNickname: 'Ana',
         hostIdentity: 'TestAnaIdentity',
+        hostAvatar: new AvatarVO('face-01', 'khaki'),
         groupNature: 'family',
         place: 'remote',
         dilemmaLanguage: 'es',
         code: 'K7M2Q',
       },
       new FixedIdGenerator('TestRoomId', 'TestAnaId'),
-      new FixedRandomness(),
     );
     room.join(
-      { nickname: 'Luis', identity: 'TestLuisIdentity' },
+      {
+        nickname: 'Luis',
+        identity: 'TestLuisIdentity',
+        avatar: room.suggestAvatar(new FixedRandomness()),
+      },
       new FixedIdGenerator('TestLuisId'),
-      new FixedRandomness(),
     );
     await rooms.save(room);
     // Each origin, so a repository that loses them fails.

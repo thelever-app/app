@@ -132,3 +132,23 @@
 .submit {
   margin-top: auto;
 }
+
+/* The avatar and the nickname of the player, side by side. */
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.identity .field {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+/* A soft notice under a field, which does not stop the player. */
+.notice {
+  margin: -8px 0 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-ink-muted);
+}

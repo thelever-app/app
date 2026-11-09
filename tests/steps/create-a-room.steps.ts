@@ -44,6 +44,8 @@ Given('a player on the home screen', function (this: GameWorld) {
 
 When('the player creates a room', async function (this: GameWorld) {
   this.beginRoomCreation(this.player);
+  await this.driver.openRoomCreation(this.player);
+  this.avatar = await this.driver.avatarSeenBy(this.player);
   await this.host();
 });
 
@@ -59,10 +61,22 @@ Then('the player becomes the host of that room', async function (this: GameWorld
   assert.ok(await this.driver.isHost(this.player));
 });
 
-Then('the host gets a random avatar', async function (this: GameWorld) {
-  const host = await this.host();
-  const players = await this.driver.playersSeenBy(host);
-  assert.ok(players.find(({ nickname }) => nickname === host)?.avatar, 'the host has no avatar');
+Then(
+  /^the host (?:plays with the random avatar shown before creating the room|enters the lobby with that avatar)$/,
+  async function (this: GameWorld) {
+    assert.ok(this.avatar, 'no step saw the avatar before the room was created');
+    assert.equal(await this.avatarOf(await this.host()), this.avatar);
+  },
+);
+
+Given('a player creating a room', async function (this: GameWorld) {
+  this.player = SOMEONE.player;
+  this.beginRoomCreation(this.player);
+  await this.driver.openRoomCreation(this.player);
+});
+
+When('creates the room', async function (this: GameWorld) {
+  await this.host();
 });
 
 Then(
