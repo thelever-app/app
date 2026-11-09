@@ -17,8 +17,8 @@ import { RoomPreviewEndpoint } from '../rooms/http/room-preview.endpoint.ts';
 import { SearchDilemmasEndpoint } from '../rooms/http/search-dilemmas.endpoint.ts';
 import { RandomIdGenerator } from '../rooms/random-id-generator.ts';
 import { SystemClock } from '../rooms/system-clock.ts';
-import { TotalTimeTimers } from '../rooms/total-time-timers.ts';
-import { decisionPhaseCommandHandlers } from '../rooms/sockets/decision-phase-commands.ts';
+import { RoundTimers } from '../rooms/round-timers.ts';
+import { roundCommandHandlers } from '../rooms/sockets/round-commands.ts';
 import { LeaveRoomHandler } from '../rooms/sockets/leave-room.handler.ts';
 import { OwnStateCommandHandler } from '../rooms/sockets/own-state-command.handler.ts';
 import type { RunCommand } from '../rooms/run-command.ts';
@@ -75,12 +75,13 @@ export async function composeRealtimeServer(
   // 2. The queries, and with them what sends each player the state of their room. One holder per
   // room at a time in this instance: its commands never interleave, and an event of the room
   // another instance published waits for the command in progress. Sending a game in its decision
-  // phase sets the timer of its total time in this instance.
+  // phase sets the timer of its round in this instance.
   const clock = new SystemClock();
   const roomLock = new KeyedLock();
   const queries = gameQueries({ ...repositories, catalog });
-  const timers = new TotalTimeTimers(
-    (roomId) => commands.runOutTotalTime.execute({ roomId }),
+  const timers = new RoundTimers(
+    (roomId) => commands.runOutRound.execute({ roomId }),
+    clock,
     roomLock,
     runCommand,
     logger,
@@ -188,7 +189,7 @@ function roomSocketServer(
     ),
     new AnswerDilemmaHandler(commands.answerDilemma, roomLock, stateSender, runCommand),
     ...lobbyCommandHandlers(commands, roomLock, runCommand),
-    ...decisionPhaseCommandHandlers(commands, roomLock, runCommand),
+    ...roundCommandHandlers(commands, roomLock, runCommand),
     new LeaveRoomHandler(commands.leaveRoom, socketNotifier, roomLock, runCommand),
     new OwnStateCommandHandler(
       'report-dilemma',

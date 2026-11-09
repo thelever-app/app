@@ -20,7 +20,7 @@ async function nominalGame(server: Awaited<ReturnType<typeof startRoomServer>>) 
   return { roomId, ana, luis, marta, states };
 }
 
-describe('the decision phase over the room sockets', () => {
+describe('the rounds over the room sockets', () => {
   let server: Awaited<ReturnType<typeof startRoomServer>> | undefined;
 
   afterEach(async () => {
@@ -28,7 +28,7 @@ describe('the decision phase over the room sockets', () => {
     server = undefined;
   });
 
-  it('should send each player the total time, the time of the server and their prediction subset', async () => {
+  it('should send each player the first round, its time, the time of the server and their prediction subset', async () => {
     // Arrange
     server = await startRoomServer();
 
@@ -37,9 +37,11 @@ describe('the decision phase over the room sockets', () => {
 
     // Assert
     for (const state of states) {
-      const ends = Date.parse(state.totalTimeEndsAt);
-      expect(ends - Date.parse(state.serverTime)).toBeGreaterThan(5 * 60_000);
-      expect(state.phase).toBe('decision');
+      expect(state.round).toMatchObject({ position: 0, phase: 'decision', revealedBy: null });
+      const left = Date.parse(state.round.endsAt) - Date.parse(state.serverTime);
+      expect(left).toBeGreaterThan(55_000);
+      expect(left).toBeLessThanOrEqual(60_000);
+      expect(state.reveal).toBeNull();
       for (const dilemma of state.dilemmas) {
         expect(dilemma.predictionSubset).toHaveLength(2);
         expect(dilemma.predictionSubset).not.toContain(state.playerId);
@@ -47,12 +49,11 @@ describe('the decision phase over the room sockets', () => {
     }
   });
 
-  it('should raise the progress of a nominal answer only once every prediction is made', async () => {
+  it('should tell the others who answered only once every prediction is made', async () => {
     // Arrange
     server = await startRoomServer();
     const { ana, luis, states } = await nominalGame(server);
-    const luisState = states[1]!;
-    const [first] = luisState.dilemmas;
+    const [first] = states[1]!.dilemmas;
     const vote = first!.options[0]!.optionId;
 
     // Act
@@ -71,37 +72,58 @@ describe('the decision phase over the room sockets', () => {
     expect(draft.answers).toEqual([
       { dilemmaId: first!.dilemmaId, vote, matchPrediction: 1, votePredictions: [] },
     ]);
-    const progress = await ana.next('progress-updated');
-    expect(progress.progress).toBe(1);
+    expect(await ana.next('player-answered')).toMatchObject({ playerId: states[1]!.playerId });
   });
 
-  it('should let the host start the reveal, and tell everyone', async () => {
+  it('should let the host reveal the dilemma early, and tell everyone what it shows', async () => {
     // Arrange
     server = await startRoomServer();
     const { ana, luis } = await nominalGame(server);
 
     // Act
-    ana.send({ type: 'start-reveal' });
+    ana.send({ type: 'reveal-early' });
 
     // Assert
-    expect((await luis.next('game-state')).phase).toBe('reveal');
-    expect((await ana.next('game-state')).phase).toBe('reveal');
+    const seen = await luis.next('game-state');
+    expect(seen.round).toMatchObject({ phase: 'reveal', revealedBy: 'host' });
+    expect(seen.reveal).toMatchObject({ position: 0, didNotVoteCount: 3 });
+    expect((await ana.next('game-state')).round.phase).toBe('reveal');
   });
 
-  it('should turn down a reveal started by anyone but the host', async () => {
+  it('should turn down an early reveal by anyone but the host', async () => {
     // Arrange
     server = await startRoomServer();
     const { luis } = await nominalGame(server);
 
     // Act
-    luis.send({ type: 'start-reveal' });
+    luis.send({ type: 'reveal-early' });
 
     // Assert
     expect(await luis.next('error')).toEqual({
       type: 'error',
-      command: 'start-reveal',
+      command: 'reveal-early',
       code: 'not-host',
     });
+  });
+
+  it('should take everyone to the next round when any player moves on, and say who', async () => {
+    // Arrange
+    server = await startRoomServer();
+    const { ana, luis, marta, states } = await nominalGame(server);
+    ana.send({ type: 'reveal-early' });
+    await Promise.all([ana, luis, marta].map((client) => client.next('game-state')));
+
+    // Act
+    marta.send({ type: 'move-on', fromPosition: 0 });
+
+    // Assert
+    const seen = await luis.next('game-state');
+    expect(seen.round).toMatchObject({
+      position: 1,
+      phase: 'decision',
+      movedOnBy: states[2]!.playerId,
+    });
+    expect(seen.reveal).toBeNull();
   });
 
   it('should pass the role of a host who leaves, and close their socket', async () => {
@@ -117,6 +139,20 @@ describe('the decision phase over the room sockets', () => {
     const after = await luis.next('game-state');
     expect(after.hostId).toBe(states[1]!.playerId);
     expect(after.players.find(({ playerId }) => playerId === states[0]!.playerId)?.left).toBe(true);
+  });
+
+  it('should close every socket of a player who leaves, also another tab', async () => {
+    // Arrange
+    server = await startRoomServer();
+    const { roomId, luis } = await nominalGame(server);
+    const otherTab = await TestClient.connected(server.url, 'luis', roomId, 'game-state');
+
+    // Act
+    luis.send({ type: 'leave-room' });
+
+    // Assert
+    await luis.closed();
+    await otherTab.closed();
   });
 
   it('should let a player skip a dilemma they reported as offensive', async () => {

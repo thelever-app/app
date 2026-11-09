@@ -1,24 +1,32 @@
-import type { StartRevealUseCase } from '@thelever-app/game';
+import type { MoveOnUseCase, RevealEarlyUseCase } from '@thelever-app/game';
 import type { KeyedLock } from '../../concurrency/keyed-lock.ts';
 import type { RunCommand } from '../run-command.ts';
 import { RoomCommandHandler } from './room-command.handler.ts';
 import type { SocketMessageHandler } from './socket-message-handler.ts';
 
-/** The use cases behind the commands of the decision phase that every player learns of by an event. */
-export interface DecisionPhaseUseCases {
-  readonly startReveal: StartRevealUseCase;
+/** The use cases behind the commands of the rounds that every player learns of by an event. */
+export interface RoundUseCases {
+  readonly revealEarly: RevealEarlyUseCase;
+  readonly moveOn: MoveOnUseCase;
 }
 
-/** Starting the reveal: every screen, the one of the host too, changes through its event. */
-export function decisionPhaseCommandHandlers(
-  useCases: DecisionPhaseUseCases,
+/** Revealing early and moving on: every screen, the one who sent it too, changes through its event. */
+export function roundCommandHandlers(
+  useCases: RoundUseCases,
   roomLock: KeyedLock,
   runCommand: RunCommand,
 ): SocketMessageHandler[] {
   return [
     new RoomCommandHandler(
-      'start-reveal',
-      (_message, { roomId, playerId }) => useCases.startReveal.execute({ roomId, playerId }),
+      'reveal-early',
+      (_message, { roomId, playerId }) => useCases.revealEarly.execute({ roomId, playerId }),
+      roomLock,
+      runCommand,
+    ),
+    new RoomCommandHandler(
+      'move-on',
+      ({ fromPosition }, { roomId, playerId }) =>
+        useCases.moveOn.execute({ roomId, playerId, fromPosition }),
       roomLock,
       runCommand,
     ),

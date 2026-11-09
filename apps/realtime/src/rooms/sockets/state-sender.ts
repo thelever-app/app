@@ -19,14 +19,14 @@ export class StateSender {
   readonly #getRoomState: GetRoomStateUseCase;
   readonly #getGameState: GetGameStateUseCase;
   readonly #clock: Clock;
-  /** Whoever sends a game in its decision phase makes sure its total time runs out here. */
-  readonly #onDecisionPhase: (roomId: string, totalTimeEndsAt: Date) => void;
+  /** Whoever sends a round in its decision phase makes sure its time runs out here. */
+  readonly #onDecisionPhase: (roomId: string, roundEndsAt: Date) => void;
 
   constructor(
     getRoomState: GetRoomStateUseCase,
     getGameState: GetGameStateUseCase,
     clock: Clock,
-    onDecisionPhase: (roomId: string, totalTimeEndsAt: Date) => void,
+    onDecisionPhase: (roomId: string, roundEndsAt: Date) => void,
   ) {
     this.#getRoomState = getRoomState;
     this.#getGameState = getGameState;
@@ -53,13 +53,11 @@ export class StateSender {
           playerId,
           language,
         });
-        if (game.phase === 'decision' && !game.totalTimeRanOut) {
-          this.#onDecisionPhase(roomId, game.totalTimeEndsAt);
-        }
+        if (game.round.phase === 'decision') this.#onDecisionPhase(roomId, game.round.endsAt);
         connection.send({
           type: 'game-state',
           ...game,
-          totalTimeEndsAt: game.totalTimeEndsAt.toISOString(),
+          round: { ...game.round, endsAt: game.round.endsAt.toISOString() },
           serverTime: this.#clock.now().toISOString(),
         });
         return 'sent';

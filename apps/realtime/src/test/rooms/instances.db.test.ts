@@ -128,10 +128,7 @@ describe('the room server on several instances', () => {
       playerId: luis.playerId,
       connected: true,
     });
-    expect(await ana.client.next('progress-updated')).toMatchObject({
-      playerId: luis.playerId,
-      progress: 1,
-    });
+    expect(await ana.client.next('answered-count')).toMatchObject({ answeredCount: 1 });
   });
 
   it('should show the players of an instance that dies as disconnected', async () => {

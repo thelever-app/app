@@ -3,8 +3,8 @@ import { z } from 'zod';
 /**
  * The version of this contract. Client and server agree on it once, when the connection opens.
  * 2 since App Check: a client of 1 could not read the error that turns it down. 3 since the lobby:
- * a connection is to a room, not to a game. 5 since the whole decision phase: predictions, the
- * total time, the reveal, leaving and reporting.
+ * a connection is to a room, not to a game. 5 since the game by rounds: predictions, the time
+ * per dilemma, the reveal of each dilemma, moving on, leaving and reporting.
  */
 export const CONTRACT_VERSION = 5;
 
@@ -65,7 +65,7 @@ export const RoomSettingsDto = z.strictObject({
    */
   categories: z.array(z.string().min(1)).max(20).nullable(),
   dilemmaCount: z.union([z.literal(6), z.literal(8), z.literal(10), z.literal(12)]),
-  totalTimeInMinutes: z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(10)]),
+  timePerDilemmaSeconds: z.union([z.literal(30), z.literal(45), z.literal(60), z.literal(90)]),
   /** Whether a game by categories keeps room for dilemmas in exploration. */
   newDilemmas: z.boolean(),
   /** How many dilemmas each player, the host too, may add in the lobby; none, and nobody adds any. */
@@ -115,9 +115,17 @@ export const AnswerDilemmaDto = z.strictObject({
   traceparent: TraceparentDto.optional(),
 });
 
-/** The host ends the decision phase and starts the reveal, at any moment. */
-export const StartRevealDto = z.strictObject({
-  type: z.literal('start-reveal'),
+/** The host reveals the dilemma of the round without waiting for everyone, at any moment of its decision phase. */
+export const RevealEarlyDto = z.strictObject({
+  type: z.literal('reveal-early'),
+  traceparent: TraceparentDto.optional(),
+});
+
+/** From the reveal of a round, any player takes everyone to the next one. */
+export const MoveOnDto = z.strictObject({
+  type: z.literal('move-on'),
+  /** The position of the round whose reveal the player moves on from, so two at once move one round. */
+  fromPosition: z.number().int().nonnegative(),
   traceparent: TraceparentDto.optional(),
 });
 
@@ -139,7 +147,7 @@ export const ReportDilemmaDto = z.strictObject({
   traceparent: TraceparentDto.optional(),
 });
 
-/** The player skips the dilemma they are on, which they reported as offensive. */
+/** The player skips the dilemma of the round, which they reported as offensive. */
 export const SkipDilemmaDto = z.strictObject({
   type: z.literal('skip-dilemma'),
   dilemmaId: z.string().min(1),
@@ -207,7 +215,8 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   RemoveAddedDilemmaDto,
   ExpelPlayerDto,
   StartGameDto,
-  StartRevealDto,
+  RevealEarlyDto,
+  MoveOnDto,
   LeaveRoomDto,
   ReportDilemmaDto,
   SkipDilemmaDto,
@@ -224,7 +233,8 @@ export const ClientMessageTypeDto = z.enum([
   'remove-added-dilemma',
   'expel-player',
   'start-game',
-  'start-reveal',
+  'reveal-early',
+  'move-on',
   'leave-room',
   'report-dilemma',
   'skip-dilemma',
@@ -246,7 +256,8 @@ export type ExpelPlayerDto = z.infer<typeof ExpelPlayerDto>;
 export type StartGameDto = z.infer<typeof StartGameDto>;
 export type ConnectDto = z.infer<typeof ConnectDto>;
 export type AnswerDilemmaDto = z.infer<typeof AnswerDilemmaDto>;
-export type StartRevealDto = z.infer<typeof StartRevealDto>;
+export type RevealEarlyDto = z.infer<typeof RevealEarlyDto>;
+export type MoveOnDto = z.infer<typeof MoveOnDto>;
 export type LeaveRoomDto = z.infer<typeof LeaveRoomDto>;
 export type ReportReasonDto = z.infer<typeof ReportReasonDto>;
 export type ReportDilemmaDto = z.infer<typeof ReportDilemmaDto>;

@@ -163,7 +163,7 @@ describe('ClientMessageTypeDto', () => {
   });
 });
 
-describe('the messages of the decision phase', () => {
+describe('the messages of the rounds', () => {
   it('should accept an answer with the predictions made so far, or without any', () => {
     // Arrange
     const answer = { type: 'answer-dilemma', dilemmaId: 'dilemma-1', vote: 'option-1' };
@@ -191,7 +191,9 @@ describe('the messages of the decision phase', () => {
 
   it('should accept starting the reveal, leaving and reporting a dilemma', () => {
     // Act & Assert
-    expect(ClientMessageDto.safeParse({ type: 'start-reveal' }).success).toBe(true);
+    expect(ClientMessageDto.safeParse({ type: 'reveal-early' }).success).toBe(true);
+    expect(ClientMessageDto.safeParse({ type: 'move-on', fromPosition: 0 }).success).toBe(true);
+    expect(ClientMessageDto.safeParse({ type: 'move-on', fromPosition: -1 }).success).toBe(false);
     expect(ClientMessageDto.safeParse({ type: 'leave-room' }).success).toBe(true);
     expect(
       ClientMessageDto.safeParse({ type: 'skip-dilemma', dilemmaId: 'dilemma-1' }).success,

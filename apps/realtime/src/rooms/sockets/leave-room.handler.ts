@@ -42,7 +42,9 @@ export class LeaveRoomHandler implements SocketMessageHandler<'leave-room'> {
     } finally {
       release();
     }
-    // Leaving already closed every connection of the player in the room.
+    // The event of leaving closed every connection of the player in this instance, this one too;
+    // if it did not reach here, this one closes anyway.
+    if (!connection.session) return;
     this.#notifier.unregister(session.playerId, connection);
     connection.session = undefined;
     connection.socket.close(1000, 'left');

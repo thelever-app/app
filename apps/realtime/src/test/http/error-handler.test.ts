@@ -16,7 +16,7 @@ function failingWith(error: Error) {
   app.use(
     httpErrorHandler((candidate) => {
       if (candidate instanceof KnownError) return 'room-not-found';
-      if (candidate instanceof ConflictError) return 'dilemma-not-reached';
+      if (candidate instanceof ConflictError) return 'dilemma-not-in-round';
       return undefined;
     }),
   );
@@ -48,7 +48,7 @@ describe('httpErrorHandler', () => {
 
     // Assert
     expect(response.status).toBe(409);
-    expect(response.body).toEqual({ code: 'dilemma-not-reached' });
+    expect(response.body).toEqual({ code: 'dilemma-not-in-round' });
   });
 
   it('should leave any other error to Express, as a fault of the server', async () => {

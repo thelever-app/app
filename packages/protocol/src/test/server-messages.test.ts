@@ -3,7 +3,8 @@ import {
   ConnectionChangedDto,
   ErrorDto,
   GameStateDto,
-  ProgressUpdatedDto,
+  AnsweredCountDto,
+  PlayerAnsweredDto,
   ServerMessageDto,
 } from '../server-messages.ts';
 
@@ -13,11 +14,35 @@ const gameState = {
   gameVersion: 4,
   roomVersion: 2,
   playerId: 'player-2',
-  phase: 'decision',
+  round: {
+    position: 0,
+    phase: 'reveal',
+    endsAt: '2026-11-09T10:01:00.000Z',
+    revealedBy: 'everyone',
+    movedOnBy: null,
+  },
   hostId: 'player-1',
-  totalTimeEndsAt: '2026-11-09T10:06:00.000Z',
   serverTime: '2026-11-09T10:01:12.345Z',
-  totalTimeRanOut: false,
+  answeredCount: 2,
+  reveal: {
+    position: 0,
+    dilemmaId: 'dilemma-1',
+    distribution: [
+      { optionId: 'option-1', count: 1 },
+      { optionId: 'option-2', count: 1 },
+    ],
+    tooFewVotes: false,
+    didNotVoteCount: 0,
+    votes: [
+      { playerId: 'player-1', vote: 'option-2' },
+      { playerId: 'player-2', vote: 'option-1' },
+    ],
+    matchPredictions: [{ playerId: 'player-2', predicted: 1, actual: 0, distance: 1 }],
+    closestIds: ['player-2'],
+    votePredictions: [{ playerId: 'player-2', aboutId: 'player-1', vote: 'option-2', right: true }],
+    personInTheGap: null,
+    addedBy: null,
+  },
   dilemmas: [
     {
       dilemmaId: 'dilemma-1',
@@ -46,7 +71,7 @@ const gameState = {
       playerId: 'player-1',
       nickname: 'Ana',
       avatar: { face: 'face-01', color: 'khaki' },
-      progress: 0,
+      answered: true,
       connected: false,
       left: false,
     },
@@ -54,7 +79,7 @@ const gameState = {
       playerId: 'player-2',
       nickname: 'Luis',
       avatar: { face: 'face-12', color: 'teal' },
-      progress: 1,
+      answered: true,
       connected: true,
       left: false,
     },
@@ -71,11 +96,16 @@ const gameState = {
   didNotVote: [],
 };
 
-const progressUpdated = {
-  type: 'progress-updated',
+const playerAnswered = {
+  type: 'player-answered',
   gameVersion: 5,
   playerId: 'player-1',
-  progress: 3,
+};
+
+const answeredCount = {
+  type: 'answered-count',
+  gameVersion: 5,
+  answeredCount: 3,
 };
 
 const connectionChanged = {
@@ -85,7 +115,7 @@ const connectionChanged = {
   connected: false,
 };
 
-const error = { type: 'error', command: 'answer-dilemma', code: 'dilemma-not-reached' };
+const error = { type: 'error', command: 'answer-dilemma', code: 'dilemma-not-in-round' };
 
 /** The same message without one of its keys. */
 function without(message: object, key: string): object {
@@ -155,23 +185,33 @@ describe('GameStateDto', () => {
     expect(GameStateDto.safeParse({ ...gameState, players: [] }).success).toBe(false);
   });
 
-  it('should reject a negative or fractional progress', () => {
+  it('should reject a negative or fractional position of the round', () => {
     // Arrange
-    const withProgress = (progress: number) => ({
-      ...gameState,
-      players: [{ playerId: 'player-1', nickname: 'Ana', progress, connected: true }],
-    });
+    const at = (position: number) => ({ ...gameState, round: { ...gameState.round, position } });
 
     // Act & Assert
-    expect(GameStateDto.safeParse(withProgress(-1)).success).toBe(false);
-    expect(GameStateDto.safeParse(withProgress(1.5)).success).toBe(false);
+    expect(GameStateDto.safeParse(at(-1)).success).toBe(false);
+    expect(GameStateDto.safeParse(at(1.5)).success).toBe(false);
+  });
+
+  it('should accept no reveal in the decision phase, and only how many answered in an anonymous room', () => {
+    // Arrange
+    const deciding = {
+      ...gameState,
+      round: { ...gameState.round, phase: 'decision', revealedBy: null },
+      reveal: null,
+      players: gameState.players.map((player) => ({ ...player, answered: null })),
+    };
+
+    // Act & Assert
+    expect(GameStateDto.safeParse(deciding).success).toBe(true);
   });
 
   it('should reject an empty nickname or vote', () => {
     // Arrange
     const emptyNickname = {
       ...gameState,
-      players: [{ playerId: 'player-1', nickname: '', progress: 0, connected: true }],
+      players: [{ playerId: 'player-1', nickname: '', answered: null, connected: true }],
     };
     const emptyVote = {
       ...gameState,
@@ -189,7 +229,7 @@ describe('GameStateDto', () => {
     const withOthersAnswers = {
       ...gameState,
       players: [
-        { playerId: 'player-1', nickname: 'Ana', progress: 1, connected: true, answers: [] },
+        { playerId: 'player-1', nickname: 'Ana', answered: true, connected: true, answers: [] },
       ],
     };
 
@@ -217,7 +257,7 @@ describe('GameStateDto versions and connections', () => {
     // Arrange
     const withoutConnection = {
       ...gameState,
-      players: [{ playerId: 'player-1', nickname: 'Ana', progress: 0 }],
+      players: [{ playerId: 'player-1', nickname: 'Ana', answered: null }],
     };
 
     // Act & Assert
@@ -225,49 +265,31 @@ describe('GameStateDto versions and connections', () => {
   });
 });
 
-describe('ProgressUpdatedDto', () => {
-  it('should accept a well-formed message from the network', () => {
-    // Arrange
-    const raw = JSON.parse(JSON.stringify(progressUpdated)) as unknown;
-
-    // Act
-    const result = ProgressUpdatedDto.safeParse(raw);
-
-    // Assert
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual(progressUpdated);
+describe('PlayerAnsweredDto and AnsweredCountDto', () => {
+  it('should accept well-formed messages from the network', () => {
+    // Act & Assert
+    expect(PlayerAnsweredDto.parse(JSON.parse(JSON.stringify(playerAnswered)))).toEqual(
+      playerAnswered,
+    );
+    expect(AnsweredCountDto.parse(JSON.parse(JSON.stringify(answeredCount)))).toEqual(
+      answeredCount,
+    );
   });
 
-  it('should reject an unknown type', () => {
+  it('should reject the vote as an extra key, and who answered in the count', () => {
     // Act & Assert
-    expect(
-      ProgressUpdatedDto.safeParse({ ...progressUpdated, type: 'ProgressUpdated' }).success,
-    ).toBe(false);
-  });
-
-  it('should reject a negative or fractional progress', () => {
-    // Act & Assert
-    expect(ProgressUpdatedDto.safeParse({ ...progressUpdated, progress: -1 }).success).toBe(false);
-    expect(ProgressUpdatedDto.safeParse({ ...progressUpdated, progress: 1.5 }).success).toBe(false);
-  });
-
-  it('should reject the vote as an extra key', () => {
-    // Act & Assert
-    expect(ProgressUpdatedDto.safeParse({ ...progressUpdated, vote: 'option-1' }).success).toBe(
+    expect(PlayerAnsweredDto.safeParse({ ...playerAnswered, vote: 'option-1' }).success).toBe(
+      false,
+    );
+    expect(AnsweredCountDto.safeParse({ ...answeredCount, playerId: 'player-1' }).success).toBe(
       false,
     );
   });
-});
 
-describe('ProgressUpdatedDto versions', () => {
-  it('should reject a progress without the game version', () => {
+  it('should reject them without the game version', () => {
     // Act & Assert
-    expect(ProgressUpdatedDto.safeParse(without(progressUpdated, 'gameVersion')).success).toBe(
-      false,
-    );
-    expect(ProgressUpdatedDto.safeParse({ ...progressUpdated, gameVersion: -1 }).success).toBe(
-      false,
-    );
+    expect(PlayerAnsweredDto.safeParse(without(playerAnswered, 'gameVersion')).success).toBe(false);
+    expect(AnsweredCountDto.safeParse(without(answeredCount, 'gameVersion')).success).toBe(false);
   });
 });
 
@@ -352,15 +374,15 @@ describe('ServerMessageDto', () => {
   it('should tell the messages apart by their type', () => {
     // Act
     const state = ServerMessageDto.parse(gameState);
-    const update = ServerMessageDto.parse(progressUpdated);
+    const update = ServerMessageDto.parse(answeredCount);
     const change = ServerMessageDto.parse(connectionChanged);
     const rejection = ServerMessageDto.parse(error);
 
     // Assert
     expect(state.type).toBe('game-state');
-    expect(update.type === 'progress-updated' && update.progress).toBe(3);
+    expect(update.type === 'answered-count' && update.answeredCount).toBe(3);
     expect(change.type === 'connection-changed' && change.connected).toBe(false);
-    expect(rejection.type === 'error' && rejection.code).toBe('dilemma-not-reached');
+    expect(rejection.type === 'error' && rejection.code).toBe('dilemma-not-in-round');
   });
 
   it('should reject a message no schema knows', () => {
