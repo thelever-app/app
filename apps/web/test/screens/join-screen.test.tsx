@@ -73,6 +73,30 @@ describe('JoinScreen', () => {
     expect(location()).toBe('/join');
   });
 
+  it('should take whoever typed the code to the start when the room turns them away on joining', async () => {
+    // Arrange
+    const { t, location } = await renderAtRoute(<JoinScreen />, {
+      api: fakeRoomApi({
+        previewRoom: vi.fn(async () => PREVIEW),
+        joinRoom: vi.fn(async () => {
+          throw new RoomApiError('room-full');
+        }),
+      }),
+      at: { pathname: '/join/K7M2Q', state: { fromCode: true } },
+      path: '/join/:code',
+    });
+    fireEvent.change(await screen.findByRole('textbox', { name: t('joinRoom.nickname') }), {
+      target: { value: 'Luis' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: t('joinRoom.submit') }));
+
+    // Act
+    fireEvent.click(await screen.findByRole('button', { name: t('joinRefusal.room-full.action') }));
+
+    // Assert
+    expect(location()).toBe('/');
+  });
+
   it('should leave the room behind, at full screen, when it turns the player away on joining', async () => {
     // Arrange
     const { t } = await renderJoin(

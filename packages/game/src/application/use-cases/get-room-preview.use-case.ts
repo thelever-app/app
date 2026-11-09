@@ -5,6 +5,8 @@ import type { RoomRepository } from '../ports/room-repository.port.ts';
 
 export interface GetRoomPreviewInput {
   readonly code: string;
+  /** Who asks, from their verified token: if they are already inside, they are not shown. */
+  readonly identity: string;
 }
 
 interface PreviewAvatar {
@@ -17,7 +19,7 @@ export interface GetRoomPreviewOutput {
   readonly hostNickname: string;
   readonly variant: RoomVariant;
   readonly adultsOnly: boolean;
-  /** Who is inside, in the order they came in, without their ids or identities. */
+  /** Who else is inside, in the order they came in, without their ids or identities. */
   readonly players: readonly { readonly nickname: string; readonly avatar: PreviewAvatar }[];
   /** An avatar nobody inside has, for whoever is about to join. */
   readonly suggestedAvatar: PreviewAvatar;
@@ -33,7 +35,7 @@ export class GetRoomPreviewUseCase {
     this.#randomness = randomness;
   }
 
-  async execute({ code }: GetRoomPreviewInput): Promise<GetRoomPreviewOutput> {
+  async execute({ code, identity }: GetRoomPreviewInput): Promise<GetRoomPreviewOutput> {
     const room = await this.#roomRepository.findByCode(code);
     if (!room) throw new RoomCodeNotFoundError(code);
 
@@ -43,10 +45,12 @@ export class GetRoomPreviewUseCase {
       hostNickname: room.host.nickname,
       variant: room.settings.variant,
       adultsOnly: room.settings.adultsOnly,
-      players: room.players.map(({ nickname, avatar }) => ({
-        nickname,
-        avatar: { face: avatar.face, color: avatar.color },
-      })),
+      players: room.players
+        .filter((player) => player.identity !== identity)
+        .map(({ nickname, avatar }) => ({
+          nickname,
+          avatar: { face: avatar.face, color: avatar.color },
+        })),
       suggestedAvatar: { face, color },
     };
   }

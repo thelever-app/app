@@ -102,7 +102,9 @@ describe('CreateRoomForm', () => {
     // Arrange
     const { t, api, fill, submit } = await renderForm(async () => CREATED);
     fill();
-    fireEvent.click(screen.getByRole('button', { name: t('avatarPicker.change') }));
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(`^${t('avatarPicker.change')}`) }),
+    );
     const picker = screen.getByRole('dialog');
 
     // Act

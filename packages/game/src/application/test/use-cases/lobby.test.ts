@@ -59,7 +59,10 @@ describe('GetRoomPreviewUseCase', () => {
     const { code } = (await roomRepository.findById(roomId))!;
 
     // Act
-    const preview = await getRoomPreview.execute({ code: code.toLowerCase() });
+    const preview = await getRoomPreview.execute({
+      code: code.toLowerCase(),
+      identity: 'TestPabloIdentity',
+    });
 
     // Assert
     expect(preview).toMatchObject({
@@ -76,7 +79,7 @@ describe('GetRoomPreviewUseCase', () => {
     const { code } = (await roomRepository.findById(roomId))!;
 
     // Act
-    const { players } = await getRoomPreview.execute({ code });
+    const { players } = await getRoomPreview.execute({ code, identity: 'TestPabloIdentity' });
 
     // Assert
     expect(players).toEqual([
@@ -86,6 +89,18 @@ describe('GetRoomPreviewUseCase', () => {
     ]);
   });
 
+  it('should leave out the player of whoever asks, who is already inside', async () => {
+    // Arrange
+    const { getRoomPreview, roomRepository, roomId } = await arrange();
+    const { code } = (await roomRepository.findById(roomId))!;
+
+    // Act
+    const { players } = await getRoomPreview.execute({ code, identity: 'TestLuisIdentity' });
+
+    // Assert
+    expect(players.map(({ nickname }) => nickname)).toEqual(['Ana', 'Marta']);
+  });
+
   it('should suggest, at random, an avatar nobody inside has', async () => {
     // Arrange: Ana wears the first avatar, so the free ones start at the second.
     const { roomRepository, roomId } = await arrange();
@@ -93,7 +108,10 @@ describe('GetRoomPreviewUseCase', () => {
     const getRoomPreview = new GetRoomPreviewUseCase(roomRepository, new FixedRandomness(0));
 
     // Act
-    const { suggestedAvatar } = await getRoomPreview.execute({ code });
+    const { suggestedAvatar } = await getRoomPreview.execute({
+      code,
+      identity: 'TestPabloIdentity',
+    });
 
     // Assert
     const [, second] = AvatarVO.all();
@@ -105,7 +123,9 @@ describe('GetRoomPreviewUseCase', () => {
     const { getRoomPreview } = await arrange();
 
     // Act & Assert
-    await expect(getRoomPreview.execute({ code: 'ZZZZZ' })).rejects.toThrow(RoomCodeNotFoundError);
+    await expect(
+      getRoomPreview.execute({ code: 'ZZZZZ', identity: 'TestPabloIdentity' }),
+    ).rejects.toThrow(RoomCodeNotFoundError);
   });
 });
 

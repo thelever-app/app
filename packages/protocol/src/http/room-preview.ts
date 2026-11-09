@@ -7,8 +7,8 @@ export const RoomPreviewResponseDto = z.strictObject({
   hostNickname: z.string().min(1),
   variant: RoomSettingsDto.shape.variant,
   adultsOnly: z.boolean(),
-  /** Who is inside, in the order they came in, without their ids or identities. */
-  players: z.array(z.strictObject({ nickname: z.string().min(1), avatar: AvatarDto })).min(1),
+  /** Who else is inside, in the order they came in, without their ids or identities; none if alone. */
+  players: z.array(z.strictObject({ nickname: z.string().min(1), avatar: AvatarDto })),
   /** An avatar nobody inside has, for whoever is about to join. */
   suggestedAvatar: AvatarDto,
 });

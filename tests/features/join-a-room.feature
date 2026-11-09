@@ -136,7 +136,7 @@ Feature: Join a room
     When "Luis" joins with the avatar of "Ana"
     Then both players are in the room with the same avatar
 
-  @ui
+  @ui @screen
   Scenario: The player is told the nickname is already in the room
     Given a lobby with a player called "Ana"
     When another player opens its invitation link and types the nickname "ana"

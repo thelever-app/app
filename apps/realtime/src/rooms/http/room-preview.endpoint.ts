@@ -1,6 +1,7 @@
 import type { GetRoomPreviewUseCase } from '@thelever-app/game';
 import { RoomPreviewResponseDto } from '@thelever-app/protocol';
 import type { Request, Response } from 'express';
+import { identityOf } from '../../http/authentication.ts';
 import type { HttpEndpoint } from '../../http/http-endpoint.ts';
 
 /**
@@ -19,7 +20,10 @@ export class RoomPreviewEndpoint implements HttpEndpoint {
   }
 
   async handle(req: Request, res: Response): Promise<void> {
-    const preview = await this.#getRoomPreview.execute({ code: String(req.params.code) });
+    const preview = await this.#getRoomPreview.execute({
+      code: String(req.params.code),
+      identity: identityOf(res),
+    });
     res.status(200).json(RoomPreviewResponseDto.parse(preview));
   }
 }

@@ -56,12 +56,14 @@ export function JoinScreen() {
   }, [api, code]);
   const preview: Preview = answer?.code === code ? answer.preview : { status: 'loading' };
 
-  // Whoever typed the code goes back to it; whoever came by the link or the QR, to the start.
+  // Whoever typed the code goes back to it, as they left it; whoever came by the link or the QR,
+  // to the start. A room that does not exist sends everyone to type another code.
   const fromCode = (useLocation().state as { fromCode?: boolean } | null)?.fromCode === true;
-  const back = () => void navigate(fromCode ? '/join' : '/');
-  const tryAnotherCode = () => void navigate('/join');
+  const back = () => void (fromCode ? navigate(-1) : navigate('/'));
+  const tryAnotherCode = () => void (fromCode ? navigate(-1) : navigate('/join'));
+  const home = () => void navigate('/');
   if (preview.status === 'refused') {
-    const action = preview.code === 'room-code-not-found' ? tryAnotherCode : back;
+    const action = preview.code === 'room-code-not-found' ? tryAnotherCode : home;
     return <JoinRefusal code={preview.code} onAction={action} />;
   }
 

@@ -38,7 +38,9 @@ async function renderForm(joinRoom: JoinRoom, suggestedAvatar = SUGGESTED) {
     fireEvent.click(screen.getByRole('button', { name: t('joinRoom.submit') }));
   };
   const openPicker = () =>
-    fireEvent.click(screen.getByRole('button', { name: t('avatarPicker.change') }));
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(`^${t('avatarPicker.change')}`) }),
+    );
   return { ...rendered, api, onRefused, type, join, openPicker };
 }
 
@@ -72,6 +74,14 @@ describe('JoinRoomForm', () => {
       'Luis',
     );
     expect(shownAvatar()).toEqual(SUGGESTED);
+    expect(
+      screen.getByRole('button', {
+        name: t('avatarPicker.changeCurrent', {
+          face: 5,
+          color: t('avatarPicker.colors.cyan').toLowerCase(),
+        }),
+      }),
+    ).toBeDefined();
   });
 
   it('should join the room with the nickname and the avatar, remember the nickname and enter it', async () => {
@@ -176,6 +186,23 @@ describe('JoinRoomForm', () => {
         t('joinRoom.lookalikeJustJoined', { nickname: 'Luis' }),
       ),
     );
+  });
+
+  it('should forget an avatar refused for a nickname once the player changes the nickname', async () => {
+    // Arrange
+    const { t, join, type } = await renderForm(async () => {
+      throw new RoomApiError('nickname-and-avatar-taken');
+    });
+    join('Luis');
+    await screen.findByRole('dialog');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+    // Act
+    type('Luis B.');
+
+    // Assert
+    await waitFor(() => expect(document.querySelector('[role="alert"]')).toBeNull());
+    expect(submitButton().textContent).toBe(t('joinRoom.submit'));
   });
 
   it.each(['room-full', 'player-expelled', 'room-not-found'] as const)(

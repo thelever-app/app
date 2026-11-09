@@ -26,7 +26,6 @@ import {
   JoinRoomUseCase,
   LobbyChangedEvent,
   NicknameAndAvatarTakenError,
-  NicknameVO,
   PickDilemmasUseCase,
   GameInProgressError,
   NotEnoughPlayersError,
@@ -147,8 +146,6 @@ interface AcceptancePlayer {
   previewPlayers: readonly { readonly nickname: string; readonly avatar: Avatar }[];
   /** The avatar the screen to create or join a room shows as theirs, before they enter. */
   avatar: Avatar | undefined;
-  /** What they typed in the nickname field, before confirming it. */
-  typedNickname: string | undefined;
   /** Whether they were asked to choose another avatar, since someone with their nickname has it. */
   askedForAnotherAvatar: boolean;
   refusal: JoinRefusal | undefined;
@@ -376,7 +373,7 @@ export class AcceptanceDriver implements GameDriver {
   async typeRoomCode(player: string, code: string): Promise<void> {
     const opener = this.#introduce(player);
     try {
-      const preview = await this.#getRoomPreview.execute({ code });
+      const preview = await this.#getRoomPreview.execute({ code, identity: opener.identity });
       opener.roomId = preview.roomId;
       opener.preview = {
         host: preview.hostNickname,
@@ -399,16 +396,12 @@ export class AcceptanceDriver implements GameDriver {
     return this.#playerCalled(player).preview;
   }
 
-  async typeNickname(player: string, nickname: string): Promise<void> {
-    this.#playerCalled(player).typedNickname = nickname;
+  async typeNickname(): Promise<void> {
+    throw new Error('Only the device has a nickname field: the scenario must be @screen');
   }
 
-  /** The screen to join compares what was typed with who is inside, as the room compares them. */
-  async namesakeWarningSeenBy(player: string): Promise<string | undefined> {
-    const { typedNickname, previewPlayers } = this.#playerCalled(player);
-    if (!typedNickname?.trim()) return undefined;
-    const typed = new NicknameVO(typedNickname);
-    return previewPlayers.find(({ nickname }) => new NicknameVO(nickname).sameAs(typed))?.nickname;
+  async namesakeWarningSeenBy(): Promise<string | undefined> {
+    throw new Error('Only the device warns about a namesake: the scenario must be @screen');
   }
 
   async confirmNickname(player: string, nickname: string): Promise<void> {
@@ -938,6 +931,17 @@ export class AcceptanceDriver implements GameDriver {
     return hostId === playerId;
   }
 
+  /** The reveal the application gives `viewer`, with only their own predictions, as the screen does. */
+  async ownPredictionsSeenBy(viewer: string): Promise<{ about: string; right: boolean }[]> {
+    const reveal = await this.revealSeenBy(viewer);
+    const voted = new Set(
+      (reveal?.votes ?? []).flatMap(({ player, vote }) => (vote === null ? [] : player)),
+    );
+    return (reveal?.votePredictions ?? [])
+      .filter(({ player, about }) => player === viewer && voted.has(about))
+      .map(({ about, right }) => ({ about, right }));
+  }
+
   async revealSeenBy(viewer: string): Promise<RevealView | undefined> {
     const { reveal } = await this.#gameStateOf(viewer);
     if (!reveal) return undefined;
@@ -1156,7 +1160,12 @@ export class AcceptanceDriver implements GameDriver {
   async #codeLeadsToTheRoom(player: string): Promise<boolean> {
     const { code, roomId } = await this.#roomStateOf(player);
     if (code.length !== 5) return false;
-    return (await this.#getRoomPreview.execute({ code })).roomId === roomId;
+    // Whoever follows the link or scans the QR: someone who is not in the room yet.
+    const preview = await this.#getRoomPreview.execute({
+      code,
+      identity: identityOf('someone else'),
+    });
+    return preview.roomId === roomId;
   }
 
   /** Whether the application accepts the command; only the refusals given are what the scenario looks for. */
@@ -1220,7 +1229,6 @@ export class AcceptanceDriver implements GameDriver {
       preview: undefined,
       previewPlayers: [],
       avatar: undefined,
-      typedNickname: undefined,
       askedForAnotherAvatar: false,
       refusal: undefined,
       connectionId: undefined,

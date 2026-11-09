@@ -43,6 +43,10 @@ describe('GET /rooms/by-code/:code', () => {
         { nickname: 'Luis', avatar: JOIN_AVATAR },
       ],
     });
+    // Nothing that tells who each one is beyond what they show: no ids, no identities.
+    for (const player of response.body.players) {
+      expect(Object.keys(player).sort()).toEqual(['avatar', 'nickname']);
+    }
     const { suggestedAvatar } = response.body;
     expect([ROOM_CHOICES.avatar, JOIN_AVATAR]).not.toContainEqual(suggestedAvatar);
   });

@@ -155,9 +155,12 @@ export interface GameDriver {
   /** `player` types a code on the join screen, without pressing any button. */
   typeRoomCode(player: string, code: string): Promise<void>;
   roomPreviewSeenBy(player: string): Promise<RoomPreview | undefined>;
-  /** `player` types a nickname on the screen to join, without confirming it. */
+  /** `player` types a nickname on the screen to join, without confirming it. Only on the device (@screen). */
   typeNickname(player: string, nickname: string): Promise<void>;
-  /** The nickname of whoever `player` is told already has the nickname they typed, if anyone. */
+  /**
+   * The nickname of whoever `player` is told already has the nickname they typed, if anyone. Only
+   * on the device (@screen): the screen warns, the room decides nothing until they join.
+   */
   namesakeWarningSeenBy(player: string): Promise<string | undefined>;
   /** `player` confirms a nickname for the room they opened, and tries to enter with their avatar. */
   confirmNickname(player: string, nickname: string): Promise<void>;
@@ -301,6 +304,13 @@ export interface GameDriver {
   canRevealEarly(player: string): Promise<boolean>;
   /** What `viewer` sees of the reveal of the dilemma of the round; undefined in its decision phase. */
   revealSeenBy(viewer: string): Promise<RevealView | undefined>;
+  /**
+   * How each prediction of `viewer` about someone who voted went, as their reveal shows it next to
+   * each vote; the reveal never shows them the predictions of anyone else.
+   */
+  ownPredictionsSeenBy(
+    viewer: string,
+  ): Promise<{ readonly about: string; readonly right: boolean }[]>;
   /** `player` moves on from the reveal of the round to the next one. */
   moveOn(player: string): Promise<void>;
   /** The players move on from the reveal of the round at the same time. */

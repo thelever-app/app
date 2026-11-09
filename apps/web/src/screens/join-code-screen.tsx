@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { Icon } from '../components/icon.tsx';
 import { SubmitButton } from '../components/submit-button.tsx';
 import { CODE_LENGTH, CodeField } from './code-field.tsx';
@@ -9,15 +9,19 @@ import styles from './home-screen.module.css';
 
 /**
  * /join: the code of a room, which goes through as soon as it is complete, to the same screen the
- * link and the QR lead to. The button below says how many characters are missing, and enters
- * again if the player comes back.
+ * link and the QR lead to. The button below says how many characters are missing. The history
+ * keeps the code it entered with: whoever comes back finds it, and enters again with the button.
  */
 export function JoinCodeScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [code, setCode] = useState('');
+  const kept = (useLocation().state as { code?: string } | null)?.code;
+  const [code, setCode] = useState(kept ?? '');
   const complete = code.length === CODE_LENGTH;
-  const enter = (next: string) => void navigate(`/join/${next}`, { state: { fromCode: true } });
+  const enter = (next: string) => {
+    void navigate('/join', { replace: true, state: { code: next } });
+    void navigate(`/join/${next}`, { state: { fromCode: true } });
+  };
 
   const onChange = (next: string) => {
     setCode(next);

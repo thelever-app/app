@@ -52,6 +52,23 @@ describe('JoinCodeScreen', () => {
     expect(location()).toBe('/join/K7M2Q');
   });
 
+  it('should keep the code it entered with, to enter again on coming back', async () => {
+    // Arrange
+    const { t, location } = await renderAtRoute(<JoinCodeScreen />, {
+      at: { pathname: '/join', state: { code: 'K7M2Q' } },
+    });
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('joinCode.enter') }));
+
+    // Assert
+    expect(screen.getByRole('textbox', { name: t('joinCode.label') })).toHaveProperty(
+      'value',
+      'K7M2Q',
+    );
+    expect(location()).toBe('/join/K7M2Q');
+  });
+
   it('should keep five characters at most', async () => {
     // Arrange
     const { field } = await renderCodeScreen();

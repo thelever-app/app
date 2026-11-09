@@ -461,7 +461,8 @@
       "olive": "Oliva",
       "stone": "Piedra"
     },
-    "change": "Cambiar avatar"
+    "change": "Cambiar avatar",
+    "changeCurrent": "Cambiar avatar: cara {{face}}, {{color}}"
   },
   "qr": {
     "title": "Apunta con la cámara para entrar",

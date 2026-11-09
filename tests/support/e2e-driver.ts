@@ -46,6 +46,8 @@ const SCREEN = {
   enter: 'Entrar en la sala',
   settingsTitle: 'Ajustes de la partida',
   someoneInTheGroup: 'alguien del grupo',
+  predictionRight: /^(.+), acertaste$/,
+  predictionMissed: /^(.+), fallaste: dijiste [A-D]$/,
   changeAvatar: 'Cambiar avatar',
   missingAvatar: 'Elige otro avatar',
   namesake: /^(.+) ya está en la sala; os distinguirá el avatar\.$/,
@@ -1239,6 +1241,27 @@ export class E2eDriver implements GameDriver {
    * Once the screen of `viewer` shows the reveal of a dilemma, what the room server sent it of that
    * reveal, by the names of the scenario; and whether the screen says anything about points.
    */
+  /** The chips of the reveal of `viewer`: «Luis, acertaste» or «Luis, fallaste: dijiste B». */
+  async ownPredictionsSeenBy(viewer: string): Promise<{ about: string; right: boolean }[]> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const region = page.getByRole('main', { name: SCREEN.reveal });
+    await region.waitFor();
+    const labels = await region
+      .getByRole('listitem')
+      .evaluateAll((items) => items.map((item) => item.getAttribute('aria-label') ?? ''));
+    return labels.flatMap((label) => {
+      const right = label.match(SCREEN.predictionRight)?.[1];
+      const missed = label.match(SCREEN.predictionMissed)?.[1];
+      const nickname = right ?? missed;
+      if (nickname === undefined) return [];
+      const about = [...this.#players.values()].find((player) => player.nickname === nickname);
+      if (!about) {
+        throw new Error(`${viewer} sees a prediction about ${nickname}, who is not in the room`);
+      }
+      return [{ about: about.name, right: right !== undefined }];
+    });
+  }
+
   async revealSeenBy(viewer: string): Promise<RevealView | undefined> {
     const watcher = this.#playerCalled(viewer);
     const { page } = screenOf(watcher);

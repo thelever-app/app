@@ -3,7 +3,7 @@ import { useActionState, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { AvatarButton } from '../avatar/avatar-button.tsx';
-import { namesakesOf } from '../avatar/namesakes.ts';
+import { namesakesOf, sameNickname } from '../avatar/namesakes.ts';
 import { sameAvatar } from '../avatar/random-avatar.ts';
 import { SubmitButton } from '../components/submit-button.tsx';
 import { lastNickname, rememberNickname } from '../identity/last-nickname.ts';
@@ -38,11 +38,16 @@ export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: Jo
   const [nickname, setNickname] = useState(lastNickname);
   const [avatar, setAvatar] = useState(suggestedAvatar);
   const [pickingAvatar, setPickingAvatar] = useState(false);
-  // Avatars the room refused because someone with this nickname got in with them meanwhile.
-  const [refused, setRefused] = useState<readonly AvatarDto[]>([]);
+  // Avatars the room refused because someone with that nickname got in with them meanwhile.
+  const [refused, setRefused] = useState<readonly { nickname: string; avatar: AvatarDto }[]>([]);
 
   const namesakes = namesakesOf(nickname, players);
-  const taken = [...namesakes.map((player) => player.avatar), ...refused];
+  const taken = [
+    ...namesakes.map((player) => player.avatar),
+    ...refused
+      .filter((entry) => sameNickname(entry.nickname, nickname))
+      .map(({ avatar }) => avatar),
+  ];
   const lookalike = taken.some((other) => sameAvatar(other, avatar));
   const missing = nickname.trim() === '' ? 'nickname' : lookalike ? 'avatar' : undefined;
 
@@ -56,7 +61,7 @@ export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: Jo
     } catch (failure) {
       const code = codeOf(failure);
       if (code === 'nickname-and-avatar-taken') {
-        setRefused((before) => [...before, avatar]);
+        setRefused((before) => [...before, { nickname, avatar }]);
         setPickingAvatar(true);
         return code;
       }
@@ -88,13 +93,17 @@ export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: Jo
           {t('joinRoom.namesake', { nickname: namesakes[0].nickname })}
         </p>
       )}
-      {error && (
-        <p role="alert" className={styles.error}>
-          {error === 'nickname-and-avatar-taken'
-            ? t('joinRoom.lookalikeJustJoined', { nickname: nickname.trim() })
-            : t(`roomErrors.${error}`, { defaultValue: t('roomErrors.unknown') })}
-        </p>
-      )}
+      {error === 'nickname-and-avatar-taken'
+        ? lookalike && (
+            <p role="alert" className={styles.error}>
+              {t('joinRoom.lookalikeJustJoined', { nickname: nickname.trim() })}
+            </p>
+          )
+        : error && (
+            <p role="alert" className={styles.error}>
+              {t(`roomErrors.${error}`, { defaultValue: t('roomErrors.unknown') })}
+            </p>
+          )}
       <div className={styles.submit}>
         <SubmitButton
           pending={isPending}

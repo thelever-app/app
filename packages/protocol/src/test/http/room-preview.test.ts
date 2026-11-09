@@ -30,8 +30,8 @@ describe('RoomPreviewResponseDto', () => {
     }
   });
 
-  it('should reject a room with nobody in it', () => {
+  it('should accept nobody else inside, for whoever opens the room they are alone in', () => {
     // Act & Assert
-    expect(RoomPreviewResponseDto.safeParse({ ...preview, players: [] }).success).toBe(false);
+    expect(RoomPreviewResponseDto.safeParse({ ...preview, players: [] }).success).toBe(true);
   });
 });

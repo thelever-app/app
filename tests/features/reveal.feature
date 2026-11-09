@@ -124,7 +124,7 @@ Feature: Reveal
       Given the reveal is on the first dilemma
       Then all players see how many chose each option
       And all players see what each player voted
-      And all players see which predictions were right
+      And each player sees which of their own predictions were right
 
     @ui
     Scenario: The reveal of a dilemma shows no total of points
