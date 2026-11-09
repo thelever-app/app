@@ -32,7 +32,6 @@ const GAME_STATE: GameStateDto = {
   dilemmas: [
     {
       dilemmaId: 'TestDilemma1',
-      predictionSubset: [],
       personInTheGap: null,
       text: 'TestText1',
       options: [
@@ -42,7 +41,6 @@ const GAME_STATE: GameStateDto = {
     },
     {
       dilemmaId: 'TestDilemma2',
-      predictionSubset: [],
       personInTheGap: null,
       text: 'TestText2',
       options: [
@@ -51,6 +49,7 @@ const GAME_STATE: GameStateDto = {
       ],
     },
   ],
+  playersToPredict: [],
   players: [
     {
       playerId: 'TestAnaId',
@@ -173,7 +172,6 @@ describe('roomReducer', () => {
           {
             dilemmaId: 'TestDilemma1',
             vote: 'TestOption',
-            matchPrediction: null,
             votePredictions: [],
           },
         ],

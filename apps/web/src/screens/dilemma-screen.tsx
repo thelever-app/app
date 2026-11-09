@@ -26,7 +26,7 @@ interface DilemmaScreenProps {
   readonly onLeave: () => void;
 }
 
-const NO_PREDICTIONS: Predictions = { matchPrediction: null, votePredictions: [] };
+const NO_PREDICTIONS: Predictions = { votePredictions: [] };
 
 function samePredictions(a: Predictions, b: Predictions): boolean {
   const votesOf = ({ votePredictions }: Predictions) =>
@@ -34,7 +34,7 @@ function samePredictions(a: Predictions, b: Predictions): boolean {
       .map(({ playerId, vote }) => `${playerId}:${vote}`)
       .sort()
       .join();
-  return a.matchPrediction === b.matchPrediction && votesOf(a) === votesOf(b);
+  return votesOf(a) === votesOf(b);
 }
 
 /**
@@ -118,7 +118,6 @@ export function DilemmaScreen({
               onAnswer({
                 dilemmaId,
                 vote: chosen,
-                matchPrediction: predictions.matchPrediction,
                 votePredictions: [...predictions.votePredictions],
               });
             }
@@ -130,6 +129,7 @@ export function DilemmaScreen({
           dilemma={dilemma}
           vote={vote ?? ''}
           predictions={predictions}
+          playersToPredict={game.playersToPredict}
           players={game.players}
           personInTheGap={person}
           isSending={isSending}
@@ -139,7 +139,6 @@ export function DilemmaScreen({
               onAnswer({
                 dilemmaId,
                 vote: vote ?? '',
-                matchPrediction: predictions.matchPrediction,
                 votePredictions: [...predictions.votePredictions],
               });
             }
@@ -149,7 +148,6 @@ export function DilemmaScreen({
             confirm({
               dilemmaId,
               vote: vote ?? '',
-              matchPrediction: predictions.matchPrediction,
               votePredictions: [...predictions.votePredictions],
             })
           }

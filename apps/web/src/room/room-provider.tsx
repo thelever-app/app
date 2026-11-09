@@ -16,6 +16,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { noteServerTime } from '../game/remaining-time.ts';
 import type { RoomConnection, RoomConnectionStatus } from './room-connection.ts';
 import { INITIAL_ROOM_STATE, roomReducer } from './room-reducer.ts';
 
@@ -58,7 +59,14 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
     INITIAL_ROOM_STATE,
   );
 
-  useEffect(() => connection.subscribe(dispatch), [connection]);
+  useEffect(
+    () =>
+      connection.subscribe((message) => {
+        if (message.type === 'game-state') noteServerTime(message.serverTime);
+        dispatch(message);
+      }),
+    [connection],
+  );
 
   // The status lives in the connection, not in React: React reads it as it renders, so it is never stale.
   const subscribeStatus = useCallback(

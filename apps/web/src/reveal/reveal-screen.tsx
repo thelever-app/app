@@ -26,8 +26,8 @@ interface RevealScreenProps {
 
 /**
  * The reveal of the dilemma of the round: how many chose each option and, in a nominal room, what
- * each one voted, who predicted it and who came closest; in an anonymous room, only the
- * distribution, or that there were too few votes to show it.
+ * each one voted and who predicted it right; in an anonymous room, only the distribution, or that
+ * there were too few votes to show it.
  */
 export function RevealScreen({ game, reveal, onMoveOn, onLeave }: RevealScreenProps) {
   const { t } = useTranslation();
@@ -159,7 +159,6 @@ function NominalResult({ game, reveal, dilemma, person }: ResultProps) {
   const absent = reveal.votes.flatMap(({ playerId, vote }) =>
     vote === null ? (playerOf(playerId) ?? []) : [],
   );
-  const closest = reveal.matchPredictions.toSorted((a, b) => a.distance - b.distance);
 
   return (
     <>
@@ -226,28 +225,6 @@ function NominalResult({ game, reveal, dilemma, person }: ResultProps) {
         </p>
       )}
       {reveal.votePredictions.length > 0 && <p className={styles.hint}>{t('reveal.hitsHint')}</p>}
-      {closest.length > 0 && (
-        <section className={styles.closest} aria-label={t('reveal.closestTitle')}>
-          <h2 className={styles.closestTitle}>{t('reveal.closestTitle')}</h2>
-          <ul className={styles.closestList}>
-            {closest.flatMap(({ playerId, distance }) => {
-              const player = playerOf(playerId);
-              if (!player) return [];
-              const best = reveal.closestIds.includes(playerId);
-              return [
-                <li key={playerId} className={styles.closestRow} data-best={best || undefined}>
-                  <Avatar avatar={player.avatar} size="xs" />
-                  <span className={styles.closestName}>{nameOf(player)}</span>
-                  <span className={styles.distance}>
-                    {distance === 0 ? t('reveal.exact') : t('reveal.away', { count: distance })}
-                  </span>
-                  {best && <span className={styles.best}>{t('reveal.closest')}</span>}
-                </li>,
-              ];
-            })}
-          </ul>
-        </section>
-      )}
     </>
   );
 }

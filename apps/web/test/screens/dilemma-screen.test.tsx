@@ -79,7 +79,6 @@ describe('DilemmaScreen', () => {
           {
             dilemmaId: 'test-dilemma-1',
             vote: 'test-option-1b',
-            matchPrediction: null,
             votePredictions: [],
           },
         ],

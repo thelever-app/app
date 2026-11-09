@@ -1,6 +1,6 @@
 import type { GameStateDto } from '@thelever-app/protocol';
 import { RadioGroup } from 'radix-ui';
-import { type CSSProperties, useId } from 'react';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
@@ -12,7 +12,6 @@ type Player = GameStateDto['players'][number];
 
 /** The predictions of a dilemma, as the player is making them. */
 export interface Predictions {
-  readonly matchPrediction: number | null;
   readonly votePredictions: readonly { readonly playerId: string; readonly vote: string }[];
 }
 
@@ -20,7 +19,9 @@ interface PredictCardProps {
   readonly dilemma: Dilemma;
   readonly vote: string;
   readonly predictions: Predictions;
-  /** Everyone in the game, to name those of the subset. */
+  /** The ones whose vote the player predicts, as the room says. */
+  readonly playersToPredict: readonly string[];
+  /** Everyone in the game, to name those to predict. */
   readonly players: readonly Player[];
   readonly personInTheGap: string | undefined;
   readonly isSending: boolean;
@@ -29,18 +30,21 @@ interface PredictCardProps {
   readonly onNext: () => void;
 }
 
-/** How many predictions are still to make: the match one and one per player of the subset. */
-export function missingPredictions(dilemma: Dilemma, predictions: Predictions): number {
+/** How many predictions are still to make: one per player to predict. */
+export function missingPredictions(
+  playersToPredict: readonly string[],
+  predictions: Predictions,
+): number {
   const predicted = new Set(predictions.votePredictions.map(({ playerId }) => playerId));
-  const votes = dilemma.predictionSubset.filter((playerId) => !predicted.has(playerId)).length;
-  return votes + (predictions.matchPrediction === null ? 1 : 0);
+  return playersToPredict.filter((playerId) => !predicted.has(playerId)).length;
 }
 
-/** «De los otros N, ¿cuántos eligieron lo mismo que tú?» and the vote of each player of the subset. */
+/** «¿Qué votó cada uno?»: the vote of each of the other players. */
 export function PredictCard({
   dilemma,
   vote,
   predictions,
+  playersToPredict,
   players,
   personInTheGap,
   isSending,
@@ -49,18 +53,13 @@ export function PredictCard({
   onNext,
 }: PredictCardProps) {
   const { t } = useTranslation();
-  const matchId = useId();
-  const others = players.length - 1;
+  const headingId = useId();
   const voted = dilemma.options.find(({ optionId }) => optionId === vote);
-  const { matchPrediction } = predictions;
-  const missing = missingPredictions(dilemma, predictions);
-  const subset = dilemma.predictionSubset.flatMap((playerId) => {
+  const missing = missingPredictions(playersToPredict, predictions);
+  const toPredict = playersToPredict.flatMap((playerId) => {
     const player = players.find((candidate) => candidate.playerId === playerId);
     return player ? [player] : [];
   });
-  const fill = {
-    '--fill': `${((matchPrediction ?? 0) / Math.max(others, 1)) * 100}%`,
-  } as CSSProperties;
 
   const predictVote = (playerId: string, predicted: string) =>
     onChange({
@@ -82,54 +81,26 @@ export function PredictCard({
             {t('predict.votedEnd')}
           </span>
         </p>
-        <section className={styles.section} aria-labelledby={matchId}>
-          <h1 id={matchId} className={styles.heading}>
-            {t('predict.matchQuestion', { count: others })}
+        <section className={styles.section} aria-labelledby={headingId}>
+          <h1 id={headingId} className={styles.heading}>
+            {t('predict.voteQuestion')}
           </h1>
-          <RadioGroup.Root
-            className={styles.bar}
-            style={fill}
-            aria-labelledby={matchId}
-            value={matchPrediction === null ? '' : String(matchPrediction)}
-            onValueChange={(value) => onChange({ ...predictions, matchPrediction: Number(value) })}
-            data-chosen={matchPrediction !== null || undefined}
-          >
-            <span aria-hidden="true" className={styles.track} />
-            {Array.from({ length: others + 1 }, (_, count) => (
-              <RadioGroup.Item
-                key={count}
-                value={String(count)}
-                className={styles.step}
-                aria-label={t('predict.matchValue', { count, total: others })}
+          <ul className={styles.players}>
+            {toPredict.map((player) => (
+              <VotePredictionCard
+                key={player.playerId}
+                player={player}
+                dilemma={dilemma}
+                personInTheGap={personInTheGap}
+                predicted={
+                  predictions.votePredictions.find(({ playerId }) => playerId === player.playerId)
+                    ?.vote
+                }
+                onPredict={(predicted) => predictVote(player.playerId, predicted)}
               />
             ))}
-          </RadioGroup.Root>
-          <p className={styles.readout} data-chosen={matchPrediction !== null || undefined}>
-            {matchPrediction === null
-              ? t('predict.matchHint')
-              : t('predict.matchChosen', { count: matchPrediction, total: others })}
-          </p>
+          </ul>
         </section>
-        {subset.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.heading}>{t('predict.voteQuestion')}</h2>
-            <ul className={styles.players}>
-              {subset.map((player) => (
-                <VotePredictionCard
-                  key={player.playerId}
-                  player={player}
-                  dilemma={dilemma}
-                  personInTheGap={personInTheGap}
-                  predicted={
-                    predictions.votePredictions.find(({ playerId }) => playerId === player.playerId)
-                      ?.vote
-                  }
-                  onPredict={(predicted) => predictVote(player.playerId, predicted)}
-                />
-              ))}
-            </ul>
-          </section>
-        )}
       </main>
       <footer className={styles.footer}>
         <button

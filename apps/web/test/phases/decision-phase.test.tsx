@@ -6,9 +6,9 @@ import { aGame } from '../support/game.ts';
 import { fakeConnection } from '../support/fake-connection.ts';
 import { renderWithProviders } from '../support/render.tsx';
 
-/** A nominal room: Ana predicts how many chose the same as her and what Luis voted. */
+/** A nominal room: Ana predicts what Luis voted. */
 const NOMINAL: GameStateDto = aGame({
-  dilemmas: aGame().dilemmas.map((dilemma) => ({ ...dilemma, predictionSubset: ['test-luis-id'] })),
+  playersToPredict: ['test-luis-id'],
 });
 
 /** An anonymous room, which never tells who answered. */
@@ -25,7 +25,6 @@ const ANSWERED: GameStateDto = {
     {
       dilemmaId: 'test-dilemma-1',
       vote: 'test-option-1a',
-      matchPrediction: 1,
       votePredictions: [{ playerId: 'test-luis-id', vote: 'test-option-1b' }],
     },
   ],
@@ -77,9 +76,6 @@ describe('DecisionPhase', () => {
     // Act
     fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
     const afterVote = [...connection.send.mock.calls];
-    fireEvent.click(
-      screen.getByRole('radio', { name: t('predict.matchValue', { count: 1, total: 1 }) }),
-    );
     const luis = screen.getByRole('radiogroup', { name: t('predict.voteOf', { name: 'Luis' }) });
     fireEvent.click(within(luis).getByRole('radio', { name: 'Opción 1B' }));
     const whilePredicting = connection.send.mock.calls.length;
@@ -92,7 +88,6 @@ describe('DecisionPhase', () => {
           type: 'answer-dilemma',
           dilemmaId: 'test-dilemma-1',
           vote: 'test-option-1a',
-          matchPrediction: null,
           votePredictions: [],
         },
       ],
@@ -179,6 +174,5 @@ const ANSWERED_MESSAGE = {
   type: 'answer-dilemma',
   dilemmaId: 'test-dilemma-1',
   vote: 'test-option-1a',
-  matchPrediction: 1,
   votePredictions: [{ playerId: 'test-luis-id', vote: 'test-option-1b' }],
 };

@@ -36,68 +36,6 @@
   font-weight: 600;
 }
 
-/* A bar to tap: each step is a value, from none of the others to all of them. */
-.bar {
-  position: relative;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  height: 48px;
-}
-
-.track {
-  position: absolute;
-  inset-inline: 0;
-  top: 20px;
-  height: 8px;
-  border-radius: 6px;
-  background: linear-gradient(
-    to right,
-    var(--color-option-a) var(--fill),
-    var(--color-surface) var(--fill)
-  );
-  box-shadow: inset 0 0 0 1px var(--color-border-strong);
-  pointer-events: none;
-}
-
-.step {
-  position: relative;
-  min-width: 0;
-  height: 48px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-/* The thumb sits on the value chosen, only once there is one. */
-.step[data-state='checked']::after {
-  content: '';
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  width: 28px;
-  height: 28px;
-  transform: translateX(-50%);
-  border: 2px solid var(--color-ink);
-  border-radius: var(--radius-full);
-  background: var(--color-surface-raised);
-}
-
-.readout {
-  margin: 0;
-  text-align: center;
-  font-size: var(--type-body-size);
-  line-height: 24px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-ink-muted);
-}
-
-.readout[data-chosen] {
-  color: var(--color-ink);
-}
-
 .players {
   display: flex;
   flex-direction: column;

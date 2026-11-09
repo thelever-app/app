@@ -145,12 +145,11 @@ describe('SimulatedRoomConnection', () => {
       const game = lastGame(received);
       const dilemma = game.dilemmas[game.round.position]!;
       const vote = dilemma.options[0]!.optionId;
-      const votePredictions = dilemma.predictionSubset.map((playerId) => ({ playerId, vote }));
+      const votePredictions = game.playersToPredict.map((playerId) => ({ playerId, vote }));
       connection!.send({
         type: 'answer-dilemma',
         dilemmaId: dilemma.dilemmaId,
         vote,
-        matchPrediction: 0,
         votePredictions,
       });
       return { dilemmaId: dilemma.dilemmaId, vote, votePredictions };
@@ -206,7 +205,7 @@ describe('SimulatedRoomConnection', () => {
 
       // Assert
       const game = lastGame(received);
-      expect(game.answers).toEqual([{ dilemmaId, vote, matchPrediction: 0, votePredictions }]);
+      expect(game.answers).toEqual([{ dilemmaId, vote, votePredictions }]);
       expect(game.round).toMatchObject({ position: 0, phase: 'reveal', revealedBy: 'everyone' });
       expect(game.reveal?.votes).toHaveLength(3);
     });

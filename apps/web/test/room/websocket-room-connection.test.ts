@@ -30,7 +30,6 @@ const GAME_STATE: GameStateDto = {
   dilemmas: [
     {
       dilemmaId: 'test-dilemma-1',
-      predictionSubset: [],
       personInTheGap: null,
       text: 'TestText1',
       options: [
@@ -39,6 +38,7 @@ const GAME_STATE: GameStateDto = {
       ],
     },
   ],
+  playersToPredict: [],
   players: [
     {
       playerId: 'test-ana-id',

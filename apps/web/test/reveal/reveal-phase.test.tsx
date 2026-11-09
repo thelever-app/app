@@ -37,12 +37,6 @@ const NOMINAL_REVEAL: Reveal = {
     { playerId: 'test-marta-id', vote: 'test-option-1a' },
     { playerId: 'test-pablo-id', vote: null },
   ],
-  matchPredictions: [
-    { playerId: 'test-luis-id', predicted: 2, actual: 0, distance: 2 },
-    { playerId: 'test-ana-id', predicted: 1, actual: 1, distance: 0 },
-    { playerId: 'test-marta-id', predicted: 0, actual: 1, distance: 1 },
-  ],
-  closestIds: ['test-ana-id'],
   votePredictions: [
     { playerId: 'test-ana-id', aboutId: 'test-luis-id', vote: 'test-option-1b', right: true },
     { playerId: 'test-ana-id', aboutId: 'test-marta-id', vote: 'test-option-1b', right: false },
@@ -73,8 +67,6 @@ function revealed(reveal: Reveal, overrides: Partial<GameStateDto> = {}): GameSt
 const ANONYMOUS_REVEAL: Reveal = {
   ...NOMINAL_REVEAL,
   votes: [],
-  matchPredictions: [],
-  closestIds: [],
   votePredictions: [],
   addedBy: null,
 };
@@ -155,23 +147,6 @@ describe('RevealPhase', () => {
       expect(screen.getByText(t('reveal.didNotVote', { names: 'Pablo' }))).toBeDefined();
     });
 
-    it('should show how close every prediction was, the closest first', async () => {
-      // Act
-      const { t } = await renderReveal(revealed(NOMINAL_REVEAL));
-
-      // Assert
-      const closest = screen.getByRole('region', { name: t('reveal.closestTitle') });
-      expect(
-        within(closest)
-          .getAllByRole('listitem')
-          .map((item) => item.textContent),
-      ).toEqual([
-        `${t('playerList.you', { name: 'Ana' })}${t('reveal.exact')}${t('reveal.closest')}`,
-        `Marta${t('reveal.away', { count: 1 })}`,
-        `Luis${t('reveal.away', { count: 2 })}`,
-      ]);
-    });
-
     it('should say who added the dilemma and who it was about', async () => {
       // Act
       const { t } = await renderReveal(
@@ -195,7 +170,6 @@ describe('RevealPhase', () => {
       expect(
         screen.getByText(t('reveal.anonymousDidNotVote', { count: 1 }), { exact: false }),
       ).toBeDefined();
-      expect(screen.queryByRole('region', { name: t('reveal.closestTitle') })).toBeNull();
     });
 
     it('should say there were too few votes to show the distribution', async () => {

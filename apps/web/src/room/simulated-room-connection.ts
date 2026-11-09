@@ -206,7 +206,7 @@ export class SimulatedRoomConnection implements RoomConnection {
       revealEarly: new RevealEarlyUseCase(rooms, games, notifier, clock),
       moveOn: new MoveOnUseCase(rooms, games, notifier, clock),
       runOutRound: new RunOutRoundUseCase(rooms, games, notifier, clock),
-      leaveRoom: new LeaveRoomUseCase(rooms, games, notifier),
+      leaveRoom: new LeaveRoomUseCase(rooms, games, notifier, clock),
       skipDilemma: new SkipDilemmaUseCase({
         roomRepository: rooms,
         gameRepository: games,
@@ -316,13 +316,12 @@ export class SimulatedRoomConnection implements RoomConnection {
       case 'connect':
         return;
       case 'answer-dilemma': {
-        const { dilemmaId, vote, matchPrediction, votePredictions } = message;
+        const { dilemmaId, vote, votePredictions } = message;
         await useCases.answerDilemma.execute({
           roomId,
           playerId,
           dilemmaId,
           vote,
-          ...(matchPrediction !== undefined && { matchPrediction }),
           ...(votePredictions && { votePredictions }),
         });
         // The use case only tells the others: the player learns their own answer from a fresh state.
@@ -412,19 +411,15 @@ export class SimulatedRoomConnection implements RoomConnection {
         if (seen?.round.position !== position || seen.round.phase !== 'decision') return;
         const dilemma = seen.dilemmas[position]!;
         const vote = dilemma.options[index % dilemma.options.length]!.optionId;
-        const nominal = dilemma.predictionSubset.length > 0;
         await this.#useCases.answerDilemma.execute({
           roomId: this.#roomId,
           playerId,
           dilemmaId: dilemma.dilemmaId,
           vote,
-          ...(nominal && {
-            matchPrediction: MATH_RANDOMNESS.integer(seen.players.length),
-            votePredictions: dilemma.predictionSubset.map((predicted) => ({
-              playerId: predicted,
-              vote,
-            })),
-          }),
+          votePredictions: seen.playersToPredict.map((predicted) => ({
+            playerId: predicted,
+            vote,
+          })),
         });
       });
     });

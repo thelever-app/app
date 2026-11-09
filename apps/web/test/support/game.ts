@@ -21,7 +21,6 @@ export function aGame(overrides: Partial<GameStateDto> = {}): GameStateDto {
     reveal: null,
     dilemmas: [1, 2, 3].map((n) => ({
       dilemmaId: `test-dilemma-${n}`,
-      predictionSubset: [],
       personInTheGap: null,
       text: `Texto del dilema ${n}`,
       options: [
@@ -29,6 +28,7 @@ export function aGame(overrides: Partial<GameStateDto> = {}): GameStateDto {
         { optionId: `test-option-${n}b`, text: `Opción ${n}B` },
       ],
     })),
+    playersToPredict: [],
     players: [
       {
         playerId: 'test-ana-id',

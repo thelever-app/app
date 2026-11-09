@@ -201,56 +201,6 @@
   color: var(--color-ink-muted);
 }
 
-.closest {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
-}
-
-.closestTitle {
-  composes: signage from '../styles/typography.module.css';
-  color: var(--color-ink-muted);
-}
-
-.closestList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.closestRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 40px;
-}
-
-.closestName {
-  flex-grow: 1;
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-  font-weight: 500;
-}
-
-.distance {
-  font-size: 14px;
-  line-height: 20px;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-ink-muted);
-}
-
-.best {
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
-}
-
 .fewVotes {
   display: flex;
   align-items: flex-start;

@@ -1,4 +1,5 @@
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
+import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
 import { DecisionPhase } from '../../src/phases/decision-phase.tsx';
 import { aGame } from '../support/game.ts';
@@ -7,8 +8,14 @@ import { renderWithProviders } from '../support/render.tsx';
 
 /** A nominal room of Ana and Luis: Ana predicts Luis in every dilemma. */
 const nominal = aGame({
-  dilemmas: aGame().dilemmas.map((dilemma) => ({ ...dilemma, predictionSubset: ['test-luis-id'] })),
+  playersToPredict: ['test-luis-id'],
 });
+
+/** Ana predicts that Luis voted that option. */
+function predictLuis(t: TFunction, option: string): void {
+  const luis = screen.getByRole('radiogroup', { name: t('predict.voteOf', { name: 'Luis' }) });
+  fireEvent.click(within(luis).getByRole('radio', { name: option }));
+}
 
 async function renderNominal() {
   const fake = fakeConnection();
@@ -25,14 +32,15 @@ describe('a dilemma of a nominal room', () => {
 
     // Act
     fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
-    fireEvent.click(
-      screen.getByRole('radio', { name: t('predict.matchValue', { count: 1, total: 1 }) }),
-    );
+    const missing = screen.getByRole('button', { name: t('predict.missing', { count: 1 }) });
+    const disabledBefore = missing.hasAttribute('disabled');
+    predictLuis(t, 'Opción 1B');
 
     // Assert
-    expect(screen.getByRole('button', { name: t('predict.missing', { count: 1 }) })).toHaveProperty(
+    expect(disabledBefore).toBe(true);
+    expect(screen.getByRole('button', { name: t('predict.next') })).toHaveProperty(
       'disabled',
-      true,
+      false,
     );
     expect(connection.send).toHaveBeenCalledOnce();
   });
@@ -42,9 +50,7 @@ describe('a dilemma of a nominal room', () => {
     const { connection, t } = await renderNominal();
     fireEvent.click(screen.getByRole('radio', { name: 'Opción 1A' }));
     fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
-    fireEvent.click(
-      screen.getByRole('radio', { name: t('predict.matchValue', { count: 1, total: 1 }) }),
-    );
+    predictLuis(t, 'Opción 1B');
 
     // Act
     fireEvent.click(screen.getByRole('button', { name: t('predict.back') }));
@@ -54,8 +60,7 @@ describe('a dilemma of a nominal room', () => {
       type: 'answer-dilemma',
       dilemmaId: 'test-dilemma-1',
       vote: 'test-option-1a',
-      matchPrediction: 1,
-      votePredictions: [],
+      votePredictions: [{ playerId: 'test-luis-id', vote: 'test-option-1b' }],
     });
   });
 

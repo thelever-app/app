@@ -3,6 +3,7 @@ import { act, render, renderHook, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RoomConnection } from '../../src/room/room-connection.ts';
+import { useRemainingSeconds } from '../../src/game/remaining-time.ts';
 import { RoomProvider, useGame, useLobby, useRoom } from '../../src/room/room-provider.tsx';
 import { SimulatedRoomConnection } from '../../src/room/simulated-room-connection.ts';
 import { fakeConnection } from '../support/fake-connection.ts';
@@ -28,7 +29,6 @@ const GAME_STATE: GameStateDto = {
   dilemmas: [
     {
       dilemmaId: 'test-dilemma-id',
-      predictionSubset: [],
       personInTheGap: null,
       text: 'TestText1',
       options: [
@@ -37,6 +37,7 @@ const GAME_STATE: GameStateDto = {
       ],
     },
   ],
+  playersToPredict: [],
   players: [
     {
       playerId: 'test-player-id-0',
@@ -115,6 +116,25 @@ describe('RoomProvider', () => {
     // Assert
     expect(screen.getByText('TestScreen')).toBeDefined();
     expect(screen.queryByText('TestConnecting')).toBeNull();
+  });
+
+  it('should note the clock of the server as soon as each state arrives', () => {
+    // Arrange
+    vi.useFakeTimers({ now: new Date('2026-11-09T10:00:00Z') });
+    const fake = fakeConnection();
+    const state = { ...GAME_STATE, serverTime: '2026-11-09T10:00:20.000Z' };
+    const { result } = renderHook(() => useRoom().game, { wrapper: wrapperFor(fake.connection) });
+
+    // Act
+    act(() => fake.deliver(state));
+    vi.advanceTimersByTime(5000);
+
+    // Assert: 40 s were left by the server when it arrived, 5 s ago.
+    const remaining = renderHook(() =>
+      useRemainingSeconds(state.round.endsAt, result.current!.serverTime),
+    );
+    expect(remaining.result.current).toBe(35);
+    vi.useRealTimers();
   });
 
   it('should show why the room rejected the player instead of the fallback, before any game', () => {

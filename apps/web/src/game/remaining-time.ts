@@ -22,9 +22,14 @@ function currentSecond(): number {
 
 /**
  * How far the clock of the server is ahead of the one of the device, measured when each state
- * first arrives, so the countdown of every device ends with the one of the server.
+ * arrives, so the countdown of every device ends with the one of the server.
  */
 const offsets = new Map<string, number>();
+
+/** A state from the server has just arrived: how far its clock is ahead is measured now. */
+export function noteServerTime(serverTime: string): void {
+  offsetFor(serverTime);
+}
 
 function offsetFor(serverTime: string): number {
   let offset = offsets.get(serverTime);
