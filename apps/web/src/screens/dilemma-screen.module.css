@@ -1,5 +1,14 @@
 .thanks {
   margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.thanksIcon {
+  display: inline-flex;
+  flex: none;
+  color: #ffd23f;
 }
 
 /* The signal yellow on the ink of the card. */
@@ -12,7 +21,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin: var(--space-2) 0 0;
 }
 
@@ -25,7 +34,7 @@
 .skip {
   flex: none;
   min-height: 40px;
-  padding: 0 var(--space-3);
+  padding: 0 14px;
   border: 0;
   border-radius: 10px;
   background: #ffd23f;

@@ -18,6 +18,7 @@ export const SearchDilemmasResponseDto = z.strictObject({
       minimumAge: z.union([z.literal(16), z.literal(18)]),
       category: z.string().min(1),
       tags: z.array(z.string().min(1)),
+      optionCount: z.number().int().min(2).max(4),
     }),
   ),
 });

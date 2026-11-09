@@ -229,7 +229,22 @@ describe('RevealPhase', () => {
       const { t } = await renderReveal(revealed(NOMINAL_REVEAL));
 
       // Assert
-      expect(screen.getByText(t('reveal.didNotVote', { names: 'Pablo' }))).toBeDefined();
+      expect(screen.getByText(t('reveal.didNotVote', { count: 1, names: 'Pablo' }))).toBeDefined();
+    });
+
+    it('should say who did not vote in the plural when they are several', async () => {
+      // Arrange
+      const votes = NOMINAL_REVEAL.votes.map((vote) =>
+        vote.playerId === 'test-luis-id' ? { ...vote, vote: null } : vote,
+      );
+
+      // Act
+      const { t } = await renderReveal(revealed({ ...NOMINAL_REVEAL, votes }));
+
+      // Assert
+      expect(
+        screen.getByText(t('reveal.didNotVote', { count: 2, names: 'Luis y Pablo' })),
+      ).toBeDefined();
     });
 
     it('should say who added the dilemma and who it was about', async () => {

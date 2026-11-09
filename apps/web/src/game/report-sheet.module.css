@@ -4,7 +4,7 @@
 
 .sheet {
   composes: sheet from './sheet.module.css';
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .handle {
@@ -42,7 +42,7 @@
 .commentLabel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 6px;
   font-size: var(--type-label-size);
   line-height: var(--type-label-line-height);
   font-weight: 500;

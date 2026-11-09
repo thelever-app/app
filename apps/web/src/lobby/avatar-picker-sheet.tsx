@@ -32,10 +32,10 @@ export function AvatarPickerSheet({ current, taken, onChoose, onClose }: AvatarP
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className={sheet.overlay} />
-        <Dialog.Content className={sheet.sheet}>
+        <Dialog.Content className={`${sheet.sheet} ${sheet.roomy}`}>
           <div aria-hidden="true" className={sheet.handle} />
           <div className={styles.heading}>
-            <Avatar avatar={chosen} size="lg" />
+            <Avatar avatar={chosen} size="xl" />
             <Dialog.Title className={sheet.title}>{t('avatarPicker.title')}</Dialog.Title>
           </div>
           <div className={styles.faces} role="group" aria-label={t('avatarPicker.title')}>

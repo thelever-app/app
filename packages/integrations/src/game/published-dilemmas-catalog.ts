@@ -55,12 +55,13 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
   async search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]> {
     const { dilemmas } = await this.#searchDilemmas.execute(criteria);
     // Game keeps the version a game plays when it starts, not when it is found.
-    return dilemmas.map(({ dilemmaId, text, minimumAge, category, tags }) => ({
+    return dilemmas.map(({ dilemmaId, text, minimumAge, category, tags, optionCount }) => ({
       dilemmaId,
       text,
       minimumAge,
       category,
       tags,
+      optionCount,
     }));
   }
 

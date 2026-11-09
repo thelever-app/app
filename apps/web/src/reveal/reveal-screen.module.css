@@ -1,21 +1,36 @@
+/* Its header and its action stay put, and the result between them scrolls. */
 .screen {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100dvh;
+}
+
+.screen > header,
+.screen > footer {
+  flex-shrink: 0;
+}
+
+.screen > main {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.screen > main > * {
+  flex-shrink: 0;
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) var(--space-3);
+  gap: 10px;
+  padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
 }
 
 .top {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .position {
@@ -28,7 +43,8 @@
 .players {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
+  min-height: 32px;
 }
 
 .avatars {
@@ -37,9 +53,19 @@
 }
 
 .more {
-  composes: caption from '../styles/typography.module.css';
+  width: 28px;
+  height: 28px;
+  flex: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  font-size: 11px;
   font-weight: 500;
-  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
 }
 
 .hidden {
@@ -57,6 +83,11 @@
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-6) var(--space-4) var(--space-4);
+}
+
+.main[data-variant='nominal'] {
+  gap: 20px;
+  padding: 20px var(--space-4) var(--space-4);
 }
 
 .text {
@@ -85,7 +116,7 @@
 .anonymousOption {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 6px;
 }
 
 /* How the predictions of the player went: on the surface, or the inverted sign when all are right. */
@@ -127,7 +158,7 @@
 }
 
 .summary[data-all='true'] .summaryLine {
-  color: inherit;
+  color: var(--color-bg);
 }
 
 .segments {
@@ -296,11 +327,12 @@
 .absentAvatars {
   display: inline-flex;
   gap: 4px;
-  opacity: 0.6;
+  opacity: 0.4;
 }
 
-.hint {
-  composes: caption from '../styles/typography.module.css';
+.anonymousHint {
+  font-size: 14px;
+  line-height: 20px;
   color: var(--color-ink-muted);
 }
 
@@ -309,7 +341,7 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-4);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
 }
 
@@ -333,7 +365,7 @@
 
 .footer {
   display: flex;
-  padding: var(--space-3) var(--space-4) var(--space-6);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   border-top: 1px solid var(--color-border);
 }
 

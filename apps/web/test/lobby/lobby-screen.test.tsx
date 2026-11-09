@@ -19,8 +19,16 @@ const FOUND: Awaited<ReturnType<RoomApi['searchDilemmas']>> = [
     minimumAge: 16,
     category: 'honesty',
     tags: ['family'],
+    optionCount: 2,
   },
-  { dilemmaId: 'test-dilemma-2', text: 'TestText2', minimumAge: 16, category: 'honesty', tags: [] },
+  {
+    dilemmaId: 'test-dilemma-2',
+    text: 'TestText2',
+    minimumAge: 16,
+    category: 'honesty',
+    tags: [],
+    optionCount: 4,
+  },
 ];
 
 /** Luis is the one using the screen in the lobby of Ana. */
@@ -309,6 +317,39 @@ describe('LobbyScreen', () => {
       expect(send).toHaveBeenCalledWith({ type: 'pick-dilemmas', dilemmaIds: ['test-dilemma-1'] });
     });
 
+    it('should say how many options each dilemma has, and go back to the settings', async () => {
+      // Arrange
+      const searchDilemmas = vi.fn(async () => [...FOUND]);
+      const { t } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
+
+      // Act
+      const first = await screen.findByRole('checkbox', { name: /TestText1/ });
+      const meta = first.textContent;
+      fireEvent.click(screen.getByRole('button', { name: t('pickDilemmas.back') }));
+
+      // Assert
+      expect(meta).toContain(`${t('pickDilemmas.options', { count: 2 })} · #family`);
+      expect(await screen.findByRole('dialog', { name: t('settings.title') })).toBeDefined();
+    });
+
+    it('should show the gap of a dilemma as someone in the group', async () => {
+      // Arrange
+      const withGap = { ...FOUND[0]!, text: 'Le mientes a {gap}' };
+      const searchDilemmas = vi.fn(async () => [withGap]);
+      const { t } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
+
+      // Assert
+      const card = await screen.findByRole('checkbox', { name: /Le mientes a/ });
+      expect(card.textContent).toContain(`Le mientes a ${t('pickDilemmas.someone')}`);
+      expect(card.textContent).not.toContain('{gap}');
+    });
+
     it('should search only once the host stops typing, keeping what it found on screen', async () => {
       // Arrange: the second search never answers.
       let calls = 0;
@@ -437,9 +478,12 @@ describe('LobbyScreen', () => {
 
       // Act
       fireEvent.click(screen.getByRole('button', { name: t('lobby.add.action') }));
-      fireEvent.click(await screen.findByRole('button', { name: /TestText2/ }));
+      const second = await screen.findByRole('button', { name: /TestText2/ });
+      const meta = second.textContent;
+      fireEvent.click(second);
 
       // Assert
+      expect(meta).toContain(t('pickDilemmas.options', { count: 4 }));
       expect(send).toHaveBeenCalledWith({ type: 'add-dilemma', dilemmaId: 'test-dilemma-2' });
     });
 

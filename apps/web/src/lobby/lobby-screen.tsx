@@ -2,6 +2,7 @@ import type { AvatarDto, RoomSettingsDto } from '@thelever-app/protocol';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
+import mascotWaiting from '../assets/brand/mascot-waiting.svg';
 import { Avatar } from '../avatar/avatar.tsx';
 import { namesakesOf } from '../avatar/namesakes.ts';
 import { Icon } from '../components/icon.tsx';
@@ -227,7 +228,12 @@ export function LobbyScreen() {
           </ul>
         </section>
 
-        {missing > 0 && <p className={styles.muted}>{t('lobby.waiting')}</p>}
+        {missing > 0 && (
+          <p className={styles.waiting}>
+            <img src={mascotWaiting} alt="" width={64} height={64} />
+            {t('lobby.waiting')}
+          </p>
+        )}
       </main>
 
       <footer className={styles.footer}>
@@ -265,7 +271,7 @@ export function LobbyScreen() {
           roomId={lobby.roomId}
           picked={lobby.pickedDilemmas.map(({ dilemmaId }) => dilemmaId)}
           onPick={(dilemmaIds) => send({ type: 'pick-dilemmas', dilemmaIds: [...dilemmaIds] })}
-          onClose={close}
+          onClose={() => setOpen({ sheet: 'settings' })}
         />
       )}
       {open.sheet === 'add' && (

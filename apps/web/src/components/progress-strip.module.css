@@ -9,7 +9,7 @@
 .top {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1);
 }
 
 .position {
@@ -53,8 +53,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: var(--radius-full);
   background: var(--color-ink);
   color: var(--color-surface);
@@ -97,15 +97,13 @@
   margin-left: auto;
 }
 
+/* Who moved everyone on, said quietly where «Ver todos» goes, as tall as it so nothing jumps. */
 .movedOn {
   composes: caption from '../styles/typography.module.css';
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-full);
-  background: var(--color-ink);
-  color: var(--color-bg);
-  font-weight: 600;
+  gap: 2px;
+  color: var(--color-ink-muted);
   white-space: nowrap;
 }

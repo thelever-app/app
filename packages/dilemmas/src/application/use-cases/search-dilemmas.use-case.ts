@@ -23,6 +23,7 @@ export interface SearchDilemmasOutput {
     readonly minimumAge: MinimumAge;
     readonly category: string;
     readonly tags: readonly string[];
+    readonly optionCount: number;
   }[];
 }
 
@@ -51,6 +52,7 @@ export class SearchDilemmasUseCase implements SearchDilemmas {
         minimumAge: dilemma.minimumAge,
         category: dilemma.category,
         tags: dilemma.tags,
+        optionCount: dilemma.options.length,
       })),
     };
   }

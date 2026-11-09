@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import mascotNeutral from '../assets/brand/mascot-neutral.svg';
+import mascotCelebrating from '../assets/brand/mascot-celebrating.svg';
 import { useGame } from '../room/room-provider.tsx';
 import { GameToast } from './game-toast.tsx';
 import styles from './new-host-notice.module.css';
@@ -32,7 +32,7 @@ export function NewHostNotice() {
     <GameToast>
       <div className={styles.newHost}>
         <span className={styles.mascot}>
-          <img src={mascotNeutral} alt="" width={34} height={34} />
+          <img src={mascotCelebrating} alt="" width={34} height={34} />
         </span>
         <span className={styles.newHostText}>
           <strong className={styles.signal}>{t('newHost.title')}</strong>

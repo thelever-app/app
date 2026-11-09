@@ -100,6 +100,7 @@
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line-height);
   color: var(--color-ink-muted);
+  text-align: center;
 }
 
 .guest {

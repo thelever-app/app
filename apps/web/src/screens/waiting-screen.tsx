@@ -25,7 +25,7 @@ export function WaitingScreen({ game, onChange, onRevealEarly }: WaitingScreenPr
   const host = game.players.find(({ playerId }) => playerId === game.hostId)?.nickname ?? '';
 
   return (
-    <div className={screen.screen}>
+    <div className={`${screen.screen} ${screen.fixed}`}>
       <header className={styles.header}>
         <div className={styles.top}>
           <p className={styles.position}>
@@ -35,7 +35,7 @@ export function WaitingScreen({ game, onChange, onRevealEarly }: WaitingScreenPr
         </div>
         <StationLine stations={total} passed={position} />
       </header>
-      <main className={styles.main}>
+      <main className={styles.main} tabIndex={0}>
         <div className={styles.intro}>
           <div className={styles.titleRow}>
             <h1 className={styles.title}>{t('waiting.title')}</h1>

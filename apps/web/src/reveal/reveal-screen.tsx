@@ -49,9 +49,15 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave }: RevealScreenPr
           </p>
           <GameMenu onShowGroup={() => setIsGroupOpen(true)} onLeave={onLeave} />
         </div>
-        <Players players={game.players} />
+        <Players players={game.players} selfId={game.playerId} />
       </header>
-      <main className={styles.main} aria-label={t('reveal.region')}>
+      <main
+        className={styles.main}
+        data-variant={anonymous ? 'anonymous' : 'nominal'}
+        aria-label={t('reveal.region')}
+        // It scrolls between the header and the action: a keyboard must be able to reach it.
+        tabIndex={0}
+      >
         <h1 className={styles.text}>
           <DilemmaText text={dilemma.text} personInTheGap={person} />
         </h1>
@@ -89,10 +95,20 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave }: RevealScreenPr
   );
 }
 
-function Players({ players }: { readonly players: readonly Player[] }) {
+/** Who is in the game, the player first, as on the strip of the decision. */
+function Players({
+  players,
+  selfId,
+}: {
+  readonly players: readonly Player[];
+  readonly selfId: string;
+}) {
   const { t } = useTranslation();
   const nameOf = usePlayerName();
-  const inGame = players.filter(({ left }) => !left);
+  const inGame = [
+    ...players.filter(({ left, playerId }) => !left && playerId === selfId),
+    ...players.filter(({ left, playerId }) => !left && playerId !== selfId),
+  ];
   const visible = inGame.slice(0, VISIBLE_PLAYERS);
   const hidden = inGame.length - visible.length;
   return (
@@ -317,7 +333,10 @@ function NominalResult({ game, reveal, dilemma, person }: ResultProps) {
               <Avatar key={player.playerId} avatar={player.avatar} size="xs" />
             ))}
           </span>
-          {t('reveal.didNotVote', { names: list(absent.map((player) => nameOf(player))) })}
+          {t('reveal.didNotVote', {
+            count: absent.length,
+            names: list(absent.map((player) => nameOf(player))),
+          })}
         </p>
       )}
     </>
@@ -359,7 +378,7 @@ function AnonymousResult({ game, reveal, dilemma, person }: ResultProps) {
           <Bar percent={option.percent} color={option.color} />
         </section>
       ))}
-      <p className={styles.hint}>
+      <p className={styles.anonymousHint}>
         {didNot > 0 && <>{t('reveal.anonymousDidNotVote', { count: didNot })} </>}
         {t('reveal.anonymousNote')}
       </p>

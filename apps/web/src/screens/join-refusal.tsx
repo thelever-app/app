@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 // Inline, in the page itself: these screens show when the network may be gone.
-import mascotWaiting from '../assets/brand/mascot-waiting.svg?inline';
+import doubtingAtTrackEnd from '../assets/brand/doubting-at-track-end.svg?inline';
 import { Icon } from '../components/icon.tsx';
 import screen from './screen.module.css';
 import styles from './join-refusal.module.css';
@@ -42,7 +42,14 @@ export function JoinRefusal({ code, onAction }: JoinRefusalProps) {
           <Icon name="arrowBack" />
         </button>
         <div className={styles.message} role="alert">
-          <img className={styles.mascot} src={mascotWaiting} alt="" width={96} height={96} />
+          <div className={styles.illustration}>
+            <img
+              src={doubtingAtTrackEnd}
+              alt={t('joinRefusal.illustration')}
+              width={360}
+              height={170}
+            />
+          </div>
           <h1 className={styles.title}>{t(`joinRefusal.${code}.title`)}</h1>
           <p className={styles.text}>{t(`joinRefusal.${code}.text`)}</p>
         </div>

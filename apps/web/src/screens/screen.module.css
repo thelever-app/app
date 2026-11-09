@@ -4,3 +4,25 @@
   flex-direction: column;
   min-height: 100dvh;
 }
+
+/* A screen of the game: its header and its actions stay put, and what is between them scrolls. */
+.fixed {
+  height: 100dvh;
+  min-height: 0;
+}
+
+.fixed > header,
+.fixed > footer {
+  flex-shrink: 0;
+}
+
+.fixed > main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Inside a column that scrolls, blocks keep their height instead of shrinking and clipping. */
+.fixed > main > * {
+  flex-shrink: 0;
+}

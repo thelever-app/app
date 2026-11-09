@@ -54,7 +54,7 @@ describe('JoinScreen', () => {
     expect(screen.getByRole('textbox', { name: t('joinRoom.nickname') })).toBeDefined();
   });
 
-  it('should tell the player when no room has that code, and take them back to the start', async () => {
+  it('should tell the player when no room has that code, and take them back to type another', async () => {
     // Arrange
     const { t, location } = await renderJoin(async () => {
       throw new RoomApiError('room-code-not-found');
@@ -70,7 +70,7 @@ describe('JoinScreen', () => {
 
     // Assert
     expect(heading).toBeDefined();
-    expect(location()).toBe('/');
+    expect(location()).toBe('/join');
   });
 
   it('should leave the room behind, at full screen, when it turns the player away on joining', async () => {

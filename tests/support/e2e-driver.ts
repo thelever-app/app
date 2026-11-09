@@ -44,6 +44,8 @@ const SCREEN = {
   places: { together: 'En el mismo sitio', remote: 'A distancia' },
   code: 'Código de la sala',
   enter: 'Entrar en la sala',
+  settingsTitle: 'Ajustes de la partida',
+  someoneInTheGroup: 'alguien del grupo',
   changeAvatar: 'Cambiar avatar',
   missingAvatar: 'Elige otro avatar',
   namesake: /^(.+) ya está en la sala; os distinguirá el avatar\.$/,
@@ -594,7 +596,7 @@ export class E2eDriver implements GameDriver {
 
     await page
       .getByRole('dialog')
-      .getByRole('button', { name: new RegExp(`^${escaped(first.text)}`) })
+      .getByRole('button', { name: new RegExp(`^${escaped(listedText(first))}`) })
       .click();
     await waitUntil(
       () => lastLobbyOf(adder)?.ownAddedDilemmaIds.includes(first.dilemmaId),
@@ -662,8 +664,9 @@ export class E2eDriver implements GameDriver {
     }
     const sheet = page.getByRole('dialog');
     const [first] = found;
-    if (first) await sheet.getByText(first.text, { exact: true }).waitFor();
+    if (first) await sheet.getByText(listedText(first), { exact: true }).waitFor();
     await page.keyboard.press('Escape');
+    if (player === this.#hostName()) await this.#leaveTheSettings(player);
     await sheet.waitFor({ state: 'hidden' });
     return found.map(({ dilemmaId }) => dilemmaId);
   }
@@ -678,15 +681,27 @@ export class E2eDriver implements GameDriver {
     for (const dilemmaId of dilemmaIds) {
       const dilemma = found.find((candidate) => candidate.dilemmaId === dilemmaId);
       if (!dilemma) throw new Error(`The search of the host does not offer ${dilemmaId}`);
-      await sheet.getByRole('checkbox', { name: new RegExp(`^${escaped(dilemma.text)}`) }).click();
+      await sheet
+        .getByRole('checkbox', { name: new RegExp(`^${escaped(listedText(dilemma))}`) })
+        .click();
     }
     await sheet.getByRole('button', { name: SCREEN.play(dilemmaIds.length) }).click();
+    await this.#leaveTheSettings(host);
     await this.#untilEveryoneSees('the picked dilemmas', (lobby) =>
       isDeepStrictEqual(
         lobby.pickedDilemmas.map(({ dilemmaId }) => dilemmaId).toSorted(),
         dilemmaIds.toSorted(),
       ),
     );
+  }
+
+  /** Leaving the screen to pick dilemmas goes back to the settings, which the host closes. */
+  async #leaveTheSettings(host: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const settings = page.getByRole('dialog', { name: SCREEN.settingsTitle });
+    await settings.waitFor();
+    await page.keyboard.press('Escape');
+    await settings.waitFor({ state: 'hidden' });
   }
 
   /** «Por categorías» in the settings leaves the picked dilemmas in one tap. */
@@ -2102,6 +2117,11 @@ async function steady<T>(read: () => Promise<T>): Promise<T> {
     previous = current;
   }
   return previous;
+}
+
+/** A dilemma as the lists of the lobby show it: with «alguien del grupo» in its gap. */
+function listedText({ text }: { readonly text: string }): string {
+  return text.replaceAll(GAP_MARKER, SCREEN.someoneInTheGroup);
 }
 
 /** A text of a dilemma or an option as the screen shows it, with the nickname in the gap. */

@@ -30,6 +30,14 @@
   composes: titleSheet from '../styles/typography.module.css';
 }
 
+/* The two answers together, a little apart from the text. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
 .body {
   margin: 0;
 }

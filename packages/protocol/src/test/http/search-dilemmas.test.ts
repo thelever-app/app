@@ -37,6 +37,7 @@ describe('SearchDilemmasResponseDto', () => {
           minimumAge: 16,
           category: 'honesty',
           tags: ['family'],
+          optionCount: 2,
         },
       ],
     };

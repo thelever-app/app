@@ -22,12 +22,29 @@
   color: var(--color-ink);
 }
 
+/* The main action of a long sheet, on its own below a line, edge to edge. */
+.footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0 calc(-1 * var(--space-4)) calc(-1 * var(--space-6));
+  padding: var(--space-3) var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+/* A sheet that ends with its main action, with more room below it. */
+.roomy {
+  padding-bottom: 28px;
+}
+
 /* A sheet whose list changes as the player searches: it keeps its height, so it does not jump. */
 .tall {
   height: 88dvh;
 }
 
+/* 4 px from the handle to what follows, in every sheet. */
 .handle {
+  margin-bottom: -8px;
   align-self: center;
   width: 40px;
   height: 4px;

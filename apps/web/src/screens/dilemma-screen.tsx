@@ -6,6 +6,7 @@ import { isAnonymous } from '../components/players.ts';
 import { ProgressStrip } from '../components/progress-strip.tsx';
 import { personInTheGapOf } from '../game/dilemma-text.tsx';
 import { GameMenu } from '../game/game-menu.tsx';
+import { Icon } from '../components/icon.tsx';
 import { GameToast } from '../game/game-toast.tsx';
 import { PredictCard, type Predictions } from '../game/predict-card.tsx';
 import { ReportSheet } from '../game/report-sheet.tsx';
@@ -91,7 +92,7 @@ export function DilemmaScreen({
   );
 
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} ${styles.fixed}`}>
       <ProgressStrip
         game={game}
         label={t(step === 'vote' ? 'progressStrip.position' : 'progressStrip.predicting', {
@@ -166,8 +167,13 @@ export function DilemmaScreen({
       {reportedHere && (
         <GameToast>
           <p className={toast.thanks}>
-            <strong className={toast.signal}>{t('reportSent.thanks')}</strong>{' '}
-            {t('reportSent.text')}
+            <span className={toast.thanksIcon}>
+              <Icon name="checkCircle" size={20} />
+            </span>
+            <span>
+              <strong className={toast.signal}>{t('reportSent.thanks')}</strong>{' '}
+              {t('reportSent.text')}
+            </span>
           </p>
           {reportedHere.offensive && (
             <p className={toast.skipRow}>

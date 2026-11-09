@@ -37,7 +37,8 @@
     "playerAnswered": "{{name}} · ha respondido",
     "playerPending": "{{name}} · aún no ha respondido",
     "playerDisconnected": "{{name}} (desconectado)",
-    "movedOn": "{{name}} pasó al siguiente"
+    "movedOn": "{{name}} pasó al siguiente",
+    "playerMovedOn": "{{label}} · pasó al siguiente"
   },
   "groupSheet": {
     "title": "El grupo",
@@ -146,7 +147,9 @@
     "voterRight": "{{name}}, acertaste",
     "voterMissed": "{{name}}, fallaste: dijiste {{letter}}",
     "optionCount": "{{count, number}} · {{percent}}",
-    "didNotVote": "No votó · {{names}}",
+    "didNotVote_one": "No votó · {{names}}",
+    "didNotVote_many": "No votaron · {{names}}",
+    "didNotVote_other": "No votaron · {{names}}",
     "next": "Siguiente dilema",
     "anonymousDidNotVote_one": "{{count}} persona no votó.",
     "anonymousDidNotVote_many": "{{count, number}} personas no votaron.",
@@ -262,7 +265,12 @@
     "title": "Escribe el código de la sala",
     "text": "Son 5 caracteres. Te lo puede dictar quien ha creado la sala.",
     "label": "Código de la sala",
-    "hint": "Entra solo al completar el código. También puedes pegarlo."
+    "hint": "Entra solo al completar el código. También puedes pegarlo.",
+    "entering": "Entrando…",
+    "enter": "Entrar",
+    "missing_one": "Falta {{count}} carácter",
+    "missing_many": "Faltan {{count, number}} caracteres",
+    "missing_other": "Faltan {{count, number}} caracteres"
   },
   "variant": {
     "nominal": {
@@ -275,6 +283,7 @@
     }
   },
   "joinRefusal": {
+    "illustration": "La Palanca, dudando, junto a un final de vía",
     "room-code-not-found": {
       "title": "Esa sala no existe",
       "text": "Revisa el código: son 5 caracteres. Pídeselo de nuevo a quien ha creado la sala.",
@@ -417,7 +426,11 @@
     "empty": "No hay dilemas aptos con esa búsqueda.",
     "tags": "#{{tags}}",
     "play_many": "Jugar estos {{count}}",
-    "byCategory": "Volver a jugar por categorías"
+    "byCategory": "Volver a jugar por categoría",
+    "options_one": "{{count}} opción",
+    "options_many": "{{count, number}} opciones",
+    "options_other": "{{count, number}} opciones",
+    "someone": "alguien del grupo"
   },
   "addDilemma": {
     "title": "Añade un dilema",
@@ -454,6 +467,7 @@
     "title": "Apunta con la cámara para entrar",
     "close": "Cerrar",
     "label": "Código QR de la sala {{code}}",
-    "or": "o entra en {{host}} y escribe el código"
+    "or": "o entra en {{host}} y escribe el código",
+    "code": "Código {{code}}"
   }
 }

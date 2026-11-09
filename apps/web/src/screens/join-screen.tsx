@@ -1,7 +1,7 @@
 import type { RoomPreviewResponseDto } from '@thelever-app/protocol';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
 import { RoomApiError } from '../room/room-api.ts';
@@ -56,13 +56,19 @@ export function JoinScreen() {
   }, [api, code]);
   const preview: Preview = answer?.code === code ? answer.preview : { status: 'loading' };
 
-  const home = () => void navigate('/');
-  if (preview.status === 'refused') return <JoinRefusal code={preview.code} onAction={home} />;
+  // Whoever typed the code goes back to it; whoever came by the link or the QR, to the start.
+  const fromCode = (useLocation().state as { fromCode?: boolean } | null)?.fromCode === true;
+  const back = () => void navigate(fromCode ? '/join' : '/');
+  const tryAnotherCode = () => void navigate('/join');
+  if (preview.status === 'refused') {
+    const action = preview.code === 'room-code-not-found' ? tryAnotherCode : back;
+    return <JoinRefusal code={preview.code} onAction={action} />;
+  }
 
   return (
     <div className={screen.screen}>
       <div className={styles.body}>
-        <button type="button" className={styles.back} aria-label={t('home.back')} onClick={home}>
+        <button type="button" className={styles.back} aria-label={t('home.back')} onClick={back}>
           <Icon name="arrowBack" />
         </button>
         {preview.status === 'loading' && <p>{t('joinRoom.loading')}</p>}

@@ -140,22 +140,24 @@ export function RoomSettingsSheet({
               </select>
             </label>
 
-            <fieldset className={`${styles.group} ${styles.section}`}>
-              <legend className={styles.legend}>{t('settings.howPicked')}</legend>
-              <div className={styles.segmented}>
-                {(['categories', 'hand'] as const).map((option) => (
-                  <label key={option} className={styles.segment}>
-                    <input
-                      type="radio"
-                      name="mode"
-                      checked={mode === option}
-                      onChange={() => setMode(option)}
-                    />
-                    {t(option === 'categories' ? 'settings.byCategories' : 'settings.byHand')}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            <div className={styles.section}>
+              <fieldset className={styles.group}>
+                <legend className={styles.legend}>{t('settings.howPicked')}</legend>
+                <div className={styles.segmented}>
+                  {(['categories', 'hand'] as const).map((option) => (
+                    <label key={option} className={styles.segment}>
+                      <input
+                        type="radio"
+                        name="mode"
+                        checked={mode === option}
+                        onChange={() => setMode(option)}
+                      />
+                      {t(option === 'categories' ? 'settings.byCategories' : 'settings.byHand')}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </div>
 
             {mode === 'categories' ? (
               <>
@@ -221,13 +223,13 @@ export function RoomSettingsSheet({
 
                 <button type="button" className={styles.link} onClick={pick}>
                   {t('settings.pick')}
-                  <Icon name="chevronRight" size={20} />
+                  <Icon name="chevronRight" size={22} />
                 </button>
               </>
             ) : (
               <div className={styles.group}>
                 <div className={styles.picked}>
-                  <span className={styles.switchLabel}>
+                  <span className={styles.pickedLabel}>
                     {pickedCount > 0
                       ? t('settings.picked', { count: pickedCount })
                       : t('settings.noPicked')}
@@ -258,33 +260,37 @@ export function RoomSettingsSheet({
               <span className={sheet.hint}>{t('settings.timeHint')}</span>
             </fieldset>
 
-            <fieldset className={`${styles.group} ${styles.section}`}>
-              <legend className={styles.legend}>{t('settings.dilemmasPerPlayer.label')}</legend>
-              <div
-                className={styles.options}
-                role="radiogroup"
-                aria-label={t('settings.dilemmasPerPlayer.label')}
-              >
-                {DILEMMAS_PER_PLAYER.map((dilemmasPerPlayer) => (
-                  <label key={dilemmasPerPlayer} className={styles.option}>
-                    <input
-                      type="radio"
-                      name="dilemmasPerPlayer"
-                      checked={draft.dilemmasPerPlayer === dilemmasPerPlayer}
-                      onChange={() => change({ dilemmasPerPlayer })}
-                    />
-                    {dilemmasPerPlayer === 0
-                      ? t('settings.dilemmasPerPlayer.none')
-                      : dilemmasPerPlayer}
-                  </label>
-                ))}
-              </div>
-              <span className={sheet.hint}>{t('settings.dilemmasPerPlayer.hint')}</span>
-            </fieldset>
+            <div className={styles.section}>
+              <fieldset className={styles.group}>
+                <legend className={styles.legend}>{t('settings.dilemmasPerPlayer.label')}</legend>
+                <div
+                  className={styles.options}
+                  role="radiogroup"
+                  aria-label={t('settings.dilemmasPerPlayer.label')}
+                >
+                  {DILEMMAS_PER_PLAYER.map((dilemmasPerPlayer) => (
+                    <label key={dilemmasPerPlayer} className={styles.option}>
+                      <input
+                        type="radio"
+                        name="dilemmasPerPlayer"
+                        checked={draft.dilemmasPerPlayer === dilemmasPerPlayer}
+                        onChange={() => change({ dilemmasPerPlayer })}
+                      />
+                      {dilemmasPerPlayer === 0
+                        ? t('settings.dilemmasPerPlayer.none')
+                        : dilemmasPerPlayer}
+                    </label>
+                  ))}
+                </div>
+                <span className={sheet.hint}>{t('settings.dilemmasPerPlayer.hint')}</span>
+              </fieldset>
+            </div>
           </div>
-          <button type="button" className={sheet.primary} onClick={save}>
-            {t('settings.save')}
-          </button>
+          <div className={sheet.footer}>
+            <button type="button" className={sheet.primary} onClick={save}>
+              {t('settings.save')}
+            </button>
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

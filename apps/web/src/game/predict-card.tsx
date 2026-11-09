@@ -1,6 +1,6 @@
 import type { GameStateDto } from '@thelever-app/protocol';
 import { RadioGroup } from 'radix-ui';
-import { useId } from 'react';
+import { type CSSProperties, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
@@ -55,6 +55,7 @@ export function PredictCard({
   const { t } = useTranslation();
   const headingId = useId();
   const voted = dilemma.options.find(({ optionId }) => optionId === vote);
+  const votedColor = optionColor(dilemma.options.length, dilemma.options.indexOf(voted!));
   const missing = missingPredictions(playersToPredict, predictions);
   const toPredict = playersToPredict.flatMap((playerId) => {
     const player = players.find((candidate) => candidate.playerId === playerId);
@@ -72,8 +73,8 @@ export function PredictCard({
 
   return (
     <>
-      <main className={styles.main}>
-        <p className={styles.voted}>
+      <main className={styles.main} tabIndex={0}>
+        <p className={styles.voted} style={{ '--option': votedColor } as CSSProperties}>
           <Icon name="checkCircle" size={18} />
           <span>
             {t('predict.voted')}
@@ -124,6 +125,11 @@ export function PredictCard({
   );
 }
 
+/** The colour of an option by its position, as on the dilemma: a and b for two, 1 to 4 for more. */
+function optionColor(count: number, index: number): string {
+  return count === 2 ? `var(--color-option-${'ab'[index]})` : `var(--color-option-${index + 1})`;
+}
+
 interface VotePredictionCardProps {
   readonly player: Player;
   readonly dilemma: Dilemma;
@@ -148,6 +154,7 @@ function VotePredictionCard({
       </p>
       <RadioGroup.Root
         className={styles.options}
+        data-count={dilemma.options.length}
         aria-label={t('predict.voteOf', { name: player.nickname })}
         value={predicted ?? ''}
         onValueChange={onPredict}
