@@ -1,4 +1,3 @@
-import { InvalidMatchPredictionError } from '../errors/invalid-match-prediction.error.ts';
 import { VoteVO } from './vote.vo.ts';
 
 /**
@@ -20,8 +19,6 @@ export interface VotePrediction {
 
 export interface AnswerProps {
   readonly vote: string;
-  /** How many of the other players the voter believes chose the same; null until they say it. */
-  readonly matchPrediction: number | null;
   /** Only the ones the voter made, in a nominal room. */
   readonly votePredictions: readonly VotePrediction[];
   /** The options of the dilemma in the order the voter saw them. */
@@ -35,7 +32,7 @@ export interface AnswerProps {
 
 /**
  * The vote plus the predictions the room variant requires, with what is recorded alongside it.
- * Whether it is complete depends on the variant and the prediction subset, which the game knows.
+ * Whether it is complete depends on the variant and the players of the game, which the game knows.
  */
 export class AnswerVO {
   readonly #vote: VoteVO;
@@ -43,10 +40,6 @@ export class AnswerVO {
 
   constructor(props: AnswerProps) {
     this.#vote = new VoteVO(props.vote);
-    const { matchPrediction } = props;
-    if (matchPrediction !== null && (!Number.isInteger(matchPrediction) || matchPrediction < 0)) {
-      throw new InvalidMatchPredictionError(matchPrediction, 0);
-    }
     this.#props = {
       ...props,
       vote: this.#vote.value,
@@ -61,10 +54,6 @@ export class AnswerVO {
 
   get vote(): string {
     return this.#vote.value;
-  }
-
-  get matchPrediction(): number | null {
-    return this.#props.matchPrediction;
   }
 
   get votePredictions(): readonly VotePrediction[] {

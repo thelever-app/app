@@ -8,10 +8,9 @@ import { DilemmaNotInRoundError } from '../../errors/dilemma-not-in-round.error.
 import { DilemmaNotReportedAsOffensiveError } from '../../errors/dilemma-not-reported-as-offensive.error.ts';
 import { DilemmaSkippedError } from '../../errors/dilemma-skipped.error.ts';
 import { DuplicateVotePredictionError } from '../../errors/duplicate-vote-prediction.error.ts';
-import { InvalidMatchPredictionError } from '../../errors/invalid-match-prediction.error.ts';
 import { NoNextRoundError } from '../../errors/no-next-round.error.ts';
 import { PlayerLeftGameError } from '../../errors/player-left-game.error.ts';
-import { PlayerNotInPredictionSubsetError } from '../../errors/player-not-in-prediction-subset.error.ts';
+import { PlayerNotPredictableError } from '../../errors/player-not-predictable.error.ts';
 import { PredictionsNotAllowedError } from '../../errors/predictions-not-allowed.error.ts';
 import { VoteMissingError } from '../../errors/vote-missing.error.ts';
 import { AnsweredCountChangedEvent } from '../../events/answered-count-changed.event.ts';
@@ -77,12 +76,11 @@ function gameOfThree(settings: GameSettings = NOMINAL, randomness = new KeepOrde
 }
 
 /** The complete answer of a player in a nominal room: the vote and every prediction. */
-function complete(game: Game, playerId: string, dilemmaId: string, vote = 'TestPull') {
+function complete(game: Game, playerId: string, vote = 'TestPull') {
   return {
     vote,
-    matchPrediction: 1,
     votePredictions: game
-      .predictionSubsetOf(playerId, dilemmaId)
+      .playersToPredictBy(playerId)
       .map((other) => ({ playerId: other, vote: 'TestPull' })),
   };
 }
@@ -91,13 +89,7 @@ function complete(game: Game, playerId: string, dilemmaId: string, vote = 'TestP
 function everyoneAnswers(game: Game, votes: Record<string, string> = {}, at = AT): void {
   const dilemmaId = game.round?.dilemmaId as string;
   for (const playerId of EVERYONE) {
-    game.answer(
-      playerId,
-      dilemmaId,
-      complete(game, playerId, dilemmaId, votes[playerId]),
-      SEAL,
-      at,
-    );
+    game.answer(playerId, dilemmaId, complete(game, playerId, votes[playerId]), SEAL, at);
   }
   game.revealIfEveryoneAnswered(EVERYONE);
 }
@@ -123,8 +115,8 @@ describe('Game, by rounds', () => {
 
     it('should give each player the options of each dilemma in an order of their own', () => {
       // Act
-      // Two numbers to shuffle the players for the subsets, then two for each option order.
-      const game = gameOfThree(NOMINAL, new FixedRandomness(0, 0, 0, 0, 0, 0, 0, 0, 1, 0));
+      // Two numbers for each option order.
+      const game = gameOfThree(NOMINAL, new FixedRandomness(0, 0, 0, 0, 0, 0, 1, 0));
 
       // Assert
       const orders = EVERYONE.map((playerId) => game.optionOrderOf(playerId, 'TestDilemma1'));
@@ -132,12 +124,12 @@ describe('Game, by rounds', () => {
       expect(new Set(orders.map((order) => order.join())).size).toBeGreaterThan(1);
     });
 
-    it('should give every player the other two to predict in a nominal room of three', () => {
+    it('should give every player all the others to predict in a nominal room', () => {
       // Act
       const game = gameOfThree();
 
       // Assert
-      expect(game.predictionSubsetOf('Ana', 'TestDilemma1').toSorted()).toEqual(['Luis', 'Marta']);
+      expect(game.playersToPredictBy('Ana')).toEqual(['Luis', 'Marta']);
     });
 
     it('should give nobody to predict in an anonymous room', () => {
@@ -145,7 +137,7 @@ describe('Game, by rounds', () => {
       const game = gameOfThree(ANONYMOUS);
 
       // Assert
-      expect(game.predictionSubsetOf('Ana', 'TestDilemma1')).toEqual([]);
+      expect(game.playersToPredictBy('Ana')).toEqual([]);
     });
 
     it('should choose the same person in the gap for everyone, only for the dilemmas with it', () => {
@@ -176,7 +168,7 @@ describe('Game, by rounds', () => {
       const game = gameOfThree();
 
       // Act
-      game.answer('Luis', 'TestDilemma1', complete(game, 'Luis', 'TestDilemma1'), SEAL, AT);
+      game.answer('Luis', 'TestDilemma1', complete(game, 'Luis'), SEAL, AT);
 
       // Assert
       expect(game.hasAnswered('Luis')).toBe(true);
@@ -189,7 +181,7 @@ describe('Game, by rounds', () => {
     it('should keep the predictions when the player changes the vote, and still count as answered', () => {
       // Arrange
       const game = gameOfThree();
-      const answer = complete(game, 'Luis', 'TestDilemma1');
+      const answer = complete(game, 'Luis');
       game.answer('Luis', 'TestDilemma1', answer, SEAL, AT);
 
       // Act
@@ -205,7 +197,7 @@ describe('Game, by rounds', () => {
     it('should not let a complete answer lose its predictions', () => {
       // Arrange
       const game = gameOfThree();
-      game.answer('Luis', 'TestDilemma1', complete(game, 'Luis', 'TestDilemma1'), SEAL, AT);
+      game.answer('Luis', 'TestDilemma1', complete(game, 'Luis'), SEAL, AT);
 
       // Act & Assert
       expect(() => game.answer('Luis', 'TestDilemma1', { vote: 'TestWait' }, SEAL, AT)).toThrow(
@@ -218,9 +210,9 @@ describe('Game, by rounds', () => {
       const game = gameOfThree();
 
       // Act & Assert
-      expect(() =>
-        game.answer('Luis', 'TestDilemma2', complete(game, 'Luis', 'TestDilemma2'), SEAL, AT),
-      ).toThrow(DilemmaNotInRoundError);
+      expect(() => game.answer('Luis', 'TestDilemma2', complete(game, 'Luis'), SEAL, AT)).toThrow(
+        DilemmaNotInRoundError,
+      );
     });
 
     it('should not take predictions without a vote', () => {
@@ -229,21 +221,17 @@ describe('Game, by rounds', () => {
 
       // Act & Assert
       expect(() =>
-        game.answer('Luis', 'TestDilemma1', { vote: '', matchPrediction: 1 }, SEAL, AT),
+        game.answer(
+          'Luis',
+          'TestDilemma1',
+          { vote: '', votePredictions: [{ playerId: 'Ana', vote: 'TestPull' }] },
+          SEAL,
+          AT,
+        ),
       ).toThrow(VoteMissingError);
     });
 
-    it('should throw an error for a match prediction above the number of other players', () => {
-      // Arrange
-      const game = gameOfThree();
-
-      // Act & Assert
-      expect(() =>
-        game.answer('Luis', 'TestDilemma1', { vote: 'TestPull', matchPrediction: 3 }, SEAL, AT),
-      ).toThrow(InvalidMatchPredictionError);
-    });
-
-    it('should throw an error for a vote prediction outside the subset or repeated', () => {
+    it('should throw an error for a vote prediction about oneself or repeated', () => {
       // Arrange
       const game = gameOfThree();
       const draft = (votePredictions: { playerId: string; vote: string }[]) => ({
@@ -260,7 +248,7 @@ describe('Game, by rounds', () => {
           SEAL,
           AT,
         ),
-      ).toThrow(PlayerNotInPredictionSubsetError);
+      ).toThrow(PlayerNotPredictableError);
       expect(() =>
         game.answer(
           'Luis',
@@ -286,7 +274,7 @@ describe('Game, by rounds', () => {
       game.answer(
         personInTheGap,
         'TestDilemma2',
-        complete(game, personInTheGap, 'TestDilemma2'),
+        complete(game, personInTheGap),
         SEAL,
         after(2 * SECOND),
       );
@@ -305,7 +293,13 @@ describe('Game, by rounds', () => {
 
       // Act & Assert
       expect(() =>
-        game.answer('Luis', 'TestDilemma1', { vote: 'TestPull', matchPrediction: 1 }, SEAL, AT),
+        game.answer(
+          'Luis',
+          'TestDilemma1',
+          { vote: 'TestPull', votePredictions: [{ playerId: 'Ana', vote: 'TestPull' }] },
+          SEAL,
+          AT,
+        ),
       ).toThrow(PredictionsNotAllowedError);
     });
 
@@ -331,17 +325,11 @@ describe('Game, by rounds', () => {
       game.answer('Luis', 'TestDilemma1', { vote: 'TestPull' }, SEAL, after(10 * SECOND));
 
       // Act
+      game.answer('Luis', 'TestDilemma1', complete(game, 'Luis'), SEAL, after(40 * SECOND));
       game.answer(
         'Luis',
         'TestDilemma1',
-        complete(game, 'Luis', 'TestDilemma1'),
-        SEAL,
-        after(40 * SECOND),
-      );
-      game.answer(
-        'Luis',
-        'TestDilemma1',
-        complete(game, 'Luis', 'TestDilemma1', 'TestWait'),
+        complete(game, 'Luis', 'TestWait'),
         SEAL,
         after(50 * SECOND),
       );
@@ -381,9 +369,9 @@ describe('Game, by rounds', () => {
         { dilemmaId: 'TestDilemma1', reason: 'reported' },
       ]);
       expect(game.hasAnswered('Luis')).toBe(true);
-      expect(() =>
-        game.answer('Luis', 'TestDilemma1', complete(game, 'Luis', 'TestDilemma1'), SEAL, AT),
-      ).toThrow(DilemmaSkippedError);
+      expect(() => game.answer('Luis', 'TestDilemma1', complete(game, 'Luis'), SEAL, AT)).toThrow(
+        DilemmaSkippedError,
+      );
     });
 
     it('should only skip a dilemma the player reported as offensive', () => {
@@ -401,7 +389,7 @@ describe('Game, by rounds', () => {
       // Arrange
       const game = gameOfThree();
       for (const playerId of ['Ana', 'Luis']) {
-        game.answer(playerId, 'TestDilemma1', complete(game, playerId, 'TestDilemma1'), SEAL, AT);
+        game.answer(playerId, 'TestDilemma1', complete(game, playerId), SEAL, AT);
       }
       game.pullEvents();
 
@@ -421,7 +409,7 @@ describe('Game, by rounds', () => {
     it('should not reveal while a connected player has not answered, nor with nobody connected', () => {
       // Arrange
       const game = gameOfThree();
-      game.answer('Ana', 'TestDilemma1', complete(game, 'Ana', 'TestDilemma1'), SEAL, AT);
+      game.answer('Ana', 'TestDilemma1', complete(game, 'Ana'), SEAL, AT);
 
       // Act & Assert
       expect(game.revealIfEveryoneAnswered(['Ana', 'Luis'])).toBe(false);
@@ -433,7 +421,7 @@ describe('Game, by rounds', () => {
       // Arrange
       const game = gameOfThree();
       for (const playerId of ['Ana', 'Luis']) {
-        game.answer(playerId, 'TestDilemma1', complete(game, playerId, 'TestDilemma1'), SEAL, AT);
+        game.answer(playerId, 'TestDilemma1', complete(game, playerId), SEAL, AT);
       }
       game.leave('Marta');
       game.rejoin('Marta');
@@ -472,19 +460,22 @@ describe('Game, by rounds', () => {
     it('should count the vote of an incomplete answer and score only the predictions made', () => {
       // Arrange
       const game = gameOfThree();
-      game.answer('Marta', 'TestDilemma1', { vote: 'TestPull', matchPrediction: 0 }, SEAL, AT);
+      game.answer('Ana', 'TestDilemma1', { vote: 'TestPull' }, SEAL, AT);
+      game.answer(
+        'Marta',
+        'TestDilemma1',
+        { vote: 'TestPull', votePredictions: [{ playerId: 'Ana', vote: 'TestPull' }] },
+        SEAL,
+        AT,
+      );
 
       // Act
       game.reveal('time');
 
       // Assert
       expect(game.didNotVoteOf('Marta')).toEqual([]);
-      expect(game.pointsOf('Marta')).toEqual([
-        { dilemmaId: 'TestDilemma1', match: 100, votes: null },
-      ]);
-      expect(game.pointsOf('Ana')).toEqual([
-        { dilemmaId: 'TestDilemma1', match: null, votes: null },
-      ]);
+      expect(game.pointsOf('Marta')).toEqual([{ dilemmaId: 'TestDilemma1', points: 50 }]);
+      expect(game.pointsOf('Ana')).toEqual([{ dilemmaId: 'TestDilemma1', points: null }]);
     });
 
     it('should not take any answer once the dilemma is revealed', () => {
@@ -493,9 +484,9 @@ describe('Game, by rounds', () => {
       game.reveal('host');
 
       // Act & Assert
-      expect(() =>
-        game.answer('Luis', 'TestDilemma1', complete(game, 'Luis', 'TestDilemma1'), SEAL, AT),
-      ).toThrow(DecisionPhaseOverError);
+      expect(() => game.answer('Luis', 'TestDilemma1', complete(game, 'Luis'), SEAL, AT)).toThrow(
+        DecisionPhaseOverError,
+      );
     });
   });
 
@@ -570,38 +561,40 @@ describe('Game, by rounds', () => {
       game.leave('Luis');
 
       // Act & Assert
-      expect(() =>
-        game.answer('Luis', 'TestDilemma1', complete(game, 'Luis', 'TestDilemma1'), SEAL, AT),
-      ).toThrow(PlayerLeftGameError);
+      expect(() => game.answer('Luis', 'TestDilemma1', complete(game, 'Luis'), SEAL, AT)).toThrow(
+        PlayerLeftGameError,
+      );
       expect(() => game.recordReport('Luis', 'TestDilemma1', true)).toThrow(PlayerLeftGameError);
       game.rejoin('Luis');
       expect(() =>
-        game.answer('Luis', 'TestDilemma1', complete(game, 'Luis', 'TestDilemma1'), SEAL, AT),
+        game.answer('Luis', 'TestDilemma1', complete(game, 'Luis'), SEAL, AT),
       ).not.toThrow();
+    });
+
+    it('should not count among those who answered while away', () => {
+      // Arrange
+      const game = gameOfThree(ANONYMOUS);
+      game.answer('Luis', 'TestDilemma1', { vote: 'TestPull' }, SEAL, AT);
+
+      // Act
+      game.leave('Luis');
+
+      // Assert
+      expect(game.answeredCount).toBe(0);
+      game.rejoin('Luis');
+      expect(game.answeredCount).toBe(1);
     });
   });
 
   describe('revealOf', () => {
-    it('should show the distribution, the votes, the predictions right and how close each one was', () => {
+    it('should show the distribution, the votes and which predictions were right', () => {
       // Arrange
       const game = gameOfThree();
-      const answer = (playerId: string, vote: string, matchPrediction: number) =>
-        game.answer(
-          playerId,
-          'TestDilemma1',
-          {
-            vote,
-            matchPrediction,
-            votePredictions: game
-              .predictionSubsetOf(playerId, 'TestDilemma1')
-              .map((other) => ({ playerId: other, vote: 'TestPull' })),
-          },
-          SEAL,
-          AT,
-        );
-      answer('Ana', 'TestPull', 1);
-      answer('Luis', 'TestWait', 2);
-      answer('Marta', 'TestPull', 0);
+      const answer = (playerId: string, vote: string) =>
+        game.answer(playerId, 'TestDilemma1', complete(game, playerId, vote), SEAL, AT);
+      answer('Ana', 'TestPull');
+      answer('Luis', 'TestWait');
+      answer('Marta', 'TestPull');
       game.revealIfEveryoneAnswered(EVERYONE);
 
       // Act
@@ -620,12 +613,6 @@ describe('Game, by rounds', () => {
         { playerId: 'Luis', vote: 'TestWait' },
         { playerId: 'Marta', vote: 'TestPull' },
       ]);
-      expect(reveal.matchPredictions).toEqual([
-        { playerId: 'Ana', predicted: 1, actual: 1, distance: 0 },
-        { playerId: 'Luis', predicted: 2, actual: 0, distance: 2 },
-        { playerId: 'Marta', predicted: 0, actual: 1, distance: 1 },
-      ]);
-      expect(reveal.closestIds).toEqual(['Ana']);
       expect(reveal.votePredictions).toContainEqual({
         playerId: 'Ana',
         aboutId: 'Luis',
@@ -634,10 +621,10 @@ describe('Game, by rounds', () => {
       });
     });
 
-    it('should leave out who did not vote and who made no match prediction', () => {
+    it('should show who did not vote, and only the predictions of who voted', () => {
       // Arrange
       const game = gameOfThree();
-      game.answer('Ana', 'TestDilemma1', complete(game, 'Ana', 'TestDilemma1'), SEAL, AT);
+      game.answer('Ana', 'TestDilemma1', complete(game, 'Ana'), SEAL, AT);
       game.answer('Luis', 'TestDilemma1', { vote: 'TestPull' }, SEAL, AT);
       game.reveal('host');
 
@@ -647,7 +634,9 @@ describe('Game, by rounds', () => {
       // Assert
       expect(reveal.votes).toContainEqual({ playerId: 'Marta', vote: null });
       expect(reveal.didNotVoteCount).toBe(1);
-      expect(reveal.matchPredictions.map(({ playerId }) => playerId)).toEqual(['Ana']);
+      expect(new Set(reveal.votePredictions.map(({ playerId }) => playerId))).toEqual(
+        new Set(['Ana']),
+      );
     });
 
     it('should show who added the dilemma and the person in the gap', () => {
@@ -678,7 +667,7 @@ describe('Game, by rounds', () => {
       expect(reveal.tooFewVotes).toBe(true);
       expect(reveal.distribution).toBeNull();
       expect(reveal.votes).toEqual([]);
-      expect(reveal.matchPredictions).toEqual([]);
+      expect(reveal.votePredictions).toEqual([]);
       expect(reveal.addedBy).toBeNull();
       expect(reveal.didNotVoteCount).toBe(1);
     });
@@ -690,7 +679,7 @@ describe('Game, by rounds', () => {
       const game = gameOfThree();
       game.recordReport('Luis', 'TestDilemma1', true);
       game.skip('Luis', 'TestDilemma1');
-      game.answer('Ana', 'TestDilemma1', complete(game, 'Ana', 'TestDilemma1'), SEAL, AT);
+      game.answer('Ana', 'TestDilemma1', complete(game, 'Ana'), SEAL, AT);
       game.leave('Marta');
       game.revealIfEveryoneAnswered(['Ana', 'Luis']);
       game.moveOn('Luis', 0, after(2 * SECOND));

@@ -23,6 +23,7 @@ async function arrange() {
     game.roomRepository,
     game.gameRepository,
     notifier,
+    game.clock,
   );
   const { connectionId } = await connectPlayer.execute({
     roomId: game.roomId,

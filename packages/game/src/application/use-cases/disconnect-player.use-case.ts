@@ -1,3 +1,4 @@
+import type { Clock } from '../../domain/ports/clock.port.ts';
 import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
 import { revealIfEveryoneAnswered } from '../../domain/services/reveal-if-everyone-answered.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
@@ -21,15 +22,18 @@ export class DisconnectPlayerUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
+  readonly #clock: Clock;
 
   constructor(
     roomRepository: RoomRepository,
     gameRepository: GameRepository,
     notifier: PlayerNotifier,
+    clock: Clock,
   ) {
     this.#roomRepository = roomRepository;
     this.#gameRepository = gameRepository;
     this.#notifier = notifier;
+    this.#clock = clock;
   }
 
   async execute({ roomId, playerId, connectionId }: DisconnectPlayerInput): Promise<void> {
@@ -40,8 +44,8 @@ export class DisconnectPlayerUseCase {
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
     if (game?.playerIds.includes(playerId) && game.isInDecisionPhase) {
-      // The round does not wait for who disconnects.
-      revealIfEveryoneAnswered(room, game);
+      // The round does not wait for who disconnects; past its time, it is revealed by time.
+      if (!game.runOutRound(this.#clock.now())) revealIfEveryoneAnswered(room, game);
     }
     if (game) handOverHostIfAway(room, game);
     const roomEvents = room.pullEvents();

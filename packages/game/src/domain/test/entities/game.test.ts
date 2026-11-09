@@ -546,10 +546,6 @@ describe('Game', () => {
         dilemmaId,
         optionOrder: OPTION_IDS,
       }));
-      const predictionSubsets = DILEMMAS.map(({ dilemmaId }) => ({
-        dilemmaId,
-        predictionSubset: [],
-      }));
       expect(snapshot).toEqual({
         id: 'TestId',
         roomId: 'TestRoomId',
@@ -570,7 +566,6 @@ describe('Game', () => {
             id: 'TestAnaId',
             left: false,
             optionOrders,
-            predictionSubsets,
             answers: [],
             didNotVote: [],
             points: [],
@@ -580,12 +575,10 @@ describe('Game', () => {
             id: 'TestLuisId',
             left: false,
             optionOrders,
-            predictionSubsets,
             answers: [
               {
                 dilemmaId: 'TestDilemma1',
                 vote: 'TestOption',
-                matchPrediction: null,
                 votePredictions: [],
                 optionOrder: OPTION_IDS,
                 responseTimeMs: 40_000,

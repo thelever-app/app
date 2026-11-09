@@ -6,7 +6,7 @@ import { PlayerLeftEvent } from '../../events/player-left.event.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 import { SequentialRandomness } from '../../../adapters/in-memory/sequential-randomness.ts';
 
-/** Ana hosts, Luis joined before Marta, all three connected, and a game in progress. */
+/** Ana hosts, Luis joined before Marta, all three connected, and a game in progress they play. */
 function roomInGame(): Room {
   const randomness = new SequentialRandomness();
   const room = Room.create(
@@ -37,6 +37,20 @@ function roomInGame(): Room {
   return room;
 }
 
+/** The players of the game in progress. */
+const PLAYERS = ['Ana', 'Luis', 'Marta'];
+
+/** Pedro joins once the game has started, so he waits in the room and does not play it. */
+function pedroJoins(room: Room): void {
+  room.join(
+    { nickname: 'Pedro', identity: 'TestPedroIdentity' },
+    new FixedIdGenerator('Pedro'),
+    new SequentialRandomness(),
+  );
+  room.connect('Pedro', 'PedroConnection');
+  room.pullEvents();
+}
+
 describe('Room, host and leaving', () => {
   describe('leave', () => {
     it('should pass the role of a host who leaves to who has been in the room longest, for good', () => {
@@ -44,7 +58,7 @@ describe('Room, host and leaving', () => {
       const room = roomInGame();
 
       // Act
-      room.leave('Ana');
+      room.leave('Ana', PLAYERS);
       room.connect('Ana', 'AnaOtherConnection');
 
       // Assert
@@ -59,10 +73,24 @@ describe('Room, host and leaving', () => {
       room.disconnect('Marta', 'MartaConnection');
 
       // Act
-      room.leave('Ana');
+      room.leave('Ana', PLAYERS);
 
       // Assert
       expect(room.host.id).toBe('Luis');
+    });
+
+    it('should pass the role of a host who leaves only to a player of the game', () => {
+      // Arrange
+      const room = roomInGame();
+      pedroJoins(room);
+      room.leave('Luis', PLAYERS);
+      room.leave('Marta', PLAYERS);
+
+      // Act
+      room.leave('Ana', PLAYERS);
+
+      // Assert
+      expect(room.host.id).toBe('Ana');
     });
 
     it('should close the connections of who leaves and tell the room', () => {
@@ -70,7 +98,7 @@ describe('Room, host and leaving', () => {
       const room = roomInGame();
 
       // Act
-      room.leave('Marta');
+      room.leave('Marta', PLAYERS);
 
       // Assert
       expect(room.isConnected('Marta')).toBe(false);
@@ -96,7 +124,7 @@ describe('Room, host and leaving', () => {
       );
 
       // Act & Assert
-      expect(() => room.leave('Ana')).toThrow(GameNotInProgressError);
+      expect(() => room.leave('Ana', PLAYERS)).toThrow(GameNotInProgressError);
     });
   });
 
@@ -104,7 +132,7 @@ describe('Room, host and leaving', () => {
     it('should bring back who left as a player, not as the host', () => {
       // Arrange
       const room = roomInGame();
-      room.leave('Ana');
+      room.leave('Ana', PLAYERS);
       room.pullEvents();
 
       // Act
@@ -146,7 +174,7 @@ describe('Room, host and leaving', () => {
       room.pullEvents();
 
       // Act
-      room.handOverHost();
+      room.handOverHost(PLAYERS);
 
       // Assert
       expect(room.host.id).toBe('Marta');
@@ -155,12 +183,27 @@ describe('Room, host and leaving', () => {
       ]);
     });
 
+    it('should pass the role of a disconnected host only to a player of the game', () => {
+      // Arrange
+      const room = roomInGame();
+      pedroJoins(room);
+      room.disconnect('Ana', 'AnaConnection');
+      room.disconnect('Luis', 'LuisConnection');
+      room.disconnect('Marta', 'MartaConnection');
+
+      // Act
+      room.handOverHost(PLAYERS);
+
+      // Assert
+      expect(room.host.id).toBe('Ana');
+    });
+
     it('should not take the role from a connected host', () => {
       // Arrange
       const room = roomInGame();
 
       // Act
-      room.handOverHost();
+      room.handOverHost(PLAYERS);
 
       // Assert
       expect(room.host.id).toBe('Ana');
@@ -170,7 +213,7 @@ describe('Room, host and leaving', () => {
       // Arrange
       const room = roomInGame();
       room.disconnect('Ana', 'AnaConnection');
-      room.handOverHost();
+      room.handOverHost(PLAYERS);
       room.pullEvents();
 
       // Act
@@ -187,8 +230,8 @@ describe('Room, host and leaving', () => {
       // Arrange
       const room = roomInGame();
       room.disconnect('Ana', 'AnaConnection');
-      room.handOverHost();
-      room.leave('Marta');
+      room.handOverHost(PLAYERS);
+      room.leave('Marta', PLAYERS);
 
       // Act
       const restored = Room.restore(room.toSnapshot());

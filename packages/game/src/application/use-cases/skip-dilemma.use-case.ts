@@ -5,7 +5,7 @@ import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findCurrentGame } from './find-current-game.ts';
-import { runOutRoundFirst } from './run-out-round-first.ts';
+import { runOutRound } from './run-out-round.ts';
 import { notifyGame } from './notify-game.ts';
 
 export interface SkipDilemmaInput {
@@ -44,15 +44,20 @@ export class SkipDilemmaUseCase {
     );
     const at = this.#clock.now();
 
-    await runOutRoundFirst(
-      { room, game },
-      {
-        roomRepository: this.#roomRepository,
-        gameRepository: this.#gameRepository,
-        notifier: this.#notifier,
-      },
-      at,
-    );
+    // Too late: the dilemma is revealed as the timer would have done, and the command is dropped.
+    if (
+      await runOutRound(
+        { room, game },
+        {
+          roomRepository: this.#roomRepository,
+          gameRepository: this.#gameRepository,
+          notifier: this.#notifier,
+        },
+        at,
+      )
+    ) {
+      return;
+    }
     game.skip(playerId, dilemmaId);
     revealIfEveryoneAnswered(room, game);
     handOverHostIfAway(room, game);

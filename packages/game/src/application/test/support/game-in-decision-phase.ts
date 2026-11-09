@@ -24,7 +24,7 @@ export const TEST_GAME_SETTINGS = {
 
 /**
  * Ana hosts a room with Luis and Marta; she creates it and they join, all in the lobby. The game
- * it starts plays the test dilemmas in their order, and options and subsets in their order too.
+ * it starts plays the test dilemmas in their order, and options in their order too.
  * The room has its default settings unless another variant is asked for.
  */
 export async function lobbyOfThree(

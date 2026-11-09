@@ -12,7 +12,6 @@ import { SkipDilemmaUseCase } from '../../use-cases/skip-dilemma.use-case.ts';
 import { InvalidReportReasonError } from '../../errors/invalid-report-reason.error.ts';
 import { NotHostError } from '../../../domain/errors/not-host.error.ts';
 import { HostChangedEvent } from '../../../domain/events/host-changed.event.ts';
-import { DecisionPhaseOverError } from '../../../domain/errors/decision-phase-over.error.ts';
 import { DilemmaRevealedEvent } from '../../../domain/events/dilemma-revealed.event.ts';
 import { RoundStartedEvent } from '../../../domain/events/round-started.event.ts';
 import { InMemoryDilemmaReports } from '../../../adapters/in-memory/in-memory-dilemma-reports.ts';
@@ -72,13 +71,14 @@ async function arrange() {
       game.clock,
     ),
     moveOn: new MoveOnUseCase(game.roomRepository, game.gameRepository, notifier, game.clock),
-    leaveRoom: new LeaveRoomUseCase(game.roomRepository, game.gameRepository, notifier),
+    leaveRoom: new LeaveRoomUseCase(game.roomRepository, game.gameRepository, notifier, game.clock),
     reportDilemma: new ReportDilemmaUseCase({ ...ports, reports }),
     skipDilemma: new SkipDilemmaUseCase(ports),
     disconnectPlayer: new DisconnectPlayerUseCase(
       game.roomRepository,
       game.gameRepository,
       notifier,
+      game.clock,
     ),
     joinRoom: new JoinRoomUseCase({
       ...ports,
@@ -121,22 +121,28 @@ describe('Round commands', () => {
       expect(notifier.receivedBy(anaId).at(-1)).toBeInstanceOf(DilemmaRevealedEvent);
     });
 
-    it('should find the time for the dilemma over before taking a late answer', async () => {
+    it('should reveal the dilemma whose time is over and drop an answer that comes after it', async () => {
       // Arrange
-      const { answerDilemma, gameRepository, clock, roomId, gameId, luisId, dilemmaIds } =
-        await arrange();
+      const arranged = await arrange();
+      const { answerDilemma, gameRepository, notifier, clock, roomId, gameId } = arranged;
+      const { anaId, luisId, dilemmaIds } = arranged;
       clock.advance(MINUTE);
 
-      // Act & Assert
-      await expect(
-        answerDilemma.execute({
-          roomId,
-          playerId: luisId,
-          dilemmaId: dilemmaIds[0]!,
-          vote: 'TestOption',
-        }),
-      ).rejects.toThrow(DecisionPhaseOverError);
-      expect((await gameRepository.findById(gameId))?.round?.revealedBy).toBe('time');
+      // Act
+      await answerDilemma.execute({
+        roomId,
+        playerId: luisId,
+        dilemmaId: dilemmaIds[0]!,
+        vote: 'TestOption',
+      });
+
+      // Assert
+      const game = await gameRepository.findById(gameId);
+      expect(game?.round).toMatchObject({ phase: 'reveal', revealedBy: 'time' });
+      expect(game?.didNotVoteOf(luisId)).toEqual([
+        { dilemmaId: dilemmaIds[0], reason: 'not-answered' },
+      ]);
+      expect(notifier.receivedBy(anaId).at(-1)).toBeInstanceOf(DilemmaRevealedEvent);
     });
   });
 
@@ -161,6 +167,25 @@ describe('Round commands', () => {
       expect(game?.didNotVoteOf(martaId)).toEqual([
         { dilemmaId: arranged.dilemmaIds[0], reason: 'not-answered' },
       ]);
+    });
+
+    it('should reveal by time a dilemma whose time is over when the last one left disconnects', async () => {
+      // Arrange
+      const arranged = await arrange();
+      const { disconnectPlayer, gameRepository, connections, clock, roomId, gameId } = arranged;
+      const { anaId, luisId, martaId } = arranged;
+      await vote(arranged, 0, anaId, luisId);
+      clock.advance(MINUTE);
+
+      // Act
+      await disconnectPlayer.execute({
+        roomId,
+        playerId: martaId,
+        connectionId: connections.get(martaId)!,
+      });
+
+      // Assert
+      expect((await gameRepository.findById(gameId))?.round?.revealedBy).toBe('time');
     });
   });
 
@@ -261,6 +286,20 @@ describe('Round commands', () => {
       expect(room?.host.id).toBe(luisId);
       expect(room?.hasLeft(anaId)).toBe(false);
       expect((await gameRepository.findById(gameId))?.hasLeft(anaId)).toBe(false);
+    });
+
+    it('should reveal by time a dilemma whose time is over when the last one left leaves', async () => {
+      // Arrange
+      const arranged = await arrange();
+      const { leaveRoom, gameRepository, clock, roomId, gameId, anaId, luisId, martaId } = arranged;
+      await vote(arranged, 0, anaId, luisId);
+      clock.advance(MINUTE);
+
+      // Act
+      await leaveRoom.execute({ roomId, playerId: martaId });
+
+      // Assert
+      expect((await gameRepository.findById(gameId))?.round?.revealedBy).toBe('time');
     });
   });
 

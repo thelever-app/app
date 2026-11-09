@@ -8,7 +8,7 @@ import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import type { SealProvider } from '../ports/seal-provider.port.ts';
 import { findCurrentGame } from './find-current-game.ts';
-import { runOutRoundFirst } from './run-out-round-first.ts';
+import { runOutRound } from './run-out-round.ts';
 import { notifyGame } from './notify-game.ts';
 
 export interface AnswerDilemmaInput {
@@ -17,8 +17,7 @@ export interface AnswerDilemmaInput {
   readonly playerId: string;
   readonly dilemmaId: string;
   readonly vote: string;
-  /** In a nominal room, the predictions made so far; the client sends them with every change. */
-  readonly matchPrediction?: number | null;
+  /** In a nominal room, the vote predictions made so far. */
   readonly votePredictions?: readonly VotePrediction[];
 }
 
@@ -58,15 +57,20 @@ export class AnswerDilemmaUseCase {
     if (!player) throw new PlayerNotInRoomError(playerId);
     const at = this.#clock.now();
 
-    await runOutRoundFirst(
-      { room, game },
-      {
-        roomRepository: this.#roomRepository,
-        gameRepository: this.#gameRepository,
-        notifier: this.#notifier,
-      },
-      at,
-    );
+    // Too late: the dilemma is revealed as the timer would have done, and the command is dropped.
+    if (
+      await runOutRound(
+        { room, game },
+        {
+          roomRepository: this.#roomRepository,
+          gameRepository: this.#gameRepository,
+          notifier: this.#notifier,
+        },
+        at,
+      )
+    ) {
+      return;
+    }
     game.answer(playerId, dilemmaId, draft, await this.#sealProvider.sealFor(player.identity), at);
     revealIfEveryoneAnswered(room, game);
     handOverHostIfAway(room, game);

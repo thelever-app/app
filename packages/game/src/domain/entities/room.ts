@@ -362,10 +362,10 @@ export class Room {
 
   /**
    * The player leaves the game in progress on purpose: their connections close and, if they were
-   * the host, the role passes on for good, also to a player who is not connected. They keep their
-   * place in the room and can join again.
+   * the host, the role passes on for good to a player of the game, also one who is not connected.
+   * They keep their place in the room and can join again.
    */
-  leave(playerId: string): void {
+  leave(playerId: string, gamePlayerIds: readonly string[]): void {
     this.#player(playerId);
     if (this.isInLobby) throw new GameNotInProgressError(this.id);
     if (this.#leftPlayerIds.has(playerId)) return;
@@ -374,7 +374,7 @@ export class Room {
     if (this.#connections.delete(playerId)) this.#changeConnection(playerId, false);
     this.#version += 1;
     this.#events.push(new PlayerLeftEvent(this.id, playerId, true, this.#version));
-    if (playerId === this.#hostId) this.#passHostOnFor(playerId);
+    if (playerId === this.#hostId) this.#passHostOnFor(playerId, gamePlayerIds);
     if (playerId === this.#absentHostId) this.#absentHostId = null;
   }
 
@@ -385,12 +385,13 @@ export class Room {
 
   /**
    * The host is away (disconnected) when the game needs one: the role passes to the connected
-   * player who has been in the room longest, and the host gets it back on connecting again.
+   * player of the game who has been in the room longest, and the host gets it back on connecting
+   * again.
    */
-  handOverHost(): void {
+  handOverHost(gamePlayerIds: readonly string[]): void {
     if (this.isConnected(this.#hostId)) return;
     const absentHostId = this.#hostId;
-    if (this.#handOverHost()) this.#absentHostId ??= absentHostId;
+    if (this.#handOverHost(gamePlayerIds)) this.#absentHostId ??= absentHostId;
   }
 
   /**
@@ -496,20 +497,30 @@ export class Room {
     this.#events.push(new LobbyChangedEvent(this.id, change, this.#version));
   }
 
-  /** To the connected player who has been in the room longest and has not left; whether anyone took it. */
-  #handOverHost(): boolean {
+  /**
+   * To the connected player of the game who has been in the room longest and has not left; whether
+   * anyone took it.
+   */
+  #handOverHost(gamePlayerIds: readonly string[]): boolean {
     const successor = this.#players.find(
-      ({ id }) => id !== this.#hostId && this.#connections.has(id) && !this.#leftPlayerIds.has(id),
+      ({ id }) =>
+        id !== this.#hostId &&
+        gamePlayerIds.includes(id) &&
+        this.#connections.has(id) &&
+        !this.#leftPlayerIds.has(id),
     );
     if (!successor) return false;
     this.#changeHost(successor.id);
     return true;
   }
 
-  /** For good, to the player who has been in the room longest and has not left, connected or not. */
-  #passHostOnFor(playerId: string): void {
+  /**
+   * For good, to the player of the game who has been in the room longest and has not left,
+   * connected or not.
+   */
+  #passHostOnFor(playerId: string, gamePlayerIds: readonly string[]): void {
     const successor = this.#players.find(
-      ({ id }) => id !== playerId && !this.#leftPlayerIds.has(id),
+      ({ id }) => id !== playerId && gamePlayerIds.includes(id) && !this.#leftPlayerIds.has(id),
     );
     if (successor) this.#changeHost(successor.id);
   }

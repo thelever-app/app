@@ -96,7 +96,7 @@ export function describeGameRepositoryContract(
     };
   }
 
-  /** Options and subsets in an order other than the one given, so a repository that sorts them fails. */
+  /** Options in an order other than the one given, so a repository that sorts them fails. */
   function start(game: Game, room: Room): void {
     game.start(room.players, STARTED_AT, new FixedRandomness(0, 0, 1, 0, 1));
   }
@@ -151,7 +151,6 @@ export function describeGameRepositoryContract(
           first.dilemmaId,
           {
             vote: first.optionIds[0],
-            matchPrediction: 1,
             votePredictions: [{ playerId: 'TestLuisId', vote: first.optionIds[1] }],
           },
           ANA_SEAL,
@@ -160,7 +159,7 @@ export function describeGameRepositoryContract(
         game.answer(
           'TestLuisId',
           first.dilemmaId,
-          { vote: first.optionIds[1], matchPrediction: 0 },
+          { vote: first.optionIds[1] },
           LUIS_SEAL,
           new Date(STARTED_AT.getTime() + 20 * SECOND),
         );
@@ -175,8 +174,7 @@ export function describeGameRepositoryContract(
         expect(found?.personInTheGap(second.dilemmaId)).not.toBeNull();
         expect(found?.pointsOf('TestAnaId')[0]).toEqual({
           dilemmaId: first.dilemmaId,
-          match: 0,
-          votes: 100,
+          points: 100,
         });
       });
 

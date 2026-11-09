@@ -57,8 +57,7 @@ export {
   type ExplorationSlots,
 } from './domain/services/compose-game.ts';
 export type { Seal, VotePrediction, AnswerProps } from './domain/vos/answer.vo.ts';
-export { PREDICTION_LIMIT } from './domain/services/prediction-subsets.ts';
-export { MAXIMUM_POINTS, type PredictionPoints } from './domain/services/score-predictions.ts';
+export { MAXIMUM_POINTS } from './domain/services/score-predictions.ts';
 export type { DomainEvent } from './domain/events/domain-event.ts';
 export { ProgressUpdatedEvent } from './domain/events/progress-updated.event.ts';
 export { ConnectionChangedEvent } from './domain/events/connection-changed.event.ts';
@@ -106,8 +105,7 @@ export { DilemmaNotSuitableError } from './domain/errors/dilemma-not-suitable.er
 export { HostCannotBeExpelledError } from './domain/errors/host-cannot-be-expelled.error.ts';
 export { DecisionPhaseOverError } from './domain/errors/decision-phase-over.error.ts';
 export { PredictionsNotAllowedError } from './domain/errors/predictions-not-allowed.error.ts';
-export { InvalidMatchPredictionError } from './domain/errors/invalid-match-prediction.error.ts';
-export { PlayerNotInPredictionSubsetError } from './domain/errors/player-not-in-prediction-subset.error.ts';
+export { PlayerNotPredictableError } from './domain/errors/player-not-predictable.error.ts';
 export { DuplicateVotePredictionError } from './domain/errors/duplicate-vote-prediction.error.ts';
 export { AnswerIncompleteError } from './domain/errors/answer-incomplete.error.ts';
 export { DilemmaSkippedError } from './domain/errors/dilemma-skipped.error.ts';

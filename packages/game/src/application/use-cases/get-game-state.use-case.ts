@@ -32,12 +32,11 @@ export interface GetGameStateOutput {
   readonly reveal: DilemmaReveal | null;
   /**
    * Their content, in the order every player gets them, with the options in the order of the player
-   * who asks, the players whose vote they predict and who takes the gap, if it has one.
+   * who asks and who takes the gap, if it has one.
    */
-  readonly dilemmas: readonly (DilemmaContent & {
-    readonly predictionSubset: readonly string[];
-    readonly personInTheGap: string | null;
-  })[];
+  readonly dilemmas: readonly (DilemmaContent & { readonly personInTheGap: string | null })[];
+  /** The players whose vote the player who asks predicts in each dilemma; none in an anonymous room. */
+  readonly playersToPredict: readonly string[];
   readonly players: readonly {
     readonly playerId: string;
     readonly nickname: string;
@@ -52,7 +51,6 @@ export interface GetGameStateOutput {
   readonly answers: readonly {
     readonly dilemmaId: string;
     readonly vote: string;
-    readonly matchPrediction: number | null;
     readonly votePredictions: readonly VotePrediction[];
   }[];
   /** The dilemmas the player who asks reported, and whether as offensive, so they may skip it. */
@@ -64,7 +62,7 @@ export interface GetGameStateOutput {
 /**
  * What a player may know about a game: the round in progress and, once revealed, what its reveal
  * shows; who answered it (in an anonymous room, only how many) and who is connected; and their own
- * answers, options order and prediction subsets. Never anyone's response time.
+ * answers, options order and whose votes they predict. Never anyone's response time.
  */
 export class GetGameStateUseCase {
   readonly #roomRepository: RoomRepository;
@@ -90,12 +88,7 @@ export class GetGameStateUseCase {
     // Throws if the player does not play this game, before anything about it is returned.
     const answers = game
       .answersOf(playerId)
-      .map(({ dilemmaId, vote, matchPrediction, votePredictions }) => ({
-        dilemmaId,
-        vote,
-        matchPrediction,
-        votePredictions,
-      }));
+      .map(({ dilemmaId, vote, votePredictions }) => ({ dilemmaId, vote, votePredictions }));
     const round = game.round;
     if (!round) throw new DecisionPhaseNotStartedError();
     const anonymous = game.settings.variant === 'anonymous';
@@ -119,14 +112,12 @@ export class GetGameStateUseCase {
     );
     const dilemmas = contents.map((content) => {
       const optionOrder = game.optionOrderOf(playerId, content.dilemmaId);
-      const predictionSubset = game.predictionSubsetOf(playerId, content.dilemmaId);
       const options = optionOrder.map((optionId) =>
         content.options.find((option) => option.optionId === optionId)!,
       );
       return {
         ...content,
         options,
-        predictionSubset,
         personInTheGap: game.personInTheGap(content.dilemmaId),
       };
     });
@@ -147,6 +138,7 @@ export class GetGameStateUseCase {
       answeredCount: game.answeredCount,
       reveal: round.phase === 'reveal' ? game.revealOf(round.position) : null,
       dilemmas,
+      playersToPredict: game.playersToPredictBy(playerId),
       players,
       answers,
       reports: game.reportsOf(playerId),

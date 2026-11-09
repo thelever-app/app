@@ -6,6 +6,7 @@ import { GameNotFoundError } from '../../errors/game-not-found.error.ts';
 import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
 import { PlayerNotInGameError } from '../../../domain/errors/player-not-in-game.error.ts';
 import { Game } from '../../../domain/entities/game.ts';
+import type { RoomVariant } from '../../../domain/vos/room-settings.vo.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
@@ -17,9 +18,9 @@ import {
   TEST_GAME_SETTINGS,
 } from '../support/game-in-decision-phase.ts';
 
-/** Ana hosts a room with Luis and Marta, and the game is in the decision phase. */
-async function gameInDecisionPhase() {
-  const game = await sharedGameInDecisionPhase();
+/** Ana hosts a room with Luis and Marta, and the game is in the decision phase; anonymous unless asked. */
+async function gameInDecisionPhase(variant: RoomVariant = 'anonymous') {
+  const game = await sharedGameInDecisionPhase(new InMemoryPlayerNotifier(), variant);
   return {
     ...game,
     answerDilemma: new AnswerDilemmaUseCase({
@@ -50,13 +51,24 @@ describe('GetGameStateUseCase', () => {
           dilemmaId,
           text: `TextOf${dilemmaId}`,
           options: TEST_OPTION_IDS.map((optionId) => ({ optionId, text: `TextOf${optionId}` })),
-          predictionSubset: [],
           personInTheGap: null,
         })),
       );
       expect(state.round).toMatchObject({ position: 0, phase: 'decision', revealedBy: null });
       expect(state.hostId).toBe(anaId);
       expect(state.reveal).toBeNull();
+      expect(state.playersToPredict).toEqual([]);
+    });
+
+    it('should return every other player to predict in a nominal room', async () => {
+      // Arrange
+      const { getGameState, gameId, anaId, luisId, martaId } = await gameInDecisionPhase('nominal');
+
+      // Act
+      const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
+
+      // Assert
+      expect(state.playersToPredict).toEqual([anaId, martaId]);
     });
 
     it('should return every player with their nickname and avatar, and only how many answered in an anonymous room', async () => {
@@ -187,7 +199,6 @@ describe('GetGameStateUseCase', () => {
         {
           dilemmaId: 'TestDilemma1',
           vote: 'TestOption',
-          matchPrediction: null,
           votePredictions: [],
         },
       ]);

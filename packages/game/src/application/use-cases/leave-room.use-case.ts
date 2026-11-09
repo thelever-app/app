@@ -1,3 +1,4 @@
+import type { Clock } from '../../domain/ports/clock.port.ts';
 import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
 import { revealIfEveryoneAnswered } from '../../domain/services/reveal-if-everyone-answered.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
@@ -19,15 +20,18 @@ export class LeaveRoomUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
+  readonly #clock: Clock;
 
   constructor(
     roomRepository: RoomRepository,
     gameRepository: GameRepository,
     notifier: PlayerNotifier,
+    clock: Clock,
   ) {
     this.#roomRepository = roomRepository;
     this.#gameRepository = gameRepository;
     this.#notifier = notifier;
+    this.#clock = clock;
   }
 
   async execute({ roomId, playerId }: LeaveRoomInput): Promise<void> {
@@ -37,11 +41,11 @@ export class LeaveRoomUseCase {
       roomId,
     );
 
-    room.leave(playerId);
+    room.leave(playerId, game.playerIds);
     if (game.playerIds.includes(playerId)) {
       game.leave(playerId);
-      // The round does not wait for who leaves.
-      revealIfEveryoneAnswered(room, game);
+      // The round does not wait for who leaves; past its time, it is revealed by time.
+      if (!game.runOutRound(this.#clock.now())) revealIfEveryoneAnswered(room, game);
     }
     handOverHostIfAway(room, game);
     const roomEvents = room.pullEvents();

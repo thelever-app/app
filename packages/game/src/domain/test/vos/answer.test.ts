@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AnswerVO, type AnswerProps } from '../../vos/answer.vo.ts';
 import { VoteMissingError } from '../../errors/vote-missing.error.ts';
-import { InvalidMatchPredictionError } from '../../errors/invalid-match-prediction.error.ts';
 
 const SEAL = {
   gameConsentVersion: 'TestGameConsentVersion',
@@ -11,7 +10,6 @@ const SEAL = {
 };
 const PROPS: AnswerProps = {
   vote: 'TestOption',
-  matchPrediction: 1,
   votePredictions: [{ playerId: 'TestAnaId', vote: 'TestOtherOption' }],
   optionOrder: ['TestOtherOption', 'TestOption'],
   responseTimeMs: null,
@@ -27,7 +25,6 @@ describe('AnswerVO', () => {
 
       // Assert
       expect(answerVO.vote).toBe('TestOption');
-      expect(answerVO.matchPrediction).toBe(1);
       expect(answerVO.votePredictions).toEqual(PROPS.votePredictions);
       expect(answerVO.optionOrder).toEqual(PROPS.optionOrder);
       expect(answerVO.responseTimeMs).toBeNull();
@@ -70,16 +67,6 @@ describe('AnswerVO', () => {
       expect(
         () => new AnswerVO({ ...PROPS, votePredictions: [{ playerId: 'TestAnaId', vote: ' ' }] }),
       ).toThrow(VoteMissingError);
-    });
-
-    it('should throw an error if the match prediction is not a whole number from 0', () => {
-      // Act & Assert
-      expect(() => new AnswerVO({ ...PROPS, matchPrediction: -1 })).toThrow(
-        InvalidMatchPredictionError,
-      );
-      expect(() => new AnswerVO({ ...PROPS, matchPrediction: 1.5 })).toThrow(
-        InvalidMatchPredictionError,
-      );
     });
   });
 

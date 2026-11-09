@@ -11,12 +11,11 @@ import { DilemmaSkippedError } from '../errors/dilemma-skipped.error.ts';
 import { DilemmasMissingError } from '../errors/dilemmas-missing.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { DuplicateVotePredictionError } from '../errors/duplicate-vote-prediction.error.ts';
-import { InvalidMatchPredictionError } from '../errors/invalid-match-prediction.error.ts';
 import { NoNextRoundError } from '../errors/no-next-round.error.ts';
 import { OptionNotInDilemmaError } from '../errors/option-not-in-dilemma.error.ts';
 import { PlayerLeftGameError } from '../errors/player-left-game.error.ts';
 import { PlayerNotInGameError } from '../errors/player-not-in-game.error.ts';
-import { PlayerNotInPredictionSubsetError } from '../errors/player-not-in-prediction-subset.error.ts';
+import { PlayerNotPredictableError } from '../errors/player-not-predictable.error.ts';
 import { PlayersMissingError } from '../errors/players-missing.error.ts';
 import { PredictionsNotAllowedError } from '../errors/predictions-not-allowed.error.ts';
 import { AnsweredCountChangedEvent } from '../events/answered-count-changed.event.ts';
@@ -28,9 +27,8 @@ import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
 import type { DilemmaOrigin } from '../services/compose-game.ts';
 import { peopleInTheGap } from '../services/people-in-the-gap.ts';
-import { predictionSubsets } from '../services/prediction-subsets.ts';
 import { shuffle } from '../services/random-choice.ts';
-import { scorePredictions, type PredictionPoints } from '../services/score-predictions.ts';
+import { scorePredictions } from '../services/score-predictions.ts';
 import { AnswerVO, type AnswerProps, type Seal, type VotePrediction } from '../vos/answer.vo.ts';
 import { DilemmaVO } from '../vos/dilemma.vo.ts';
 import type { GroupNature, Place } from '../vos/group.vo.ts';
@@ -94,7 +92,6 @@ export type DidNotVoteReason = 'not-answered' | 'reported';
 /** What a player answers of a dilemma, complete or not yet: the vote and the predictions made so far. */
 export interface AnswerDraft {
   readonly vote: string;
-  readonly matchPrediction?: number | null;
   readonly votePredictions?: readonly VotePrediction[];
 }
 
@@ -114,15 +111,6 @@ export interface DilemmaReveal {
   readonly didNotVoteCount: number;
   /** What each player voted, null for who did not vote. */
   readonly votes: readonly { readonly playerId: string; readonly vote: string | null }[];
-  /** Each match prediction made by a player who voted, against how many of the others chose the same. */
-  readonly matchPredictions: readonly {
-    readonly playerId: string;
-    readonly predicted: number;
-    readonly actual: number;
-    readonly distance: number;
-  }[];
-  /** Who was closest with their match prediction; a tie shares it. */
-  readonly closestIds: readonly string[];
   /** Each vote prediction made, and whether it was right. */
   readonly votePredictions: readonly {
     readonly playerId: string;
@@ -150,17 +138,13 @@ export interface GameSnapshot {
       readonly dilemmaId: string;
       readonly optionOrder: readonly string[];
     }[];
-    /** The players whose vote they predict in each dilemma; none in an anonymous room. */
-    readonly predictionSubsets: readonly {
-      readonly dilemmaId: string;
-      readonly predictionSubset: readonly string[];
-    }[];
     readonly answers: readonly ({ readonly dilemmaId: string } & AnswerProps)[];
     readonly didNotVote: readonly {
       readonly dilemmaId: string;
       readonly reason: DidNotVoteReason;
     }[];
-    readonly points: readonly ({ readonly dilemmaId: string } & PredictionPoints)[];
+    /** What the vote predictions of the player scored in each dilemma revealed; null for none made. */
+    readonly points: readonly { readonly dilemmaId: string; readonly points: number | null }[];
     /** The dilemmas the player reported, and whether as offensive, which lets them skip it. */
     readonly reports: readonly { readonly dilemmaId: string; readonly offensive: boolean }[];
   }[];
@@ -168,10 +152,9 @@ export interface GameSnapshot {
 
 interface PlayerState {
   readonly optionOrders: Map<string, readonly string[]>;
-  readonly predictionSubsets: Map<string, readonly string[]>;
   readonly answers: Map<string, AnswerVO>;
   readonly didNotVote: Map<string, DidNotVoteReason>;
-  readonly points: Map<string, PredictionPoints>;
+  readonly points: Map<string, number | null>;
   /** Whether each dilemma the player reported was offensive. */
   readonly reports: Map<string, boolean>;
   left: boolean;
@@ -296,30 +279,20 @@ export class Game {
 
   /**
    * The game starts with its first round. Everyone gets the dilemmas in the same order; each player
-   * gets the options of each dilemma in an order of their own and, in a nominal room, their
-   * prediction subset; each dilemma with the gap gets its person.
+   * gets the options of each dilemma in an order of their own; each dilemma with the gap gets its
+   * person.
    */
   start(players: readonly Player[], at: Date, randomness: Randomness): void {
     if (this.#round !== null) throw new DecisionPhaseAlreadyStartedError();
     if (players.length === 0) throw new PlayersMissingError();
 
     const playerIds = players.map(({ id }) => id);
-    const subsets =
-      this.#settings.variant === 'nominal'
-        ? predictionSubsets(playerIds, this.#dilemmas.length, randomness)
-        : new Map<string, string[][]>();
     for (const playerId of playerIds) {
       this.#players.set(playerId, {
         optionOrders: new Map(
           this.#dilemmas.map((dilemma) => [
             dilemma.dilemmaId,
             shuffle(dilemma.optionIds, randomness),
-          ]),
-        ),
-        predictionSubsets: new Map(
-          this.#dilemmas.map((dilemma, position) => [
-            dilemma.dilemmaId,
-            subsets.get(playerId)?.[position] ?? [],
           ]),
         ),
         answers: new Map(),
@@ -350,27 +323,20 @@ export class Game {
     const vote = new VoteVO(draft.vote).value;
     if (state.didNotVote.has(dilemmaId)) throw new DilemmaSkippedError(dilemmaId);
     if (!dilemma.hasOption(vote)) throw new OptionNotInDilemmaError(vote, dilemmaId);
-    const matchPrediction = draft.matchPrediction ?? null;
     const votePredictions = draft.votePredictions ?? [];
-    this.#ensurePredictionsFit(
-      dilemma,
-      this.predictionSubsetOf(playerId, dilemmaId),
-      matchPrediction,
-      votePredictions,
-    );
+    this.#ensurePredictionsFit(dilemma, this.playersToPredictBy(playerId), votePredictions);
 
     const previous = state.answers.get(dilemmaId);
-    const wasComplete = previous !== undefined && this.#isComplete(playerId, dilemmaId, previous);
+    const wasComplete = previous !== undefined && this.#isComplete(playerId, previous);
     let answer = new AnswerVO({
       vote,
-      matchPrediction,
       votePredictions,
       optionOrder: this.optionOrderOf(playerId, dilemmaId),
       responseTimeMs: previous?.responseTimeMs ?? null,
       seal,
       voterInTheGap: this.#peopleInTheGap.get(dilemmaId) === playerId,
     });
-    const isComplete = this.#isComplete(playerId, dilemmaId, answer);
+    const isComplete = this.#isComplete(playerId, answer);
     if (wasComplete && !isComplete) throw new AnswerIncompleteError(dilemmaId);
 
     if (isComplete && !wasComplete) {
@@ -527,9 +493,9 @@ export class Game {
     );
   }
 
-  /** How many players have answered the dilemma of the round, which is all an anonymous room tells. */
+  /** How many players still in the game have answered the dilemma of the round: all an anonymous room tells. */
   get answeredCount(): number {
-    return this.playerIds.filter((playerId) => this.hasAnswered(playerId)).length;
+    return this.#activePlayerIds().filter((playerId) => this.hasAnswered(playerId)).length;
   }
 
   /** The options of the dilemma in the order the player sees them. */
@@ -538,10 +504,11 @@ export class Game {
     return [...(this.#stateOf(playerId).optionOrders.get(dilemmaId) as readonly string[])];
   }
 
-  /** The players whose vote the player predicts in the dilemma; none in an anonymous room. */
-  predictionSubsetOf(playerId: string, dilemmaId: string): readonly string[] {
-    this.#dilemmaOf(dilemmaId);
-    return [...(this.#stateOf(playerId).predictionSubsets.get(dilemmaId) as readonly string[])];
+  /** The players whose vote the player predicts in each dilemma: all the others in a nominal room, none in an anonymous one. */
+  playersToPredictBy(playerId: string): readonly string[] {
+    this.#stateOf(playerId);
+    if (this.#settings.variant === 'anonymous') return [];
+    return this.playerIds.filter((other) => other !== playerId);
   }
 
   /** The player whose nickname takes the gap of the dilemma, the same for everyone; null without a gap. */
@@ -570,13 +537,14 @@ export class Game {
     });
   }
 
-  /** What the predictions of the player scored in each dilemma revealed so far. */
-  pointsOf(playerId: string): readonly ({ readonly dilemmaId: string } & PredictionPoints)[] {
+  /** What the vote predictions of the player scored in each dilemma revealed so far; null for none made. */
+  pointsOf(
+    playerId: string,
+  ): readonly { readonly dilemmaId: string; readonly points: number | null }[] {
     const { points } = this.#stateOf(playerId);
-    return this.#dilemmas.flatMap(({ dilemmaId }) => {
-      const scored = points.get(dilemmaId);
-      return scored ? [{ dilemmaId, ...scored }] : [];
-    });
+    return this.#dilemmas.flatMap(({ dilemmaId }) =>
+      points.has(dilemmaId) ? [{ dilemmaId, points: points.get(dilemmaId) ?? null }] : [],
+    );
   }
 
   /** What the reveal of the dilemma at that position shows, once it has been revealed. */
@@ -594,17 +562,6 @@ export class Game {
     const voteOf = (playerId: string) => answerOf(playerId)?.vote ?? null;
     const voters = this.playerIds.filter((playerId) => voteOf(playerId) !== null);
     const tooFewVotes = !nominal && voters.length < MINIMUM_VOTES_TO_SHOW;
-    const matchPredictions = nominal
-      ? voters.flatMap((playerId) => {
-          const predicted = answerOf(playerId)?.matchPrediction ?? null;
-          if (predicted === null) return [];
-          const actual = voters.filter(
-            (other) => other !== playerId && voteOf(other) === voteOf(playerId),
-          ).length;
-          return [{ playerId, predicted, actual, distance: Math.abs(predicted - actual) }];
-        })
-      : [];
-    const closest = Math.min(...matchPredictions.map(({ distance }) => distance));
 
     return {
       position,
@@ -620,10 +577,6 @@ export class Game {
       votes: nominal
         ? this.playerIds.map((playerId) => ({ playerId, vote: voteOf(playerId) }))
         : [],
-      matchPredictions,
-      closestIds: matchPredictions
-        .filter(({ distance }) => distance === closest)
-        .map(({ playerId }) => playerId),
       votePredictions: nominal
         ? voters.flatMap((playerId) =>
             (answerOf(playerId)?.votePredictions ?? []).map(({ playerId: aboutId, vote }) => ({
@@ -669,10 +622,6 @@ export class Game {
           dilemmaId,
           optionOrder: [...optionOrder],
         })),
-        predictionSubsets: [...state.predictionSubsets].map(([dilemmaId, predictionSubset]) => ({
-          dilemmaId,
-          predictionSubset: [...predictionSubset],
-        })),
         answers: this.answersOf(playerId),
         didNotVote: this.didNotVoteOf(playerId),
         points: this.pointsOf(playerId),
@@ -697,19 +646,11 @@ export class Game {
         optionOrders: new Map(
           player.optionOrders.map(({ dilemmaId, optionOrder }) => [dilemmaId, [...optionOrder]]),
         ),
-        predictionSubsets: new Map(
-          player.predictionSubsets.map(({ dilemmaId, predictionSubset }) => [
-            dilemmaId,
-            [...predictionSubset],
-          ]),
-        ),
         answers: new Map(
           player.answers.map(({ dilemmaId, ...props }) => [dilemmaId, new AnswerVO(props)]),
         ),
         didNotVote: new Map(player.didNotVote.map(({ dilemmaId, reason }) => [dilemmaId, reason])),
-        points: new Map(
-          player.points.map(({ dilemmaId, match, votes }) => [dilemmaId, { match, votes }]),
-        ),
+        points: new Map(player.points.map(({ dilemmaId, points }) => [dilemmaId, points])),
         reports: new Map(player.reports.map(({ dilemmaId, offensive }) => [dilemmaId, offensive])),
         left: player.left,
       });
@@ -763,43 +704,28 @@ export class Game {
 
   #isCompleted(playerId: string, dilemmaId: string): boolean {
     const answer = this.#stateOf(playerId).answers.get(dilemmaId);
-    return answer !== undefined && this.#isComplete(playerId, dilemmaId, answer);
+    return answer !== undefined && this.#isComplete(playerId, answer);
   }
 
   /** The vote in an anonymous room; the vote with every prediction in a nominal one. */
-  #isComplete(playerId: string, dilemmaId: string, answer: AnswerVO): boolean {
+  #isComplete(playerId: string, answer: AnswerVO): boolean {
     if (this.#settings.variant === 'anonymous') return true;
-    const predictionSubset = this.predictionSubsetOf(playerId, dilemmaId);
     const predicted = new Set(answer.votePredictions.map((prediction) => prediction.playerId));
-    return (
-      answer.matchPrediction !== null && predictionSubset.every((other) => predicted.has(other))
-    );
+    return this.playersToPredictBy(playerId).every((other) => predicted.has(other));
   }
 
   #ensurePredictionsFit(
     dilemma: DilemmaVO,
-    predictionSubset: readonly string[],
-    matchPrediction: number | null,
+    playersToPredict: readonly string[],
     votePredictions: readonly VotePrediction[],
   ): void {
     if (this.#settings.variant === 'anonymous') {
-      if (matchPrediction !== null || votePredictions.length > 0) {
-        throw new PredictionsNotAllowedError();
-      }
+      if (votePredictions.length > 0) throw new PredictionsNotAllowedError();
       return;
-    }
-    const otherPlayers = this.#players.size - 1;
-    if (
-      matchPrediction !== null &&
-      (!Number.isInteger(matchPrediction) || matchPrediction < 0 || matchPrediction > otherPlayers)
-    ) {
-      throw new InvalidMatchPredictionError(matchPrediction, otherPlayers);
     }
     const seen = new Set<string>();
     for (const { playerId, vote } of votePredictions) {
-      if (!predictionSubset.includes(playerId)) {
-        throw new PlayerNotInPredictionSubsetError(playerId, dilemma.dilemmaId);
-      }
+      if (!playersToPredict.includes(playerId)) throw new PlayerNotPredictableError(playerId);
       if (seen.has(playerId)) throw new DuplicateVotePredictionError(playerId);
       seen.add(playerId);
       if (!dilemma.hasOption(vote.trim())) {
@@ -827,7 +753,6 @@ export class Game {
     const points = scorePredictions({
       playerIds: this.playerIds,
       answerOf: (playerId) => this.#stateOf(playerId).answers.get(dilemmaId),
-      subsetOf: (playerId) => this.predictionSubsetOf(playerId, dilemmaId),
     });
     for (const [playerId, scored] of points) {
       this.#stateOf(playerId).points.set(dilemmaId, scored);
