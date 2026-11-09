@@ -296,6 +296,81 @@ describe('LobbyScreen', () => {
       expect(send).toHaveBeenCalledWith({ type: 'pick-dilemmas', dilemmaIds: [] });
     });
 
+    it('should keep what the host changed in the settings, unsent, while picking dilemmas', async () => {
+      // Arrange
+      const searchDilemmas = vi.fn(async () => [...FOUND]);
+      const { t, send } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      fireEvent.click(screen.getByRole('radio', { name: t('settings.anonymous') }));
+      fireEvent.click(screen.getByRole('radio', { name: t('settings.byHand') }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.choosePicked') }));
+      await screen.findByRole('checkbox', { name: /TestText1/ });
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('pickDilemmas.back') }));
+
+      // Assert
+      const settings = await screen.findByRole('dialog', { name: t('settings.title') });
+      const checked = (name: string) =>
+        (within(settings).getByRole('radio', { name }) as HTMLInputElement).checked;
+      expect(checked(t('settings.anonymous'))).toBe(true);
+      expect(checked(t('settings.byHand'))).toBe(true);
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it('should show the dilemmas picked by hand in the settings once the room has them', async () => {
+      // Arrange
+      const searchDilemmas = vi.fn(async () => [...FOUND]);
+      const room = aRoom();
+      const { t, deliver } = await renderLobby(room, fakeRoomApi({ searchDilemmas }));
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
+      fireEvent.click(await screen.findByRole('checkbox', { name: /TestText1/ }));
+
+      // Act: the settings come back before the room confirms the pick.
+      fireEvent.click(screen.getByRole('button', { name: t('pickDilemmas.play', { count: 1 }) }));
+      act(() =>
+        deliver(
+          aRoom({
+            roomVersion: room.roomVersion + 1,
+            pickedDilemmas: [{ dilemmaId: 'test-dilemma-1', text: 'TestText1' }],
+          }),
+        ),
+      );
+
+      // Assert
+      const settings = await screen.findByRole('dialog', { name: t('settings.title') });
+      expect(
+        (within(settings).getByRole('radio', { name: t('settings.byHand') }) as HTMLInputElement)
+          .checked,
+      ).toBe(true);
+      expect(within(settings).getByText(t('settings.picked', { count: 1 }))).toBeDefined();
+    });
+
+    it('should show the settings by categories again once the host unchecks every picked dilemma', async () => {
+      // Arrange
+      const searchDilemmas = vi.fn(async () => FOUND);
+      const room = aRoom({ pickedDilemmas: [{ dilemmaId: 'test-dilemma-1', text: 'TestText1' }] });
+      const { t, deliver } = await renderLobby(room, fakeRoomApi({ searchDilemmas }));
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.changePicked') }));
+      fireEvent.click(await screen.findByRole('checkbox', { name: /TestText1/ }));
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('pickDilemmas.byCategory') }));
+      act(() => deliver(aRoom({ roomVersion: room.roomVersion + 1, pickedDilemmas: [] })));
+
+      // Assert
+      const settings = await screen.findByRole('dialog', { name: t('settings.title') });
+      expect(
+        (
+          within(settings).getByRole('radio', {
+            name: t('settings.byCategories'),
+          }) as HTMLInputElement
+        ).checked,
+      ).toBe(true);
+    });
+
     it('should pick the dilemmas it finds by what the host types', async () => {
       // Arrange
       const searchDilemmas = vi.fn(async () => [...FOUND]);
