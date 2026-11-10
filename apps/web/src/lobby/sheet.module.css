@@ -1,5 +1,6 @@
 /* The scrim of the design: ink at half opacity. */
 .overlay {
+  composes: fade from '../styles/motion.module.css';
   position: fixed;
   inset: 0;
   background: rgb(23 20 15 / 0.5);
@@ -7,6 +8,7 @@
 
 /* A bottom sheet within the column of the app. */
 .sheet {
+  composes: rise from '../styles/motion.module.css';
   position: fixed;
   inset: auto 0 0;
   max-width: 480px;

@@ -10,6 +10,7 @@ import { RoomApiProvider } from '../room/room-api-context.tsx';
 import type { ConnectedRoom } from '../room/connect-room.ts';
 import { useOpenRoom } from '../room/open-room-context.tsx';
 import { RoomProvider, useRoom } from '../room/room-provider.tsx';
+import { RoomMoments } from '../sound/room-moments.tsx';
 import { NoReturnScreen } from './no-return-screen.tsx';
 
 /**
@@ -61,6 +62,7 @@ export function RoomScreen() {
         )}
       >
         <RoomNotices />
+        <RoomMoments />
         <RoomContent />
       </RoomProvider>
     </RoomApiProvider>

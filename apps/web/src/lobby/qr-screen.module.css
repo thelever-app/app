@@ -1,5 +1,6 @@
 /* Signal yellow at full screen: a camera reads it best. */
 .screen {
+  composes: fade from '../styles/motion.module.css';
   position: fixed;
   inset: 0;
   box-sizing: border-box;

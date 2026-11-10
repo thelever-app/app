@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { hasAnswered, isAnonymous, pendingCountOf } from '../components/players.ts';
+import {
+  hasAnswered,
+  isAnonymous,
+  pendingCountOf,
+  selfAnswered,
+  selfSkipped,
+} from '../components/players.ts';
 import { RevealEarlyDialog } from '../game/reveal-early-dialog.tsx';
 import { useGame } from '../room/room-provider.tsx';
 import { DilemmaScreen } from '../screens/dilemma-screen.tsx';
@@ -26,15 +32,9 @@ export function DecisionPhase() {
   }
 
   const { position } = game.round;
-  const { dilemmaId } = game.dilemmas[position]!;
   const anonymous = isAnonymous(game);
-  const self = game.players.find(({ playerId }) => playerId === game.playerId);
-  const answered = anonymous
-    ? game.answers.some((answer) => answer.dilemmaId === dilemmaId)
-    : self !== undefined && hasAnswered(self);
-  const skipped = game.didNotVote.some(
-    (entry) => entry.dilemmaId === dilemmaId && entry.reason === 'reported',
-  );
+  const answered = selfAnswered(game);
+  const skipped = selfSkipped(game);
   const isHost = game.hostId === game.playerId;
   const pending = anonymous
     ? undefined

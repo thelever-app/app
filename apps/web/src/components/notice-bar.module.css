@@ -1,5 +1,6 @@
 /* A bar over the top of the screen, inside the centred column, that never moves the content below. */
 .bar {
+  composes: drop from '../styles/motion.module.css';
   position: fixed;
   inset-block-start: 0;
   inset-inline: 0;

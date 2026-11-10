@@ -1,5 +1,6 @@
 /* Header, content that scrolls on its own and the action at the bottom: nothing covers a row. */
 .screen {
+  composes: enter from '../styles/motion.module.css';
   display: flex;
   flex-direction: column;
   height: 100dvh;
@@ -27,6 +28,17 @@
   letter-spacing: var(--type-signage-letter-spacing);
   text-transform: uppercase;
   color: var(--color-ink-muted);
+}
+
+/* Mute and leave, side by side: the edge of the last one meets the edge of the header. */
+.headerActions {
+  display: flex;
+  align-items: center;
+  margin-right: -12px;
+}
+
+.headerActions .iconButton {
+  margin-right: 0;
 }
 
 .iconButton {
@@ -308,6 +320,15 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* A player who joins slides in; one who leaves slides out, and the row goes once it has. */
+.joining {
+  composes: join from '../styles/motion.module.css';
+}
+
+.leaving {
+  composes: leave from '../styles/motion.module.css';
 }
 
 .player {

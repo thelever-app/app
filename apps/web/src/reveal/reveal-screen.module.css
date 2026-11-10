@@ -313,6 +313,16 @@
   width: var(--share);
   height: 100%;
   background: var(--option);
+  transform-origin: left;
+  animation: grow var(--duration-slow) var(--ease-enter) backwards;
+}
+
+/* The share of each option grows as the dilemma is revealed; with reduced motion it fades in. */
+@keyframes grow {
+  from {
+    opacity: 0;
+    transform: scaleX(calc(1 - var(--motion)));
+  }
 }
 
 .absent {

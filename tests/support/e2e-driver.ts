@@ -140,6 +140,8 @@ const SCREEN = {
   voteOf: (nickname: string) => `El voto de ${nickname}`,
   next: 'Siguiente dilema',
   moreOptions: 'Más opciones',
+  mute: 'Silenciar el juego',
+  sound: /^Sonido/,
   report: 'Reportar este dilema',
   reasons: { offensive: 'Ofensivo', confusing: 'Confuso' },
   sendReport: 'Enviar reporte',
@@ -219,6 +221,8 @@ export class E2eDriver implements GameDriver {
   /** Whether the host gave the nickname and the nature of the group on the same screen. */
   #askedTogether = false;
   #fillers = 0;
+  /** The players whose device asks for reduced motion, set before their screen opens. */
+  readonly #reducedMotion = new Set<string>();
 
   constructor(stack: E2eStack) {
     this.#stack = stack;
@@ -1152,6 +1156,12 @@ export class E2eDriver implements GameDriver {
    * opens the game again to get its new time.
    */
   async letTimePass(seconds: number): Promise<void> {
+    await this.#startRoundAgo(seconds);
+    await this.#reopenEveryScreen();
+  }
+
+  /** The round in progress started that long ago, in the database of the run. */
+  async #startRoundAgo(seconds: number): Promise<void> {
     const { gameId } = this.#gameOf(this.#hostName());
     const now = Date.now();
     await this.#withDatabase(async (db) => {
@@ -1171,7 +1181,6 @@ export class E2eDriver implements GameDriver {
         .execute();
     });
     this.#timeSetAt = now;
-    await this.#reopenEveryScreen();
   }
 
   /**
@@ -1442,6 +1451,99 @@ export class E2eDriver implements GameDriver {
     return steady(async () => this.#nameOf(this.#gameOf(watcher.name).hostId));
   }
 
+  // Sound and motion
+
+  async soundsHeardBy(player: string): Promise<string[]> {
+    return (await this.#deviceOf(player)).sounds;
+  }
+
+  async vibrationsOf(player: string): Promise<number> {
+    return (await this.#deviceOf(player)).vibrations;
+  }
+
+  /** In the lobby, the speaker of its header; in the game, the switch of the menu. */
+  async mute(player: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(player));
+    if (await this.isInTheLobby(player)) {
+      const mute = page.getByRole('button', { name: SCREEN.mute });
+      await mute.click();
+      await waitUntilAsync(async () => (await mute.getAttribute('aria-pressed')) === 'true');
+      return;
+    }
+    await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+    const sound = page.getByRole('switch', { name: SCREEN.sound });
+    await sound.click();
+    await waitUntilAsync(async () => (await sound.getAttribute('aria-checked')) === 'false');
+    await page.keyboard.press('Escape');
+  }
+
+  async isMuted(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    if (await this.isInTheLobby(player)) {
+      const mute = page.getByRole('button', { name: SCREEN.mute });
+      return (await mute.getAttribute('aria-pressed')) === 'true';
+    }
+    await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+    const checked = await page
+      .getByRole('switch', { name: SCREEN.sound })
+      .getAttribute('aria-checked');
+    await page.keyboard.press('Escape');
+    return checked === 'false';
+  }
+
+  /** The same browser, so the same device: it opens the page again, as the app would. */
+  async reopenApp(player: string): Promise<void> {
+    const reopened = this.#playerCalled(player);
+    const { page } = screenOf(reopened);
+    const before = screenOf(reopened).received.length;
+    await page.reload();
+    await waitUntil(
+      () => screenOf(reopened).received.length > before || undefined,
+      `${player} gets the room again`,
+      RECONNECTION_TIMEOUT_MS,
+    );
+    await touch(page);
+  }
+
+  reduceMotionFor(player: string): void {
+    if (this.#players.get(player)?.screen) {
+      throw new Error(`The screen of ${player} is already open: reduce motion before it opens`);
+    }
+    this.#reducedMotion.add(player);
+  }
+
+  async canSound(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    return (await page.evaluate('window.__deviceCanSound()')) as boolean;
+  }
+
+  async movementsSeenBy(player: string): Promise<string[]> {
+    return [...new Set((await this.#deviceOf(player)).moved)];
+  }
+
+  /**
+   * The round started long enough ago for its last seconds to be a few seconds away; every screen
+   * opens the game again, its player touches it so it may sound, and the clock gets there.
+   */
+  async reachLastSeconds(): Promise<void> {
+    const { timePerDilemmaSeconds } = await this.settingsOfTheGame();
+    await this.#startRoundAgo(timePerDilemmaSeconds - LAST_SECONDS - 3);
+    // One screen after another: reopening them all at once would leave, for a moment, only those
+    // who answered connected, and the room would reveal the dilemma.
+    const online = this.#withScreens().filter(({ screen }) => screen?.link);
+    for (const player of online) await this.reopenApp(player.name);
+    for (const player of online) {
+      await waitUntilAsync(
+        async () => (await secondsOnTimerOf(screenOf(player).page)) <= LAST_SECONDS,
+      );
+    }
+  }
+
+  async #deviceOf(player: string): Promise<DeviceLog> {
+    const { page } = screenOf(this.#playerCalled(player));
+    return (await page.evaluate('window.__device')) as DeviceLog;
+  }
+
   /** From the menu of the game: the screen goes back home, and the others hear it. */
   async leave(player: string): Promise<void> {
     const leaver = this.#playerCalled(player);
@@ -1687,7 +1789,10 @@ export class E2eDriver implements GameDriver {
     const context = await this.#newContext({
       locale,
       permissions: ['clipboard-read', 'clipboard-write'],
+      reducedMotion: this.#reducedMotion.has(name) ? 'reduce' : 'no-preference',
     });
+    // What the device plays, vibrates and moves, for the scenarios of sound and motion.
+    await context.addInitScript({ content: DEVICE_WATCHER });
     // Below the timeout of a step, so a failure names what the screen did not show.
     context.setDefaultTimeout(WAIT_TIMEOUT_MS);
     // A desktop browser without the share sheet of a phone: the screen copies the link instead.
@@ -2159,4 +2264,102 @@ function textOnScreen(
     game?.dilemmas.find((candidate) => candidate.text === text)?.personInTheGap;
   const person = game?.players.find(({ playerId }) => playerId === personId)?.nickname;
   return person ? text.replaceAll(GAP_MARKER, person) : text;
+}
+
+/** The last seconds of the time per dilemma, as the web counts them. */
+const LAST_SECONDS = 10;
+
+/** What the device of a player played, vibrated and moved since its page last opened. */
+interface DeviceLog {
+  readonly sounds: string[];
+  readonly vibrations: number;
+  readonly moved: string[];
+}
+
+/**
+ * Installed in every page before the web loads, as plain JavaScript run in the browser: it names
+ * the sound each source plays by the file it came from, counts the vibrations, and notes every
+ * element an animation moves or scales.
+ */
+const DEVICE_WATCHER = `
+(() => {
+  const log = { sounds: [], vibrations: 0, moved: [] };
+  Object.defineProperty(window, '__device', { value: log });
+
+  const fileOf = new WeakMap();
+  const arrayBuffer = Response.prototype.arrayBuffer;
+  Response.prototype.arrayBuffer = async function () {
+    const bytes = await arrayBuffer.call(this);
+    fileOf.set(bytes, this.url);
+    return bytes;
+  };
+  const contexts = new Set();
+  let decoded = 0;
+  const decode = BaseAudioContext.prototype.decodeAudioData;
+  BaseAudioContext.prototype.decodeAudioData = async function (bytes) {
+    contexts.add(this);
+    const file = fileOf.get(bytes);
+    const buffer = await decode.call(this, bytes);
+    if (file) fileOf.set(buffer, file);
+    decoded += 1;
+    return buffer;
+  };
+  // Whether the page could sound now: its audio running and the five sounds loaded.
+  Object.defineProperty(window, '__deviceCanSound', {
+    value: () => decoded >= 5 && [...contexts].some((context) => context.state === 'running'),
+  });
+  const start = AudioBufferSourceNode.prototype.start;
+  AudioBufferSourceNode.prototype.start = function (...args) {
+    const file = (this.buffer && fileOf.get(this.buffer)) || '';
+    const found = /(player-joined|game-started|answer-confirmed|last-seconds|dilemma-revealed)/.exec(file);
+    log.sounds.push(found ? found[1] : 'an unknown sound');
+    return start.apply(this, args);
+  };
+  Object.defineProperty(Navigator.prototype, 'vibrate', {
+    configurable: true,
+    value: () => {
+      log.vibrations += 1;
+      return true;
+    },
+  });
+
+  const still = (transform) => transform === 'none' || transform === 'matrix(1, 0, 0, 1, 0, 0)';
+  const watch = () => {
+    for (const animation of document.getAnimations()) {
+      const effect = animation.effect;
+      if (!effect || !effect.target) continue;
+      const transform = getComputedStyle(effect.target, effect.pseudoElement).transform;
+      if (!still(transform)) {
+        log.moved.push(effect.target.tagName.toLowerCase() + '.' + [...effect.target.classList].join('.'));
+      }
+    }
+    requestAnimationFrame(watch);
+  };
+  requestAnimationFrame(watch);
+})();
+`;
+
+/** The seconds the timer of the page shows now, as it is, whenever the round started. */
+async function secondsOnTimerOf(page: Page): Promise<number> {
+  const label = await page.getByRole('timer').getAttribute('aria-label');
+  const [, minutes, seconds] = (label ?? '').match(SCREEN.timeLeft) ?? [];
+  if (minutes === undefined || seconds === undefined) throw new Error('The screen shows no timer');
+  return Number(minutes) * 60 + Number(seconds);
+}
+
+/** The player touches the screen where nothing reacts, so the page may start making sound. */
+async function touch(page: Page): Promise<void> {
+  await page.dispatchEvent('body', 'pointerup');
+}
+
+/** As waitUntil, for a check that reads the screen. */
+async function waitUntilAsync(
+  check: () => Promise<boolean>,
+  timeoutMs = WAIT_TIMEOUT_MS,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!(await check())) {
+    if (Date.now() > deadline) throw new Error('Timed out waiting for the screen');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
 }

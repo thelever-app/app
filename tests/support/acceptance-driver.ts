@@ -1271,4 +1271,42 @@ export class AcceptanceDriver implements GameDriver {
     if (!playerId) throw new Error(`"${player}" is not in the room in this scenario`);
     return playerId;
   }
+
+  // Sound and motion happen only on the device: their scenarios are @screen.
+
+  async soundsHeardBy(): Promise<string[]> {
+    throw new Error('Only the device plays sounds: the scenario must be @screen');
+  }
+
+  async vibrationsOf(): Promise<number> {
+    throw new Error('Only the device vibrates: the scenario must be @screen');
+  }
+
+  async canSound(): Promise<boolean> {
+    throw new Error('Only the device plays sounds: the scenario must be @screen');
+  }
+
+  async mute(): Promise<void> {
+    throw new Error('Only the device can be muted: the scenario must be @screen');
+  }
+
+  async isMuted(): Promise<boolean> {
+    throw new Error('Only the device can be muted: the scenario must be @screen');
+  }
+
+  async reopenApp(): Promise<void> {
+    throw new Error('Only a device opens the app again: the scenario must be @screen');
+  }
+
+  reduceMotionFor(): void {
+    throw new Error('Only a device reduces motion: the scenario must be @screen');
+  }
+
+  async movementsSeenBy(): Promise<string[]> {
+    throw new Error('Only the device moves things: the scenario must be @screen');
+  }
+
+  async reachLastSeconds(): Promise<void> {
+    throw new Error('Only the device counts the last seconds: the scenario must be @screen');
+  }
 }

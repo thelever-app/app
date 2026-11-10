@@ -470,5 +470,10 @@
     "label": "Código QR de la sala {{code}}",
     "or": "o entra en {{host}} y escribe el código",
     "code": "Código {{code}}"
+  },
+  "sound": {
+    "mute": "Silenciar el juego",
+    "label": "Sonido",
+    "hint": "También la vibración"
   }
 }

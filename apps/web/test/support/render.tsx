@@ -6,6 +6,9 @@ import { MemoryRouter } from 'react-router';
 import { createI18n } from '../../src/i18n/i18n.ts';
 import type { RoomConnection } from '../../src/room/room-connection.ts';
 import { RoomProvider } from '../../src/room/room-provider.tsx';
+import { SoundProvider } from '../../src/sound/sound-context.tsx';
+import { SILENT } from '../../src/sound/sound-effects.ts';
+import { soundPreference } from '../../src/sound/sound-preference.ts';
 
 interface ProvidersOptions {
   readonly connection?: RoomConnection;
@@ -29,7 +32,7 @@ function roomThatSent(game: GameStateDto): RoomConnection {
   };
 }
 
-/** A wrapper with i18n in Spanish and, if given, the room, and the `t` it translates with. */
+/** A wrapper with i18n in Spanish, a silent game and, if given, the room, and the `t` it translates with. */
 export async function providersFor({ game, ...options }: ProvidersOptions = {}) {
   const i18n = await createI18n('es');
   const connection = game ? roomThatSent(game) : options.connection;
@@ -43,7 +46,11 @@ export async function providersFor({ game, ...options }: ProvidersOptions = {}) 
     );
     return (
       <MemoryRouter>
-        <I18nextProvider i18n={i18n}>{content}</I18nextProvider>
+        <I18nextProvider i18n={i18n}>
+          <SoundProvider effects={SILENT} preference={soundPreference()}>
+            {content}
+          </SoundProvider>
+        </I18nextProvider>
       </MemoryRouter>
     );
   }

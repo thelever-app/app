@@ -1,7 +1,8 @@
 import { act, fireEvent, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { NewHostNotice } from '../../src/game/new-host-notice.tsx';
 import { DecisionPhase } from '../../src/phases/decision-phase.tsx';
+import { soundPreference } from '../../src/sound/sound-preference.ts';
 import { aGame } from '../support/game.ts';
 import { fakeConnection } from '../support/fake-connection.ts';
 import { renderWithProviders } from '../support/render.tsx';
@@ -20,6 +21,28 @@ async function renderPhase(game = aGame()) {
 }
 
 describe('the menu of the game', () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('should turn the sound of the game off and on, vibration included, and remember it on the device', async () => {
+    // Arrange
+    const { t } = await renderPhase();
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.open') }));
+    const sound = screen.getByRole('switch', { name: t('sound.label') });
+    const hint = sound.getAttribute('aria-describedby');
+    const before = sound.getAttribute('aria-checked');
+
+    // Act
+    fireEvent.click(sound);
+
+    // Assert
+    expect(before).toBe('true');
+    expect(sound.getAttribute('aria-checked')).toBe('false');
+    expect(soundPreference().isMuted()).toBe(true);
+    expect(hint && document.getElementById(hint)?.textContent).toBe(t('sound.hint'));
+  });
+
   it('should let the player report the dilemma and, as offensive, skip it and wait for the others', async () => {
     // Arrange
     const { connection, deliver, t } = await renderPhase();

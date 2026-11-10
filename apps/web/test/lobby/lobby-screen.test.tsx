@@ -8,6 +8,9 @@ import { LobbyScreen } from '../../src/lobby/lobby-screen.tsx';
 import type { RoomApi } from '../../src/room/room-api.ts';
 import { RoomApiProvider } from '../../src/room/room-api-context.tsx';
 import { RoomProvider } from '../../src/room/room-provider.tsx';
+import { SoundProvider } from '../../src/sound/sound-context.tsx';
+import { SILENT } from '../../src/sound/sound-effects.ts';
+import { soundPreference } from '../../src/sound/sound-preference.ts';
 import { fakeConnection } from '../support/fake-connection.ts';
 import { aRoom } from '../support/room.ts';
 import { fakeRoomApi } from '../support/routing.tsx';
@@ -42,9 +45,11 @@ async function renderLobby(room: RoomStateDto = aRoom(), api: RoomApi = fakeRoom
     <I18nextProvider i18n={i18n}>
       <RoomApiProvider api={api}>
         <MemoryRouter>
-          <RoomProvider connection={fake.connection} fallback={null} rejected={() => null}>
-            <LobbyScreen />
-          </RoomProvider>
+          <SoundProvider effects={SILENT} preference={soundPreference()}>
+            <RoomProvider connection={fake.connection} fallback={null} rejected={() => null}>
+              <LobbyScreen />
+            </RoomProvider>
+          </SoundProvider>
         </MemoryRouter>
       </RoomApiProvider>
     </I18nextProvider>,
@@ -56,9 +61,74 @@ async function renderLobby(room: RoomStateDto = aRoom(), api: RoomApi = fakeRoom
 describe('LobbyScreen', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   describe('what everyone sees', () => {
+    it('should show once a player who leaves and comes back before their row has gone', async () => {
+      // Arrange
+      const room = aRoom();
+      const { t, deliver } = await renderLobby(room);
+      act(() =>
+        deliver(aRoom({ roomVersion: room.roomVersion + 1, players: room.players.slice(0, 2) })),
+      );
+
+      // Act
+      act(() => deliver(aRoom({ roomVersion: room.roomVersion + 2 })));
+      const avatarAnimationEnds = document.querySelector('[data-player-id="test-marta-id"] img');
+      if (avatarAnimationEnds) fireEvent.animationEnd(avatarAnimationEnds);
+
+      // Assert
+      const list = screen.getByRole('region', { name: t('lobby.players', { count: 3 }) });
+      expect(
+        within(list)
+          .getAllByRole('listitem')
+          .map((row) => row.textContent),
+      ).toEqual([`${t('lobby.you', { name: 'Ana' })}${t('lobby.host')}`, 'Luis', 'Marta']);
+      expect(document.querySelector('[data-leaving]')).toBeNull();
+    });
+
+    it('should keep a player who leaves on screen while they go, hidden from assistive technology', async () => {
+      // Arrange
+      const room = aRoom();
+      const { t, deliver } = await renderLobby(room);
+      const list = () => screen.getByRole('region', { name: t('lobby.players', { count: 2 }) });
+
+      // Act
+      act(() =>
+        deliver(aRoom({ roomVersion: room.roomVersion + 1, players: room.players.slice(0, 2) })),
+      );
+      const leaving = document.querySelector<HTMLElement>('[data-leaving]');
+      const named = within(list())
+        .getAllByRole('listitem')
+        .map((row) => row.textContent);
+      const inside = leaving?.querySelector('img');
+      if (inside) fireEvent.animationEnd(inside);
+      const stillGoing = document.querySelector('[data-leaving]') !== null;
+      if (leaving) fireEvent.animationEnd(leaving);
+
+      // Assert
+      expect(leaving?.textContent).toBe('Marta');
+      expect(stillGoing).toBe(true);
+      expect(named).toEqual([`${t('lobby.you', { name: 'Ana' })}${t('lobby.host')}`, 'Luis']);
+      expect(document.querySelector('[data-leaving]')).toBeNull();
+    });
+
+    it('should let any player mute the game from the lobby, and remember it on the device', async () => {
+      // Arrange
+      const { t } = await renderLobby();
+      const mute = screen.getByRole('button', { name: t('sound.mute') });
+      const before = mute.getAttribute('aria-pressed');
+
+      // Act
+      fireEvent.click(mute);
+
+      // Assert
+      expect(before).toBe('false');
+      expect(mute.getAttribute('aria-pressed')).toBe('true');
+      expect(soundPreference().isMuted()).toBe(true);
+    });
+
     it('should show the code to invite with and who is in the room, the host marked', async () => {
       // Act
       const { t } = await renderLobby();

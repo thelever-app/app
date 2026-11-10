@@ -1,5 +1,6 @@
 /* Every screen fills the visible height: header, content that grows, and the actions at the bottom. */
 .screen {
+  composes: enter from '../styles/motion.module.css';
   display: flex;
   flex-direction: column;
   min-height: 100dvh;

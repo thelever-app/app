@@ -27,6 +27,14 @@ export interface DesignTokens {
   readonly radius: {
     readonly tokens: readonly { readonly name: string; readonly value: string }[];
   };
+  /** How long a change of the interface takes. */
+  readonly duration: {
+    readonly tokens: readonly { readonly name: string; readonly value: string }[];
+  };
+  /** The curves of motion: one for what arrives, one for what leaves. */
+  readonly easing: {
+    readonly tokens: readonly { readonly name: string; readonly value: string }[];
+  };
 }
 
 /**
@@ -50,9 +58,12 @@ export function tokensCss(tokens: DesignTokens): string {
       `  --type-${name}-letter-spacing: ${letterSpacing ?? 'normal'};`,
     ]),
   );
-  const lengths = [...tokens.spacing.tokens, ...tokens.radius.tokens].map(
-    ({ name, value }) => `  --${name}: ${value};`,
-  );
+  const values = [
+    ...tokens.spacing.tokens,
+    ...tokens.radius.tokens,
+    ...tokens.duration.tokens,
+    ...tokens.easing.tokens,
+  ].map(({ name, value }) => `  --${name}: ${value};`);
 
   return [
     `/* ${tokens.name}: generated from tokens.json by \`pnpm --filter @thelever-app/ui tokens\`. Do not edit. */`,
@@ -61,7 +72,7 @@ export function tokensCss(tokens: DesignTokens): string {
     ...colors,
     ...families,
     ...typeStyles,
-    ...lengths,
+    ...values,
     '}',
     '',
   ].join('\n');
