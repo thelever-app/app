@@ -3,7 +3,10 @@ export interface DesignTokens {
   readonly name: string;
   readonly color: {
     readonly themes: readonly { readonly id: string }[];
-    readonly tokens: readonly { readonly name: string; readonly value: Record<string, string> }[];
+    readonly tokens: readonly {
+      readonly name: string;
+      readonly value: { readonly light: string };
+    }[];
   };
   readonly type: {
     readonly families: Record<string, string>;
@@ -26,8 +29,6 @@ export interface DesignTokens {
   };
 }
 
-const LIGHT = 'light';
-
 /**
  * Turns the design tokens into CSS custom properties. The brand has a single, light theme, and
  * `only light` keeps the browser from darkening it on its own.
@@ -35,7 +36,7 @@ const LIGHT = 'light';
 export function tokensCss(tokens: DesignTokens): string {
   // Lower case, as Prettier writes them, so the generated file is already formatted.
   const colors = tokens.color.tokens.map(
-    ({ name, value }) => `  --color-${name}: ${(value[LIGHT] ?? '').toLowerCase()};`,
+    ({ name, value }) => `  --color-${name}: ${value.light.toLowerCase()};`,
   );
   const families = Object.entries(tokens.type.families).map(
     ([name, value]) => `  --font-${name}: ${value};`,

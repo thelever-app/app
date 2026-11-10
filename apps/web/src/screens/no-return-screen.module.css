@@ -35,10 +35,6 @@
   height: 72px;
 }
 
-.mascot img {
-  display: block;
-}
-
 .text {
   color: var(--color-ink-muted);
 }

@@ -7,7 +7,7 @@ const tokens = JSON.parse(
 ) as DesignTokens;
 
 describe('tokensCss', () => {
-  it('should give every color its light value, the only theme, and keep the browser from darkening it', () => {
+  it('should give every color its light value and opt out of the dark mode of the browser', () => {
     // Act
     const css = tokensCss(tokens);
 

@@ -1,4 +1,4 @@
-/* The SVG is a mask filled with the current colour, so an icon follows the text in both themes. */
+/* The SVG is a mask filled with the current colour, so an icon follows the colour of the text. */
 .icon {
   display: inline-block;
   flex-shrink: 0;
