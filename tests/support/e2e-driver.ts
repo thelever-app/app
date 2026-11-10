@@ -1512,6 +1512,11 @@ export class E2eDriver implements GameDriver {
     this.#reducedMotion.add(player);
   }
 
+  async canSound(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    return (await page.evaluate('window.__deviceCanSound()')) as boolean;
+  }
+
   async movementsSeenBy(player: string): Promise<string[]> {
     return [...new Set((await this.#deviceOf(player)).moved)];
   }
@@ -2288,13 +2293,21 @@ const DEVICE_WATCHER = `
     fileOf.set(bytes, this.url);
     return bytes;
   };
+  const contexts = new Set();
+  let decoded = 0;
   const decode = BaseAudioContext.prototype.decodeAudioData;
   BaseAudioContext.prototype.decodeAudioData = async function (bytes) {
+    contexts.add(this);
     const file = fileOf.get(bytes);
     const buffer = await decode.call(this, bytes);
     if (file) fileOf.set(buffer, file);
+    decoded += 1;
     return buffer;
   };
+  // Whether the page could sound now: its audio running and the five sounds loaded.
+  Object.defineProperty(window, '__deviceCanSound', {
+    value: () => decoded >= 5 && [...contexts].some((context) => context.state === 'running'),
+  });
   const start = AudioBufferSourceNode.prototype.start;
   AudioBufferSourceNode.prototype.start = function (...args) {
     const file = (this.buffer && fileOf.get(this.buffer)) || '';
@@ -2336,7 +2349,7 @@ async function secondsOnTimerOf(page: Page): Promise<number> {
 
 /** The player touches the screen where nothing reacts, so the page may start making sound. */
 async function touch(page: Page): Promise<void> {
-  await page.dispatchEvent('body', 'pointerdown');
+  await page.dispatchEvent('body', 'pointerup');
 }
 
 /** As waitUntil, for a check that reads the screen. */

@@ -1,5 +1,5 @@
 import type { GameStateDto, RoomStateDto } from '@thelever-app/protocol';
-import { selfAnswered } from '../components/players.ts';
+import { selfAnswered, selfSkipped } from '../components/players.ts';
 
 /** The moments of the game that sound, and some of them vibrate, on the device of each player. */
 export type Moment =
@@ -51,9 +51,9 @@ function gameMoments(
   if (after.round.phase !== 'decision') return [];
 
   const moments: Moment[] = [];
-  if (answerConfirmed(before, after)) moments.push('answer-confirmed');
+  if (!done(before) && done(after) && !selfSkipped(after)) moments.push('answer-confirmed');
   if (
-    !selfAnswered(after) &&
+    !done(after) &&
     secondsBefore !== undefined &&
     secondsLeft !== undefined &&
     secondsLeft < secondsBefore &&
@@ -65,14 +65,21 @@ function gameMoments(
   return moments;
 }
 
-/** The room confirmed an answer of the player: the first one, or one that changed it. */
-function answerConfirmed(before: GameStateDto, after: GameStateDto): boolean {
-  if (!selfAnswered(after)) return false;
-  if (!selfAnswered(before)) return true;
-  return JSON.stringify(ownAnswer(before)) !== JSON.stringify(ownAnswer(after));
+/** The player is done with the dilemma of the round: they answered it, or skipped it. */
+function done(game: GameStateDto): boolean {
+  return selfAnswered(game) || selfSkipped(game);
 }
 
-function ownAnswer(game: GameStateDto): GameStateDto['answers'][number] | undefined {
-  const dilemma = game.dilemmas[game.round.position];
-  return game.answers.find(({ dilemmaId }) => dilemmaId === dilemma?.dilemmaId);
+/**
+ * What to remember of the room for the next comparison: `now`, but with the lowest second left
+ * already seen in the same round, so a new measure of the clock of the server that puts it back a
+ * second does not tick the same second twice.
+ */
+export function remembered(before: RoomSnapshot, now: RoomSnapshot): RoomSnapshot {
+  const sameRound =
+    before.game !== undefined &&
+    now.game !== undefined &&
+    before.game.round.position === now.game.round.position;
+  if (!sameRound || before.secondsLeft === undefined || now.secondsLeft === undefined) return now;
+  return { ...now, secondsLeft: Math.min(before.secondsLeft, now.secondsLeft) };
 }

@@ -1282,6 +1282,10 @@ export class AcceptanceDriver implements GameDriver {
     throw new Error('Only the device vibrates: the scenario must be @screen');
   }
 
+  async canSound(): Promise<boolean> {
+    throw new Error('Only the device plays sounds: the scenario must be @screen');
+  }
+
   async mute(): Promise<void> {
     throw new Error('Only the device can be muted: the scenario must be @screen');
   }

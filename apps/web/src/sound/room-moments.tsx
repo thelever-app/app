@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useSecondsLeft } from '../game/remaining-time.ts';
 import { useRoom } from '../room/room-provider.tsx';
-import { momentsBetween, type RoomSnapshot } from './moments.ts';
+import { momentsBetween, remembered, type RoomSnapshot } from './moments.ts';
 import { useSoundEffects } from './sound-context.tsx';
 
 /**
@@ -18,7 +18,7 @@ export function RoomMoments() {
 
   useEffect(() => {
     for (const moment of momentsBetween(before.current, now)) play(moment);
-    before.current = now;
+    before.current = remembered(before.current, now);
   });
 
   return null;

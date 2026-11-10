@@ -1,6 +1,6 @@
 import type { GameStateDto } from '@thelever-app/protocol';
 import { describe, expect, it } from 'vitest';
-import { momentsBetween, type RoomSnapshot } from '../../src/sound/moments.ts';
+import { momentsBetween, remembered, type RoomSnapshot } from '../../src/sound/moments.ts';
 import { aGame } from '../support/game.ts';
 import { aRoom } from '../support/room.ts';
 
@@ -84,13 +84,54 @@ describe('momentsBetween', () => {
       expect(momentsBetween(inGame(game), inGame(answered(game)))).toEqual(['answer-confirmed']);
     });
 
-    it('should hear a changed answer too, once the room confirms it', () => {
+    it('should hear only the first answer, not the saves of a change', () => {
       // Arrange
       const before = answered(aGame());
       const after = answered(aGame(), { ...ANA_ANSWER, vote: 'test-option-1b' });
 
       // Act & Assert
-      expect(momentsBetween(inGame(before), inGame(after))).toEqual(['answer-confirmed']);
+      expect(momentsBetween(inGame(before), inGame(after))).toEqual([]);
+    });
+
+    it('should not hear an answer when the player skips a dilemma they reported', () => {
+      // Arrange: a nominal room counts the skip as done.
+      const before = aGame();
+      const skipped = {
+        ...answered(aGame()),
+        answers: [],
+        didNotVote: [{ dilemmaId: 'test-dilemma-1', reason: 'reported' as const }],
+      };
+
+      // Act & Assert
+      expect(momentsBetween(inGame(before), inGame(skipped))).toEqual([]);
+    });
+
+    it('should not tick for whoever skipped the dilemma, also in an anonymous room', () => {
+      // Arrange: the anonymous room drops the answer of whoever skips.
+      const game = aGame({
+        players: aGame().players.map((player) => ({ ...player, answered: null })),
+        didNotVote: [{ dilemmaId: 'test-dilemma-1', reason: 'reported' }],
+      });
+
+      // Act & Assert
+      expect(momentsBetween(inGame(game, 6), inGame(game, 5))).toEqual([]);
+    });
+
+    it('should tick each second once, even if the clock goes back a second for a moment', () => {
+      // Arrange
+      const game = aGame();
+      let before = inGame(game, 6);
+      const heard: string[][] = [];
+
+      // Act: the time left reads 5, 6 (a new measure of the clock of the server) and 5 again.
+      for (const second of [5, 6, 5, 4]) {
+        const now = inGame(game, second);
+        heard.push(momentsBetween(before, now));
+        before = remembered(before, now);
+      }
+
+      // Assert
+      expect(heard).toEqual([['last-seconds'], [], [], ['last-seconds']]);
     });
 
     it('should hear the answer in an anonymous room, which tells nobody who answered', () => {

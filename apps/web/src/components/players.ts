@@ -29,6 +29,16 @@ export function selfAnswered(
   return self !== undefined && hasAnswered(self);
 }
 
+/** Whether the player using the screen skipped the dilemma of the round, after reporting it. */
+export function selfSkipped(
+  game: Pick<GameStateDto, 'didNotVote' | 'dilemmas' | 'round'>,
+): boolean {
+  const dilemma = game.dilemmas[game.round.position];
+  return game.didNotVote.some(
+    ({ dilemmaId, reason }) => dilemmaId === dilemma?.dilemmaId && reason === 'reported',
+  );
+}
+
 /** How many of those still in the game have not answered the dilemma of the round yet. */
 export function pendingCountOf(game: Pick<GameStateDto, 'players' | 'answeredCount'>): number {
   const inGame = game.players.filter(({ left }) => !left).length;

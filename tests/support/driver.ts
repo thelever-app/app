@@ -352,6 +352,8 @@ export interface GameDriver {
   soundsHeardBy(player: string): Promise<string[]>;
   /** How many times the device of `player` vibrated since its screen last opened. */
   vibrationsOf(player: string): Promise<number>;
+  /** Whether the device of `player` could play a sound now: its audio running, every sound loaded. */
+  canSound(player: string): Promise<boolean>;
   /** `player` mutes the game from the screen they are on: the lobby or the menu of the game. */
   mute(player: string): Promise<void>;
   /** Whether the screen of `player` shows the game muted. */

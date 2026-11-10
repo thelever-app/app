@@ -1,18 +1,37 @@
 import type { GameStateDto } from '@thelever-app/protocol';
 import { useSyncExternalStore } from 'react';
 
-/** One tick a second for every countdown on screen, and none while nobody shows one. */
+/**
+ * One tick a second for every countdown on screen, and none while nobody shows one. The ticks start
+ * when the second of the device changes, so no two fall in the same second and none is skipped.
+ */
 const listeners = new Set<() => void>();
-let ticking: ReturnType<typeof setInterval> | undefined;
+let stopTicking: (() => void) | undefined;
+
+function startTicking(): () => void {
+  const notify = () => listeners.forEach((listener) => listener());
+  let interval: ReturnType<typeof setInterval> | undefined;
+  const aligned = setTimeout(
+    () => {
+      notify();
+      interval = setInterval(notify, 1000);
+    },
+    1000 - (Date.now() % 1000),
+  );
+  return () => {
+    clearTimeout(aligned);
+    clearInterval(interval);
+  };
+}
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
-  ticking ??= setInterval(() => listeners.forEach((notify) => notify()), 1000);
+  stopTicking ??= startTicking();
   return () => {
     listeners.delete(listener);
-    if (listeners.size === 0 && ticking !== undefined) {
-      clearInterval(ticking);
-      ticking = undefined;
+    if (listeners.size === 0 && stopTicking !== undefined) {
+      stopTicking();
+      stopTicking = undefined;
     }
   };
 }

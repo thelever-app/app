@@ -29,7 +29,8 @@ describe('the menu of the game', () => {
     // Arrange
     const { t } = await renderPhase();
     fireEvent.click(screen.getByRole('button', { name: t('gameMenu.open') }));
-    const sound = screen.getByRole('switch', { name: new RegExp(t('sound.label')) });
+    const sound = screen.getByRole('switch', { name: t('sound.label') });
+    const hint = sound.getAttribute('aria-describedby');
     const before = sound.getAttribute('aria-checked');
 
     // Act
@@ -39,6 +40,7 @@ describe('the menu of the game', () => {
     expect(before).toBe('true');
     expect(sound.getAttribute('aria-checked')).toBe('false');
     expect(soundPreference().isMuted()).toBe(true);
+    expect(hint && document.getElementById(hint)?.textContent).toBe(t('sound.hint'));
   });
 
   it('should let the player report the dilemma and, as offensive, skip it and wait for the others', async () => {

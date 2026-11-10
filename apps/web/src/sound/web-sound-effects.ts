@@ -7,8 +7,11 @@ const VIBRATION_MS = 30;
 
 const VIBRATES: ReadonlySet<Moment> = new Set(['answer-confirmed', 'dilemma-revealed']);
 
-/** The gestures with which a browser lets a page start making sound. */
-const UNLOCKING_GESTURES = ['pointerdown', 'keydown'] as const;
+/**
+ * The gestures with which a browser lets a page start making sound. A touch counts when it ends,
+ * not when it starts, so a phone needs `touchend` or `pointerup`, never `pointerdown`.
+ */
+const UNLOCKING_GESTURES = ['pointerup', 'touchend', 'click', 'keydown'] as const;
 
 /** What the engine needs from the browser, so a test can hand it a device of its own. */
 export interface AudioEnvironment {
@@ -19,8 +22,8 @@ export interface AudioEnvironment {
     /** Only Safari offers it: an ambient session mixes with the music and follows the silent switch. */
     readonly audioSession?: { type: string };
   };
-  /** Where the first gesture of the player is heard. */
-  readonly page: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>;
+  /** Where the gestures of the player are heard, and the page coming back into view. */
+  readonly page: Pick<EventTarget, 'addEventListener'>;
   readonly fetchSound: (url: string) => Promise<ArrayBuffer>;
 }
 
@@ -38,8 +41,9 @@ export function browserAudio(): AudioEnvironment {
 /**
  * Plays the sound of each moment with Web Audio, which mixes several at once without delay, and
  * vibrates where the moment asks for it and the browser can. Browsers let a page sound only after
- * a gesture of the player, so the sounds load on the first one, and nothing sounds before. While
- * the player has muted the game, nothing sounds or vibrates.
+ * a gesture of the player, and may stop it again (a call, the page in the background): every
+ * gesture, and the page coming back into view, starts it again if it is not running. While the
+ * player has muted the game, nothing sounds or vibrates; a sound that cannot be loaded stays silent.
  */
 export function webSoundEffects(
   sounds: Record<Moment, string>,
@@ -51,21 +55,26 @@ export function webSoundEffects(
   let context: AudioContext | undefined;
   const buffers = new Map<Moment, AudioBuffer>();
 
-  const unlock = () => {
-    UNLOCKING_GESTURES.forEach((gesture) =>
-      environment.page.removeEventListener(gesture, unlock, true),
-    );
-    context = environment.createAudioContext?.();
-    if (!context) return;
-    void context.resume();
-    for (const [moment, url] of Object.entries(sounds) as [Moment, string][]) {
-      void load(context, url).then((buffer) => buffers.set(moment, buffer));
+  const load = async (audio: AudioContext, moment: Moment, url: string) => {
+    try {
+      buffers.set(moment, await audio.decodeAudioData(await environment.fetchSound(url)));
+    } catch {
+      // Not downloaded or not decoded: that moment stays silent, the others still sound.
     }
   };
-  UNLOCKING_GESTURES.forEach((gesture) => environment.page.addEventListener(gesture, unlock, true));
 
-  const load = async (audio: AudioContext, url: string) =>
-    audio.decodeAudioData(await environment.fetchSound(url));
+  const wake = () => {
+    if (!context) {
+      context = environment.createAudioContext?.();
+      if (!context) return;
+      for (const [moment, url] of Object.entries(sounds) as [Moment, string][]) {
+        void load(context, moment, url);
+      }
+    }
+    if (context.state !== 'running') context.resume().catch(() => {});
+  };
+  UNLOCKING_GESTURES.forEach((gesture) => environment.page.addEventListener(gesture, wake, true));
+  environment.page.addEventListener('visibilitychange', wake);
 
   return {
     play: (moment) => {

@@ -65,6 +65,29 @@ describe('LobbyScreen', () => {
   });
 
   describe('what everyone sees', () => {
+    it('should show once a player who leaves and comes back before their row has gone', async () => {
+      // Arrange
+      const room = aRoom();
+      const { t, deliver } = await renderLobby(room);
+      act(() =>
+        deliver(aRoom({ roomVersion: room.roomVersion + 1, players: room.players.slice(0, 2) })),
+      );
+
+      // Act
+      act(() => deliver(aRoom({ roomVersion: room.roomVersion + 2 })));
+      const avatarAnimationEnds = document.querySelector('[data-player-id="test-marta-id"] img');
+      if (avatarAnimationEnds) fireEvent.animationEnd(avatarAnimationEnds);
+
+      // Assert
+      const list = screen.getByRole('region', { name: t('lobby.players', { count: 3 }) });
+      expect(
+        within(list)
+          .getAllByRole('listitem')
+          .map((row) => row.textContent),
+      ).toEqual([`${t('lobby.you', { name: 'Ana' })}${t('lobby.host')}`, 'Luis', 'Marta']);
+      expect(document.querySelector('[data-leaving]')).toBeNull();
+    });
+
     it('should keep a player who leaves on screen while they go, hidden from assistive technology', async () => {
       // Arrange
       const room = aRoom();
@@ -79,10 +102,14 @@ describe('LobbyScreen', () => {
       const named = within(list())
         .getAllByRole('listitem')
         .map((row) => row.textContent);
+      const inside = leaving?.querySelector('img');
+      if (inside) fireEvent.animationEnd(inside);
+      const stillGoing = document.querySelector('[data-leaving]') !== null;
       if (leaving) fireEvent.animationEnd(leaving);
 
       // Assert
       expect(leaving?.textContent).toBe('Marta');
+      expect(stillGoing).toBe(true);
       expect(named).toEqual([`${t('lobby.you', { name: 'Ana' })}${t('lobby.host')}`, 'Luis']);
       expect(document.querySelector('[data-leaving]')).toBeNull();
     });

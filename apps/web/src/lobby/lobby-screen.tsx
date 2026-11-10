@@ -205,7 +205,10 @@ export function LobbyScreen() {
                     className={styles.leaving}
                     data-leaving
                     aria-hidden="true"
-                    onAnimationEnd={() => gone(player.playerId)}
+                    onAnimationEnd={(event) => {
+                      // Only its own animation: one of something inside the row bubbles up too.
+                      if (event.target === event.currentTarget) gone(player.playerId);
+                    }}
                   >
                     <div className={styles.player}>
                       <Avatar avatar={player.avatar} />

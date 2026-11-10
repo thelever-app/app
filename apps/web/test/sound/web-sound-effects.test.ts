@@ -11,15 +11,20 @@ const SOUNDS: Record<Moment, string> = {
   'dilemma-revealed': '/sounds/dilemma-revealed.m4a',
 };
 
-/** A device with Web Audio and, unless told otherwise, vibration and an audio session. */
-function aDevice({ vibrate = true, audioSession = true } = {}) {
+/**
+ * A device with Web Audio and, unless told otherwise, vibration and an audio session. Its audio
+ * starts on the gesture that `startsOn` counts, from 1, as a phone may refuse the first ones.
+ */
+function aDevice({ vibrate = true, audioSession = true, startsOn = 1, missing = '' } = {}) {
   const started: string[] = [];
   const page = new EventTarget();
+  let tries = 0;
   const context = {
     state: 'suspended' as AudioContextState,
     destination: {},
     resume: vi.fn(async () => {
-      context.state = 'running';
+      tries += 1;
+      if (tries >= startsOn) context.state = 'running';
     }),
     decodeAudioData: vi.fn(async (bytes: ArrayBuffer) => ({
       url: new TextDecoder().decode(bytes),
@@ -41,13 +46,25 @@ function aDevice({ vibrate = true, audioSession = true } = {}) {
     createAudioContext: () => context as unknown as AudioContext,
     navigator,
     page,
-    fetchSound: async (url) => new TextEncoder().encode(url).buffer as ArrayBuffer,
+    fetchSound: async (url) => {
+      if (url === missing) throw new TypeError('Failed to fetch');
+      return new TextEncoder().encode(url).buffer as ArrayBuffer;
+    },
   };
+  const loaded = missing ? 4 : 5;
   const touch = async () => {
-    page.dispatchEvent(new Event('pointerdown'));
-    await vi.waitFor(() => expect(context.decodeAudioData).toHaveBeenCalledTimes(5));
+    page.dispatchEvent(new Event('touchend'));
+    await vi.waitFor(() => expect(context.decodeAudioData).toHaveBeenCalledTimes(loaded));
+    await Promise.resolve();
   };
-  return { environment, navigator, started, touch };
+  const interrupt = () => {
+    context.state = 'suspended';
+  };
+  const comeBack = async () => {
+    page.dispatchEvent(new Event('visibilitychange'));
+    await Promise.resolve();
+  };
+  return { environment, navigator, started, touch, interrupt, comeBack };
 }
 
 describe('webSoundEffects', () => {
@@ -143,5 +160,49 @@ describe('webSoundEffects', () => {
     // Assert
     expect(device.started).toEqual([]);
     expect(device.navigator.vibrate).not.toHaveBeenCalled();
+  });
+
+  it('should sound once a later gesture starts it, when the phone refused the first one', async () => {
+    // Arrange
+    const device = aDevice({ startsOn: 2 });
+    const effects = webSoundEffects(SOUNDS, soundPreference(), device.environment);
+    await device.touch();
+    effects.play('player-joined');
+
+    // Act
+    await device.touch();
+    effects.play('game-started');
+
+    // Assert
+    expect(device.started).toEqual([SOUNDS['game-started']]);
+  });
+
+  it('should sound again when the player comes back to the page after something stopped it', async () => {
+    // Arrange
+    const device = aDevice();
+    const effects = webSoundEffects(SOUNDS, soundPreference(), device.environment);
+    await device.touch();
+    device.interrupt();
+
+    // Act
+    await device.comeBack();
+    effects.play('dilemma-revealed');
+
+    // Assert
+    expect(device.started).toEqual([SOUNDS['dilemma-revealed']]);
+  });
+
+  it('should play the other sounds when one of them cannot be loaded', async () => {
+    // Arrange
+    const device = aDevice({ missing: SOUNDS['last-seconds'] });
+    const effects = webSoundEffects(SOUNDS, soundPreference(), device.environment);
+    await device.touch();
+
+    // Act
+    effects.play('last-seconds');
+    effects.play('dilemma-revealed');
+
+    // Assert
+    expect(device.started).toEqual([SOUNDS['dilemma-revealed']]);
   });
 });

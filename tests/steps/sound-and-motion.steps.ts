@@ -27,8 +27,16 @@ async function hears(world: GameWorld, player: string, moment: string): Promise<
   }
 }
 
-/** Gives the screen of `player` the time a sound would take, and checks `moment` did not sound. */
+/**
+ * Checks `moment` did not sound on the device of `player`, once it could have: its audio running
+ * with every sound loaded, and the time a sound would take.
+ */
 async function doesNotHear(world: GameWorld, player: string, moment?: string): Promise<void> {
+  const deadline = Date.now() + HEARING_MS;
+  while (!(await world.driver.canSound(player))) {
+    if (Date.now() > deadline) assert.fail(`The device of ${player} could not sound at all`);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
   await new Promise((resolve) => setTimeout(resolve, HEARING_MS / 2));
   const heard = await world.driver.soundsHeardBy(player);
   if (moment) assert.ok(!heard.includes(moment), `${player} heard ${moment}`);
