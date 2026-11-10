@@ -1,4 +1,4 @@
-/* Signal yellow at full screen, whatever the theme: a camera reads it best. */
+/* Signal yellow at full screen: a camera reads it best. */
 .screen {
   position: fixed;
   inset: 0;

@@ -38,13 +38,6 @@
   height: auto;
 }
 
-/* Its black track and body disappear on the asphalt of dark mode: there it sits on ticket cream. */
-@media (prefers-color-scheme: dark) {
-  .illustration {
-    background: #fbf6ec;
-  }
-}
-
 .title {
   composes: title from '../styles/typography.module.css';
   margin: 0;
