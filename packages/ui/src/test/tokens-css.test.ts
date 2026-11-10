@@ -7,14 +7,14 @@ const tokens = JSON.parse(
 ) as DesignTokens;
 
 describe('tokensCss', () => {
-  it('should give every color its light value by default and its dark value in dark mode', () => {
+  it('should give every color its light value, the only theme, and keep the browser from darkening it', () => {
     // Act
     const css = tokensCss(tokens);
 
     // Assert
-    const [light, dark] = css.split('@media (prefers-color-scheme: dark)');
-    expect(light).toContain('--color-bg: #fbf6ec;');
-    expect(dark).toContain('--color-bg: #15130e;');
+    expect(css).toContain('color-scheme: only light;');
+    expect(css).toContain('--color-bg: #fbf6ec;');
+    expect(css).not.toContain('prefers-color-scheme');
   });
 
   it('should turn every text style into its family, size, line height, weight and spacing', () => {

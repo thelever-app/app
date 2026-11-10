@@ -1,6 +1,6 @@
 /* TheLever: generated from tokens.json by `pnpm --filter @thelever-app/ui tokens`. Do not edit. */
 :root {
-  color-scheme: light dark;
+  color-scheme: only light;
   --color-bg: #fbf6ec;
   --color-surface: #f1e9d8;
   --color-surface-raised: #ffffff;
@@ -96,36 +96,4 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-full: 999px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #15130e;
-    --color-surface: #211e17;
-    --color-surface-raised: #2a261d;
-    --color-ink: #f5efe2;
-    --color-ink-muted: #b8af9c;
-    --color-border: #34302a;
-    --color-border-strong: #7a7263;
-    --color-primary: #ffd23f;
-    --color-on-primary: #17140f;
-    --color-accent: #ffd23f;
-    --color-on-accent: #17140f;
-    --color-option-a: #96b6ff;
-    --color-option-b: #f78eb9;
-    --color-option-1: #90b7ff;
-    --color-option-2: #c9a3f5;
-    --color-option-3: #f596b7;
-    --color-option-4: #85cc87;
-    --color-on-option: #15130e;
-    --color-player-teal: #5ecdbf;
-    --color-player-brown: #d9a877;
-    --color-player-slate: #b6becb;
-    --color-player-cyan: #67c7e3;
-    --color-player-rust: #f0a07a;
-    --color-player-olive: #c3cf6e;
-    --color-player-khaki: #d6c58e;
-    --color-player-stone: #c9bfb3;
-    --color-on-player: #17140f;
-  }
 }

@@ -27,16 +27,16 @@ export interface DesignTokens {
 }
 
 const LIGHT = 'light';
-const DARK = 'dark';
 
-/** Turns the design tokens into CSS custom properties, light by default and dark when the device asks for it. */
+/**
+ * Turns the design tokens into CSS custom properties. The brand has a single, light theme, and
+ * `only light` keeps the browser from darkening it on its own.
+ */
 export function tokensCss(tokens: DesignTokens): string {
   // Lower case, as Prettier writes them, so the generated file is already formatted.
-  const colors = (theme: string) =>
-    tokens.color.tokens.map(
-      ({ name, value }) =>
-        `  --color-${name}: ${(value[theme] ?? value[LIGHT] ?? '').toLowerCase()};`,
-    );
+  const colors = tokens.color.tokens.map(
+    ({ name, value }) => `  --color-${name}: ${(value[LIGHT] ?? '').toLowerCase()};`,
+  );
   const families = Object.entries(tokens.type.families).map(
     ([name, value]) => `  --font-${name}: ${value};`,
   );
@@ -56,17 +56,11 @@ export function tokensCss(tokens: DesignTokens): string {
   return [
     `/* ${tokens.name}: generated from tokens.json by \`pnpm --filter @thelever-app/ui tokens\`. Do not edit. */`,
     ':root {',
-    '  color-scheme: light dark;',
-    ...colors(LIGHT),
+    '  color-scheme: only light;',
+    ...colors,
     ...families,
     ...typeStyles,
     ...lengths,
-    '}',
-    '',
-    '@media (prefers-color-scheme: dark) {',
-    '  :root {',
-    ...colors(DARK).map((line) => `  ${line}`),
-    '  }',
     '}',
     '',
   ].join('\n');
