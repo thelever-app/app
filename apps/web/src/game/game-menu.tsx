@@ -2,6 +2,7 @@ import { Dialog } from 'radix-ui';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon, type IconName } from '../components/icon.tsx';
+import { useMuted } from '../sound/sound-context.tsx';
 import styles from './game-menu.module.css';
 
 interface GameMenuProps {
@@ -63,6 +64,7 @@ export function GameMenu({
                 </span>
               </li>
             )}
+            <SoundRow />
           </ul>
           <hr className={styles.divider} />
           <ul className={styles.items}>
@@ -105,6 +107,30 @@ function MenuItem({ icon, title, subtitle, onSelect }: MenuItemProps) {
           </span>
         </button>
       </Dialog.Close>
+    </li>
+  );
+}
+
+/** One setting for sound and vibration alike; it does not close the menu. */
+function SoundRow() {
+  const { t } = useTranslation();
+  const labelId = useId();
+  const [muted, setMuted] = useMuted();
+  return (
+    <li className={styles.soundRow}>
+      <Icon name={muted ? 'volumeOff' : 'volumeUp'} size={22} />
+      <span id={labelId} className={styles.itemText}>
+        <span className={styles.itemTitle}>{t('sound.label')}</span>
+        <span className={styles.itemSubtitle}>{t('sound.hint')}</span>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={!muted}
+        aria-labelledby={labelId}
+        className={styles.switch}
+        onClick={() => setMuted(!muted)}
+      />
     </li>
   );
 }

@@ -11,6 +11,18 @@
   box-sizing: border-box;
 }
 
+/* Everything that moves or scales multiplies its distance, scale or duration by --motion: with
+   reduced motion it is 0, so nothing moves and every change is a fade or a cut. */
+:root {
+  --motion: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion: 0;
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-bg);

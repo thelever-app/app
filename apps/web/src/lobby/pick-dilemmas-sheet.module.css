@@ -1,5 +1,6 @@
 /* A full screen over the lobby, within the column of the app. */
 .screen {
+  composes: rise from '../styles/motion.module.css';
   position: fixed;
   inset: 0;
   max-width: 480px;

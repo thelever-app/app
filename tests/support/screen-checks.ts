@@ -20,6 +20,7 @@ export async function problemsOn(page: Page): Promise<string[]> {
   const problems: string[] = [];
   for (const size of SCREENS) {
     await page.setViewportSize(size);
+    await settled(page);
     const at = `at ${size.width} px`;
 
     const contentWidth: number = await page.evaluate('document.documentElement.scrollWidth');
@@ -43,4 +44,17 @@ export async function problemsOn(page: Page): Promise<string[]> {
     }
   }
   return problems;
+}
+
+/**
+ * Waits for every animation that ends to end, so a screen is measured as it rests and not halfway
+ * through a fade; the beat of the last seconds never ends, and is left alone.
+ */
+async function settled(page: Page): Promise<void> {
+  await page.evaluate(`Promise.all(
+    document
+      .getAnimations()
+      .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+      .map((animation) => animation.finished.catch(() => undefined)),
+  )`);
 }

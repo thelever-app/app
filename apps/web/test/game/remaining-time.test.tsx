@@ -4,7 +4,9 @@ import {
   formatRemaining,
   noteServerTime,
   useRemainingSeconds,
+  useSecondsLeft,
 } from '../../src/game/remaining-time.ts';
+import { aGame } from '../support/game.ts';
 
 describe('formatRemaining', () => {
   it.each([
@@ -61,5 +63,31 @@ describe('useRemainingSeconds', () => {
 
     // Assert
     expect(result.current).toBe(0);
+  });
+});
+
+describe('useSecondsLeft', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ now: new Date('2026-11-09T10:00:00Z') });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should count the time left for the dilemma of the round', () => {
+    // Act
+    const { result } = renderHook(() => useSecondsLeft(aGame()));
+
+    // Assert
+    expect(result.current).toBe(60);
+  });
+
+  it('should have no time to count without a game, as in the lobby', () => {
+    // Act
+    const { result } = renderHook(() => useSecondsLeft(undefined));
+
+    // Assert
+    expect(result.current).toBeUndefined();
   });
 });

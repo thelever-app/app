@@ -14,6 +14,21 @@ export function isAnonymous(game: Pick<GameStateDto, 'players'>): boolean {
   return game.players.some(({ answered }) => answered === null);
 }
 
+/**
+ * Whether the player using the screen answered the dilemma of the round: the room says so in a
+ * nominal room; in an anonymous one, which tells nobody who answered, their own answers do.
+ */
+export function selfAnswered(
+  game: Pick<GameStateDto, 'playerId' | 'players' | 'answers' | 'dilemmas' | 'round'>,
+): boolean {
+  if (isAnonymous(game)) {
+    const dilemma = game.dilemmas[game.round.position];
+    return game.answers.some(({ dilemmaId }) => dilemmaId === dilemma?.dilemmaId);
+  }
+  const self = game.players.find(({ playerId }) => playerId === game.playerId);
+  return self !== undefined && hasAnswered(self);
+}
+
 /** How many of those still in the game have not answered the dilemma of the round yet. */
 export function pendingCountOf(game: Pick<GameStateDto, 'players' | 'answeredCount'>): number {
   const inGame = game.players.filter(({ left }) => !left).length;

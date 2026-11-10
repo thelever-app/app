@@ -103,7 +103,8 @@ export async function startE2eStack(): Promise<void> {
   ];
   try {
     await Promise.all([ready(`${realtimeUrl}/health`), ready(webUrl)]);
-    const browser = await chromium.launch();
+    // As a phone after the player touched it: the web may play sound without waiting for a gesture.
+    const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
     running = {
       stack: {
         browser,

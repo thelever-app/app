@@ -7,6 +7,8 @@ import { Avatar } from '../avatar/avatar.tsx';
 import { namesakesOf } from '../avatar/namesakes.ts';
 import { Icon } from '../components/icon.tsx';
 import { useLobby } from '../room/room-provider.tsx';
+import { useMuted } from '../sound/sound-context.tsx';
+import { useLeavingPlayers } from './leaving-players.ts';
 import { AddDilemmaSheet } from './add-dilemma-sheet.tsx';
 import { AvatarPickerSheet } from './avatar-picker-sheet.tsx';
 import { ExpelSheet } from './expel-sheet.tsx';
@@ -31,6 +33,8 @@ export function LobbyScreen() {
   const { lobby, send, rejection } = useLobby();
   const [open, setOpen] = useState<Open>({ sheet: 'none' });
   const [copied, setCopied] = useState(false);
+  const [muted, setMuted] = useMuted();
+  const { rows, gone } = useLeavingPlayers(lobby.players);
   const close = () => setOpen({ sheet: 'none' });
 
   const isHost = lobby.hostId === lobby.playerId;
@@ -60,14 +64,25 @@ export function LobbyScreen() {
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <span className={styles.signage}>{t('lobby.codeLabel')}</span>
-          <button
-            type="button"
-            className={styles.iconButton}
-            aria-label={t('lobby.leave')}
-            onClick={() => void navigate('/')}
-          >
-            <Icon name="close" />
-          </button>
+          <div className={styles.headerActions}>
+            <button
+              type="button"
+              className={styles.iconButton}
+              aria-label={t('sound.mute')}
+              aria-pressed={muted}
+              onClick={() => setMuted(!muted)}
+            >
+              <Icon name={muted ? 'volumeOff' : 'volumeUp'} />
+            </button>
+            <button
+              type="button"
+              className={styles.iconButton}
+              aria-label={t('lobby.leave')}
+              onClick={() => void navigate('/')}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
         </div>
         <p className={styles.code} aria-label={spelled(lobby.code)} data-testid="room-code">
           {lobby.code}
@@ -182,7 +197,23 @@ export function LobbyScreen() {
             {t('lobby.players', { count: lobby.players.length })}
           </h2>
           <ul className={styles.playerList}>
-            {lobby.players.map((player) => {
+            {rows.map(({ player, leaving }) => {
+              if (leaving) {
+                return (
+                  <li
+                    key={player.playerId}
+                    className={styles.leaving}
+                    data-leaving
+                    aria-hidden="true"
+                    onAnimationEnd={() => gone(player.playerId)}
+                  >
+                    <div className={styles.player}>
+                      <Avatar avatar={player.avatar} />
+                      <span className={styles.playerName}>{player.nickname}</span>
+                    </div>
+                  </li>
+                );
+              }
               const isSelf = player.playerId === lobby.playerId;
               const name = isSelf ? t('lobby.you', { name: player.nickname }) : player.nickname;
               const action = isSelf
@@ -207,6 +238,7 @@ export function LobbyScreen() {
               return (
                 <li
                   key={player.playerId}
+                  className={styles.joining}
                   data-player-id={player.playerId}
                   data-nickname={player.nickname}
                 >

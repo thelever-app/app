@@ -8,3 +8,15 @@
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
+
+/* The last seconds: a beat a second, which with reduced motion dims instead of growing. */
+.timer[data-last-seconds] {
+  animation: beat 1s var(--ease-enter) infinite;
+}
+
+@keyframes beat {
+  50% {
+    opacity: calc(0.6 + 0.4 * var(--motion));
+    transform: scale(calc(1 + 0.12 * var(--motion)));
+  }
+}

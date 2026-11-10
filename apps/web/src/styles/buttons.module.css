@@ -2,6 +2,7 @@
 
 /* The main action of a screen: signal yellow with an on-primary border, like a signal plate. */
 .primary {
+  composes: press from './motion.module.css';
   min-height: 48px;
   border: 0;
   border-radius: var(--radius-md);

@@ -3,6 +3,7 @@
 }
 
 .dialog {
+  composes: pop from '../styles/motion.module.css';
   position: fixed;
   inset-inline: 0;
   top: 200px;

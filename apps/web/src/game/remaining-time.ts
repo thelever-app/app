@@ -1,3 +1,4 @@
+import type { GameStateDto } from '@thelever-app/protocol';
 import { useSyncExternalStore } from 'react';
 
 /** One tick a second for every countdown on screen, and none while nobody shows one. */
@@ -44,6 +45,26 @@ function offsetFor(serverTime: string): number {
 /** The whole seconds left until `endsAt`, by the clock of the server; 0 once it is over. */
 export function useRemainingSeconds(endsAt: string, serverTime: string): number {
   const second = useSyncExternalStore(subscribe, currentSecond);
+  return secondsLeftAt(second, endsAt, serverTime);
+}
+
+/** Nothing ticks while there is no game: the lobby has no time to count. */
+function subscribeNever(): () => void {
+  return () => {};
+}
+
+/**
+ * The whole seconds left for the dilemma of the round of `game`, as `useRemainingSeconds` counts
+ * them; undefined while there is no game, which keeps the clock still.
+ */
+export function useSecondsLeft(
+  game: Pick<GameStateDto, 'round' | 'serverTime'> | undefined,
+): number | undefined {
+  const second = useSyncExternalStore(game ? subscribe : subscribeNever, currentSecond);
+  return game && secondsLeftAt(second, game.round.endsAt, game.serverTime);
+}
+
+function secondsLeftAt(second: number, endsAt: string, serverTime: string): number {
   const serverNow = second * 1000 + offsetFor(serverTime);
   return Math.max(0, Math.ceil((Date.parse(endsAt) - serverNow) / 1000));
 }

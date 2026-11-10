@@ -32,6 +32,8 @@ import sync from '@material-symbols/svg-500/rounded/sync.svg?url';
 import videocam from '@material-symbols/svg-500/rounded/videocam.svg?url';
 import visibility from '@material-symbols/svg-500/rounded/visibility-fill.svg?url';
 import visibilityOff from '@material-symbols/svg-500/rounded/visibility_off-fill.svg?url';
+import volumeOff from '@material-symbols/svg-500/rounded/volume_off-fill.svg?url';
+import volumeUp from '@material-symbols/svg-500/rounded/volume_up-fill.svg?url';
 import work from '@material-symbols/svg-500/rounded/work-fill.svg?url';
 import styles from './icon.module.css';
 
@@ -70,6 +72,8 @@ const ICONS = {
   visibility,
   visibilityOff,
   visibilityOutline,
+  volumeOff,
+  volumeUp,
   work,
 } as const;
 

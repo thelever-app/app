@@ -37,6 +37,16 @@ describe('tokensCss', () => {
     expect(css).toContain('--radius-md: 12px;');
   });
 
+  it('should turn the durations and the easing curves of motion into custom properties', () => {
+    // Act
+    const css = tokensCss(tokens);
+
+    // Assert
+    expect(css).toContain('--duration-fast: 120ms;');
+    expect(css).toContain('--duration-slow: 320ms;');
+    expect(css).toContain('--ease-enter: cubic-bezier(0.2, 0, 0, 1);');
+  });
+
   it('should match the tokens.css in the repo, so nobody forgets to regenerate it', () => {
     // Arrange
     const committed = readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');

@@ -345,4 +345,23 @@ export interface GameDriver {
   hostSeenBy(viewer: string): Promise<string>;
   /** `player` leaves the game on purpose. */
   leave(player: string): Promise<void>;
+
+  // Sound and motion: they happen only on the device (@screen).
+
+  /** The moments whose sound the screen of `player` played since it last opened, in order. */
+  soundsHeardBy(player: string): Promise<string[]>;
+  /** How many times the device of `player` vibrated since its screen last opened. */
+  vibrationsOf(player: string): Promise<number>;
+  /** `player` mutes the game from the screen they are on: the lobby or the menu of the game. */
+  mute(player: string): Promise<void>;
+  /** Whether the screen of `player` shows the game muted. */
+  isMuted(player: string): Promise<boolean>;
+  /** `player` closes the app and opens it again on the same device, and touches the screen. */
+  reopenApp(player: string): Promise<void>;
+  /** The device of `player` asks for reduced motion; before their screen first opens. */
+  reduceMotionFor(player: string): void;
+  /** What moved or changed size on the screen of `player` since it last opened. */
+  movementsSeenBy(player: string): Promise<string[]>;
+  /** The time per dilemma of the round reaches its last seconds on every screen. */
+  reachLastSeconds(): Promise<void>;
 }

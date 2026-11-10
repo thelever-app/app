@@ -95,7 +95,8 @@ legend.legend {
   cursor: pointer;
 }
 
-/* A checkbox drawn as the switch of the design: a track and a knob that slides. */
+/* A checkbox drawn as the switch of the design: a track and a knob that slides, or jumps with
+   reduced motion. */
 .switch input {
   flex: none;
   position: relative;
@@ -106,7 +107,7 @@ legend.legend {
   border-radius: var(--radius-full);
   background: var(--color-border-strong);
   cursor: pointer;
-  transition: background 120ms;
+  transition: background var(--duration-fast) var(--ease-enter);
 }
 
 .switch input::before {
@@ -118,7 +119,7 @@ legend.legend {
   height: 20px;
   border-radius: var(--radius-full);
   background: var(--color-surface-raised);
-  transition: transform 120ms;
+  transition: left calc(var(--duration-fast) * var(--motion)) var(--ease-enter);
 }
 
 .switch input:checked {
@@ -126,7 +127,7 @@ legend.legend {
 }
 
 .switch input:checked::before {
-  transform: translateX(18px);
+  left: 21px;
 }
 
 .switch input:focus-visible {

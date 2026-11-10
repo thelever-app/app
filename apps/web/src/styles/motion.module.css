@@ -1,0 +1,122 @@
+/*
+ * The motion of the common pieces, composed from each component: `composes: rise from …`. Every
+ * distance and scale is multiplied by --motion, which is 0 with reduced motion: then nothing moves
+ * or changes size, and what remains is a fade. No animation keeps its last frame, so no transform
+ * stays on an element once it has arrived.
+ */
+
+/* A scrim that fades in and out. */
+.fade {
+  animation: fade-in var(--duration-base) var(--ease-enter) backwards;
+}
+
+.fade[data-state='closed'] {
+  animation: fade-out var(--duration-base) var(--ease-exit);
+}
+
+/* A sheet that rises from the bottom edge and sinks back when it closes. */
+.rise {
+  animation: rise-in var(--duration-base) var(--ease-enter) backwards;
+}
+
+.rise[data-state='closed'] {
+  animation: rise-out var(--duration-base) var(--ease-exit);
+}
+
+/* A dialog in the middle of the screen, that grows a little as it appears. */
+.pop {
+  animation: pop-in var(--duration-base) var(--ease-enter) backwards;
+}
+
+.pop[data-state='closed'] {
+  animation: fade-out var(--duration-fast) var(--ease-exit);
+}
+
+/* A whole screen that arrives: the lobby, a phase of the round, the reveal. */
+.enter {
+  animation: enter var(--duration-slow) var(--ease-enter) backwards;
+}
+
+/* A bar that drops from the top edge. */
+.drop {
+  animation: drop-in var(--duration-base) var(--ease-enter) backwards;
+}
+
+/* A row that joins a list, and one that leaves it. */
+.join {
+  animation: join var(--duration-base) var(--ease-enter) backwards;
+}
+
+.leave {
+  animation: leave var(--duration-base) var(--ease-exit) forwards;
+}
+
+/* A button that gives under the finger. */
+.press {
+  transition: transform var(--duration-fast) var(--ease-enter);
+}
+
+.press:active:not(:disabled) {
+  transform: scale(calc(1 - 0.03 * var(--motion)));
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(100% * var(--motion)));
+  }
+}
+
+@keyframes rise-out {
+  to {
+    opacity: 0;
+    transform: translateY(calc(100% * var(--motion)));
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(calc(1 - 0.06 * var(--motion)));
+  }
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(calc(12px * var(--motion)));
+  }
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-100% * var(--motion)));
+  }
+}
+
+@keyframes join {
+  from {
+    opacity: 0;
+    transform: translateY(calc(8px * var(--motion))) scale(calc(1 - 0.04 * var(--motion)));
+  }
+}
+
+@keyframes leave {
+  to {
+    opacity: 0;
+    transform: translateX(calc(-16px * var(--motion)));
+  }
+}

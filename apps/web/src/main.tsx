@@ -15,6 +15,14 @@ import { httpRoomApi } from './room/room-api.ts';
 import { RoomApiProvider } from './room/room-api-context.tsx';
 import { OpenRoomProvider, type OpenRoom } from './room/open-room-context.tsx';
 import { newTraceparent } from './room/traceparent.ts';
+import answerConfirmed from './assets/sounds/answer-confirmed.m4a';
+import dilemmaRevealed from './assets/sounds/dilemma-revealed.m4a';
+import gameStarted from './assets/sounds/game-started.m4a';
+import lastSeconds from './assets/sounds/last-seconds.m4a';
+import playerJoined from './assets/sounds/player-joined.m4a';
+import { SoundProvider } from './sound/sound-context.tsx';
+import { soundPreference } from './sound/sound-preference.ts';
+import { browserAudio, webSoundEffects } from './sound/web-sound-effects.ts';
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Missing #root element in index.html');
@@ -22,7 +30,8 @@ const root = createRoot(container);
 
 /**
  * Composition root of the web: the config of the environment, the player, signed in when a call
- * first needs it, the HTTP routes of the room server and how to open the link to a room.
+ * first needs it, the HTTP routes of the room server, how to open the link to a room and the sound
+ * of the game.
  */
 async function start(): Promise<void> {
   const i18n = await createI18n();
@@ -42,14 +51,28 @@ async function start(): Promise<void> {
         createSocket: (url) => new WebSocket(url),
         pageActivity: documentActivity(document),
       });
+    const preference = soundPreference();
+    const effects = webSoundEffects(
+      {
+        'player-joined': playerJoined,
+        'game-started': gameStarted,
+        'answer-confirmed': answerConfirmed,
+        'last-seconds': lastSeconds,
+        'dilemma-revealed': dilemmaRevealed,
+      },
+      preference,
+      browserAudio(),
+    );
     root.render(
       <StrictMode>
         <I18nextProvider i18n={i18n}>
           <RoomApiProvider api={api}>
             <OpenRoomProvider openRoom={openRoom}>
-              <BrowserRouter>
-                <App />
-              </BrowserRouter>
+              <SoundProvider effects={effects} preference={preference}>
+                <BrowserRouter>
+                  <App />
+                </BrowserRouter>
+              </SoundProvider>
             </OpenRoomProvider>
           </RoomApiProvider>
         </I18nextProvider>

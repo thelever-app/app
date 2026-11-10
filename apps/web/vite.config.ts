@@ -6,6 +6,6 @@ export default defineConfig({
   test: {
     name: 'web',
     environment: 'jsdom',
-    setupFiles: ['./test/setup.ts'],
+    setupFiles: ['./test/animation-event.ts', './test/setup.ts'],
   },
 });
