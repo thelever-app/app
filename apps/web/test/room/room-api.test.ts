@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { type AccessCode, deviceAccessCode } from '../../src/identity/access-code.ts';
 import { httpRoomApi, RoomApiError } from '../../src/room/room-api.ts';
 
 const REALTIME_URL = 'wss://realtime.example';
@@ -16,13 +17,28 @@ function answering(status: number, body: unknown) {
   return { fetch: fetch as typeof globalThis.fetch, calls };
 }
 
-function apiWith(fetch: typeof globalThis.fetch, appCheckToken?: string) {
+/** The access code of a device that keeps it only in memory. */
+function codeInMemory(): AccessCode {
+  const items = new Map<string, string>();
+  return deviceAccessCode(() => ({
+    getItem: (key) => items.get(key) ?? null,
+    setItem: (key, value) => void items.set(key, value),
+    removeItem: (key) => void items.delete(key),
+  }));
+}
+
+function apiWith(
+  fetch: typeof globalThis.fetch,
+  appCheckToken?: string,
+  accessCode: AccessCode = codeInMemory(),
+) {
   return httpRoomApi({
     realtimeUrl: REALTIME_URL,
     player: {
       getToken: async () => 'id-token',
       getAppCheckToken: async () => appCheckToken,
     },
+    accessCode,
     fetch,
     newTraceparent: () => '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01',
   });
@@ -159,6 +175,65 @@ describe('httpRoomApi', () => {
       expect(calls[0]?.url).toBe(
         'https://realtime.example/rooms/room-1/dilemmas?category=honesty&q=tranv%C3%ADa+rojo',
       );
+    });
+  });
+
+  describe('the access code', () => {
+    it('should send no access code until the player writes one', async () => {
+      // Arrange
+      const { fetch, calls } = answering(200, { dilemmas: [] });
+
+      // Act
+      await apiWith(fetch).searchDilemmas('room-1', {});
+
+      // Assert
+      expect(new Headers(calls[0]?.init.headers).has('X-Access-Code')).toBe(false);
+    });
+
+    it('should send the code the player wrote with every call, encoded for a header', async () => {
+      // Arrange
+      const { fetch, calls } = answering(200, { dilemmas: [] });
+      const api = apiWith(fetch);
+
+      // Act
+      api.enterAccessCode(' palanca ñ ');
+      await api.searchDilemmas('room-1', {});
+      await api.searchDilemmas('room-1', {});
+
+      // Assert
+      expect(calls.map(({ init }) => new Headers(init.headers).get('X-Access-Code'))).toEqual([
+        'palanca%20%C3%B1',
+        'palanca%20%C3%B1',
+      ]);
+    });
+
+    it('should forget a code the server turns down, so the device asks for it again', async () => {
+      // Arrange
+      const { fetch } = answering(403, { code: 'invalid-access-code' });
+      const accessCode = codeInMemory();
+      const api = apiWith(fetch, undefined, accessCode);
+      api.enterAccessCode('old-code');
+
+      // Act
+      const previewing = api.previewRoom('K7M2Q');
+
+      // Assert
+      await expect(previewing).rejects.toEqual(new RoomApiError('invalid-access-code'));
+      expect(accessCode.current()).toBeUndefined();
+    });
+
+    it('should keep the code when the server turns the call down for another reason', async () => {
+      // Arrange
+      const { fetch } = answering(404, { code: 'room-code-not-found' });
+      const accessCode = codeInMemory();
+      const api = apiWith(fetch, undefined, accessCode);
+      api.enterAccessCode('palanca');
+
+      // Act
+      await api.previewRoom('ZZZZZ').catch(() => undefined);
+
+      // Assert
+      expect(accessCode.current()).toBe('palanca');
     });
   });
 

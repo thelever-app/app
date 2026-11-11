@@ -1,7 +1,11 @@
 import type { RequestHandler } from 'express';
 
-/** What the web sends: the token, the body, the proof that it is the app and the trace. */
-const ALLOWED_HEADERS = 'Authorization, Content-Type, X-Firebase-AppCheck, traceparent';
+/**
+ * What the web sends: the token, the body, the proof that it is the app, the access code of a
+ * closed environment and the trace.
+ */
+const ALLOWED_HEADERS =
+  'Authorization, Content-Type, X-Firebase-AppCheck, X-Access-Code, traceparent';
 
 /**
  * Lets the web, served from another origin than the room server, call its HTTP routes: the browser

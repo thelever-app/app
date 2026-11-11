@@ -156,6 +156,8 @@ const SCREEN = {
 
 /** Where the web keeps the last nickname on the device (identity/last-nickname.ts). */
 const LAST_NICKNAME_KEY = 'thelever.lastNickname';
+/** Where the web keeps the access code on the device (identity/access-code.ts). */
+const ACCESS_CODE_KEY = 'thelever.accessCode';
 
 /** The language of each device a scenario names, as the browser announces it. */
 const LOCALES: Readonly<Record<string, string>> = { es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
@@ -1871,9 +1873,18 @@ export class E2eDriver implements GameDriver {
     return player;
   }
 
-  /** A phone whose web talks to the room server of the run, wherever it listens. */
+  /**
+   * A phone whose web talks to the room server of the run, wherever it listens, and where the
+   * player already wrote the access code.
+   */
   async #newContext(options: BrowserContextOptions): Promise<BrowserContext> {
     const context = await this.#stack.browser.newContext({ viewport: PHONE, ...options });
+    await context.addInitScript(
+      ([key, value]) => {
+        localStorage.setItem(key, value);
+      },
+      [ACCESS_CODE_KEY, this.#stack.accessCode] as const,
+    );
     const realtime = new URL(this.#stack.realtimeUrl);
     await context.route('**/config.json', async (route) => {
       const response = await route.fetch();
@@ -1898,7 +1909,10 @@ export class E2eDriver implements GameDriver {
     );
     const { idToken } = (await signUp.json()) as { readonly idToken: string };
     const { roomId, code } = this.#lobbyOf(this.#hostName());
-    const authorization = { Authorization: `Bearer ${idToken}` };
+    const authorization = {
+      Authorization: `Bearer ${idToken}`,
+      'X-Access-Code': this.#stack.accessCode,
+    };
     const previewed = await fetch(`${this.#stack.realtimeUrl}/rooms/by-code/${code}`, {
       headers: authorization,
     });

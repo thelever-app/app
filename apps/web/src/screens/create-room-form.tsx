@@ -11,6 +11,7 @@ import { lastNickname, rememberNickname } from '../identity/last-nickname.ts';
 import { deviceLanguage } from '../i18n/i18n.ts';
 import { useRoomApi } from '../room/room-api-context.tsx';
 import { codeOf } from './room-error.ts';
+import { useAccessGate } from './use-access-gate.tsx';
 import styles from './form.module.css';
 
 /** What the room is created with, as the player fills it in. */
@@ -51,6 +52,7 @@ export function CreateRoomForm() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const api = useRoomApi();
+  const { withAccess, accessCodeScreen } = useAccessGate();
 
   const [choices, setChoices] = useState<CreateRoomChoices>(() => ({
     nickname: lastNickname(),
@@ -68,15 +70,19 @@ export function CreateRoomForm() {
     const { nickname, groupNature, place } = choices;
     if (groupNature === undefined || place === undefined) return undefined;
     try {
-      const { roomId } = await api.createRoom({
-        nickname,
-        avatar,
-        groupNature,
-        place,
-        dilemmaLanguage: deviceLanguage(i18n),
-      });
+      const created = await withAccess(() =>
+        api.createRoom({
+          nickname,
+          avatar,
+          groupNature,
+          place,
+          dilemmaLanguage: deviceLanguage(i18n),
+        }),
+      );
+      // Back from the access code: the form stays as the player left it.
+      if (!created) return undefined;
       rememberNickname(nickname);
-      void navigate(`/rooms/${roomId}`);
+      void navigate(`/rooms/${created.roomId}`);
       return undefined;
     } catch (failure) {
       return codeOf(failure);
@@ -84,93 +90,96 @@ export function CreateRoomForm() {
   }, undefined);
 
   return (
-    <form action={formAction} className={styles.form}>
-      <div className={styles.identity}>
-        <AvatarButton avatar={avatar} onClick={() => setPickingAvatar(true)} />
-        <label className={styles.field}>
-          {t('createRoom.nickname')}
-          <input
-            className={styles.input}
-            name="nickname"
-            required
-            maxLength={20}
-            autoComplete="nickname"
-            placeholder={t('createRoom.nicknamePlaceholder')}
-            value={choices.nickname}
-            onChange={(event) => setChoices({ ...choices, nickname: event.target.value })}
+    <>
+      <form action={formAction} className={styles.form}>
+        <div className={styles.identity}>
+          <AvatarButton avatar={avatar} onClick={() => setPickingAvatar(true)} />
+          <label className={styles.field}>
+            {t('createRoom.nickname')}
+            <input
+              className={styles.input}
+              name="nickname"
+              required
+              maxLength={20}
+              autoComplete="nickname"
+              placeholder={t('createRoom.nicknamePlaceholder')}
+              value={choices.nickname}
+              onChange={(event) => setChoices({ ...choices, nickname: event.target.value })}
+            />
+          </label>
+        </div>
+
+        <fieldset className={styles.choice}>
+          <legend className={styles.legend}>{t('createRoom.groupNature.label')}</legend>
+          <div className={styles.natures}>
+            {NATURES.map(([nature, icon]) => (
+              <label key={nature} className={styles.nature}>
+                <input
+                  className={styles.radio}
+                  type="radio"
+                  name="groupNature"
+                  value={nature}
+                  required
+                  defaultChecked={choices.groupNature === nature}
+                  onChange={() => setChoices({ ...choices, groupNature: nature })}
+                />
+                <Icon name={icon} size={22} />
+                {t(`createRoom.groupNature.${nature}`)}
+              </label>
+            ))}
+          </div>
+          <p className={styles.hint}>{t('createRoom.groupNature.hint')}</p>
+        </fieldset>
+
+        <fieldset className={styles.choice}>
+          <legend className={styles.legend}>{t('createRoom.place.label')}</legend>
+          <div className={styles.places}>
+            {PLACES.map(([place, icon]) => (
+              <label key={place} className={styles.place}>
+                <input
+                  className={styles.radio}
+                  type="radio"
+                  name="place"
+                  value={place}
+                  required
+                  defaultChecked={choices.place === place}
+                  onChange={() => setChoices({ ...choices, place })}
+                />
+                <Icon name={icon} size={20} />
+                {t(`createRoom.place.${place}`)}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {error && (
+          <p role="alert" className={styles.error}>
+            {t(`roomErrors.${error}`, { defaultValue: t('roomErrors.unknown') })}
+          </p>
+        )}
+        <div className={styles.submit}>
+          <SubmitButton
+            pending={isPending}
+            disabled={missing !== undefined}
+            text={
+              isPending
+                ? t('createRoom.submitting')
+                : missing
+                  ? t(`createRoom.missing.${missing}`)
+                  : t('createRoom.submit')
+            }
           />
-        </label>
-      </div>
-
-      <fieldset className={styles.choice}>
-        <legend className={styles.legend}>{t('createRoom.groupNature.label')}</legend>
-        <div className={styles.natures}>
-          {NATURES.map(([nature, icon]) => (
-            <label key={nature} className={styles.nature}>
-              <input
-                className={styles.radio}
-                type="radio"
-                name="groupNature"
-                value={nature}
-                required
-                defaultChecked={choices.groupNature === nature}
-                onChange={() => setChoices({ ...choices, groupNature: nature })}
-              />
-              <Icon name={icon} size={22} />
-              {t(`createRoom.groupNature.${nature}`)}
-            </label>
-          ))}
         </div>
-        <p className={styles.hint}>{t('createRoom.groupNature.hint')}</p>
-      </fieldset>
-
-      <fieldset className={styles.choice}>
-        <legend className={styles.legend}>{t('createRoom.place.label')}</legend>
-        <div className={styles.places}>
-          {PLACES.map(([place, icon]) => (
-            <label key={place} className={styles.place}>
-              <input
-                className={styles.radio}
-                type="radio"
-                name="place"
-                value={place}
-                required
-                defaultChecked={choices.place === place}
-                onChange={() => setChoices({ ...choices, place })}
-              />
-              <Icon name={icon} size={20} />
-              {t(`createRoom.place.${place}`)}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      {error && (
-        <p role="alert" className={styles.error}>
-          {t(`roomErrors.${error}`, { defaultValue: t('roomErrors.unknown') })}
-        </p>
-      )}
-      <div className={styles.submit}>
-        <SubmitButton
-          pending={isPending}
-          disabled={missing !== undefined}
-          text={
-            isPending
-              ? t('createRoom.submitting')
-              : missing
-                ? t(`createRoom.missing.${missing}`)
-                : t('createRoom.submit')
-          }
-        />
-      </div>
-      {pickingAvatar && (
-        <AvatarPickerSheet
-          current={avatar}
-          taken={[]}
-          onChoose={setAvatar}
-          onClose={() => setPickingAvatar(false)}
-        />
-      )}
-    </form>
+        {pickingAvatar && (
+          <AvatarPickerSheet
+            current={avatar}
+            taken={[]}
+            onChoose={setAvatar}
+            onClose={() => setPickingAvatar(false)}
+          />
+        )}
+      </form>
+      {accessCodeScreen}
+    </>
   );
 }

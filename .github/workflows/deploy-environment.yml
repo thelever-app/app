@@ -73,12 +73,16 @@ jobs:
       # which the capacity alert in ops/monitoring counts on.
       # The CPU stays with the instance between requests: its beat, the check of LISTEN, the cleaning
       # of dead instances and the export of telemetry run on timers, with no request open.
+      # Dev and prod are closed to the public: entering a room asks for the access code of the
+      # environment, which Secret Manager keeps as access-code. Mounted as a file, every read of it
+      # asks Secret Manager, so a new version of the secret takes over without deploying.
       - name: Deploy the room server
         run: |
           gcloud run deploy realtime --project "$PROJECT" --region europe-southwest1 \
             --image "$(cat image.txt)" \
             --service-account "realtime@$PROJECT.iam.gserviceaccount.com" \
-            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=realtime@$PROJECT.iam,DB_POOL_SIZE=3,APP_CHECK=required,WEB_ORIGINS=https://$WEB_DOMAIN https://$PROJECT.web.app https://$PROJECT.firebaseapp.com" \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=realtime@$PROJECT.iam,DB_POOL_SIZE=3,APP_CHECK=required,ACCESS_CODE_FILE=/secrets/access-code/value,WEB_ORIGINS=https://$WEB_DOMAIN https://$PROJECT.web.app https://$PROJECT.firebaseapp.com" \
+            --set-secrets "/secrets/access-code/value=access-code:latest" \
             --timeout 3600 --session-affinity --min-instances 0 --max-instances 2 --concurrency 250 \
             --no-cpu-throttling \
             --quiet

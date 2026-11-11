@@ -5,6 +5,7 @@ import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter } from 'react-router';
 import { App } from './App.tsx';
 import { loadWebConfig } from './config/web-config.ts';
+import { deviceAccessCode } from './identity/access-code.ts';
 import { signInAnonymousPlayer } from './identity/anonymous-player.ts';
 import { lazyPlayer } from './identity/lazy-player.ts';
 import { createI18n, deviceLanguage } from './i18n/i18n.ts';
@@ -39,7 +40,12 @@ async function start(): Promise<void> {
     const language = deviceLanguage(i18n);
     const config = await loadWebConfig();
     const player = lazyPlayer(() => signInAnonymousPlayer(config));
-    const api = httpRoomApi({ realtimeUrl: config.realtimeUrl, player, newTraceparent });
+    const api = httpRoomApi({
+      realtimeUrl: config.realtimeUrl,
+      player,
+      accessCode: deviceAccessCode(),
+      newTraceparent,
+    });
     const openRoom: OpenRoom = (roomId) =>
       connectRoom({
         roomId,

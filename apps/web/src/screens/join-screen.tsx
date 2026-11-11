@@ -8,6 +8,7 @@ import { RoomApiError } from '../room/room-api.ts';
 import { useRoomApi } from '../room/room-api-context.tsx';
 import { isJoinRefusal, JoinRefusal, type JoinRefusalCode } from './join-refusal.tsx';
 import { JoinRoomForm } from './join-room-form.tsx';
+import { useAccessGate } from './use-access-gate.tsx';
 import screen from './screen.module.css';
 import styles from './join-screen.module.css';
 
@@ -33,11 +34,19 @@ export function JoinScreen() {
   // The answer keeps the code it answers: while it answers another one, the screen is loading.
   const [answer, setAnswer] = useState<{ readonly code: string; readonly preview: Preview }>();
 
+  // Whoever typed the code goes back to it, as they left it; whoever came by the link or the QR,
+  // to the start. A room that does not exist sends everyone to type another code.
+  const fromCode = (useLocation().state as { fromCode?: boolean } | null)?.fromCode === true;
+  const back = () => void (fromCode ? navigate(-1) : navigate('/'));
+  // Whoever came by a link without the access code writes it before seeing the room.
+  const { withAccess, accessCodeScreen } = useAccessGate(back);
+
   useEffect(() => {
     let current = true;
-    api.previewRoom(code).then(
+    withAccess(() => api.previewRoom(code)).then(
       (room) => {
-        if (current) setAnswer({ code, preview: { status: 'found', room } });
+        // Without a room, the player went back from the access code, and leaves the screen.
+        if (current && room) setAnswer({ code, preview: { status: 'found', room } });
       },
       (error: unknown) => {
         if (!current) return;
@@ -53,13 +62,9 @@ export function JoinScreen() {
     return () => {
       current = false;
     };
-  }, [api, code]);
+  }, [api, code, withAccess]);
   const preview: Preview = answer?.code === code ? answer.preview : { status: 'loading' };
 
-  // Whoever typed the code goes back to it, as they left it; whoever came by the link or the QR,
-  // to the start. A room that does not exist sends everyone to type another code.
-  const fromCode = (useLocation().state as { fromCode?: boolean } | null)?.fromCode === true;
-  const back = () => void (fromCode ? navigate(-1) : navigate('/'));
   const tryAnotherCode = () => void (fromCode ? navigate(-1) : navigate('/join'));
   const home = () => void navigate('/');
   if (preview.status === 'refused') {
@@ -123,6 +128,7 @@ export function JoinScreen() {
           </>
         )}
       </div>
+      {accessCodeScreen}
     </div>
   );
 }

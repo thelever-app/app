@@ -1,6 +1,9 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   ConsoleLogger,
@@ -28,6 +31,11 @@ const WORKER = Number(process.env.CUCUMBER_WORKER_ID ?? 0);
 const REALTIME_PORT = Number(process.env.E2E_REALTIME_PORT ?? 3000) + WORKER;
 const WEB_PORT = 4173 + WORKER;
 const READY_TIMEOUT_MS = 30_000;
+/**
+ * Test data: the access code of the run. The room server asks for it, as dev and prod do, and
+ * every browser of a scenario has it, as a device where the player already wrote it.
+ */
+const ACCESS_CODE = 'e2e-access-code';
 /** Locally, DATABASE_URL comes from the .env of the repo; in CI, from the workflow. */
 const ENV_FILE = `${ROOT}.env`;
 
@@ -45,6 +53,8 @@ export interface E2eStack {
   readonly databaseUrl: string;
   /** The Auth emulator, to sign in the players the scenario brings in without a screen. */
   readonly authEmulatorHost: string;
+  /** The access code the room server asks for. */
+  readonly accessCode: string;
 }
 
 let running:
@@ -52,6 +62,8 @@ let running:
       readonly stack: E2eStack;
       readonly processes: readonly ChildProcess[];
       readonly database: string;
+      /** Where the access code is, as Cloud Run mounts the secret. */
+      readonly secrets: string;
     }
   | undefined;
 
@@ -88,6 +100,9 @@ export async function startE2eStack(): Promise<void> {
   const realtimeUrl = `http://localhost:${REALTIME_PORT}`;
   const webUrl = `http://localhost:${WEB_PORT}`;
   const database = await createE2eDatabase();
+  const secrets = await mkdtemp(join(tmpdir(), 'thelever-e2e-secrets-'));
+  const accessCodeFile = join(secrets, 'access-code');
+  await writeFile(accessCodeFile, ACCESS_CODE);
   const processes = [
     start('node', ['apps/realtime/src/server.ts'], {
       PORT: String(REALTIME_PORT),
@@ -95,6 +110,7 @@ export async function startE2eStack(): Promise<void> {
       FIREBASE_AUTH_EMULATOR_HOST: authEmulator,
       DATABASE_URL: urlOf(database),
       WEB_ORIGINS: webUrl,
+      ACCESS_CODE_FILE: accessCodeFile,
     }),
     start('pnpm', [
       '--filter',
@@ -118,24 +134,28 @@ export async function startE2eStack(): Promise<void> {
         webUrl,
         databaseUrl: urlOf(database),
         authEmulatorHost: authEmulator,
+        accessCode: ACCESS_CODE,
       },
       processes,
       database,
+      secrets,
     };
   } catch (error) {
     await Promise.all(processes.map(stop));
     await dropE2eDatabase(database);
+    await rm(secrets, { recursive: true, force: true });
     throw error;
   }
 }
 
 export async function stopE2eStack(): Promise<void> {
   if (!running) return;
-  const { stack, processes, database } = running;
+  const { stack, processes, database, secrets } = running;
   running = undefined;
   await stack.browser.close();
   await Promise.all(processes.map(stop));
   await dropE2eDatabase(database);
+  await rm(secrets, { recursive: true, force: true });
 }
 
 /** The stack a scenario plays against, once the test run has started it. */

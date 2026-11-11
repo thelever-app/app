@@ -8,6 +8,7 @@ import {
   RoomPreviewResponseDto,
   SearchDilemmasResponseDto,
 } from '@thelever-app/protocol';
+import type { AccessCode } from '../identity/access-code.ts';
 import type { PlayerIdentity } from '../identity/anonymous-player.ts';
 
 /** The room server said no, with the stable code the screen translates; none if it did not say why. */
@@ -32,12 +33,16 @@ export interface RoomApi {
     /** One category, or every one; what the player typed, looked for in the text and the tags. */
     criteria: { readonly category?: string; readonly q?: string },
   ): Promise<SearchDilemmasResponseDto['dilemmas']>;
+  /** The access code the player wrote, which every call carries from now on. */
+  enterAccessCode(code: string): void;
 }
 
 export interface HttpRoomApiOptions {
   /** The room server, as the config gives it for its socket: the same host serves HTTP. */
   readonly realtimeUrl: string;
   readonly player: PlayerIdentity;
+  /** The access code of a closed environment, kept on the device. */
+  readonly accessCode: AccessCode;
   readonly fetch?: typeof fetch;
   readonly newTraceparent: () => string;
 }
@@ -49,11 +54,13 @@ interface Schema<T> {
 
 /**
  * The HTTP routes of the room server, as the player who signed in: every call carries their
- * token and, where the environment asks for it, the proof that it comes from the app.
+ * token, where the environment asks for it the proof that it comes from the app and, once the
+ * player wrote it, the access code. A code the server turns down is forgotten.
  */
 export function httpRoomApi({
   realtimeUrl,
   player,
+  accessCode,
   fetch: send = fetch,
   newTraceparent,
 }: HttpRoomApiOptions): RoomApi {
@@ -71,6 +78,9 @@ export function httpRoomApi({
     });
     const appCheckToken = await player.getAppCheckToken(false);
     if (appCheckToken) headers.set('X-Firebase-AppCheck', appCheckToken);
+    const code = accessCode.current();
+    // Encoded, since a header only carries Latin-1 and the player may type anything.
+    if (code !== undefined) headers.set('X-Access-Code', encodeURIComponent(code));
     if (body !== undefined) headers.set('Content-Type', 'application/json');
 
     const response = await send(`${base}${path}`, {
@@ -79,7 +89,11 @@ export function httpRoomApi({
       ...(body !== undefined && { body: JSON.stringify(body) }),
     });
     const read: unknown = await response.json().catch(() => undefined);
-    if (!response.ok) throw new RoomApiError(HttpErrorDto.safeParse(read).data?.code);
+    if (!response.ok) {
+      const error = new RoomApiError(HttpErrorDto.safeParse(read).data?.code);
+      if (error.code === 'invalid-access-code') accessCode.forget();
+      throw error;
+    }
     const parsed = schema.safeParse(read);
     if (!parsed.success) throw new RoomApiError(undefined);
     return parsed.data;
@@ -106,5 +120,6 @@ export function httpRoomApi({
       );
       return dilemmas;
     },
+    enterAccessCode: (code) => accessCode.remember(code),
   };
 }

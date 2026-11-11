@@ -12,6 +12,7 @@ import { AvatarPickerSheet } from '../lobby/avatar-picker-sheet.tsx';
 import { useRoomApi } from '../room/room-api-context.tsx';
 import { isJoinRefusal, type JoinRefusalCode } from './join-refusal.tsx';
 import { codeOf } from './room-error.ts';
+import { useAccessGate } from './use-access-gate.tsx';
 import styles from './form.module.css';
 
 interface JoinRoomFormProps {
@@ -35,6 +36,7 @@ export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: Jo
   const { t } = useTranslation();
   const navigate = useNavigate();
   const api = useRoomApi();
+  const { withAccess, accessCodeScreen } = useAccessGate();
 
   const [nickname, setNickname] = useState(lastNickname);
   const [avatar, setAvatar] = useState(suggestedAvatar);
@@ -55,9 +57,11 @@ export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: Jo
   // Why the last attempt failed; the nickname stays in its field.
   const [error, formAction, isPending] = useActionState(async (): Promise<string | undefined> => {
     try {
-      const { joinedLate } = await api.joinRoom(roomId, nickname, avatar);
+      const joined = await withAccess(() => api.joinRoom(roomId, nickname, avatar));
+      // Back from the access code: the form stays as the player left it.
+      if (!joined) return undefined;
       rememberNickname(nickname);
-      const state: JoinedLateState | null = joinedLate ? { joinedLate } : null;
+      const state: JoinedLateState | null = joined.joinedLate ? { joinedLate: true } : null;
       void navigate(`/rooms/${roomId}`, { state });
       return undefined;
     } catch (failure) {
@@ -74,61 +78,64 @@ export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: Jo
   }, undefined);
 
   return (
-    <form action={formAction} className={styles.form}>
-      <div className={styles.identity}>
-        <AvatarButton avatar={avatar} onClick={() => setPickingAvatar(true)} />
-        <label className={styles.field}>
-          {t('joinRoom.nickname')}
-          <input
-            className={styles.input}
-            name="nickname"
-            required
-            maxLength={20}
-            autoComplete="nickname"
-            value={nickname}
-            onChange={(event) => setNickname(event.target.value)}
+    <>
+      <form action={formAction} className={styles.form}>
+        <div className={styles.identity}>
+          <AvatarButton avatar={avatar} onClick={() => setPickingAvatar(true)} />
+          <label className={styles.field}>
+            {t('joinRoom.nickname')}
+            <input
+              className={styles.input}
+              name="nickname"
+              required
+              maxLength={20}
+              autoComplete="nickname"
+              value={nickname}
+              onChange={(event) => setNickname(event.target.value)}
+            />
+          </label>
+        </div>
+        {namesakes[0] && (
+          <p role="status" className={styles.notice} data-testid="namesake">
+            {t('joinRoom.namesake', { nickname: namesakes[0].nickname })}
+          </p>
+        )}
+        {error === 'nickname-and-avatar-taken'
+          ? lookalike && (
+              <p role="alert" className={styles.error}>
+                {t('joinRoom.lookalikeJustJoined', { nickname: nickname.trim() })}
+              </p>
+            )
+          : error && (
+              <p role="alert" className={styles.error}>
+                {t(`roomErrors.${error}`, { defaultValue: t('roomErrors.unknown') })}
+              </p>
+            )}
+        <div className={styles.submit}>
+          <SubmitButton
+            pending={isPending}
+            disabled={missing !== undefined}
+            text={
+              isPending
+                ? t('joinRoom.submitting')
+                : missing === 'nickname'
+                  ? t('joinRoom.missingNickname')
+                  : missing === 'avatar'
+                    ? t('joinRoom.missingAvatar')
+                    : t('joinRoom.submit')
+            }
           />
-        </label>
-      </div>
-      {namesakes[0] && (
-        <p role="status" className={styles.notice} data-testid="namesake">
-          {t('joinRoom.namesake', { nickname: namesakes[0].nickname })}
-        </p>
-      )}
-      {error === 'nickname-and-avatar-taken'
-        ? lookalike && (
-            <p role="alert" className={styles.error}>
-              {t('joinRoom.lookalikeJustJoined', { nickname: nickname.trim() })}
-            </p>
-          )
-        : error && (
-            <p role="alert" className={styles.error}>
-              {t(`roomErrors.${error}`, { defaultValue: t('roomErrors.unknown') })}
-            </p>
-          )}
-      <div className={styles.submit}>
-        <SubmitButton
-          pending={isPending}
-          disabled={missing !== undefined}
-          text={
-            isPending
-              ? t('joinRoom.submitting')
-              : missing === 'nickname'
-                ? t('joinRoom.missingNickname')
-                : missing === 'avatar'
-                  ? t('joinRoom.missingAvatar')
-                  : t('joinRoom.submit')
-          }
-        />
-      </div>
-      {pickingAvatar && (
-        <AvatarPickerSheet
-          current={avatar}
-          taken={taken}
-          onChoose={setAvatar}
-          onClose={() => setPickingAvatar(false)}
-        />
-      )}
-    </form>
+        </div>
+        {pickingAvatar && (
+          <AvatarPickerSheet
+            current={avatar}
+            taken={taken}
+            onChoose={setAvatar}
+            onClose={() => setPickingAvatar(false)}
+          />
+        )}
+      </form>
+      {accessCodeScreen}
+    </>
   );
 }

@@ -10,9 +10,11 @@ import { getAppCheck } from 'firebase-admin/app-check';
 import { getAuth } from 'firebase-admin/auth';
 import { composeRealtimeServer } from './composition/index.ts';
 import { PING_INTERVAL_MS } from './rooms/sockets/heartbeat.ts';
+import { OpenAccess } from './identity/access-gate.ts';
 import { UncheckedAppCheck } from './identity/app-check-verifier.ts';
 import { FirebaseAppCheckVerifier } from './identity/firebase-app-check-verifier.ts';
 import { FirebaseTokenVerifier } from './identity/firebase-token-verifier.ts';
+import { SecretFileAccessGate } from './identity/secret-file-access-gate.ts';
 import { CloudLoggingLogger } from './telemetry/cloud-logging-logger.ts';
 import { shutdownTelemetry } from './telemetry/register.ts';
 
@@ -31,6 +33,12 @@ const appCheckVerifier =
   process.env.APP_CHECK === 'required'
     ? new FirebaseAppCheckVerifier(getAppCheck(firebase))
     : new UncheckedAppCheck();
+// Dev and prod, while closed, mount their access code from Secret Manager at ACCESS_CODE_FILE;
+// without it the gate is open. A file it cannot read stops the server before it serves anyone.
+const accessCodeFile = process.env.ACCESS_CODE_FILE;
+const accessGate = accessCodeFile
+  ? await SecretFileAccessGate.open(accessCodeFile)
+  : new OpenAccess();
 
 // DATABASE_URL locally and in CI; CLOUD_SQL_INSTANCE and DB_USER in Cloud Run.
 const databaseConfig = databaseConfigFrom(process.env);
@@ -47,6 +55,7 @@ const webOrigins = (process.env.WEB_ORIGINS ?? 'http://localhost:5173 http://loc
 const server = await composeRealtimeServer({
   tokenVerifier,
   appCheckVerifier,
+  accessGate,
   pingIntervalMs: PING_INTERVAL_MS,
   logger,
   webOrigins,

@@ -1,0 +1,100 @@
+/* The whole screen, over the one the player was on, as wide as the app. */
+.screen {
+  composes: enter from '../styles/motion.module.css';
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  max-width: 480px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+
+.body {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: var(--space-4) 20px 28px;
+}
+
+.back {
+  width: 44px;
+  height: 44px;
+  margin-left: -12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.lock {
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.title {
+  composes: title from '../styles/typography.module.css';
+  margin: 0;
+}
+
+.lead {
+  margin: -8px 0 0;
+  color: var(--color-ink-muted);
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 2px var(--color-border-strong);
+  font: inherit;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+/* The ring darkens once there is a code, and stays dark on a refusal. */
+.input[data-empty='false'],
+.input[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+/* Always there, so a screen reader announces the refusal when it appears. */
+.alert {
+  margin-top: -8px;
+}
+
+.error {
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.error strong {
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
