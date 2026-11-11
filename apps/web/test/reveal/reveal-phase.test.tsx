@@ -30,6 +30,7 @@ const NOMINAL_REVEAL: Reveal = {
     { optionId: 'test-option-1b', count: 1 },
   ],
   tooFewVotes: false,
+  voteCount: 3,
   didNotVoteCount: 1,
   votes: [
     { playerId: 'test-ana-id', vote: 'test-option-1a' },
@@ -77,7 +78,7 @@ async function renderReveal(game: GameStateDto, { pastTheIntro = true } = {}) {
   const fake = fakeConnection();
   const { Providers, t } = await providersFor({ connection: fake.connection });
   vi.useFakeTimers();
-  render(<RevealPhase />, { wrapper: Providers });
+  render(<RevealPhase onShowQr={() => {}} />, { wrapper: Providers });
   act(() => fake.deliver(game));
   if (pastTheIntro) act(() => vi.advanceTimersByTime(REVEAL_INTRO_MS));
   return { ...fake, t };
@@ -102,6 +103,22 @@ describe('RevealPhase', () => {
     expect(answered).not.toBeNull();
     expect(screen.queryByRole('heading', { name: t('reveal.introTitle') })).toBeNull();
     expect(screen.getByRole('main', { name: t('reveal.region') })).toBeDefined();
+  });
+
+  it('should count in the passage only who was asked the dilemma, not who joined after it', async () => {
+    // Arrange: Pedro joined once the dilemma was revealed.
+    const pedro = { ...PLAYERS[0]!, playerId: 'test-pedro-id', nickname: 'Pedro' };
+
+    // Act
+    const { t } = await renderReveal(
+      revealed(NOMINAL_REVEAL, { players: [...PLAYERS, pedro], answeredCount: 1 }),
+      { pastTheIntro: false },
+    );
+
+    // Assert
+    expect(
+      screen.getByText(t('reveal.introAnswered', { count: 3, total: 4 }), { exact: false }),
+    ).toBeDefined();
   });
 
   describe('nominal room', () => {
@@ -272,17 +289,28 @@ describe('RevealPhase', () => {
       ).toBeDefined();
     });
 
-    it('should say there were too few votes to show the distribution', async () => {
+    it('should say there were too few votes to show the distribution, counting only who was asked', async () => {
+      // Arrange: a fifth player joined once the dilemma was revealed.
+      const late = { ...ANONYMOUS_PLAYERS[0]!, playerId: 'test-pedro-id', nickname: 'Pedro' };
+
       // Act
       const { t } = await renderReveal(
         revealed(
-          { ...ANONYMOUS_REVEAL, distribution: null, tooFewVotes: true, didNotVoteCount: 2 },
-          { players: ANONYMOUS_PLAYERS },
+          {
+            ...ANONYMOUS_REVEAL,
+            distribution: null,
+            tooFewVotes: true,
+            voteCount: 2,
+            didNotVoteCount: 2,
+          },
+          { players: [...ANONYMOUS_PLAYERS, late] },
         ),
       );
 
       // Assert
-      expect(screen.getByRole('status').textContent).toContain(t('reveal.fewVotesTitle'));
+      const status = screen.getByRole('status').textContent;
+      expect(status).toContain(t('reveal.fewVotesTitle'));
+      expect(status).toContain(t('reveal.fewVotesVoted', { count: 2 }));
       expect(screen.queryByRole('heading', { name: 'Opción 1A' })).toBeNull();
     });
   });

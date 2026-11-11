@@ -33,6 +33,7 @@ const gameState = {
       { optionId: 'option-2', count: 1 },
     ],
     tooFewVotes: false,
+    voteCount: 2,
     didNotVoteCount: 0,
     votes: [
       { playerId: 'player-1', vote: 'option-2' },

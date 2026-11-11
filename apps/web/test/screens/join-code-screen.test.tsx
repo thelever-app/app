@@ -60,8 +60,8 @@ describe('JoinCodeScreen', () => {
     const { field, location } = await renderCodeScreen();
     fireEvent.change(field, { target: { value: 'K7M2Q' } });
 
-    // Act
-    fireEvent.submit(field);
+    // Act: Enter in the field submits its form.
+    fireEvent.submit(field.form!);
 
     // Assert
     expect(location()).toBe('/join/K7M2Q');

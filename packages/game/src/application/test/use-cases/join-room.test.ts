@@ -5,6 +5,7 @@ import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-pl
 import { InvalidAvatarError } from '../../../domain/errors/invalid-avatar.error.ts';
 import { NicknameAndAvatarTakenError } from '../../../domain/errors/nickname-and-avatar-taken.error.ts';
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
+import { PlayerJoinedLateEvent } from '../../../domain/events/player-joined-late.event.ts';
 import { AvatarVO } from '../../../domain/vos/avatar.vo.ts';
 import { KeepOrderRandomness } from '../../../domain/test/support/keep-order-randomness.ts';
 import { gameInDecisionPhase, lobbyOfThree } from '../support/game-in-decision-phase.ts';
@@ -104,10 +105,18 @@ describe('JoinRoomUseCase', () => {
       expect(notifier.receivedBy(luisId)).toEqual([]);
     });
 
-    it('should take a new player into the game in progress', async () => {
+    it('should take a new player into the game in progress, and tell everyone', async () => {
       // Arrange
-      const { joinRoom, gameRepository, roomId, gameId, dilemmaIds, notifier, anaId } =
-        await arrangeGame();
+      const {
+        joinRoom,
+        gameRepository,
+        roomRepository,
+        roomId,
+        gameId,
+        dilemmaIds,
+        notifier,
+        anaId,
+      } = await arrangeGame();
 
       // Act
       const { playerId, joinedLate } = await joinRoom.execute({ roomId, ...PABLO });
@@ -116,6 +125,11 @@ describe('JoinRoomUseCase', () => {
       expect(joinedLate).toBe(true);
       const game = await gameRepository.findById(gameId);
       expect(game?.playerIds).toContain(playerId);
+      const room = await roomRepository.findById(roomId);
+      expect(notifier.receivedBy(anaId)).toEqual([
+        new LobbyChangedEvent(roomId, 'player-joined', room!.version),
+        new PlayerJoinedLateEvent(gameId, playerId, game!.version),
+      ]);
       expect(() =>
         game?.answer(
           playerId,
@@ -130,12 +144,12 @@ describe('JoinRoomUseCase', () => {
           new Date(),
         ),
       ).not.toThrow();
-      expect(notifier.receivedBy(anaId)).toHaveLength(1);
     });
 
-    it('should take into the game a player of the room who was left out of it', async () => {
+    it('should take into the game a player of the room who was left out of it, and tell the others', async () => {
       // Arrange
-      const { joinRoom, roomRepository, gameRepository, roomId, gameId } = await arrangeGame();
+      const { joinRoom, roomRepository, gameRepository, roomId, gameId, notifier, anaId } =
+        await arrangeGame();
       const room = await roomRepository.findById(roomId);
       const pablo = room!.join(
         {
@@ -153,7 +167,11 @@ describe('JoinRoomUseCase', () => {
       // Assert
       expect(playerId).toBe(pablo.id);
       expect(joinedLate).toBe(true);
-      expect((await gameRepository.findById(gameId))?.playerIds).toContain(pablo.id);
+      const game = await gameRepository.findById(gameId);
+      expect(game?.playerIds).toContain(pablo.id);
+      expect(notifier.receivedBy(anaId)).toEqual([
+        new PlayerJoinedLateEvent(gameId, pablo.id, game!.version),
+      ]);
     });
 
     it('should leave as it is the game of a player who is already in it', async () => {

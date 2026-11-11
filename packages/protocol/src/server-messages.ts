@@ -60,6 +60,9 @@ export const GameStateDto = z.strictObject({
         )
         .nullable(),
       tooFewVotes: z.boolean(),
+      /** How many voted it, also in an anonymous room. */
+      voteCount: z.number().int().nonnegative(),
+      /** How many did not vote it, without who joined the game once it was revealed. */
       didNotVoteCount: z.number().int().nonnegative(),
       /** What each player voted, null for who did not vote; empty in an anonymous room. */
       votes: z.array(

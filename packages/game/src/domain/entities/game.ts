@@ -21,6 +21,7 @@ import { PredictionsNotAllowedError } from '../errors/predictions-not-allowed.er
 import { AnsweredCountChangedEvent } from '../events/answered-count-changed.event.ts';
 import { DilemmaRevealedEvent } from '../events/dilemma-revealed.event.ts';
 import type { DomainEvent } from '../events/domain-event.ts';
+import { PlayerJoinedLateEvent } from '../events/player-joined-late.event.ts';
 import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
 import { RoundStartedEvent } from '../events/round-started.event.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
@@ -111,6 +112,9 @@ export interface DilemmaReveal {
   /** How many chose each option, in the order of the dilemma; null when too few voted to show it. */
   readonly distribution: readonly { readonly optionId: string; readonly count: number }[] | null;
   readonly tooFewVotes: boolean;
+  /** How many of those asked voted it, also in an anonymous room. */
+  readonly voteCount: number;
+  /** How many of those asked did not vote it; who joined once it was revealed was not asked. */
   readonly didNotVoteCount: number;
   /** What each player voted, null for who did not vote. */
   readonly votes: readonly { readonly playerId: string; readonly vote: string | null }[];
@@ -474,6 +478,7 @@ export class Game {
     }
     this.#players.set(playerId, state);
     this.#version += 1;
+    this.#events.push(new PlayerJoinedLateEvent(this.id, playerId, this.#version));
   }
 
   /** A player who had left comes back to the game where it is. */
@@ -594,6 +599,7 @@ export class Game {
             count: voters.filter((playerId) => voteOf(playerId) === optionId).length,
           })),
       tooFewVotes,
+      voteCount: voters.length,
       didNotVoteCount: asked.length - voters.length,
       votes: nominal ? asked.map((playerId) => ({ playerId, vote: voteOf(playerId) })) : [],
       votePredictions: nominal

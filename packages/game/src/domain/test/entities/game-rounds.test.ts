@@ -16,6 +16,7 @@ import { PredictionsNotAllowedError } from '../../errors/predictions-not-allowed
 import { VoteMissingError } from '../../errors/vote-missing.error.ts';
 import { AnsweredCountChangedEvent } from '../../events/answered-count-changed.event.ts';
 import { DilemmaRevealedEvent } from '../../events/dilemma-revealed.event.ts';
+import { PlayerJoinedLateEvent } from '../../events/player-joined-late.event.ts';
 import { ProgressUpdatedEvent } from '../../events/progress-updated.event.ts';
 import { RoundStartedEvent } from '../../events/round-started.event.ts';
 import { AvatarVO } from '../../vos/avatar.vo.ts';
@@ -595,6 +596,7 @@ describe('Game, by rounds', () => {
         everyoneAnswers(game);
         game.moveOn('Ana', position, AT);
       }
+      game.pullEvents();
       const version = game.version;
 
       // Act
@@ -603,6 +605,9 @@ describe('Game, by rounds', () => {
       // Assert
       expect(game.playerIds).toEqual([...EVERYONE, 'Pedro']);
       expect(game.version).toBe(version + 1);
+      expect(game.pullEvents()).toEqual([
+        new PlayerJoinedLateEvent('TestGameId', 'Pedro', version + 1),
+      ]);
       expect(game.didNotVoteOf('Pedro')).toEqual([
         { dilemmaId: 'TestDilemma1', reason: 'joined-late' },
         { dilemmaId: 'TestDilemma2', reason: 'joined-late' },
@@ -626,6 +631,7 @@ describe('Game, by rounds', () => {
         { dilemmaId: 'TestDilemma1', reason: 'joined-late' },
       ]);
       expect(game.revealOf(0)).toEqual(reveal);
+      expect(reveal.voteCount + reveal.didNotVoteCount).toBe(EVERYONE.length);
     });
 
     it('should record as not answered a round the late player did not answer before its reveal', () => {
@@ -781,6 +787,7 @@ describe('Game, by rounds', () => {
 
       // Assert
       expect(reveal.votes).toContainEqual({ playerId: 'Marta', vote: null });
+      expect(reveal.voteCount).toBe(2);
       expect(reveal.didNotVoteCount).toBe(1);
       expect(new Set(reveal.votePredictions.map(({ playerId }) => playerId))).toEqual(
         new Set(['Ana']),

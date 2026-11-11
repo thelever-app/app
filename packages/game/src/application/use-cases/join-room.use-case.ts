@@ -6,6 +6,7 @@ import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findRoom } from './find-room.ts';
+import { notifyGame } from './notify-game.ts';
 import { notifyRoom } from './notify-room.ts';
 
 export interface JoinRoomInput {
@@ -69,7 +70,12 @@ export class JoinRoomUseCase {
       game.rejoin(player.id);
       await this.#gameRepository.save(game);
     }
-    await notifyRoom(room, events, this.#notifier);
+    if (game) {
+      const gameEvents = game.pullEvents();
+      await notifyGame({ room, game }, { roomEvents: events, gameEvents }, this.#notifier);
+    } else {
+      await notifyRoom(room, events, this.#notifier);
+    }
 
     return { playerId: player.id, joinedLate };
   }

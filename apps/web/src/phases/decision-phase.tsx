@@ -16,7 +16,7 @@ import { WaitingScreen } from '../screens/waiting-screen.tsx';
  * The decision of a round: its dilemma, or waiting for the others once the player answered it or
  * skipped it; the host may reveal it early from either.
  */
-export function DecisionPhase() {
+export function DecisionPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   const navigate = useNavigate();
   const { game, rejection, answerDilemma, send } = useGame();
   const [isChanging, setIsChanging] = useState(false);
@@ -51,6 +51,7 @@ export function DecisionPhase() {
         />
       ) : (
         <DilemmaScreen
+          onShowQr={onShowQr}
           key={`${position}:${rejectedAnswers}`}
           game={game}
           onAnswer={answerDilemma}

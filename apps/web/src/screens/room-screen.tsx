@@ -5,6 +5,7 @@ import { RoomNotices } from '../components/room-notices.tsx';
 import { LateJoinNotice, useJoinedLate } from '../game/late-join-notice.tsx';
 import { NewHostNotice } from '../game/new-host-notice.tsx';
 import { LobbyScreen } from '../lobby/lobby-screen.tsx';
+import { QrScreen } from '../lobby/qr-screen.tsx';
 import { DecisionPhase } from '../phases/decision-phase.tsx';
 import { RevealPhase } from '../phases/reveal-phase.tsx';
 import { RoomApiProvider } from '../room/room-api-context.tsx';
@@ -74,11 +75,19 @@ export function RoomScreen() {
 export function RoomContent() {
   const { lobby, game } = useRoom();
   const { joinedLate, forget } = useJoinedLate();
+  // Here, so the QR stays while someone scans it although the round changes phase.
+  const [isQrOpen, setIsQrOpen] = useState(false);
   if (lobby) return <LobbyScreen />;
   if (game && joinedLate) return <LateJoinNotice game={game} onEnter={forget} />;
+  const showQr = () => setIsQrOpen(true);
   return (
     <>
-      {game?.round.phase === 'reveal' ? <RevealPhase /> : <DecisionPhase />}
+      {game?.round.phase === 'reveal' ? (
+        <RevealPhase onShowQr={showQr} />
+      ) : (
+        <DecisionPhase onShowQr={showQr} />
+      )}
+      {game && isQrOpen && <QrScreen code={game.code} onClose={() => setIsQrOpen(false)} />}
       <NewHostNotice />
     </>
   );

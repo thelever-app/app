@@ -35,7 +35,9 @@ const ANSWERED: GameStateDto = {
 
 async function renderPhase(game: GameStateDto) {
   const fake = fakeConnection();
-  const { t } = await renderWithProviders(<DecisionPhase />, { connection: fake.connection });
+  const { t } = await renderWithProviders(<DecisionPhase onShowQr={() => {}} />, {
+    connection: fake.connection,
+  });
   act(() => fake.deliver(game));
   return { ...fake, t };
 }

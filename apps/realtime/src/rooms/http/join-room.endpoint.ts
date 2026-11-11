@@ -1,4 +1,4 @@
-import type { JoinRoomUseCase } from '@thelever-app/game';
+import type { JoinRoomOutput, JoinRoomUseCase } from '@thelever-app/game';
 import { JoinRoomRequestDto, JoinRoomResponseDto } from '@thelever-app/protocol';
 import type { Request, Response } from 'express';
 import type { KeyedLock } from '../../concurrency/keyed-lock.ts';
@@ -29,7 +29,7 @@ export class JoinRoomEndpoint implements HttpEndpoint {
     const { nickname, avatar } = parseBody(JoinRoomRequestDto, req.body);
     const roomId = String(req.params.roomId);
     const release = await this.#roomLock.acquire(roomId);
-    let joined;
+    let joined: JoinRoomOutput;
     try {
       joined = await this.#runCommand(() =>
         this.#joinRoom.execute({ roomId, nickname, identity: identityOf(res), avatar }),

@@ -24,6 +24,7 @@ import {
   LeaveRoomUseCase,
   LobbyChangedEvent,
   MoveOnUseCase,
+  PlayerJoinedLateEvent,
   PlayerLeftEvent,
   ReportDilemmaUseCase,
   RevealEarlyUseCase,
@@ -97,6 +98,7 @@ const SENT_AS_STATE = [
   RoundStartedEvent,
   HostChangedEvent,
   PlayerLeftEvent,
+  PlayerJoinedLateEvent,
 ] as const;
 
 /** Who uses the screen in the simulation. */

@@ -25,6 +25,7 @@ interface DilemmaScreenProps {
   readonly onReport: (dilemmaId: string, reason: ReportReasonDto, comment: string) => void;
   readonly onSkip: (dilemmaId: string) => void;
   readonly onLeave: () => void;
+  readonly onShowQr: () => void;
 }
 
 const NO_PREDICTIONS: Predictions = { votePredictions: [] };
@@ -52,6 +53,7 @@ export function DilemmaScreen({
   onReport,
   onSkip,
   onLeave,
+  onShowQr,
 }: DilemmaScreenProps) {
   const { t } = useTranslation();
   const { position } = game.round;
@@ -84,6 +86,7 @@ export function DilemmaScreen({
   const menu = (
     <GameMenu
       code={game.code}
+      onShowQr={onShowQr}
       onRevealEarly={onRevealEarly}
       reported={reported}
       onShowGroup={() => setIsGroupOpen(true)}

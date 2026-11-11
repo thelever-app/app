@@ -9,6 +9,7 @@ import {
   PlayerLeftEvent,
   AnsweredCountChangedEvent,
   DilemmaRevealedEvent,
+  PlayerJoinedLateEvent,
   RoundStartedEvent,
   ProgressUpdatedEvent,
   type DomainEvent,
@@ -101,6 +102,7 @@ describe('PostgresPlayerNotifier', () => {
         new RoundStartedEvent('TestGameId', 1, 'TestMartaId', 10),
         new HostChangedEvent('TestRoomId', 'TestLuisId', 5),
         new PlayerLeftEvent('TestRoomId', 'TestAnaId', true, 6),
+        new PlayerJoinedLateEvent('TestGameId', 'TestPedroId', 11),
       ];
 
       // Act
