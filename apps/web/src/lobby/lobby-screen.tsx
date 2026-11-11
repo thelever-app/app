@@ -13,7 +13,7 @@ import { AddDilemmaSheet } from './add-dilemma-sheet.tsx';
 import { AvatarPickerSheet } from './avatar-picker-sheet.tsx';
 import { ExpelSheet } from './expel-sheet.tsx';
 import { isCategory } from './categories.ts';
-import { invitationLink, spelled } from './invitation.ts';
+import { shareInvitation, spelled } from './invitation.ts';
 import { PickDilemmasSheet } from './pick-dilemmas-sheet.tsx';
 import { QrScreen } from './qr-screen.tsx';
 import { RoomSettingsSheet } from './room-settings-sheet.tsx';
@@ -45,15 +45,8 @@ export function LobbyScreen() {
   const { settings } = lobby;
 
   const share = async () => {
-    const url = invitationLink(lobby.code);
-    const text = t('lobby.shareText', { code: lobby.code });
-    if (navigator.share) {
-      // The player may close the share sheet: that is not an error.
-      await navigator.share({ title: 'TheLever', text, url }).catch(() => {});
-      return;
-    }
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
+    const shared = await shareInvitation(lobby.code, t('lobby.shareText', { code: lobby.code }));
+    if (shared === 'copied') setCopied(true);
   };
 
   const expelled =

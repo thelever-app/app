@@ -6,7 +6,7 @@ import { RoomApiError } from '../../src/room/room-api.ts';
 import { JoinRoomForm } from '../../src/screens/join-room-form.tsx';
 import { fakeRoomApi, renderAtRoute } from '../support/routing.tsx';
 
-const JOINED = { playerId: 'test-luis-id' };
+const JOINED = { playerId: 'test-luis-id', joinedLate: false };
 
 const ANA_AVATAR: AvatarDto = { face: 'face-01', color: 'teal' };
 const SUGGESTED: AvatarDto = { face: 'face-05', color: 'cyan' };
@@ -95,6 +95,21 @@ describe('JoinRoomForm', () => {
     await waitFor(() => expect(location()).toBe('/rooms/test-room-id'));
     expect(api.joinRoom).toHaveBeenCalledWith('test-room-id', 'Luis', SUGGESTED);
     expect(lastNickname()).toBe('Luis');
+  });
+
+  it('should tell the room the player joined a game in progress, so it shows where they come in', async () => {
+    // Arrange
+    const { join, location, locationState } = await renderForm(async () => ({
+      ...JOINED,
+      joinedLate: true,
+    }));
+
+    // Act
+    join('Luis');
+
+    // Assert
+    await waitFor(() => expect(location()).toBe('/rooms/test-room-id'));
+    expect(locationState()).toEqual({ joinedLate: true });
   });
 
   it('should join with another avatar the player chose, even one that someone else has', async () => {

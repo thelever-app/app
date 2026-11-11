@@ -1,11 +1,15 @@
 import { Dialog } from 'radix-ui';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon, type IconName } from '../components/icon.tsx';
+import { shareInvitation } from '../lobby/invitation.ts';
+import { QrScreen } from '../lobby/qr-screen.tsx';
 import { useMuted } from '../sound/sound-context.tsx';
 import styles from './game-menu.module.css';
 
 interface GameMenuProps {
+  /** The code of the room, to invite others during the game. */
+  readonly code: string;
   /** Only for the host, in the decision of a round: reveals its dilemma without waiting. */
   readonly onRevealEarly?: (() => void) | undefined;
   /** Whether the player already reported the dilemma on screen. */
@@ -18,6 +22,7 @@ interface GameMenuProps {
 
 /** «Más opciones» and the menu of the game it opens. */
 export function GameMenu({
+  code,
   onRevealEarly,
   reported,
   onShowGroup,
@@ -25,54 +30,98 @@ export function GameMenu({
   onLeave,
 }: GameMenuProps) {
   const { t } = useTranslation();
+  const [isQrOpen, setIsQrOpen] = useState(false);
 
   return (
-    <Dialog.Root>
-      <Dialog.Trigger asChild>
-        <button type="button" className={styles.trigger} aria-label={t('gameMenu.open')}>
-          <Icon name="moreVert" size={22} />
-        </button>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className={styles.overlay} />
-        <Dialog.Content className={styles.sheet} aria-describedby={undefined}>
-          <div aria-hidden="true" className={styles.handle} />
-          <Dialog.Title className={styles.hidden}>{t('gameMenu.title')}</Dialog.Title>
-          <ul className={styles.items}>
-            {onRevealEarly && (
+    <>
+      <Dialog.Root>
+        <Dialog.Trigger asChild>
+          <button type="button" className={styles.trigger} aria-label={t('gameMenu.open')}>
+            <Icon name="moreVert" size={22} />
+          </button>
+        </Dialog.Trigger>
+        <Dialog.Portal>
+          <Dialog.Overlay className={styles.overlay} />
+          <Dialog.Content className={styles.sheet} aria-describedby={undefined}>
+            <div aria-hidden="true" className={styles.handle} />
+            <Dialog.Title className={styles.hidden}>{t('gameMenu.title')}</Dialog.Title>
+            <ul className={styles.items}>
+              {onRevealEarly && (
+                <MenuItem
+                  icon="visibilityOutline"
+                  title={t('gameMenu.revealEarly')}
+                  subtitle={t('gameMenu.onlyHost')}
+                  onSelect={onRevealEarly}
+                />
+              )}
+              <MenuItem icon="groups" title={t('gameMenu.showGroup')} onSelect={onShowGroup} />
+              <ShareRow code={code} />
               <MenuItem
-                icon="visibilityOutline"
-                title={t('gameMenu.revealEarly')}
-                subtitle={t('gameMenu.onlyHost')}
-                onSelect={onRevealEarly}
+                icon="qrCode"
+                title={t('gameMenu.showQr')}
+                onSelect={() => setIsQrOpen(true)}
               />
-            )}
-            <MenuItem icon="groups" title={t('gameMenu.showGroup')} onSelect={onShowGroup} />
-            {onReport && !reported && (
-              <MenuItem
-                icon="flag"
-                title={t('gameMenu.report')}
-                subtitle={t('gameMenu.reportSubtitle')}
-                onSelect={onReport}
-              />
-            )}
-            {onReport && reported && (
-              <li>
-                <span className={styles.done} aria-disabled="true">
-                  <Icon name="checkCircle" size={22} />
-                  <span className={styles.itemTitle}>{t('gameMenu.reported')}</span>
-                </span>
-              </li>
-            )}
-            <SoundRow />
-          </ul>
-          <hr className={styles.divider} />
-          <ul className={styles.items}>
-            <MenuItem icon="logout" title={t('gameMenu.leave')} onSelect={onLeave} />
-          </ul>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+              {onReport && !reported && (
+                <MenuItem
+                  icon="flag"
+                  title={t('gameMenu.report')}
+                  subtitle={t('gameMenu.reportSubtitle')}
+                  onSelect={onReport}
+                />
+              )}
+              {onReport && reported && (
+                <li>
+                  <span className={styles.done} aria-disabled="true">
+                    <Icon name="checkCircle" size={22} />
+                    <span className={styles.itemTitle}>{t('gameMenu.reported')}</span>
+                  </span>
+                </li>
+              )}
+              <SoundRow />
+            </ul>
+            <hr className={styles.divider} />
+            <ul className={styles.items}>
+              <MenuItem icon="logout" title={t('gameMenu.leave')} onSelect={onLeave} />
+            </ul>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+      {isQrOpen && <QrScreen code={code} onClose={() => setIsQrOpen(false)} />}
+    </>
+  );
+}
+
+/**
+ * Shares the invitation link with the code under it, as the lobby does; it stays open to say so
+ * when it copied the link instead.
+ */
+function ShareRow({ code }: { readonly code: string }) {
+  const { t } = useTranslation();
+  const subtitleId = useId();
+  const [copied, setCopied] = useState(false);
+  const title = copied ? t('gameMenu.copied') : t('gameMenu.share');
+  const share = async () => {
+    const shared = await shareInvitation(code, t('lobby.shareText', { code }));
+    if (shared === 'copied') setCopied(true);
+  };
+  return (
+    <li>
+      <button
+        type="button"
+        className={styles.item}
+        aria-label={title}
+        aria-describedby={subtitleId}
+        onClick={() => void share()}
+      >
+        <Icon name="iosShare" size={22} />
+        <span className={styles.itemText}>
+          <span className={styles.itemTitle}>{title}</span>
+          <span id={subtitleId} className={styles.itemSubtitle} data-testid="game-room-code">
+            {t('gameMenu.code', { code })}
+          </span>
+        </span>
+      </button>
+    </li>
   );
 }
 

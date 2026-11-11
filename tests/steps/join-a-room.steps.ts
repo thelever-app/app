@@ -108,7 +108,12 @@ When(
   },
 );
 
-Then('the player sees that room without pressing any button', async function (this: GameWorld) {
+Then('the player still sees the join screen', async function (this: GameWorld) {
+  assert.ok(await this.driver.isOnJoinCodeScreen(this.player), 'the code went through by itself');
+});
+
+Then('sees that room after pressing the button to enter', async function (this: GameWorld) {
+  await this.driver.enterTypedCode(this.player);
   const preview = await this.driver.roomPreviewSeenBy(this.player);
   assert.equal(preview?.host, await this.host());
 });
@@ -116,6 +121,7 @@ Then('the player sees that room without pressing any button', async function (th
 When('a player enters a code that does not match any room', async function (this: GameWorld) {
   this.player = SOMEONE.player;
   await this.driver.typeRoomCode(this.player, UNKNOWN_ROOM_CODE);
+  await this.driver.enterTypedCode(this.player);
 });
 
 Then('the player is told the room does not exist', async function (this: GameWorld) {
@@ -430,5 +436,117 @@ Then('no player in the lobby sees who added it', async function (this: GameWorld
   assert.ok((await this.driver.addedDilemmasSeenBy(await this.host())).length > 0, 'none added');
   for (const viewer of this.inRoom) {
     assert.deepEqual(await this.driver.authorsOfAddedDilemmasSeenBy(viewer), [], viewer);
+  }
+});
+
+// Joining once the game has started
+
+const ROUNDS: Record<string, number> = { first: 1, second: 2, third: 3 };
+
+/** The round the scenario names, which a game of three dilemmas plays. */
+function roundCalled(ordinal: string): number {
+  const position = ROUNDS[ordinal];
+  assert.ok(position, `the scenario says the "${ordinal}" round`);
+  return position;
+}
+
+/** Ana hosts Luis and Marta in a game of three dilemmas, which starts once a step needs it. */
+async function gameOfThree(world: GameWorld): Promise<void> {
+  await world.hostIs('Ana');
+  await world.isInTheRoom('Luis');
+  await world.isInTheRoom('Marta');
+  world.dilemmaCount = 3;
+  world.requestGame();
+}
+
+Given(
+  'a game on the decision phase of its {word} round',
+  async function (this: GameWorld, ordinal: string) {
+    await gameOfThree(this);
+    await this.toRound(roundCalled(ordinal));
+  },
+);
+
+Given(
+  'a game on the reveal of its {word} round',
+  async function (this: GameWorld, ordinal: string) {
+    await gameOfThree(this);
+    await this.toRevealOf(roundCalled(ordinal));
+  },
+);
+
+Given('a nominal game that has already started', async function (this: GameWorld) {
+  await gameOfThree(this);
+  assert.equal((await this.driver.settingsSeenBy('Ana')).variant, 'nominal');
+  // With the gap in every dilemma, so the steps can look at who takes it.
+  const found = await this.driver.searchDilemmas('Ana', 'about {gap}');
+  await this.driver.pickDilemmas('Ana', found);
+  await this.game();
+});
+
+When('a player joins the room', async function (this: GameWorld) {
+  this.player = SOMEONE.anotherPlayer;
+  await this.isInTheRoom(this.player);
+});
+
+Then('the player can answer the {word} dilemma', async function (this: GameWorld, ordinal: string) {
+  assert.equal(await this.driver.dilemmaShownTo(this.player), roundCalled(ordinal));
+  assert.ok(await this.driver.canAnswer(this.player), `${this.player} cannot answer`);
+});
+
+Then(
+  'the player is recorded as {string} for the first two dilemmas',
+  async function (this: GameWorld, recorded: string) {
+    assert.equal(recorded, 'did not vote');
+    assert.deepEqual(await this.driver.didNotVoteRecordedFor(this.player), [1, 2]);
+  },
+);
+
+Then(
+  'the player sees the reveal of the {word} dilemma',
+  async function (this: GameWorld, ordinal: string) {
+    assert.equal((await this.driver.revealSeenBy(this.player))?.position, roundCalled(ordinal));
+  },
+);
+
+Then(
+  'the player makes no predictions and nobody predicts their vote',
+  async function (this: GameWorld) {
+    assert.deepEqual(await this.driver.playersToPredictBy(this.player), []);
+    for (const other of this.present().filter((player) => player !== this.player)) {
+      assert.ok(
+        !(await this.driver.playersToPredictBy(other)).includes(this.player),
+        `${other} predicts ${this.player}`,
+      );
+    }
+  },
+);
+
+Then('the player is never the person in the gap', async function (this: GameWorld) {
+  const people = [...(await this.driver.peopleInTheGap()).values()];
+  assert.ok(people.length > 0, 'no dilemma of the game has the gap');
+  assert.ok(!people.includes(this.player), `${this.player} takes the gap`);
+});
+
+Then('the player has no points in the game results', async function (this: GameWorld) {
+  // The game results add up the points of each dilemma: the player votes one and it is revealed.
+  await this.toRevealOf(await this.driver.dilemmaShownTo(this.player));
+  assert.ok((await this.driver.voteRecordedFor(this.player, 1)) !== undefined);
+  assert.deepEqual(await this.driver.pointsOf(this.player), []);
+  assert.ok((await this.driver.pointsOf('Ana')).length > 0, 'nobody scored');
+});
+
+// Inviting once the game has started
+
+Then('any player can share the invitation link of the room', async function (this: GameWorld) {
+  for (const player of this.present()) {
+    assert.ok(await this.driver.canShareInvitationLink(player), `${player} cannot share it`);
+  }
+});
+
+Then('any player can show the QR and the code of the room', async function (this: GameWorld) {
+  for (const player of this.present()) {
+    assert.ok(await this.driver.canShowQrFullScreen(player), `${player} cannot show the QR`);
+    assert.match(await this.driver.roomCodeSeenBy(player), /^[A-Z0-9]{5}$/);
   }
 });

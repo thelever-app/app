@@ -7,6 +7,7 @@ import { namesakesOf, sameNickname } from '../avatar/namesakes.ts';
 import { sameAvatar } from '../avatar/random-avatar.ts';
 import { SubmitButton } from '../components/submit-button.tsx';
 import { lastNickname, rememberNickname } from '../identity/last-nickname.ts';
+import type { JoinedLateState } from '../game/late-join-notice.tsx';
 import { AvatarPickerSheet } from '../lobby/avatar-picker-sheet.tsx';
 import { useRoomApi } from '../room/room-api-context.tsx';
 import { isJoinRefusal, type JoinRefusalCode } from './join-refusal.tsx';
@@ -54,9 +55,10 @@ export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: Jo
   // Why the last attempt failed; the nickname stays in its field.
   const [error, formAction, isPending] = useActionState(async (): Promise<string | undefined> => {
     try {
-      await api.joinRoom(roomId, nickname, avatar);
+      const { joinedLate } = await api.joinRoom(roomId, nickname, avatar);
       rememberNickname(nickname);
-      void navigate(`/rooms/${roomId}`);
+      const state: JoinedLateState | null = joinedLate ? { joinedLate } : null;
+      void navigate(`/rooms/${roomId}`, { state });
       return undefined;
     } catch (failure) {
       const code = codeOf(failure);

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { RoomNotices } from '../components/room-notices.tsx';
+import { LateJoinNotice, useJoinedLate } from '../game/late-join-notice.tsx';
 import { NewHostNotice } from '../game/new-host-notice.tsx';
 import { LobbyScreen } from '../lobby/lobby-screen.tsx';
 import { DecisionPhase } from '../phases/decision-phase.tsx';
@@ -69,9 +70,12 @@ export function RoomScreen() {
   );
 }
 
-function RoomContent() {
+/** The lobby, or the game: first the notice of who has just joined it late, then its round. */
+export function RoomContent() {
   const { lobby, game } = useRoom();
+  const { joinedLate, forget } = useJoinedLate();
   if (lobby) return <LobbyScreen />;
+  if (game && joinedLate) return <LateJoinNotice game={game} onEnter={forget} />;
   return (
     <>
       {game?.round.phase === 'reveal' ? <RevealPhase /> : <DecisionPhase />}

@@ -126,7 +126,13 @@ export function gameCommands({
 }: GameCommandsDependencies): GameCommands {
   return {
     createRoom: new CreateRoomUseCase(roomRepository, idGenerator, randomness),
-    joinRoom: new JoinRoomUseCase({ roomRepository, gameRepository, notifier, idGenerator }),
+    joinRoom: new JoinRoomUseCase({
+      roomRepository,
+      gameRepository,
+      notifier,
+      idGenerator,
+      randomness,
+    }),
     connectPlayer: new ConnectPlayerUseCase(roomRepository, gameRepository, notifier, idGenerator),
     disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier, clock),
     disconnectConnections: new DisconnectConnectionsUseCase(roomRepository, notifier),

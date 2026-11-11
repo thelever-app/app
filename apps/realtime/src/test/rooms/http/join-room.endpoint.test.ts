@@ -34,6 +34,7 @@ describe('POST /rooms/:roomId/players', () => {
     // Assert
     expect(first.status).toBe(201);
     expect(first.body.playerId).not.toBe(room.playerId);
+    expect(first.body.joinedLate).toBe(false);
     expect(again.body.playerId).toBe(first.body.playerId);
   });
 

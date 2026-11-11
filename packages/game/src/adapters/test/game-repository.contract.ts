@@ -90,6 +90,7 @@ export function describeGameRepositoryContract(
     const [first, second] = dilemmas as [GameDilemma, GameDilemma];
     return {
       games,
+      rooms,
       room,
       game,
       first: { dilemmaId: first.dilemmaId, optionIds: first.optionIds as [string, string] },
@@ -180,6 +181,37 @@ export function describeGameRepositoryContract(
           dilemmaId: first.dilemmaId,
           points: 100,
         });
+      });
+
+      it('should find a saved game with a player who joined it late', async () => {
+        // Arrange
+        const { games, rooms, room, game, first } = await arrange({
+          ...ANONYMOUS,
+          variant: 'nominal',
+        });
+        start(game, room);
+        game.reveal('time');
+        room.join(
+          {
+            nickname: 'Marta',
+            identity: 'TestMartaIdentity',
+            avatar: room.suggestAvatar(new FixedRandomness()),
+          },
+          new FixedIdGenerator('TestMartaId'),
+        );
+        await rooms.save(room);
+        game.joinLate('TestMartaId', new FixedRandomness(1, 0));
+        await games.save(game);
+
+        // Act
+        const found = await games.findById('TestGameId');
+
+        // Assert
+        expect(found?.toSnapshot()).toEqual(game.toSnapshot());
+        expect(found?.didNotVoteOf('TestMartaId')).toEqual([
+          { dilemmaId: first.dilemmaId, reason: 'joined-late' },
+        ]);
+        expect(found?.playersToPredictBy('TestMartaId')).toEqual([]);
       });
 
       it('should find a saved game that has not started', async () => {

@@ -47,7 +47,7 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave }: RevealScreenPr
           <p className={styles.position}>
             {t('reveal.position', { position: reveal.position + 1, total: game.dilemmas.length })}
           </p>
-          <GameMenu onShowGroup={() => setIsGroupOpen(true)} onLeave={onLeave} />
+          <GameMenu code={game.code} onShowGroup={() => setIsGroupOpen(true)} onLeave={onLeave} />
         </div>
         <Players players={game.players} selfId={game.playerId} />
       </header>

@@ -19,8 +19,12 @@ describe('JoinRoomRequestDto', () => {
 });
 
 describe('JoinRoomResponseDto', () => {
-  it('should carry the player', () => {
+  it('should carry the player and whether they joined a game in progress', () => {
+    // Arrange
+    const response = { playerId: 'player-2', joinedLate: true };
+
     // Act & Assert
-    expect(JoinRoomResponseDto.parse({ playerId: 'player-2' })).toEqual({ playerId: 'player-2' });
+    expect(JoinRoomResponseDto.parse(response)).toEqual(response);
+    expect(JoinRoomResponseDto.safeParse({ playerId: 'player-2' }).success).toBe(false);
   });
 });

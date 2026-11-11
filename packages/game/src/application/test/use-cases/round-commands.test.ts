@@ -80,7 +80,11 @@ async function arrange() {
       notifier,
       game.clock,
     ),
-    joinRoom: new JoinRoomUseCase({ ...ports, idGenerator: game.idGenerator }),
+    joinRoom: new JoinRoomUseCase({
+      ...ports,
+      idGenerator: game.idGenerator,
+      randomness: game.randomness,
+    }),
   };
 }
 

@@ -83,6 +83,7 @@ export function DilemmaScreen({
 
   const menu = (
     <GameMenu
+      code={game.code}
       onRevealEarly={onRevealEarly}
       reported={reported}
       onShowGroup={() => setIsGroupOpen(true)}

@@ -8,7 +8,11 @@ export const JoinRoomRequestDto = z.strictObject({
   avatar: AvatarDto,
 });
 
-export const JoinRoomResponseDto = z.strictObject({ playerId: z.string().min(1) });
+export const JoinRoomResponseDto = z.strictObject({
+  playerId: z.string().min(1),
+  /** Whether joining took the player into a game in progress, which the screen tells them. */
+  joinedLate: z.boolean(),
+});
 
 export type JoinRoomRequestDto = z.infer<typeof JoinRoomRequestDto>;
 export type JoinRoomResponseDto = z.infer<typeof JoinRoomResponseDto>;

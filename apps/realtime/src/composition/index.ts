@@ -107,7 +107,7 @@ export async function composeRealtimeServer(
 
   // 4. The HTTP routes and the room sockets on the same server.
   const http = createServer(
-    createApp(httpEndpoints(commands, queries, runCommand), {
+    createApp(httpEndpoints(commands, queries, roomLock, runCommand), {
       authenticate: authentication(configuration.tokenVerifier, configuration.appCheckVerifier),
       errorHandler: httpErrorHandler(errorCodeOf),
       webOrigins: configuration.webOrigins,
@@ -147,13 +147,14 @@ export async function composeRealtimeServer(
 function httpEndpoints(
   commands: GameCommands,
   queries: GameQueries,
+  roomLock: KeyedLock,
   runCommand: RunCommand,
 ): HttpEndpoint[] {
   return [
     new HealthEndpoint(),
     new CreateRoomEndpoint(commands.createRoom, runCommand),
     new RoomPreviewEndpoint(queries.getRoomPreview),
-    new JoinRoomEndpoint(commands.joinRoom, runCommand),
+    new JoinRoomEndpoint(commands.joinRoom, roomLock, runCommand),
     new SearchDilemmasEndpoint(queries.searchDilemmas),
   ];
 }

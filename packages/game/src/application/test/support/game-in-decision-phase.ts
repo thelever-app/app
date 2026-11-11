@@ -37,7 +37,13 @@ export async function lobbyOfThree(
   const idGenerator = new SequentialIdGenerator();
   const randomness = new SequentialRandomness();
   const clock = new ManualClock();
-  const joinRoom = new JoinRoomUseCase({ roomRepository, gameRepository, notifier, idGenerator });
+  const joinRoom = new JoinRoomUseCase({
+    roomRepository,
+    gameRepository,
+    notifier,
+    idGenerator,
+    randomness,
+  });
 
   const { roomId, hostId: anaId } = await new CreateRoomUseCase(
     roomRepository,

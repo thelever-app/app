@@ -62,7 +62,7 @@ export class StateSender {
         });
         return 'sent';
       } catch (error) {
-        // Who joins once the game started waits in the lobby: that game is not theirs.
+        // A player of the room joins the game by joining the room again; until then, the lobby.
         if (!(error instanceof PlayerNotInGameError)) throw error;
       }
     }

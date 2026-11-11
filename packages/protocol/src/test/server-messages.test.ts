@@ -14,6 +14,7 @@ const gameState = {
   gameVersion: 4,
   roomVersion: 2,
   playerId: 'player-2',
+  code: 'K7M2Q',
   round: {
     position: 0,
     phase: 'reveal',
@@ -137,6 +138,27 @@ describe('GameStateDto', () => {
 
     // Assert
     expect(result.success).toBe(true);
+  });
+
+  it('should accept each reason of "did not vote", also a dilemma revealed before the player joined', () => {
+    // Arrange
+    const didNotVote = (['not-answered', 'reported', 'joined-late'] as const).map((reason) => ({
+      dilemmaId: 'dilemma-1',
+      reason,
+    }));
+
+    // Act & Assert
+    for (const record of didNotVote) {
+      expect(GameStateDto.safeParse({ ...gameState, didNotVote: [record] }).success).toBe(true);
+    }
+    const unknown = { dilemmaId: 'dilemma-1', reason: 'away' };
+    expect(GameStateDto.safeParse({ ...gameState, didNotVote: [unknown] }).success).toBe(false);
+  });
+
+  it('should reject a room code that is not of 5 characters', () => {
+    // Act & Assert
+    expect(GameStateDto.safeParse({ ...gameState, code: 'K7M2' }).success).toBe(false);
+    expect(GameStateDto.safeParse(without(gameState, 'code')).success).toBe(false);
   });
 
   it('should reject an unknown type', () => {

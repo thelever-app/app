@@ -180,6 +180,7 @@ export class SimulatedRoomConnection implements RoomConnection {
         gameRepository: games,
         notifier,
         idGenerator,
+        randomness: MATH_RANDOMNESS,
       }),
       connectPlayer: new ConnectPlayerUseCase(rooms, games, notifier, idGenerator),
       getRoomState: new GetRoomStateUseCase(rooms, catalog),

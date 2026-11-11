@@ -135,9 +135,9 @@ export interface GameDriver {
   /** Whether `host` gave their nickname and the nature of the group on the same screen. */
   nicknameAndGroupNatureAskedTogether(host: string): Promise<boolean>;
   isHost(player: string): Promise<boolean>;
-  /** The code of the room, as `player` sees it in the lobby. */
+  /** The code of the room, as `player` sees it in the lobby or, during the game, in its menu. */
   roomCodeSeenBy(player: string): Promise<string>;
-  /** Whether the invitation link `player` can share takes whoever opens it to the room. */
+  /** Whether the invitation link `player` can share, from the lobby or the game, takes whoever opens it to the room. */
   canShareInvitationLink(player: string): Promise<boolean>;
   /** Whether `player` can show full screen a QR that takes whoever scans it to the room. */
   canShowQrFullScreen(player: string): Promise<boolean>;
@@ -154,6 +154,10 @@ export interface GameDriver {
   openInvitation(player: string, method: InvitationMethod): Promise<void>;
   /** `player` types a code on the join screen, without pressing any button. */
   typeRoomCode(player: string, code: string): Promise<void>;
+  /** `player` presses the button to enter with the code they typed, and sees the room or why not. */
+  enterTypedCode(player: string): Promise<void>;
+  /** Whether `player` is still on the join screen, with no room opened by the code they typed. */
+  isOnJoinCodeScreen(player: string): Promise<boolean>;
   roomPreviewSeenBy(player: string): Promise<RoomPreview | undefined>;
   /** `player` types a nickname on the screen to join, without confirming it. Only on the device (@screen). */
   typeNickname(player: string, nickname: string): Promise<void>;

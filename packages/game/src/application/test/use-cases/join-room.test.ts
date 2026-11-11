@@ -5,7 +5,9 @@ import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-pl
 import { InvalidAvatarError } from '../../../domain/errors/invalid-avatar.error.ts';
 import { NicknameAndAvatarTakenError } from '../../../domain/errors/nickname-and-avatar-taken.error.ts';
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
-import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
+import { AvatarVO } from '../../../domain/vos/avatar.vo.ts';
+import { KeepOrderRandomness } from '../../../domain/test/support/keep-order-randomness.ts';
+import { gameInDecisionPhase, lobbyOfThree } from '../support/game-in-decision-phase.ts';
 
 const PABLO = {
   nickname: 'Pablo',
@@ -19,13 +21,27 @@ const ANA_AVATAR = { face: 'face-01', color: 'khaki' };
 async function arrange() {
   const lobby = await lobbyOfThree();
   const notifier = new InMemoryPlayerNotifier();
-  const joinRoom = new JoinRoomUseCase({
-    roomRepository: lobby.roomRepository,
-    gameRepository: lobby.gameRepository,
+  return { ...lobby, notifier, joinRoom: joinRoomOf(lobby, notifier) };
+}
+
+/** The lobby of three, with the game in its decision phase. */
+async function arrangeGame() {
+  const game = await gameInDecisionPhase();
+  const notifier = new InMemoryPlayerNotifier();
+  return { ...game, notifier, joinRoom: joinRoomOf(game, notifier) };
+}
+
+function joinRoomOf(
+  ports: Awaited<ReturnType<typeof lobbyOfThree>>,
+  notifier: InMemoryPlayerNotifier,
+): JoinRoomUseCase {
+  return new JoinRoomUseCase({
+    roomRepository: ports.roomRepository,
+    gameRepository: ports.gameRepository,
     notifier,
-    idGenerator: lobby.idGenerator,
+    idGenerator: ports.idGenerator,
+    randomness: new KeepOrderRandomness(),
   });
-  return { ...lobby, notifier, joinRoom };
 }
 
 describe('JoinRoomUseCase', () => {
@@ -35,13 +51,14 @@ describe('JoinRoomUseCase', () => {
       const { joinRoom, roomRepository, roomId } = await arrange();
 
       // Act
-      const { playerId } = await joinRoom.execute({ roomId, ...PABLO });
+      const { playerId, joinedLate } = await joinRoom.execute({ roomId, ...PABLO });
 
       // Assert
       const room = await roomRepository.findById(roomId);
       const pablo = room?.players.find(({ id }) => id === playerId);
       expect(pablo?.nickname).toBe('Pablo');
       expect(pablo?.avatar).toMatchObject(PABLO.avatar);
+      expect(joinedLate).toBe(false);
     });
 
     it('should let a player take the avatar of someone with another nickname', async () => {
@@ -85,6 +102,77 @@ describe('JoinRoomUseCase', () => {
       // Assert
       expect(playerId).toBe(luisId);
       expect(notifier.receivedBy(luisId)).toEqual([]);
+    });
+
+    it('should take a new player into the game in progress', async () => {
+      // Arrange
+      const { joinRoom, gameRepository, roomId, gameId, dilemmaIds, notifier, anaId } =
+        await arrangeGame();
+
+      // Act
+      const { playerId, joinedLate } = await joinRoom.execute({ roomId, ...PABLO });
+
+      // Assert
+      expect(joinedLate).toBe(true);
+      const game = await gameRepository.findById(gameId);
+      expect(game?.playerIds).toContain(playerId);
+      expect(() =>
+        game?.answer(
+          playerId,
+          dilemmaIds[0] as string,
+          { vote: game.dilemmas[0]?.optionIds[0] as string },
+          {
+            gameConsentVersion: 'TestGameConsentVersion',
+            researchConsentVersion: null,
+            commercialLicenceConsentVersion: null,
+            underEighteen: false,
+          },
+          new Date(),
+        ),
+      ).not.toThrow();
+      expect(notifier.receivedBy(anaId)).toHaveLength(1);
+    });
+
+    it('should take into the game a player of the room who was left out of it', async () => {
+      // Arrange
+      const { joinRoom, roomRepository, gameRepository, roomId, gameId } = await arrangeGame();
+      const room = await roomRepository.findById(roomId);
+      const pablo = room!.join(
+        {
+          nickname: PABLO.nickname,
+          identity: PABLO.identity,
+          avatar: new AvatarVO(PABLO.avatar.face, PABLO.avatar.color),
+        },
+        { generate: () => 'TestPabloId' },
+      );
+      await roomRepository.save(room!);
+
+      // Act
+      const { playerId, joinedLate } = await joinRoom.execute({ roomId, ...PABLO });
+
+      // Assert
+      expect(playerId).toBe(pablo.id);
+      expect(joinedLate).toBe(true);
+      expect((await gameRepository.findById(gameId))?.playerIds).toContain(pablo.id);
+    });
+
+    it('should leave as it is the game of a player who is already in it', async () => {
+      // Arrange
+      const { joinRoom, gameRepository, roomId, gameId, luisId } = await arrangeGame();
+      const version = (await gameRepository.findById(gameId))?.version;
+
+      // Act
+      const { playerId, joinedLate } = await joinRoom.execute({
+        roomId,
+        nickname: 'Luis',
+        identity: 'TestLuisIdentity',
+        avatar: PABLO.avatar,
+      });
+
+      // Assert
+      expect(playerId).toBe(luisId);
+      expect(joinedLate).toBe(false);
+      expect((await gameRepository.findById(gameId))?.version).toBe(version);
     });
 
     it('should throw an error if someone with the same nickname has that avatar', async () => {

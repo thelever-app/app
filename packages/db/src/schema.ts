@@ -146,6 +146,7 @@ export interface Database {
     player_id: string;
     position: number;
     has_left: boolean;
+    joined_late: boolean;
   };
   /**
    * Each dilemma as each player plays it: the order of its options, given when the game starts,

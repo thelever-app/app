@@ -8,6 +8,7 @@ export function aGame(overrides: Partial<GameStateDto> = {}): GameStateDto {
     gameVersion: 1,
     roomVersion: 2,
     playerId: 'test-ana-id',
+    code: 'K7M2Q',
     round: {
       position: 0,
       phase: 'decision',

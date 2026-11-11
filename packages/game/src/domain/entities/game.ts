@@ -86,8 +86,11 @@ export interface Round {
   readonly movedOnBy: string | null;
 }
 
-/** Why a dilemma is recorded as "did not vote": unanswered when it was revealed, or skipped by reporting it. */
-export type DidNotVoteReason = 'not-answered' | 'reported';
+/**
+ * Why a dilemma is recorded as "did not vote": unanswered when it was revealed, skipped by reporting
+ * it, or already revealed when the player joined the game.
+ */
+export type DidNotVoteReason = 'not-answered' | 'reported' | 'joined-late';
 
 /** What a player answers of a dilemma, complete or not yet: the vote and the predictions made so far. */
 export interface AnswerDraft {
@@ -133,6 +136,8 @@ export interface GameSnapshot {
   readonly players: readonly {
     readonly id: string;
     readonly left: boolean;
+    /** Whether the player joined once the game had started. */
+    readonly joinedLate: boolean;
     /** The options of each dilemma in the order the player sees them. */
     readonly optionOrders: readonly {
       readonly dilemmaId: string;
@@ -158,6 +163,7 @@ interface PlayerState {
   /** Whether each dilemma the player reported was offensive. */
   readonly reports: Map<string, boolean>;
   left: boolean;
+  readonly joinedLate: boolean;
 }
 
 interface RoundState {
@@ -288,19 +294,7 @@ export class Game {
 
     const playerIds = players.map(({ id }) => id);
     for (const playerId of playerIds) {
-      this.#players.set(playerId, {
-        optionOrders: new Map(
-          this.#dilemmas.map((dilemma) => [
-            dilemma.dilemmaId,
-            shuffle(dilemma.optionIds, randomness),
-          ]),
-        ),
-        answers: new Map(),
-        didNotVote: new Map(),
-        points: new Map(),
-        reports: new Map(),
-        left: false,
-      });
+      this.#players.set(playerId, this.#newPlayerState(randomness, false));
     }
     this.#peopleInTheGap = peopleInTheGap(
       this.#dilemmas.filter(({ hasGap }) => hasGap).map(({ dilemmaId }) => dilemmaId),
@@ -462,6 +456,26 @@ export class Game {
     this.#version += 1;
   }
 
+  /**
+   * A player of the room who was not in the game joins it in the round in progress: the dilemmas
+   * already revealed are recorded as "did not vote". In a nominal room they only vote: nobody
+   * predicts them, they predict nobody and they score no points. A player already in the game stays
+   * as they are.
+   */
+  joinLate(playerId: string, randomness: Randomness): void {
+    const round = this.#round;
+    if (!round) throw new DecisionPhaseNotStartedError();
+    if (this.#players.has(playerId)) return;
+
+    const state = this.#newPlayerState(randomness, true);
+    const revealed = round.phase === 'reveal' ? round.position + 1 : round.position;
+    for (const { dilemmaId } of this.#dilemmas.slice(0, revealed)) {
+      state.didNotVote.set(dilemmaId, 'joined-late');
+    }
+    this.#players.set(playerId, state);
+    this.#version += 1;
+  }
+
   /** A player who had left comes back to the game where it is. */
   rejoin(playerId: string): void {
     const state = this.#stateOf(playerId);
@@ -504,11 +518,14 @@ export class Game {
     return [...(this.#stateOf(playerId).optionOrders.get(dilemmaId) as readonly string[])];
   }
 
-  /** The players whose vote the player predicts in each dilemma: all the others in a nominal room, none in an anonymous one. */
+  /**
+   * The players whose vote the player predicts in each dilemma: in a nominal room, all the others
+   * who started the game; none in an anonymous one, nor for who joined late.
+   */
   playersToPredictBy(playerId: string): readonly string[] {
-    this.#stateOf(playerId);
-    if (this.#settings.variant === 'anonymous') return [];
-    return this.playerIds.filter((other) => other !== playerId);
+    const { joinedLate } = this.#stateOf(playerId);
+    if (this.#settings.variant === 'anonymous' || joinedLate) return [];
+    return this.#startingPlayerIds().filter((other) => other !== playerId);
   }
 
   /** The player whose nickname takes the gap of the dilemma, the same for everyone; null without a gap. */
@@ -560,7 +577,11 @@ export class Game {
     const nominal = this.#settings.variant === 'nominal';
     const answerOf = (playerId: string) => this.#stateOf(playerId).answers.get(dilemmaId);
     const voteOf = (playerId: string) => answerOf(playerId)?.vote ?? null;
-    const voters = this.playerIds.filter((playerId) => voteOf(playerId) !== null);
+    // Who joined once it was revealed was never asked it: the reveal stays as the group saw it.
+    const asked = this.playerIds.filter(
+      (playerId) => this.#stateOf(playerId).didNotVote.get(dilemmaId) !== 'joined-late',
+    );
+    const voters = asked.filter((playerId) => voteOf(playerId) !== null);
     const tooFewVotes = !nominal && voters.length < MINIMUM_VOTES_TO_SHOW;
 
     return {
@@ -573,10 +594,8 @@ export class Game {
             count: voters.filter((playerId) => voteOf(playerId) === optionId).length,
           })),
       tooFewVotes,
-      didNotVoteCount: this.playerIds.length - voters.length,
-      votes: nominal
-        ? this.playerIds.map((playerId) => ({ playerId, vote: voteOf(playerId) }))
-        : [],
+      didNotVoteCount: asked.length - voters.length,
+      votes: nominal ? asked.map((playerId) => ({ playerId, vote: voteOf(playerId) })) : [],
       votePredictions: nominal
         ? voters.flatMap((playerId) =>
             (answerOf(playerId)?.votePredictions ?? []).map(({ playerId: aboutId, vote }) => ({
@@ -618,6 +637,7 @@ export class Game {
       players: [...this.#players].map(([playerId, state]) => ({
         id: playerId,
         left: state.left,
+        joinedLate: state.joinedLate,
         optionOrders: [...state.optionOrders].map(([dilemmaId, optionOrder]) => ({
           dilemmaId,
           optionOrder: [...optionOrder],
@@ -653,9 +673,28 @@ export class Game {
         points: new Map(player.points.map(({ dilemmaId, points }) => [dilemmaId, points])),
         reports: new Map(player.reports.map(({ dilemmaId, offensive }) => [dilemmaId, offensive])),
         left: player.left,
+        joinedLate: player.joinedLate,
       });
     }
     return game;
+  }
+
+  /** Each player gets the options of each dilemma in an order of their own. */
+  #newPlayerState(randomness: Randomness, joinedLate: boolean): PlayerState {
+    return {
+      optionOrders: new Map(
+        this.#dilemmas.map((dilemma) => [
+          dilemma.dilemmaId,
+          shuffle(dilemma.optionIds, randomness),
+        ]),
+      ),
+      answers: new Map(),
+      didNotVote: new Map(),
+      points: new Map(),
+      reports: new Map(),
+      left: false,
+      joinedLate,
+    };
   }
 
   #roundAt(position: number, at: Date, movedOnBy: string | null): RoundState {
@@ -745,13 +784,20 @@ export class Game {
     );
   }
 
+  /** Who started the game: the only ones predicted and scored in a nominal room. */
+  #startingPlayerIds(): string[] {
+    return [...this.#players]
+      .filter(([, state]) => !state.joinedLate)
+      .map(([playerId]) => playerId);
+  }
+
   #activePlayerIds(): string[] {
     return [...this.#players].filter(([, state]) => !state.left).map(([playerId]) => playerId);
   }
 
   #score(dilemmaId: string): void {
     const points = scorePredictions({
-      playerIds: this.playerIds,
+      playerIds: this.#startingPlayerIds(),
       answerOf: (playerId) => this.#stateOf(playerId).answers.get(dilemmaId),
     });
     for (const [playerId, scored] of points) {

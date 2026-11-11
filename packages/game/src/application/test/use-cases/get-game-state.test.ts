@@ -36,9 +36,10 @@ async function gameInDecisionPhase(variant: RoomVariant = 'anonymous') {
 
 describe('GetGameStateUseCase', () => {
   describe('execute', () => {
-    it('should return the game, the player who asks and the content of the dilemmas in order', async () => {
+    it('should return the game, the player who asks, the code of the room and the content of the dilemmas in order', async () => {
       // Arrange
-      const { getGameState, gameId, anaId, luisId } = await gameInDecisionPhase();
+      const { getGameState, gameId, anaId, luisId, roomRepository, roomId } =
+        await gameInDecisionPhase();
 
       // Act
       const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
@@ -46,6 +47,7 @@ describe('GetGameStateUseCase', () => {
       // Assert
       expect(state.gameId).toBe(gameId);
       expect(state.playerId).toBe(luisId);
+      expect(state.code).toBe((await roomRepository.findById(roomId))?.code);
       expect(state.dilemmas).toEqual(
         TEST_DILEMMA_IDS.map((dilemmaId) => ({
           dilemmaId,

@@ -41,12 +41,27 @@ describe('JoinCodeScreen', () => {
     expect(screen.getByText(t('joinCode.hint'))).toBeDefined();
   });
 
-  it('should go to the room of the code as soon as it is complete, with no button', async () => {
+  it('should wait for the button once the code is complete, and then go to its room', async () => {
     // Arrange
-    const { field, location } = await renderCodeScreen();
+    const { t, field, location } = await renderCodeScreen();
 
     // Act: pasted as someone may dictate it.
     fireEvent.change(field, { target: { value: 'k7m 2q' } });
+    const before = location();
+    fireEvent.click(screen.getByRole('button', { name: t('joinCode.enter') }));
+
+    // Assert
+    expect(before).toBe('/join');
+    expect(location()).toBe('/join/K7M2Q');
+  });
+
+  it('should enter with the keyboard too, once the code is complete', async () => {
+    // Arrange
+    const { field, location } = await renderCodeScreen();
+    fireEvent.change(field, { target: { value: 'K7M2Q' } });
+
+    // Act
+    fireEvent.submit(field);
 
     // Assert
     expect(location()).toBe('/join/K7M2Q');

@@ -132,16 +132,16 @@ describe('httpRoomApi', () => {
   });
 
   describe('joinRoom', () => {
-    it('should join the room with the nickname and the avatar', async () => {
+    it('should join the room with the nickname and the avatar, and tell whether into a game in progress', async () => {
       // Arrange
-      const { fetch, calls } = answering(201, { playerId: 'player-2' });
+      const { fetch, calls } = answering(201, { playerId: 'player-2', joinedLate: true });
       const avatar = { face: 'face-02', color: 'khaki' } as const;
 
       // Act
       const joined = await apiWith(fetch).joinRoom('room-1', 'Luis', avatar);
 
       // Assert
-      expect(joined).toEqual({ playerId: 'player-2' });
+      expect(joined).toEqual({ playerId: 'player-2', joinedLate: true });
       expect(calls[0]?.url).toBe('https://realtime.example/rooms/room-1/players');
       expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ nickname: 'Luis', avatar });
     });

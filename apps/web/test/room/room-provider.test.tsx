@@ -15,6 +15,7 @@ const GAME_STATE: GameStateDto = {
   gameVersion: 1,
   roomVersion: 3,
   playerId: 'test-player-id-0',
+  code: 'K7M2Q',
   round: {
     position: 0,
     phase: 'decision',
