@@ -16,12 +16,17 @@ import { loadTestDilemmas } from './test-catalog.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 /**
- * The port of apps/web/public/config.json, which the build copies to dist: the web looks there.
- * Another one with E2E_REALTIME_PORT, when a room server for development already takes it; the
- * browsers of the scenarios are then pointed at it.
+ * Each worker of a parallel run plays against a stack of its own, its ports one apart from the
+ * previous worker's: its room server, its web, its database and its browser.
  */
-const REALTIME_PORT = Number(process.env.E2E_REALTIME_PORT ?? 3000);
-const WEB_PORT = 4173;
+const WORKER = Number(process.env.CUCUMBER_WORKER_ID ?? 0);
+/**
+ * From the port of apps/web/public/config.json, which the build copies to dist, or from
+ * E2E_REALTIME_PORT when a room server for development already takes it; the browsers of the
+ * scenarios are pointed at the one of their worker.
+ */
+const REALTIME_PORT = Number(process.env.E2E_REALTIME_PORT ?? 3000) + WORKER;
+const WEB_PORT = 4173 + WORKER;
 const READY_TIMEOUT_MS = 30_000;
 /** Locally, DATABASE_URL comes from the .env of the repo; in CI, from the workflow. */
 const ENV_FILE = `${ROOT}.env`;
@@ -89,6 +94,7 @@ export async function startE2eStack(): Promise<void> {
       FIREBASE_PROJECT_ID: 'demo-thelever',
       FIREBASE_AUTH_EMULATOR_HOST: authEmulator,
       DATABASE_URL: urlOf(database),
+      WEB_ORIGINS: webUrl,
     }),
     start('pnpm', [
       '--filter',

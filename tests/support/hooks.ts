@@ -28,10 +28,11 @@ After(async function (this: GameWorld) {
 After({ tags: '@ui', timeout: 60_000 }, async function (this: GameWorld, { result }) {
   if (!(this.driver instanceof E2eDriver) || result?.status !== Status.PASSED) return;
 
-  const problems: string[] = [];
-  for (const [index, page] of this.driver.screens().entries()) {
-    for (const problem of await problemsOn(page)) problems.push(`Screen ${index + 1}, ${problem}`);
-  }
+  // Every screen at once: each one is a browser of its own, and they are checked as they rest.
+  const found = await Promise.all(this.driver.screens().map((page) => problemsOn(page)));
+  const problems = found.flatMap((onScreen, index) =>
+    onScreen.map((problem) => `Screen ${index + 1}, ${problem}`),
+  );
   if (problems.length > 0) {
     throw new Error(`What players see has problems:\n${problems.join('\n')}`);
   }
