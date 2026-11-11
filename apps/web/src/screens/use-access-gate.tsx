@@ -34,6 +34,8 @@ export function useAccessGate(onBack?: () => void): AccessGate {
   // hold back every transition after it, the navigations too.
   const waiting = useRef<Answer>(undefined);
   useEffect(() => () => waiting.current?.(undefined), []);
+  // Each ask is a turn: a call another one replaced leaves the screen to the one that replaced it.
+  const turn = useRef(0);
 
   const ask = useCallback((refused: boolean) => {
     waiting.current?.(undefined);
@@ -48,19 +50,25 @@ export function useAccessGate(onBack?: () => void): AccessGate {
 
   const withAccess = useCallback(
     async <T,>(call: () => Promise<T>): Promise<T | undefined> => {
+      // The turn of this call, once it asked; only then the screen is its own to close.
+      let mine: number | undefined;
+      const close = () => {
+        if (mine !== undefined && turn.current === mine) setAsking(undefined);
+      };
       for (let refused = false; ; refused = true) {
         try {
           const result = await call();
-          setAsking(undefined);
+          close();
           return result;
         } catch (error) {
           if (codeOf(error) !== 'invalid-access-code') {
-            setAsking(undefined);
+            close();
             throw error;
           }
+          mine = ++turn.current;
           const code = await ask(refused);
           if (code === undefined) {
-            setAsking(undefined);
+            close();
             return undefined;
           }
           setAsking({ refused, checking: true });

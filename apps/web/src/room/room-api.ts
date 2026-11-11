@@ -91,7 +91,7 @@ export function httpRoomApi({
     const read: unknown = await response.json().catch(() => undefined);
     if (!response.ok) {
       const error = new RoomApiError(HttpErrorDto.safeParse(read).data?.code);
-      if (error.code === 'invalid-access-code') accessCode.forget();
+      if (error.code === 'invalid-access-code' && code !== undefined) accessCode.forget(code);
       throw error;
     }
     const parsed = schema.safeParse(read);

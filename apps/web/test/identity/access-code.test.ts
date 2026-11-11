@@ -47,11 +47,27 @@ describe('deviceAccessCode', () => {
     code.remember('palanca');
 
     // Act
-    code.forget();
+    code.forget('palanca');
 
     // Assert
     expect(code.current()).toBeUndefined();
     expect(deviceAccessCode(() => storage).current()).toBeUndefined();
+  });
+
+  it('should keep a newer code another tab wrote when forgetting an older one', () => {
+    // Arrange
+    const storage = memoryStorage();
+    const thisTab = deviceAccessCode(() => storage);
+    const otherTab = deviceAccessCode(() => storage);
+    thisTab.remember('old-code');
+    otherTab.remember('new-code');
+
+    // Act
+    thisTab.forget('old-code');
+
+    // Assert
+    expect(thisTab.current()).toBe('new-code');
+    expect(otherTab.current()).toBe('new-code');
   });
 
   it('should keep the code until the page closes where the browser keeps nothing', () => {
@@ -63,6 +79,7 @@ describe('deviceAccessCode', () => {
 
     // Assert
     expect(code.current()).toBe('palanca');
-    expect(() => code.forget()).not.toThrow();
+    expect(() => code.forget('palanca')).not.toThrow();
+    expect(code.current()).toBeUndefined();
   });
 });

@@ -35,6 +35,12 @@
   cursor: pointer;
 }
 
+/* While the code is checked, the player waits for the answer. */
+.back:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .lock {
   width: 56px;
   height: 56px;

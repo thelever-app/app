@@ -12,7 +12,7 @@ interface AccessCodeScreenProps {
   /** While the room server checks the code. */
   readonly checking: boolean;
   readonly onEnter: (code: string) => void;
-  /** Back to where the player was, with what they had filled in. */
+  /** Back to where the player was, with what they had filled in; not while the code is checked. */
   readonly onBack: () => void;
 }
 
@@ -37,12 +37,17 @@ export function AccessCodeScreen({ refused, checking, onEnter, onBack }: AccessC
   };
 
   return (
-    <Dialog.Root open onOpenChange={(open) => !open && onBack()}>
+    <Dialog.Root open onOpenChange={(open) => !open && !checking && onBack()}>
       <Dialog.Portal>
         <Dialog.Content className={styles.screen}>
           <form className={styles.body} onSubmit={onSubmit}>
             <Dialog.Close asChild>
-              <button type="button" className={styles.back} aria-label={t('home.back')}>
+              <button
+                type="button"
+                className={styles.back}
+                aria-label={t('home.back')}
+                disabled={checking}
+              >
                 <Icon name="arrowBack" />
               </button>
             </Dialog.Close>

@@ -222,6 +222,28 @@ describe('httpRoomApi', () => {
       expect(accessCode.current()).toBeUndefined();
     });
 
+    it('should keep a code the player wrote while a call with the old one was on its way', async () => {
+      // Arrange
+      let answer: (response: Response) => void = () => undefined;
+      const fetch = (() =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        })) as typeof globalThis.fetch;
+      const accessCode = codeInMemory();
+      const api = apiWith(fetch, undefined, accessCode);
+      api.enterAccessCode('old-code');
+      const previewing = api.previewRoom('K7M2Q').catch(() => undefined);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Act
+      api.enterAccessCode('new-code');
+      answer(Response.json({ code: 'invalid-access-code' }, { status: 403 }));
+      await previewing;
+
+      // Assert
+      expect(accessCode.current()).toBe('new-code');
+    });
+
     it('should keep the code when the server turns the call down for another reason', async () => {
       // Arrange
       const { fetch } = answering(404, { code: 'room-code-not-found' });

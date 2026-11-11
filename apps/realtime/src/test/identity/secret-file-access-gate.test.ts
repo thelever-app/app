@@ -131,4 +131,36 @@ describe('SecretFileAccessGate', () => {
     await expect(kept).resolves.toBeUndefined();
     await expect(other).rejects.toThrow(InvalidAccessCodeError);
   });
+
+  it('should go on with the code it had when reading the file again takes too long', async () => {
+    // Arrange
+    const reads = ['k7m2x9q4w1zp'];
+    const clock = manualClock();
+    const gate = await SecretFileAccessGate.open(file, {
+      now: clock.now,
+      readAgainAfterMs: 60_000,
+      readTimeoutMs: 10,
+      // The first read answers; the next one never does.
+      read: async () => reads.shift() ?? new Promise<never>(() => {}),
+    });
+    clock.advance(60_000);
+
+    // Act
+    const kept = gate.verify('k7m2x9q4w1zp');
+
+    // Assert
+    await expect(kept).resolves.toBeUndefined();
+  });
+
+  it('should take the code as the same whichever way the keyboard writes its accents', async () => {
+    // Arrange
+    await writeFile(file, 'palanca-ó'.normalize('NFC'));
+    const gate = await SecretFileAccessGate.open(file);
+
+    // Act
+    const verified = gate.verify('palanca-ó'.normalize('NFD'));
+
+    // Assert
+    await expect(verified).resolves.toBeUndefined();
+  });
 });

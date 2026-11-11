@@ -10,41 +10,43 @@ const deviceStorage: DeviceStorage = () => localStorage;
 export interface AccessCode {
   current(): string | undefined;
   remember(code: string): void;
-  /** The room server turned it down: the device asks for it again. */
-  forget(): void;
+  /**
+   * The room server turned that code down: the device asks for it again. A newer code, from
+   * another tab or written while the call was on its way, stays.
+   */
+  forget(code: string): void;
 }
 
 /**
- * The access code stays on the device, so the player writes it once. A browser that keeps nothing
- * remembers it only until the page closes.
+ * The access code stays on the device, so the player writes it once, and every tab reads the
+ * same one. A browser that keeps nothing remembers it only until the page closes.
  */
 export function deviceAccessCode(storage: DeviceStorage = deviceStorage): AccessCode {
-  let code = read(storage);
+  // Only for a browser that keeps nothing.
+  let inMemory: string | undefined;
   return {
-    current: () => code,
-    remember: (next) => {
-      code = next.trim();
+    current: () => {
       try {
-        storage().setItem(KEY, code);
+        return storage().getItem(KEY) || undefined;
+      } catch {
+        return inMemory;
+      }
+    },
+    remember: (next) => {
+      inMemory = next.trim();
+      try {
+        storage().setItem(KEY, inMemory);
       } catch {
         // Private mode, blocked or full storage: the code lasts until the page closes.
       }
     },
-    forget: () => {
-      code = undefined;
+    forget: (code) => {
+      if (inMemory === code) inMemory = undefined;
       try {
-        storage().removeItem(KEY);
+        if (storage().getItem(KEY) === code) storage().removeItem(KEY);
       } catch {
         // Nothing was kept.
       }
     },
   };
-}
-
-function read(storage: DeviceStorage): string | undefined {
-  try {
-    return storage().getItem(KEY) || undefined;
-  } catch {
-    return undefined;
-  }
 }
