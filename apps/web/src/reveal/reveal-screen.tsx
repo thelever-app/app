@@ -23,6 +23,7 @@ interface RevealScreenProps {
   /** Takes everyone to the next round; none on the last one. */
   readonly onMoveOn: (() => void) | undefined;
   readonly onLeave: () => void;
+  readonly onShowQr: () => void;
 }
 
 /**
@@ -30,7 +31,7 @@ interface RevealScreenProps {
  * each one voted, with how the predictions of the player went next to each vote; in an anonymous room, only the distribution, or that
  * there were too few votes to show it.
  */
-export function RevealScreen({ game, reveal, onMoveOn, onLeave }: RevealScreenProps) {
+export function RevealScreen({ game, reveal, onMoveOn, onLeave, onShowQr }: RevealScreenProps) {
   const { t } = useTranslation();
   const [isGroupOpen, setIsGroupOpen] = useState(false);
   const dilemma = game.dilemmas.find(({ dilemmaId }) => dilemmaId === reveal.dilemmaId)!;
@@ -47,7 +48,12 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave }: RevealScreenPr
           <p className={styles.position}>
             {t('reveal.position', { position: reveal.position + 1, total: game.dilemmas.length })}
           </p>
-          <GameMenu onShowGroup={() => setIsGroupOpen(true)} onLeave={onLeave} />
+          <GameMenu
+            code={game.code}
+            onShowQr={onShowQr}
+            onShowGroup={() => setIsGroupOpen(true)}
+            onLeave={onLeave}
+          />
         </div>
         <Players players={game.players} selfId={game.playerId} />
       </header>
@@ -78,7 +84,7 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave }: RevealScreenPr
           </p>
         )}
         {anonymous ? (
-          <AnonymousResult game={game} reveal={reveal} dilemma={dilemma} person={person} />
+          <AnonymousResult reveal={reveal} dilemma={dilemma} person={person} />
         ) : (
           <NominalResult game={game} reveal={reveal} dilemma={dilemma} person={person} />
         )}
@@ -343,12 +349,12 @@ function NominalResult({ game, reveal, dilemma, person }: ResultProps) {
   );
 }
 
-function AnonymousResult({ game, reveal, dilemma, person }: ResultProps) {
+function AnonymousResult({ reveal, dilemma, person }: Omit<ResultProps, 'game'>) {
   const { t } = useTranslation();
   const didNot = reveal.didNotVoteCount;
 
   if (reveal.distribution === null) {
-    const voted = Math.max(0, game.players.length - didNot);
+    const voted = reveal.voteCount;
     return (
       <div role="status" className={styles.fewVotes}>
         <Icon name="visibilityOff" size={24} />

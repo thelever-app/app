@@ -89,6 +89,10 @@
     "revealEarly": "Revelar ya",
     "onlyHost": "Solo el anfitrión",
     "showGroup": "Ver el grupo",
+    "share": "Compartir enlace",
+    "copied": "Enlace copiado",
+    "code": "Código {{code}}",
+    "showQr": "Mostrar QR",
     "report": "Reportar este dilema",
     "reportSubtitle": "Nadie del grupo lo sabrá",
     "reported": "Ya reportaste este dilema",
@@ -128,6 +132,14 @@
     "title": "Ahora eres el anfitrión",
     "disconnected": "{{host}} sigue sin conexión. Desde la próxima ronda puedes revelar antes de tiempo en el menú ⋮. Si vuelve, recupera el rol.",
     "left": "{{host}} ha salido de la partida. Tus opciones están en el menú ⋮."
+  },
+  "lateJoin": {
+    "illustration": "La Palanca, junto a un desvío de vías",
+    "room": "Sala de {{host}}",
+    "title": "La partida ya ha empezado",
+    "round": "Entras en la ronda en curso, el dilema {{position, number}} de {{total, number}}; si ya se está revelando, lo verás con el grupo.",
+    "onlyVote": "En esta partida solo votas: no predices, nadie predice tu voto y no entras en el ranking.",
+    "enter": "Entrar en la ronda"
   },
   "reveal": {
     "region": "Reveal",
@@ -265,8 +277,7 @@
     "title": "Escribe el código de la sala",
     "text": "Son 5 caracteres. Te lo puede dictar quien ha creado la sala.",
     "label": "Código de la sala",
-    "hint": "Entra solo al completar el código. También puedes pegarlo.",
-    "entering": "Entrando…",
+    "hint": "También puedes pegarlo.",
     "enter": "Entrar",
     "missing_one": "Falta {{count}} carácter",
     "missing_many": "Faltan {{count, number}} caracteres",

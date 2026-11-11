@@ -4,6 +4,7 @@ import {
   DilemmaRevealedEvent,
   HostChangedEvent,
   LobbyChangedEvent,
+  PlayerJoinedLateEvent,
   PlayerLeftEvent,
   ProgressUpdatedEvent,
   RoundStartedEvent,
@@ -47,6 +48,7 @@ const SENT_AS_STATE = [
   RoundStartedEvent,
   HostChangedEvent,
   PlayerLeftEvent,
+  PlayerJoinedLateEvent,
 ] as const;
 
 /** Delivers the events of the use cases to the connections of each player in this instance. */

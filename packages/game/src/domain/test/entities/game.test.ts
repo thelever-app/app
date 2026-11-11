@@ -565,6 +565,7 @@ describe('Game', () => {
           {
             id: 'TestAnaId',
             left: false,
+            joinedLate: false,
             optionOrders,
             answers: [],
             didNotVote: [],
@@ -574,6 +575,7 @@ describe('Game', () => {
           {
             id: 'TestLuisId',
             left: false,
+            joinedLate: false,
             optionOrders,
             answers: [
               {

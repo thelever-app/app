@@ -22,6 +22,8 @@ export interface GetGameStateOutput {
   /** The version of the connections of the room this state was computed from. */
   readonly roomVersion: number;
   readonly playerId: string;
+  /** The code of the room, so the players can invite others during the game. */
+  readonly code: string;
   /** The round in progress: which dilemma, its phase and when its time runs out. */
   readonly round: Omit<Round, 'dilemmaId' | 'startedAt'>;
   /** Who may reveal the dilemma of the round early now. */
@@ -127,6 +129,7 @@ export class GetGameStateUseCase {
       gameVersion: game.version,
       roomVersion: room.version,
       playerId,
+      code: room.code,
       round: {
         position: round.position,
         phase: round.phase,

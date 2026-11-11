@@ -8,7 +8,7 @@ import { RevealScreen } from '../reveal/reveal-screen.tsx';
  * The reveal of a round, after a brief passage from its decision: any player takes everyone on to
  * the next one, until the last.
  */
-export function RevealPhase() {
+export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   const navigate = useNavigate();
   const { game, send } = useGame();
   const { reveal } = game;
@@ -28,7 +28,7 @@ export function RevealPhase() {
   }, [introFor]);
 
   if (!reveal) return null;
-  if (introFor === position) return <RevealIntro game={game} />;
+  if (introFor === position) return <RevealIntro game={game} reveal={reveal} />;
   const isLast = position === game.dilemmas.length - 1;
   return (
     <RevealScreen
@@ -36,6 +36,7 @@ export function RevealPhase() {
       key={position}
       game={game}
       reveal={reveal}
+      onShowQr={onShowQr}
       onMoveOn={isLast ? undefined : () => send({ type: 'move-on', fromPosition: position })}
       onLeave={() => {
         send({ type: 'leave-room' });

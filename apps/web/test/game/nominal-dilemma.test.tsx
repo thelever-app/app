@@ -19,7 +19,9 @@ function predictLuis(t: TFunction, option: string): void {
 
 async function renderNominal() {
   const fake = fakeConnection();
-  const rendered = await renderWithProviders(<DecisionPhase />, { connection: fake.connection });
+  const rendered = await renderWithProviders(<DecisionPhase onShowQr={() => {}} />, {
+    connection: fake.connection,
+  });
   act(() => fake.deliver(nominal));
   return { ...fake, ...rendered };
 }

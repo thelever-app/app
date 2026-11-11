@@ -17,6 +17,7 @@ async function renderScreen(game: GameStateDto = aGame()) {
       onReport={vi.fn()}
       onSkip={vi.fn()}
       onLeave={vi.fn()}
+      onShowQr={vi.fn()}
     />,
     { game },
   );

@@ -7,6 +7,7 @@ import {
   HostChangedEvent,
   type LobbyChange,
   LobbyChangedEvent,
+  PlayerJoinedLateEvent,
   PlayerLeftEvent,
   type PlayerNotifier,
   ProgressUpdatedEvent,
@@ -120,6 +121,12 @@ function decisionPhaseEventOf(event: Record<string, unknown>): DomainEvent {
         String(event.playerId),
         Boolean(event.left),
         Number(event.roomVersion),
+      );
+    case 'PlayerJoinedLate':
+      return new PlayerJoinedLateEvent(
+        String(event.gameId),
+        String(event.playerId),
+        Number(event.gameVersion),
       );
     default:
       throw new Error(`no event of type ${String(event.type)} travels between instances`);

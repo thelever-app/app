@@ -37,10 +37,11 @@ Feature: Join a room
     Then the player sees that the room is for adults only and has 4 players before entering
 
   @ui
-  Scenario: The code goes through as soon as it is complete
+  Scenario: The code goes through only with the button
     Given a player on the join screen
     When the player types the 5 characters of the code of an existing room
-    Then the player sees that room without pressing any button
+    Then the player still sees the join screen
+    And sees that room after pressing the button to enter
 
   @ui @todo
   Scenario: A player adds a dilemma created on the spot
@@ -195,23 +196,28 @@ Feature: Join a room
     And the player joins the room
     Then the player enters the lobby of the rematch
 
-  @ui @todo
+  @ui
   Scenario: Joining a game that has already started
     Given a game on the decision phase of its third round
     When a player joins the room
     Then the player can answer the third dilemma
     And the player is recorded as "did not vote" for the first two dilemmas
 
-  @ui @todo
+  @ui
   Scenario: Joining a game during the reveal of a round
     Given a game on the reveal of its second round
     When a player joins the room
     Then the player sees the reveal of the second dilemma
 
-  @todo
   Scenario: A player who joins a nominal game late only votes
     Given a nominal game that has already started
     When a player joins the room
     Then the player makes no predictions and nobody predicts their vote
     And the player is never the person in the gap
     And the player has no points in the game results
+
+  @ui
+  Scenario: Inviting once the game has started
+    Given a game on the decision phase of its second round
+    Then any player can share the invitation link of the room
+    And any player can show the QR and the code of the room

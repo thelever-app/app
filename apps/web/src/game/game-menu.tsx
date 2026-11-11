@@ -1,11 +1,16 @@
 import { Dialog } from 'radix-ui';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon, type IconName } from '../components/icon.tsx';
+import { shareInvitation } from '../lobby/invitation.ts';
 import { useMuted } from '../sound/sound-context.tsx';
 import styles from './game-menu.module.css';
 
 interface GameMenuProps {
+  /** The code of the room, to invite others during the game. */
+  readonly code: string;
+  /** Shows the QR of the room at full screen, which outlives the screen of the phase. */
+  readonly onShowQr: () => void;
   /** Only for the host, in the decision of a round: reveals its dilemma without waiting. */
   readonly onRevealEarly?: (() => void) | undefined;
   /** Whether the player already reported the dilemma on screen. */
@@ -18,6 +23,8 @@ interface GameMenuProps {
 
 /** «Más opciones» and the menu of the game it opens. */
 export function GameMenu({
+  code,
+  onShowQr,
   onRevealEarly,
   reported,
   onShowGroup,
@@ -48,6 +55,8 @@ export function GameMenu({
               />
             )}
             <MenuItem icon="groups" title={t('gameMenu.showGroup')} onSelect={onShowGroup} />
+            <ShareRow code={code} />
+            <MenuItem icon="qrCode" title={t('gameMenu.showQr')} onSelect={onShowQr} />
             {onReport && !reported && (
               <MenuItem
                 icon="flag"
@@ -73,6 +82,40 @@ export function GameMenu({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+/**
+ * Shares the invitation link with the code under it, as the lobby does; it stays open to say so
+ * when it copied the link instead.
+ */
+function ShareRow({ code }: { readonly code: string }) {
+  const { t } = useTranslation();
+  const subtitleId = useId();
+  const [copied, setCopied] = useState(false);
+  const title = copied ? t('gameMenu.copied') : t('gameMenu.share');
+  const share = async () => {
+    const shared = await shareInvitation(code, t('lobby.shareText', { code }));
+    if (shared === 'copied') setCopied(true);
+  };
+  return (
+    <li>
+      <button
+        type="button"
+        className={styles.item}
+        aria-label={title}
+        aria-describedby={subtitleId}
+        onClick={() => void share()}
+      >
+        <Icon name="iosShare" size={22} />
+        <span className={styles.itemText}>
+          <span className={styles.itemTitle}>{title}</span>
+          <span id={subtitleId} className={styles.itemSubtitle} data-testid="game-room-code">
+            {t('gameMenu.code', { code })}
+          </span>
+        </span>
+      </button>
+    </li>
   );
 }
 

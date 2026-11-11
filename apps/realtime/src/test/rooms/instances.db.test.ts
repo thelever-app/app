@@ -13,7 +13,9 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { tokenOf } from '../support/fake-token-verifier.ts';
 import {
   gameInDecisionPhase,
+  JOIN_AVATAR,
   lobbyOfThree,
+  post,
   startRoomServer,
   TestClient,
 } from '../support/room-server.ts';
@@ -129,6 +131,30 @@ describe('the room server on several instances', () => {
       connected: true,
     });
     expect(await ana.client.next('answered-count')).toMatchObject({ answeredCount: 1 });
+  });
+
+  it('should take a player who joins on another instance into the game in progress', async () => {
+    // Arrange
+    const a = await instance();
+    const b = await instance();
+    const { roomId } = await gameInDecisionPhase(a);
+    const ana = await connect(a.url, 'ana', roomId);
+
+    // Act
+    const joined = await post(`${b.http}/rooms/${roomId}/players`, 'pedro', {
+      nickname: 'Pedro',
+      avatar: JOIN_AVATAR,
+    });
+    const pedro = await connect(b.url, 'pedro', roomId);
+
+    // Assert
+    expect(joined.joinedLate).toBe(true);
+    await expect
+      .poll(async () => {
+        const state = await ana.client.next('game-state', 5000);
+        return state.players.map(({ playerId }) => playerId);
+      })
+      .toContain(pedro.playerId);
   });
 
   it('should show the players of an instance that dies as disconnected', async () => {

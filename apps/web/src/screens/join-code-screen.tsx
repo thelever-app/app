@@ -8,9 +8,9 @@ import screen from './screen.module.css';
 import styles from './home-screen.module.css';
 
 /**
- * /join: the code of a room, which goes through as soon as it is complete, to the same screen the
- * link and the QR lead to. The button below says how many characters are missing. The history
- * keeps the code it entered with: whoever comes back finds it, and enters again with the button.
+ * /join: the code of a room, which goes through with the button once it is complete, to the same
+ * screen the link and the QR lead to. Until then the button says how many characters are missing.
+ * The history keeps the code it entered with: whoever comes back finds it, and enters again.
  */
 export function JoinCodeScreen() {
   const { t } = useTranslation();
@@ -23,10 +23,6 @@ export function JoinCodeScreen() {
     void navigate(`/join/${next}`, { state: { fromCode: true } });
   };
 
-  const onChange = (next: string) => {
-    setCode(next);
-    if (next.length === CODE_LENGTH) enter(next);
-  };
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (complete) enter(code);
@@ -45,8 +41,8 @@ export function JoinCodeScreen() {
         </button>
         <h1 className={styles.stepTitle}>{t('joinCode.title')}</h1>
         <p className={styles.lead}>{t('joinCode.text')}</p>
-        <CodeField code={code} onChange={onChange} />
-        <p className={styles.hint}>{complete ? t('joinCode.entering') : t('joinCode.hint')}</p>
+        <CodeField code={code} onChange={setCode} />
+        <p className={styles.hint}>{t('joinCode.hint')}</p>
         <div className={styles.submit}>
           <SubmitButton
             pending={false}

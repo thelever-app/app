@@ -18,6 +18,7 @@ const GAME_STATE: GameStateDto = {
   gameVersion: 1,
   roomVersion: 2,
   playerId: 'TestAnaId',
+  code: 'K7M2Q',
   round: {
     position: 0,
     phase: 'decision',

@@ -20,10 +20,14 @@ export function fakeRoomApi(overrides: Partial<RoomApi> = {}): RoomApi {
   };
 }
 
-/** Where the screen is now, for a test to read after it navigates. */
+/** Where the screen is now, and what the history keeps with it, for a test to read after it navigates. */
 function Location() {
-  const { pathname } = useLocation();
-  return <output data-testid="location">{pathname}</output>;
+  const { pathname, state } = useLocation();
+  return (
+    <output data-testid="location" data-state={JSON.stringify(state)}>
+      {pathname}
+    </output>
+  );
 }
 
 interface RouteOptions {
@@ -57,5 +61,7 @@ export async function renderAtRoute(
     </I18nextProvider>,
   );
   const location = () => rendered.getByTestId('location').textContent;
-  return { ...rendered, t: i18n.t, location };
+  const locationState = (): unknown =>
+    JSON.parse(rendered.getByTestId('location').dataset.state ?? 'null');
+  return { ...rendered, t: i18n.t, location, locationState };
 }

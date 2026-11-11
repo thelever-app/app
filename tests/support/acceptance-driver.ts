@@ -139,6 +139,8 @@ function optionTextOf(dilemmaId: string, optionId: string): string {
 interface AcceptancePlayer {
   readonly identity: string;
   playerId: string | undefined;
+  /** The code typed on the join screen, before pressing the button to enter. */
+  typedCode: string | undefined;
   /** The room this player opened and has not entered yet, or entered. */
   roomId: string | undefined;
   preview: RoomPreview | undefined;
@@ -234,6 +236,7 @@ export class AcceptanceDriver implements GameDriver {
       gameRepository: games,
       notifier,
       idGenerator,
+      randomness,
     });
     this.#getRoomState = new GetRoomStateUseCase(rooms, catalog);
     this.#changeAvatar = new ChangeAvatarUseCase(rooms, notifier);
@@ -332,7 +335,7 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async roomCodeSeenBy(player: string): Promise<string> {
-    return (await this.#roomStateOf(player)).code;
+    return this.#codeSeenBy(player);
   }
 
   /** The link carries the code of the room, so it works if the code leads to the room. */
@@ -368,10 +371,26 @@ export class AcceptanceDriver implements GameDriver {
     // The link and the QR carry the code of the room: every method ends up opening it by its code.
     void method;
     await this.typeRoomCode(player, await this.roomCodeSeenBy(this.#hostName()));
+    await this.enterTypedCode(player);
   }
 
+  /** The screen only holds the code: nothing asks the room server for it yet. */
   async typeRoomCode(player: string, code: string): Promise<void> {
-    const opener = this.#introduce(player);
+    const typer = this.#introduce(player);
+    typer.typedCode = code;
+    typer.preview = undefined;
+    typer.refusal = undefined;
+  }
+
+  async isOnJoinCodeScreen(player: string): Promise<boolean> {
+    const { typedCode, preview, refusal } = this.#playerCalled(player);
+    return typedCode !== undefined && preview === undefined && refusal === undefined;
+  }
+
+  async enterTypedCode(player: string): Promise<void> {
+    const opener = this.#playerCalled(player);
+    const code = opener.typedCode;
+    if (code === undefined) throw new Error(`${player} presses to enter without typing a code`);
     try {
       const preview = await this.#getRoomPreview.execute({ code, identity: opener.identity });
       opener.roomId = preview.roomId;
@@ -408,7 +427,7 @@ export class AcceptanceDriver implements GameDriver {
     const joiner = this.#playerCalled(player);
     if (!joiner.roomId) throw new Error(`The scenario has ${player} enter without opening a room`);
     try {
-      const { playerId } = await this.#joinRoom.execute({
+      const { playerId, joinedLate } = await this.#joinRoom.execute({
         roomId: joiner.roomId,
         nickname,
         identity: joiner.identity,
@@ -418,6 +437,8 @@ export class AcceptanceDriver implements GameDriver {
       joiner.refusal = undefined;
       joiner.askedForAnotherAvatar = false;
       await this.#screenOf(player);
+      // Who joins a game in progress has it open at once, as their device would.
+      if (joinedLate) await this.reconnect(player);
     } catch (error) {
       if (error instanceof RoomFullError) joiner.refusal = 'room-full';
       else if (error instanceof PlayerExpelledError) joiner.refusal = 'expelled';
@@ -1158,7 +1179,8 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async #codeLeadsToTheRoom(player: string): Promise<boolean> {
-    const { code, roomId } = await this.#roomStateOf(player);
+    const code = await this.#codeSeenBy(player);
+    const roomId = this.#currentRoomId();
     if (code.length !== 5) return false;
     // Whoever follows the link or scans the QR: someone who is not in the room yet.
     const preview = await this.#getRoomPreview.execute({
@@ -1197,6 +1219,18 @@ export class AcceptanceDriver implements GameDriver {
     return device.screen.state;
   }
 
+  /** The code of the room as `player` gets it: in the state of the game in progress, or of the lobby. */
+  async #codeSeenBy(player: string): Promise<string> {
+    const { code, currentGameId } = await this.#roomStateOf(player);
+    if (!currentGameId) return code;
+    const game = await this.#getGameState.execute({
+      gameId: currentGameId,
+      playerId: this.#playerIdOf(player),
+      language: 'en',
+    });
+    return game.code;
+  }
+
   async #roomStateOf(player: string): Promise<GetRoomStateOutput> {
     return this.#getRoomState.execute({
       roomId: this.#currentRoomId(),
@@ -1225,6 +1259,7 @@ export class AcceptanceDriver implements GameDriver {
     const introduced: AcceptancePlayer = {
       identity: identityOf(player),
       playerId: undefined,
+      typedCode: undefined,
       roomId: undefined,
       preview: undefined,
       previewPlayers: [],

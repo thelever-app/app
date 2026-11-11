@@ -1,11 +1,15 @@
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CONTRACT_VERSION } from '@thelever-app/protocol';
 import {
   gameInDecisionPhase,
+  JOIN_AVATAR,
   lobbyOfThree,
+  post,
   startRoomServer,
   TestClient,
 } from '../../support/room-server.ts';
+import { tokenOf } from '../../support/fake-token-verifier.ts';
 
 /** Ana hosts Luis and Marta in a nominal game of the seed dilemmas, and all three are connected. */
 async function nominalGame(server: Awaited<ReturnType<typeof startRoomServer>>) {
@@ -45,6 +49,36 @@ describe('the rounds over the room sockets', () => {
       expect(state.playersToPredict).toHaveLength(2);
       expect(state.playersToPredict).not.toContain(state.playerId);
     }
+  });
+
+  it('should take whoever joins once the game started into its round, and show them to the others', async () => {
+    // Arrange
+    server = await startRoomServer();
+    const { roomId, ana, states } = await nominalGame(server);
+
+    // Act
+    const joined = await post(`${server.http}/rooms/${roomId}/players`, 'pedro', {
+      nickname: 'Pedro',
+      avatar: JOIN_AVATAR,
+    });
+    const pedro = await TestClient.open(server.url);
+    pedro.send({
+      type: 'connect',
+      contractVersion: CONTRACT_VERSION,
+      token: tokenOf('pedro'),
+      roomId,
+      language: 'es',
+    });
+    const own = await pedro.next('game-state');
+
+    // Assert
+    expect(joined.joinedLate).toBe(true);
+    expect(own.round).toMatchObject({ position: 0, phase: 'decision' });
+    expect(own.playersToPredict).toEqual([]);
+    expect(own.code).toHaveLength(5);
+    const toAna = await ana.next('game-state');
+    expect(toAna.players.map(({ nickname }) => nickname)).toContain('Pedro');
+    expect(toAna.playersToPredict).toEqual(states[0]!.playersToPredict);
   });
 
   it('should tell the others who answered only once every prediction is made', async () => {

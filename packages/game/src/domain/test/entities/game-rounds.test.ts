@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Game, type GameSettings, type PlayedDilemma } from '../../entities/game.ts';
 import { Player } from '../../entities/player.ts';
 import { AnswerIncompleteError } from '../../errors/answer-incomplete.error.ts';
+import { DecisionPhaseNotStartedError } from '../../errors/decision-phase-not-started.error.ts';
 import { DecisionPhaseOverError } from '../../errors/decision-phase-over.error.ts';
 import { DilemmaAlreadyReportedError } from '../../errors/dilemma-already-reported.error.ts';
 import { DilemmaNotInRoundError } from '../../errors/dilemma-not-in-round.error.ts';
@@ -15,6 +16,7 @@ import { PredictionsNotAllowedError } from '../../errors/predictions-not-allowed
 import { VoteMissingError } from '../../errors/vote-missing.error.ts';
 import { AnsweredCountChangedEvent } from '../../events/answered-count-changed.event.ts';
 import { DilemmaRevealedEvent } from '../../events/dilemma-revealed.event.ts';
+import { PlayerJoinedLateEvent } from '../../events/player-joined-late.event.ts';
 import { ProgressUpdatedEvent } from '../../events/progress-updated.event.ts';
 import { RoundStartedEvent } from '../../events/round-started.event.ts';
 import { AvatarVO } from '../../vos/avatar.vo.ts';
@@ -586,6 +588,158 @@ describe('Game, by rounds', () => {
     });
   });
 
+  describe('joinLate', () => {
+    it('should take the player into the round in progress, with "did not vote" for the dilemmas already revealed', () => {
+      // Arrange
+      const game = gameOfThree();
+      for (const position of [0, 1]) {
+        everyoneAnswers(game);
+        game.moveOn('Ana', position, AT);
+      }
+      game.pullEvents();
+      const version = game.version;
+
+      // Act
+      game.joinLate('Pedro', new KeepOrderRandomness());
+
+      // Assert
+      expect(game.playerIds).toEqual([...EVERYONE, 'Pedro']);
+      expect(game.version).toBe(version + 1);
+      expect(game.pullEvents()).toEqual([
+        new PlayerJoinedLateEvent('TestGameId', 'Pedro', version + 1),
+      ]);
+      expect(game.didNotVoteOf('Pedro')).toEqual([
+        { dilemmaId: 'TestDilemma1', reason: 'joined-late' },
+        { dilemmaId: 'TestDilemma2', reason: 'joined-late' },
+      ]);
+      expect(game.optionOrderOf('Pedro', 'TestDilemma3')).toEqual(OPTIONS);
+      game.answer('Pedro', 'TestDilemma3', { vote: 'TestRun' }, SEAL, AT);
+      expect(game.hasAnswered('Pedro')).toBe(true);
+    });
+
+    it('should record the dilemma of a round in its reveal as "did not vote", and leave its reveal as it was', () => {
+      // Arrange
+      const game = gameOfThree();
+      everyoneAnswers(game);
+      const reveal = game.revealOf(0);
+
+      // Act
+      game.joinLate('Pedro', new KeepOrderRandomness());
+
+      // Assert
+      expect(game.didNotVoteOf('Pedro')).toEqual([
+        { dilemmaId: 'TestDilemma1', reason: 'joined-late' },
+      ]);
+      expect(game.revealOf(0)).toEqual(reveal);
+      expect(reveal.voteCount + reveal.didNotVoteCount).toBe(EVERYONE.length);
+    });
+
+    it('should record as not answered a round the late player did not answer before its reveal', () => {
+      // Arrange
+      const game = gameOfThree(ANONYMOUS);
+      game.joinLate('Pedro', new KeepOrderRandomness());
+
+      // Act
+      everyoneAnswers(game);
+
+      // Assert
+      expect(game.didNotVoteOf('Pedro')).toEqual([
+        { dilemmaId: 'TestDilemma1', reason: 'not-answered' },
+      ]);
+      expect(game.revealOf(0).didNotVoteCount).toBe(1);
+    });
+
+    it('should do nothing for a player who is already in the game', () => {
+      // Arrange
+      const game = gameOfThree();
+      const snapshot = game.toSnapshot();
+
+      // Act
+      game.joinLate('Luis', new KeepOrderRandomness());
+
+      // Assert
+      expect(game.toSnapshot()).toEqual(snapshot);
+    });
+
+    it('should leave a late player out of the predictions in a nominal room, so their vote completes their answer', () => {
+      // Arrange
+      const game = gameOfThree();
+      game.answer('Ana', 'TestDilemma1', complete(game, 'Ana'), SEAL, AT);
+
+      // Act
+      game.joinLate('Pedro', new KeepOrderRandomness());
+
+      // Assert
+      expect(game.playersToPredictBy('Pedro')).toEqual([]);
+      expect(game.playersToPredictBy('Luis')).toEqual(['Ana', 'Marta']);
+      expect(game.hasAnswered('Ana')).toBe(true);
+      expect(() =>
+        game.answer(
+          'Luis',
+          'TestDilemma1',
+          { vote: 'TestPull', votePredictions: [{ playerId: 'Pedro', vote: 'TestPull' }] },
+          SEAL,
+          AT,
+        ),
+      ).toThrow(PlayerNotPredictableError);
+      game.answer('Pedro', 'TestDilemma1', { vote: 'TestWait' }, SEAL, AT);
+      expect(game.hasAnswered('Pedro')).toBe(true);
+    });
+
+    it('should show the vote of a late player in the reveal, and score only among who started the game', () => {
+      // Arrange
+      const game = gameOfThree();
+      game.joinLate('Pedro', new KeepOrderRandomness());
+      game.answer('Pedro', 'TestDilemma1', { vote: 'TestWait' }, SEAL, AT);
+
+      // Act
+      everyoneAnswers(game);
+
+      // Assert
+      expect(game.revealOf(0).votes).toContainEqual({ playerId: 'Pedro', vote: 'TestWait' });
+      expect(game.pointsOf('Ana')).toEqual([{ dilemmaId: 'TestDilemma1', points: 100 }]);
+      expect(game.pointsOf('Pedro')).toEqual([]);
+    });
+
+    it('should never make a late player the person in the gap', () => {
+      // Arrange
+      const game = gameOfThree();
+      const personInTheGap = game.personInTheGap('TestDilemma2');
+
+      // Act
+      game.joinLate('Pedro', new KeepOrderRandomness());
+
+      // Assert
+      expect(game.personInTheGap('TestDilemma2')).toBe(personInTheGap);
+    });
+
+    it('should throw an error before the game starts', () => {
+      // Arrange
+      const game = Game.create(
+        {
+          roomId: 'TestRoomId',
+          dilemmas: [
+            {
+              dilemmaId: 'TestDilemma1',
+              version: 1,
+              optionIds: OPTIONS,
+              hasGap: false,
+              origin: 'picked-by-the-system',
+              addedBy: null,
+            },
+          ],
+          settings: NOMINAL,
+        },
+        new FixedIdGenerator('TestGameId'),
+      );
+
+      // Act & Assert
+      expect(() => game.joinLate('Pedro', new KeepOrderRandomness())).toThrow(
+        DecisionPhaseNotStartedError,
+      );
+    });
+  });
+
   describe('revealOf', () => {
     it('should show the distribution, the votes and which predictions were right', () => {
       // Arrange
@@ -633,6 +787,7 @@ describe('Game, by rounds', () => {
 
       // Assert
       expect(reveal.votes).toContainEqual({ playerId: 'Marta', vote: null });
+      expect(reveal.voteCount).toBe(2);
       expect(reveal.didNotVoteCount).toBe(1);
       expect(new Set(reveal.votePredictions.map(({ playerId }) => playerId))).toEqual(
         new Set(['Ana']),
@@ -682,6 +837,7 @@ describe('Game, by rounds', () => {
       game.answer('Ana', 'TestDilemma1', complete(game, 'Ana'), SEAL, AT);
       game.leave('Marta');
       game.revealIfEveryoneAnswered(['Ana', 'Luis']);
+      game.joinLate('Pedro', new KeepOrderRandomness());
       game.moveOn('Luis', 0, after(2 * SECOND));
 
       // Act

@@ -20,7 +20,10 @@ const PREVIEW = {
 
 async function renderJoin(
   previewRoom: (code: string) => Promise<typeof PREVIEW>,
-  joinRoom: () => Promise<{ playerId: string }> = async () => ({ playerId: 'test-luis-id' }),
+  joinRoom: () => Promise<{ playerId: string; joinedLate: boolean }> = async () => ({
+    playerId: 'test-luis-id',
+    joinedLate: false,
+  }),
 ) {
   return renderAtRoute(<JoinScreen />, {
     api: fakeRoomApi({ previewRoom: vi.fn(previewRoom), joinRoom: vi.fn(joinRoom) }),

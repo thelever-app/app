@@ -14,6 +14,8 @@ interface ProvidersOptions {
   readonly connection?: RoomConnection;
   /** A room that has already sent this state, for screens and components that read it. */
   readonly game?: GameStateDto;
+  /** The address the screen opens at, with what the history keeps with it. */
+  readonly at?: { readonly pathname: string; readonly state: unknown };
 }
 
 function roomThatSent(game: GameStateDto): RoomConnection {
@@ -33,7 +35,7 @@ function roomThatSent(game: GameStateDto): RoomConnection {
 }
 
 /** A wrapper with i18n in Spanish, a silent game and, if given, the room, and the `t` it translates with. */
-export async function providersFor({ game, ...options }: ProvidersOptions = {}) {
+export async function providersFor({ game, at, ...options }: ProvidersOptions = {}) {
   const i18n = await createI18n('es');
   const connection = game ? roomThatSent(game) : options.connection;
   function Providers({ children }: { readonly children: ReactNode }) {
@@ -45,7 +47,7 @@ export async function providersFor({ game, ...options }: ProvidersOptions = {}) 
       children
     );
     return (
-      <MemoryRouter>
+      <MemoryRouter initialEntries={at ? [at] : ['/']}>
         <I18nextProvider i18n={i18n}>
           <SoundProvider effects={SILENT} preference={soundPreference()}>
             {content}

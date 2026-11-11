@@ -68,6 +68,7 @@ export { RoundStartedEvent } from './domain/events/round-started.event.ts';
 export { AnsweredCountChangedEvent } from './domain/events/answered-count-changed.event.ts';
 export { HostChangedEvent } from './domain/events/host-changed.event.ts';
 export { PlayerLeftEvent } from './domain/events/player-left.event.ts';
+export { PlayerJoinedLateEvent } from './domain/events/player-joined-late.event.ts';
 export type { IdGenerator } from './domain/ports/id-generator.port.ts';
 export type { Randomness } from './domain/ports/randomness.port.ts';
 export type { Clock } from './domain/ports/clock.port.ts';

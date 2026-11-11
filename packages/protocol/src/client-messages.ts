@@ -5,9 +5,10 @@ import { z } from 'zod';
  * 2 since App Check: a client of 1 could not read the error that turns it down. 3 since the lobby:
  * a connection is to a room, not to a game. 5 since the game by rounds: predictions, the time
  * per dilemma, the reveal of each dilemma, moving on, leaving and reporting. 6 since the avatar
- * before entering: an avatar is refused only to someone with the same nickname.
+ * before entering: an avatar is refused only to someone with the same nickname. 7 since joining
+ * a game in progress: a dilemma already revealed when the player joined is "did not vote" too.
  */
-export const CONTRACT_VERSION = 6;
+export const CONTRACT_VERSION = 7;
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a

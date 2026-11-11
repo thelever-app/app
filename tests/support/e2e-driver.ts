@@ -44,6 +44,7 @@ const SCREEN = {
   places: { together: 'En el mismo sitio', remote: 'A distancia' },
   code: 'Código de la sala',
   enter: 'Entrar en la sala',
+  enterCode: 'Entrar',
   settingsTitle: 'Ajustes de la partida',
   someoneInTheGroup: 'alguien del grupo',
   predictionRight: /^(.+), acertaste$/,
@@ -55,6 +56,9 @@ const SCREEN = {
   share: 'Compartir enlace',
   copied: 'Enlace copiado',
   showQr: 'Mostrar QR',
+  gameRoomCode: /^Código ([A-Z0-9]{5})$/,
+  lateJoin: 'La partida ya ha empezado',
+  enterTheRound: 'Entrar en la ronda',
   qr: (code: string) => `Código QR de la sala ${code}`,
   close: 'Cerrar',
   videoCall: 'videollamada',
@@ -287,18 +291,29 @@ export class E2eDriver implements GameDriver {
     return (await own.textContent())?.includes(SCREEN.host) ?? false;
   }
 
+  /** In the lobby, at its head; during the game, under the share of its menu. */
   async roomCodeSeenBy(player: string): Promise<string> {
-    const { page } = screenOf(this.#playerCalled(player));
-    return (await page.getByTestId('room-code').textContent()) ?? '';
+    const viewer = this.#playerCalled(player);
+    const { page } = screenOf(viewer);
+    if (!lastGameOf(viewer)) return (await page.getByTestId('room-code').textContent()) ?? '';
+    await this.#openGameMenu(page);
+    const seen = (await page.getByTestId('game-room-code').textContent()) ?? '';
+    await this.#closeGameMenu(page);
+    return SCREEN.gameRoomCode.exec(seen)?.[1] ?? '';
   }
 
-  /** The link the screen copies opens the room for whoever follows it. */
+  /** The link the screen copies, from the lobby or the menu of the game, opens the room for whoever follows it. */
   async canShareInvitationLink(player: string): Promise<boolean> {
-    const { page } = screenOf(this.#playerCalled(player));
+    const viewer = this.#playerCalled(player);
+    const { page } = screenOf(viewer);
+    const code = await this.roomCodeSeenBy(player);
+    const inGame = lastGameOf(viewer) !== undefined;
+    if (inGame) await this.#openGameMenu(page);
     await page.getByRole('button', { name: SCREEN.share }).click();
     await page.getByRole('button', { name: SCREEN.copied }).waitFor();
     const link = String(await page.evaluate('navigator.clipboard.readText()'));
-    return this.#opensTheRoom(link, await this.roomCodeSeenBy(player));
+    if (inGame) await this.#closeGameMenu(page);
+    return this.#opensTheRoom(link, code);
   }
 
   /** The QR at full screen carries a link that opens the room. */
@@ -345,6 +360,7 @@ export class E2eDriver implements GameDriver {
         : await this.roomCodeSeenBy(this.#hostName());
     if (method === 'code') {
       await this.typeRoomCode(player, code);
+      await this.enterTypedCode(player);
       return;
     }
     const link =
@@ -356,14 +372,30 @@ export class E2eDriver implements GameDriver {
     await this.#readJoinScreen(opener);
   }
 
-  /** On the start screen, with no button: the field goes through once the code is complete. */
+  /** From the start screen, into the field of the code, without pressing the button. */
   async typeRoomCode(player: string, code: string): Promise<void> {
     const opener = await this.#withScreen(player);
     const { page } = screenOf(opener);
     await page.goto(`${this.#stack.webUrl}/`);
     await page.getByRole('button', { name: SCREEN.joinWithCode }).click();
     await page.getByRole('textbox', { name: SCREEN.code }).fill(code);
+  }
+
+  async enterTypedCode(player: string): Promise<void> {
+    const opener = this.#playerCalled(player);
+    const { page } = screenOf(opener);
+    await page.getByRole('button', { name: SCREEN.enterCode, exact: true }).click();
     await this.#readJoinScreen(opener);
+  }
+
+  /** The field of the code stays, and no room shows. */
+  async isOnJoinCodeScreen(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    return steady(
+      async () =>
+        (await page.getByRole('textbox', { name: SCREEN.code }).isVisible()) &&
+        (await page.getByTestId('room-of').count()) === 0,
+    );
   }
 
   async roomPreviewSeenBy(player: string): Promise<RoomPreview | undefined> {
@@ -395,9 +427,21 @@ export class E2eDriver implements GameDriver {
     }
     await page.getByRole('button', { name: SCREEN.enter }).click();
 
-    // Who comes back to a game in progress, having left it, gets the game instead of the lobby.
+    // Who comes back to a game in progress, having left it, gets the game instead of the lobby;
+    // who joins it late, first the notice of where they come in.
     const inGame = page.getByText(SCREEN.position);
-    await page.locator('[data-testid="room-code"], [role="alert"] h1').or(inGame).first().waitFor();
+    const lateJoin = page.getByRole('heading', { name: SCREEN.lateJoin });
+    await page
+      .locator('[data-testid="room-code"], [role="alert"] h1')
+      .or(inGame)
+      .or(lateJoin)
+      .first()
+      .waitFor();
+    if ((await lateJoin.count()) > 0) {
+      joiner.nickname = nickname;
+      await page.getByRole('button', { name: SCREEN.enterTheRound }).click();
+      await inGame.first().waitFor();
+    }
     if ((await inGame.count()) > 0) {
       await waitUntil(
         () => received.filter(isState).length > statesBefore || undefined,
@@ -1951,14 +1995,26 @@ export class E2eDriver implements GameDriver {
 
   /** The link the QR at full screen carries; it closes the QR again. */
   async #qrLinkOf(player: string): Promise<string> {
-    const { page } = screenOf(this.#playerCalled(player));
+    const viewer = this.#playerCalled(player);
+    const { page } = screenOf(viewer);
     const code = await this.roomCodeSeenBy(player);
+    if (lastGameOf(viewer)) await this.#openGameMenu(page);
     await page.getByRole('button', { name: SCREEN.showQr }).click();
     const qr = page.getByRole('img', { name: SCREEN.qr(code) });
     const link = (await qr.getAttribute('data-link')) ?? '';
     await page.getByRole('dialog').getByRole('button', { name: SCREEN.close }).click();
     await qr.waitFor({ state: 'hidden' });
     return link;
+  }
+
+  async #openGameMenu(page: Page): Promise<void> {
+    await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+    await page.getByRole('dialog').waitFor();
+  }
+
+  async #closeGameMenu(page: Page): Promise<void> {
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state: 'hidden' });
   }
 
   /** Whether whoever follows the link sees that room before entering it. */

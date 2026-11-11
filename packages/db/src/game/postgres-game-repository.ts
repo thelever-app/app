@@ -297,7 +297,7 @@ function readGame(db: Kysely<GameTables>, id: string) {
       jsonArrayFrom(
         eb
           .selectFrom('game_players')
-          .select(['game_players.player_id', 'game_players.has_left'])
+          .select(['game_players.player_id', 'game_players.has_left', 'game_players.joined_late'])
           .whereRef('game_players.game_id', '=', 'games.id')
           .orderBy('game_players.position'),
       ).as('players'),
@@ -361,11 +361,12 @@ function snapshotOf(row: GameRow): GameSnapshot {
         : null,
     dilemmas,
     peopleInTheGap,
-    players: row.players.map(({ player_id, has_left }) => {
+    players: row.players.map(({ player_id, has_left, joined_late }) => {
       const ofPlayer = row.playerDilemmas.filter((dilemma) => dilemma.player_id === player_id);
       return {
         id: player_id,
         left: has_left,
+        joinedLate: joined_late,
         optionOrders: ofPlayer.map(({ dilemma_id, option_order }) => ({
           dilemmaId: dilemma_id,
           optionOrder: option_order,
@@ -462,6 +463,7 @@ function playerRowsOf({ id, players }: GameSnapshot): PlayerRow[] {
     player_id: player.id,
     position,
     has_left: player.left,
+    joined_late: player.joinedLate,
   }));
 }
 

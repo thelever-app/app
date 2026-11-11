@@ -28,6 +28,8 @@ export const GameStateDto = z.strictObject({
   roomVersion: RoomVersionDto,
   /** The player who receives the message. */
   playerId: z.string().min(1),
+  /** The code of the room, so the players can invite others during the game. */
+  code: z.string().length(5),
   /** The round in progress: one dilemma, played by everyone at the same time. */
   round: z.strictObject({
     /** The position of its dilemma in the game, from 0. */
@@ -58,6 +60,9 @@ export const GameStateDto = z.strictObject({
         )
         .nullable(),
       tooFewVotes: z.boolean(),
+      /** How many voted it, also in an anonymous room. */
+      voteCount: z.number().int().nonnegative(),
+      /** How many did not vote it, without who joined the game once it was revealed. */
       didNotVoteCount: z.number().int().nonnegative(),
       /** What each player voted, null for who did not vote; empty in an anonymous room. */
       votes: z.array(
@@ -92,7 +97,10 @@ export const GameStateDto = z.strictObject({
       }),
     )
     .min(1),
-  /** The players whose vote this player predicts in each dilemma: every other one, none in an anonymous room. */
+  /**
+   * The players whose vote this player predicts in each dilemma: every other one who started the
+   * game, none in an anonymous room nor for a player who joined late.
+   */
   playersToPredict: z.array(z.string().min(1)),
   players: z
     .array(
@@ -125,7 +133,8 @@ export const GameStateDto = z.strictObject({
   didNotVote: z.array(
     z.strictObject({
       dilemmaId: z.string().min(1),
-      reason: z.enum(['not-answered', 'reported']),
+      /** Unanswered when it was revealed, skipped by reporting it, or revealed before the player joined. */
+      reason: z.enum(['not-answered', 'reported', 'joined-late']),
     }),
   ),
 });

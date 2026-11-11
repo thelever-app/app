@@ -8,9 +8,16 @@ import styles from './reveal-intro.module.css';
 export const REVEAL_INTRO_MS = 2000;
 
 /** «Se revela el dilema»: the brief passage from the decision of a round to its reveal. */
-export function RevealIntro({ game }: { readonly game: GameStateDto }) {
+export function RevealIntro({
+  game,
+  reveal,
+}: {
+  readonly game: GameStateDto;
+  readonly reveal: NonNullable<GameStateDto['reveal']>;
+}) {
   const { t } = useTranslation();
-  const inGame = game.players.filter(({ left }) => !left).length;
+  // Only who was asked the dilemma: not who joined the game once it was revealed.
+  const asked = reveal.voteCount + reveal.didNotVoteCount;
   return (
     <div className={styles.screen} role="status">
       <div aria-hidden="true" className={styles.hazard} />
@@ -26,7 +33,7 @@ export function RevealIntro({ game }: { readonly game: GameStateDto }) {
         </p>
         <h1 className={styles.title}>{t('reveal.introTitle')}</h1>
         <p className={styles.body}>
-          {t('reveal.introAnswered', { count: game.answeredCount, total: inGame })}{' '}
+          {t('reveal.introAnswered', { count: reveal.voteCount, total: asked })}{' '}
           {isAnonymous(game) ? t('reveal.introAnonymous') : t('reveal.introNominal')}
         </p>
       </div>
