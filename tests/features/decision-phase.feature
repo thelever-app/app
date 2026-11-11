@@ -255,37 +255,70 @@ Feature: Decision phase
       And the game has started
 
     @ui @todo
-    Scenario: A player with the research consent is told what anonymous means
-      Given "Luis" has given the research consent
+    Scenario: Each player is told what anonymous means
       When the first round starts
-      Then "Luis" is told that nobody in the group will see his votes
+      Then each player is told that nobody in the group will see their votes
       And that the group sees how many chose each option of each dilemma
-      And that his answers count for research under a pseudonym
-      And that he can change it in the settings
+      And that their answers are only used to play and are deleted within 24 hours of the room closing, except their history
 
     @ui @todo
-    Scenario: A player without the research consent is told what anonymous means
-      Given "Marta" has not given the research consent
-      When the first round starts
-      Then "Marta" is told that nobody in the group will see her votes
-      And that the group sees how many chose each option of each dilemma
-      And that her answers are only used to play and are deleted 24 hours after the room closes, except her history
-      And that she can change it in the settings
-
-    @todo
-    Scenario: Nobody receives the consent status of another player
-      Given "Luis" has given the research consent and "Marta" has not
-      When the first round starts
-      Then no player receives the consent status of any other player
-
-    @ui
-    Scenario: A player answers by voting
+    Scenario: A player has answered only after voting and pressing Ready
       Given "Luis" is on the first dilemma
       When "Luis" votes
-      Then "Luis" has answered the first dilemma without making any prediction
+      Then the first dilemma does not count as answered by "Luis"
+      When "Luis" presses Ready
+      Then the first dilemma counts as answered by "Luis"
+
+    @ui @todo
+    Scenario: A player cannot predict the distribution before voting
+      Given "Luis" has not voted the current dilemma
+      Then "Luis" cannot predict the distribution
+
+    @todo
+    Scenario: The current distribution prediction counts when time runs out
+      Given "Luis" voted the first dilemma and set his distribution prediction to 70 % and 30 %
+      And "Luis" has not pressed Ready
+      When the time for the dilemma runs out
+      Then his vote and his distribution prediction of 70 % and 30 % count
 
     @ui
     Scenario: Players see how many have answered but not who
       When "Luis" answers the first dilemma
       Then "Ana" and "Marta" see that 1 player has answered it
       And no player receives who has answered
+
+  Rule: Distribution prediction in an anonymous room
+
+    Background:
+      Given the room is anonymous
+
+    @ui @todo
+    Scenario Outline: The distribution prediction starts with an even split
+      Given a dilemma with <options> options
+      When a player has voted it
+      Then the distribution prediction starts at <split> in the order the player sees the options
+      And the option the player voted is marked as their vote
+
+      Examples:
+        | options | split                  |
+        | 2       | 50 %, 50 %             |
+        | 3       | 40 %, 30 %, 30 %       |
+        | 4       | 30 %, 30 %, 20 %, 20 % |
+
+    @ui @todo
+    Scenario: Moving one option adjusts the others in proportion
+      Given a distribution prediction of 30 %, 30 %, 20 % and 20 %
+      When the player moves the first option to 60 %
+      Then the distribution prediction is 60 %, 20 %, 10 % and 10 %
+
+    @todo
+    Scenario: The distribution prediction always adds up to 100 % in steps of 10 %
+      When a player moves any option of their distribution prediction
+      Then every option is a multiple of 10 %
+      And all the options add up to 100 %
+
+    @ui @todo
+    Scenario: Two options are predicted with a single slider
+      Given a dilemma with 2 options
+      When a player predicts the distribution
+      Then the player moves a single slider that sets both options

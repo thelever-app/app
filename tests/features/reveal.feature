@@ -233,6 +233,13 @@ Feature: Reveal
       Then nobody sees how many chose each option
       And all players see that there were too few votes to show it
 
+    @ui @todo
+    Scenario: Too few votes score nothing
+      Given only "Luis" and "Marta" voted the first dilemma
+      When the reveal is on the first dilemma
+      Then no player scores points for the first dilemma
+      And no player sees anything about their distribution prediction
+
     @ui
     Scenario: The reveal never shows who added a dilemma
       Given "Luis" added the first dilemma in the lobby
@@ -240,8 +247,65 @@ Feature: Reveal
       Then no player sees who added it
 
     @ui @todo
-    Scenario: The last round ends the game without game results
+    Scenario: The last round leads to the ranking of who reads the group best
       Given the reveal is on the last dilemma
       When a player moves on
+      Then all players see the ranking of who reads the group best
+      And nobody sees El Mentalista or who knows them best
+
+    @ui @todo
+    Scenario: The ranking of an anonymous room ends the game
+      Given the ranking of who reads the group best is shown
+      When a player moves on
       Then the game ends
-      And nobody sees a ranking, El Mentalista or who knows them best
+
+    @ui @screen @todo
+    Scenario: No ad is shown in the ranking of an anonymous room
+      When the ranking of who reads the group best is shown
+      Then no ad is shown
+
+  Rule: Points for the distribution prediction
+
+    Background:
+      Given an anonymous room with 10 players
+
+    @todo
+    Scenario Outline: Points depend on how close the prediction was
+      Given the first dilemma has 2 options and the group voted <real>
+      And "Ana" predicted <predicted>
+      When the reveal is on the first dilemma
+      Then "Ana" scores <points> points for the first dilemma
+
+      Examples:
+        | real          | predicted     | points |
+        | 70 % and 30 % | 70 % and 30 % | 100    |
+        | 70 % and 30 % | 50 % and 50 % | 80     |
+        | 70 % and 30 % | 30 % and 70 % | 60     |
+        | 70 % and 30 % | 0 % and 100 % | 30     |
+
+    @todo
+    Scenario: Points are rounded to a whole number
+      Given 9 of the players voted the first dilemma, 6 for the first option and 3 for the second
+      And "Ana" predicted 50 % and 50 %
+      When the reveal is on the first dilemma
+      Then "Ana" scores 83 points for the first dilemma
+
+    @ui @todo
+    Scenario: Each player sees their own prediction and points in private
+      Given "Ana" predicted 50 % and 50 % on the first dilemma
+      When the reveal is on the first dilemma
+      Then "Ana" sees a mark on each bar at the share she predicted
+      And "Ana" sees the points she scored for the first dilemma
+      And no other player receives the prediction or the points of "Ana"
+
+    @todo
+    Scenario: Players who did not vote score nothing
+      Given "Ana" did not vote the first dilemma
+      When the reveal is on the first dilemma
+      Then "Ana" scores no points for the first dilemma
+
+    @ui @todo
+    Scenario: Ties in the ranking share the position
+      Given "Ana" and "Luis" have the same total of points
+      When the ranking of who reads the group best is shown
+      Then "Ana" and "Luis" share the same position

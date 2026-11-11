@@ -911,15 +911,6 @@ When('{string} votes', async function (this: GameWorld, player: string) {
 });
 
 Then(
-  '{string} has answered the first dilemma without making any prediction',
-  async function (this: GameWorld, player: string) {
-    assert.ok(await this.driver.hasAnswered(player), `${player} has not answered`);
-    const answer = await this.driver.answerRecordedFor(player, 1);
-    assert.deepEqual(answer?.votePredictions, []);
-  },
-);
-
-Then(
   '{string} and {string} see that {int} player has answered it',
   async function (this: GameWorld, firstViewer: string, secondViewer: string, count: number) {
     for (const viewer of [firstViewer, secondViewer]) {
