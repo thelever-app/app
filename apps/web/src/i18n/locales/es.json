@@ -283,6 +283,15 @@
     "missing_many": "Faltan {{count, number}} caracteres",
     "missing_other": "Faltan {{count, number}} caracteres"
   },
+  "accessCode": {
+    "title": "TheLever está en pruebas",
+    "text": "Por ahora solo puede jugar quien tiene el código de acceso. Escríbelo una vez y no te lo volveremos a pedir en este dispositivo.",
+    "label": "Código de acceso",
+    "invalid": "Ese código no vale.",
+    "check": "Revisa que esté bien escrito.",
+    "enter": "Entrar",
+    "entering": "Entrando…"
+  },
   "variant": {
     "nominal": {
       "name": "Sala nominal:",

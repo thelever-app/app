@@ -9,6 +9,7 @@ import {
 import WebSocket from 'ws';
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
 import { composeRealtimeServer, type Storage } from '../../composition/index.ts';
+import { type AccessGate, OpenAccess } from '../../identity/access-gate.ts';
 import { type AppCheckVerifier, UncheckedAppCheck } from '../../identity/app-check-verifier.ts';
 import type { TokenVerifier } from '../../identity/token-verifier.ts';
 import { FakeTokenVerifier, tokenOf } from './fake-token-verifier.ts';
@@ -32,6 +33,7 @@ export async function composedHttpServer() {
   const { http } = await composeRealtimeServer({
     tokenVerifier: new FakeTokenVerifier(),
     appCheckVerifier: new UncheckedAppCheck(),
+    accessGate: new OpenAccess(),
     pingIntervalMs: 30_000,
     storage: { kind: 'memory' },
     logger: new ConsoleLogger(),
@@ -53,12 +55,14 @@ export async function startRoomServer({
   pingIntervalMs = 30_000,
   tokenVerifier = new FakeTokenVerifier() as TokenVerifier,
   appCheckVerifier = new UncheckedAppCheck() as AppCheckVerifier,
+  accessGate = new OpenAccess() as AccessGate,
   storage = { kind: 'memory' } as Storage,
   logger = new ConsoleLogger() as Logger,
 } = {}) {
   const composed = await composeRealtimeServer({
     tokenVerifier,
     appCheckVerifier,
+    accessGate,
     pingIntervalMs,
     storage,
     logger,

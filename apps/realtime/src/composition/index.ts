@@ -7,6 +7,7 @@ import { authentication } from '../http/authentication.ts';
 import { httpErrorHandler } from '../http/error-handler.ts';
 import { HealthEndpoint } from '../http/health.endpoint.ts';
 import type { HttpEndpoint } from '../http/http-endpoint.ts';
+import type { AccessGate } from '../identity/access-gate.ts';
 import type { AppCheckVerifier } from '../identity/app-check-verifier.ts';
 import type { TokenVerifier } from '../identity/token-verifier.ts';
 import { CryptoRandomness } from '../rooms/crypto-randomness.ts';
@@ -46,6 +47,8 @@ export interface RealtimeConfiguration {
   readonly tokenVerifier: TokenVerifier;
   /** Whether a call must prove it comes from the app: in dev and prod, not locally. */
   readonly appCheckVerifier: AppCheckVerifier;
+  /** Whether entering a room asks for the access code: in dev and prod while they are closed. */
+  readonly accessGate: AccessGate;
   readonly pingIntervalMs: number;
   readonly storage: Storage;
   readonly logger: Logger;
@@ -108,7 +111,11 @@ export async function composeRealtimeServer(
   // 4. The HTTP routes and the room sockets on the same server.
   const http = createServer(
     createApp(httpEndpoints(commands, queries, roomLock, runCommand), {
-      authenticate: authentication(configuration.tokenVerifier, configuration.appCheckVerifier),
+      authenticate: authentication(
+        configuration.tokenVerifier,
+        configuration.appCheckVerifier,
+        configuration.accessGate,
+      ),
       errorHandler: httpErrorHandler(errorCodeOf),
       webOrigins: configuration.webOrigins,
     }),

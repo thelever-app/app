@@ -6,6 +6,8 @@ import error from '@material-symbols/svg-500/rounded/error.svg?url';
 import expandMore from '@material-symbols/svg-500/rounded/keyboard_arrow_down-fill.svg?url';
 import refresh from '@material-symbols/svg-500/rounded/refresh-fill.svg?url';
 import timer from '@material-symbols/svg-500/rounded/timer-fill.svg?url';
+import block from '@material-symbols/svg-500/rounded/block.svg?url';
+import lock from '@material-symbols/svg-500/rounded/lock-fill.svg?url';
 import arrowForward from '@material-symbols/svg-500/rounded/arrow_forward-fill.svg?url';
 import check from '@material-symbols/svg-500/rounded/check-fill.svg?url';
 import edit from '@material-symbols/svg-500/rounded/edit-fill.svg?url';
@@ -43,6 +45,7 @@ const ICONS = {
   addCircle,
   arrowBack,
   arrowForward,
+  block,
   check,
   checkBox,
   checkBoxBlank,
@@ -58,6 +61,7 @@ const ICONS = {
   groups,
   howToVote,
   iosShare,
+  lock,
   logout,
   moreVert,
   personPin,

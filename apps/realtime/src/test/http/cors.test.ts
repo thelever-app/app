@@ -38,7 +38,7 @@ describe('cors', () => {
     expect(response.headers['access-control-allow-origin']).toBe(WEB);
     expect(response.headers['access-control-allow-methods']).toBe('GET, POST');
     expect(response.headers['access-control-allow-headers']).toBe(
-      'Authorization, Content-Type, X-Firebase-AppCheck, traceparent',
+      'Authorization, Content-Type, X-Firebase-AppCheck, X-Access-Code, traceparent',
     );
   });
 

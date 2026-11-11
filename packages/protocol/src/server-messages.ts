@@ -217,6 +217,7 @@ export const ErrorCodeDto = z.enum([
   'not-connected',
   'invalid-token',
   'invalid-app-check',
+  'invalid-access-code',
   'room-not-found',
   'room-code-not-found',
   'game-not-found',

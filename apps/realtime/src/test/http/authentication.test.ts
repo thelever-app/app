@@ -2,6 +2,7 @@ import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { authentication, identityOf } from '../../http/authentication.ts';
+import { OpenAccess } from '../../identity/access-gate.ts';
 import { UncheckedAppCheck } from '../../identity/app-check-verifier.ts';
 import { InvalidTokenError } from '../../identity/token-verifier.ts';
 import { FakeTokenVerifier, tokenOf } from '../support/fake-token-verifier.ts';
@@ -9,7 +10,7 @@ import { FakeTokenVerifier, tokenOf } from '../support/fake-token-verifier.ts';
 /** An app with one route behind the authentication that answers with the identity, or with the error. */
 function appBehindAuthentication() {
   const app = express();
-  app.use(authentication(new FakeTokenVerifier(), new UncheckedAppCheck()));
+  app.use(authentication(new FakeTokenVerifier(), new UncheckedAppCheck(), new OpenAccess()));
   app.get('/whoami', (_req, res) => {
     res.json({ identity: identityOf(res) });
   });

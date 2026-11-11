@@ -40,6 +40,7 @@ import {
   TooManyAddedDilemmasError,
 } from '@thelever-app/game';
 import type { ErrorCodeDto } from '@thelever-app/protocol';
+import { InvalidAccessCodeError } from '../identity/access-gate.ts';
 import { InvalidAppCheckError } from '../identity/app-check-verifier.ts';
 import { InvalidTokenError } from '../identity/token-verifier.ts';
 
@@ -47,6 +48,7 @@ import { InvalidTokenError } from '../identity/token-verifier.ts';
 const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])[] = [
   [InvalidTokenError, 'invalid-token'],
   [InvalidAppCheckError, 'invalid-app-check'],
+  [InvalidAccessCodeError, 'invalid-access-code'],
   [RoomNotFoundError, 'room-not-found'],
   [RoomCodeNotFoundError, 'room-code-not-found'],
   [GameNotFoundError, 'game-not-found'],
