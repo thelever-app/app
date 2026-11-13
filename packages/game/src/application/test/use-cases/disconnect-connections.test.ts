@@ -9,6 +9,9 @@ import {
   ROOM_VERSION_WHEN_THE_GAME_STARTS,
 } from '../support/game-in-decision-phase.ts';
 
+/** When the connections closed, which the tests do not look at. */
+const CLOSED_AT = new Date('2026-11-09T10:05:00Z');
+
 /** Like the arranged game, with Ana connected once and Luis twice, as from two tabs. */
 async function arrange() {
   const game = await gameInDecisionPhase();
@@ -18,6 +21,7 @@ async function arrange() {
     game.gameRepository,
     notifier,
     game.idGenerator,
+    game.clock,
   );
   const ana = await connectPlayer.execute({ roomId: game.roomId, identity: 'TestAnaIdentity' });
   const luis1 = await connectPlayer.execute({ roomId: game.roomId, identity: 'TestLuisIdentity' });
@@ -34,7 +38,11 @@ describe('DisconnectConnectionsUseCase', () => {
         await arrange();
 
       // Act
-      await disconnectConnections.execute({ roomId, connections: [ana, luis1, luis2] });
+      await disconnectConnections.execute({
+        roomId,
+        connections: [ana, luis1, luis2],
+        at: CLOSED_AT,
+      });
 
       // Assert
       const room = await roomRepository.findById(roomId);
@@ -49,7 +57,7 @@ describe('DisconnectConnectionsUseCase', () => {
         await arrange();
 
       // Act
-      await disconnectConnections.execute({ roomId, connections: [luis1] });
+      await disconnectConnections.execute({ roomId, connections: [luis1], at: CLOSED_AT });
 
       // Assert
       const room = await roomRepository.findById(roomId);
@@ -66,7 +74,7 @@ describe('DisconnectConnectionsUseCase', () => {
       const before = notifier.receivedBy(anaId).length;
 
       // Act
-      await disconnectConnections.execute({ roomId, connections: [luis1, luis2] });
+      await disconnectConnections.execute({ roomId, connections: [luis1, luis2], at: CLOSED_AT });
 
       // Assert
       const event = new ConnectionChangedEvent(
@@ -86,7 +94,7 @@ describe('DisconnectConnectionsUseCase', () => {
         await arrange();
 
       // Act
-      await disconnectConnections.execute({ roomId, connections: [ana, luis1] });
+      await disconnectConnections.execute({ roomId, connections: [ana, luis1], at: CLOSED_AT });
 
       // Assert
       expect(notifier.receivedBy(luisId).at(-1)).toEqual(
@@ -104,6 +112,7 @@ describe('DisconnectConnectionsUseCase', () => {
       await disconnectConnections.execute({
         roomId,
         connections: [{ playerId: luisId, connectionId: 'TestClosedConnectionId' }],
+        at: CLOSED_AT,
       });
 
       // Assert
@@ -117,7 +126,11 @@ describe('DisconnectConnectionsUseCase', () => {
 
       // Act & Assert
       await expect(
-        disconnectConnections.execute({ roomId: 'TestUnknownRoomId', connections: [ana] }),
+        disconnectConnections.execute({
+          roomId: 'TestUnknownRoomId',
+          connections: [ana],
+          at: CLOSED_AT,
+        }),
       ).rejects.toThrow(RoomNotFoundError);
     });
   });

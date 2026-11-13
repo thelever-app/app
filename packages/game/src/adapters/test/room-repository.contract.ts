@@ -5,6 +5,9 @@ import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.t
 import { FixedRandomness } from '../../domain/test/support/fixed-randomness.ts';
 import { AvatarVO } from '../../domain/vos/avatar.vo.ts';
 
+/** When everything in these tests happens, unless a test says otherwise. */
+const NOW = new Date('2026-11-12T10:00:00Z');
+
 function room(id = 'TestRoomId', hostId = 'TestAnaId', code = 'K7M2Q'): Room {
   return Room.create(
     {
@@ -15,6 +18,7 @@ function room(id = 'TestRoomId', hostId = 'TestAnaId', code = 'K7M2Q'): Room {
       place: 'together',
       dilemmaLanguage: 'es',
       code,
+      createdAt: NOW,
     },
     new FixedIdGenerator(id, hostId),
   );
@@ -132,6 +136,62 @@ export function describeRoomRepositoryContract(
       });
     });
 
+    describe('findIdsWithNobodyConnected', () => {
+      it('should give the rooms with no connection open, whether anyone ever connected or not', async () => {
+        // Arrange
+        const repository = await create();
+        const neverConnected = room('TestNeverRoomId', 'TestNeverAnaId', 'K7M2Q');
+        const connected = room('TestConnectedRoomId', 'TestConnectedAnaId', 'P3X8W');
+        connected.connect('TestConnectedAnaId', 'TestConnectedAnaConnection');
+        const disconnected = room('TestDisconnectedRoomId', 'TestDisconnectedAnaId', 'H4N9R');
+        disconnected.connect('TestDisconnectedAnaId', 'TestDisconnectedAnaConnection');
+        disconnected.disconnect('TestDisconnectedAnaId', 'TestDisconnectedAnaConnection', NOW);
+        for (const saved of [neverConnected, connected, disconnected]) await repository.save(saved);
+
+        // Act
+        const found = await repository.findIdsWithNobodyConnected();
+
+        // Assert
+        expect([...found].sort()).toEqual(['TestDisconnectedRoomId', 'TestNeverRoomId']);
+      });
+    });
+
+    describe('delete', () => {
+      it('should delete the room as it was read, with its code, and say so', async () => {
+        // Arrange
+        const repository = await create();
+        const saved = room();
+        join(saved, 'Luis');
+        await repository.save(saved);
+        const read = await repository.findById('TestRoomId');
+
+        // Act
+        const deleted = await repository.delete(read!);
+
+        // Assert
+        expect(deleted).toBe(true);
+        expect(await repository.findById('TestRoomId')).toBeUndefined();
+        expect(await repository.findByCode('K7M2Q')).toBeUndefined();
+      });
+
+      it('should keep a room that changed since it was read, and say so', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(room());
+        const read = await repository.findById('TestRoomId');
+        const meanwhile = await repository.findById('TestRoomId');
+        meanwhile!.connect('TestAnaId', 'TestAnaConnection');
+        await repository.save(meanwhile!);
+
+        // Act
+        const deleted = await repository.delete(read!);
+
+        // Assert
+        expect(deleted).toBe(false);
+        expect(await repository.findById('TestRoomId')).toBeDefined();
+      });
+    });
+
     describe('save', () => {
       it('should keep everything about the lobby: settings, avatars, dilemmas and who was expelled', async () => {
         // Arrange
@@ -211,8 +271,8 @@ export function describeRoomRepositoryContract(
         saved.connect('TestAnaId', 'TestAnaConnection2');
         saved.connect('TestLuisId', 'TestLuisConnection');
         await repository.save(saved);
-        saved.disconnect('TestAnaId', 'TestAnaConnection1');
-        saved.disconnect('TestLuisId', 'TestLuisConnection');
+        saved.disconnect('TestAnaId', 'TestAnaConnection1', NOW);
+        saved.disconnect('TestLuisId', 'TestLuisConnection', NOW);
 
         // Act
         await repository.save(saved);

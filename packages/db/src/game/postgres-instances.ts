@@ -34,22 +34,23 @@ export class PostgresInstances {
     return false;
   }
 
-  /** The other instances with no sign for longer than that, which are taken for dead. */
+  /**
+   * The other instances with no sign for longer than that, which are taken for dead, and when each
+   * was last seen alive. Without `except`, all of them: for whoever looks is not an instance.
+   */
   async findSilent({
     forMs,
     except,
   }: {
     readonly forMs: number;
-    readonly except: string;
-  }): Promise<readonly string[]> {
-    const rows = await this.#db
+    readonly except?: string;
+  }): Promise<readonly { readonly id: string; readonly seenAt: Date }[]> {
+    const silent = this.#db
       .selectFrom('instances')
-      .select('id')
+      .select(['id', 'seen_at as seenAt'])
       .where('seen_at', '<', sql<Date>`now() - make_interval(secs => ${forMs / 1000})`)
-      .where('id', '<>', except)
-      .orderBy('id')
-      .execute();
-    return rows.map(({ id }) => id);
+      .orderBy('id');
+    return (except === undefined ? silent : silent.where('id', '<>', except)).execute();
   }
 
   /** The connections that instance serves, room by room. */

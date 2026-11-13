@@ -46,7 +46,7 @@ async function arrange() {
     removeAddedDilemma: new RemoveAddedDilemmaUseCase(roomRepository, notifier),
     expelPlayer: new ExpelPlayerUseCase(roomRepository, notifier),
     searchDilemmas: new SearchDilemmasUseCase(roomRepository, catalog),
-    getRoomPreview: new GetRoomPreviewUseCase(roomRepository, new FixedRandomness()),
+    getRoomPreview: new GetRoomPreviewUseCase(roomRepository, new FixedRandomness(), lobby.clock),
     joinRoom: new JoinRoomUseCase({ ...lobby, notifier }),
     getRoomState: new GetRoomStateUseCase(roomRepository, catalog),
   };
@@ -103,9 +103,9 @@ describe('GetRoomPreviewUseCase', () => {
 
   it('should suggest, at random, an avatar nobody inside has', async () => {
     // Arrange: Ana wears the first avatar, so the free ones start at the second.
-    const { roomRepository, roomId } = await arrange();
+    const { roomRepository, roomId, clock } = await arrange();
     const { code } = (await roomRepository.findById(roomId))!;
-    const getRoomPreview = new GetRoomPreviewUseCase(roomRepository, new FixedRandomness(0));
+    const getRoomPreview = new GetRoomPreviewUseCase(roomRepository, new FixedRandomness(0), clock);
 
     // Act
     const { suggestedAvatar } = await getRoomPreview.execute({

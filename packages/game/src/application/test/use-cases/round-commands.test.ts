@@ -38,6 +38,7 @@ async function arrange() {
     game.gameRepository,
     notifier,
     game.idGenerator,
+    game.clock,
   );
   const connections = new Map<string, string>();
   for (const [name, playerId] of [

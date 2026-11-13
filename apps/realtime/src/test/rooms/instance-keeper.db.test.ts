@@ -48,6 +48,7 @@ describe('InstanceKeeper', () => {
           place: 'together',
           dilemmaLanguage: 'es',
           code: 'K7M2Q',
+          createdAt: new Date(),
         },
         new SequentialIdGenerator(),
       );

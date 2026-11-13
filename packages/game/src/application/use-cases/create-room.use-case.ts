@@ -1,4 +1,5 @@
 import { Room } from '../../domain/entities/room.ts';
+import type { Clock } from '../../domain/ports/clock.port.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import type { Randomness } from '../../domain/ports/randomness.port.ts';
 import { AvatarVO } from '../../domain/vos/avatar.vo.ts';
@@ -27,23 +28,31 @@ export interface CreateRoomOutput {
   readonly hostId: string;
 }
 
-/** A player creates a room, with a code no other open room has, and becomes its host. */
+/** A player creates a room, with a code no other room has, and becomes its host. */
 export class CreateRoomUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #idGenerator: IdGenerator;
   readonly #randomness: Randomness;
+  readonly #clock: Clock;
 
-  constructor(roomRepository: RoomRepository, idGenerator: IdGenerator, randomness: Randomness) {
+  constructor(
+    roomRepository: RoomRepository,
+    idGenerator: IdGenerator,
+    randomness: Randomness,
+    clock: Clock,
+  ) {
     this.#roomRepository = roomRepository;
     this.#idGenerator = idGenerator;
     this.#randomness = randomness;
+    this.#clock = clock;
   }
 
   async execute(input: CreateRoomInput): Promise<CreateRoomOutput> {
     const code = await this.#freeCode();
     const { face, color } = input.hostAvatar;
     const hostAvatar = new AvatarVO(face, color);
-    const room = Room.create({ ...input, hostAvatar, code }, this.#idGenerator);
+    const createdAt = this.#clock.now();
+    const room = Room.create({ ...input, hostAvatar, code, createdAt }, this.#idGenerator);
 
     await this.#roomRepository.save(room);
 

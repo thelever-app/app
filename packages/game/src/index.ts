@@ -11,6 +11,7 @@ export { Player, type PlayerSnapshot } from './domain/entities/player.ts';
 export {
   Room,
   MAXIMUM_PLAYERS,
+  CLOSES_WITH_NOBODY_CONNECTED_AFTER_MS,
   type RoomSnapshot,
   type LobbyDilemma,
   type AddedDilemma,
@@ -210,6 +211,10 @@ export {
   DisconnectConnectionsUseCase,
   type DisconnectConnectionsInput,
 } from './application/use-cases/disconnect-connections.use-case.ts';
+export {
+  DeleteClosedRoomsUseCase,
+  type DeleteClosedRoomsOutput,
+} from './application/use-cases/delete-closed-rooms.use-case.ts';
 export {
   GetGameStateUseCase,
   type GetGameStateInput,

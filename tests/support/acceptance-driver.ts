@@ -6,6 +6,7 @@ import {
   ConnectionChangedEvent,
   ConnectPlayerUseCase,
   CreateRoomUseCase,
+  DeleteClosedRoomsUseCase,
   DisconnectPlayerUseCase,
   ExpelPlayerUseCase,
   GAP_MARKER,
@@ -35,6 +36,7 @@ import {
   RemoveAddedDilemmaUseCase,
   RoomCodeNotFoundError,
   RoomFullError,
+  RoomNotFoundError,
   SearchDilemmasUseCase,
   StartGameUseCase,
   AvatarVO,
@@ -200,6 +202,7 @@ export class AcceptanceDriver implements GameDriver {
   readonly #leaveRoom: LeaveRoomUseCase;
   readonly #reportDilemma: ReportDilemmaUseCase;
   readonly #skipDilemma: SkipDilemmaUseCase;
+  readonly #deleteClosedRooms: DeleteClosedRoomsUseCase;
   /** What each player is answering of the dilemma they are on, as the screen holds it. */
   readonly #drafts = new Map<
     string,
@@ -229,14 +232,15 @@ export class AcceptanceDriver implements GameDriver {
     const games = this.#gameRepository;
     const clock = this.#clock;
 
-    this.#createRoom = new CreateRoomUseCase(rooms, idGenerator, randomness);
-    this.#getRoomPreview = new GetRoomPreviewUseCase(rooms, randomness);
+    this.#createRoom = new CreateRoomUseCase(rooms, idGenerator, randomness, clock);
+    this.#getRoomPreview = new GetRoomPreviewUseCase(rooms, randomness, clock);
     this.#joinRoom = new JoinRoomUseCase({
       roomRepository: rooms,
       gameRepository: games,
       notifier,
       idGenerator,
       randomness,
+      clock,
     });
     this.#getRoomState = new GetRoomStateUseCase(rooms, catalog);
     this.#changeAvatar = new ChangeAvatarUseCase(rooms, notifier);
@@ -266,7 +270,7 @@ export class AcceptanceDriver implements GameDriver {
       clock,
     });
     this.#getGameState = new GetGameStateUseCase(rooms, this.#gameRepository, catalog);
-    this.#connectPlayer = new ConnectPlayerUseCase(rooms, games, notifier, idGenerator);
+    this.#connectPlayer = new ConnectPlayerUseCase(rooms, games, notifier, idGenerator, clock);
     this.#disconnectPlayer = new DisconnectPlayerUseCase(rooms, games, notifier, clock);
     this.#revealEarly = new RevealEarlyUseCase(rooms, games, notifier, clock);
     this.#runOutRound = new RunOutRoundUseCase(rooms, games, notifier, clock);
@@ -278,6 +282,7 @@ export class AcceptanceDriver implements GameDriver {
       notifier,
       clock,
     });
+    this.#deleteClosedRooms = new DeleteClosedRoomsUseCase(rooms, games, clock);
     this.#reportDilemma = new ReportDilemmaUseCase({
       roomRepository: rooms,
       gameRepository: games,
@@ -823,6 +828,16 @@ export class AcceptanceDriver implements GameDriver {
     connecting.connectionId = connectionId;
   }
 
+  async tryToReconnect(player: string): Promise<boolean> {
+    try {
+      await this.reconnect(player);
+      return true;
+    } catch (error) {
+      if (error instanceof RoomNotFoundError) return false;
+      throw error;
+    }
+  }
+
   async dilemmaShownTo(player: string): Promise<number> {
     return (await this.#gameStateOf(player)).round.position + 1;
   }
@@ -929,6 +944,16 @@ export class AcceptanceDriver implements GameDriver {
 
   async letTimePass(seconds: number): Promise<void> {
     this.#clock.advance(seconds * 1000);
+  }
+
+  async deleteClosedRooms(): Promise<void> {
+    await this.#deleteClosedRooms.execute();
+  }
+
+  async isGameDataKept(): Promise<boolean> {
+    const room = await this.#roomRepository.findById(this.#currentRoomId());
+    const game = this.#gameId && (await this.#gameRepository.findById(this.#gameId));
+    return room !== undefined || Boolean(game);
   }
 
   /** The time is over, and the room server runs it out as its timer would. */

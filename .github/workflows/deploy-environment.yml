@@ -92,6 +92,33 @@ jobs:
           url=$(gcloud run services describe realtime --project "$PROJECT" --region europe-southwest1 --format 'value(status.url)')
           curl --silent --show-error --fail --retry 5 --retry-all-errors "$url/health"
 
+      # Every hour, Cloud Scheduler runs the job that deletes the closed rooms with their game data,
+      # so no closed room lasts more than an hour and a quarter. Same image and service account as
+      # the room server, which may already do it; a failed run is tried once more, and the next hour
+      # tries again. The schedule signs in as the scheduler account, which may only run this job.
+      - name: Deploy the job that deletes the closed rooms, and its schedule
+        run: |
+          gcloud run jobs deploy close-rooms --project "$PROJECT" --region europe-southwest1 \
+            --image "$(cat image.txt)" \
+            --service-account "realtime@$PROJECT.iam.gserviceaccount.com" \
+            --command node --args apps/realtime/src/jobs/close-rooms.ts \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=realtime@$PROJECT.iam" \
+            --max-retries 1 --task-timeout 10m \
+            --quiet
+          schedule=(
+            --project "$PROJECT" --location europe-southwest1
+            --schedule "0 * * * *" --time-zone Etc/UTC
+            --uri "https://run.googleapis.com/v2/projects/$PROJECT/locations/europe-southwest1/jobs/close-rooms:run"
+            --http-method POST
+            --oauth-service-account-email "scheduler@$PROJECT.iam.gserviceaccount.com"
+            --quiet
+          )
+          if gcloud scheduler jobs describe close-rooms --project "$PROJECT" --location europe-southwest1 >/dev/null 2>&1; then
+            gcloud scheduler jobs update http close-rooms "${schedule[@]}"
+          else
+            gcloud scheduler jobs create http close-rooms "${schedule[@]}"
+          fi
+
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: web

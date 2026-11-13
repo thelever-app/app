@@ -1,3 +1,4 @@
+import type { Clock } from '../../domain/ports/clock.port.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import type { Randomness } from '../../domain/ports/randomness.port.ts';
 import { PlayerLeftEvent } from '../../domain/events/player-left.event.ts';
@@ -5,7 +6,7 @@ import { AvatarVO } from '../../domain/vos/avatar.vo.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
-import { findRoom } from './find-room.ts';
+import { findOpenRoom } from './find-room.ts';
 import { notifyGame } from './notify-game.ts';
 import { notifyRoom } from './notify-room.ts';
 
@@ -28,7 +29,7 @@ export interface JoinRoomOutput {
  * A new player joins a room with the avatar they chose; whoever is already in it gets their player
  * back, and who had left the game in progress comes back to it as a player. With a game in
  * progress, a player of the room who is not in it joins it late, also one who joined the room
- * before players could.
+ * before players could. Nobody joins a closed room, not even who was in it.
  */
 export class JoinRoomUseCase {
   readonly #roomRepository: RoomRepository;
@@ -36,6 +37,7 @@ export class JoinRoomUseCase {
   readonly #notifier: PlayerNotifier;
   readonly #idGenerator: IdGenerator;
   readonly #randomness: Randomness;
+  readonly #clock: Clock;
 
   constructor(ports: {
     readonly roomRepository: RoomRepository;
@@ -43,16 +45,18 @@ export class JoinRoomUseCase {
     readonly notifier: PlayerNotifier;
     readonly idGenerator: IdGenerator;
     readonly randomness: Randomness;
+    readonly clock: Clock;
   }) {
     this.#roomRepository = ports.roomRepository;
     this.#gameRepository = ports.gameRepository;
     this.#notifier = ports.notifier;
     this.#idGenerator = ports.idGenerator;
     this.#randomness = ports.randomness;
+    this.#clock = ports.clock;
   }
 
   async execute({ roomId, nickname, identity, avatar }: JoinRoomInput): Promise<JoinRoomOutput> {
-    const room = await findRoom(this.#roomRepository, roomId);
+    const room = await findOpenRoom(this.#roomRepository, roomId, this.#clock.now());
 
     const chosen = new AvatarVO(avatar.face, avatar.color);
     const player = room.join({ nickname, identity, avatar: chosen }, this.#idGenerator);

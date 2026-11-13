@@ -40,7 +40,7 @@ export class DisconnectPlayerUseCase {
     const room = await findRoom(this.#roomRepository, roomId);
 
     // Saved even without an event: a connection that closes while another one stays open must not come back.
-    room.disconnect(playerId, connectionId);
+    room.disconnect(playerId, connectionId, this.#clock.now());
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
     if (game?.playerIds.includes(playerId) && game.isInDecisionPhase) {

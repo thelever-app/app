@@ -3,6 +3,13 @@ import type { Room } from '../../domain/entities/room.ts';
 export interface RoomRepository {
   save(room: Room): Promise<void>;
   findById(id: string): Promise<Room | undefined>;
-  /** The open room with that code, which no other open room has. */
+  /** The room with that code, open or closed: no other room has it until a closed one is deleted. */
   findByCode(code: string): Promise<Room | undefined>;
+  /** The rooms with no connection open, which may be closed: whether they are, each room says. */
+  findIdsWithNobodyConnected(): Promise<readonly string[]>;
+  /**
+   * Deletes the room with everything that hangs from it, unless it changed since it was read, as a
+   * player who connected meanwhile would change it. Says whether it did.
+   */
+  delete(room: Room): Promise<boolean>;
 }

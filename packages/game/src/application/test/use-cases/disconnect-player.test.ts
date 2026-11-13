@@ -18,6 +18,7 @@ async function arrange() {
     game.gameRepository,
     notifier,
     game.idGenerator,
+    game.clock,
   );
   const disconnectPlayer = new DisconnectPlayerUseCase(
     game.roomRepository,

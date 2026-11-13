@@ -23,6 +23,9 @@ import { AvatarVO } from '../../vos/avatar.vo.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 import { FixedRandomness } from '../support/fixed-randomness.ts';
 
+/** When everything in these tests happens, unless a test says otherwise. */
+const NOW = new Date('2026-11-12T10:00:00Z');
+
 const ANA_AVATAR = new AvatarVO('face-01', 'khaki');
 
 function roomHostedByAna(): Room {
@@ -35,6 +38,7 @@ function roomHostedByAna(): Room {
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
+      createdAt: NOW,
     },
     new FixedIdGenerator('TestId', 'TestHostId'),
   );
@@ -126,6 +130,7 @@ describe('Room', () => {
             place: 'together',
             dilemmaLanguage: 'es',
             code: 'K7M2Q',
+            createdAt: NOW,
             ...change,
           },
           new FixedIdGenerator('TestId', 'TestHostId'),
@@ -145,6 +150,7 @@ describe('Room', () => {
             place: 'together',
             dilemmaLanguage: 'es',
             code: 'K7M2Q',
+            createdAt: NOW,
           },
           new FixedIdGenerator('', 'TestHostId'),
         ),
@@ -263,6 +269,7 @@ describe('Room', () => {
           place: 'together',
           dilemmaLanguage: 'es',
           code: 'K7M2Q',
+          createdAt: NOW,
         },
         new FixedIdGenerator('TestId', 'TestHostId'),
       );
@@ -797,7 +804,7 @@ describe('Room', () => {
       room.connect('TestHostId', 'TestConnectionId');
 
       // Act
-      room.disconnect('TestHostId', 'TestConnectionId');
+      room.disconnect('TestHostId', 'TestConnectionId', NOW);
 
       // Assert
       expect(room.isConnected('TestHostId')).toBe(false);
@@ -811,7 +818,7 @@ describe('Room', () => {
       room.pullEvents();
 
       // Act
-      room.disconnect('TestHostId', 'TestConnectionId');
+      room.disconnect('TestHostId', 'TestConnectionId', NOW);
 
       // Assert
       expect(room.pullEvents()).toEqual([
@@ -827,7 +834,7 @@ describe('Room', () => {
       room.pullEvents();
 
       // Act
-      room.disconnect('TestHostId', 'TestOldConnectionId');
+      room.disconnect('TestHostId', 'TestOldConnectionId', NOW);
 
       // Assert
       expect(room.isConnected('TestHostId')).toBe(true);
@@ -840,11 +847,11 @@ describe('Room', () => {
       const room = roomHostedByAna();
       room.connect('TestHostId', 'TestFirstConnectionId');
       room.connect('TestHostId', 'TestSecondConnectionId');
-      room.disconnect('TestHostId', 'TestSecondConnectionId');
+      room.disconnect('TestHostId', 'TestSecondConnectionId', NOW);
       room.pullEvents();
 
       // Act
-      room.disconnect('TestHostId', 'TestFirstConnectionId');
+      room.disconnect('TestHostId', 'TestFirstConnectionId', NOW);
 
       // Assert
       expect(room.isConnected('TestHostId')).toBe(false);
@@ -861,7 +868,7 @@ describe('Room', () => {
       room.pullEvents();
 
       // Act
-      room.disconnect('TestHostId', 'TestUnknownConnectionId');
+      room.disconnect('TestHostId', 'TestUnknownConnectionId', NOW);
 
       // Assert
       expect(room.isConnected('TestHostId')).toBe(true);
@@ -874,7 +881,7 @@ describe('Room', () => {
       const room = roomHostedByAna();
 
       // Act
-      room.disconnect('TestHostId', 'TestConnectionId');
+      room.disconnect('TestHostId', 'TestConnectionId', NOW);
 
       // Assert
       expect(room.version).toBe(0);
@@ -885,7 +892,7 @@ describe('Room', () => {
       // Arrange
       const room = roomHostedByAna();
       room.connect('TestHostId', 'TestConnectionId');
-      room.disconnect('TestHostId', 'TestConnectionId');
+      room.disconnect('TestHostId', 'TestConnectionId', NOW);
 
       // Act
       room.connect('TestHostId', 'TestOtherConnectionId');
@@ -946,6 +953,8 @@ describe('Room', () => {
         currentGameId: null,
         absentHostId: null,
         leftPlayerIds: [],
+        lastConnectedAt: NOW,
+        closedAt: null,
       });
     });
 

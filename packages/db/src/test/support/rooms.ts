@@ -30,6 +30,7 @@ export function roomOf(
       place: 'together',
       dilemmaLanguage: 'es',
       code,
+      createdAt: new Date(),
     },
     idGenerator,
   );

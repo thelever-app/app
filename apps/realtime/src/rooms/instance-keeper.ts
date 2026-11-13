@@ -1,6 +1,7 @@
 import type { Logger, PostgresInstances } from '@thelever-app/db';
 import type { DisconnectConnectionsUseCase } from '@thelever-app/game';
 import type { RunCommand } from './run-command.ts';
+import { closeConnectionsOf, forgetSilentInstances } from './silent-instances.ts';
 
 /** A command already running when the instance leaves may save one more connection after it looked. */
 const LEAVE_ATTEMPTS = 5;
@@ -70,7 +71,7 @@ export class InstanceKeeper {
   async leave(): Promise<void> {
     this.stop();
     for (let attempt = 1; ; attempt += 1) {
-      await this.#closeConnectionsOf(this.#instanceId);
+      await closeConnectionsOf(this.#cleaning, this.#instanceId, new Date());
       if (await this.#instances.remove(this.#instanceId)) return;
       if (attempt === LEAVE_ATTEMPTS) {
         throw new Error(`instance ${this.#instanceId} left with connections still open`);
@@ -82,21 +83,17 @@ export class InstanceKeeper {
   async #tick(): Promise<void> {
     // Its sign registers it again, so its players can connect again as soon as it says so.
     if (!(await this.#instances.beat(this.#instanceId))) this.#onForgotten();
-    const silent = await this.#instances.findSilent({
-      forMs: this.#silentAfterMs,
+    await forgetSilentInstances(this.#cleaning, {
+      silentAfterMs: this.#silentAfterMs,
       except: this.#instanceId,
     });
-    for (const instanceId of silent) {
-      // Another instance may clean the same one at once: the lock of each room puts them in order.
-      // If it still has connections, it was not dead after all, or it is cleaned on the next look.
-      await this.#closeConnectionsOf(instanceId);
-      await this.#instances.remove(instanceId);
-    }
   }
 
-  async #closeConnectionsOf(instanceId: string): Promise<void> {
-    for (const room of await this.#instances.connectionsOf(instanceId)) {
-      await this.#runCommand(() => this.#disconnectConnections.execute(room));
-    }
+  get #cleaning() {
+    return {
+      instances: this.#instances,
+      disconnectConnections: this.#disconnectConnections,
+      runCommand: this.#runCommand,
+    };
   }
 }

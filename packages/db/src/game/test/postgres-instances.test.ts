@@ -61,9 +61,8 @@ describe('PostgresInstances', () => {
 
       // Assert
       expect(registered).toBe(false);
-      expect(await instances.findSilent({ forMs: 0, except: 'TestInstanceB' })).toEqual([
-        'TestInstanceA',
-      ]);
+      const silent = await instances.findSilent({ forMs: 0, except: 'TestInstanceB' });
+      expect(silent.map(({ id }) => id)).toEqual(['TestInstanceA']);
     });
   });
 
@@ -79,7 +78,38 @@ describe('PostgresInstances', () => {
       const silent = await instances.findSilent({ forMs: 90_000, except: 'TestInstanceC' });
 
       // Assert
-      expect(silent).toEqual(['TestInstanceA']);
+      expect(silent.map(({ id }) => id)).toEqual(['TestInstanceA']);
+    });
+
+    it('should say when each silent instance was last seen', async () => {
+      // Arrange
+      const { instances } = await roomsOfTwoInstances();
+      await lastSeenAgo('TestInstanceA', 120);
+      const { seen_at: seenAt } = await database
+        .db()
+        .selectFrom('instances')
+        .select('seen_at')
+        .where('id', '=', 'TestInstanceA')
+        .executeTakeFirstOrThrow();
+
+      // Act
+      const silent = await instances.findSilent({ forMs: 90_000, except: 'TestInstanceB' });
+
+      // Assert
+      expect(silent).toEqual([{ id: 'TestInstanceA', seenAt }]);
+    });
+
+    it('should find every silent instance for whoever is not an instance, as a scheduled job', async () => {
+      // Arrange
+      const { instances } = await roomsOfTwoInstances();
+      await lastSeenAgo('TestInstanceA', 120);
+      await lastSeenAgo('TestInstanceB', 120);
+
+      // Act
+      const silent = await instances.findSilent({ forMs: 90_000 });
+
+      // Assert
+      expect(silent.map(({ id }) => id)).toEqual(['TestInstanceA', 'TestInstanceB']);
     });
 
     it('should not find an instance that gave a sign again', async () => {
@@ -137,7 +167,7 @@ describe('PostgresInstances', () => {
     it('should remove an instance with no connections left, and say so', async () => {
       // Arrange
       const { instances, first } = await roomsOfTwoInstances();
-      first.disconnect(first.players[1]!.id, 'TestLuisConnection');
+      first.disconnect(first.players[1]!.id, 'TestLuisConnection', new Date());
       await new PostgresRoomRepository(database.db(), 'TestInstanceA').save(first);
 
       // Act

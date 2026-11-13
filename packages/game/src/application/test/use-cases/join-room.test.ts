@@ -42,6 +42,7 @@ function joinRoomOf(
     notifier,
     idGenerator: ports.idGenerator,
     randomness: new KeepOrderRandomness(),
+    clock: ports.clock,
   });
 }
 

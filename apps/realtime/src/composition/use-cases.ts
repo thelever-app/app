@@ -60,6 +60,8 @@ export interface GameQueriesDependencies {
   readonly catalog: DilemmaCatalog;
   /** The preview suggests an avatar at random. */
   readonly randomness: Randomness;
+  /** The preview shows only an open room. */
+  readonly clock: Clock;
 }
 
 /** The queries of Game: they change nothing, so they notify no one. */
@@ -75,11 +77,12 @@ export function gameQueries({
   gameRepository,
   catalog,
   randomness,
+  clock,
 }: GameQueriesDependencies): GameQueries {
   return {
     getRoomState: new GetRoomStateUseCase(roomRepository, catalog),
     getGameState: new GetGameStateUseCase(roomRepository, gameRepository, catalog),
-    getRoomPreview: new GetRoomPreviewUseCase(roomRepository, randomness),
+    getRoomPreview: new GetRoomPreviewUseCase(roomRepository, randomness, clock),
     searchDilemmas: new SearchDilemmasUseCase(roomRepository, catalog),
   };
 }
@@ -88,7 +91,6 @@ export function gameQueries({
 export interface GameCommandsDependencies extends GameQueriesDependencies {
   readonly notifier: PlayerNotifier;
   readonly idGenerator: IdGenerator;
-  readonly clock: Clock;
 }
 
 /**
@@ -125,15 +127,22 @@ export function gameCommands({
   clock,
 }: GameCommandsDependencies): GameCommands {
   return {
-    createRoom: new CreateRoomUseCase(roomRepository, idGenerator, randomness),
+    createRoom: new CreateRoomUseCase(roomRepository, idGenerator, randomness, clock),
     joinRoom: new JoinRoomUseCase({
       roomRepository,
       gameRepository,
       notifier,
       idGenerator,
       randomness,
+      clock,
     }),
-    connectPlayer: new ConnectPlayerUseCase(roomRepository, gameRepository, notifier, idGenerator),
+    connectPlayer: new ConnectPlayerUseCase(
+      roomRepository,
+      gameRepository,
+      notifier,
+      idGenerator,
+      clock,
+    ),
     disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier, clock),
     disconnectConnections: new DisconnectConnectionsUseCase(roomRepository, notifier),
     changeAvatar: new ChangeAvatarUseCase(roomRepository, notifier),

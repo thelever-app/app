@@ -31,8 +31,8 @@ export async function lobbyOfThree(
   notifier = new InMemoryPlayerNotifier(),
   catalog: InMemoryDilemmaCatalog = testCatalog(),
   variant: RoomVariant = 'nominal',
+  roomRepository = new InMemoryRoomRepository(),
 ) {
-  const roomRepository = new InMemoryRoomRepository();
   const gameRepository = new InMemoryGameRepository();
   const idGenerator = new SequentialIdGenerator();
   const randomness = new SequentialRandomness();
@@ -43,12 +43,14 @@ export async function lobbyOfThree(
     notifier,
     idGenerator,
     randomness,
+    clock,
   });
 
   const { roomId, hostId: anaId } = await new CreateRoomUseCase(
     roomRepository,
     idGenerator,
     randomness,
+    clock,
   ).execute({
     hostNickname: 'Ana',
     hostIdentity: 'TestAnaIdentity',

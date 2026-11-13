@@ -1,0 +1,43 @@
+{
+  "displayName": "Job close-rooms: failed or not run",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "The job that deletes the closed rooms every hour failed, or has not finished well for two hours, so closed rooms may outlive the 24 hours their game data may be kept. Open Cloud Run, Jobs, `close-rooms`, and its last execution's logs; if there is none, open Cloud Scheduler, `close-rooms`, and its last attempt (a 403 means the scheduler account may not run the job). Run it again with `gcloud run jobs execute close-rooms --region europe-southwest1`."
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "An execution failed",
+      "conditionThreshold": {
+        "filter": "metric.type=\"run.googleapis.com/job/completed_execution_count\" AND resource.type=\"cloud_run_job\" AND resource.label.job_name=\"close-rooms\" AND metric.label.result=\"failed\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "300s",
+            "perSeriesAligner": "ALIGN_DELTA",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "0s",
+        "trigger": { "count": 1 }
+      }
+    },
+    {
+      "displayName": "No execution finished well in 2 hours",
+      "conditionAbsent": {
+        "filter": "metric.type=\"run.googleapis.com/job/completed_execution_count\" AND resource.type=\"cloud_run_job\" AND resource.label.job_name=\"close-rooms\" AND metric.label.result=\"succeeded\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "3600s",
+            "perSeriesAligner": "ALIGN_DELTA",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "duration": "7200s",
+        "trigger": { "count": 1 }
+      }
+    }
+  ],
+  "alertStrategy": { "autoClose": "7200s" }
+}

@@ -1,10 +1,11 @@
+import type { Clock } from '../../domain/ports/clock.port.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
 import { IdentityNotInRoomError } from '../errors/identity-not-in-room.error.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
-import { findRoom } from './find-room.ts';
+import { findOpenRoom } from './find-room.ts';
 
 export interface ConnectPlayerInput {
   readonly roomId: string;
@@ -22,28 +23,31 @@ export interface ConnectPlayerOutput {
 /**
  * A player opens a connection to their room, in the lobby or in a game; the others see them
  * connected. During the reveal of a round, a player who connects while the host is away takes the
- * role if nobody could take it when the dilemma was revealed.
+ * role if nobody could take it when the dilemma was revealed. A closed room takes nobody back.
  */
 export class ConnectPlayerUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
   readonly #idGenerator: IdGenerator;
+  readonly #clock: Clock;
 
   constructor(
     roomRepository: RoomRepository,
     gameRepository: GameRepository,
     notifier: PlayerNotifier,
     idGenerator: IdGenerator,
+    clock: Clock,
   ) {
     this.#roomRepository = roomRepository;
     this.#gameRepository = gameRepository;
     this.#notifier = notifier;
     this.#idGenerator = idGenerator;
+    this.#clock = clock;
   }
 
   async execute({ roomId, identity }: ConnectPlayerInput): Promise<ConnectPlayerOutput> {
-    const room = await findRoom(this.#roomRepository, roomId);
+    const room = await findOpenRoom(this.#roomRepository, roomId, this.#clock.now());
     const playerId = room.playerWith(identity)?.id;
     if (!playerId) throw new IdentityNotInRoomError(roomId);
 

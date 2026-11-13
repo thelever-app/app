@@ -7,6 +7,9 @@ import { FixedRandomness } from '../support/fixed-randomness.ts';
 import { AvatarVO } from '../../vos/avatar.vo.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 
+/** When everything in these tests happens, unless a test says otherwise. */
+const NOW = new Date('2026-11-12T10:00:00Z');
+
 /** Ana hosts, Luis joined before Marta, all three connected, and a game in progress they play. */
 function roomInGame(): Room {
   const room = Room.create(
@@ -18,6 +21,7 @@ function roomInGame(): Room {
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
+      createdAt: NOW,
     },
     new FixedIdGenerator('TestRoomId', 'Ana'),
   );
@@ -67,7 +71,7 @@ describe('Room, host and leaving', () => {
       const room = roomInGame();
 
       // Act
-      room.leave('Ana', PLAYERS);
+      room.leave('Ana', PLAYERS, NOW);
       room.connect('Ana', 'AnaOtherConnection');
 
       // Assert
@@ -78,11 +82,11 @@ describe('Room, host and leaving', () => {
     it('should pass the role of a host who leaves even when nobody else is connected', () => {
       // Arrange
       const room = roomInGame();
-      room.disconnect('Luis', 'LuisConnection');
-      room.disconnect('Marta', 'MartaConnection');
+      room.disconnect('Luis', 'LuisConnection', NOW);
+      room.disconnect('Marta', 'MartaConnection', NOW);
 
       // Act
-      room.leave('Ana', PLAYERS);
+      room.leave('Ana', PLAYERS, NOW);
 
       // Assert
       expect(room.host.id).toBe('Luis');
@@ -92,11 +96,11 @@ describe('Room, host and leaving', () => {
       // Arrange
       const room = roomInGame();
       pedroJoins(room);
-      room.leave('Luis', PLAYERS);
-      room.leave('Marta', PLAYERS);
+      room.leave('Luis', PLAYERS, NOW);
+      room.leave('Marta', PLAYERS, NOW);
 
       // Act
-      room.leave('Ana', PLAYERS);
+      room.leave('Ana', PLAYERS, NOW);
 
       // Assert
       expect(room.host.id).toBe('Ana');
@@ -107,7 +111,7 @@ describe('Room, host and leaving', () => {
       const room = roomInGame();
 
       // Act
-      room.leave('Marta', PLAYERS);
+      room.leave('Marta', PLAYERS, NOW);
 
       // Assert
       expect(room.isConnected('Marta')).toBe(false);
@@ -128,12 +132,13 @@ describe('Room, host and leaving', () => {
           place: 'together',
           dilemmaLanguage: 'es',
           code: 'K7M2Q',
+          createdAt: NOW,
         },
         new FixedIdGenerator('TestRoomId', 'Ana'),
       );
 
       // Act & Assert
-      expect(() => room.leave('Ana', PLAYERS)).toThrow(GameNotInProgressError);
+      expect(() => room.leave('Ana', PLAYERS, NOW)).toThrow(GameNotInProgressError);
     });
   });
 
@@ -141,7 +146,7 @@ describe('Room, host and leaving', () => {
     it('should bring back who left as a player, not as the host', () => {
       // Arrange
       const room = roomInGame();
-      room.leave('Ana', PLAYERS);
+      room.leave('Ana', PLAYERS, NOW);
       room.pullEvents();
 
       // Act
@@ -170,7 +175,7 @@ describe('Room, host and leaving', () => {
       const room = roomInGame();
 
       // Act
-      room.disconnect('Luis', 'LuisConnection');
+      room.disconnect('Luis', 'LuisConnection', NOW);
 
       // Assert
       expect(room.connectedPlayerIds).toEqual(['Ana', 'Marta']);
@@ -181,8 +186,8 @@ describe('Room, host and leaving', () => {
     it('should pass the role of a disconnected host to the connected player in the room longest', () => {
       // Arrange
       const room = roomInGame();
-      room.disconnect('Ana', 'AnaConnection');
-      room.disconnect('Luis', 'LuisConnection');
+      room.disconnect('Ana', 'AnaConnection', NOW);
+      room.disconnect('Luis', 'LuisConnection', NOW);
       room.pullEvents();
 
       // Act
@@ -199,9 +204,9 @@ describe('Room, host and leaving', () => {
       // Arrange
       const room = roomInGame();
       pedroJoins(room);
-      room.disconnect('Ana', 'AnaConnection');
-      room.disconnect('Luis', 'LuisConnection');
-      room.disconnect('Marta', 'MartaConnection');
+      room.disconnect('Ana', 'AnaConnection', NOW);
+      room.disconnect('Luis', 'LuisConnection', NOW);
+      room.disconnect('Marta', 'MartaConnection', NOW);
 
       // Act
       room.handOverHost(PLAYERS);
@@ -224,7 +229,7 @@ describe('Room, host and leaving', () => {
     it('should give the role back to the host when they connect again', () => {
       // Arrange
       const room = roomInGame();
-      room.disconnect('Ana', 'AnaConnection');
+      room.disconnect('Ana', 'AnaConnection', NOW);
       room.handOverHost(PLAYERS);
       room.pullEvents();
 
@@ -241,9 +246,9 @@ describe('Room, host and leaving', () => {
     it('should keep everything through a snapshot', () => {
       // Arrange
       const room = roomInGame();
-      room.disconnect('Ana', 'AnaConnection');
+      room.disconnect('Ana', 'AnaConnection', NOW);
       room.handOverHost(PLAYERS);
-      room.leave('Marta', PLAYERS);
+      room.leave('Marta', PLAYERS, NOW);
 
       // Act
       const restored = Room.restore(room.toSnapshot());

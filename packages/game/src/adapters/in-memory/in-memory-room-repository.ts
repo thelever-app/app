@@ -20,4 +20,15 @@ export class InMemoryRoomRepository implements RoomRepository {
     );
     return snapshot && Room.restore(snapshot);
   }
+
+  async findIdsWithNobodyConnected(): Promise<readonly string[]> {
+    return [...this.#snapshots.values()]
+      .filter(({ connections }) => connections.length === 0)
+      .map(({ id }) => id);
+  }
+
+  async delete(room: Room): Promise<boolean> {
+    if (this.#snapshots.get(room.id)?.version !== room.version) return false;
+    return this.#snapshots.delete(room.id);
+  }
 }
