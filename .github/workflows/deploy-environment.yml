@@ -128,6 +128,8 @@ jobs:
       # the room server, which may already do it; a failed run is tried once more, and the next hour
       # tries again. The schedule signs in as the scheduler account, which may only run this job.
       # Last, after the web: if it fails, the room server and the web it serves are already in step.
+      # Cloud Scheduler has no Madrid region: the schedule lives in Belgium, in the EU, and holds no
+      # personal data, only when to run the job, which stays in Madrid next to the database.
       - name: Deploy the job that deletes the closed rooms, and its schedule
         run: |
           gcloud run jobs deploy close-rooms --project "$PROJECT" --region europe-southwest1 \
@@ -138,14 +140,14 @@ jobs:
             --max-retries 1 --task-timeout 10m \
             --quiet
           schedule=(
-            --project "$PROJECT" --location europe-southwest1
+            --project "$PROJECT" --location europe-west1
             --schedule "0 * * * *" --time-zone Etc/UTC
             --uri "https://run.googleapis.com/v2/projects/$PROJECT/locations/europe-southwest1/jobs/close-rooms:run"
             --http-method POST
             --oauth-service-account-email "scheduler@$PROJECT.iam.gserviceaccount.com"
             --quiet
           )
-          if gcloud scheduler jobs describe close-rooms --project "$PROJECT" --location europe-southwest1 >/dev/null 2>&1; then
+          if gcloud scheduler jobs describe close-rooms --project "$PROJECT" --location europe-west1 >/dev/null 2>&1; then
             gcloud scheduler jobs update http close-rooms "${schedule[@]}"
           else
             gcloud scheduler jobs create http close-rooms "${schedule[@]}"
