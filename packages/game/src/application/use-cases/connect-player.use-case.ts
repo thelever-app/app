@@ -5,7 +5,7 @@ import { IdentityNotInRoomError } from '../errors/identity-not-in-room.error.ts'
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
-import { findOpenRoom } from './find-room.ts';
+import { findRoom } from './find-room.ts';
 
 export interface ConnectPlayerInput {
   readonly roomId: string;
@@ -47,12 +47,12 @@ export class ConnectPlayerUseCase {
   }
 
   async execute({ roomId, identity }: ConnectPlayerInput): Promise<ConnectPlayerOutput> {
-    const room = await findOpenRoom(this.#roomRepository, roomId, this.#clock.now());
+    const room = await findRoom(this.#roomRepository, roomId);
     const playerId = room.playerWith(identity)?.id;
     if (!playerId) throw new IdentityNotInRoomError(roomId);
 
     const connectionId = this.#idGenerator.generate();
-    room.connect(playerId, connectionId);
+    room.connect(playerId, connectionId, this.#clock.now());
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
     if (game) handOverHostIfAway(room, game);

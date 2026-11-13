@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Room } from '../../entities/room.ts';
+import { RoomClosedError } from '../../errors/room-closed.error.ts';
 import { AvatarVO } from '../../vos/avatar.vo.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 import { FixedRandomness } from '../support/fixed-randomness.ts';
@@ -34,6 +35,7 @@ function roomOfTwo(): Room {
       avatar: room.suggestAvatar(new FixedRandomness()),
     },
     new FixedIdGenerator('Luis'),
+    CREATED_AT,
   );
   return room;
 }
@@ -42,7 +44,7 @@ function roomOfTwo(): Room {
 function roomInGame(): Room {
   const room = roomOfTwo();
   room.startGame('Ana', 'TestGameId');
-  for (const playerId of PLAYERS) room.connect(playerId, `${playerId}Connection`);
+  for (const playerId of PLAYERS) room.connect(playerId, `${playerId}Connection`, CREATED_AT);
   return room;
 }
 
@@ -114,7 +116,7 @@ describe('Room, closing', () => {
       for (const playerId of PLAYERS) {
         room.disconnect(playerId, `${playerId}Connection`, minutesLater(20));
       }
-      room.connect('Luis', 'LuisOtherConnection');
+      room.connect('Luis', 'LuisOtherConnection', minutesLater(20));
       room.disconnect('Luis', 'LuisOtherConnection', minutesLater(30));
 
       // Act
@@ -162,6 +164,70 @@ describe('Room, closing', () => {
       // Assert
       expect(stillOpen).toBe(true);
       expect(open).toBe(false);
+    });
+  });
+
+  describe('closing connections late', () => {
+    it('should count from the latest connection that closed, also one that closed while another was still open', () => {
+      // Arrange: Luis leaves at 40 while the connection of Ana, through an instance that died at 30, is still open.
+      const room = roomInGame();
+      room.disconnect('Luis', 'LuisConnection', minutesLater(40));
+      room.disconnect('Ana', 'AnaConnection', minutesLater(30));
+
+      // Act
+      const open = room.isOpenAt(minutesLater(54));
+
+      // Assert
+      expect(open).toBe(true);
+    });
+  });
+
+  describe('a closed room lets nobody in', () => {
+    it('should not let anyone join once nobody has been connected for 15 minutes', () => {
+      // Arrange
+      const room = roomOfTwo();
+
+      // Act & Assert
+      expect(() =>
+        room.join(
+          {
+            nickname: 'Pedro',
+            identity: 'TestPedroIdentity',
+            avatar: new AvatarVO('face-04', 'teal'),
+          },
+          new FixedIdGenerator('Pedro'),
+          minutesLater(15),
+        ),
+      ).toThrow(RoomClosedError);
+    });
+
+    it('should not let a player of the room back in once everyone has left', () => {
+      // Arrange
+      const room = roomInGame();
+      for (const playerId of PLAYERS) room.leave(playerId, PLAYERS, minutesLater(20));
+      const luis = room.players[1]!;
+
+      // Act & Assert
+      expect(() =>
+        room.join(
+          { nickname: luis.nickname, identity: luis.identity, avatar: luis.avatar },
+          new FixedIdGenerator('Luis'),
+          minutesLater(20),
+        ),
+      ).toThrow(RoomClosedError);
+    });
+
+    it('should not let a player of the room connect once it is closed', () => {
+      // Arrange
+      const room = roomInGame();
+      for (const playerId of PLAYERS) {
+        room.disconnect(playerId, `${playerId}Connection`, minutesLater(20));
+      }
+
+      // Act & Assert
+      expect(() => room.connect('Luis', 'LuisOtherConnection', minutesLater(35))).toThrow(
+        RoomClosedError,
+      );
     });
   });
 

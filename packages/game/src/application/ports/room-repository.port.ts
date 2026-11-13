@@ -8,8 +8,10 @@ export interface RoomRepository {
   /** The rooms with no connection open, which may be closed: whether they are, each room says. */
   findIdsWithNobodyConnected(): Promise<readonly string[]>;
   /**
-   * Deletes the room with everything that hangs from it, unless it changed since it was read, as a
-   * player who connected meanwhile would change it. Says whether it did.
+   * Deletes the room with its players, their connections and its lobby, unless it changed since it
+   * was read, as a player who connected meanwhile would change it. Says whether it did. Its games
+   * are deleted with `GameRepository.deleteOfRoom`; an adapter whose tables tie them to the room
+   * may delete them here too.
    */
   delete(room: Room): Promise<boolean>;
 }

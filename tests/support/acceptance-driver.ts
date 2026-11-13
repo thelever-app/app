@@ -35,8 +35,8 @@ import {
   ProgressUpdatedEvent,
   RemoveAddedDilemmaUseCase,
   RoomCodeNotFoundError,
+  RoomClosedError,
   RoomFullError,
-  RoomNotFoundError,
   SearchDilemmasUseCase,
   StartGameUseCase,
   AvatarVO,
@@ -833,7 +833,7 @@ export class AcceptanceDriver implements GameDriver {
       await this.reconnect(player);
       return true;
     } catch (error) {
-      if (error instanceof RoomNotFoundError) return false;
+      if (error instanceof RoomClosedError) return false;
       throw error;
     }
   }

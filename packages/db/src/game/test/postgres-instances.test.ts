@@ -18,12 +18,12 @@ async function roomsOfTwoInstances() {
   const idGenerator = new SequentialIdGenerator();
   const first = roomOf('Ana', ['Luis'], idGenerator, 'K7M2Q');
   const second = roomOf('Eva', [], idGenerator, 'P4R8T');
-  first.connect(first.host.id, 'TestAnaConnection');
-  second.connect(second.host.id, 'TestEvaConnection');
+  first.connect(first.host.id, 'TestAnaConnection', new Date());
+  second.connect(second.host.id, 'TestEvaConnection', new Date());
   const ofA = new PostgresRoomRepository(database.db(), 'TestInstanceA');
   await ofA.save(first);
   await ofA.save(second);
-  first.connect(first.players[1]!.id, 'TestLuisConnection');
+  first.connect(first.players[1]!.id, 'TestLuisConnection', new Date());
   await new PostgresRoomRepository(database.db(), 'TestInstanceB').save(first);
   return { instances, first, second };
 }

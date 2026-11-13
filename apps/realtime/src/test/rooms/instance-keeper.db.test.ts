@@ -52,10 +52,10 @@ describe('InstanceKeeper', () => {
         },
         new SequentialIdGenerator(),
       );
-      room.connect(room.host.id, 'TestAnaConnection');
+      room.connect(room.host.id, 'TestAnaConnection', new Date());
       const instances = new InstancesWithALateConnection(db, async () => {
         const saved = await rooms.findById(room.id);
-        saved!.connect(saved!.host.id, 'TestLateConnection');
+        saved!.connect(saved!.host.id, 'TestLateConnection', new Date());
         await rooms.save(saved!);
       });
       const keeper = new InstanceKeeper(

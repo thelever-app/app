@@ -6,7 +6,7 @@ import { AvatarVO } from '../../domain/vos/avatar.vo.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
-import { findOpenRoom } from './find-room.ts';
+import { findRoom } from './find-room.ts';
 import { notifyGame } from './notify-game.ts';
 import { notifyRoom } from './notify-room.ts';
 
@@ -56,10 +56,14 @@ export class JoinRoomUseCase {
   }
 
   async execute({ roomId, nickname, identity, avatar }: JoinRoomInput): Promise<JoinRoomOutput> {
-    const room = await findOpenRoom(this.#roomRepository, roomId, this.#clock.now());
+    const room = await findRoom(this.#roomRepository, roomId);
 
     const chosen = new AvatarVO(avatar.face, avatar.color);
-    const player = room.join({ nickname, identity, avatar: chosen }, this.#idGenerator);
+    const player = room.join(
+      { nickname, identity, avatar: chosen },
+      this.#idGenerator,
+      this.#clock.now(),
+    );
     const events = room.pullEvents();
     const returned = events.some((event) => event instanceof PlayerLeftEvent && !event.left);
     // The room first: a player of the game must be a player of the room.

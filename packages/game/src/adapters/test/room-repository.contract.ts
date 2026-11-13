@@ -33,6 +33,7 @@ function join(saved: Room, name: string): void {
       avatar: saved.suggestAvatar(new FixedRandomness()),
     },
     new FixedIdGenerator(`Test${name}Id`),
+    NOW,
   );
 }
 
@@ -64,9 +65,9 @@ export function describeRoomRepositoryContract(
         const saved = room();
         join(saved, 'Luis');
         join(saved, 'Eva');
-        saved.connect('TestAnaId', 'TestAnaConnection1');
-        saved.connect('TestAnaId', 'TestAnaConnection2');
-        saved.connect('TestEvaId', 'TestEvaConnection');
+        saved.connect('TestAnaId', 'TestAnaConnection1', NOW);
+        saved.connect('TestAnaId', 'TestAnaConnection2', NOW);
+        saved.connect('TestEvaId', 'TestEvaConnection', NOW);
         await repository.save(saved);
 
         // Act
@@ -100,7 +101,7 @@ export function describeRoomRepositoryContract(
 
         // Act
         join(saved, 'Luis');
-        saved.connect('TestLuisId', 'TestLuisConnection');
+        saved.connect('TestLuisId', 'TestLuisConnection', NOW);
 
         // Assert
         const found = await repository.findById('TestRoomId');
@@ -142,9 +143,9 @@ export function describeRoomRepositoryContract(
         const repository = await create();
         const neverConnected = room('TestNeverRoomId', 'TestNeverAnaId', 'K7M2Q');
         const connected = room('TestConnectedRoomId', 'TestConnectedAnaId', 'P3X8W');
-        connected.connect('TestConnectedAnaId', 'TestConnectedAnaConnection');
+        connected.connect('TestConnectedAnaId', 'TestConnectedAnaConnection', NOW);
         const disconnected = room('TestDisconnectedRoomId', 'TestDisconnectedAnaId', 'H4N9R');
-        disconnected.connect('TestDisconnectedAnaId', 'TestDisconnectedAnaConnection');
+        disconnected.connect('TestDisconnectedAnaId', 'TestDisconnectedAnaConnection', NOW);
         disconnected.disconnect('TestDisconnectedAnaId', 'TestDisconnectedAnaConnection', NOW);
         for (const saved of [neverConnected, connected, disconnected]) await repository.save(saved);
 
@@ -180,7 +181,7 @@ export function describeRoomRepositoryContract(
         await repository.save(room());
         const read = await repository.findById('TestRoomId');
         const meanwhile = await repository.findById('TestRoomId');
-        meanwhile!.connect('TestAnaId', 'TestAnaConnection');
+        meanwhile!.connect('TestAnaId', 'TestAnaConnection', NOW);
         await repository.save(meanwhile!);
 
         // Act
@@ -234,6 +235,7 @@ export function describeRoomRepositoryContract(
         saved.join(
           { nickname: 'Luis', identity: 'TestLuisIdentity', avatar: saved.host.avatar },
           new FixedIdGenerator('TestLuisId'),
+          NOW,
         );
 
         // Act
@@ -251,7 +253,7 @@ export function describeRoomRepositoryContract(
         const saved = room();
         await repository.save(saved);
         join(saved, 'Luis');
-        saved.connect('TestLuisId', 'TestLuisConnection');
+        saved.connect('TestLuisId', 'TestLuisConnection', NOW);
 
         // Act
         await repository.save(saved);
@@ -267,9 +269,9 @@ export function describeRoomRepositoryContract(
         const repository = await create();
         const saved = room();
         join(saved, 'Luis');
-        saved.connect('TestAnaId', 'TestAnaConnection1');
-        saved.connect('TestAnaId', 'TestAnaConnection2');
-        saved.connect('TestLuisId', 'TestLuisConnection');
+        saved.connect('TestAnaId', 'TestAnaConnection1', NOW);
+        saved.connect('TestAnaId', 'TestAnaConnection2', NOW);
+        saved.connect('TestLuisId', 'TestLuisConnection', NOW);
         await repository.save(saved);
         saved.disconnect('TestAnaId', 'TestAnaConnection1', NOW);
         saved.disconnect('TestLuisId', 'TestLuisConnection', NOW);

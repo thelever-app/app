@@ -57,6 +57,7 @@ function join(
   room.join(
     { nickname, identity: id.replace(/Id$/, 'Identity'), avatar },
     new FixedIdGenerator(id),
+    NOW,
   );
 }
 
@@ -217,6 +218,7 @@ describe('Room', () => {
       const player = room.join(
         { nickname: 'Luis again', identity: 'TestLuisIdentity', avatar: ANA_AVATAR },
         new FixedIdGenerator('TestOtherId'),
+        NOW,
       );
 
       // Assert
@@ -591,7 +593,7 @@ describe('Room', () => {
       const room = lobbyOfThree();
       room.changeSettings('TestHostId', { dilemmasPerPlayer: 1 });
       room.addDilemma('TestMartaId', FOR_EVERYONE);
-      room.connect('TestMartaId', 'TestConnectionId');
+      room.connect('TestMartaId', 'TestConnectionId', NOW);
       room.pullEvents();
 
       // Act
@@ -745,7 +747,7 @@ describe('Room', () => {
       const room = roomHostedByAna();
 
       // Act
-      room.connect('TestHostId', 'TestConnectionId');
+      room.connect('TestHostId', 'TestConnectionId', NOW);
 
       // Assert
       expect(room.isConnected('TestHostId')).toBe(true);
@@ -757,7 +759,7 @@ describe('Room', () => {
       const room = roomHostedByAna();
 
       // Act
-      room.connect('TestHostId', 'TestConnectionId');
+      room.connect('TestHostId', 'TestConnectionId', NOW);
 
       // Assert
       expect(room.pullEvents()).toEqual([
@@ -768,11 +770,11 @@ describe('Room', () => {
     it('should keep a player who is already connected connected through another connection, without any event', () => {
       // Arrange
       const room = roomHostedByAna();
-      room.connect('TestHostId', 'TestFirstConnectionId');
+      room.connect('TestHostId', 'TestFirstConnectionId', NOW);
       room.pullEvents();
 
       // Act
-      room.connect('TestHostId', 'TestSecondConnectionId');
+      room.connect('TestHostId', 'TestSecondConnectionId', NOW);
 
       // Assert
       expect(room.isConnected('TestHostId')).toBe(true);
@@ -785,7 +787,9 @@ describe('Room', () => {
       const room = roomHostedByAna();
 
       // Act & Assert
-      expect(() => room.connect('TestUnknownId', 'TestConnectionId')).toThrow(PlayerNotInRoomError);
+      expect(() => room.connect('TestUnknownId', 'TestConnectionId', NOW)).toThrow(
+        PlayerNotInRoomError,
+      );
     });
 
     it('should throw an error if the connection id is missing', () => {
@@ -793,7 +797,7 @@ describe('Room', () => {
       const room = roomHostedByAna();
 
       // Act & Assert
-      expect(() => room.connect('TestHostId', '')).toThrow(IdMissingError);
+      expect(() => room.connect('TestHostId', '', NOW)).toThrow(IdMissingError);
     });
   });
 
@@ -801,7 +805,7 @@ describe('Room', () => {
     it('should disconnect the player and raise the version', () => {
       // Arrange
       const room = roomHostedByAna();
-      room.connect('TestHostId', 'TestConnectionId');
+      room.connect('TestHostId', 'TestConnectionId', NOW);
 
       // Act
       room.disconnect('TestHostId', 'TestConnectionId', NOW);
@@ -814,7 +818,7 @@ describe('Room', () => {
     it('should record a connection changed event with the new version', () => {
       // Arrange
       const room = roomHostedByAna();
-      room.connect('TestHostId', 'TestConnectionId');
+      room.connect('TestHostId', 'TestConnectionId', NOW);
       room.pullEvents();
 
       // Act
@@ -829,8 +833,8 @@ describe('Room', () => {
     it('should ignore the late close of a connection the player already reopened', () => {
       // Arrange
       const room = roomHostedByAna();
-      room.connect('TestHostId', 'TestOldConnectionId');
-      room.connect('TestHostId', 'TestNewConnectionId');
+      room.connect('TestHostId', 'TestOldConnectionId', NOW);
+      room.connect('TestHostId', 'TestNewConnectionId', NOW);
       room.pullEvents();
 
       // Act
@@ -845,8 +849,8 @@ describe('Room', () => {
     it('should disconnect the player when their last open connection closes', () => {
       // Arrange
       const room = roomHostedByAna();
-      room.connect('TestHostId', 'TestFirstConnectionId');
-      room.connect('TestHostId', 'TestSecondConnectionId');
+      room.connect('TestHostId', 'TestFirstConnectionId', NOW);
+      room.connect('TestHostId', 'TestSecondConnectionId', NOW);
       room.disconnect('TestHostId', 'TestSecondConnectionId', NOW);
       room.pullEvents();
 
@@ -864,7 +868,7 @@ describe('Room', () => {
     it('should ignore a connection of the player that is not open', () => {
       // Arrange
       const room = roomHostedByAna();
-      room.connect('TestHostId', 'TestConnectionId');
+      room.connect('TestHostId', 'TestConnectionId', NOW);
       room.pullEvents();
 
       // Act
@@ -891,11 +895,11 @@ describe('Room', () => {
     it('should connect again after a disconnection', () => {
       // Arrange
       const room = roomHostedByAna();
-      room.connect('TestHostId', 'TestConnectionId');
+      room.connect('TestHostId', 'TestConnectionId', NOW);
       room.disconnect('TestHostId', 'TestConnectionId', NOW);
 
       // Act
-      room.connect('TestHostId', 'TestOtherConnectionId');
+      room.connect('TestHostId', 'TestOtherConnectionId', NOW);
 
       // Assert
       expect(room.isConnected('TestHostId')).toBe(true);
@@ -931,7 +935,7 @@ describe('Room', () => {
     it('should give everything about the room as plain data', () => {
       // Arrange
       const room = lobbyOfThree();
-      room.connect('TestLuisId', 'TestConnectionId');
+      room.connect('TestLuisId', 'TestConnectionId', NOW);
 
       // Act
       const snapshot = room.toSnapshot();
@@ -964,8 +968,8 @@ describe('Room', () => {
       room.changeSettings('TestHostId', { dilemmasPerPlayer: 1, adultsOnly: true });
       room.addDilemma('TestLuisId', FOR_ADULTS);
       room.pickDilemmas('TestHostId', [FOR_EVERYONE]);
-      room.connect('TestHostId', 'TestFirstConnectionId');
-      room.connect('TestHostId', 'TestSecondConnectionId');
+      room.connect('TestHostId', 'TestFirstConnectionId', NOW);
+      room.connect('TestHostId', 'TestSecondConnectionId', NOW);
       join(room, 'TestPabloId', 'Pablo');
       room.expel('TestHostId', 'TestPabloId');
       room.startGame('TestHostId', 'TestGameId');

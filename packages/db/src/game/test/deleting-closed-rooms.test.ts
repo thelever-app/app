@@ -123,7 +123,7 @@ async function playedRoom() {
       SEAL_BEFORE_FIRST_ACCESS,
       startedAt,
     );
-    room.connect(player.id, `Test${player.nickname}Connection`);
+    room.connect(player.id, `Test${player.nickname}Connection`, new Date());
   }
   const rooms = new PostgresRoomRepository(database.db(), 'TestInstanceId');
   const games = new PostgresGameRepository(database.db());

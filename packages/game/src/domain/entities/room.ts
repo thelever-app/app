@@ -10,6 +10,7 @@ import { NotEnoughPlayersError } from '../errors/not-enough-players.error.ts';
 import { NotHostError } from '../errors/not-host.error.ts';
 import { PlayerExpelledError } from '../errors/player-expelled.error.ts';
 import { PlayerNotInRoomError } from '../errors/player-not-in-room.error.ts';
+import { RoomClosedError } from '../errors/room-closed.error.ts';
 import { RoomFullError } from '../errors/room-full.error.ts';
 import { TooManyAddedDilemmasError } from '../errors/too-many-added-dilemmas.error.ts';
 import { ConnectionChangedEvent } from '../events/connection-changed.event.ts';
@@ -74,7 +75,7 @@ export interface RoomSnapshot {
   readonly absentHostId: string | null;
   /** Who left the game in progress on purpose. */
   readonly leftPlayerIds: readonly string[];
-  /** When its last connection closed; until anyone connects, when it was created. */
+  /** When the latest of its connections closed; until any closes, when it was created. */
   readonly lastConnectedAt: Date;
   /** When every player had left; the room closes too after a while with nobody connected. */
   readonly closedAt: Date | null;
@@ -199,7 +200,7 @@ export class Room {
   /**
    * Whether the room still lets anyone in at that moment. It closes when every player has left, or
    * after a while with no player connected; while anyone is connected, it stays open even if
-   * nobody does anything. Once closed, it never opens again.
+   * nobody does anything. Once closed, it never opens again: it lets nobody join or connect.
    */
   isOpenAt(now: Date): boolean {
     if (this.#closedAt) return false;
@@ -214,7 +215,7 @@ export class Room {
 
   /**
    * A new player joins with the avatar they chose. Whoever is already in the room gets their player
-   * back, so joining twice changes nothing.
+   * back, so joining twice changes nothing. Nobody joins a closed room, not even who was in it.
    */
   join(
     {
@@ -223,7 +224,9 @@ export class Room {
       avatar,
     }: { readonly nickname: string; readonly identity: string; readonly avatar: AvatarVO },
     idGenerator: IdGenerator,
+    at: Date,
   ): Player {
+    this.#ensureOpenAt(at);
     const existing = this.playerWith(identity);
     if (existing) {
       // Who left the game on purpose comes back as a player, never as the host.
@@ -374,9 +377,10 @@ export class Room {
 
   /**
    * The player opens a connection, on top of any others they have open, such as another tab. A
-   * host who lost the role while disconnected gets it back.
+   * host who lost the role while disconnected gets it back. A closed room takes nobody back.
    */
-  connect(playerId: string, connectionId: string): void {
+  connect(playerId: string, connectionId: string, at: Date): void {
+    this.#ensureOpenAt(at);
     const connection = new IdVO(connectionId);
     const wasConnected = this.isConnected(playerId);
 
@@ -402,7 +406,10 @@ export class Room {
     if (this.#leftPlayerIds.has(playerId)) return;
 
     this.#leftPlayerIds.add(playerId);
-    if (this.#connections.delete(playerId)) this.#lastConnectionClosed(playerId, at);
+    if (this.#connections.delete(playerId)) {
+      this.#connectionClosed(at);
+      this.#changeConnection(playerId, false);
+    }
     if (this.#leftPlayerIds.size === this.#players.length) this.#closedAt = new Date(at);
     this.#version += 1;
     this.#events.push(new PlayerLeftEvent(this.id, playerId, true, this.#version));
@@ -433,10 +440,11 @@ export class Room {
   disconnect(playerId: string, connectionId: string, at: Date): void {
     const open = this.#connections.get(playerId);
     if (!open?.delete(connectionId)) return;
+    this.#connectionClosed(at);
     if (open.size > 0) return;
 
     this.#connections.delete(playerId);
-    this.#lastConnectionClosed(playerId, at);
+    this.#changeConnection(playerId, false);
   }
 
   /** Who has a connection open, in the order they joined. */
@@ -577,10 +585,16 @@ export class Room {
     this.#events.push(new HostChangedEvent(this.id, hostId, this.#version));
   }
 
-  /** The player has no connection open any more; if nobody has, the room counts from now. */
-  #lastConnectionClosed(playerId: string, at: Date): void {
-    if (this.#connections.size === 0) this.#lastConnectedAt = new Date(at);
-    this.#changeConnection(playerId, false);
+  /**
+   * A connection closed at that moment. The room counts from the latest one that closed, never back:
+   * the connections of an instance that died are closed later, as closed when it was last seen.
+   */
+  #connectionClosed(at: Date): void {
+    if (at > this.#lastConnectedAt) this.#lastConnectedAt = new Date(at);
+  }
+
+  #ensureOpenAt(at: Date): void {
+    if (!this.isOpenAt(at)) throw new RoomClosedError(this.id);
   }
 
   #changeConnection(playerId: string, connected: boolean): void {

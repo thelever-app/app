@@ -39,10 +39,13 @@ function roomAndGame(): { room: Room; game: Game } {
     room.join(
       { nickname, identity: `Test${nickname}Identity`, avatar: room.suggestAvatar(randomness) },
       new FixedIdGenerator(nickname),
+      NOW,
     );
   }
   room.startGame('Ana', 'TestGameId');
-  for (const playerId of ['Ana', 'Luis', 'Marta']) room.connect(playerId, `${playerId}Connection`);
+  for (const playerId of ['Ana', 'Luis', 'Marta']) {
+    room.connect(playerId, `${playerId}Connection`, NOW);
+  }
   const game = Game.create(
     {
       roomId: 'TestRoomId',

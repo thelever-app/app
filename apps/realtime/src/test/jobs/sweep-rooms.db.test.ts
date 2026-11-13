@@ -49,18 +49,34 @@ async function lastSeenAgo(id: string, seconds: number): Promise<void> {
     .execute();
 }
 
-/** Saves the room with its host connected through that instance. */
-async function connectedThrough(instanceId: string, room: Room): Promise<void> {
-  room.connect(room.host.id, `${instanceId}Connection${room.code}`);
+/** Saves the room with its host connected through that instance since the room was created. */
+async function connectedThrough(instanceId: string, room: Room, createdAt: Date): Promise<void> {
+  room.connect(room.host.id, `${instanceId}Connection${room.code}`, createdAt);
   await new PostgresRoomRepository(database.db(), instanceId).save(room);
 }
 
-async function sweep(): Promise<readonly string[]> {
+/** That many minutes ago. */
+function minutesAgo(minutes: number): Date {
+  return new Date(Date.now() - minutes * 60_000);
+}
+
+/** Closes no connection: as if the room behind a dead instance could not be read. */
+class FailingDisconnectConnections extends DisconnectConnectionsUseCase {
+  override async execute(): Promise<void> {
+    throw new Error('The room cannot be read');
+  }
+}
+
+async function sweep(
+  disconnectConnections?: DisconnectConnectionsUseCase,
+): Promise<readonly string[]> {
   const db = database.db();
   const rooms = new PostgresRoomRepository(db, 'TestJob');
   const { deletedRoomIds } = await sweepRooms({
     instances: new PostgresInstances(db),
-    disconnectConnections: new DisconnectConnectionsUseCase(rooms, new PostgresPlayerNotifier(db)),
+    disconnectConnections:
+      disconnectConnections ??
+      new DisconnectConnectionsUseCase(rooms, new PostgresPlayerNotifier(db)),
     runCommand: (command) => inTransaction(db, command),
     deleteClosedRooms: new DeleteClosedRoomsUseCase(
       rooms,
@@ -87,8 +103,8 @@ describe('sweepRooms', () => {
     // Arrange
     const instances = new PostgresInstances(database.db());
     await instances.beat('TestDeadInstance');
-    const room = roomOf('K7M2Q', new Date());
-    await connectedThrough('TestDeadInstance', room);
+    const room = roomOf('K7M2Q', minutesAgo(180));
+    await connectedThrough('TestDeadInstance', room, minutesAgo(180));
     await lastSeenAgo('TestDeadInstance', 2 * 60 * 60);
 
     // Act
@@ -104,8 +120,8 @@ describe('sweepRooms', () => {
     // Arrange
     const instances = new PostgresInstances(database.db());
     await instances.beat('TestDeadInstance');
-    const room = roomOf('K7M2Q', new Date());
-    await connectedThrough('TestDeadInstance', room);
+    const room = roomOf('K7M2Q', minutesAgo(30));
+    await connectedThrough('TestDeadInstance', room, minutesAgo(30));
     await lastSeenAgo('TestDeadInstance', 10 * 60);
 
     // Act
@@ -118,12 +134,32 @@ describe('sweepRooms', () => {
     expect(connections).toEqual([]);
   });
 
+  it('should delete the closed rooms even if it cannot close the connections of a dead instance, and then fail', async () => {
+    // Arrange
+    const instances = new PostgresInstances(database.db());
+    await instances.beat('TestDeadInstance');
+    await connectedThrough('TestDeadInstance', roomOf('K7M2Q', minutesAgo(180)), minutesAgo(180));
+    await lastSeenAgo('TestDeadInstance', 2 * 60 * 60);
+    const closed = roomOf('P3X8W', minutesAgo(60));
+    await new PostgresRoomRepository(database.db(), 'TestDeadInstance').save(closed);
+    const rooms = new PostgresRoomRepository(database.db(), 'TestJob');
+
+    // Act
+    const swept = sweep(
+      new FailingDisconnectConnections(rooms, new PostgresPlayerNotifier(database.db())),
+    );
+
+    // Assert
+    await expect(swept).rejects.toThrow('The room cannot be read');
+    expect(await roomIds()).not.toContain(closed.id);
+  });
+
   it('should keep the rooms with a player connected through a live instance, and the new ones', async () => {
     // Arrange
     const instances = new PostgresInstances(database.db());
     await instances.beat('TestLiveInstance');
-    const connected = roomOf('K7M2Q', new Date(Date.now() - 60 * 60_000));
-    await connectedThrough('TestLiveInstance', connected);
+    const connected = roomOf('K7M2Q', minutesAgo(60));
+    await connectedThrough('TestLiveInstance', connected, minutesAgo(60));
     const created = roomOf('P3X8W', new Date());
     await new PostgresRoomRepository(database.db(), 'TestLiveInstance').save(created);
 

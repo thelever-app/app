@@ -32,6 +32,7 @@ function roomInGame(): Room {
       avatar: room.suggestAvatar(new FixedRandomness()),
     },
     new FixedIdGenerator('Luis'),
+    NOW,
   );
   room.join(
     {
@@ -40,9 +41,12 @@ function roomInGame(): Room {
       avatar: room.suggestAvatar(new FixedRandomness()),
     },
     new FixedIdGenerator('Marta'),
+    NOW,
   );
   room.startGame('Ana', 'TestGameId');
-  for (const playerId of ['Ana', 'Luis', 'Marta']) room.connect(playerId, `${playerId}Connection`);
+  for (const playerId of ['Ana', 'Luis', 'Marta']) {
+    room.connect(playerId, `${playerId}Connection`, NOW);
+  }
   room.pullEvents();
   return room;
 }
@@ -59,8 +63,9 @@ function pedroJoins(room: Room): void {
       avatar: room.suggestAvatar(new FixedRandomness()),
     },
     new FixedIdGenerator('Pedro'),
+    NOW,
   );
-  room.connect('Pedro', 'PedroConnection');
+  room.connect('Pedro', 'PedroConnection', NOW);
   room.pullEvents();
 }
 
@@ -72,7 +77,7 @@ describe('Room, host and leaving', () => {
 
       // Act
       room.leave('Ana', PLAYERS, NOW);
-      room.connect('Ana', 'AnaOtherConnection');
+      room.connect('Ana', 'AnaOtherConnection', NOW);
 
       // Assert
       expect(room.host.id).toBe('Luis');
@@ -157,6 +162,7 @@ describe('Room, host and leaving', () => {
           avatar: room.suggestAvatar(new FixedRandomness()),
         },
         new FixedIdGenerator('Unused'),
+        NOW,
       );
 
       // Assert
@@ -234,7 +240,7 @@ describe('Room, host and leaving', () => {
       room.pullEvents();
 
       // Act
-      room.connect('Ana', 'AnaOtherConnection');
+      room.connect('Ana', 'AnaOtherConnection', NOW);
 
       // Assert
       expect(room.host.id).toBe('Ana');
@@ -252,7 +258,7 @@ describe('Room, host and leaving', () => {
 
       // Act
       const restored = Room.restore(room.toSnapshot());
-      restored.connect('Ana', 'AnaOtherConnection');
+      restored.connect('Ana', 'AnaOtherConnection', NOW);
 
       // Assert
       expect(restored.hasLeft('Marta')).toBe(true);

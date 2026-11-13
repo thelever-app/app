@@ -75,6 +75,7 @@ export function describeGameRepositoryContract(
         avatar: room.suggestAvatar(new FixedRandomness()),
       },
       new FixedIdGenerator('TestLuisId'),
+      NOW,
     );
     await rooms.save(room);
     // Each origin, so a repository that loses them fails.
@@ -253,6 +254,7 @@ export function describeGameRepositoryContract(
             avatar: room.suggestAvatar(new FixedRandomness()),
           },
           new FixedIdGenerator('TestMartaId'),
+          NOW,
         );
         await rooms.save(room);
         game.joinLate('TestMartaId', new FixedRandomness(1, 0));

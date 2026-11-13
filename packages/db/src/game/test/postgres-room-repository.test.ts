@@ -28,7 +28,7 @@ async function savedRoom() {
   await withInstances('TestInstanceA', 'TestInstanceB');
   const idGenerator = new SequentialIdGenerator();
   const room = roomOf('Ana', ['Luis'], idGenerator);
-  room.connect(room.host.id, 'TestAnaConnection');
+  room.connect(room.host.id, 'TestAnaConnection', new Date());
   await new PostgresRoomRepository(database.db(), 'TestInstanceA').save(room);
   return { room, idGenerator };
 }
@@ -115,7 +115,7 @@ describe('PostgresRoomRepository', () => {
         const found = (await rooms.findById(room.id))!;
         firstRead();
         await new Promise((resolve) => setTimeout(resolve, 200));
-        found.connect(luis.id, 'TestLuisConnection');
+        found.connect(luis.id, 'TestLuisConnection', new Date());
         await rooms.save(found);
       });
 
@@ -157,7 +157,7 @@ describe('PostgresRoomRepository', () => {
       // Arrange
       const { room } = await savedRoom();
       const luis = room.players[1]!;
-      room.connect(luis.id, 'TestLuisConnection');
+      room.connect(luis.id, 'TestLuisConnection', new Date());
 
       // Act
       await new PostgresRoomRepository(database.db(), 'TestInstanceB').save(room);
@@ -185,6 +185,7 @@ describe('PostgresRoomRepository', () => {
           avatar: room.suggestAvatar(new SequentialRandomness()),
         },
         idGenerator,
+        new Date(),
       );
       const game = Game.create(
         {
@@ -224,6 +225,7 @@ describe('PostgresRoomRepository', () => {
           avatar: room.suggestAvatar(new SequentialRandomness()),
         },
         idGenerator,
+        new Date(),
       );
       room.startGame(room.host.id, 'TestGameOfNoRoom');
 

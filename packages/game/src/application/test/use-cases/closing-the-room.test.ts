@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { RoomCodeNotFoundError } from '../../errors/room-code-not-found.error.ts';
-import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
 import { ConnectPlayerUseCase } from '../../use-cases/connect-player.use-case.ts';
 import { CreateRoomUseCase } from '../../use-cases/create-room.use-case.ts';
 import { DeleteClosedRoomsUseCase } from '../../use-cases/delete-closed-rooms.use-case.ts';
@@ -10,6 +9,7 @@ import { GetRoomPreviewUseCase } from '../../use-cases/get-room-preview.use-case
 import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
 import { LeaveRoomUseCase } from '../../use-cases/leave-room.use-case.ts';
 import type { Room } from '../../../domain/entities/room.ts';
+import { RoomClosedError } from '../../../domain/errors/room-closed.error.ts';
 import { InMemoryRoomRepository } from '../../../adapters/in-memory/in-memory-room-repository.ts';
 import { FixedRandomness } from '../../../domain/test/support/fixed-randomness.ts';
 import { gameInDecisionPhase, lobbyOfThree } from '../support/game-in-decision-phase.ts';
@@ -164,7 +164,7 @@ describe('Closing the room', () => {
       });
 
       // Assert
-      await expect(joined).rejects.toThrow(RoomNotFoundError);
+      await expect(joined).rejects.toThrow(RoomClosedError);
     });
 
     it('should not let a player of a closed room back in', async () => {
@@ -183,7 +183,7 @@ describe('Closing the room', () => {
       });
 
       // Assert
-      await expect(joined).rejects.toThrow(RoomNotFoundError);
+      await expect(joined).rejects.toThrow(RoomClosedError);
     });
   });
 
@@ -201,7 +201,7 @@ describe('Closing the room', () => {
       });
 
       // Assert
-      await expect(connected).rejects.toThrow(RoomNotFoundError);
+      await expect(connected).rejects.toThrow(RoomClosedError);
     });
   });
 

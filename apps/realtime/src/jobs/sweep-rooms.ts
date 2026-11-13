@@ -13,8 +13,9 @@ export interface RoomSweep extends InstanceCleaning {
 /**
  * Deletes every closed room with its game data. The connections of the instances that died without
  * saying so come first: with Cloud Run scaled to zero, no instance is left to close them, and their
- * rooms would look connected forever. The deletion runs outside a command: each room is read and
- * deleted on its own, and only if it did not change in between.
+ * rooms would look connected forever. If that fails, the closed rooms are deleted all the same and
+ * the sweep fails at the end, so the next run tries again. The deletion runs outside a command:
+ * each room is read and deleted on its own, and only if it did not change in between.
  */
 export async function sweepRooms({
   deleteClosedRooms,
@@ -22,8 +23,14 @@ export async function sweepRooms({
   logger,
   ...cleaning
 }: RoomSweep): Promise<{ readonly deletedRoomIds: readonly string[] }> {
-  await forgetSilentInstances(cleaning, { silentAfterMs });
+  let cleaningFailed: { readonly error: unknown } | undefined;
+  try {
+    await forgetSilentInstances(cleaning, { silentAfterMs });
+  } catch (error) {
+    cleaningFailed = { error };
+  }
   const { roomIds } = await deleteClosedRooms.execute();
   logger.info('closed rooms deleted', { count: roomIds.length });
+  if (cleaningFailed) throw cleaningFailed.error;
   return { deletedRoomIds: roomIds };
 }

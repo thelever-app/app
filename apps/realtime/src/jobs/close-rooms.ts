@@ -22,8 +22,10 @@ if (!projectId) throw new Error('FIREBASE_PROJECT_ID is not set');
 const logger = new CloudLoggingLogger({ projectId });
 
 // DATABASE_URL locally; CLOUD_SQL_INSTANCE and DB_USER in Cloud Run, as for the room server.
+// One connection is enough: it does one thing after the other, and inside a command the notifier
+// goes through its transaction. It counts in the budget of connections of deploy-environment.yml.
 const database = await openDatabase<Database>(databaseConfigFrom(process.env), {
-  maxConnections: 2,
+  maxConnections: 1,
   logger,
 });
 const db = database.db;
