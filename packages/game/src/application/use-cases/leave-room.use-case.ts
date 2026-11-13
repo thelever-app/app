@@ -14,7 +14,8 @@ export interface LeaveRoomInput {
 
 /**
  * A player leaves the game in progress on purpose: nobody waits for them any more and, if they
- * were the host, the role passes on for good. They can join the room again as a player.
+ * were the host, the role passes on for good. They can join the room again as a player, unless
+ * everyone has left: then the room closes.
  */
 export class LeaveRoomUseCase {
   readonly #roomRepository: RoomRepository;
@@ -41,7 +42,7 @@ export class LeaveRoomUseCase {
       roomId,
     );
 
-    room.leave(playerId, game.playerIds);
+    room.leave(playerId, game.playerIds, this.#clock.now());
     if (game.playerIds.includes(playerId)) {
       game.leave(playerId);
       // The round does not wait for who leaves; past its time, it is revealed by time.

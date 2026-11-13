@@ -51,6 +51,14 @@ export class PostgresGameRepository implements GameRepository {
     return found;
   }
 
+  /** Everything of a game hangs from its row in cascade: its dilemmas, its players and their answers. */
+  async deleteOfRoom(roomId: string): Promise<void> {
+    await (currentTransaction<GameTables>() ?? this.#db)
+      .deleteFrom('games')
+      .where('room_id', '=', roomId)
+      .execute();
+  }
+
   /** Writes the game: only what changed since the command last knew it, or all of it if it did not. */
   async #save(
     db: Transaction<GameTables>,

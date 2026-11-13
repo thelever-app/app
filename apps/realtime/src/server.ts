@@ -10,6 +10,7 @@ import { getAppCheck } from 'firebase-admin/app-check';
 import { getAuth } from 'firebase-admin/auth';
 import { composeRealtimeServer } from './composition/index.ts';
 import { PING_INTERVAL_MS } from './rooms/sockets/heartbeat.ts';
+import { BEAT_EVERY_MS, SILENT_AFTER_MS } from './rooms/silent-instances.ts';
 import { OpenAccess } from './identity/access-gate.ts';
 import { UncheckedAppCheck } from './identity/app-check-verifier.ts';
 import { FirebaseAppCheckVerifier } from './identity/firebase-app-check-verifier.ts';
@@ -64,8 +65,8 @@ const server = await composeRealtimeServer({
     db: database.db,
     openListenClient: () => openListenClient(databaseConfig),
     instanceId: randomUUID(),
-    beatEveryMs: 30_000,
-    silentAfterMs: 90_000,
+    beatEveryMs: BEAT_EVERY_MS,
+    silentAfterMs: SILENT_AFTER_MS,
   },
 });
 

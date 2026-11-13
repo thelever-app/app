@@ -1,3 +1,4 @@
+import type { Clock } from '../../domain/ports/clock.port.ts';
 import type { Randomness } from '../../domain/ports/randomness.port.ts';
 import type { RoomVariant } from '../../domain/vos/room-settings.vo.ts';
 import { RoomCodeNotFoundError } from '../errors/room-code-not-found.error.ts';
@@ -25,19 +26,22 @@ export interface GetRoomPreviewOutput {
   readonly suggestedAvatar: PreviewAvatar;
 }
 
-/** What anyone with the code sees of a room before joining it. */
+/** What anyone with the code sees of an open room before joining it. */
 export class GetRoomPreviewUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #randomness: Randomness;
+  readonly #clock: Clock;
 
-  constructor(roomRepository: RoomRepository, randomness: Randomness) {
+  constructor(roomRepository: RoomRepository, randomness: Randomness, clock: Clock) {
     this.#roomRepository = roomRepository;
     this.#randomness = randomness;
+    this.#clock = clock;
   }
 
   async execute({ code, identity }: GetRoomPreviewInput): Promise<GetRoomPreviewOutput> {
     const room = await this.#roomRepository.findByCode(code);
-    if (!room) throw new RoomCodeNotFoundError(code);
+    // A closed room keeps its code until it is deleted, but lets nobody in with it.
+    if (!room?.isOpenAt(this.#clock.now())) throw new RoomCodeNotFoundError(code);
 
     const { face, color } = room.suggestAvatar(this.#randomness);
     return {

@@ -82,7 +82,7 @@ export async function composeRealtimeServer(
   const clock = new SystemClock();
   const roomLock = new KeyedLock();
   const randomness = new CryptoRandomness();
-  const queries = gameQueries({ ...repositories, catalog, randomness });
+  const queries = gameQueries({ ...repositories, catalog, randomness, clock });
   const timers = new RoundTimers(
     (roomId) => commands.runOutRound.execute({ roomId }),
     clock,

@@ -48,6 +48,50 @@ export class PostgresRoomRepository implements RoomRepository {
     return found && this.findById(found.id);
   }
 
+  async findIdsWithNobodyConnected(): Promise<readonly string[]> {
+    const rows = await (currentTransaction<GameTables>() ?? this.#db)
+      .selectFrom('rooms')
+      .select('id')
+      .where(({ not, exists, selectFrom }) =>
+        not(
+          exists(
+            selectFrom('room_connections')
+              .innerJoin('room_players', 'room_players.id', 'room_connections.player_id')
+              .select('room_connections.id')
+              .whereRef('room_players.room_id', '=', 'rooms.id'),
+          ),
+        ),
+      )
+      .orderBy('id')
+      .execute();
+    return rows.map(({ id }) => id);
+  }
+
+  async delete(room: Room): Promise<boolean> {
+    const transaction = currentTransaction<GameTables>();
+    if (transaction) return this.#delete(transaction, room);
+    return this.#db.transaction().execute((own) => this.#delete(own, room));
+  }
+
+  /**
+   * Its games first, with what hangs from them: their players point to the players of the room,
+   * which the cascade from the room would delete before them. Then the room, and its players, their
+   * connections and its lobby go with it. The version tells whether it changed since it was read.
+   */
+  async #delete(db: Transaction<GameTables>, room: Room): Promise<boolean> {
+    const unchanged = await db
+      .selectFrom('rooms')
+      .select('id')
+      .where('id', '=', room.id)
+      .where('version', '=', room.version)
+      .forUpdate()
+      .executeTakeFirst();
+    if (!unchanged) return false;
+    await db.deleteFrom('games').where('room_id', '=', room.id).execute();
+    await db.deleteFrom('rooms').where('id', '=', room.id).execute();
+    return true;
+  }
+
   async #save(db: Transaction<GameTables>, snapshot: RoomSnapshot): Promise<void> {
     const { id, players, connections } = snapshot;
     const columns = roomColumnsOf(snapshot);
@@ -171,6 +215,8 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     dilemmas_per_player: settings.dilemmasPerPlayer,
     current_game_id: snapshot.currentGameId,
     absent_host_player_id: snapshot.absentHostId,
+    last_connected_at: snapshot.lastConnectedAt,
+    closed_at: snapshot.closedAt,
   };
 }
 
@@ -275,5 +321,7 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
     currentGameId: row.current_game_id,
     absentHostId: row.absent_host_player_id,
     leftPlayerIds: row.players.filter(({ has_left }) => has_left).map(({ id }) => id),
+    lastConnectedAt: row.last_connected_at,
+    closedAt: row.closed_at,
   };
 }

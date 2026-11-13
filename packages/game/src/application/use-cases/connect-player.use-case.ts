@@ -1,3 +1,4 @@
+import type { Clock } from '../../domain/ports/clock.port.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
 import { IdentityNotInRoomError } from '../errors/identity-not-in-room.error.ts';
@@ -22,24 +23,27 @@ export interface ConnectPlayerOutput {
 /**
  * A player opens a connection to their room, in the lobby or in a game; the others see them
  * connected. During the reveal of a round, a player who connects while the host is away takes the
- * role if nobody could take it when the dilemma was revealed.
+ * role if nobody could take it when the dilemma was revealed. A closed room takes nobody back.
  */
 export class ConnectPlayerUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
   readonly #idGenerator: IdGenerator;
+  readonly #clock: Clock;
 
   constructor(
     roomRepository: RoomRepository,
     gameRepository: GameRepository,
     notifier: PlayerNotifier,
     idGenerator: IdGenerator,
+    clock: Clock,
   ) {
     this.#roomRepository = roomRepository;
     this.#gameRepository = gameRepository;
     this.#notifier = notifier;
     this.#idGenerator = idGenerator;
+    this.#clock = clock;
   }
 
   async execute({ roomId, identity }: ConnectPlayerInput): Promise<ConnectPlayerOutput> {
@@ -48,7 +52,7 @@ export class ConnectPlayerUseCase {
     if (!playerId) throw new IdentityNotInRoomError(roomId);
 
     const connectionId = this.#idGenerator.generate();
-    room.connect(playerId, connectionId);
+    room.connect(playerId, connectionId, this.#clock.now());
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
     if (game) handOverHostIfAway(room, game);

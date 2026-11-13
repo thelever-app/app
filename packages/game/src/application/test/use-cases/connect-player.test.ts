@@ -17,6 +17,7 @@ async function arrange() {
     game.gameRepository,
     notifier,
     game.idGenerator,
+    game.clock,
   );
   return { ...game, notifier, connectPlayer };
 }

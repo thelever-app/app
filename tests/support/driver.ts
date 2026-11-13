@@ -275,6 +275,8 @@ export interface GameDriver {
   disconnect(player: string): Promise<void>;
   /** `player` opens a new connection from the same device. */
   reconnect(player: string): Promise<void>;
+  /** As `reconnect`, but the room may not take the player back: says whether it did. */
+  tryToReconnect(player: string): Promise<boolean>;
   /** The position (from 1) of the dilemma of the round `player` is on. */
   dilemmaShownTo(player: string): Promise<number>;
   /** Whether `viewer` sees `player` as connected, from what `viewer` received. */
@@ -300,6 +302,10 @@ export interface GameDriver {
   declare(player: string, declaration: Declaration): Promise<void>;
   /** Time passes for everyone. */
   letTimePass(seconds: number): Promise<void>;
+  /** The scheduled job deletes the closed rooms, as it does every hour. Only in the application. */
+  deleteClosedRooms(): Promise<void>;
+  /** Whether anything of the room of the scenario or of its games is kept. Only in the application. */
+  isGameDataKept(): Promise<boolean>;
   /** The time for the dilemma of the round runs out, and every device notices. */
   runOutRound(): Promise<void>;
   /** `host` reveals the dilemma of the round early. */

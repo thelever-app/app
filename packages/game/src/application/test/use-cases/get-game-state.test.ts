@@ -132,13 +132,14 @@ describe('GetGameStateUseCase', () => {
 
     it('should return whether each player is connected', async () => {
       // Arrange
-      const { getGameState, roomRepository, gameRepository, roomId, gameId, anaId, luisId } =
+      const { getGameState, roomRepository, gameRepository, clock, roomId, gameId, anaId, luisId } =
         await gameInDecisionPhase();
       const connectPlayer = new ConnectPlayerUseCase(
         roomRepository,
         gameRepository,
         new InMemoryPlayerNotifier(),
         new FixedIdGenerator('TestConnectionId'),
+        clock,
       );
       await connectPlayer.execute({ roomId, identity: 'TestLuisIdentity' });
 
@@ -158,6 +159,7 @@ describe('GetGameStateUseCase', () => {
         answerDilemma,
         roomRepository,
         gameRepository,
+        clock,
         roomId,
         gameId,
         luisId,
@@ -173,6 +175,7 @@ describe('GetGameStateUseCase', () => {
         gameRepository,
         new InMemoryPlayerNotifier(),
         new FixedIdGenerator('TestConnectionId'),
+        clock,
       ).execute({ roomId, identity: 'TestLuisIdentity' });
 
       // Act

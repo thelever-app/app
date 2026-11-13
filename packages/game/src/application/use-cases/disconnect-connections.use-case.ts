@@ -7,6 +7,8 @@ export interface DisconnectConnectionsInput {
   readonly roomId: string;
   /** Connections of the room nobody will close, such as those of an instance of the server that died. */
   readonly connections: readonly { readonly playerId: string; readonly connectionId: string }[];
+  /** When they closed: for an instance that died, when it was last seen alive. */
+  readonly at: Date;
 }
 
 /**
@@ -22,14 +24,14 @@ export class DisconnectConnectionsUseCase {
     this.#notifier = notifier;
   }
 
-  async execute({ roomId, connections }: DisconnectConnectionsInput): Promise<void> {
+  async execute({ roomId, connections, at }: DisconnectConnectionsInput): Promise<void> {
     const room = await this.#roomRepository.findById(roomId);
     if (!room) throw new RoomNotFoundError(roomId);
 
     const notifications: { readonly playerIds: readonly string[]; readonly event: DomainEvent }[] =
       [];
     for (const { playerId, connectionId } of connections) {
-      room.disconnect(playerId, connectionId);
+      room.disconnect(playerId, connectionId, at);
       const otherPlayerIds = room.players.map(({ id }) => id).filter((id) => id !== playerId);
       for (const event of room.pullEvents()) {
         notifications.push({ playerIds: otherPlayerIds, event });

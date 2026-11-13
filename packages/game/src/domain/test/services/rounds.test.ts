@@ -8,6 +8,9 @@ import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 import { KeepOrderRandomness } from '../support/keep-order-randomness.ts';
 import { SequentialRandomness } from '../../../adapters/in-memory/sequential-randomness.ts';
 
+/** When everything in these tests happens, unless a test says otherwise. */
+const NOW = new Date('2026-11-12T10:00:00Z');
+
 const AT = new Date('2026-11-09T10:00:00Z');
 const SEAL = {
   gameConsentVersion: 'TestGameConsentVersion',
@@ -28,6 +31,7 @@ function roomAndGame(): { room: Room; game: Game } {
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
+      createdAt: NOW,
     },
     new FixedIdGenerator('TestRoomId', 'Ana'),
   );
@@ -35,10 +39,13 @@ function roomAndGame(): { room: Room; game: Game } {
     room.join(
       { nickname, identity: `Test${nickname}Identity`, avatar: room.suggestAvatar(randomness) },
       new FixedIdGenerator(nickname),
+      NOW,
     );
   }
   room.startGame('Ana', 'TestGameId');
-  for (const playerId of ['Ana', 'Luis', 'Marta']) room.connect(playerId, `${playerId}Connection`);
+  for (const playerId of ['Ana', 'Luis', 'Marta']) {
+    room.connect(playerId, `${playerId}Connection`, NOW);
+  }
   const game = Game.create(
     {
       roomId: 'TestRoomId',
@@ -75,7 +82,7 @@ describe('revealIfEveryoneAnswered', () => {
     // Arrange
     const { room, game } = roomAndGame();
     vote(game, 'Ana');
-    room.disconnect('Luis', 'LuisConnection');
+    room.disconnect('Luis', 'LuisConnection', NOW);
 
     // Act & Assert
     revealIfEveryoneAnswered(room, game);
@@ -90,7 +97,7 @@ describe('handOverHostIfAway', () => {
   it('should pass the role of a disconnected host once the dilemma is revealed', () => {
     // Arrange
     const { room, game } = roomAndGame();
-    room.disconnect('Ana', 'AnaConnection');
+    room.disconnect('Ana', 'AnaConnection', NOW);
 
     // Act & Assert
     handOverHostIfAway(room, game);

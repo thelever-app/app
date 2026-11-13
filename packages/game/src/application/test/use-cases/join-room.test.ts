@@ -42,6 +42,7 @@ function joinRoomOf(
     notifier,
     idGenerator: ports.idGenerator,
     randomness: new KeepOrderRandomness(),
+    clock: ports.clock,
   });
 }
 
@@ -148,7 +149,7 @@ describe('JoinRoomUseCase', () => {
 
     it('should take into the game a player of the room who was left out of it, and tell the others', async () => {
       // Arrange
-      const { joinRoom, roomRepository, gameRepository, roomId, gameId, notifier, anaId } =
+      const { joinRoom, roomRepository, gameRepository, clock, roomId, gameId, notifier, anaId } =
         await arrangeGame();
       const room = await roomRepository.findById(roomId);
       const pablo = room!.join(
@@ -158,6 +159,7 @@ describe('JoinRoomUseCase', () => {
           avatar: new AvatarVO(PABLO.avatar.face, PABLO.avatar.color),
         },
         { generate: () => 'TestPabloId' },
+        clock.now(),
       );
       await roomRepository.save(room!);
 

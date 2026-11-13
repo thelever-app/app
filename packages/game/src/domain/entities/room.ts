@@ -10,6 +10,7 @@ import { NotEnoughPlayersError } from '../errors/not-enough-players.error.ts';
 import { NotHostError } from '../errors/not-host.error.ts';
 import { PlayerExpelledError } from '../errors/player-expelled.error.ts';
 import { PlayerNotInRoomError } from '../errors/player-not-in-room.error.ts';
+import { RoomClosedError } from '../errors/room-closed.error.ts';
 import { RoomFullError } from '../errors/room-full.error.ts';
 import { TooManyAddedDilemmasError } from '../errors/too-many-added-dilemmas.error.ts';
 import { ConnectionChangedEvent } from '../events/connection-changed.event.ts';
@@ -38,6 +39,9 @@ import { Player, type PlayerSnapshot } from './player.ts';
  */
 export const MINIMUM_PLAYERS: Readonly<Record<RoomVariant, number>> = { nominal: 2, anonymous: 3 };
 export const MAXIMUM_PLAYERS = 50;
+
+/** How long a room stays open with no player connected (glossary, «Cerrar la sala»). */
+export const CLOSES_WITH_NOBODY_CONNECTED_AFTER_MS = 15 * 60 * 1000;
 
 /** A dilemma of the catalog, as the lobby needs it: to check that it suits the room. */
 export interface LobbyDilemma {
@@ -71,6 +75,10 @@ export interface RoomSnapshot {
   readonly absentHostId: string | null;
   /** Who left the game in progress on purpose. */
   readonly leftPlayerIds: readonly string[];
+  /** When the latest of its connections closed; until any closes, when it was created. */
+  readonly lastConnectedAt: Date;
+  /** When every player had left; the room closes too after a while with nobody connected. */
+  readonly closedAt: Date | null;
 }
 
 export interface CreateRoomProps {
@@ -81,8 +89,10 @@ export interface CreateRoomProps {
   readonly place: string;
   /** The language of the device of the host, which the dilemmas use until the host changes it. */
   readonly dilemmaLanguage: string;
-  /** Unique among the open rooms, which the room cannot know. */
+  /** Unique among the rooms, closed ones too until they are deleted, which the room cannot know. */
   readonly code: string;
+  /** Which also counts as the last moment someone was connected: the host has not connected yet. */
+  readonly createdAt: Date;
 }
 
 export class Room {
@@ -104,6 +114,8 @@ export class Room {
   #pickedDilemmas: LobbyDilemma[] = [];
   #currentGameId: IdVO | null = null;
   readonly #leftPlayerIds = new Set<string>();
+  #lastConnectedAt: Date;
+  #closedAt: Date | null = null;
   #events: DomainEvent[] = [];
 
   private constructor(
@@ -113,6 +125,7 @@ export class Room {
       readonly groupNature: string;
       readonly place: string;
       readonly settings: RoomSettingsSnapshot;
+      readonly lastConnectedAt: Date;
     },
     host: Player,
     players: readonly Player[],
@@ -124,6 +137,7 @@ export class Room {
     this.#settings = new RoomSettingsVO(snapshot.settings);
     this.#hostId = host.id;
     this.#players = [...players];
+    this.#lastConnectedAt = new Date(snapshot.lastConnectedAt);
   }
 
   /** The room is born with its host, who is its first player, and the default settings. */
@@ -134,8 +148,9 @@ export class Room {
       { nickname: props.hostNickname, identity: props.hostIdentity, avatar: props.hostAvatar },
       idGenerator,
     );
-    const { code, groupNature, place } = props;
-    return new Room({ id, code, groupNature, place, settings }, host, [host]);
+    const { code, groupNature, place, createdAt } = props;
+    const lastConnectedAt = createdAt;
+    return new Room({ id, code, groupNature, place, settings, lastConnectedAt }, host, [host]);
   }
 
   get id(): string {
@@ -182,6 +197,17 @@ export class Room {
     return this.#currentGameId?.value ?? null;
   }
 
+  /**
+   * Whether the room still lets anyone in at that moment. It closes when every player has left, or
+   * after a while with no player connected; while anyone is connected, it stays open even if
+   * nobody does anything. Once closed, it never opens again: it lets nobody join or connect.
+   */
+  isOpenAt(now: Date): boolean {
+    if (this.#closedAt) return false;
+    if (this.#connections.size > 0) return true;
+    return now.getTime() - this.#lastConnectedAt.getTime() < CLOSES_WITH_NOBODY_CONNECTED_AFTER_MS;
+  }
+
   /** Without a game in progress, the room is in the lobby. */
   get isInLobby(): boolean {
     return this.#currentGameId === null;
@@ -189,7 +215,7 @@ export class Room {
 
   /**
    * A new player joins with the avatar they chose. Whoever is already in the room gets their player
-   * back, so joining twice changes nothing.
+   * back, so joining twice changes nothing. Nobody joins a closed room, not even who was in it.
    */
   join(
     {
@@ -198,7 +224,9 @@ export class Room {
       avatar,
     }: { readonly nickname: string; readonly identity: string; readonly avatar: AvatarVO },
     idGenerator: IdGenerator,
+    at: Date,
   ): Player {
+    this.#ensureOpenAt(at);
     const existing = this.playerWith(identity);
     if (existing) {
       // Who left the game on purpose comes back as a player, never as the host.
@@ -349,9 +377,10 @@ export class Room {
 
   /**
    * The player opens a connection, on top of any others they have open, such as another tab. A
-   * host who lost the role while disconnected gets it back.
+   * host who lost the role while disconnected gets it back. A closed room takes nobody back.
    */
-  connect(playerId: string, connectionId: string): void {
+  connect(playerId: string, connectionId: string, at: Date): void {
+    this.#ensureOpenAt(at);
     const connection = new IdVO(connectionId);
     const wasConnected = this.isConnected(playerId);
 
@@ -368,15 +397,20 @@ export class Room {
   /**
    * The player leaves the game in progress on purpose: their connections close and, if they were
    * the host, the role passes on for good to a player of the game, also one who is not connected.
-   * They keep their place in the room and can join again.
+   * They keep their place in the room and can join again, unless they were the last to leave: then
+   * the room closes.
    */
-  leave(playerId: string, gamePlayerIds: readonly string[]): void {
+  leave(playerId: string, gamePlayerIds: readonly string[], at: Date): void {
     this.#player(playerId);
     if (this.isInLobby) throw new GameNotInProgressError(this.id);
     if (this.#leftPlayerIds.has(playerId)) return;
 
     this.#leftPlayerIds.add(playerId);
-    if (this.#connections.delete(playerId)) this.#changeConnection(playerId, false);
+    if (this.#connections.delete(playerId)) {
+      this.#connectionClosed(at);
+      this.#changeConnection(playerId, false);
+    }
+    if (this.#leftPlayerIds.size === this.#players.length) this.#closedAt = new Date(at);
     this.#version += 1;
     this.#events.push(new PlayerLeftEvent(this.id, playerId, true, this.#version));
     if (playerId === this.#hostId) this.#passHostOnFor(playerId, gamePlayerIds);
@@ -403,9 +437,10 @@ export class Room {
    * A connection closes. The player stays connected while another of theirs is open, so a close
    * that comes after they connected again changes nothing.
    */
-  disconnect(playerId: string, connectionId: string): void {
+  disconnect(playerId: string, connectionId: string, at: Date): void {
     const open = this.#connections.get(playerId);
     if (!open?.delete(connectionId)) return;
+    this.#connectionClosed(at);
     if (open.size > 0) return;
 
     this.#connections.delete(playerId);
@@ -448,6 +483,8 @@ export class Room {
       currentGameId: this.currentGameId,
       absentHostId: this.#absentHostId,
       leftPlayerIds: [...this.#leftPlayerIds],
+      lastConnectedAt: new Date(this.#lastConnectedAt),
+      closedAt: this.#closedAt && new Date(this.#closedAt),
     };
   }
 
@@ -469,6 +506,7 @@ export class Room {
     room.#currentGameId = snapshot.currentGameId === null ? null : new IdVO(snapshot.currentGameId);
     room.#absentHostId = snapshot.absentHostId;
     for (const playerId of snapshot.leftPlayerIds) room.#leftPlayerIds.add(playerId);
+    room.#closedAt = snapshot.closedAt && new Date(snapshot.closedAt);
     return room;
   }
 
@@ -545,6 +583,18 @@ export class Room {
     this.#hostId = hostId;
     this.#version += 1;
     this.#events.push(new HostChangedEvent(this.id, hostId, this.#version));
+  }
+
+  /**
+   * A connection closed at that moment. The room counts from the latest one that closed, never back:
+   * the connections of an instance that died are closed later, as closed when it was last seen.
+   */
+  #connectionClosed(at: Date): void {
+    if (at > this.#lastConnectedAt) this.#lastConnectedAt = new Date(at);
+  }
+
+  #ensureOpenAt(at: Date): void {
+    if (!this.isOpenAt(at)) throw new RoomClosedError(this.id);
   }
 
   #changeConnection(playerId: string, connected: boolean): void {

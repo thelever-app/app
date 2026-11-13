@@ -11,6 +11,7 @@ export { Player, type PlayerSnapshot } from './domain/entities/player.ts';
 export {
   Room,
   MAXIMUM_PLAYERS,
+  CLOSES_WITH_NOBODY_CONNECTED_AFTER_MS,
   type RoomSnapshot,
   type LobbyDilemma,
   type AddedDilemma,
@@ -98,6 +99,7 @@ export { InvalidRoomSettingError } from './domain/errors/invalid-room-setting.er
 export { NotHostError } from './domain/errors/not-host.error.ts';
 export { GameInProgressError } from './domain/errors/game-in-progress.error.ts';
 export { RoomFullError } from './domain/errors/room-full.error.ts';
+export { RoomClosedError } from './domain/errors/room-closed.error.ts';
 export { PlayerExpelledError } from './domain/errors/player-expelled.error.ts';
 export { NicknameAndAvatarTakenError } from './domain/errors/nickname-and-avatar-taken.error.ts';
 export { NotEnoughPlayersError } from './domain/errors/not-enough-players.error.ts';
@@ -210,6 +212,10 @@ export {
   DisconnectConnectionsUseCase,
   type DisconnectConnectionsInput,
 } from './application/use-cases/disconnect-connections.use-case.ts';
+export {
+  DeleteClosedRoomsUseCase,
+  type DeleteClosedRoomsOutput,
+} from './application/use-cases/delete-closed-rooms.use-case.ts';
 export {
   GetGameStateUseCase,
   type GetGameStateInput,

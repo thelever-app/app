@@ -7,6 +7,9 @@ import { AvatarVO } from '../../domain/vos/avatar.vo.ts';
 import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.ts';
 import { FixedRandomness } from '../../domain/test/support/fixed-randomness.ts';
 
+/** When everything in these tests happens, unless a test says otherwise. */
+const NOW = new Date('2026-11-12T10:00:00Z');
+
 /** Two different seals, so a repository that mixes them up fails. */
 const ANA_SEAL = {
   gameConsentVersion: 'TestGameConsentVersion2',
@@ -61,6 +64,7 @@ export function describeGameRepositoryContract(
         place: 'remote',
         dilemmaLanguage: 'es',
         code: 'K7M2Q',
+        createdAt: NOW,
       },
       new FixedIdGenerator('TestRoomId', 'TestAnaId'),
     );
@@ -71,6 +75,7 @@ export function describeGameRepositoryContract(
         avatar: room.suggestAvatar(new FixedRandomness()),
       },
       new FixedIdGenerator('TestLuisId'),
+      NOW,
     );
     await rooms.save(room);
     // Each origin, so a repository that loses them fails.
@@ -91,6 +96,7 @@ export function describeGameRepositoryContract(
     return {
       games,
       rooms,
+      dilemmas,
       room,
       game,
       first: { dilemmaId: first.dilemmaId, optionIds: first.optionIds as [string, string] },
@@ -107,6 +113,56 @@ export function describeGameRepositoryContract(
   }
 
   describe(`${name} (GameRepository contract)`, () => {
+    describe('deleteOfRoom', () => {
+      it('should delete the games of that room, answers and all, and keep those of other rooms', async () => {
+        // Arrange
+        const { games, rooms, dilemmas, room, game, first } = await arrange();
+        start(game, room);
+        game.answer(
+          'TestAnaId',
+          first.dilemmaId,
+          { vote: first.optionIds[0] },
+          ANA_SEAL,
+          STARTED_AT,
+        );
+        await games.save(game);
+        const other = Room.create(
+          {
+            hostNickname: 'Eva',
+            hostIdentity: 'TestEvaIdentity',
+            hostAvatar: new AvatarVO('face-02', 'teal'),
+            groupNature: 'friends',
+            place: 'together',
+            dilemmaLanguage: 'es',
+            code: 'P3X8W',
+            createdAt: NOW,
+          },
+          new FixedIdGenerator('TestOtherRoomId', 'TestEvaId'),
+        );
+        await rooms.save(other);
+        const otherGame = Game.create(
+          {
+            roomId: other.id,
+            dilemmas: dilemmas.map((dilemma) => ({
+              ...dilemma,
+              origin: 'picked-by-the-system' as const,
+              addedBy: null,
+            })),
+            settings: ANONYMOUS,
+          },
+          new FixedIdGenerator('TestOtherGameId'),
+        );
+        await games.save(otherGame);
+
+        // Act
+        await games.deleteOfRoom(room.id);
+
+        // Assert
+        expect(await games.findById('TestGameId')).toBeUndefined();
+        expect(await games.findById('TestOtherGameId')).toBeDefined();
+      });
+    });
+
     describe('findById', () => {
       it('should find a saved anonymous game as it was saved', async () => {
         // Arrange
@@ -198,6 +254,7 @@ export function describeGameRepositoryContract(
             avatar: room.suggestAvatar(new FixedRandomness()),
           },
           new FixedIdGenerator('TestMartaId'),
+          NOW,
         );
         await rooms.save(room);
         game.joinLate('TestMartaId', new FixedRandomness(1, 0));

@@ -30,6 +30,7 @@ export function roomOf(
       place: 'together',
       dilemmaLanguage: 'es',
       code,
+      createdAt: new Date(),
     },
     idGenerator,
   );
@@ -37,6 +38,7 @@ export function roomOf(
     room.join(
       { nickname: guest, identity: `Test${guest}Identity`, avatar: room.suggestAvatar(randomness) },
       idGenerator,
+      new Date(),
     );
   }
   return room;

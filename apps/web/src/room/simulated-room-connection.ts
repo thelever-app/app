@@ -176,15 +176,16 @@ export class SimulatedRoomConnection implements RoomConnection {
     const idGenerator = this.#idGenerator;
     const clock = BROWSER_CLOCK;
     this.#useCases = {
-      createRoom: new CreateRoomUseCase(rooms, idGenerator, MATH_RANDOMNESS),
+      createRoom: new CreateRoomUseCase(rooms, idGenerator, MATH_RANDOMNESS, clock),
       joinRoom: new JoinRoomUseCase({
         roomRepository: rooms,
         gameRepository: games,
         notifier,
         idGenerator,
         randomness: MATH_RANDOMNESS,
+        clock,
       }),
-      connectPlayer: new ConnectPlayerUseCase(rooms, games, notifier, idGenerator),
+      connectPlayer: new ConnectPlayerUseCase(rooms, games, notifier, idGenerator, clock),
       getRoomState: new GetRoomStateUseCase(rooms, catalog),
       getGameState: new GetGameStateUseCase(rooms, games, catalog),
       searchDilemmas: new SearchDilemmasUseCase(rooms, catalog),

@@ -68,6 +68,10 @@ export interface Database {
     /** The host who lost the role while disconnected, and gets it back on connecting again. */
     absent_host_player_id: string | null;
     created_at: Generated<Date>;
+    /** When its last connection closed; until anyone connects, when it was created. */
+    last_connected_at: Date;
+    /** When every player had left. */
+    closed_at: Date | null;
   };
   room_players: {
     id: string;

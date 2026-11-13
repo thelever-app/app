@@ -1081,6 +1081,12 @@ export class E2eDriver implements GameDriver {
     await this.#untilOthersHear(reconnecting, 'is connected', ({ connected }) => connected);
   }
 
+  async tryToReconnect(): Promise<boolean> {
+    throw new Error(
+      'Only the application says whether the room takes a player back: it must not be @ui',
+    );
+  }
+
   /** The position the screen of `player` says, on the dilemma, the waiting screen or the reveal. */
   async dilemmaShownTo(player: string): Promise<number> {
     const { page } = screenOf(this.#playerCalled(player));
@@ -1204,6 +1210,14 @@ export class E2eDriver implements GameDriver {
   async letTimePass(seconds: number): Promise<void> {
     await this.#startRoundAgo(seconds);
     await this.#reopenEveryScreen();
+  }
+
+  async deleteClosedRooms(): Promise<void> {
+    throw new Error('The scheduled job runs in the application: the scenario must not be @ui');
+  }
+
+  async isGameDataKept(): Promise<boolean> {
+    throw new Error('The scenario reads what the database keeps: it must not be @ui');
   }
 
   /** The round in progress started that long ago, in the database of the run. */

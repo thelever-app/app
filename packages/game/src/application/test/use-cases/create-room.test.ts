@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CreateRoomUseCase } from '../../use-cases/create-room.use-case.ts';
 import { RoomCodeUnavailableError } from '../../errors/room-code-unavailable.error.ts';
 import { InMemoryRoomRepository } from '../../../adapters/in-memory/in-memory-room-repository.ts';
+import { ManualClock } from '../../../adapters/in-memory/manual-clock.ts';
 import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
 import { SequentialRandomness } from '../../../adapters/in-memory/sequential-randomness.ts';
 import { InvalidAvatarError } from '../../../domain/errors/invalid-avatar.error.ts';
@@ -26,6 +27,7 @@ describe('CreateRoomUseCase', () => {
         roomRepository,
         new SequentialIdGenerator(),
         new SequentialRandomness(),
+        new ManualClock(),
       );
 
       // Act
@@ -51,6 +53,7 @@ describe('CreateRoomUseCase', () => {
         roomRepository,
         idGenerator,
         new FixedRandomness(0, 0, 0, 0, 0),
+        new ManualClock(),
       ).execute(ANA);
 
       // Act
@@ -58,6 +61,7 @@ describe('CreateRoomUseCase', () => {
         roomRepository,
         idGenerator,
         new FixedRandomness(0, 0, 0, 0, 0, 1, 1, 1, 1, 1),
+        new ManualClock(),
       ).execute(ANA);
 
       // Assert
@@ -69,11 +73,21 @@ describe('CreateRoomUseCase', () => {
       // Arrange: a randomness that always draws AAAAA, which is taken.
       const roomRepository = new InMemoryRoomRepository();
       const idGenerator = new SequentialIdGenerator();
-      await new CreateRoomUseCase(roomRepository, idGenerator, new FixedRandomness()).execute(ANA);
+      await new CreateRoomUseCase(
+        roomRepository,
+        idGenerator,
+        new FixedRandomness(),
+        new ManualClock(),
+      ).execute(ANA);
 
       // Act & Assert
       await expect(
-        new CreateRoomUseCase(roomRepository, idGenerator, new FixedRandomness()).execute(ANA),
+        new CreateRoomUseCase(
+          roomRepository,
+          idGenerator,
+          new FixedRandomness(),
+          new ManualClock(),
+        ).execute(ANA),
       ).rejects.toThrow(RoomCodeUnavailableError);
     });
 
@@ -83,6 +97,7 @@ describe('CreateRoomUseCase', () => {
         new InMemoryRoomRepository(),
         new SequentialIdGenerator(),
         new SequentialRandomness(),
+        new ManualClock(),
       );
 
       // Act & Assert
@@ -97,6 +112,7 @@ describe('CreateRoomUseCase', () => {
         new InMemoryRoomRepository(),
         new SequentialIdGenerator(),
         new SequentialRandomness(),
+        new ManualClock(),
       );
 
       // Act & Assert
