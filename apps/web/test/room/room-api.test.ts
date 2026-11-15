@@ -176,6 +176,18 @@ describe('httpRoomApi', () => {
         'https://realtime.example/rooms/room-1/dilemmas?category=honesty&q=tranv%C3%ADa+rojo',
       );
     });
+
+    it('should ask for the page after the one before, and give where the next one starts', async () => {
+      // Arrange
+      const { fetch, calls } = answering(200, { dilemmas: [], next: 'TestNext' });
+
+      // Act
+      const page = await apiWith(fetch).searchDilemmas('room-1', { after: 'TestAfter' });
+
+      // Assert
+      expect(calls[0]?.url).toBe('https://realtime.example/rooms/room-1/dilemmas?after=TestAfter');
+      expect(page).toEqual({ dilemmas: [], next: 'TestNext' });
+    });
   });
 
   describe('the access code', () => {

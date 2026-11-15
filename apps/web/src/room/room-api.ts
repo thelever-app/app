@@ -28,11 +28,12 @@ export interface RoomApi {
   /** The room of a code, as the player typed it or as the link carries it. */
   previewRoom(code: string): Promise<RoomPreviewResponseDto>;
   joinRoom(roomId: string, nickname: string, avatar: AvatarDto): Promise<JoinRoomResponseDto>;
+  /** A page of the search: the first one, or the one after the `next` of the page before. */
   searchDilemmas(
     roomId: string,
     /** One category, or every one; what the player typed, looked for in the text and the tags. */
-    criteria: { readonly category?: string; readonly q?: string },
-  ): Promise<SearchDilemmasResponseDto['dilemmas']>;
+    criteria: { readonly category?: string; readonly q?: string; readonly after?: string },
+  ): Promise<SearchDilemmasResponseDto>;
   /** The access code the player wrote, which every call carries from now on. */
   enterAccessCode(code: string): void;
 }
@@ -108,17 +109,17 @@ export function httpRoomApi({
         nickname,
         avatar,
       }),
-    searchDilemmas: async (roomId, { category, q }) => {
+    searchDilemmas: async (roomId, { category, q, after }) => {
       const query = new URLSearchParams();
       if (category) query.set('category', category);
       if (q) query.set('q', q);
+      if (after) query.set('after', after);
       const search = query.size > 0 ? `?${query.toString()}` : '';
-      const { dilemmas } = await call(
+      return call(
         'GET',
         `/rooms/${encodeURIComponent(roomId)}/dilemmas${search}`,
         SearchDilemmasResponseDto,
       );
-      return dilemmas;
     },
     enterAccessCode: (code) => accessCode.remember(code),
   };

@@ -1,13 +1,14 @@
 import {
   type DatabaseClient,
   inTransaction,
+  PostgresDilemmaQueries,
   PostgresDilemmaRepository,
   PostgresGameRepository,
   PostgresPlayerNotifier,
   PostgresRoomRepository,
   type openListenClient,
 } from '@thelever-app/db';
-import type { DilemmaRepository } from '@thelever-app/dilemmas';
+import type { DilemmaQueries, DilemmaRepository } from '@thelever-app/dilemmas';
 import { InMemoryDilemmaRepository } from '@thelever-app/dilemmas/in-memory';
 import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
 import type { GameRepository, PlayerNotifier, RoomRepository } from '@thelever-app/game';
@@ -36,6 +37,7 @@ export interface SharedStorage {
 /** The adapters behind the ports of the storage, and how a command runs on it. */
 export interface StorageAdapters {
   readonly dilemmaRepository: DilemmaRepository;
+  readonly dilemmaQueries: DilemmaQueries;
   readonly roomRepository: RoomRepository;
   readonly gameRepository: GameRepository;
   /**
@@ -52,16 +54,18 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
     await loadSeedDilemmas(dilemmaRepository);
     return {
       dilemmaRepository,
+      dilemmaQueries: dilemmaRepository,
       roomRepository: new InMemoryRoomRepository(),
       gameRepository: new InMemoryGameRepository(),
       notifierFor: (sockets) => sockets,
       runCommand: (command) => command(),
     };
   }
-  // The dilemmas are loaded by the migrate job, not by each instance.
+  // The dilemmas are loaded by the catalog-import job, not by each instance.
   const { db, instanceId } = storage;
   return {
     dilemmaRepository: new PostgresDilemmaRepository(db),
+    dilemmaQueries: new PostgresDilemmaQueries(db),
     roomRepository: new PostgresRoomRepository(db, instanceId),
     gameRepository: new PostgresGameRepository(db),
     notifierFor: () => new PostgresPlayerNotifier(db),

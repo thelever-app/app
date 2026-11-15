@@ -43,12 +43,18 @@ export { ArgumentsDoNotMatchOptionsError } from './domain/errors/arguments-do-no
 export type { ArgumentsSnapshot } from './domain/vos/arguments.vo.ts';
 
 // Application
+export type { DilemmaRepository } from './application/ports/dilemma-repository.port.ts';
 export {
-  type DilemmaRepository,
+  type CandidateCriteria,
   type DilemmaCriteria,
+  type DilemmaPage,
+  type DilemmaQueries,
+  type DilemmaSummary,
+  type PageRequest,
   WORD_SIMILARITY,
-} from './application/ports/dilemma-repository.port.ts';
+} from './application/ports/dilemma-queries.port.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
+export { InvalidPageError } from './application/errors/invalid-page.error.ts';
 export {
   GetDilemmasUseCase,
   type GetDilemmasInput,
@@ -72,3 +78,8 @@ export {
   type SearchDilemmasInput,
   type SearchDilemmasOutput,
 } from './application/use-cases/search-dilemmas.use-case.ts';
+export {
+  FindDilemmaIdsUseCase,
+  type FindDilemmaIdsInput,
+  type FindDilemmaIdsOutput,
+} from './application/use-cases/find-dilemma-ids.use-case.ts';

@@ -620,12 +620,28 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async searchDilemmas(player: string, text?: string): Promise<string[]> {
-    const found = await this.#searchDilemmas.execute({
+    const { dilemmas } = await this.#searchDilemmas.execute({
       roomId: this.#currentRoomId(),
       identity: this.#playerCalled(player).identity,
       ...(text && { text }),
     });
-    return found.map(({ dilemmaId }) => dilemmaId);
+    return dilemmas.map(({ dilemmaId }) => dilemmaId);
+  }
+
+  async searchDilemmaPages(player: string, pages: number): Promise<string[][]> {
+    const found: string[][] = [];
+    let after: string | undefined;
+    for (let page = 0; page < pages; page += 1) {
+      const { dilemmas, next } = await this.#searchDilemmas.execute({
+        roomId: this.#currentRoomId(),
+        identity: this.#playerCalled(player).identity,
+        ...(after !== undefined && { after }),
+      });
+      found.push(dilemmas.map(({ dilemmaId }) => dilemmaId));
+      if (next === undefined) break;
+      after = next;
+    }
+    return found;
   }
 
   async pickDilemmas(host: string, dilemmaIds: string[]): Promise<void> {
@@ -793,6 +809,7 @@ export class AcceptanceDriver implements GameDriver {
       maximumMinimumAge: 18,
       status,
       language: 'es',
+      size: 1,
     });
     return dilemmas.length === 1;
   }

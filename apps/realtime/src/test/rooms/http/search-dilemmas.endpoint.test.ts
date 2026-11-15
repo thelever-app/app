@@ -28,6 +28,8 @@ describe('GET /rooms/:roomId/dilemmas', () => {
     expect(response.body.dilemmas.map(({ dilemmaId }: { dilemmaId: string }) => dilemmaId)).toEqual(
       forEveryone.map(({ id }) => id).sort(),
     );
+    // They fit in one page: there is no next one.
+    expect(response.body.next).toBeUndefined();
   });
 
   it('should find the dilemmas of the category with what the player typed, the best match first', async () => {
@@ -69,6 +71,21 @@ describe('GET /rooms/:roomId/dilemmas', () => {
     // Assert
     expect(response.status).toBe(403);
     expect(response.body).toEqual({ code: 'player-not-in-room' });
+  });
+
+  it('should answer invalid-page to a page that does not come from the search', async () => {
+    // Arrange
+    const { server, roomId } = await roomOfAna();
+
+    // Act
+    const response = await request(server)
+      .get(`/rooms/${roomId}/dilemmas`)
+      .query({ after: 'made up' })
+      .set('Authorization', bearer('ana'));
+
+    // Assert
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ code: 'invalid-page' });
   });
 
   it('should answer invalid-message to a criterion it does not know', async () => {

@@ -205,8 +205,10 @@ export interface GameDriver {
   authorsOfAddedDilemmasSeenBy(viewer: string): Promise<string[]>;
   /** `player` removes the first added dilemma they may: any for the host, their own for anyone else. */
   removeAddedDilemma(player: string): Promise<void>;
-  /** The ids of the dilemmas of the catalog that a search of `player` shows, for what they typed. */
+  /** The ids of the dilemmas of the catalog that a search of `player` shows first, for what they typed. */
   searchDilemmas(player: string, text?: string): Promise<string[]>;
+  /** The ids of each of the first `pages` pages of a search of `player`, asking for more after each one. */
+  searchDilemmaPages(player: string, pages: number): Promise<string[][]>;
   pickDilemmas(host: string, dilemmaIds: string[]): Promise<void>;
   /** `host` goes back to a game by categories, leaving the picked dilemmas at once. */
   playByCategories(host: string): Promise<void>;

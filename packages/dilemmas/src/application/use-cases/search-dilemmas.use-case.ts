@@ -1,7 +1,8 @@
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import type { DilemmaStatus } from '../../domain/entities/dilemma.ts';
+import { isCategory } from '../../domain/vos/category.vo.ts';
 import { LanguageVO } from '../../domain/vos/language.vo.ts';
-import type { DilemmaRepository } from '../ports/dilemma-repository.port.ts';
+import type { DilemmaQueries } from '../ports/dilemma-queries.port.ts';
 
 export interface SearchDilemmasInput {
   readonly dilemmaIds?: readonly string[];
@@ -14,6 +15,10 @@ export interface SearchDilemmasInput {
   readonly status: DilemmaStatus;
   /** Only the dilemmas written or translated in it. */
   readonly language: string;
+  /** How many dilemmas the page has at most. */
+  readonly size: number;
+  /** The `next` of the page before; none for the first page. */
+  readonly after?: string;
 }
 
 export interface SearchDilemmasOutput {
@@ -26,36 +31,47 @@ export interface SearchDilemmasOutput {
     readonly tags: readonly string[];
     readonly optionCount: number;
   }[];
+  /** Where the next page starts; none when this one is the last. */
+  readonly next?: string;
 }
 
 /**
- * What Dilemmas publishes to the other contexts to look for dilemmas: the public ones that match
- * every criterion given, at their current version, in the order the catalog gives them.
+ * What Dilemmas publishes to the other contexts to look for dilemmas: a page of the public ones
+ * that match every criterion given, at their current version, in the order the catalog gives them.
+ * A category that does not exist has no dilemmas, and a `next` that does not come from that search
+ * throws InvalidPageError.
  */
 export interface SearchDilemmas {
   execute(input: SearchDilemmasInput): Promise<SearchDilemmasOutput>;
 }
 
 export class SearchDilemmasUseCase implements SearchDilemmas {
-  readonly #dilemmaRepository: DilemmaRepository;
+  readonly #dilemmaQueries: DilemmaQueries;
 
-  constructor(dilemmaRepository: DilemmaRepository) {
-    this.#dilemmaRepository = dilemmaRepository;
+  constructor(dilemmaQueries: DilemmaQueries) {
+    this.#dilemmaQueries = dilemmaQueries;
   }
 
-  async execute(criteria: SearchDilemmasInput): Promise<SearchDilemmasOutput> {
+  async execute({
+    size,
+    after,
+    categories,
+    ...criteria
+  }: SearchDilemmasInput): Promise<SearchDilemmasOutput> {
     new LanguageVO(criteria.language);
-    const found = await this.#dilemmaRepository.search(criteria);
+    const { summaries, next } = await this.#dilemmaQueries.search(
+      {
+        ...criteria,
+        ...(categories && { categories: categories.filter(isCategory) }),
+      },
+      {
+        size,
+        ...(after !== undefined && { after }),
+      },
+    );
     return {
-      dilemmas: found.map((dilemma) => ({
-        dilemmaId: dilemma.id,
-        version: dilemma.version,
-        text: dilemma.text,
-        minimumAge: dilemma.minimumAge,
-        category: dilemma.category,
-        tags: dilemma.tags,
-        optionCount: dilemma.options.length,
-      })),
+      dilemmas: summaries.map(({ id, ...summary }) => ({ dilemmaId: id, ...summary })),
+      ...(next !== undefined && { next }),
     };
   }
 }

@@ -1,7 +1,13 @@
+import { InvalidPageError } from '../../application/errors/invalid-page.error.ts';
 import type {
+  CandidateCriteria,
   DilemmaCriteria,
-  DilemmaRepository,
-} from '../../application/ports/dilemma-repository.port.ts';
+  DilemmaPage,
+  DilemmaQueries,
+  DilemmaSummary,
+  PageRequest,
+} from '../../application/ports/dilemma-queries.port.ts';
+import type { DilemmaRepository } from '../../application/ports/dilemma-repository.port.ts';
 import { rankOf } from './text-match.ts';
 import {
   Dilemma,
@@ -12,9 +18,10 @@ import {
 
 /**
  * Stores snapshots, not the dilemmas themselves, so changes that were not saved are lost like in a database.
- * Each dilemma keeps every version it was saved at, by number.
+ * Each dilemma keeps every version it was saved at, by number. It answers the queries on what it
+ * stores, as the database does.
  */
-export class InMemoryDilemmaRepository implements DilemmaRepository {
+export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQueries {
   readonly #dilemmas = new Map<
     string,
     {
@@ -54,7 +61,25 @@ export class InMemoryDilemmaRepository implements DilemmaRepository {
     return undefined;
   }
 
-  async search(criteria: DilemmaCriteria): Promise<Dilemma[]> {
+  async idsOf(criteria: CandidateCriteria): Promise<string[]> {
+    return (await this.#matching(criteria)).map(({ id }) => id);
+  }
+
+  async search(criteria: DilemmaCriteria, { after, size }: PageRequest): Promise<DilemmaPage> {
+    const found = await this.#matching(criteria);
+    // A page starts after the dilemma the page before ended with, as the database does it.
+    const start = after === undefined ? 0 : found.findIndex(({ id }) => id === idAfter(after)) + 1;
+    if (start === 0 && after !== undefined) throw new InvalidPageError(after);
+    const page = found.slice(start, start + size);
+    const last = page.at(-1);
+    return {
+      summaries: page.map(summaryOf),
+      ...(last && start + size < found.length && { next: JSON.stringify({ after: last.id }) }),
+    };
+  }
+
+  /** The public dilemmas that match, at their current version: with a text, the best first, and by id. */
+  async #matching(criteria: DilemmaCriteria): Promise<Dilemma[]> {
     const ids = [...this.#dilemmas.keys()].sort();
     const current = await Promise.all(ids.map((id) => this.findById(id)));
     const found = current.filter(
@@ -80,4 +105,19 @@ export class InMemoryDilemmaRepository implements DilemmaRepository {
     );
     return ranked.map(({ dilemma }) => dilemma);
   }
+}
+
+/** The id a page starts after, or undefined if it is not a page of a search. */
+function idAfter(after: string): string | undefined {
+  try {
+    const { after: id } = JSON.parse(after) as { after?: unknown };
+    return typeof id === 'string' ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function summaryOf(dilemma: Dilemma): DilemmaSummary {
+  const { id, version, text, minimumAge, category, tags, options } = dilemma;
+  return { id, version, text, minimumAge, category, tags, optionCount: options.length };
 }

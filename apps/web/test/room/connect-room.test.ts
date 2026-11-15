@@ -99,7 +99,7 @@ describe('connectRoom', () => {
 
     // Act
     const { connection, api } = await connectRoom(all);
-    const found = await api.searchDilemmas(SIMULATED_ROOM_ID, {});
+    const { dilemmas: found } = await api.searchDilemmas(SIMULATED_ROOM_ID, {});
 
     // Assert
     expect(connection.getStatus()).toBe('connected');

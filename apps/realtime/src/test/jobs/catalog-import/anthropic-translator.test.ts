@@ -157,17 +157,47 @@ describe('AnthropicTranslator', () => {
         { translations: [translationIn('en', { text: 'if someone smells' }), translationIn('fr')] },
         '{gap}',
       ],
-      [
-        'the gap appears where it was not',
-        { translations: [translationIn('en', { name: 'name {gap}' }), translationIn('fr')] },
-        '{gap}',
-      ],
     ])('should throw an error if %s', async (_case, output, named) => {
       // Arrange
       const { translator } = modelGiving(output);
 
       // Act & Assert
       await expect(translator.translate(CONTENT, 'es', ['en', 'fr'])).rejects.toThrow(named);
+    });
+
+    it('should keep the gap repeated or in another field, instead of a pronoun with a gender', async () => {
+      // Arrange
+      const { translator } = modelGiving({
+        translations: [
+          translationIn('en', {
+            text: 'If {gap} smells, do you tell {gap}?',
+            options: ['I tell {gap}', 'I stay out'],
+          }),
+        ],
+      });
+
+      // Act
+      const translated = await translator.translate(CONTENT, 'es', ['en']);
+
+      // Assert
+      expect(translated.get('en')).toMatchObject({
+        text: 'If {gap} smells, do you tell {gap}?',
+        options: ['I tell {gap}', 'I stay out'],
+      });
+    });
+
+    it('should throw an error if the gap appears in a dilemma that has none', async () => {
+      // Arrange
+      const { translator } = modelGiving({
+        translations: [translationIn('en', { text: 'If someone smells', name: 'name {gap}' })],
+      });
+
+      // Act & Assert
+      await expect(
+        translator.translate({ ...CONTENT, text: 'Si alguien huele mal, ¿qué haces?' }, 'es', [
+          'en',
+        ]),
+      ).rejects.toThrow('{gap}');
     });
 
     it('should throw an error if the arguments are missing or not one for each option', async () => {

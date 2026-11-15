@@ -4,3 +4,4 @@
  * The tests every adapter of the Dilemmas ports must pass, in memory or in PostgreSQL. Only for tests.
  */
 export { describeDilemmaRepositoryContract } from './dilemma-repository.contract.ts';
+export { describeDilemmaQueriesContract } from './dilemma-queries.contract.ts';

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type {
-  CatalogDilemma,
+  CandidateSearch,
+  CatalogPage,
   DilemmaCatalog,
   DilemmaContent,
   DilemmaSearch,
@@ -58,9 +59,14 @@ class CountingCatalog implements DilemmaCatalog {
     }));
   }
 
-  async search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]> {
-    this.asked.push(['search', criteria.status]);
+  async findCandidateIds(criteria: CandidateSearch): Promise<readonly string[]> {
+    this.asked.push(['candidates', criteria.status]);
     return [];
+  }
+
+  async search(criteria: DilemmaSearch): Promise<CatalogPage> {
+    this.asked.push(['search', criteria.status]);
+    return { dilemmas: [] };
   }
 }
 
@@ -188,7 +194,7 @@ describe('CachedDilemmaCatalog', () => {
     expect(inner.asked).toEqual([['TestA@1:es'], ['TestB@1:es'], ['TestC@1:es']]);
   });
 
-  describe('search', () => {
+  describe('search and findCandidateIds', () => {
     it('should always ask the catalog, since current versions change', async () => {
       // Arrange
       const counting = new CountingCatalog();
@@ -200,13 +206,17 @@ describe('CachedDilemmaCatalog', () => {
       } as const;
 
       // Act
-      await catalog.search(criteria);
-      await catalog.search(criteria);
+      await catalog.search(criteria, { size: 20 });
+      await catalog.search(criteria, { size: 20 });
+      await catalog.findCandidateIds(criteria);
+      await catalog.findCandidateIds(criteria);
 
       // Assert
       expect(counting.asked).toEqual([
         ['search', 'in-catalog'],
         ['search', 'in-catalog'],
+        ['candidates', 'in-catalog'],
+        ['candidates', 'in-catalog'],
       ]);
     });
   });

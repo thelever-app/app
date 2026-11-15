@@ -1,6 +1,7 @@
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import type { SettingsView } from '../support/driver.ts';
+import { catalogDilemmasSuiting } from '../support/test-catalog.ts';
 import { SOMEONE, type GameWorld } from '../support/world.ts';
 
 /** The words of the scenarios for where the group plays, and how the room keeps them. */
@@ -388,6 +389,29 @@ When('the host searches part of the text of a dilemma', async function (this: Ga
   const part = text.slice(-Math.ceil(text.length / 3)).toUpperCase();
   this.dilemmas = [dilemmaId];
   this.found = await this.driver.searchDilemmas(host, part);
+});
+
+Given(
+  'more than {int} dilemmas of the catalog suit the room',
+  async function (this: GameWorld, count: number) {
+    const { dilemmaLanguage, adultsOnly } = await this.driver.settingsSeenBy(await this.host());
+    const suiting = catalogDilemmasSuiting(dilemmaLanguage, adultsOnly ? 18 : 16);
+    assert.ok(suiting.length > count, `the test data has only ${suiting.length} for the room`);
+  },
+);
+
+Then('{int} dilemmas are shown', function (this: GameWorld, count: number) {
+  assert.equal(this.dilemmas.length, count);
+});
+
+Then('the host can ask for {int} more', async function (this: GameWorld, count: number) {
+  const [first = [], second = []] = await this.driver.searchDilemmaPages(await this.host(), 2);
+  assert.ok(second.length > 0, 'the search has no more dilemmas to show');
+  assert.ok(second.length <= count, `the search shows ${second.length} more, not up to ${count}`);
+  assert.ok(
+    second.every((dilemmaId) => !first.includes(dilemmaId)),
+    'the next dilemmas repeat some shown before',
+  );
 });
 
 Then('that dilemma is shown', function (this: GameWorld) {

@@ -94,6 +94,7 @@ const SCREEN = {
   pick: 'Elegir dilemas uno a uno',
   changePicked: 'Cambiar',
   search: 'Buscar dilemas',
+  more: 'Ver más',
   play: (count: number) => (count === 1 ? 'Jugar este' : `Jugar estos ${count}`),
   add: 'Añadir un dilema',
   remove: 'Quitar este dilema',
@@ -648,7 +649,10 @@ export class E2eDriver implements GameDriver {
     const added = new Set(await this.addedDilemmasSeenBy(player));
     const answer = this.#nextSearchOn(page);
     await page.getByRole('button', { name: SCREEN.add }).click();
-    const first = (await answer).find(({ dilemmaId }) => !added.has(dilemmaId));
+    const listed = await this.#listedUntil(page, await answer, (found) =>
+      found.some(({ dilemmaId }) => !added.has(dilemmaId)),
+    );
+    const first = listed.find(({ dilemmaId }) => !added.has(dilemmaId));
     if (!first) throw new Error('The catalog has no other dilemma suitable for the room');
 
     await page
@@ -728,11 +732,42 @@ export class E2eDriver implements GameDriver {
     return found.map(({ dilemmaId }) => dilemmaId);
   }
 
+  async searchDilemmaPages(player: string, pages: number): Promise<string[][]> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const answer = this.#nextSearchOn(page);
+    if (player === this.#hostName()) {
+      await this.#openPickSheet(player);
+    } else {
+      await page.getByRole('button', { name: SCREEN.add }).click();
+    }
+    const found = [await answer];
+    const sheet = page.getByRole('dialog');
+    const more = sheet.getByRole('button', { name: SCREEN.more });
+    // Whether there are more shows once what it found is on screen, below what it had found.
+    const shown = async () => {
+      const last = found.at(-1)?.at(-1);
+      if (last) await sheet.getByText(listedText(last), { exact: true }).waitFor();
+    };
+    await shown();
+    while (found.length < pages && (await more.count()) > 0) {
+      const next = this.#nextSearchOn(page, 'after=');
+      await more.click();
+      found.push(await next);
+      await shown();
+    }
+    await page.keyboard.press('Escape');
+    if (player === this.#hostName()) await this.#leaveTheSettings(player);
+    await sheet.waitFor({ state: 'hidden' });
+    return found.map((listed) => listed.map(({ dilemmaId }) => dilemmaId));
+  }
+
   async pickDilemmas(host: string, dilemmaIds: string[]): Promise<void> {
     const { page } = screenOf(this.#playerCalled(host));
     const answer = this.#nextSearchOn(page);
     await this.#openPickSheet(host);
-    const found = await answer;
+    const found = await this.#listedUntil(page, await answer, (listed) =>
+      dilemmaIds.every((dilemmaId) => listed.some((dilemma) => dilemma.dilemmaId === dilemmaId)),
+    );
 
     const sheet = page.getByRole('dialog');
     for (const dilemmaId of dilemmaIds) {
@@ -2116,6 +2151,30 @@ export class E2eDriver implements GameDriver {
     const sheet = page.getByRole('dialog');
     const open = byHand ? SCREEN.changePicked : SCREEN.pick;
     await sheet.getByRole('button', { name: open, exact: true }).click();
+  }
+
+  /** What the open sheet lists, asking for more below until it lists what is `wanted` or has no more. */
+  async #listedUntil(
+    page: Page,
+    first: readonly { readonly dilemmaId: string; readonly text: string }[],
+    wanted: (listed: readonly { readonly dilemmaId: string }[]) => boolean,
+  ): Promise<readonly { readonly dilemmaId: string; readonly text: string }[]> {
+    const listed = [...first];
+    const sheet = page.getByRole('dialog');
+    const more = sheet.getByRole('button', { name: SCREEN.more });
+    // Whether there are more shows once what it found is on screen.
+    const shown = async () => {
+      const last = listed.at(-1);
+      if (last) await sheet.getByText(listedText(last), { exact: true }).waitFor();
+    };
+    await shown();
+    while (!wanted(listed) && (await more.count()) > 0) {
+      const answer = this.#nextSearchOn(page, 'after=');
+      await more.click();
+      listed.push(...(await answer));
+      await shown();
+    }
+    return listed;
   }
 
   async #nextSearchOn(

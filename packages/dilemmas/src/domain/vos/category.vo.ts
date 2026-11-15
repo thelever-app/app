@@ -16,6 +16,11 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
+/** Whether a name is one of the categories. */
+export function isCategory(name: string): name is Category {
+  return CATEGORIES.some((category) => category === name);
+}
+
 export class CategoryVO {
   readonly value: Category;
 

@@ -41,6 +41,21 @@ export interface DilemmaSearch {
   readonly language: string;
 }
 
+/** The criteria a game is put together with: no text, no ids. */
+export type CandidateSearch = Omit<DilemmaSearch, 'text' | 'dilemmaIds'>;
+
+/** Which page of a search: the first one, or the one after the `next` of the page before. */
+export interface SearchPage {
+  readonly size: number;
+  readonly after?: string;
+}
+
+export interface CatalogPage {
+  readonly dilemmas: readonly CatalogDilemma[];
+  /** Where the next page starts; none when this one is the last. */
+  readonly next?: string;
+}
+
 /**
  * How the Game context asks the Dilemmas context for the dilemmas of a game.
  * Both methods keep the order asked for and throw DilemmaNotFoundError if a dilemma, or that version of it, does not exist.
@@ -60,6 +75,11 @@ export interface DilemmaCatalog {
     dilemmas: readonly { readonly dilemmaId: string; readonly version: number }[],
     language: string,
   ): Promise<readonly DilemmaContent[]>;
-  /** The public dilemmas that match, at their current version; none is an empty list. */
-  search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]>;
+  /** The ids of every public dilemma that matches, at its current version, for a game to draw from. */
+  findCandidateIds(criteria: CandidateSearch): Promise<readonly string[]>;
+  /**
+   * A page of the public dilemmas that match, at their current version, the best matches of a
+   * text first. A `next` that does not come from that search throws InvalidPageError.
+   */
+  search(criteria: DilemmaSearch, page: SearchPage): Promise<CatalogPage>;
 }

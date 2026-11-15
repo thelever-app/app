@@ -150,6 +150,13 @@ Feature: Create a room
     Then that dilemma is shown
 
   @ui
+  Scenario: The search shows the dilemmas twenty at a time
+    Given more than 20 dilemmas of the catalog suit the room
+    When the host searches for dilemmas
+    Then 20 dilemmas are shown
+    And the host can ask for 20 more
+
+  @ui
   Scenario: The host plays several categories
     When the host chooses the categories "life-and-death" and "honesty"
     Then every dilemma of the game is of one of those categories

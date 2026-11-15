@@ -48,6 +48,7 @@ describe('SearchDilemmasUseCase', () => {
         maximumMinimumAge: 18,
         status: 'in-catalog',
         language: 'es',
+        size: 10,
       });
 
       // Assert
@@ -73,6 +74,21 @@ describe('SearchDilemmasUseCase', () => {
       ]);
     });
 
+    it('should give a page as big as asked for, and where the next one starts', async () => {
+      // Arrange
+      const searchDilemmas = await searchInCatalog();
+      const criteria = { maximumMinimumAge: 18, status: 'in-catalog', language: 'es' } as const;
+
+      // Act
+      const first = await searchDilemmas.execute({ ...criteria, size: 1 });
+      const second = await searchDilemmas.execute({ ...criteria, size: 1, after: first.next! });
+
+      // Assert
+      expect(first.dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(['TestDilemma1']);
+      expect(second.dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(['TestDilemma2']);
+      expect(second.next).toBeUndefined();
+    });
+
     it('should pass every criterion on to the catalog', async () => {
       // Arrange
       const searchDilemmas = await searchInCatalog();
@@ -84,6 +100,7 @@ describe('SearchDilemmasUseCase', () => {
         maximumMinimumAge: 16,
         status: 'in-catalog',
         language: 'es',
+        size: 10,
       });
 
       // Assert
@@ -100,6 +117,7 @@ describe('SearchDilemmasUseCase', () => {
         maximumMinimumAge: 18,
         status: 'in-catalog',
         language: 'es',
+        size: 10,
       });
 
       // Assert
@@ -116,6 +134,24 @@ describe('SearchDilemmasUseCase', () => {
         maximumMinimumAge: 16,
         status: 'in-catalog',
         language: 'en',
+        size: 10,
+      });
+
+      // Assert
+      expect(dilemmas).toEqual([]);
+    });
+
+    it('should find nothing in a category that does not exist', async () => {
+      // Arrange
+      const searchDilemmas = await searchInCatalog();
+
+      // Act
+      const { dilemmas } = await searchDilemmas.execute({
+        categories: ['TestNoCategory'],
+        maximumMinimumAge: 16,
+        status: 'in-catalog',
+        language: 'es',
+        size: 10,
       });
 
       // Assert
@@ -131,6 +167,7 @@ describe('SearchDilemmasUseCase', () => {
         maximumMinimumAge: 16,
         status: 'in-catalog',
         language: 'Spanish',
+        size: 10,
       });
 
       // Assert

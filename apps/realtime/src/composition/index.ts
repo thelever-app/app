@@ -73,7 +73,7 @@ export async function composeRealtimeServer(
 
   // 1. The adapters of the storage, and the dilemmas Game plays with.
   const { notifierFor, runCommand, ...repositories } = await adaptersFor(storage);
-  const catalog = dilemmaCatalog(repositories.dilemmaRepository);
+  const catalog = dilemmaCatalog(repositories.dilemmaRepository, repositories.dilemmaQueries);
 
   // 2. The queries, and with them what sends each player the state of their room. One holder per
   // room at a time in this instance: its commands never interleave, and an event of the room

@@ -93,6 +93,16 @@ export const TEST_DILEMMAS: readonly TestDilemma[] = [
   ...dilemmas('spanish-only', 1, { category: 'justice' }),
 ];
 
+/** The ids of the dilemmas of the test data in the general catalog that a room in that language, for that age, plays. */
+export function catalogDilemmasSuiting(language: string, maximumMinimumAge: number): string[] {
+  return TEST_DILEMMAS.filter(
+    (dilemma) =>
+      dilemma.status === 'in-catalog' &&
+      dilemma.language === language &&
+      dilemma.minimumAge <= maximumMinimumAge,
+  ).map(({ dilemmaId }) => dilemmaId);
+}
+
 /** The text of the dilemma of the test data in that language. */
 export function testTextIn(dilemmaId: string, language: string): string {
   const dilemma = TEST_DILEMMAS.find((candidate) => candidate.dilemmaId === dilemmaId);

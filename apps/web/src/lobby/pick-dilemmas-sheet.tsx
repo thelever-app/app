@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
 import { DilemmaText } from '../game/dilemma-text.tsx';
 import { CATEGORIES } from './categories.ts';
+import { MoreDilemmas } from './more-dilemmas.tsx';
 import { useDilemmaSearch } from './use-dilemma-search.ts';
 import styles from './pick-dilemmas-sheet.module.css';
 import sheet from './sheet.module.css';
@@ -112,6 +113,7 @@ export function PickDilemmasSheet({ roomId, picked, onPick, onClose }: PickDilem
                 </button>
               );
             })}
+            <MoreDilemmas search={search} />
           </div>
           <footer className={styles.footer}>
             <button

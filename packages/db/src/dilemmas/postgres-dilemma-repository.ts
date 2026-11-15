@@ -1,22 +1,12 @@
 import {
   type ArgumentsSnapshot,
-  type Category,
   type Creator,
   Dilemma,
-  type DilemmaCriteria,
   type DilemmaRepository,
   type DilemmaSnapshot,
   type TranslationOf,
-  WORD_SIMILARITY,
 } from '@thelever-app/dilemmas';
-import {
-  type ExpressionBuilder,
-  type Kysely,
-  type RawBuilder,
-  type Selectable,
-  sql,
-  type Transaction,
-} from 'kysely';
+import { type ExpressionBuilder, type Kysely, type Selectable, type Transaction } from 'kysely';
 import { jsonArrayFrom } from 'kysely/helpers/postgres';
 import type { DilemmasTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
@@ -169,52 +159,6 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
     return row && dilemmaOf(row);
   }
 
-  async search(criteria: DilemmaCriteria): Promise<Dilemma[]> {
-    const db = currentTransaction<DilemmasTables>() ?? this.#db;
-    const { dilemmaIds, categories, maximumMinimumAge, status } = criteria;
-    if (dilemmaIds?.length === 0 || categories?.length === 0) return [];
-    const typed = criteria.text?.trim() ?? '';
-    const words = typed.split(/\s+/).filter((word) => word.length > 0);
-
-    const rows = await this.#versions(db)
-      .where('dilemmas.visibility', '=', 'public')
-      // Only the current version of each dilemma: no later one exists.
-      .where(({ not, exists, selectFrom }) =>
-        not(
-          exists(
-            selectFrom('dilemma_versions as later')
-              .select('later.number')
-              .whereRef('later.dilemma_id', '=', 'dilemma_versions.dilemma_id')
-              .whereRef('later.number', '>', 'dilemma_versions.number'),
-          ),
-        ),
-      )
-      .where('dilemma_versions.status', '=', status)
-      .where('dilemma_versions.minimum_age', '<=', maximumMinimumAge)
-      .$if(criteria.language !== undefined, (query) =>
-        query.where('dilemmas.language', '=', criteria.language ?? ''),
-      )
-      .$if(dilemmaIds !== undefined, (query) => query.where('dilemmas.id', 'in', dilemmaIds ?? []))
-      .$if(categories !== undefined, (query) =>
-        query.where('dilemma_versions.category', 'in', (categories ?? []) as Category[]),
-      )
-      // Every word typed is part of the text or a tag, or alike enough to one.
-      .$if(words.length > 0, (query) =>
-        query.where(sql<boolean>`${sql.join(words.map(matchesTextOrTag), sql` and `)}`),
-      )
-      // A tag equal to what was typed first, then the most alike to the text or a tag.
-      .$if(words.length > 0, (query) =>
-        query
-          .orderBy(sql`${hasTag(sql`= search_text(${typed})`)} desc`)
-          .orderBy(sql`${similarityTo(typed)} desc`),
-      )
-      // Byte order, as the other implementations sort.
-      .orderBy(sql`dilemmas.id collate "C"`)
-      .execute();
-
-    return rows.map(dilemmaOf);
-  }
-
   /** Every version of every dilemma, with its content, to narrow down. */
   #versions(db: Kysely<DilemmasTables> = currentTransaction<DilemmasTables>() ?? this.#db) {
     return db
@@ -331,40 +275,4 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
       )
       .execute();
   }
-}
-
-/** Whether a tag of the version of the dilemma, as search_text leaves it, holds the condition. */
-function hasTag(condition: RawBuilder<unknown>): RawBuilder<boolean> {
-  return sql<boolean>`exists (
-    select 1 from dilemma_version_tags as typed_tags
-    where typed_tags.dilemma_id = dilemma_versions.dilemma_id
-      and typed_tags.version = dilemma_versions.number
-      and search_text(typed_tags.tag) ${condition}
-  )`;
-}
-
-/** A word typed is part of the text or of a tag, or alike enough to one, as pg_trgm measures it. */
-function matchesTextOrTag(word: string): RawBuilder<boolean> {
-  const alike = (field: RawBuilder<unknown>) =>
-    sql`(strpos(${field}, search_text(${word})) > 0
-      or word_similarity(search_text(${word}), ${field}) >= ${WORD_SIMILARITY})`;
-  return sql<boolean>`(${alike(sql`search_text(dilemma_versions.text)`)} or exists (
-    select 1 from dilemma_version_tags as typed_tags
-    where typed_tags.dilemma_id = dilemma_versions.dilemma_id
-      and typed_tags.version = dilemma_versions.number
-      and ${alike(sql`search_text(typed_tags.tag)`)}
-  ))`;
-}
-
-/** How alike what was typed is to the text or to the most alike tag, from 0 to 1. */
-function similarityTo(typed: string): RawBuilder<number> {
-  return sql<number>`greatest(
-    word_similarity(search_text(${typed}), search_text(dilemma_versions.text)),
-    coalesce((
-      select max(word_similarity(search_text(${typed}), search_text(typed_tags.tag)))
-      from dilemma_version_tags as typed_tags
-      where typed_tags.dilemma_id = dilemma_versions.dilemma_id
-        and typed_tags.version = dilemma_versions.number
-    ), 0)
-  )`;
 }
