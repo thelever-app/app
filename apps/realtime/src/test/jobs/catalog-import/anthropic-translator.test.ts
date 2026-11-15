@@ -200,6 +200,53 @@ describe('AnthropicTranslator', () => {
       ).rejects.toThrow('{gap}');
     });
 
+    it('should throw an error if the name gets the gap, which the public pages show without a room', async () => {
+      // Arrange
+      const { translator } = modelGiving({
+        translations: [translationIn('en', { name: 'The smell of {gap}' })],
+      });
+
+      // Act & Assert
+      await expect(translator.translate(CONTENT, 'es', ['en'])).rejects.toThrow('name');
+    });
+
+    it('should throw an error if the gap reaches the text of a dilemma that has it only in its arguments', async () => {
+      // Arrange: the game tells a dilemma with the gap by its text and its options.
+      const { translator } = modelGiving({
+        translations: [
+          translationIn('en', {
+            text: 'If {gap} smells, what do you do?',
+            arguments: {
+              context: 'if {gap} knows',
+              options: [
+                { for: 'f1', against: 'a1' },
+                { for: 'f2', against: 'a2' },
+              ],
+            },
+          }),
+        ],
+      });
+
+      // Act & Assert
+      await expect(
+        translator.translate(
+          {
+            ...CONTENT,
+            text: 'Si alguien huele mal, ¿qué haces?',
+            arguments: {
+              context: 'si {gap} lo sabe',
+              options: [
+                { for: 'F1', against: 'C1' },
+                { for: 'F2', against: 'C2' },
+              ],
+            },
+          },
+          'es',
+          ['en'],
+        ),
+      ).rejects.toThrow('text');
+    });
+
     it('should throw an error if the arguments are missing or not one for each option', async () => {
       // Arrange
       const args = { context: null, options: [{ for: 'f1', against: 'a1' }] };

@@ -58,7 +58,9 @@ export interface DilemmaQueries {
   idsOf(criteria: CandidateCriteria): Promise<string[]>;
   /**
    * A page of the public dilemmas that match: with a text, the best matches first and then by id;
-   * without one, by id. A `next` from another search, or made up, throws InvalidPageError.
+   * without one, by id. A page starts right after where the page before ended in that order, even
+   * if that dilemma has gone since. A `next` that is not where a page ends, or that ended a search
+   * with a text when this one has none or the other way round, throws InvalidPageError.
    */
   search(criteria: DilemmaCriteria, page: PageRequest): Promise<DilemmaPage>;
 }

@@ -168,16 +168,17 @@ export class AnthropicTranslator implements Translator {
       });
     }
     // The gap may come more often, or in another field, where a pronoun would give the player a
-    // gender: the nickname fills each one. It must stay where it was, and a dilemma without it
-    // must not get it.
-    const hasGap = fields.some(([, before]) => hasTheGap(before));
+    // gender: the nickname fills each one. It must stay where it was; a dilemma without it, as the
+    // game tells by its text and its options, must not get it, and neither may the name, which the
+    // public pages show without a room.
+    const hasGap = [original.text, ...original.options].some(hasTheGap);
     for (const [field, before, after] of fields) {
       if (hasTheGap(before) && !hasTheGap(after)) {
         throw new Error(
           `the translation into ${language} does not keep ${GAP_MARKER} in its ${field}`,
         );
       }
-      if (!hasGap && hasTheGap(after)) {
+      if (hasTheGap(after) && !hasTheGap(before) && (!hasGap || field === 'name')) {
         throw new Error(
           `the translation into ${language} adds ${GAP_MARKER} to its ${field}, which the dilemma has not`,
         );

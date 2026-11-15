@@ -369,6 +369,40 @@ export function describeDilemmaQueriesContract(
           expect(next).toBeUndefined();
         });
 
+        it('should go on after the page before even if the dilemma it ended with has gone', async () => {
+          // Arrange
+          const { repository, queries } = await create();
+          for (const id of ['TestA', 'TestB', 'TestC', 'TestD']) {
+            await repository.save(catalogDilemma(id));
+          }
+          const first = await queries.search(EVERYONE, { size: 2 });
+          const gone = catalogDilemma('TestB');
+          gone.withdraw();
+          await repository.save(gone);
+
+          // Act
+          const second = await queries.search(EVERYONE, { size: 2, after: first.next! });
+
+          // Assert
+          expect(second.summaries.map(({ id }) => id)).toEqual(['TestC', 'TestD']);
+        });
+
+        it('should throw InvalidPageError for a page of a search with a text asked without one, or the other way round', async () => {
+          // Arrange
+          const queries = await five();
+          const withText = { ...EVERYONE, text: 'TextOf' };
+          const { next: withoutTextNext } = await queries.search(EVERYONE, { size: 2 });
+          const { next: withTextNext } = await queries.search(withText, { size: 2 });
+
+          // Act & Assert
+          await expect(
+            queries.search(withText, { size: 2, after: withoutTextNext! }),
+          ).rejects.toThrow(InvalidPageError);
+          await expect(queries.search(EVERYONE, { size: 2, after: withTextNext! })).rejects.toThrow(
+            InvalidPageError,
+          );
+        });
+
         it('should throw InvalidPageError for a page that does not come from a search', async () => {
           // Arrange
           const queries = await five();
