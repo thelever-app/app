@@ -1,13 +1,22 @@
 import {
+  type ArgumentsSnapshot,
   type Category,
   type Creator,
   Dilemma,
   type DilemmaCriteria,
   type DilemmaRepository,
   type DilemmaSnapshot,
+  type TranslationOf,
   WORD_SIMILARITY,
 } from '@thelever-app/dilemmas';
-import { type Kysely, type RawBuilder, sql, type Transaction } from 'kysely';
+import {
+  type ExpressionBuilder,
+  type Kysely,
+  type RawBuilder,
+  type Selectable,
+  sql,
+  type Transaction,
+} from 'kysely';
 import { jsonArrayFrom } from 'kysely/helpers/postgres';
 import type { DilemmasTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
@@ -20,7 +29,105 @@ function creatorOf({
   return { type: creator_type };
 }
 
-/** Each version in its own rows, inserted once; saving again only changes the status and the visibility. */
+type Row = Selectable<DilemmasTables['dilemmas']> &
+  Selectable<DilemmasTables['dilemma_versions']> & {
+    readonly options: readonly { readonly id: string; readonly text: string }[];
+    readonly tags: readonly { readonly tag: string }[];
+    readonly argument_context: readonly { readonly context: string | null }[];
+    readonly option_arguments: readonly {
+      readonly optionId: string;
+      readonly for: string;
+      readonly against: string;
+    }[];
+  };
+
+/** The rows of a version as the dilemma they make. */
+function dilemmaOf(row: Row): Dilemma {
+  const [argued] = row.argument_context;
+  const args: ArgumentsSnapshot | undefined = argued && {
+    ...(argued.context === null ? {} : { context: argued.context }),
+    options: row.option_arguments,
+  };
+  return Dilemma.restore({
+    id: row.id,
+    language: row.language,
+    ...(row.name === null ? {} : { name: row.name }),
+    creator: creatorOf(row),
+    visibility: row.visibility,
+    version: {
+      number: row.number,
+      text: row.text,
+      options: row.options,
+      category: row.category,
+      tags: row.tags.map(({ tag }) => tag),
+      minimumAge: row.minimum_age,
+      status: row.status,
+      ...(row.translation_of === null ||
+      row.translation_of_version === null ||
+      row.translation === null
+        ? {}
+        : {
+            translationOf: { dilemmaId: row.translation_of, version: row.translation_of_version },
+            translation: row.translation,
+          }),
+      ...(args === undefined ? {} : { arguments: args }),
+    },
+  });
+}
+
+/** The options, the tags and the arguments of the version in each row, in order. */
+function contentOfTheVersion(
+  eb: ExpressionBuilder<DilemmasTables, 'dilemmas' | 'dilemma_versions'>,
+) {
+  return [
+    jsonArrayFrom(
+      eb
+        .selectFrom('dilemma_version_options')
+        .select(['option_id as id', 'text'])
+        .whereRef('dilemma_version_options.dilemma_id', '=', 'dilemma_versions.dilemma_id')
+        .whereRef('dilemma_version_options.version', '=', 'dilemma_versions.number')
+        .orderBy('position'),
+    ).as('options'),
+    jsonArrayFrom(
+      eb
+        .selectFrom('dilemma_version_tags')
+        .select('tag')
+        .whereRef('dilemma_version_tags.dilemma_id', '=', 'dilemma_versions.dilemma_id')
+        .whereRef('dilemma_version_tags.version', '=', 'dilemma_versions.number')
+        .orderBy('position'),
+    ).as('tags'),
+    jsonArrayFrom(
+      eb
+        .selectFrom('dilemma_version_arguments')
+        .select('context')
+        .whereRef('dilemma_version_arguments.dilemma_id', '=', 'dilemma_versions.dilemma_id')
+        .whereRef('dilemma_version_arguments.version', '=', 'dilemma_versions.number'),
+    ).as('argument_context'),
+    jsonArrayFrom(
+      eb
+        .selectFrom('dilemma_version_option_arguments as argued')
+        .innerJoin('dilemma_version_options as argued_option', (join) =>
+          join
+            .onRef('argued_option.dilemma_id', '=', 'argued.dilemma_id')
+            .onRef('argued_option.version', '=', 'argued.version')
+            .onRef('argued_option.option_id', '=', 'argued.option_id'),
+        )
+        .select([
+          'argued.option_id as optionId',
+          'argued.argument_for as for',
+          'argued.argument_against as against',
+        ])
+        .whereRef('argued.dilemma_id', '=', 'dilemma_versions.dilemma_id')
+        .whereRef('argued.version', '=', 'dilemma_versions.number')
+        .orderBy('argued_option.position'),
+    ).as('option_arguments'),
+  ] as const;
+}
+
+/**
+ * Each version in its own rows, inserted once; saving again only changes the status, the
+ * visibility, the name and the arguments of the version saved.
+ */
 export class PostgresDilemmaRepository implements DilemmaRepository {
   readonly #db: Kysely<DilemmasTables>;
 
@@ -46,46 +153,20 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
   }
 
   async findVersion(id: string, version: number): Promise<Dilemma | undefined> {
-    const db = currentTransaction<DilemmasTables>() ?? this.#db;
-    const row = await db
-      .selectFrom('dilemmas')
-      .innerJoin('dilemma_versions', 'dilemma_versions.dilemma_id', 'dilemmas.id')
-      .selectAll(['dilemmas', 'dilemma_versions'])
+    const row = await this.#versions()
       .where('dilemmas.id', '=', id)
       .where('dilemma_versions.number', '=', version)
       .executeTakeFirst();
-    if (!row) return undefined;
+    return row && dilemmaOf(row);
+  }
 
-    const options = await db
-      .selectFrom('dilemma_version_options')
-      .select(['option_id', 'text'])
-      .where('dilemma_id', '=', id)
-      .where('version', '=', version)
-      .orderBy('position')
-      .execute();
-    const tags = await db
-      .selectFrom('dilemma_version_tags')
-      .select('tag')
-      .where('dilemma_id', '=', id)
-      .where('version', '=', version)
-      .orderBy('position')
-      .execute();
-
-    return Dilemma.restore({
-      id: row.id,
-      language: row.language,
-      creator: creatorOf(row),
-      visibility: row.visibility,
-      version: {
-        number: row.number,
-        text: row.text,
-        options: options.map(({ option_id, text }) => ({ id: option_id, text })),
-        category: row.category,
-        tags: tags.map(({ tag }) => tag),
-        minimumAge: row.minimum_age,
-        status: row.status,
-      },
-    });
+  async findTranslation(original: TranslationOf, language: string): Promise<Dilemma | undefined> {
+    const row = await this.#versions()
+      .where('dilemmas.translation_of', '=', original.dilemmaId)
+      .where('dilemmas.language', '=', language)
+      .where('dilemma_versions.translation_of_version', '=', original.version)
+      .executeTakeFirst();
+    return row && dilemmaOf(row);
   }
 
   async search(criteria: DilemmaCriteria): Promise<Dilemma[]> {
@@ -95,28 +176,7 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
     const typed = criteria.text?.trim() ?? '';
     const words = typed.split(/\s+/).filter((word) => word.length > 0);
 
-    const rows = await db
-      .selectFrom('dilemmas')
-      .innerJoin('dilemma_versions', 'dilemma_versions.dilemma_id', 'dilemmas.id')
-      .selectAll(['dilemmas', 'dilemma_versions'])
-      .select((eb) => [
-        jsonArrayFrom(
-          eb
-            .selectFrom('dilemma_version_options')
-            .select(['option_id as id', 'text'])
-            .whereRef('dilemma_version_options.dilemma_id', '=', 'dilemma_versions.dilemma_id')
-            .whereRef('dilemma_version_options.version', '=', 'dilemma_versions.number')
-            .orderBy('position'),
-        ).as('options'),
-        jsonArrayFrom(
-          eb
-            .selectFrom('dilemma_version_tags')
-            .select('tag')
-            .whereRef('dilemma_version_tags.dilemma_id', '=', 'dilemma_versions.dilemma_id')
-            .whereRef('dilemma_version_tags.version', '=', 'dilemma_versions.number')
-            .orderBy('position'),
-        ).as('tags'),
-      ])
+    const rows = await this.#versions(db)
       .where('dilemmas.visibility', '=', 'public')
       // Only the current version of each dilemma: no later one exists.
       .where(({ not, exists, selectFrom }) =>
@@ -131,6 +191,9 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
       )
       .where('dilemma_versions.status', '=', status)
       .where('dilemma_versions.minimum_age', '<=', maximumMinimumAge)
+      .$if(criteria.language !== undefined, (query) =>
+        query.where('dilemmas.language', '=', criteria.language ?? ''),
+      )
       .$if(dilemmaIds !== undefined, (query) => query.where('dilemmas.id', 'in', dilemmaIds ?? []))
       .$if(categories !== undefined, (query) =>
         query.where('dilemma_versions.category', 'in', (categories ?? []) as Category[]),
@@ -149,37 +212,35 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
       .orderBy(sql`dilemmas.id collate "C"`)
       .execute();
 
-    return rows.map((row) =>
-      Dilemma.restore({
-        id: row.id,
-        language: row.language,
-        creator: creatorOf(row),
-        visibility: row.visibility,
-        version: {
-          number: row.number,
-          text: row.text,
-          options: row.options,
-          category: row.category,
-          tags: row.tags.map(({ tag }) => tag),
-          minimumAge: row.minimum_age,
-          status: row.status,
-        },
-      }),
-    );
+    return rows.map(dilemmaOf);
+  }
+
+  /** Every version of every dilemma, with its content, to narrow down. */
+  #versions(db: Kysely<DilemmasTables> = currentTransaction<DilemmasTables>() ?? this.#db) {
+    return db
+      .selectFrom('dilemmas')
+      .innerJoin('dilemma_versions', 'dilemma_versions.dilemma_id', 'dilemmas.id')
+      .selectAll(['dilemmas', 'dilemma_versions'])
+      .select(contentOfTheVersion);
   }
 
   async #save(db: Transaction<DilemmasTables>, snapshot: DilemmaSnapshot): Promise<void> {
     const { id, language, creator, visibility, version } = snapshot;
-    const creatorColumns = {
+    const changing = {
+      visibility,
+      name: snapshot.name ?? null,
       creator_type: creator.type,
       creator_identity: creator.type === 'player' ? creator.identity : null,
     };
     await db
       .insertInto('dilemmas')
-      .values({ id, language, visibility, ...creatorColumns })
-      .onConflict((conflict) =>
-        conflict.column('id').doUpdateSet({ visibility, ...creatorColumns }),
-      )
+      .values({
+        id,
+        language,
+        translation_of: version.translationOf?.dilemmaId ?? null,
+        ...changing,
+      })
+      .onConflict((conflict) => conflict.column('id').doUpdateSet(changing))
       .execute();
 
     const saved = await db
@@ -195,6 +256,7 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
         .where('dilemma_id', '=', id)
         .where('number', '=', version.number)
         .execute();
+      await this.#saveArguments(db, id, version.number, version.arguments);
       return;
     }
 
@@ -207,6 +269,8 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
         category: version.category,
         minimum_age: version.minimumAge,
         status: version.status,
+        translation_of_version: version.translationOf?.version ?? null,
+        translation: version.translation ?? null,
       })
       .execute();
     await db
@@ -234,6 +298,38 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
         )
         .execute();
     }
+    await this.#saveArguments(db, id, version.number, version.arguments);
+  }
+
+  /** The arguments of that version as they are now, replacing what it had. */
+  async #saveArguments(
+    db: Transaction<DilemmasTables>,
+    dilemmaId: string,
+    version: number,
+    args: ArgumentsSnapshot | undefined,
+  ): Promise<void> {
+    await db
+      .deleteFrom('dilemma_version_arguments')
+      .where('dilemma_id', '=', dilemmaId)
+      .where('version', '=', version)
+      .execute();
+    if (!args) return;
+    await db
+      .insertInto('dilemma_version_arguments')
+      .values({ dilemma_id: dilemmaId, version, context: args.context ?? null })
+      .execute();
+    await db
+      .insertInto('dilemma_version_option_arguments')
+      .values(
+        args.options.map((option) => ({
+          dilemma_id: dilemmaId,
+          version,
+          option_id: option.optionId,
+          argument_for: option.for,
+          argument_against: option.against,
+        })),
+      )
+      .execute();
   }
 }
 

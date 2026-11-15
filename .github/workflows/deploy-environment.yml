@@ -52,14 +52,14 @@ jobs:
 
       # From the same image as the room server, before its new revision serves anyone: each
       # migration must also work with the revision still serving. A failure stops the deploy.
-      - name: Migrate the database and load the seed
+      # The dilemmas come from the curated catalog, which the job catalog-import loads.
+      - name: Migrate the database
         run: |
           gcloud run jobs deploy migrate --project "$PROJECT" --region europe-southwest1 \
             --image "$(cat image.txt)" \
             --service-account "migrator@$PROJECT.iam.gserviceaccount.com" \
-            --command sh \
-            --args=-c,"node packages/db/src/migrate.ts && node packages/db/seeds/load.ts" \
-            --set-env-vars "CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=migrator@$PROJECT.iam,DB_APP_USER=realtime@$PROJECT.iam" \
+            --command node --args packages/db/src/migrate.ts \
+            --set-env-vars "CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=migrator@$PROJECT.iam,DB_APP_USER=realtime@$PROJECT.iam,DB_CATALOG_USER=catalog-import@$PROJECT.iam" \
             --max-retries 0 --task-timeout 10m \
             --quiet
           gcloud run jobs execute migrate --project "$PROJECT" --region europe-southwest1 \
@@ -68,8 +68,8 @@ jobs:
       # The rooms live in PostgreSQL, so several instances share them. After a deploy the previous
       # revision keeps its sockets for up to an hour, so two revisions may run side by side: at most
       # 2 instances each, with a pool of 3 and the LISTEN connection, are 16 connections; with 1 of
-      # the migrate job and 1 of the close-rooms job, 18, within the 19 the micro instance leaves to
-      # the app users (25, minus 3 for superusers and 3 Cloud SQL uses).
+      # the migrate job, 1 of the close-rooms job and 1 of the catalog-import job, 19, the 19 the
+      # micro instance leaves to the app users (25, minus 3 for superusers and 3 Cloud SQL uses).
       # Each open socket is one of the 250 requests an instance takes at once: 500 sockets in all,
       # which the capacity alert in ops/monitoring counts on.
       # The CPU stays with the instance between requests: its beat, the check of LISTEN, the cleaning
@@ -152,3 +152,20 @@ jobs:
           else
             gcloud scheduler jobs create http close-rooms "${schedule[@]}"
           fi
+
+      # The job that loads the Catalog of dilemmas of Notion, with its translations, which the
+      # workflow Import the catalog runs by hand: here it only gets the new image. Same image as the
+      # room server, but an account of its own: only it reads the token of Notion and the key of
+      # Anthropic in Secret Manager, and its database user only touches the tables of Dilemmas, so
+      # the public room server can read neither. Loading again changes only what changed in Notion,
+      # so a run that failed is just run again.
+      - name: Deploy the job that loads the catalog
+        run: |
+          gcloud run jobs deploy catalog-import --project "$PROJECT" --region europe-southwest1 \
+            --image "$(cat image.txt)" \
+            --service-account "catalog-import@$PROJECT.iam.gserviceaccount.com" \
+            --command node --args apps/realtime/src/jobs/catalog-import.ts \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=catalog-import@$PROJECT.iam" \
+            --set-secrets "NOTION_TOKEN=notion-token:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest" \
+            --max-retries 0 --task-timeout 3h \
+            --quiet

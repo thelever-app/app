@@ -76,6 +76,36 @@ function catalogDilemma(
 
 const EVERYONE: DilemmaCriteria = { maximumMinimumAge: 16, status: 'in-catalog' };
 
+/** The English translation of the first version of dilemma(). */
+function translation(): Dilemma {
+  return Dilemma.translate(
+    dilemma(),
+    {
+      language: 'en',
+      name: 'TestTranslatedName',
+      text: 'TestTranslatedText',
+      options: ['TestTranslatedOption1', 'TestTranslatedOption2', 'TestTranslatedOption3'],
+      tags: ['testtranslatedtag'],
+    },
+    new FixedIdGenerator(
+      'TestTranslationId',
+      'TestTranslationOptionId1',
+      'TestTranslationOptionId2',
+      'TestTranslationOptionId3',
+    ),
+  );
+}
+
+/** Arguments for the options of the first version of dilemma(). */
+const ARGUMENTS = {
+  context: 'TestContext',
+  options: ['TestOptionId1', 'TestOptionId2', 'TestOptionId3'].map((optionId) => ({
+    optionId,
+    for: `TestFor${optionId}`,
+    against: `TestAgainst${optionId}`,
+  })),
+};
+
 async function idsFound(repository: DilemmaRepository, criteria: DilemmaCriteria) {
   return (await repository.search(criteria)).map(({ id }) => id);
 }
@@ -215,6 +245,53 @@ export function describeDilemmaRepositoryContract(
         );
       });
 
+      it('should keep a new name and new arguments without making a new version', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(dilemma());
+        const argued = dilemma();
+        argued.rename('TestName');
+        argued.argue(ARGUMENTS);
+
+        // Act
+        await repository.save(argued);
+
+        // Assert
+        const found = await repository.findById('TestDilemmaId');
+        expect(found?.version).toBe(1);
+        expect(found?.name).toBe('TestName');
+        expect(found?.arguments).toEqual(ARGUMENTS);
+      });
+
+      it('should keep the arguments of each version apart', async () => {
+        // Arrange
+        const repository = await create();
+        const argued = dilemma();
+        argued.argue(ARGUMENTS);
+        await repository.save(argued);
+
+        // Act
+        await repository.save(revised());
+
+        // Assert
+        expect((await repository.findVersion('TestDilemmaId', 1))?.arguments).toEqual(ARGUMENTS);
+        expect((await repository.findVersion('TestDilemmaId', 2))?.arguments).toBeUndefined();
+      });
+
+      it('should keep a translation with what it translates', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(dilemma());
+
+        // Act
+        await repository.save(translation());
+
+        // Assert
+        expect((await repository.findById('TestTranslationId'))?.toSnapshot()).toEqual(
+          translation().toSnapshot(),
+        );
+      });
+
       it('should keep the earlier versions when it saves a new one', async () => {
         // Arrange
         const repository = await create();
@@ -226,6 +303,80 @@ export function describeDilemmaRepositoryContract(
         // Assert
         expect((await repository.findVersion('TestDilemmaId', 1))?.options).toHaveLength(3);
         expect((await repository.findVersion('TestDilemmaId', 2))?.text).toBe('TestRevisedText');
+      });
+    });
+
+    describe('findTranslation', () => {
+      it('should find the translation of that version into that language', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(dilemma());
+        await repository.save(translation());
+
+        // Act
+        const found = await repository.findTranslation(
+          { dilemmaId: 'TestDilemmaId', version: 1 },
+          'en',
+        );
+
+        // Assert
+        expect(found?.toSnapshot()).toEqual(translation().toSnapshot());
+      });
+
+      it('should find the version of the translation that translates each version', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(dilemma());
+        await repository.save(translation());
+        const original = revised();
+        const retranslated = translation();
+        retranslated.retranslate(
+          original,
+          {
+            text: 'TestRetranslatedText',
+            options: ['TestTranslatedOption1', 'TestTranslatedOption3', 'TestTranslatedOption4'],
+            tags: [],
+          },
+          new FixedIdGenerator(),
+        );
+        await repository.save(original);
+        await repository.save(retranslated);
+
+        // Act
+        const first = await repository.findTranslation(
+          { dilemmaId: 'TestDilemmaId', version: 1 },
+          'en',
+        );
+        const second = await repository.findTranslation(
+          { dilemmaId: 'TestDilemmaId', version: 2 },
+          'en',
+        );
+
+        // Assert
+        expect(first?.text).toBe('TestTranslatedText');
+        expect(second?.version).toBe(2);
+        expect(second?.text).toBe('TestRetranslatedText');
+      });
+
+      it('should return undefined if there is no translation into that language or of that version', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(dilemma());
+        await repository.save(translation());
+
+        // Act
+        const otherLanguage = await repository.findTranslation(
+          { dilemmaId: 'TestDilemmaId', version: 1 },
+          'fr',
+        );
+        const otherVersion = await repository.findTranslation(
+          { dilemmaId: 'TestDilemmaId', version: 2 },
+          'en',
+        );
+
+        // Assert
+        expect(otherLanguage).toBeUndefined();
+        expect(otherVersion).toBeUndefined();
       });
     });
 
@@ -438,6 +589,23 @@ export function describeDilemmaRepositoryContract(
         // Assert
         expect(asItWas).toEqual([]);
         expect(asItIs.map((found) => found.toSnapshot())).toEqual([revised().toSnapshot()]);
+      });
+
+      it('should find only the dilemmas written or translated in the language given', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(dilemma());
+        await repository.save(translation());
+
+        // Act
+        const english = await idsFound(repository, { ...EVERYONE, language: 'en' });
+        const spanish = await idsFound(repository, { ...EVERYONE, language: 'es' });
+        const any = await idsFound(repository, EVERYONE);
+
+        // Assert
+        expect(english).toEqual(['TestTranslationId']);
+        expect(spanish).toEqual(['TestDilemmaId']);
+        expect(any).toEqual(['TestDilemmaId', 'TestTranslationId']);
       });
 
       it('should return an empty list when nothing matches', async () => {

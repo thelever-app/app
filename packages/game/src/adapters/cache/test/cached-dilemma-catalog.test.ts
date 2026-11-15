@@ -23,13 +23,20 @@ describeDilemmaCatalogContract('CachedDilemmaCatalog', async () => {
       text: option,
     })),
   }));
-  const stored = dilemmas.map(({ dilemmaId, text, options }) => ({ dilemmaId, text, options }));
+  const stored = dilemmas.map(({ dilemmaId, text, options }) => ({
+    dilemmaId,
+    text,
+    options,
+    language: 'es',
+  }));
   return { catalog: new CachedDilemmaCatalog(new InMemoryDilemmaCatalog(dilemmas)), stored };
 });
 
 /** A catalog that answers every version it is asked for and remembers what it was asked. */
 class CountingCatalog implements DilemmaCatalog {
   readonly asked: string[][] = [];
+  /** The dilemmas without a translation, which it returns in Spanish whatever the language asked for. */
+  readonly untranslated = new Set<string>();
 
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
     this.asked.push(['options', ...dilemmaIds]);
@@ -47,6 +54,7 @@ class CountingCatalog implements DilemmaCatalog {
       dilemmaId,
       text: `TestText ${dilemmaId}@${version} ${language}`,
       options: [],
+      language: this.untranslated.has(dilemmaId) ? 'es' : language,
     }));
   }
 
@@ -108,6 +116,24 @@ describe('CachedDilemmaCatalog', () => {
 
     // Assert
     expect(found?.text).toBe('TestText TestA@1 en');
+  });
+
+  it('should ask again for what came in another language, since its translation may still come', async () => {
+    // Arrange
+    const inner = new CountingCatalog();
+    inner.untranslated.add('TestA');
+    const catalog = new CachedDilemmaCatalog(inner);
+    const played = [{ dilemmaId: 'TestA', version: 1 }];
+    await catalog.findContents(played, 'en');
+    inner.untranslated.delete('TestA');
+
+    // Act
+    const [content] = await catalog.findContents(played, 'en');
+    await catalog.findContents(played, 'en');
+
+    // Assert
+    expect(content?.language).toBe('en');
+    expect(inner.asked).toEqual([['TestA@1:en'], ['TestA@1:en']]);
   });
 
   it('should always ask for the current versions, which change', async () => {

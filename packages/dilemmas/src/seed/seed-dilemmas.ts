@@ -139,3 +139,19 @@ export async function loadSeedDilemmas(repository: DilemmaRepository): Promise<r
   }
   return SEED_DILEMMAS.map(({ id }) => id);
 }
+
+/**
+ * Withdraws the seed dilemmas, once the curated catalog takes their place, and returns how many it
+ * withdrew: none if they are not there or are already withdrawn.
+ */
+export async function withdrawSeedDilemmas(repository: DilemmaRepository): Promise<number> {
+  let withdrawn = 0;
+  for (const { id } of SEED_DILEMMAS) {
+    const dilemma = await repository.findById(id);
+    if (!dilemma || dilemma.status === 'withdrawn') continue;
+    dilemma.withdraw();
+    await repository.save(dilemma);
+    withdrawn += 1;
+  }
+  return withdrawn;
+}

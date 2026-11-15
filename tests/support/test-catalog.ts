@@ -6,7 +6,18 @@ import type { CatalogEntry } from './driver.ts';
 /** A dilemma of the test data, with what a scenario checks of it. */
 export interface TestDilemma extends CatalogEntry {
   readonly dilemmaId: string;
+  /** The language it is written in, which a room must play in to find it. */
+  readonly language: string;
+  /** Its text and its options in other languages, option n translating option n. */
+  readonly translations: readonly TestTranslation[];
   readonly tags: readonly string[];
+  readonly options: readonly string[];
+}
+
+/** A dilemma of the test data in another language. */
+export interface TestTranslation {
+  readonly language: string;
+  readonly text: string;
   readonly options: readonly string[];
 }
 
@@ -29,6 +40,8 @@ function dilemmas(
     tags = [],
     status = 'in-catalog',
     options = OPTION_TEXTS,
+    language = 'es',
+    translations = [],
     gap = false,
   }: Partial<Omit<TestDilemma, 'dilemmaId' | 'text'>> & { readonly gap?: boolean },
 ): TestDilemma[] {
@@ -40,8 +53,13 @@ function dilemmas(
     tags,
     status,
     options,
+    language,
+    translations,
   }));
 }
+
+/** The options of the dilemma of the test data written in Spanish, and translated into English. */
+export const SPANISH_OPTION_TEXTS = ['Tirar de la palanca', 'No hacer nada'] as const;
 
 /**
  * Test data, enough for every scenario of the lobby and the decision phase:
@@ -50,7 +68,10 @@ function dilemmas(
  *   some; and new dilemmas for each age;
  * - in honesty, 8 dilemmas and 2 new ones, to choose categories;
  * - in loyalty, 3 dilemmas with the gap "someone in the group" and one with three options, for the
- *   host to pick.
+ *   host to pick;
+ * - all of them in Spanish but 6 of honesty in French, for a room that changes its language;
+ * - in justice, one with its texts in Spanish and a translation into English, and one only in
+ *   Spanish, for the language each player reads in.
  */
 export const TEST_DILEMMAS: readonly TestDilemma[] = [
   ...dilemmas('life-and-death', 8, { tags: ['family'] }),
@@ -61,14 +82,34 @@ export const TEST_DILEMMAS: readonly TestDilemma[] = [
   ...dilemmas('new-honesty', 2, { category: 'honesty', status: 'in-exploration' }),
   ...dilemmas('gap', 3, { category: 'loyalty', gap: true }),
   ...dilemmas('three-options', 1, { category: 'loyalty', options: THREE_OPTION_TEXTS }),
+  ...dilemmas('honesty-in-french', 6, { category: 'honesty', language: 'fr' }),
+  ...dilemmas('english-version', 1, {
+    category: 'justice',
+    options: SPANISH_OPTION_TEXTS,
+    translations: [
+      { language: 'en', text: 'Text of english-version-1 in English', options: OPTION_TEXTS },
+    ],
+  }),
+  ...dilemmas('spanish-only', 1, { category: 'justice' }),
 ];
+
+/** The text of the dilemma of the test data in that language. */
+export function testTextIn(dilemmaId: string, language: string): string {
+  const dilemma = TEST_DILEMMAS.find((candidate) => candidate.dilemmaId === dilemmaId);
+  if (!dilemma) throw new Error(`The test data has no dilemma ${dilemmaId}`);
+  if (dilemma.language === language) return dilemma.text;
+  const translation = dilemma.translations.find((candidate) => candidate.language === language);
+  if (!translation) throw new Error(`Dilemma ${dilemmaId} of the test data is not in ${language}`);
+  return translation.text;
+}
 
 /**
  * The ids of the dilemmas of the test data with the two usual options and no gap, suitable from
  * 16, enough for the largest game: those a game plays when its scenario names those options.
  */
 export const TWO_OPTION_DILEMMA_IDS = TEST_DILEMMAS.filter(
-  ({ text, minimumAge, status, options }) =>
+  ({ text, minimumAge, status, options, language }) =>
+    language === 'es' &&
     options === OPTION_TEXTS &&
     !text.includes(GAP_MARKER) &&
     minimumAge === 16 &&
@@ -127,14 +168,26 @@ class FixedIds implements IdGenerator {
   }
 }
 
-/** Stores the test data, in Spanish and by the curation team, each dilemma with its status. */
+/** Stores the test data, by the curation team, each dilemma in its language, with its status and its translations. */
 export async function loadTestDilemmas(repository: DilemmaRepository): Promise<void> {
-  for (const { dilemmaId, text, minimumAge, category, tags, status, options } of TEST_DILEMMAS) {
+  for (const test of TEST_DILEMMAS) {
+    const { dilemmaId, text, minimumAge, category, tags, status, options, language } = test;
     const ids = new FixedIds([dilemmaId, ...options.map((_, n) => `${dilemmaId}-option-${n + 1}`)]);
     const created = Dilemma.create(
-      { text, language: 'es', options, category, tags, minimumAge },
+      { text, language, options, category, tags, minimumAge },
       ids,
     ).toSnapshot();
-    await repository.save(Dilemma.restore({ ...created, version: { ...created.version, status } }));
+    const original = Dilemma.restore({ ...created, version: { ...created.version, status } });
+    await repository.save(original);
+    for (const translation of test.translations) {
+      const translationId = `${dilemmaId}-${translation.language}`;
+      const translationIds = new FixedIds([
+        translationId,
+        ...translation.options.map((_, n) => `${translationId}-option-${n + 1}`),
+      ]);
+      await repository.save(
+        Dilemma.translate(original, { ...translation, tags: [] }, translationIds),
+      );
+    }
   }
 }

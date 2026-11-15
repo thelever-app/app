@@ -1,0 +1,47 @@
+name: Import the catalog
+
+# Loads the Catalog of dilemmas of Notion into the database of an environment, with its
+# translations, by running the job catalog-import that Deploy left there with the image it serves.
+# By hand, when the curation team has approved, discarded or changed dilemmas; prod waits for
+# Mario's approval, as a deploy does. Loading again changes only what changed in Notion.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: dev or prod
+        required: true
+        type: choice
+        options: [dev, prod]
+
+permissions:
+  contents: read
+  id-token: write
+
+# One load per environment at a time: two would translate the same dilemmas twice.
+concurrency:
+  group: import-catalog-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    # The task timeout of the job, 3 hours, and a margin.
+    timeout-minutes: 190
+    environment: ${{ inputs.environment }}
+    env:
+      PROJECT: thelever-app-${{ inputs.environment }}
+      WORKLOAD_IDENTITY_PROVIDER: projects/236232367578/locations/global/workloadIdentityPools/github/providers/thelever-app-app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Sign in to Google Cloud as the deployer of the environment
+        env:
+          SERVICE_ACCOUNT: deployer@${{ env.PROJECT }}.iam.gserviceaccount.com
+        run: .github/scripts/gcp-auth.sh
+
+      - name: Load the catalog
+        run: |
+          gcloud run jobs execute catalog-import --project "$PROJECT" --region europe-southwest1 \
+            --wait --quiet

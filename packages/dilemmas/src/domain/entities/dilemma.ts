@@ -1,9 +1,16 @@
+import { ArgumentsDoNotMatchOptionsError } from '../errors/arguments-do-not-match-options.error.ts';
+import { NotAnOriginalError } from '../errors/not-an-original.error.ts';
+import { NotItsOriginalError } from '../errors/not-its-original.error.ts';
+import { SameLanguageTranslationError } from '../errors/same-language-translation.error.ts';
+import { TranslationOptionCountError } from '../errors/translation-option-count.error.ts';
 import { UnknownOptionError } from '../errors/unknown-option.error.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Category } from '../vos/category.vo.ts';
+import { type ArgumentsSnapshot, ArgumentsVO } from '../vos/arguments.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { LanguageVO } from '../vos/language.vo.ts';
 import type { MinimumAge } from '../vos/minimum-age.vo.ts';
+import { TextVO } from '../vos/text.vo.ts';
 import { VersionVO } from '../vos/version.vo.ts';
 
 export interface OptionSnapshot {
@@ -31,6 +38,15 @@ export type Creator =
   | { readonly type: 'player'; readonly identity: string }
   | { readonly type: 'unlinked-player' };
 
+/** The version of an original that a version of a translation translates. */
+export interface TranslationOf {
+  readonly dilemmaId: string;
+  readonly version: number;
+}
+
+/** Automatic: the translator made it and nobody corrected it. Reviewed: a person corrected it before publishing. */
+export type Translation = 'automatic' | 'reviewed';
+
 export interface VersionSnapshot {
   readonly number: number;
   readonly text: string;
@@ -39,35 +55,60 @@ export interface VersionSnapshot {
   readonly tags: readonly string[];
   readonly minimumAge: MinimumAge;
   readonly status: DilemmaStatus;
+  /** Only in a translation. */
+  readonly translationOf?: TranslationOf;
+  /** Only in a translation. */
+  readonly translation?: Translation;
+  /** For the public web; adding or changing them makes no new version. */
+  readonly arguments?: ArgumentsSnapshot;
 }
 
 export interface DilemmaSnapshot {
   readonly id: string;
-  /** The language the dilemma was written in; each translation is a dilemma of its own. */
+  /** The language the dilemma was written or translated in; each translation is a dilemma of its own. */
   readonly language: string;
+  /** The short title the public web gives it; changing it makes no new version. */
+  readonly name?: string;
   readonly creator: Creator;
   readonly visibility: Visibility;
   /** The current version; earlier ones never change and are read through the repository. */
   readonly version: VersionSnapshot;
 }
 
-/** What a player reads: the text and the options, in one language. */
-export interface DilemmaContent {
+/** What the translator gives for a version of an original: its content in another language, option by option. */
+export interface TranslatedContent {
+  readonly language: string;
+  readonly name?: string;
   readonly text: string;
-  readonly options: readonly OptionSnapshot[];
+  /** In the order of the options of the original: option n translates option n. */
+  readonly options: readonly string[];
+  readonly tags: readonly string[];
 }
+
+/** Whatever its creator, a version in one of these is out of the reach of players. */
+const UNREADABLE: readonly DilemmaStatus[] = [
+  'in-review',
+  'rejected',
+  'hidden-by-reports',
+  'withdrawn',
+];
 
 export class Dilemma {
   readonly #id: IdVO;
   readonly #language: LanguageVO;
+  #name: TextVO | undefined;
   readonly #creator: Creator;
   readonly #visibility: Visibility;
   #version: VersionVO;
   #status: DilemmaStatus;
+  #translationOf: TranslationOf | undefined;
+  #translation: Translation | undefined;
+  #arguments: ArgumentsVO | undefined;
 
   private constructor(snapshot: DilemmaSnapshot) {
     this.#id = new IdVO(snapshot.id);
     this.#language = new LanguageVO(snapshot.language);
+    this.#name = snapshot.name === undefined ? undefined : new TextVO(snapshot.name);
     this.#creator =
       snapshot.creator.type === 'player'
         ? { type: 'player', identity: new IdVO(snapshot.creator.identity).value }
@@ -75,6 +116,12 @@ export class Dilemma {
     this.#visibility = snapshot.visibility;
     this.#version = new VersionVO(snapshot.version.number, snapshot.version);
     this.#status = snapshot.version.status;
+    this.#translationOf = snapshot.version.translationOf;
+    this.#translation = snapshot.version.translation;
+    this.#arguments =
+      snapshot.version.arguments === undefined
+        ? undefined
+        : new ArgumentsVO(snapshot.version.arguments);
   }
 
   /** The curation team writes it: it is public and goes straight to the catalog. */
@@ -82,6 +129,7 @@ export class Dilemma {
     {
       text,
       language,
+      name,
       options,
       category,
       tags,
@@ -89,6 +137,7 @@ export class Dilemma {
     }: {
       readonly text: string;
       readonly language: string;
+      readonly name?: string;
       readonly options: readonly string[];
       readonly category: string;
       readonly tags: readonly string[];
@@ -107,9 +156,49 @@ export class Dilemma {
     return new Dilemma({
       id,
       language,
+      ...(name === undefined ? {} : { name }),
       creator: { type: 'curation-team' },
       visibility: 'public',
       version: { ...Dilemma.#snapshotOf(version), status: 'in-catalog' },
+    });
+  }
+
+  /**
+   * A dilemma of its own that translates the current version of an original, automatically:
+   * with the category, the minimum age, the creator and the visibility of the original, and
+   * its option n translating option n of the original.
+   */
+  static translate(
+    original: Dilemma,
+    content: TranslatedContent,
+    idGenerator: IdGenerator,
+  ): Dilemma {
+    if (original.translationOf) throw new NotAnOriginalError(original.id);
+    if (content.language === original.language) {
+      throw new SameLanguageTranslationError(content.language);
+    }
+    Dilemma.#checkOptionCount(original, content.options);
+
+    const id = idGenerator.generate();
+    const version = new VersionVO(1, {
+      text: content.text,
+      options: content.options.map((option) => ({ id: idGenerator.generate(), text: option })),
+      category: original.category,
+      tags: content.tags,
+      minimumAge: original.minimumAge,
+    });
+    return new Dilemma({
+      id,
+      language: content.language,
+      ...(content.name === undefined ? {} : { name: content.name }),
+      creator: original.creator,
+      visibility: original.visibility,
+      version: {
+        ...Dilemma.#snapshotOf(version),
+        status: Dilemma.#statusOfANewVersion(original.creator),
+        translationOf: { dilemmaId: original.id, version: original.version },
+        translation: 'automatic',
+      },
     });
   }
 
@@ -119,6 +208,25 @@ export class Dilemma {
 
   get language(): string {
     return this.#language.value;
+  }
+
+  get name(): string | undefined {
+    return this.#name?.value;
+  }
+
+  /** Of the current version; none in an original. */
+  get translationOf(): TranslationOf | undefined {
+    return this.#translationOf;
+  }
+
+  /** Of the current version; none in an original. */
+  get translation(): Translation | undefined {
+    return this.#translation;
+  }
+
+  /** Of the current version, if it has any. */
+  get arguments(): ArgumentsSnapshot | undefined {
+    return this.#arguments?.toSnapshot();
   }
 
   get creator(): Creator {
@@ -200,28 +308,111 @@ export class Dilemma {
     if (next.hasSameContentAs(this.#version)) return;
 
     this.#version = next;
-    // Only what the curation team writes skips the filter; anything else is reviewed again.
-    this.#status = this.#creator.type === 'curation-team' ? 'in-catalog' : 'in-review';
+    this.#status = Dilemma.#statusOfANewVersion(this.#creator);
+    this.#arguments = undefined;
   }
 
-  /** The content in the language asked for, or in the original language while there is no translation. */
-  contentIn(language: string): DilemmaContent {
-    new LanguageVO(language);
-    return { text: this.text, options: this.options };
+  /**
+   * Translates the new version of its original with a new version of its own: option n keeps the
+   * id of option n, a new position gets a new id, and the category and the minimum age follow the
+   * original. Nothing changes if it already translates the current version of its original.
+   */
+  retranslate(
+    original: Dilemma,
+    content: Omit<TranslatedContent, 'language' | 'name'>,
+    idGenerator: IdGenerator,
+  ): void {
+    if (this.#translationOf?.dilemmaId !== original.id) {
+      throw new NotItsOriginalError(this.id, original.id);
+    }
+    if (this.#translationOf.version === original.version) return;
+    Dilemma.#checkOptionCount(original, content.options);
+
+    const current = this.#version.options;
+    this.#version = new VersionVO(this.#version.number + 1, {
+      text: content.text,
+      options: content.options.map((text, index) => ({
+        id: current[index]?.id ?? idGenerator.generate(),
+        text,
+      })),
+      category: original.category,
+      tags: content.tags,
+      minimumAge: original.minimumAge,
+    });
+    this.#status = Dilemma.#statusOfANewVersion(this.#creator);
+    this.#translationOf = { dilemmaId: original.id, version: original.version };
+    this.#translation = 'automatic';
+    this.#arguments = undefined;
+  }
+
+  /** Out of new games, at the version it has. */
+  withdraw(): void {
+    this.#status = 'withdrawn';
+  }
+
+  /**
+   * A withdrawn dilemma back as a new version would leave it: in the catalog if the curation team
+   * wrote it, in review if not. Nothing changes if it is not withdrawn.
+   */
+  reinstate(): void {
+    if (this.#status === 'withdrawn') this.#status = Dilemma.#statusOfANewVersion(this.#creator);
+  }
+
+  /** Whether a player may read its current version: nothing keeps it in review or has taken it out. */
+  canBeRead(): boolean {
+    return !UNREADABLE.includes(this.#status);
+  }
+
+  /** A new name, without a new version. */
+  rename(name: string): void {
+    this.#name = new TextVO(name);
+  }
+
+  /** The current version without arguments, without a new version. */
+  dropArguments(): void {
+    this.#arguments = undefined;
+  }
+
+  /** The arguments of the current version, one for each of its options, without a new version. */
+  argue(args: ArgumentsSnapshot): void {
+    const vo = new ArgumentsVO(args);
+    if (!vo.coversExactly(this.#version.options.map(({ id }) => id))) {
+      throw new ArgumentsDoNotMatchOptionsError(this.id);
+    }
+    this.#arguments = vo;
   }
 
   toSnapshot(): DilemmaSnapshot {
     return {
       id: this.id,
       language: this.language,
+      ...(this.name === undefined ? {} : { name: this.name }),
       creator: this.#creator,
       visibility: this.#visibility,
-      version: { ...Dilemma.#snapshotOf(this.#version), status: this.#status },
+      version: {
+        ...Dilemma.#snapshotOf(this.#version),
+        status: this.#status,
+        ...(this.#translationOf === undefined
+          ? {}
+          : { translationOf: this.#translationOf, translation: this.#translation! }),
+        ...(this.#arguments === undefined ? {} : { arguments: this.#arguments.toSnapshot() }),
+      },
     };
   }
 
   static restore(snapshot: DilemmaSnapshot): Dilemma {
     return new Dilemma(snapshot);
+  }
+
+  /** Only what the curation team writes skips the filter; anything else is reviewed. */
+  static #statusOfANewVersion(creator: Creator): DilemmaStatus {
+    return creator.type === 'curation-team' ? 'in-catalog' : 'in-review';
+  }
+
+  static #checkOptionCount(original: Dilemma, options: readonly string[]): void {
+    if (options.length !== original.options.length) {
+      throw new TranslationOptionCountError(original.options.length, options.length);
+    }
   }
 
   static #snapshotOf(version: VersionVO): Omit<VersionSnapshot, 'status'> {

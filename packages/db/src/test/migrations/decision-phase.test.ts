@@ -5,7 +5,7 @@ import { type Kysely, sql } from 'kysely';
 import { afterEach, describe, expect, it } from 'vitest';
 import { openDatabase } from '../../connection.ts';
 import { ConsoleLogger } from '../../console-logger.ts';
-import { PostgresDilemmaRepository } from '../../dilemmas/postgres-dilemma-repository.ts';
+import { insertDilemmaAsTheFirstMigrationLeftIt } from '../support/dilemmas.ts';
 import { migrateTo } from '../../migrator.ts';
 import type { Database } from '../../schema.ts';
 import { onServer, urlOf } from '../support/test-database.ts';
@@ -47,7 +47,7 @@ async function gameInProgressBefore(db: Kysely<Database>): Promise<void> {
     },
     new SequentialIdGenerator('dilemma'),
   );
-  await new PostgresDilemmaRepository(db).save(dilemma);
+  await insertDilemmaAsTheFirstMigrationLeftIt(db, dilemma);
   const [vote] = dilemma.options.map(({ id }) => id);
   await db.transaction().execute(async (trx) => {
     await sql`

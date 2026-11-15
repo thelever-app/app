@@ -1,5 +1,6 @@
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import type { DilemmaStatus } from '../../domain/entities/dilemma.ts';
+import { LanguageVO } from '../../domain/vos/language.vo.ts';
 import type { DilemmaRepository } from '../ports/dilemma-repository.port.ts';
 
 export interface SearchDilemmasInput {
@@ -11,7 +12,7 @@ export interface SearchDilemmasInput {
   /** 16 leaves out the dilemmas for adults. */
   readonly maximumMinimumAge: MinimumAge;
   readonly status: DilemmaStatus;
-  /** The language of the texts returned; the original one while there is no translation. */
+  /** Only the dilemmas written or translated in it. */
   readonly language: string;
 }
 
@@ -42,13 +43,14 @@ export class SearchDilemmasUseCase implements SearchDilemmas {
     this.#dilemmaRepository = dilemmaRepository;
   }
 
-  async execute({ language, ...criteria }: SearchDilemmasInput): Promise<SearchDilemmasOutput> {
+  async execute(criteria: SearchDilemmasInput): Promise<SearchDilemmasOutput> {
+    new LanguageVO(criteria.language);
     const found = await this.#dilemmaRepository.search(criteria);
     return {
       dilemmas: found.map((dilemma) => ({
         dilemmaId: dilemma.id,
         version: dilemma.version,
-        text: dilemma.contentIn(language).text,
+        text: dilemma.text,
         minimumAge: dilemma.minimumAge,
         category: dilemma.category,
         tags: dilemma.tags,

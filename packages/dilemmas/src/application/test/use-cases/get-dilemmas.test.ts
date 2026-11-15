@@ -99,6 +99,7 @@ describe('GetDilemmasUseCase', () => {
             { optionId: 'TestOption2E', text: 'TestOptionE' },
           ],
           hasGap: false,
+          language: 'es',
         },
         {
           dilemmaId: 'TestDilemma1',
@@ -109,6 +110,7 @@ describe('GetDilemmasUseCase', () => {
             { optionId: 'TestOption1B', text: 'TestOptionB' },
           ],
           hasGap: false,
+          language: 'es',
         },
       ]);
     });
@@ -136,7 +138,163 @@ describe('GetDilemmasUseCase', () => {
       ).rejects.toThrow(DilemmaNotFoundError);
     });
 
-    it('should return the original text when there is no translation', async () => {
+    describe('in the language of the player', () => {
+      const ORIGINAL = {
+        ...CLASSIFICATION,
+        text: 'TestTextEs',
+        options: ['TestOptionEsA', 'TestOptionEsB'],
+      };
+
+      function translationOf(original: Dilemma, language: string) {
+        return Dilemma.translate(
+          original,
+          {
+            language,
+            text: `TestText${language}`,
+            options: [`TestOption${language}A`, `TestOption${language}B`],
+            tags: [],
+          },
+          new FixedIdGenerator(
+            `TestDilemma${language}`,
+            `TestOption${language}IdA`,
+            `TestOption${language}IdB`,
+          ),
+        );
+      }
+
+      /** An original in Spanish with its translations into English and French. */
+      async function catalogInThreeLanguages() {
+        const repository = new InMemoryDilemmaRepository();
+        const original = Dilemma.create(
+          ORIGINAL,
+          new FixedIdGenerator('TestDilemmaEs', 'TestOptionEsIdA', 'TestOptionEsIdB'),
+        );
+        await repository.save(original);
+        await repository.save(translationOf(original, 'en'));
+        await repository.save(translationOf(original, 'fr'));
+        return { repository, original, getDilemmas: new GetDilemmasUseCase(repository) };
+      }
+
+      it('should return the translation, with the ids of the options of the dilemma played', async () => {
+        // Arrange
+        const { getDilemmas } = await catalogInThreeLanguages();
+
+        // Act
+        const { dilemmas } = await getDilemmas.execute({
+          dilemmas: [{ dilemmaId: 'TestDilemmaEs' }],
+          language: 'en',
+        });
+
+        // Assert
+        expect(dilemmas[0]).toEqual({
+          dilemmaId: 'TestDilemmaEs',
+          version: 1,
+          text: 'TestTexten',
+          options: [
+            { optionId: 'TestOptionEsIdA', text: 'TestOptionenA' },
+            { optionId: 'TestOptionEsIdB', text: 'TestOptionenB' },
+          ],
+          hasGap: false,
+          language: 'en',
+        });
+      });
+
+      it('should return the original when a translation is played', async () => {
+        // Arrange
+        const { getDilemmas } = await catalogInThreeLanguages();
+
+        // Act
+        const { dilemmas } = await getDilemmas.execute({
+          dilemmas: [{ dilemmaId: 'TestDilemmaen' }],
+          language: 'es',
+        });
+
+        // Assert
+        expect(dilemmas[0]).toMatchObject({
+          dilemmaId: 'TestDilemmaen',
+          text: 'TestTextEs',
+          options: [
+            { optionId: 'TestOptionenIdA', text: 'TestOptionEsA' },
+            { optionId: 'TestOptionenIdB', text: 'TestOptionEsB' },
+          ],
+          language: 'es',
+        });
+      });
+
+      it('should return another translation when a translation is played', async () => {
+        // Arrange
+        const { getDilemmas } = await catalogInThreeLanguages();
+
+        // Act
+        const { dilemmas } = await getDilemmas.execute({
+          dilemmas: [{ dilemmaId: 'TestDilemmaen' }],
+          language: 'fr',
+        });
+
+        // Assert
+        expect(dilemmas[0]).toMatchObject({
+          dilemmaId: 'TestDilemmaen',
+          text: 'TestTextfr',
+          language: 'fr',
+        });
+      });
+
+      it('should return the dilemma played when there is no translation into that language', async () => {
+        // Arrange
+        const { getDilemmas } = await catalogInThreeLanguages();
+
+        // Act
+        const { dilemmas } = await getDilemmas.execute({
+          dilemmas: [{ dilemmaId: 'TestDilemmaEs' }],
+          language: 'de',
+        });
+
+        // Assert
+        expect(dilemmas[0]).toMatchObject({ text: 'TestTextEs', language: 'es' });
+      });
+
+      it('should return the dilemma played when no translation translates the version played', async () => {
+        // Arrange
+        const { repository, original, getDilemmas } = await catalogInThreeLanguages();
+        original.revise(
+          {
+            ...ORIGINAL,
+            text: 'TestRevisedTextEs',
+            options: original.options.map((option) => ({ ...option })),
+          },
+          new FixedIdGenerator(),
+        );
+        await repository.save(original);
+
+        // Act
+        const { dilemmas } = await getDilemmas.execute({
+          dilemmas: [{ dilemmaId: 'TestDilemmaEs', version: 2 }],
+          language: 'en',
+        });
+
+        // Assert
+        expect(dilemmas[0]).toMatchObject({ text: 'TestRevisedTextEs', language: 'es' });
+      });
+
+      it('should return the dilemma played when its translation cannot be read', async () => {
+        // Arrange
+        const { repository, getDilemmas } = await catalogInThreeLanguages();
+        const english = await repository.findById('TestDilemmaen');
+        english?.withdraw();
+        if (english) await repository.save(english);
+
+        // Act
+        const { dilemmas } = await getDilemmas.execute({
+          dilemmas: [{ dilemmaId: 'TestDilemmaEs' }],
+          language: 'en',
+        });
+
+        // Assert
+        expect(dilemmas[0]).toMatchObject({ text: 'TestTextEs', language: 'es' });
+      });
+    });
+
+    it('should return the text of the dilemma played when there is no translation', async () => {
       // Arrange
       const getDilemmas = await catalogWithTwoDilemmas();
 

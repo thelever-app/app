@@ -3,21 +3,17 @@ import { GetDilemmasUseCase, SearchDilemmasUseCase } from '@thelever-app/dilemma
 import { InMemoryDilemmaRepository, SequentialIdGenerator } from '@thelever-app/dilemmas/in-memory';
 import { CONTRACT_DILEMMAS, describeDilemmaCatalogContract } from '@thelever-app/game/contracts';
 import { PublishedDilemmasCatalog } from '../published-dilemmas-catalog.ts';
-import { contractDilemma } from './support/contract-dilemma.ts';
+import { saveContractDilemmas } from './support/contract-dilemma.ts';
 
 const CLASSIFICATION = { category: 'honesty', tags: [], minimumAge: 16 };
 
 async function catalogWithContractDilemmas() {
   const repository = new InMemoryDilemmaRepository();
-  const idGenerator = new SequentialIdGenerator('dilemma');
-  const dilemmas = CONTRACT_DILEMMAS.map((contract) => contractDilemma(contract, idGenerator));
-  for (const dilemma of dilemmas) await repository.save(dilemma);
-
-  const stored = dilemmas.map((dilemma) => ({
-    dilemmaId: dilemma.id,
-    text: dilemma.text,
-    options: dilemma.options.map(({ id, text }) => ({ optionId: id, text })),
-  }));
+  const { dilemmas, stored } = await saveContractDilemmas(
+    CONTRACT_DILEMMAS,
+    repository,
+    new SequentialIdGenerator('dilemma'),
+  );
   return {
     catalog: new PublishedDilemmasCatalog(
       new GetDilemmasUseCase(repository),

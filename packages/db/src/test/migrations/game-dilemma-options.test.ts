@@ -6,7 +6,7 @@ import pg from 'pg';
 import { afterEach, describe, expect, it } from 'vitest';
 import { openDatabase } from '../../connection.ts';
 import { ConsoleLogger } from '../../console-logger.ts';
-import { PostgresDilemmaRepository } from '../../dilemmas/postgres-dilemma-repository.ts';
+import { insertDilemmaAsTheFirstMigrationLeftIt } from '../support/dilemmas.ts';
 import { grantRowAccess } from '../../grants.ts';
 import { migrateTo } from '../../migrator.ts';
 import type { Database } from '../../schema.ts';
@@ -48,7 +48,7 @@ async function databaseAt(migration: string) {
     },
     new SequentialIdGenerator('dilemma'),
   );
-  await new PostgresDilemmaRepository(db).save(dilemma);
+  await insertDilemmaAsTheFirstMigrationLeftIt(db, dilemma);
   const { roomId, hostId } = await roomOfItsHost(db);
   return {
     db,

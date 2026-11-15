@@ -41,6 +41,9 @@ export class GameWorld extends World {
   /** What the last search of a step showed. */
   found: readonly string[] = [];
 
+  /** The dilemma of the test data a step made the first one of the game. */
+  dilemmaId = '';
+
   /** The game in progress before a step tried to start one. */
   gameBefore: string | undefined;
 

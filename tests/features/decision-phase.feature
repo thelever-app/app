@@ -108,6 +108,29 @@ Feature: Decision phase
       Then each of them sees the three options in a random order
       And the order each of them saw is recorded with their answer
 
+    @ui
+    Scenario: Each player reads the dilemma in their language
+      Given the room plays its dilemmas in Spanish
+      And "Luis" uses the app in English
+      And the first dilemma has an English translation
+      When the players get the first dilemma
+      Then "Luis" reads it in English
+      And "Ana" and "Marta" read it in Spanish
+
+    @ui
+    Scenario: A dilemma without a translation is shown in the language of the room
+      Given the room plays its dilemmas in Spanish
+      And "Luis" uses the app in English
+      And the first dilemma has no English translation
+      When the players get the first dilemma
+      Then "Luis" reads it in Spanish
+
+    Scenario: A vote cast in another language counts for the dilemma of the room
+      Given the room plays its dilemmas in Spanish
+      And "Luis" reads the first dilemma in English
+      When "Luis" votes "pull the lever"
+      Then his vote counts for "tirar de la palanca" in the dilemma the room plays
+
     Scenario: The time to answer each dilemma is recorded
       Given "Luis" got the first dilemma 40 seconds ago
       When "Luis" answers it

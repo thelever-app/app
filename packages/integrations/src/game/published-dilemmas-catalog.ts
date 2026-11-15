@@ -45,10 +45,11 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
     language: string,
   ): Promise<readonly DilemmaContent[]> {
     const found = await this.#find({ dilemmas, language });
-    return found.map(({ dilemmaId, text, options }) => ({
+    return found.map(({ dilemmaId, text, options, language: read }) => ({
       dilemmaId,
       text: withGameGap(text),
       options: options.map((option) => ({ ...option, text: withGameGap(option.text) })),
+      language: read,
     }));
   }
 

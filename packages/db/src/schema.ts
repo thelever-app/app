@@ -1,4 +1,10 @@
-import type { Category, DilemmaStatus, MinimumAge, Visibility } from '@thelever-app/dilemmas';
+import type {
+  Category,
+  DilemmaStatus,
+  MinimumAge,
+  Translation,
+  Visibility,
+} from '@thelever-app/dilemmas';
 import type {
   AvatarFace,
   DilemmaCount,
@@ -26,6 +32,10 @@ export interface Database {
     creator_identity: string | null;
     visibility: Visibility;
     created_at: Generated<Date>;
+    /** The short title the public web gives it. */
+    name: string | null;
+    /** In a translation, its original. */
+    translation_of: string | null;
   };
   dilemma_versions: {
     dilemma_id: string;
@@ -34,6 +44,22 @@ export interface Database {
     category: Category;
     minimum_age: MinimumAge;
     status: DilemmaStatus;
+    /** In a translation, the version of the original this version translates. */
+    translation_of_version: number | null;
+    translation: Translation | null;
+  };
+  /** The arguments of a version, for the public web; they change without a new version. */
+  dilemma_version_arguments: {
+    dilemma_id: string;
+    version: number;
+    context: string | null;
+  };
+  dilemma_version_option_arguments: {
+    dilemma_id: string;
+    version: number;
+    option_id: string;
+    argument_for: string;
+    argument_against: string;
   };
   dilemma_version_options: {
     dilemma_id: string;
@@ -190,7 +216,12 @@ export interface Database {
 /** The tables of Dilemmas: only its adapters read or write them. */
 export type DilemmasTables = Pick<
   Database,
-  'dilemmas' | 'dilemma_versions' | 'dilemma_version_options' | 'dilemma_version_tags'
+  | 'dilemmas'
+  | 'dilemma_versions'
+  | 'dilemma_version_options'
+  | 'dilemma_version_tags'
+  | 'dilemma_version_arguments'
+  | 'dilemma_version_option_arguments'
 >;
 
 /** The tables of Game: its adapters see only these, never those of another context (ADR 0001). */

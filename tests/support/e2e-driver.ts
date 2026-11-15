@@ -32,7 +32,12 @@ import type {
   SettingsView,
 } from './driver.ts';
 import type { E2eStack } from './e2e-stack.ts';
-import { catalogEntryOf, explorationSlotsFor, TWO_OPTION_DILEMMA_IDS } from './test-catalog.ts';
+import {
+  catalogEntryOf,
+  explorationSlotsFor,
+  TEST_DILEMMAS,
+  TWO_OPTION_DILEMMA_IDS,
+} from './test-catalog.ts';
 
 /** What the driver looks for on screen, in the language of the browsers: es.json of the web. */
 const SCREEN = {
@@ -961,6 +966,49 @@ export class E2eDriver implements GameDriver {
   }
 
   /** What the room server last told `player` it keeps for them. */
+  async curationTeamCreatesADilemma(): Promise<string> {
+    throw new Error(
+      'The catalog is loaded by a job of the application: the scenario must not be @ui',
+    );
+  }
+
+  async dilemmaHasStatus(): Promise<boolean> {
+    throw new Error(
+      'Only the application keeps the status of a dilemma: the scenario must not be @ui',
+    );
+  }
+
+  /**
+   * The browser of the player says that language from now on: the app reads it when it opens,
+   * so an open screen opens again, as the same device.
+   */
+  async usesTheAppIn(player: string, language: string): Promise<void> {
+    const locale = LOCALES[language];
+    if (!locale) throw new Error(`The e2e driver has no locale for "${language}"`);
+    const { context } = screenOf(await this.#withScreen(player));
+    await context.addInitScript(
+      (languages: readonly string[]) => {
+        Object.defineProperty(Navigator.prototype, 'language', { get: () => languages[0] });
+        Object.defineProperty(Navigator.prototype, 'languages', { get: () => languages });
+      },
+      [locale, language],
+    );
+    await this.reopenApp(player);
+  }
+
+  /** The test data saves option n of each dilemma with an id that says its position. */
+  async optionOfTheRoomCalled(position: number, text: string): Promise<string> {
+    const dilemmaId = this.#dilemmaIdAt(position);
+    const index =
+      TEST_DILEMMAS.find((dilemma) => dilemma.dilemmaId === dilemmaId)?.options.findIndex(
+        (option) => option.toLowerCase() === text.toLowerCase(),
+      ) ?? -1;
+    if (index === -1) {
+      throw new Error(`Dilemma ${dilemmaId} of the test data has no option "${text}"`);
+    }
+    return Promise.resolve(`${dilemmaId}-option-${index + 1}`);
+  }
+
   async voteRecordedFor(player: string, position: number): Promise<string | undefined> {
     const dilemmaId = this.#dilemmaIdAt(position);
     return this.#gameOf(player).answers.find((answer) => answer.dilemmaId === dilemmaId)?.vote;

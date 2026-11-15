@@ -5,3 +5,5 @@
  */
 export { InMemoryDilemmaRepository } from './in-memory-dilemma-repository.ts';
 export { SequentialIdGenerator } from './sequential-id-generator.ts';
+export { InMemoryCuratedCatalog } from './in-memory-curated-catalog.ts';
+export { LanguageTagTranslator } from './language-tag-translator.ts';

@@ -24,8 +24,9 @@ export function testCatalog(): InMemoryDilemmaCatalog {
 }
 
 /**
- * Enough to put a game together and search: ten dilemmas of the catalog in life-and-death, two of
- * them for adults and three tagged "family", three in exploration and two in another category.
+ * Enough to put a game together and search, in Spanish: ten dilemmas of the catalog in
+ * life-and-death, two of them for adults and three tagged "family", three in exploration and two
+ * in another category; and ten in Catalan, for a room that plays in another language.
  */
 export function lobbyCatalog(): InMemoryDilemmaCatalog {
   return new InMemoryDilemmaCatalog([
@@ -41,6 +42,10 @@ export function lobbyCatalog(): InMemoryDilemmaCatalog {
     ...['TestHonesty1', 'TestHonesty2'].map((dilemmaId) => ({
       ...dilemma(dilemmaId),
       category: 'honesty',
+    })),
+    ...Array.from({ length: 10 }, (_, index) => ({
+      ...dilemma(`TestCatalan${index + 1}`),
+      language: 'ca',
     })),
   ]);
 }
