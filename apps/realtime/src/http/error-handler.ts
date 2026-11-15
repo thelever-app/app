@@ -12,6 +12,7 @@ const STATUS: Partial<Record<ErrorCodeDto, number>> = {
   'invalid-access-code': 403,
   'invalid-avatar': 400,
   'invalid-room-setting': 400,
+  'invalid-page': 400,
   'player-not-in-room': 403,
   'room-not-found': 404,
   'room-code-not-found': 404,

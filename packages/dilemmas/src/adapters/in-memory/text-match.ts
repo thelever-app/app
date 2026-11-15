@@ -1,8 +1,8 @@
-import { WORD_SIMILARITY } from '../../application/ports/dilemma-repository.port.ts';
+import { WORD_SIMILARITY } from '../../application/ports/dilemma-queries.port.ts';
 
 /**
  * The search of a text as the PostgreSQL repository does it with pg_trgm and unaccent, for the
- * dilemmas kept in memory: the same rules, so the contract of the repository holds for both.
+ * dilemmas kept in memory: the same rules, so the contract of the queries holds for both.
  */
 
 /** Lower case and without accents, as unaccent and lower leave it. */

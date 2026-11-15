@@ -15,7 +15,7 @@ import { fakeConnection } from '../support/fake-connection.ts';
 import { aRoom } from '../support/room.ts';
 import { fakeRoomApi } from '../support/routing.tsx';
 
-const FOUND: Awaited<ReturnType<RoomApi['searchDilemmas']>> = [
+const FOUND: Awaited<ReturnType<RoomApi['searchDilemmas']>>['dilemmas'] = [
   {
     dilemmaId: 'test-dilemma-1',
     text: 'TestText1',
@@ -368,7 +368,7 @@ describe('LobbyScreen', () => {
 
     it('should keep what the host changed in the settings, unsent, while picking dilemmas', async () => {
       // Arrange
-      const searchDilemmas = vi.fn(async () => [...FOUND]);
+      const searchDilemmas = vi.fn(async () => ({ dilemmas: [...FOUND] }));
       const { t, send } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
       fireEvent.click(screen.getByRole('radio', { name: t('settings.anonymous') }));
@@ -390,7 +390,7 @@ describe('LobbyScreen', () => {
 
     it('should show the dilemmas picked by hand in the settings once the room has them', async () => {
       // Arrange
-      const searchDilemmas = vi.fn(async () => [...FOUND]);
+      const searchDilemmas = vi.fn(async () => ({ dilemmas: [...FOUND] }));
       const room = aRoom();
       const { t, deliver } = await renderLobby(room, fakeRoomApi({ searchDilemmas }));
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
@@ -419,7 +419,7 @@ describe('LobbyScreen', () => {
 
     it('should show the settings by categories again once the host unchecks every picked dilemma', async () => {
       // Arrange
-      const searchDilemmas = vi.fn(async () => FOUND);
+      const searchDilemmas = vi.fn(async () => ({ dilemmas: FOUND }));
       const room = aRoom({ pickedDilemmas: [{ dilemmaId: 'test-dilemma-1', text: 'TestText1' }] });
       const { t, deliver } = await renderLobby(room, fakeRoomApi({ searchDilemmas }));
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
@@ -443,7 +443,7 @@ describe('LobbyScreen', () => {
 
     it('should pick the dilemmas it finds by what the host types', async () => {
       // Arrange
-      const searchDilemmas = vi.fn(async () => [...FOUND]);
+      const searchDilemmas = vi.fn(async () => ({ dilemmas: [...FOUND] }));
       const { t, send } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
       fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
@@ -464,7 +464,7 @@ describe('LobbyScreen', () => {
 
     it('should say how many options each dilemma has, and go back to the settings', async () => {
       // Arrange
-      const searchDilemmas = vi.fn(async () => [...FOUND]);
+      const searchDilemmas = vi.fn(async () => ({ dilemmas: [...FOUND] }));
       const { t } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
       fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
@@ -482,7 +482,7 @@ describe('LobbyScreen', () => {
     it('should show the gap of a dilemma as someone in the group', async () => {
       // Arrange
       const withGap = { ...FOUND[0]!, text: 'Le mientes a {gap}' };
-      const searchDilemmas = vi.fn(async () => [withGap]);
+      const searchDilemmas = vi.fn(async () => ({ dilemmas: [withGap] }));
       const { t } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
 
@@ -495,11 +495,61 @@ describe('LobbyScreen', () => {
       expect(card.textContent).not.toContain('{gap}');
     });
 
+    it('should show the next dilemmas below when the host asks for more, while there are', async () => {
+      // Arrange: the first page ends where the second starts.
+      const [first, second] = FOUND;
+      const searchDilemmas = vi.fn(async (_roomId: string, { after }: { after?: string }) =>
+        after === 'TestNext' ? { dilemmas: [second!] } : { dilemmas: [first!], next: 'TestNext' },
+      );
+      const { t } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
+      await screen.findByRole('checkbox', { name: /TestText1/ });
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('pickDilemmas.more') }));
+
+      // Assert
+      expect(await screen.findByRole('checkbox', { name: /TestText2/ })).toBeDefined();
+      expect(screen.getByRole('checkbox', { name: /TestText1/ })).toBeDefined();
+      expect(searchDilemmas).toHaveBeenLastCalledWith('test-room-id', { after: 'TestNext' });
+      expect(screen.queryByRole('button', { name: t('pickDilemmas.more') })).toBeNull();
+    });
+
+    it('should say it could not show more, and let the host try again', async () => {
+      // Arrange: the second page fails once.
+      const [first, second] = FOUND;
+      let failed = false;
+      const searchDilemmas = vi.fn(async (_roomId: string, { after }: { after?: string }) => {
+        if (after === undefined) return { dilemmas: [first!], next: 'TestNext' };
+        if (!failed) {
+          failed = true;
+          throw new Error('TestOffline');
+        }
+        return { dilemmas: [second!] };
+      });
+      const { t } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
+      fireEvent.click(screen.getByRole('button', { name: t('settings.pick') }));
+      await screen.findByRole('checkbox', { name: /TestText1/ });
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('pickDilemmas.more') }));
+      expect(await screen.findByRole('alert')).toHaveProperty(
+        'textContent',
+        t('pickDilemmas.moreFailed'),
+      );
+      fireEvent.click(screen.getByRole('button', { name: t('pickDilemmas.more') }));
+
+      // Assert
+      expect(await screen.findByRole('checkbox', { name: /TestText2/ })).toBeDefined();
+    });
+
     it('should search only once the host stops typing, keeping what it found on screen', async () => {
       // Arrange: the second search never answers.
       let calls = 0;
       const searchDilemmas = vi.fn(() =>
-        calls++ === 0 ? Promise.resolve([...FOUND]) : new Promise<never>(() => {}),
+        calls++ === 0 ? Promise.resolve({ dilemmas: [...FOUND] }) : new Promise<never>(() => {}),
       );
       const { t } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
@@ -520,7 +570,7 @@ describe('LobbyScreen', () => {
 
     it('should go back to a game by categories by unchecking every picked dilemma', async () => {
       // Arrange
-      const searchDilemmas = vi.fn(async () => FOUND);
+      const searchDilemmas = vi.fn(async () => ({ dilemmas: FOUND }));
       const room = aRoom({ pickedDilemmas: [{ dilemmaId: 'test-dilemma-1', text: 'TestText1' }] });
       const { t, send } = await renderLobby(room, fakeRoomApi({ searchDilemmas }));
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
@@ -536,7 +586,7 @@ describe('LobbyScreen', () => {
 
     it('should not offer to play without dilemmas when none was picked', async () => {
       // Arrange
-      const searchDilemmas = vi.fn(async () => FOUND);
+      const searchDilemmas = vi.fn(async () => ({ dilemmas: FOUND }));
       const { t } = await renderLobby(aRoom(), fakeRoomApi({ searchDilemmas }));
       fireEvent.click(screen.getByRole('button', { name: t('lobby.change') }));
 
@@ -588,7 +638,7 @@ describe('LobbyScreen', () => {
 
   it('should let the host add dilemmas too, when players may add them', async () => {
     // Arrange
-    const searchDilemmas = vi.fn(async () => [...FOUND]);
+    const searchDilemmas = vi.fn(async () => ({ dilemmas: [...FOUND] }));
     const room = aRoom({ settings: { ...aRoom().settings, dilemmasPerPlayer: 1 } });
     const { t, send } = await renderLobby(room, fakeRoomApi({ searchDilemmas }));
 
@@ -614,7 +664,7 @@ describe('LobbyScreen', () => {
 
     it('should add a dilemma of the catalog when the host allows it', async () => {
       // Arrange
-      const searchDilemmas = vi.fn(async () => [...FOUND]);
+      const searchDilemmas = vi.fn(async () => ({ dilemmas: [...FOUND] }));
       const room = aRoom({
         ...AS_LUIS,
         settings: { ...aRoom().settings, dilemmasPerPlayer: 1 },

@@ -1,5 +1,7 @@
 import {
+  type DilemmaQueries,
   type DilemmaRepository,
+  FindDilemmaIdsUseCase,
   GetDilemmasUseCase,
   SearchDilemmasUseCase as SearchCatalogUseCase,
 } from '@thelever-app/dilemmas';
@@ -43,12 +45,16 @@ import type { RoundUseCases } from '../rooms/sockets/round-commands.ts';
 import type { LobbyUseCases } from '../rooms/sockets/lobby-commands.ts';
 
 /** The dilemmas Game plays with, read through what Dilemmas publishes. */
-export function dilemmaCatalog(dilemmaRepository: DilemmaRepository): DilemmaCatalog {
+export function dilemmaCatalog(
+  dilemmaRepository: DilemmaRepository,
+  dilemmaQueries: DilemmaQueries,
+): DilemmaCatalog {
   // Every connect and every answer reads the dilemmas played: once per instance is enough.
   return new CachedDilemmaCatalog(
     new PublishedDilemmasCatalog(
       new GetDilemmasUseCase(dilemmaRepository),
-      new SearchCatalogUseCase(dilemmaRepository),
+      new SearchCatalogUseCase(dilemmaQueries),
+      new FindDilemmaIdsUseCase(dilemmaQueries),
     ),
   );
 }

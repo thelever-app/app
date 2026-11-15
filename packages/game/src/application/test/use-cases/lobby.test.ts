@@ -8,7 +8,10 @@ import { GetRoomStateUseCase } from '../../use-cases/get-room-state.use-case.ts'
 import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
 import { PickDilemmasUseCase } from '../../use-cases/pick-dilemmas.use-case.ts';
 import { RemoveAddedDilemmaUseCase } from '../../use-cases/remove-added-dilemma.use-case.ts';
-import { SearchDilemmasUseCase } from '../../use-cases/search-dilemmas.use-case.ts';
+import {
+  SEARCH_PAGE_SIZE,
+  SearchDilemmasUseCase,
+} from '../../use-cases/search-dilemmas.use-case.ts';
 import { DilemmaNotFoundError } from '../../errors/dilemma-not-found.error.ts';
 import { RoomCodeNotFoundError } from '../../errors/room-code-not-found.error.ts';
 import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
@@ -23,6 +26,7 @@ import { FixedRandomness } from '../../../domain/test/support/fixed-randomness.t
 import { AvatarVO } from '../../../domain/vos/avatar.vo.ts';
 import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
 import { lobbyCatalog } from '../support/test-catalog.ts';
+import { InMemoryDilemmaCatalog } from '../../../adapters/in-memory/in-memory-dilemma-catalog.ts';
 
 /** The lobby of three, with a catalog to search and add from, and every lobby use case. */
 async function arrange() {
@@ -349,7 +353,10 @@ describe('SearchDilemmasUseCase', () => {
     const { searchDilemmas, roomId } = await arrange();
 
     // Act
-    const found = await searchDilemmas.execute({ roomId, identity: 'TestLuisIdentity' });
+    const { dilemmas: found } = await searchDilemmas.execute({
+      roomId,
+      identity: 'TestLuisIdentity',
+    });
 
     // Assert
     const ids = found.map(({ dilemmaId }) => dilemmaId);
@@ -364,8 +371,8 @@ describe('SearchDilemmasUseCase', () => {
     await changeSettings.execute({ roomId, playerId: anaId, changes: { adultsOnly: true } });
 
     // Act
-    const all = await searchDilemmas.execute({ roomId, identity: 'TestAnaIdentity' });
-    const family = await searchDilemmas.execute({
+    const { dilemmas: all } = await searchDilemmas.execute({ roomId, identity: 'TestAnaIdentity' });
+    const { dilemmas: family } = await searchDilemmas.execute({
       roomId,
       identity: 'TestAnaIdentity',
       text: 'family',
@@ -385,7 +392,7 @@ describe('SearchDilemmasUseCase', () => {
     const { searchDilemmas, roomId } = await arrange();
 
     // Act
-    const found = await searchDilemmas.execute({
+    const { dilemmas: found } = await searchDilemmas.execute({
       roomId,
       identity: 'TestAnaIdentity',
       category: 'honesty',
@@ -393,6 +400,41 @@ describe('SearchDilemmasUseCase', () => {
 
     // Assert
     expect(found.map(({ dilemmaId }) => dilemmaId)).toEqual(['TestHonesty1', 'TestHonesty2']);
+  });
+
+  it('should give the dilemmas twenty at a time, and the next twenty after them', async () => {
+    // Arrange
+    const twentyFive = new InMemoryDilemmaCatalog(
+      Array.from({ length: 25 }, (_, index) => ({
+        dilemmaId: `TestDilemma${String(index + 1).padStart(2, '0')}`,
+        text: `TextOf${index + 1}`,
+        options: [
+          { optionId: 'TestOption', text: 'TestOptionText' },
+          { optionId: 'TestOtherOption', text: 'TestOtherOptionText' },
+        ],
+      })),
+    );
+    const { roomRepository, roomId } = await lobbyOfThree(new InMemoryPlayerNotifier(), twentyFive);
+    const searchDilemmas = new SearchDilemmasUseCase(roomRepository, twentyFive);
+
+    // Act
+    const first = await searchDilemmas.execute({ roomId, identity: 'TestAnaIdentity' });
+    const second = await searchDilemmas.execute({
+      roomId,
+      identity: 'TestAnaIdentity',
+      after: first.next!,
+    });
+
+    // Assert
+    expect(first.dilemmas).toHaveLength(SEARCH_PAGE_SIZE);
+    expect(second.dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual([
+      'TestDilemma21',
+      'TestDilemma22',
+      'TestDilemma23',
+      'TestDilemma24',
+      'TestDilemma25',
+    ]);
+    expect(second.next).toBeUndefined();
   });
 
   it('should throw an error if whoever searches is not in the room', async () => {

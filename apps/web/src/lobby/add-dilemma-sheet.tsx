@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
 import { DilemmaText } from '../game/dilemma-text.tsx';
+import { MoreDilemmas } from './more-dilemmas.tsx';
 import { useDilemmaSearch } from './use-dilemma-search.ts';
 import sheet from './sheet.module.css';
 
@@ -66,6 +67,7 @@ export function AddDilemmaSheet({ roomId, onAdd, onClose }: AddDilemmaSheetProps
                 </span>
               </button>
             ))}
+            <MoreDilemmas search={search} />
           </div>
         </Dialog.Content>
       </Dialog.Portal>

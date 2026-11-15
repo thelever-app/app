@@ -1,5 +1,5 @@
 import { IdentityNotInRoomError } from '../errors/identity-not-in-room.error.ts';
-import type { CatalogDilemma, DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
+import type { CatalogPage, DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findRoom } from './find-room.ts';
 
@@ -11,11 +11,16 @@ export interface SearchDilemmasInput {
   readonly category?: string;
   /** What the player typed, looked for in the text and the tags. */
   readonly text?: string;
+  /** The `next` of the page before; none for the first page. */
+  readonly after?: string;
 }
 
+/** How many dilemmas a page of the search shows. */
+export const SEARCH_PAGE_SIZE = 20;
+
 /**
- * The dilemmas of the general catalog that suit the room, in its language, to pick or add one;
- * with a text, the ones that match it best first.
+ * The dilemmas of the general catalog that suit the room, in its language, to pick or add one,
+ * twenty at a time; with a text, the ones that match it best first.
  */
 export class SearchDilemmasUseCase {
   readonly #roomRepository: RoomRepository;
@@ -31,16 +36,20 @@ export class SearchDilemmasUseCase {
     identity,
     category,
     text,
-  }: SearchDilemmasInput): Promise<readonly CatalogDilemma[]> {
+    after,
+  }: SearchDilemmasInput): Promise<CatalogPage> {
     const room = await findRoom(this.#roomRepository, roomId);
     if (!room.playerWith(identity)) throw new IdentityNotInRoomError(roomId);
 
-    return this.#dilemmaCatalog.search({
-      ...(category && { categories: [category] }),
-      ...(text && { text }),
-      maximumMinimumAge: room.settings.maximumMinimumAge,
-      status: 'in-catalog',
-      language: room.settings.dilemmaLanguage,
-    });
+    return this.#dilemmaCatalog.search(
+      {
+        ...(category && { categories: [category] }),
+        ...(text && { text }),
+        maximumMinimumAge: room.settings.maximumMinimumAge,
+        status: 'in-catalog',
+        language: room.settings.dilemmaLanguage,
+      },
+      { size: SEARCH_PAGE_SIZE, ...(after !== undefined && { after }) },
+    );
   }
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { GetDilemmasUseCase, SearchDilemmasUseCase } from '@thelever-app/dilemmas';
+import {
+  FindDilemmaIdsUseCase,
+  GetDilemmasUseCase,
+  SearchDilemmasUseCase,
+} from '@thelever-app/dilemmas';
 import { InMemoryDilemmaRepository, SequentialIdGenerator } from '@thelever-app/dilemmas/in-memory';
 import { CONTRACT_DILEMMAS, describeDilemmaCatalogContract } from '@thelever-app/game/contracts';
 import { PublishedDilemmasCatalog } from '../published-dilemmas-catalog.ts';
@@ -18,6 +22,7 @@ async function catalogWithContractDilemmas() {
     catalog: new PublishedDilemmasCatalog(
       new GetDilemmasUseCase(repository),
       new SearchDilemmasUseCase(repository),
+      new FindDilemmaIdsUseCase(repository),
     ),
     stored,
     repository,

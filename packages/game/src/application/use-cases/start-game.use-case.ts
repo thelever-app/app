@@ -62,16 +62,16 @@ export class StartGameUseCase {
     room.ensureCanStartGame(playerId);
     const { settings } = room;
 
-    const candidates = async (status: 'in-catalog' | 'in-exploration'): Promise<string[]> =>
-      (
-        await this.#dilemmaCatalog.search({
-          // Null plays every category: the search then looks at all of them.
-          ...(settings.categories && { categories: settings.categories }),
-          maximumMinimumAge: settings.maximumMinimumAge,
-          status,
-          language: settings.dilemmaLanguage,
-        })
-      ).map(({ dilemmaId }) => dilemmaId);
+    // Only their ids: the game draws from all of them and reads nothing else of them.
+    const candidates = async (status: 'in-catalog' | 'in-exploration') => [
+      ...(await this.#dilemmaCatalog.findCandidateIds({
+        // Null plays every category: the search then looks at all of them.
+        ...(settings.categories && { categories: settings.categories }),
+        maximumMinimumAge: settings.maximumMinimumAge,
+        status,
+        language: settings.dilemmaLanguage,
+      })),
+    ];
     // The dilemmas the host picked are the game: no candidates to look for.
     const [inCatalog, inExploration] =
       room.pickedDilemmas.length > 0

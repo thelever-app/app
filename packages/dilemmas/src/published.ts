@@ -14,5 +14,11 @@ export {
   type SearchDilemmasInput,
   type SearchDilemmasOutput,
 } from './application/use-cases/search-dilemmas.use-case.ts';
+export {
+  type FindDilemmaIds,
+  type FindDilemmaIdsInput,
+  type FindDilemmaIdsOutput,
+} from './application/use-cases/find-dilemma-ids.use-case.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
+export { InvalidPageError } from './application/errors/invalid-page.error.ts';
 export { GAP_MARKER } from './domain/vos/gap.ts';

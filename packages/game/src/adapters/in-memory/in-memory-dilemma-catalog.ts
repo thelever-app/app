@@ -1,10 +1,14 @@
 import { DilemmaNotFoundError } from '../../application/errors/dilemma-not-found.error.ts';
+import { InvalidPageError } from '../../application/errors/invalid-page.error.ts';
 import {
   GAP_MARKER,
+  type CandidateSearch,
   type CatalogDilemma,
+  type CatalogPage,
   type DilemmaCatalog,
   type DilemmaContent,
   type DilemmaSearch,
+  type SearchPage,
 } from '../../application/ports/dilemma-catalog.port.ts';
 import type { GameDilemma } from '../../domain/entities/game.ts';
 
@@ -90,7 +94,26 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
     });
   }
 
-  async search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]> {
+  async findCandidateIds(criteria: CandidateSearch): Promise<readonly string[]> {
+    return this.#matching(criteria).map(({ dilemmaId }) => dilemmaId);
+  }
+
+  async search(criteria: DilemmaSearch, { size, after }: SearchPage): Promise<CatalogPage> {
+    const found = this.#matching(criteria);
+    // A page starts after the dilemma the page before ended with.
+    const start =
+      after === undefined ? 0 : found.findIndex(({ dilemmaId }) => dilemmaId === after) + 1;
+    if (start === 0 && after !== undefined) throw new InvalidPageError(after);
+    const page = found.slice(start, start + size);
+    const last = page.at(-1);
+    return {
+      dilemmas: page,
+      ...(last && start + size < found.length && { next: last.dilemmaId }),
+    };
+  }
+
+  /** The dilemmas that match, in the order they were given. */
+  #matching(criteria: DilemmaSearch): CatalogDilemma[] {
     const text = criteria.text?.trim().toLowerCase() ?? '';
     return [...this.#dilemmas.values()]
       .filter(

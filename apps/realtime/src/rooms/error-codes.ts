@@ -25,6 +25,7 @@ import {
   HostCannotBeExpelledError,
   IdentityNotInRoomError,
   InvalidAvatarError,
+  InvalidPageError,
   InvalidRoomSettingError,
   NicknameAndAvatarTakenError,
   NicknameMissingError,
@@ -77,6 +78,7 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [PlayerLeftGameError, 'player-left'],
   [OptionNotInDilemmaError, 'option-not-in-dilemma'],
   [DilemmaNotFoundError, 'dilemma-not-found'],
+  [InvalidPageError, 'invalid-page'],
   [NicknameMissingError, 'nickname-missing'],
   [DuplicateDilemmaError, 'duplicate-dilemma'],
   // No dilemma of the catalog suits the room: its categories, language or age leave none.

@@ -1,5 +1,13 @@
-import { Dilemma, GetDilemmasUseCase, SearchDilemmasUseCase } from '@thelever-app/dilemmas';
-import { describeDilemmaRepositoryContract } from '@thelever-app/dilemmas/contracts';
+import {
+  Dilemma,
+  FindDilemmaIdsUseCase,
+  GetDilemmasUseCase,
+  SearchDilemmasUseCase,
+} from '@thelever-app/dilemmas';
+import {
+  describeDilemmaQueriesContract,
+  describeDilemmaRepositoryContract,
+} from '@thelever-app/dilemmas/contracts';
 import { SequentialIdGenerator } from '@thelever-app/dilemmas/in-memory';
 import { CONTRACT_DILEMMAS, describeDilemmaCatalogContract } from '@thelever-app/game/contracts';
 import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
@@ -7,6 +15,7 @@ import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../../schema.ts';
 import { emptyTables, useTestDatabase } from '../../test/support/test-database.ts';
+import { PostgresDilemmaQueries } from '../postgres-dilemma-queries.ts';
 import { PostgresDilemmaRepository } from '../postgres-dilemma-repository.ts';
 
 const database = useTestDatabase<Database>();
@@ -16,9 +25,18 @@ describeDilemmaRepositoryContract('PostgresDilemmaRepository', async () => {
   return new PostgresDilemmaRepository(database.db());
 });
 
+describeDilemmaQueriesContract('PostgresDilemmaQueries', async () => {
+  await emptyTables(database.db());
+  return {
+    repository: new PostgresDilemmaRepository(database.db()),
+    queries: new PostgresDilemmaQueries(database.db()),
+  };
+});
+
 describeDilemmaCatalogContract('PublishedDilemmasCatalog on PostgreSQL', async () => {
   await emptyTables(database.db());
   const repository = new PostgresDilemmaRepository(database.db());
+  const queries = new PostgresDilemmaQueries(database.db());
   const idGenerator = new SequentialIdGenerator('dilemma');
   const stored = [];
   for (const { status, translations, ...content } of CONTRACT_DILEMMAS) {
@@ -39,7 +57,8 @@ describeDilemmaCatalogContract('PublishedDilemmasCatalog on PostgreSQL', async (
   }
   const catalog = new PublishedDilemmasCatalog(
     new GetDilemmasUseCase(repository),
-    new SearchDilemmasUseCase(repository),
+    new SearchDilemmasUseCase(queries),
+    new FindDilemmaIdsUseCase(queries),
   );
   return { catalog, stored };
 });

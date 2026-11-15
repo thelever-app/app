@@ -87,12 +87,11 @@ export class GetRoomStateUseCase {
 
   async #textsOf(dilemmaIds: readonly string[], language: string): Promise<Map<string, string>> {
     if (dilemmaIds.length === 0) return new Map();
-    const found = await this.#dilemmaCatalog.search({
-      dilemmaIds,
-      maximumMinimumAge: 18,
-      status: 'in-catalog',
-      language,
-    });
+    const { dilemmas: found } = await this.#dilemmaCatalog.search(
+      { dilemmaIds, maximumMinimumAge: 18, status: 'in-catalog', language },
+      // One page with all of them: no more than were asked for.
+      { size: dilemmaIds.length },
+    );
     return new Map(found.map(({ dilemmaId, text }) => [dilemmaId, text]));
   }
 }

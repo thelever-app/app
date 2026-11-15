@@ -25,7 +25,8 @@ const SYSTEM = `You translate moral dilemmas for TheLever, a party game where a 
 Translate the dilemma you are given into each language asked for, so that a native speaker reads it as if it had been written in their language:
 - Keep the moral conflict exactly as it is: the same facts, the same stakes, the same people involved. Do not soften, sharpen, explain or add anything.
 - Keep the options as many and in the same order. Option n of the translation translates option n of the original, and each option stays as short as it is.
-- The text ${GAP_MARKER} stands for the nickname of a player of the room. Copy it as it is, the same number of times and in the same field, and write the sentence so it reads well with a name in its place. Never add it where it is not.
+- The text ${GAP_MARKER} stands for the nickname of a player of the room. Keep it, as it is, in each field where the original has it, write the sentence so it reads well with any name in its place, and never add it to a dilemma that does not have it.
+- Nobody knows the gender of that player nor of the reader, the "you" of the dilemma: never give either of them one. Where the language would need a gendered pronoun, article, adjective or participle for them, rephrase with a neutral construction or, for the player, repeat ${GAP_MARKER} instead of the pronoun ("they" is fine in English). Check every adjective and participle about the reader: "tu t'es trompé", "toi seul", "t'has equivocat" and "ti sei sbagliato" give a gender; "tu as eu tort", "tu es la seule personne à", "t'has errat" and "hai sbagliato" do not. Never put an article before ${GAP_MARKER} ("ao ${GAP_MARKER}", "al ${GAP_MARKER}"): write "a ${GAP_MARKER}". Repeat ${GAP_MARKER} only where a neutral wording does not read well. Keep the gender of the other people as the original gives it.
 - Use the everyday register a friend would use. Adapt idioms, currencies, foods and places only when the original would sound foreign, never the moral content.
 - Translate the name as a short title in the same style.
 - Translate each tag as one or two words in lower case.
@@ -70,15 +71,15 @@ export interface MessagesParser {
   ): Promise<{ readonly stop_reason: string | null; readonly parsed_output: unknown }>;
 }
 
-function gapsIn(text: string): number {
-  return text.split(GAP_MARKER).length - 1;
+function hasTheGap(text: string): boolean {
+  return text.includes(GAP_MARKER);
 }
 
 /**
  * Translates with Claude through the Messages API, in a single request for every language, so the
  * prompt is paid once and the languages agree with each other. Only the texts of the dilemma are
  * sent: no ids, no nicknames. It throws an error if the model refuses, runs out of tokens or gives
- * something that does not keep the dilemma: a language missing, other options or a gap moved.
+ * something that does not keep the dilemma: a language missing, other options or a gap lost.
  */
 export class AnthropicTranslator implements Translator {
   readonly #messages: MessagesParser;
@@ -166,10 +167,20 @@ export class AnthropicTranslator implements Translator {
         ]);
       });
     }
+    // The gap may come more often, or in another field, where a pronoun would give the player a
+    // gender: the nickname fills each one. It must stay where it was; a dilemma without it, as the
+    // game tells by its text and its options, must not get it, and neither may the name, which the
+    // public pages show without a room.
+    const hasGap = [original.text, ...original.options].some(hasTheGap);
     for (const [field, before, after] of fields) {
-      if (gapsIn(before) !== gapsIn(after)) {
+      if (hasTheGap(before) && !hasTheGap(after)) {
         throw new Error(
           `the translation into ${language} does not keep ${GAP_MARKER} in its ${field}`,
+        );
+      }
+      if (hasTheGap(after) && !hasTheGap(before) && (!hasGap || field === 'name')) {
+        throw new Error(
+          `the translation into ${language} adds ${GAP_MARKER} to its ${field}, which the dilemma has not`,
         );
       }
     }

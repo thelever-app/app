@@ -1,19 +1,24 @@
 import {
   DilemmaNotFoundError as DilemmasNotFoundError,
+  type FindDilemmaIds,
   GAP_MARKER as DILEMMAS_GAP_MARKER,
   type GetDilemmas,
   type GetDilemmasInput,
   type GetDilemmasOutput,
+  InvalidPageError as DilemmasInvalidPageError,
   type SearchDilemmas,
 } from '@thelever-app/dilemmas/published';
 import {
-  type CatalogDilemma,
+  type CandidateSearch,
+  type CatalogPage,
   type DilemmaCatalog,
   type DilemmaContent,
   DilemmaNotFoundError,
   GAP_MARKER,
   type DilemmaSearch,
   type GameDilemma,
+  InvalidPageError,
+  type SearchPage,
 } from '@thelever-app/game';
 
 /**
@@ -23,10 +28,16 @@ import {
 export class PublishedDilemmasCatalog implements DilemmaCatalog {
   readonly #getDilemmas: GetDilemmas;
   readonly #searchDilemmas: SearchDilemmas;
+  readonly #findDilemmaIds: FindDilemmaIds;
 
-  constructor(getDilemmas: GetDilemmas, searchDilemmas: SearchDilemmas) {
+  constructor(
+    getDilemmas: GetDilemmas,
+    searchDilemmas: SearchDilemmas,
+    findDilemmaIds: FindDilemmaIds,
+  ) {
     this.#getDilemmas = getDilemmas;
     this.#searchDilemmas = searchDilemmas;
+    this.#findDilemmaIds = findDilemmaIds;
   }
 
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
@@ -53,17 +64,34 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
     }));
   }
 
-  async search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]> {
-    const { dilemmas } = await this.#searchDilemmas.execute(criteria);
-    // Game keeps the version a game plays when it starts, not when it is found.
-    return dilemmas.map(({ dilemmaId, text, minimumAge, category, tags, optionCount }) => ({
-      dilemmaId,
-      text,
-      minimumAge,
-      category,
-      tags,
-      optionCount,
-    }));
+  async findCandidateIds(criteria: CandidateSearch): Promise<readonly string[]> {
+    const { dilemmaIds } = await this.#findDilemmaIds.execute(criteria);
+    return dilemmaIds;
+  }
+
+  async search(criteria: DilemmaSearch, { size, after }: SearchPage): Promise<CatalogPage> {
+    try {
+      const { dilemmas, next } = await this.#searchDilemmas.execute({
+        ...criteria,
+        size,
+        ...(after !== undefined && { after }),
+      });
+      // Game keeps the version a game plays when it starts, not when it is found.
+      return {
+        dilemmas: dilemmas.map(({ dilemmaId, text, minimumAge, category, tags, optionCount }) => ({
+          dilemmaId,
+          text,
+          minimumAge,
+          category,
+          tags,
+          optionCount,
+        })),
+        ...(next !== undefined && { next }),
+      };
+    } catch (error) {
+      if (error instanceof DilemmasInvalidPageError) throw new InvalidPageError(after ?? '');
+      throw error;
+    }
   }
 
   async #find(input: GetDilemmasInput): Promise<GetDilemmasOutput['dilemmas']> {

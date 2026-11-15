@@ -450,7 +450,9 @@
     "options_one": "{{count}} opción",
     "options_many": "{{count, number}} opciones",
     "options_other": "{{count, number}} opciones",
-    "someone": "alguien del grupo"
+    "someone": "alguien del grupo",
+    "more": "Ver más",
+    "moreFailed": "No se han podido cargar más dilemas. Prueba otra vez."
   },
   "addDilemma": {
     "title": "Añade un dilema",

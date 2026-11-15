@@ -127,7 +127,10 @@ export {
   type DilemmaCatalog,
   type DilemmaContent,
   type CatalogDilemma,
+  type CatalogPage,
+  type CandidateSearch,
   type DilemmaSearch,
+  type SearchPage,
 } from './application/ports/dilemma-catalog.port.ts';
 export {
   REPORT_REASONS,
@@ -139,6 +142,7 @@ export { InvalidReportReasonError } from './application/errors/invalid-report-re
 export { RoomNotFoundError } from './application/errors/room-not-found.error.ts';
 export { GameNotFoundError } from './application/errors/game-not-found.error.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
+export { InvalidPageError } from './application/errors/invalid-page.error.ts';
 export { IdentityNotInRoomError } from './application/errors/identity-not-in-room.error.ts';
 export { RoomCodeNotFoundError } from './application/errors/room-code-not-found.error.ts';
 export { RoomCodeUnavailableError } from './application/errors/room-code-unavailable.error.ts';

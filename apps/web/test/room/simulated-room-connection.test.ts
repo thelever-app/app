@@ -118,7 +118,7 @@ describe('SimulatedRoomConnection', () => {
       connection = opened.connection;
 
       // Act
-      const found = await connection.searchDilemmas({});
+      const { dilemmas: found } = await connection.searchDilemmas({});
 
       // Assert
       expect(found.map(({ text }) => text).sort()).toEqual(['TestText1', 'TestText2']);

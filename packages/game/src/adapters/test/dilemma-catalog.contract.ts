@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DilemmaNotFoundError } from '../../application/errors/dilemma-not-found.error.ts';
+import { InvalidPageError } from '../../application/errors/invalid-page.error.ts';
 import {
   GAP_MARKER,
   type CatalogDilemma,
@@ -56,6 +57,9 @@ function foundAt(stored: readonly DilemmaContent[], position: 0 | 1 | 2): Catalo
   if (!dilemmaId) throw new Error(`The catalog stored no dilemma at position ${position}`);
   return { dilemmaId, text, category, tags, minimumAge, optionCount: options.length };
 }
+
+/** Big enough for every search of the contract to fit in one page. */
+const ALL = { size: 100 };
 
 const FOR_EVERYONE: DilemmaSearch = {
   maximumMinimumAge: 16,
@@ -219,7 +223,7 @@ export function describeDilemmaCatalogContract(
         const { catalog, stored } = await create();
 
         // Act
-        const found = await catalog.search(FOR_EVERYONE);
+        const found = (await catalog.search(FOR_EVERYONE, ALL)).dilemmas;
 
         // Assert
         expect(found).toEqual([foundAt(stored, 0)]);
@@ -230,7 +234,8 @@ export function describeDilemmaCatalogContract(
         const { catalog, stored } = await create();
 
         // Act
-        const found = await catalog.search({ ...FOR_EVERYONE, maximumMinimumAge: 18 });
+        const found = (await catalog.search({ ...FOR_EVERYONE, maximumMinimumAge: 18 }, ALL))
+          .dilemmas;
 
         // Assert
         expect(byText(found)).toEqual([foundAt(stored, 0), foundAt(stored, 1)]);
@@ -241,7 +246,8 @@ export function describeDilemmaCatalogContract(
         const { catalog, stored } = await create();
 
         // Act
-        const found = await catalog.search({ ...FOR_EVERYONE, status: 'in-exploration' });
+        const found = (await catalog.search({ ...FOR_EVERYONE, status: 'in-exploration' }, ALL))
+          .dilemmas;
 
         // Assert
         expect(found).toEqual([foundAt(stored, 2)]);
@@ -254,13 +260,19 @@ export function describeDilemmaCatalogContract(
         const second = foundAt(stored, 1);
 
         // Act
-        const byCategory = await catalog.search({
-          ...forAdults,
-          categories: ['loyalty', 'justice'],
-        });
-        const byText = await catalog.search({ ...forAdults, text: 'text2' });
-        const byTag = await catalog.search({ ...forAdults, text: 'FAMILY' });
-        const byId = await catalog.search({ ...forAdults, dilemmaIds: [second.dilemmaId] });
+        const byCategory = (
+          await catalog.search(
+            {
+              ...forAdults,
+              categories: ['loyalty', 'justice'],
+            },
+            ALL,
+          )
+        ).dilemmas;
+        const byText = (await catalog.search({ ...forAdults, text: 'text2' }, ALL)).dilemmas;
+        const byTag = (await catalog.search({ ...forAdults, text: 'FAMILY' }, ALL)).dilemmas;
+        const byId = (await catalog.search({ ...forAdults, dilemmaIds: [second.dilemmaId] }, ALL))
+          .dilemmas;
 
         // Assert
         expect(byCategory).toEqual([second]);
@@ -274,7 +286,8 @@ export function describeDilemmaCatalogContract(
         const { catalog, stored } = await create();
 
         // Act
-        const found = await catalog.search({ ...FOR_EVERYONE, maximumMinimumAge: 18 });
+        const found = (await catalog.search({ ...FOR_EVERYONE, maximumMinimumAge: 18 }, ALL))
+          .dilemmas;
 
         // Assert
         expect(byText(found)).toEqual([foundAt(stored, 0), foundAt(stored, 1)]);
@@ -285,7 +298,7 @@ export function describeDilemmaCatalogContract(
         const { catalog } = await create();
 
         // Act
-        const found = await catalog.search({ ...FOR_EVERYONE, categories: [] });
+        const found = (await catalog.search({ ...FOR_EVERYONE, categories: [] }, ALL)).dilemmas;
 
         // Assert
         expect(found).toEqual([]);
@@ -296,10 +309,37 @@ export function describeDilemmaCatalogContract(
         const { catalog } = await create();
 
         // Act
-        const found = await catalog.search({ ...FOR_EVERYONE, language: 'fr' });
+        const found = (await catalog.search({ ...FOR_EVERYONE, language: 'fr' }, ALL)).dilemmas;
 
         // Assert
         expect(found).toEqual([]);
+      });
+
+      it('should give a page as big as asked for, and the next one after it', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+        const forAdults = { ...FOR_EVERYONE, maximumMinimumAge: 18 } as const;
+
+        // Act
+        const first = await catalog.search(forAdults, { size: 1 });
+        const second = await catalog.search(forAdults, { size: 1, after: first.next! });
+
+        // Assert
+        expect(byText([...first.dilemmas, ...second.dilemmas])).toEqual([
+          foundAt(stored, 0),
+          foundAt(stored, 1),
+        ]);
+        expect(second.next).toBeUndefined();
+      });
+
+      it('should throw InvalidPageError for a page that does not come from a search', async () => {
+        // Arrange
+        const { catalog } = await create();
+
+        // Act & Assert
+        await expect(catalog.search(FOR_EVERYONE, { size: 1, after: 'made up' })).rejects.toThrow(
+          InvalidPageError,
+        );
       });
 
       it('should return an empty list when nothing matches', async () => {
@@ -307,10 +347,44 @@ export function describeDilemmaCatalogContract(
         const { catalog } = await create();
 
         // Act
-        const found = await catalog.search({ ...FOR_EVERYONE, dilemmaIds: ['TestUnknownId'] });
+        const found = (
+          await catalog.search({ ...FOR_EVERYONE, dilemmaIds: ['TestUnknownId'] }, ALL)
+        ).dilemmas;
 
         // Assert
         expect(found).toEqual([]);
+      });
+    });
+
+    describe('findCandidateIds', () => {
+      it('should give the ids of every dilemma that matches, and nothing else', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+
+        // Act
+        const forEveryone = await catalog.findCandidateIds(FOR_EVERYONE);
+        const forAdults = await catalog.findCandidateIds({
+          ...FOR_EVERYONE,
+          maximumMinimumAge: 18,
+        });
+        const inExploration = await catalog.findCandidateIds({
+          ...FOR_EVERYONE,
+          status: 'in-exploration',
+        });
+        const ofLoyalty = await catalog.findCandidateIds({
+          ...FOR_EVERYONE,
+          maximumMinimumAge: 18,
+          categories: ['loyalty'],
+        });
+        const inFrench = await catalog.findCandidateIds({ ...FOR_EVERYONE, language: 'fr' });
+
+        // Assert
+        const [first, second, third] = stored.map(({ dilemmaId }) => dilemmaId);
+        expect(forEveryone).toEqual([first]);
+        expect([...forAdults].sort()).toEqual([first, second].sort());
+        expect(inExploration).toEqual([third]);
+        expect(ofLoyalty).toEqual([second]);
+        expect(inFrench).toEqual([]);
       });
     });
   });

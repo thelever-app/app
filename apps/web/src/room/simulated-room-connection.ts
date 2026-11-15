@@ -1,5 +1,6 @@
 import {
   Dilemma,
+  FindDilemmaIdsUseCase,
   GetDilemmasUseCase,
   SearchDilemmasUseCase as SearchCatalogUseCase,
 } from '@thelever-app/dilemmas';
@@ -159,6 +160,7 @@ export class SimulatedRoomConnection implements RoomConnection {
   readonly #catalog = new PublishedDilemmasCatalog(
     new GetDilemmasUseCase(this.#repositories.dilemmas),
     new SearchCatalogUseCase(this.#repositories.dilemmas),
+    new FindDilemmaIdsUseCase(this.#repositories.dilemmas),
   );
   readonly #useCases;
   #roomId = '';
@@ -269,18 +271,20 @@ export class SimulatedRoomConnection implements RoomConnection {
     this.#listeners.clear();
   }
 
-  /** The dilemmas of the catalog that suit the room, as the room server answers the search. */
+  /** A page of the dilemmas of the catalog that suit the room, as the room server answers the search. */
   async searchDilemmas(criteria: {
     readonly category?: string;
     readonly q?: string;
-  }): Promise<SearchDilemmasResponseDto['dilemmas']> {
-    const dilemmas = await this.#useCases.searchDilemmas.execute({
+    readonly after?: string;
+  }): Promise<SearchDilemmasResponseDto> {
+    const page = await this.#useCases.searchDilemmas.execute({
       roomId: this.#roomId,
       identity: SELF_IDENTITY,
       ...(criteria.category && { category: criteria.category }),
       ...(criteria.q && { text: criteria.q }),
+      ...(criteria.after && { after: criteria.after }),
     });
-    return SearchDilemmasResponseDto.parse({ dilemmas }).dilemmas;
+    return SearchDilemmasResponseDto.parse(page);
   }
 
   async #setUp(): Promise<void> {

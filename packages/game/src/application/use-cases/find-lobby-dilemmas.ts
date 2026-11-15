@@ -12,12 +12,16 @@ export async function findLobbyDilemmas(
   dilemmaIds: readonly string[],
 ): Promise<LobbyDilemma[]> {
   if (dilemmaIds.length === 0) return [];
-  const found = await dilemmaCatalog.search({
-    dilemmaIds,
-    maximumMinimumAge: 18,
-    status: 'in-catalog',
-    language: room.settings.dilemmaLanguage,
-  });
+  const { dilemmas: found } = await dilemmaCatalog.search(
+    {
+      dilemmaIds,
+      maximumMinimumAge: 18,
+      status: 'in-catalog',
+      language: room.settings.dilemmaLanguage,
+    },
+    // One page with all of them: no more than were asked for.
+    { size: dilemmaIds.length },
+  );
   return dilemmaIds.map((dilemmaId) => {
     const dilemma = found.find((candidate) => candidate.dilemmaId === dilemmaId);
     if (!dilemma) throw new DilemmaNotFoundError(dilemmaId);

@@ -1,7 +1,13 @@
+import { InvalidPageError } from '../../application/errors/invalid-page.error.ts';
 import type {
+  CandidateCriteria,
   DilemmaCriteria,
-  DilemmaRepository,
-} from '../../application/ports/dilemma-repository.port.ts';
+  DilemmaPage,
+  DilemmaQueries,
+  DilemmaSummary,
+  PageRequest,
+} from '../../application/ports/dilemma-queries.port.ts';
+import type { DilemmaRepository } from '../../application/ports/dilemma-repository.port.ts';
 import { rankOf } from './text-match.ts';
 import {
   Dilemma,
@@ -12,9 +18,10 @@ import {
 
 /**
  * Stores snapshots, not the dilemmas themselves, so changes that were not saved are lost like in a database.
- * Each dilemma keeps every version it was saved at, by number.
+ * Each dilemma keeps every version it was saved at, by number. It answers the queries on what it
+ * stores, as the database does.
  */
-export class InMemoryDilemmaRepository implements DilemmaRepository {
+export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQueries {
   readonly #dilemmas = new Map<
     string,
     {
@@ -54,7 +61,31 @@ export class InMemoryDilemmaRepository implements DilemmaRepository {
     return undefined;
   }
 
-  async search(criteria: DilemmaCriteria): Promise<Dilemma[]> {
+  async idsOf(criteria: CandidateCriteria): Promise<string[]> {
+    return (await this.#matching(criteria)).map(({ dilemma }) => dilemma.id);
+  }
+
+  async search(criteria: DilemmaCriteria, { after, size }: PageRequest): Promise<DilemmaPage> {
+    const found = await this.#matching(criteria);
+    const end = after === undefined ? undefined : pageEndOf(after);
+    const searchesText = Boolean(criteria.text?.trim());
+    if (end && (end.rank !== undefined) !== searchesText) throw new InvalidPageError(after!);
+    // A page starts right after where the page before ended, in the order of the search, as the
+    // database does it: even if that dilemma has gone since.
+    const rest = end ? found.filter((candidate) => comesAfter(candidate, end)) : found;
+    const page = rest.slice(0, size);
+    const last = page.at(-1);
+    return {
+      summaries: page.map(({ dilemma }) => summaryOf(dilemma)),
+      ...(last && rest.length > size && { next: JSON.stringify(pageEnd(last)) }),
+    };
+  }
+
+  /**
+   * The public dilemmas that match, at their current version: with a text, ranked, the best first
+   * and then by id; without one, by id.
+   */
+  async #matching(criteria: DilemmaCriteria): Promise<Found[]> {
     const ids = [...this.#dilemmas.keys()].sort();
     const current = await Promise.all(ids.map((id) => this.findById(id)));
     const found = current.filter(
@@ -68,16 +99,67 @@ export class InMemoryDilemmaRepository implements DilemmaRepository {
         (!criteria.categories || criteria.categories.includes(dilemma.category)),
     );
     const typed = criteria.text?.trim();
-    if (!typed) return found;
+    if (!typed) return found.map((dilemma) => ({ dilemma }));
     const ranked = found.flatMap((dilemma) => {
       const rank = rankOf(typed, dilemma);
       return rank ? [{ dilemma, rank }] : [];
     });
     // A stable sort: the same rank keeps the order by id.
-    ranked.sort(
-      (a, b) =>
-        Number(b.rank.wholeTag) - Number(a.rank.wholeTag) || b.rank.similarity - a.rank.similarity,
-    );
-    return ranked.map(({ dilemma }) => dilemma);
+    ranked.sort((a, b) => byRank(a.rank, b.rank));
+    return ranked;
   }
+}
+
+interface Rank {
+  readonly wholeTag: boolean;
+  readonly similarity: number;
+}
+
+/** A dilemma a search found, with its rank when it searched a text. */
+interface Found {
+  readonly dilemma: Dilemma;
+  readonly rank?: Rank;
+}
+
+/** Where a page ended: the last dilemma and, with a text, its rank. */
+interface PageEnd {
+  readonly id: string;
+  readonly rank?: Rank;
+}
+
+/** Negative when `a` goes before `b`: a whole tag first, then the most alike. */
+function byRank(a: Rank, b: Rank): number {
+  return Number(b.wholeTag) - Number(a.wholeTag) || b.similarity - a.similarity;
+}
+
+function pageEnd({ dilemma, rank }: Found): PageEnd {
+  return { id: dilemma.id, ...(rank && { rank }) };
+}
+
+/** Whether a dilemma found goes after where the page ended, in the order of the search. */
+function comesAfter({ dilemma, rank }: Found, end: PageEnd): boolean {
+  const byOrder = rank && end.rank ? byRank(end.rank, rank) : 0;
+  return byOrder < 0 || (byOrder === 0 && dilemma.id > end.id);
+}
+
+/** Where the page before ended, or InvalidPageError if `after` is not where a page ends. */
+function pageEndOf(after: string): PageEnd {
+  try {
+    const end = JSON.parse(after) as Partial<PageEnd> | null;
+    const rank = end?.rank;
+    if (typeof end?.id === 'string') {
+      if (rank === undefined) return { id: end.id };
+      if (typeof rank.wholeTag === 'boolean' && typeof rank.similarity === 'number') {
+        return { id: end.id, rank: { wholeTag: rank.wholeTag, similarity: rank.similarity } };
+      }
+    }
+  } catch {
+    // Not a page of a search.
+  }
+  throw new InvalidPageError(after);
+}
+
+function summaryOf(dilemma: Dilemma): DilemmaSummary {
+  const { id, version, text, minimumAge, category, tags, options } = dilemma;
+  return { id, version, text, minimumAge, category, tags, optionCount: options.length };
 }

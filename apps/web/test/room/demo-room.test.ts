@@ -18,7 +18,7 @@ describe('DEMO_ROOM', () => {
     await vi.advanceTimersByTimeAsync(lastJoins);
 
     // Act
-    const catalog = await connection.searchDilemmas({});
+    const { dilemmas: catalog } = await connection.searchDilemmas({});
     connection.send({ type: 'start-game' });
     await vi.advanceTimersByTimeAsync(0);
     connection.close();

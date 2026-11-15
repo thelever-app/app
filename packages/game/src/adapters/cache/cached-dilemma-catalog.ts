@@ -1,8 +1,10 @@
 import type {
-  CatalogDilemma,
+  CandidateSearch,
+  CatalogPage,
   DilemmaCatalog,
   DilemmaContent,
   DilemmaSearch,
+  SearchPage,
 } from '../../application/ports/dilemma-catalog.port.ts';
 import type { GameDilemma } from '../../domain/entities/game.ts';
 
@@ -31,8 +33,12 @@ export class CachedDilemmaCatalog implements DilemmaCatalog {
   }
 
   /** A search looks at the current versions, which change: it always asks the catalog. */
-  search(criteria: DilemmaSearch): Promise<readonly CatalogDilemma[]> {
-    return this.#catalog.search(criteria);
+  findCandidateIds(criteria: CandidateSearch): Promise<readonly string[]> {
+    return this.#catalog.findCandidateIds(criteria);
+  }
+
+  search(criteria: DilemmaSearch, page: SearchPage): Promise<CatalogPage> {
+    return this.#catalog.search(criteria, page);
   }
 
   async findContents(
