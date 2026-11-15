@@ -254,6 +254,10 @@ export interface GameDriver {
   changeVote(player: string, option?: string): Promise<void>;
   /** Every vote the driver cast for `player` in the dilemma in that position (from 1), in order. */
   votesCastFor(player: string, position: number): Promise<string[]>;
+  /** `player` uses the app in that language from now on, and reads the dilemmas in it. */
+  usesTheAppIn(player: string, language: string): Promise<void>;
+  /** The option of the dilemma in that position (from 1), as the room plays it, with that text in any case. */
+  optionOfTheRoomCalled(position: number, text: string): Promise<string>;
   /** The vote that counts for `player` in the dilemma in that position (from 1), as the game keeps it. */
   voteRecordedFor(player: string, position: number): Promise<string | undefined>;
   /** Whether `player` could answer the dilemma of the round now. */
@@ -376,4 +380,12 @@ export interface GameDriver {
   movementsSeenBy(player: string): Promise<string[]>;
   /** The time per dilemma of the round reaches its last seconds on every screen. */
   reachLastSeconds(): Promise<void>;
+
+  /**
+   * The curation team approves a new dilemma in the curated catalog and the catalog is loaded
+   * into the app; returns its id. Only in the application.
+   */
+  curationTeamCreatesADilemma(): Promise<string>;
+  /** Whether the public dilemma with that id has that status at its current version. Only in the application. */
+  dilemmaHasStatus(dilemmaId: string, status: 'in-catalog' | 'in-exploration'): Promise<boolean>;
 }

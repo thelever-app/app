@@ -5,7 +5,8 @@ import { PostgresDilemmaRepository } from '../src/dilemmas/postgres-dilemma-repo
 import type { Database } from '../src/schema.ts';
 import { inTransaction } from '../src/transaction.ts';
 
-// `pnpm db:seed` locally; in each environment, the migrate job runs it right after the migrations.
+// `pnpm db:seed` locally, for a database without the curated catalog; the environments load the
+// curated catalog instead, with the job catalog-import, which withdraws these.
 const { db, close } = await openDatabase<Database>(databaseConfigFrom(process.env), {
   maxConnections: 1,
   logger: new ConsoleLogger(),

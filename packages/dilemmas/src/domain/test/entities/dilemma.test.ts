@@ -10,6 +10,11 @@ import { TagCountError } from '../../errors/tag-count.error.ts';
 import { TextMissingError } from '../../errors/text-missing.error.ts';
 import { UnknownCategoryError } from '../../errors/unknown-category.error.ts';
 import { UnknownOptionError } from '../../errors/unknown-option.error.ts';
+import { ArgumentsDoNotMatchOptionsError } from '../../errors/arguments-do-not-match-options.error.ts';
+import { NotAnOriginalError } from '../../errors/not-an-original.error.ts';
+import { NotItsOriginalError } from '../../errors/not-its-original.error.ts';
+import { SameLanguageTranslationError } from '../../errors/same-language-translation.error.ts';
+import { TranslationOptionCountError } from '../../errors/translation-option-count.error.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 
 const DATA = {
@@ -361,6 +366,427 @@ describe('Dilemma', () => {
     });
   });
 
+  describe('translate', () => {
+    const TRANSLATION = {
+      language: 'en',
+      text: 'TestTranslatedText',
+      options: ['TestTranslatedOption1', 'TestTranslatedOption2'],
+      tags: ['testtranslatedtag'],
+    };
+
+    function translationIds() {
+      return new FixedIdGenerator(
+        'TestTranslationId',
+        'TestTranslationOptionId1',
+        'TestTranslationOptionId2',
+      );
+    }
+
+    it('should be a dilemma of its own in the other language, with its own ids', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+
+      // Act
+      const translation = Dilemma.translate(original, TRANSLATION, translationIds());
+
+      // Assert
+      expect(translation.id).toBe('TestTranslationId');
+      expect(translation.language).toBe('en');
+      expect(translation.version).toBe(1);
+      expect(translation.text).toBe('TestTranslatedText');
+      expect(translation.options).toEqual([
+        { id: 'TestTranslationOptionId1', text: 'TestTranslatedOption1' },
+        { id: 'TestTranslationOptionId2', text: 'TestTranslatedOption2' },
+      ]);
+      expect(translation.tags).toEqual(['testtranslatedtag']);
+    });
+
+    it('should translate the current version of its original, automatically', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+      original.revise({ ...CONTENT, text: 'TestRevisedText' }, new FixedIdGenerator());
+
+      // Act
+      const translation = Dilemma.translate(original, TRANSLATION, translationIds());
+
+      // Assert
+      expect(translation.translationOf).toEqual({ dilemmaId: 'TestDilemmaId', version: 2 });
+      expect(translation.translation).toBe('automatic');
+      expect(original.translationOf).toBeUndefined();
+      expect(original.translation).toBeUndefined();
+    });
+
+    it('should keep the category, the minimum age, the creator and the visibility of its original', () => {
+      // Arrange
+      const original = Dilemma.create({ ...DATA, minimumAge: 18 }, ids());
+
+      // Act
+      const translation = Dilemma.translate(original, TRANSLATION, translationIds());
+
+      // Assert
+      expect(translation.category).toBe('honesty');
+      expect(translation.minimumAge).toBe(18);
+      expect(translation.creator).toEqual({ type: 'curation-team' });
+      expect(translation.visibility).toBe('public');
+    });
+
+    it('should leave a translation of the curation team straight in the catalog', () => {
+      // Act
+      const translation = Dilemma.translate(
+        Dilemma.create(DATA, ids()),
+        TRANSLATION,
+        translationIds(),
+      );
+
+      // Assert
+      expect(translation.status).toBe('in-catalog');
+    });
+
+    it('should leave a translation of a player in review', () => {
+      // Act
+      const translation = Dilemma.translate(dilemmaOfAPlayer(), TRANSLATION, translationIds());
+
+      // Assert
+      expect(translation.status).toBe('in-review');
+      expect(translation.creator).toEqual({ type: 'player', identity: 'TestAnaIdentity' });
+      expect(translation.visibility).toBe('private');
+    });
+
+    it('should throw an error if it does not have as many options as its original', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+
+      // Act & Assert
+      expect(() =>
+        Dilemma.translate(
+          original,
+          {
+            ...TRANSLATION,
+            options: ['TestTranslatedOption1', 'TestTranslatedOption2', 'TestTranslatedOption3'],
+          },
+          new FixedIdGenerator('TestTranslationId', 'O1', 'O2', 'O3'),
+        ),
+      ).toThrow(TranslationOptionCountError);
+    });
+
+    it('should throw an error if it is in the language of its original', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+
+      // Act & Assert
+      expect(() =>
+        Dilemma.translate(original, { ...TRANSLATION, language: 'es' }, translationIds()),
+      ).toThrow(SameLanguageTranslationError);
+    });
+
+    it('should throw an error if what it translates is a translation itself', () => {
+      // Arrange
+      const translation = Dilemma.translate(
+        Dilemma.create(DATA, ids()),
+        TRANSLATION,
+        translationIds(),
+      );
+
+      // Act & Assert
+      expect(() =>
+        Dilemma.translate(
+          translation,
+          { ...TRANSLATION, language: 'fr' },
+          new FixedIdGenerator('TestOtherId', 'O1', 'O2'),
+        ),
+      ).toThrow(NotAnOriginalError);
+    });
+  });
+
+  describe('retranslate', () => {
+    const TRANSLATION = {
+      language: 'en',
+      text: 'TestTranslatedText',
+      options: ['TestTranslatedOption1', 'TestTranslatedOption2'],
+      tags: [],
+    };
+
+    function translationOf(original: Dilemma): Dilemma {
+      return Dilemma.translate(
+        original,
+        TRANSLATION,
+        new FixedIdGenerator(
+          'TestTranslationId',
+          'TestTranslationOptionId1',
+          'TestTranslationOptionId2',
+        ),
+      );
+    }
+
+    it('should create the next version translating the new version of its original', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+      const translation = translationOf(original);
+      original.revise(
+        { ...CONTENT, text: 'TestRevisedText', minimumAge: 18 },
+        new FixedIdGenerator(),
+      );
+
+      // Act
+      translation.retranslate(
+        original,
+        { ...TRANSLATION, text: 'TestRetranslatedText' },
+        new FixedIdGenerator(),
+      );
+
+      // Assert
+      expect(translation.version).toBe(2);
+      expect(translation.text).toBe('TestRetranslatedText');
+      expect(translation.minimumAge).toBe(18);
+      expect(translation.translationOf).toEqual({ dilemmaId: 'TestDilemmaId', version: 2 });
+      expect(translation.translation).toBe('automatic');
+    });
+
+    it('should keep the id of the option in each position and give new ids to the new positions', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+      const translation = translationOf(original);
+      original.revise(
+        { ...CONTENT, options: [...CONTENT.options, { text: 'TestOption3' }] },
+        new FixedIdGenerator('TestOptionId3'),
+      );
+
+      // Act
+      translation.retranslate(
+        original,
+        {
+          ...TRANSLATION,
+          options: ['TestTranslatedOption1', 'TestTranslatedOption2', 'TestTranslatedOption3'],
+        },
+        new FixedIdGenerator('TestTranslationOptionId3'),
+      );
+
+      // Assert
+      expect(translation.options.map(({ id }) => id)).toEqual([
+        'TestTranslationOptionId1',
+        'TestTranslationOptionId2',
+        'TestTranslationOptionId3',
+      ]);
+    });
+
+    it('should change nothing if its original has no new version', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+      const translation = translationOf(original);
+
+      // Act
+      translation.retranslate(
+        original,
+        { ...TRANSLATION, text: 'TestRetranslatedText' },
+        new FixedIdGenerator(),
+      );
+
+      // Assert
+      expect(translation.version).toBe(1);
+      expect(translation.text).toBe('TestTranslatedText');
+    });
+
+    it('should throw an error if the dilemma given is not its original', () => {
+      // Arrange
+      const translation = translationOf(Dilemma.create(DATA, ids()));
+      const other = Dilemma.create(DATA, new FixedIdGenerator('TestOtherId', 'O1', 'O2'));
+
+      // Act & Assert
+      expect(() => translation.retranslate(other, TRANSLATION, new FixedIdGenerator())).toThrow(
+        NotItsOriginalError,
+      );
+    });
+
+    it('should throw an error if the dilemma is not a translation', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+
+      // Act & Assert
+      expect(() => original.retranslate(original, TRANSLATION, new FixedIdGenerator())).toThrow(
+        NotItsOriginalError,
+      );
+    });
+  });
+
+  describe('withdraw', () => {
+    it('should take the dilemma out of new games', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act
+      dilemma.withdraw();
+
+      // Assert
+      expect(dilemma.status).toBe('withdrawn');
+      expect(dilemma.version).toBe(1);
+    });
+  });
+
+  describe('reinstate', () => {
+    it('should bring a withdrawn dilemma of the curation team back to the catalog, at the same version', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+      dilemma.withdraw();
+
+      // Act
+      dilemma.reinstate();
+
+      // Assert
+      expect(dilemma.status).toBe('in-catalog');
+      expect(dilemma.version).toBe(1);
+    });
+
+    it('should leave a withdrawn dilemma of a player in review', () => {
+      // Arrange
+      const dilemma = dilemmaOfAPlayer();
+      dilemma.withdraw();
+
+      // Act
+      dilemma.reinstate();
+
+      // Assert
+      expect(dilemma.status).toBe('in-review');
+    });
+
+    it('should change nothing in a dilemma that is not withdrawn', () => {
+      // Arrange
+      const dilemma = dilemmaOfAPlayer();
+
+      // Act
+      dilemma.reinstate();
+
+      // Assert
+      expect(dilemma.status).toBe('approved');
+    });
+  });
+
+  describe('canBeRead', () => {
+    it('should be readable while nothing has taken it out', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+      const withdrawn = Dilemma.create(DATA, ids());
+      withdrawn.withdraw();
+
+      // Act & Assert
+      expect(dilemma.canBeRead()).toBe(true);
+      expect(withdrawn.canBeRead()).toBe(false);
+      expect(dilemmaOfAPlayer().canBeRead()).toBe(true);
+      for (const status of ['in-review', 'rejected', 'hidden-by-reports'] as const) {
+        const snapshot = dilemma.toSnapshot();
+        expect(
+          Dilemma.restore({ ...snapshot, version: { ...snapshot.version, status } }).canBeRead(),
+        ).toBe(false);
+      }
+    });
+  });
+
+  describe('rename', () => {
+    it('should change the name without a new version', () => {
+      // Arrange
+      const dilemma = Dilemma.create({ ...DATA, name: 'TestName' }, ids());
+
+      // Act
+      dilemma.rename(' TestOtherName ');
+
+      // Assert
+      expect(dilemma.name).toBe('TestOtherName');
+      expect(dilemma.version).toBe(1);
+    });
+
+    it('should have no name unless it is given one', () => {
+      // Act & Assert
+      expect(Dilemma.create(DATA, ids()).name).toBeUndefined();
+    });
+  });
+
+  describe('argue', () => {
+    const ARGUMENTS = {
+      context: 'TestContext',
+      options: [
+        { optionId: 'TestOptionId1', for: 'TestFor1', against: 'TestAgainst1' },
+        { optionId: 'TestOptionId2', for: 'TestFor2', against: 'TestAgainst2' },
+      ],
+    };
+
+    it('should give the current version its arguments without a new version', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act
+      dilemma.argue(ARGUMENTS);
+
+      // Assert
+      expect(dilemma.arguments).toEqual(ARGUMENTS);
+      expect(dilemma.version).toBe(1);
+    });
+
+    it('should accept arguments without a context', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act
+      dilemma.argue({ options: ARGUMENTS.options });
+
+      // Assert
+      expect(dilemma.arguments?.context).toBeUndefined();
+    });
+
+    it('should leave a new version without the arguments of the previous one', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+      dilemma.argue(ARGUMENTS);
+
+      // Act
+      dilemma.revise({ ...CONTENT, text: 'TestRevisedText' }, new FixedIdGenerator());
+
+      // Assert
+      expect(dilemma.arguments).toBeUndefined();
+    });
+
+    it('should throw an error if an option has no arguments or an unknown one has', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act & Assert
+      expect(() => dilemma.argue({ options: ARGUMENTS.options.slice(0, 1) })).toThrow(
+        ArgumentsDoNotMatchOptionsError,
+      );
+      expect(() =>
+        dilemma.argue({
+          options: [
+            ARGUMENTS.options[0]!,
+            { optionId: 'TestUnknownOptionId', for: 'F', against: 'A' },
+          ],
+        }),
+      ).toThrow(ArgumentsDoNotMatchOptionsError);
+    });
+
+    it('should drop the arguments of the current version without a new version', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+      dilemma.argue(ARGUMENTS);
+
+      // Act
+      dilemma.dropArguments();
+
+      // Assert
+      expect(dilemma.arguments).toBeUndefined();
+      expect(dilemma.version).toBe(1);
+    });
+
+    it('should throw an error if an argument is empty', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+
+      // Act & Assert
+      expect(() =>
+        dilemma.argue({
+          options: [{ ...ARGUMENTS.options[0]!, against: ' ' }, ARGUMENTS.options[1]!],
+        }),
+      ).toThrow(TextMissingError);
+    });
+  });
+
   describe('options', () => {
     it('should not let the options be changed from outside the dilemma', () => {
       // Arrange
@@ -371,44 +797,6 @@ describe('Dilemma', () => {
 
       // Assert
       expect(dilemma.options).toHaveLength(2);
-    });
-  });
-
-  describe('contentIn', () => {
-    it('should return the text and the options in the language asked for', () => {
-      // Arrange
-      const dilemma = Dilemma.create(DATA, ids());
-
-      // Act
-      const content = dilemma.contentIn('es');
-
-      // Assert
-      expect(content).toEqual({
-        text: 'TestDilemmaText',
-        options: [
-          { id: 'TestOptionId1', text: 'TestOption1' },
-          { id: 'TestOptionId2', text: 'TestOption2' },
-        ],
-      });
-    });
-
-    it('should fall back to the original text when there is no translation', () => {
-      // Arrange
-      const dilemma = Dilemma.create(DATA, ids());
-
-      // Act
-      const content = dilemma.contentIn('de');
-
-      // Assert
-      expect(content.text).toBe('TestDilemmaText');
-    });
-
-    it('should throw an error if the language asked for is not a language code', () => {
-      // Arrange
-      const dilemma = Dilemma.create(DATA, ids());
-
-      // Act & Assert
-      expect(() => dilemma.contentIn('')).toThrow(InvalidLanguageError);
     });
   });
 
@@ -453,6 +841,36 @@ describe('Dilemma', () => {
       expect(restored.toSnapshot()).toEqual(dilemma.toSnapshot());
       expect(restored.creator).toEqual({ type: 'player', identity: 'TestAnaIdentity' });
       expect(restored.version).toBe(2);
+    });
+
+    it('should rebuild a translation with its name and its arguments', () => {
+      // Arrange
+      const translation = Dilemma.translate(
+        Dilemma.create(DATA, ids()),
+        {
+          language: 'en',
+          name: 'TestName',
+          text: 'TestText',
+          options: ['TestA', 'TestB'],
+          tags: [],
+        },
+        new FixedIdGenerator('TestTranslationId', 'TestA', 'TestB'),
+      );
+      translation.argue({
+        options: [
+          { optionId: 'TestA', for: 'TestFor', against: 'TestAgainst' },
+          { optionId: 'TestB', for: 'TestFor', against: 'TestAgainst' },
+        ],
+      });
+
+      // Act
+      const restored = Dilemma.restore(translation.toSnapshot());
+
+      // Assert
+      expect(restored.toSnapshot()).toEqual(translation.toSnapshot());
+      expect(restored.name).toBe('TestName');
+      expect(restored.translationOf).toEqual({ dilemmaId: 'TestDilemmaId', version: 1 });
+      expect(restored.arguments?.options).toHaveLength(2);
     });
   });
 });

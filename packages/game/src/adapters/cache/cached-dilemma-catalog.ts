@@ -11,8 +11,10 @@ const MAX_CONTENTS = 5000;
 
 /**
  * Keeps in memory the content of each version played, in each language: a version never changes,
- * so it is read once per instance and not on every command. The current versions do change, and
- * are always asked for. Past its size, the content used longest ago goes first.
+ * and neither does a translation of it, so it is read once per instance and not on every command.
+ * What comes in another language, for want of a translation, is asked for again: the translation
+ * may still come. The current versions do change, and are always asked for. Past its size, the
+ * content used longest ago goes first.
  */
 export class CachedDilemmaCatalog implements DilemmaCatalog {
   readonly #catalog: DilemmaCatalog;
@@ -52,8 +54,9 @@ export class CachedDilemmaCatalog implements DilemmaCatalog {
         language,
       );
       missing.forEach(({ key }, index) => {
-        contents.set(key, found[index]!);
-        this.#keep(key, found[index]!);
+        const content = found[index]!;
+        contents.set(key, content);
+        if (content.language === language) this.#keep(key, content);
       });
     }
     return asked.map(({ key }) => contents.get(key)!);

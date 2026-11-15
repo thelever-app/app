@@ -106,7 +106,7 @@ describe('SearchDilemmasUseCase', () => {
       expect(dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(['TestDilemma1']);
     });
 
-    it('should return the text in the original language while there is no translation', async () => {
+    it('should find only the dilemmas written or translated in the language given', async () => {
       // Arrange
       const searchDilemmas = await searchInCatalog();
 
@@ -119,7 +119,7 @@ describe('SearchDilemmasUseCase', () => {
       });
 
       // Assert
-      expect(dilemmas[0]?.text).toBe('TestText1');
+      expect(dilemmas).toEqual([]);
     });
 
     it('should throw InvalidLanguageError if the language is not a language code', async () => {

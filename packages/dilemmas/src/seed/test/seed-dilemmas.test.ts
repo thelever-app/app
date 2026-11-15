@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Dilemma } from '../../domain/entities/dilemma.ts';
 import { InMemoryDilemmaRepository } from '../../adapters/in-memory/in-memory-dilemma-repository.ts';
-import { loadSeedDilemmas, SEED_DILEMMAS } from '../seed-dilemmas.ts';
+import { loadSeedDilemmas, SEED_DILEMMAS, withdrawSeedDilemmas } from '../seed-dilemmas.ts';
 
 const [WALLET] = SEED_DILEMMAS.filter(({ id }) => id === 'seed-wallet');
 
@@ -104,5 +104,33 @@ describe('loadSeedDilemmas', () => {
 
     // Assert
     expect((await repository.findById('seed-wallet'))?.options).toEqual(WALLET?.options);
+  });
+});
+
+describe('withdrawSeedDilemmas', () => {
+  it('should withdraw every seed dilemma there is and return how many it withdrew', async () => {
+    // Arrange
+    const repository = new InMemoryDilemmaRepository();
+    await loadSeedDilemmas(repository);
+
+    // Act
+    const withdrawn = await withdrawSeedDilemmas(repository);
+
+    // Assert
+    expect(withdrawn).toBe(SEED_DILEMMAS.length);
+    for (const { id } of SEED_DILEMMAS) {
+      expect((await repository.findById(id))?.status).toBe('withdrawn');
+    }
+  });
+
+  it('should do nothing where there are no seed dilemmas or they are already withdrawn', async () => {
+    // Arrange
+    const repository = new InMemoryDilemmaRepository();
+
+    // Act & Assert
+    await expect(withdrawSeedDilemmas(repository)).resolves.toBe(0);
+    await loadSeedDilemmas(repository);
+    await withdrawSeedDilemmas(repository);
+    await expect(withdrawSeedDilemmas(repository)).resolves.toBe(0);
   });
 });

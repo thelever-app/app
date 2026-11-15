@@ -55,6 +55,15 @@ import {
   SequentialRandomness,
   type InMemoryDilemma,
 } from '@thelever-app/game/in-memory';
+import {
+  ImportCatalogUseCase,
+  SearchDilemmasUseCase as SearchCatalogUseCase,
+} from '@thelever-app/dilemmas';
+import {
+  InMemoryCuratedCatalog,
+  InMemoryDilemmaRepository,
+  LanguageTagTranslator,
+} from '@thelever-app/dilemmas/in-memory';
 import type {
   AnswerPlan,
   CatalogEntry,
@@ -75,6 +84,7 @@ import {
   catalogEntryOf,
   EXPLORATION_SLOTS,
   explorationSlotsFor,
+  SPANISH_OPTION_TEXTS,
   TEST_DILEMMAS,
   TWO_OPTION_DILEMMA_IDS,
 } from './test-catalog.ts';
@@ -89,8 +99,10 @@ const DEFAULT_CHOICES = { groupNature: 'friends', place: 'together', deviceLangu
 
 /** The test data, as the catalog of Game keeps it: every dilemma with the same two options. */
 const DILEMMAS: readonly InMemoryDilemma[] = TEST_DILEMMAS.map(
-  ({ dilemmaId, text, minimumAge, category, tags, status, options }) => ({
+  ({ dilemmaId, text, minimumAge, category, tags, status, options, language, translations }) => ({
     dilemmaId,
+    language,
+    translations,
     text,
     options: options.map((option, index) => ({ optionId: `option-${index + 1}`, text: option })),
     minimumAge: minimumAge as 16 | 18,
@@ -179,6 +191,18 @@ export class AcceptanceDriver implements GameDriver {
   /** What each identity declared and consented to, which the seal provider hands out. */
   readonly #seals = new Map<string, Seal>();
   readonly #reports = new InMemoryDilemmaReports();
+  /** The Dilemmas context, for what the curation team does: Game reads its own test catalog. */
+  readonly #curatedCatalog = new InMemoryCuratedCatalog();
+  readonly #dilemmaRepository = new InMemoryDilemmaRepository();
+  /** The languages of the app, which the catalog is translated into. */
+  readonly #importCatalog = new ImportCatalogUseCase(
+    this.#curatedCatalog,
+    new LanguageTagTranslator(),
+    this.#dilemmaRepository,
+    ['es', 'en', 'fr', 'de', 'it', 'pt', 'ca'],
+  );
+  /** The language of the device of each player who does not use the app in Spanish. */
+  readonly #languages = new Map<string, string>();
 
   readonly #createRoom: CreateRoomUseCase;
   readonly #getRoomPreview: GetRoomPreviewUseCase;
@@ -715,7 +739,7 @@ export class AcceptanceDriver implements GameDriver {
     const { dilemmaId } = await this.#roundDilemmaOf(player);
     const draft = {
       dilemmaId,
-      vote: option ? optionIdOf(dilemmaId, option) : VOTE,
+      vote: option ? await this.#optionSeenBy(player, dilemmaId, option) : VOTE,
       votePredictions: [],
     };
     this.#drafts.set(player, draft);
@@ -742,6 +766,44 @@ export class AcceptanceDriver implements GameDriver {
     return (this.#votes.get(player) ?? [])
       .filter((cast) => cast.dilemmaId === dilemmaId)
       .map(({ vote }) => vote);
+  }
+
+  async curationTeamCreatesADilemma(): Promise<string> {
+    const number = this.#curatedCatalog.approved.length + 1;
+    this.#curatedCatalog.approved.push({
+      number,
+      language: 'es',
+      name: `Test dilemma ${number}`,
+      text: `Text of the curated dilemma ${number}`,
+      options: [...SPANISH_OPTION_TEXTS],
+      category: 'justice',
+      minimumAge: 16,
+      tags: [],
+    });
+    await this.#importCatalog.execute();
+    return `dlm-${number}`;
+  }
+
+  async dilemmaHasStatus(
+    dilemmaId: string,
+    status: 'in-catalog' | 'in-exploration',
+  ): Promise<boolean> {
+    const { dilemmas } = await new SearchCatalogUseCase(this.#dilemmaRepository).execute({
+      dilemmaIds: [dilemmaId],
+      maximumMinimumAge: 18,
+      status,
+      language: 'es',
+    });
+    return dilemmas.length === 1;
+  }
+
+  usesTheAppIn(player: string, language: string): Promise<void> {
+    this.#languages.set(player, language);
+    return Promise.resolve();
+  }
+
+  async optionOfTheRoomCalled(position: number, text: string): Promise<string> {
+    return optionIdOf(await this.#dilemmaIdAt(position), text);
   }
 
   async voteRecordedFor(player: string, position: number): Promise<string | undefined> {
@@ -889,7 +951,8 @@ export class AcceptanceDriver implements GameDriver {
     const game = await this.#currentGame();
     const played = game.dilemmas[position - 1];
     if (!played) throw new Error(`The game has no dilemma in position ${position}`);
-    const [content] = await this.#catalog.findContents([played]);
+    // In the language of the room, as it was written.
+    const [content] = await this.#catalog.findContents([played], game.settings.dilemmaLanguage);
     return content!.text;
   }
 
@@ -1179,6 +1242,16 @@ export class AcceptanceDriver implements GameDriver {
     this.#gameId = gameId;
   }
 
+  /** The option of the dilemma that `player` sees with that text, in any case, in their language. */
+  async #optionSeenBy(player: string, dilemmaId: string, text: string): Promise<string> {
+    const { dilemmas } = await this.#gameStateOf(player);
+    const option = dilemmas
+      .find((dilemma) => dilemma.dilemmaId === dilemmaId)
+      ?.options.find((candidate) => candidate.text.toLowerCase() === text.toLowerCase());
+    if (!option) throw new Error(`${player} sees no option "${text}" in dilemma ${dilemmaId}`);
+    return option.optionId;
+  }
+
   /** A dilemma of the catalog suitable for the room that nobody added yet. */
   async #notYetAdded(player: string): Promise<string> {
     const added = new Set(await this.addedDilemmasSeenBy(player));
@@ -1251,7 +1324,7 @@ export class AcceptanceDriver implements GameDriver {
     const game = await this.#getGameState.execute({
       gameId: currentGameId,
       playerId: this.#playerIdOf(player),
-      language: 'en',
+      language: this.#languageOf(player),
     });
     return game.code;
   }
@@ -1267,8 +1340,12 @@ export class AcceptanceDriver implements GameDriver {
     return this.#getGameState.execute({
       gameId: this.#currentGameId(),
       playerId: this.#playerIdOf(player),
-      language: 'en',
+      language: this.#languageOf(player),
     });
+  }
+
+  #languageOf(player: string): string {
+    return this.#languages.get(player) ?? DEFAULT_CHOICES.deviceLanguage;
   }
 
   /** The scenario counts dilemmas from 1, as people do. */

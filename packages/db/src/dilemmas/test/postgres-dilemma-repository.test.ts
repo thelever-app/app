@@ -20,16 +20,23 @@ describeDilemmaCatalogContract('PublishedDilemmasCatalog on PostgreSQL', async (
   await emptyTables(database.db());
   const repository = new PostgresDilemmaRepository(database.db());
   const idGenerator = new SequentialIdGenerator('dilemma');
-  const dilemmas = CONTRACT_DILEMMAS.map(({ status, ...content }) => {
+  const stored = [];
+  for (const { status, translations, ...content } of CONTRACT_DILEMMAS) {
     const created = Dilemma.create({ ...content, language: 'es' }, idGenerator).toSnapshot();
-    return Dilemma.restore({ ...created, version: { ...created.version, status } });
-  });
-  for (const dilemma of dilemmas) await repository.save(dilemma);
-  const stored = dilemmas.map((dilemma) => ({
-    dilemmaId: dilemma.id,
-    text: dilemma.text,
-    options: dilemma.options.map(({ id, text }) => ({ optionId: id, text })),
-  }));
+    const original = Dilemma.restore({ ...created, version: { ...created.version, status } });
+    await repository.save(original);
+    for (const { language, text, options } of translations) {
+      await repository.save(
+        Dilemma.translate(original, { language, text, options, tags: [] }, idGenerator),
+      );
+    }
+    stored.push({
+      dilemmaId: original.id,
+      text: original.text,
+      options: original.options.map(({ id, text }) => ({ optionId: id, text })),
+      language: original.language,
+    });
+  }
   const catalog = new PublishedDilemmasCatalog(
     new GetDilemmasUseCase(repository),
     new SearchDilemmasUseCase(repository),

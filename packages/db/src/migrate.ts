@@ -1,6 +1,6 @@
 import { databaseConfigFrom, openDatabase } from './connection.ts';
 import { ConsoleLogger } from './console-logger.ts';
-import { grantRowAccess } from './grants.ts';
+import { grantDilemmaAccess, grantRowAccess } from './grants.ts';
 import { migrateToLatest } from './migrator.ts';
 
 // `pnpm db:migrate` locally; in each environment, the migrate job runs it before every deploy.
@@ -16,6 +16,12 @@ try {
   if (appUser) {
     await grantRowAccess(db, appUser);
     console.log(`granted the rows to ${appUser}`);
+  }
+  // In Cloud Run, the user of the job that loads the catalog, which only touches the dilemmas.
+  const catalogUser = process.env.DB_CATALOG_USER;
+  if (catalogUser) {
+    await grantDilemmaAccess(db, catalogUser);
+    console.log(`granted the dilemmas to ${catalogUser}`);
   }
 } finally {
   await close();

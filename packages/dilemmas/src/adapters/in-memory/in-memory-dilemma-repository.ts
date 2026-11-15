@@ -6,6 +6,7 @@ import { rankOf } from './text-match.ts';
 import {
   Dilemma,
   type DilemmaSnapshot,
+  type TranslationOf,
   type VersionSnapshot,
 } from '../../domain/entities/dilemma.ts';
 
@@ -40,6 +41,19 @@ export class InMemoryDilemmaRepository implements DilemmaRepository {
     return stored && snapshot && Dilemma.restore({ ...stored.dilemma, version: snapshot });
   }
 
+  async findTranslation(original: TranslationOf, language: string): Promise<Dilemma | undefined> {
+    for (const [id, { dilemma, versions }] of this.#dilemmas) {
+      if (dilemma.language !== language) continue;
+      for (const version of versions.values()) {
+        const of = version.translationOf;
+        if (of?.dilemmaId === original.dilemmaId && of.version === original.version) {
+          return this.findVersion(id, version.number);
+        }
+      }
+    }
+    return undefined;
+  }
+
   async search(criteria: DilemmaCriteria): Promise<Dilemma[]> {
     const ids = [...this.#dilemmas.keys()].sort();
     const current = await Promise.all(ids.map((id) => this.findById(id)));
@@ -49,6 +63,7 @@ export class InMemoryDilemmaRepository implements DilemmaRepository {
         dilemma.visibility === 'public' &&
         dilemma.status === criteria.status &&
         dilemma.minimumAge <= criteria.maximumMinimumAge &&
+        (criteria.language === undefined || dilemma.language === criteria.language) &&
         (!criteria.dilemmaIds || criteria.dilemmaIds.includes(dilemma.id)) &&
         (!criteria.categories || criteria.categories.includes(dilemma.category)),
     );

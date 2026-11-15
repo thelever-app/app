@@ -11,15 +11,27 @@ import type { GameDilemma } from '../../domain/entities/game.ts';
 /** The only version of its dilemmas, which never change. */
 const VERSION = 1;
 
-/** A dilemma of the in-memory catalog: its content and, unless given, one in the general catalog for everyone. */
-export interface InMemoryDilemma extends DilemmaContent {
+/** The text and the options of a dilemma in another language, option n translating option n. */
+export interface InMemoryTranslation {
+  readonly language: string;
+  readonly text: string;
+  readonly options: readonly string[];
+}
+
+/**
+ * A dilemma of the in-memory catalog: its content and, unless given, one in Spanish, without
+ * translations, in the general catalog for everyone.
+ */
+export interface InMemoryDilemma extends Omit<DilemmaContent, 'language'> {
+  readonly language?: string;
+  readonly translations?: readonly InMemoryTranslation[];
   readonly minimumAge?: 16 | 18;
   readonly category?: string;
   readonly tags?: readonly string[];
   readonly status?: 'in-catalog' | 'in-exploration';
 }
 
-/** A fixed set of dilemmas, at their first version and in a single language, for unit and acceptance tests. */
+/** A fixed set of dilemmas, at their first version and with their translations, for unit and acceptance tests. */
 export class InMemoryDilemmaCatalog implements DilemmaCatalog {
   readonly #dilemmas: ReadonlyMap<string, Required<InMemoryDilemma>>;
 
@@ -28,6 +40,8 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
       dilemmas.map((dilemma) => [
         dilemma.dilemmaId,
         {
+          language: 'es',
+          translations: [],
           minimumAge: 16,
           category: 'life-and-death',
           tags: [],
@@ -54,11 +68,25 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
 
   async findContents(
     dilemmas: readonly { readonly dilemmaId: string; readonly version: number }[],
+    language: string,
   ): Promise<readonly DilemmaContent[]> {
     return dilemmas.map(({ dilemmaId, version }) => {
       if (version !== VERSION) throw new DilemmaNotFoundError(dilemmaId);
-      const { text, options } = this.#dilemmaOf(dilemmaId);
-      return { dilemmaId, text, options };
+      const dilemma = this.#dilemmaOf(dilemmaId);
+      const translation = dilemma.translations.find((candidate) => candidate.language === language);
+      if (!translation) {
+        const { text, options } = dilemma;
+        return { dilemmaId, text, options, language: dilemma.language };
+      }
+      return {
+        dilemmaId,
+        text: translation.text,
+        options: dilemma.options.map(({ optionId }, index) => ({
+          optionId,
+          text: translation.options[index]!,
+        })),
+        language,
+      };
     });
   }
 
@@ -72,6 +100,7 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
           // Only the whole text typed, in any case: ranking what matches best is up to Dilemmas.
           [dilemma.text, ...dilemma.tags].some((field) => field.toLowerCase().includes(text)) &&
           dilemma.minimumAge <= criteria.maximumMinimumAge &&
+          dilemma.language === criteria.language &&
           dilemma.status === criteria.status,
       )
       .map(({ dilemmaId, text, minimumAge, category, tags, options }) => ({

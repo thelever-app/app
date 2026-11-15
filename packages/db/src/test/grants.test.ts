@@ -1,20 +1,24 @@
 import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
-import { grantRowAccess } from '../grants.ts';
+import { grantDilemmaAccess, grantRowAccess } from '../grants.ts';
 import type { Database } from '../schema.ts';
 import { useTestDatabase } from './support/test-database.ts';
 
 /** A role of the whole server, as the IAM user of the room server is in Cloud SQL. */
 const APP_USER = 'thelever_test_app_user';
+/** A role of the whole server, as the IAM user of the job that loads the catalog is in Cloud SQL. */
+const CATALOG_USER = 'thelever_test_catalog_user';
 
 const database = useTestDatabase<Database>();
 
-async function privilegeOf(table: string, privilege: string): Promise<boolean | undefined> {
+async function privilegeOf(
+  table: string,
+  privilege: string,
+  user = APP_USER,
+): Promise<boolean | undefined> {
   const { rows } = await sql<{
     granted: boolean;
-  }>`select has_table_privilege(${APP_USER}, ${table}, ${privilege}) as granted`.execute(
-    database.db(),
-  );
+  }>`select has_table_privilege(${user}, ${table}, ${privilege}) as granted`.execute(database.db());
   return rows[0]?.granted;
 }
 
@@ -45,5 +49,31 @@ describe('grantRowAccess', () => {
       database.db(),
     );
     expect(rows[0]?.create).toBe(false);
+  });
+});
+
+describe('grantDilemmaAccess', () => {
+  it('should let the user read and write the rows of the tables of Dilemmas, and of nothing else', async () => {
+    // Arrange
+    await sql`
+      do $$ begin
+        if not exists (select from pg_roles where rolname = 'thelever_test_catalog_user') then
+          create role thelever_test_catalog_user;
+        end if;
+      end $$
+    `.execute(database.db());
+
+    // Act
+    await grantDilemmaAccess(database.db(), CATALOG_USER);
+
+    // Assert
+    for (const table of ['dilemmas', 'dilemma_versions', 'dilemma_version_option_arguments']) {
+      for (const privilege of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
+        expect(await privilegeOf(table, privilege, CATALOG_USER)).toBe(true);
+      }
+    }
+    expect(await privilegeOf('rooms', 'SELECT', CATALOG_USER)).toBe(false);
+    expect(await privilegeOf('game_dilemmas', 'SELECT', CATALOG_USER)).toBe(false);
+    expect(await privilegeOf('room_added_dilemmas', 'SELECT', CATALOG_USER)).toBe(false);
   });
 });

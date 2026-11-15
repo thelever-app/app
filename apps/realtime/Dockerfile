@@ -4,7 +4,7 @@
 # Every workspace package apps/realtime depends on is copied with its manifest, sources and, when it
 # has production dependencies, its node_modules (packages/game and packages/dilemmas have none: a
 # context depends on no other package, ADR 0001). packages/db also brings
-# its migrations and the seed script, which the migrate job runs from this same image.
+# its migrations, which the migrate job runs from this same image.
 
 FROM node:24.21.0-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS install
 WORKDIR /app
@@ -36,7 +36,6 @@ COPY packages/protocol/package.json packages/protocol/
 COPY packages/protocol/src packages/protocol/src
 COPY packages/db/package.json packages/db/
 COPY packages/db/src packages/db/src
-COPY packages/db/seeds packages/db/seeds
 COPY packages/integrations/package.json packages/integrations/
 COPY packages/integrations/src packages/integrations/src
 USER node

@@ -36,7 +36,9 @@ export interface GetGameStateOutput {
    * Their content, in the order every player gets them, with the options in the order of the player
    * who asks and who takes the gap, if it has one.
    */
-  readonly dilemmas: readonly (DilemmaContent & { readonly personInTheGap: string | null })[];
+  readonly dilemmas: readonly (Omit<DilemmaContent, 'language'> & {
+    readonly personInTheGap: string | null;
+  })[];
   /** The players whose vote the player who asks predicts in each dilemma; none in an anonymous room. */
   readonly playersToPredict: readonly string[];
   readonly players: readonly {
@@ -118,7 +120,8 @@ export class GetGameStateUseCase {
         content.options.find((option) => option.optionId === optionId)!,
       );
       return {
-        ...content,
+        dilemmaId: content.dilemmaId,
+        text: content.text,
         options,
         personInTheGap: game.personInTheGap(content.dilemmaId),
       };

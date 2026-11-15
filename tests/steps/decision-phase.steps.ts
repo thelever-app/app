@@ -1,5 +1,6 @@
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import { testTextIn } from '../support/test-catalog.ts';
 import type { GameWorld } from '../support/world.ts';
 
 /** Test data: the option a step predicts when the scenario does not say which, as the test dilemmas write it. */
@@ -325,6 +326,88 @@ Then('the order each of them saw is recorded with their answer', async function 
     assert.deepEqual((await this.driver.answerRecordedFor(viewer, 1))?.optionOrder, seen);
   }
 });
+
+// The language each player reads in
+
+/** Test data: the dilemma with a translation into English and the one only in Spanish. */
+const WITH_ENGLISH_TRANSLATION = 'english-version-1';
+const ONLY_IN_SPANISH = 'spanish-only-1';
+
+/** The host picks, as the first dilemma of the game, the dilemma of the test data that the search finds. */
+async function firstDilemmaIs(world: GameWorld, dilemmaId: string): Promise<void> {
+  world.beforeTheGame();
+  const host = await world.host();
+  const found = await world.driver.searchDilemmas(host, dilemmaId);
+  assert.deepEqual(found, [dilemmaId], `the search does not find only ${dilemmaId}`);
+  await world.driver.pickDilemmas(host, found);
+  world.dilemmaId = dilemmaId;
+}
+
+Given('the room plays its dilemmas in Spanish', async function (this: GameWorld) {
+  const settings = await this.driver.settingsSeenBy(await this.host());
+  assert.equal(settings.dilemmaLanguage, 'es');
+});
+
+Given('{string} uses the app in English', async function (this: GameWorld, player: string) {
+  await this.driver.usesTheAppIn(player, 'en');
+});
+
+Given('the first dilemma has an English translation', async function (this: GameWorld) {
+  await firstDilemmaIs(this, WITH_ENGLISH_TRANSLATION);
+});
+
+Given('the first dilemma has no English translation', async function (this: GameWorld) {
+  await firstDilemmaIs(this, ONLY_IN_SPANISH);
+});
+
+Given(
+  '{string} reads the first dilemma in English',
+  async function (this: GameWorld, player: string) {
+    await this.driver.usesTheAppIn(player, 'en');
+    await firstDilemmaIs(this, WITH_ENGLISH_TRANSLATION);
+    await this.game();
+    assert.equal(await this.driver.dilemmaTextSeenBy(player, 1), testTextIn(this.dilemmaId, 'en'));
+  },
+);
+
+When('the players get the first dilemma', async function (this: GameWorld) {
+  await this.game();
+});
+
+Then('{string} reads it in English', async function (this: GameWorld, player: string) {
+  assert.equal(await this.driver.dilemmaTextSeenBy(player, 1), testTextIn(this.dilemmaId, 'en'));
+});
+
+Then('{string} reads it in Spanish', async function (this: GameWorld, player: string) {
+  assert.equal(await this.driver.dilemmaTextSeenBy(player, 1), testTextIn(this.dilemmaId, 'es'));
+});
+
+Then(
+  '{string} and {string} read it in Spanish',
+  async function (this: GameWorld, firstPlayer: string, secondPlayer: string) {
+    for (const player of [firstPlayer, secondPlayer]) {
+      assert.equal(
+        await this.driver.dilemmaTextSeenBy(player, 1),
+        testTextIn(this.dilemmaId, 'es'),
+      );
+    }
+  },
+);
+
+When('{string} votes {string}', async function (this: GameWorld, player: string, option: string) {
+  await this.driver.vote(player, option);
+  this.player = player;
+});
+
+Then(
+  'his vote counts for {string} in the dilemma the room plays',
+  async function (this: GameWorld, option: string) {
+    assert.equal(
+      await this.driver.voteRecordedFor(this.player, 1),
+      await this.driver.optionOfTheRoomCalled(1, option),
+    );
+  },
+);
 
 // The gap "someone in the group"
 

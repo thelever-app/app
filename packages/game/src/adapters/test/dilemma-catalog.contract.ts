@@ -9,8 +9,9 @@ import {
 } from '../../application/ports/dilemma-catalog.port.ts';
 
 /**
- * The public dilemmas every implementation stores before each test: their ids are its own. The
- * first one is for everyone, the second one for adults, with the gap, and the third one is in exploration.
+ * The public dilemmas every implementation stores before each test, in Spanish: their ids are its
+ * own. The first one is for everyone, with a translation into English; the second one for adults,
+ * with the gap; and the third one is in exploration.
  */
 export const CONTRACT_DILEMMAS = [
   {
@@ -20,6 +21,13 @@ export const CONTRACT_DILEMMAS = [
     tags: ['testfamily'],
     minimumAge: 16,
     status: 'in-catalog',
+    translations: [
+      {
+        language: 'en',
+        text: 'TestTranslatedText1',
+        options: ['TestTranslatedOptionA', 'TestTranslatedOptionB'],
+      },
+    ],
   },
   {
     text: `TestText2 about ${GAP_MARKER}`,
@@ -28,6 +36,7 @@ export const CONTRACT_DILEMMAS = [
     tags: [],
     minimumAge: 18,
     status: 'in-catalog',
+    translations: [],
   },
   {
     text: 'TestText3',
@@ -36,6 +45,7 @@ export const CONTRACT_DILEMMAS = [
     tags: [],
     minimumAge: 16,
     status: 'in-exploration',
+    translations: [],
   },
 ] as const;
 
@@ -123,6 +133,62 @@ export function describeDilemmaCatalogContract(
         expect(contents).toEqual([second, first]);
         expect(contents.map(({ text }) => text)).toEqual([CONTRACT_DILEMMAS[1].text, 'TestText1']);
         expect(first.options.map(({ text }) => text)).toEqual(['TestOptionA', 'TestOptionB']);
+      });
+
+      it('should say the language of what it returns', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+        const [first] = stored as [DilemmaContent];
+
+        // Act
+        const [content] = await catalog.findContents(
+          [{ dilemmaId: first.dilemmaId, version: 1 }],
+          'es',
+        );
+
+        // Assert
+        expect(content?.language).toBe('es');
+      });
+
+      it('should return the translation into the language asked for, with the ids of the options played', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+        const [first] = stored as [DilemmaContent];
+
+        // Act
+        const [content] = await catalog.findContents(
+          [{ dilemmaId: first.dilemmaId, version: 1 }],
+          'en',
+        );
+
+        // Assert
+        expect(content).toEqual({
+          dilemmaId: first.dilemmaId,
+          text: 'TestTranslatedText1',
+          options: [
+            { optionId: first.options[0]?.optionId, text: 'TestTranslatedOptionA' },
+            { optionId: first.options[1]?.optionId, text: 'TestTranslatedOptionB' },
+          ],
+          language: 'en',
+        });
+      });
+
+      it('should return the dilemma played, in its language, when there is no translation into the one asked for', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+        const [first, second] = stored as [DilemmaContent, DilemmaContent];
+
+        // Act
+        const contents = await catalog.findContents(
+          [
+            { dilemmaId: first.dilemmaId, version: 1 },
+            { dilemmaId: second.dilemmaId, version: 1 },
+          ],
+          'de',
+        );
+
+        // Assert
+        expect(contents).toEqual([first, second]);
       });
 
       it('should throw an error if a dilemma does not exist', async () => {
@@ -220,6 +286,17 @@ export function describeDilemmaCatalogContract(
 
         // Act
         const found = await catalog.search({ ...FOR_EVERYONE, categories: [] });
+
+        // Assert
+        expect(found).toEqual([]);
+      });
+
+      it('should find only the dilemmas in the language given', async () => {
+        // Arrange
+        const { catalog } = await create();
+
+        // Act
+        const found = await catalog.search({ ...FOR_EVERYONE, language: 'fr' });
 
         // Assert
         expect(found).toEqual([]);

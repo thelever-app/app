@@ -11,6 +11,8 @@ export interface DilemmaContent {
   readonly dilemmaId: string;
   readonly text: string;
   readonly options: readonly { readonly optionId: string; readonly text: string }[];
+  /** The one asked for if the version played has a translation into it; if not, that of the dilemma played. */
+  readonly language: string;
 }
 
 /** A dilemma of the catalog as the lobby shows it, in the language asked for. */
@@ -35,6 +37,7 @@ export interface DilemmaSearch {
   readonly maximumMinimumAge: 16 | 18;
   /** In the general catalog, or in exploration before it gets there. */
   readonly status: 'in-catalog' | 'in-exploration';
+  /** Only the dilemmas written or translated in it: the language of the dilemmas of the room. */
   readonly language: string;
 }
 
@@ -49,8 +52,9 @@ export interface DilemmaCatalog {
    */
   findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]>;
   /**
-   * The content of the versions played, in the language asked for or in the original one while there is
-   * no translation; a game shows what it plays even if a dilemma gets a new version meanwhile.
+   * The content of the versions played, in the language of the player if the version played has a
+   * translation into it, and if not in that of the dilemma played, always with the ids of the
+   * options played; a game shows what it plays even if a dilemma gets a new version meanwhile.
    */
   findContents(
     dilemmas: readonly { readonly dilemmaId: string; readonly version: number }[],
