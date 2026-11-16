@@ -9,6 +9,7 @@ group, debate the reveal. PWA.
 | --------------------- | -------------------------------------------------------- |
 | `apps/web`            | PWA game client (React + Vite)                           |
 | `apps/realtime`       | Room server (Express)                                    |
+| `apps/site`           | Public web of the dilemmas: generator job and service    |
 | `packages/game`       | Game bounded context: domain and use cases. Pure, no I/O |
 | `packages/protocol`   | Versioned client-server messages                         |
 | `packages/events`     | Versioned schema of game events with social context      |

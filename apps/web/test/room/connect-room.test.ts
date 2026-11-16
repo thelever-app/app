@@ -13,6 +13,7 @@ function unusedApi(): RoomApi {
   return {
     createRoom: vi.fn(),
     previewRoom: vi.fn(),
+    previewDilemma: vi.fn(),
     joinRoom: vi.fn(),
     searchDilemmas: vi.fn(),
     enterAccessCode: vi.fn(),

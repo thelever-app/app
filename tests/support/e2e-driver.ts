@@ -1,8 +1,24 @@
-import { type Database, type DatabaseClient, ConsoleLogger, openDatabase } from '@thelever-app/db';
+import { randomUUID } from 'node:crypto';
+import {
+  type Database,
+  type DatabaseClient,
+  ConsoleLogger,
+  openDatabase,
+  PostgresDilemmaRepository,
+} from '@thelever-app/db';
+import { GetPublicCatalogUseCase, ImportCatalogUseCase } from '@thelever-app/dilemmas';
+import { InMemoryCuratedCatalog, LanguageTagTranslator } from '@thelever-app/dilemmas/in-memory';
+import {
+  buildSite,
+  type BuiltSite,
+  LANGUAGES as SITE_LANGUAGES,
+  publishSite,
+} from '@thelever-app/site';
 import {
   ClientMessageDto,
   GAP_MARKER,
   JoinRoomResponseDto,
+  LanguageDto,
   RoomPreviewResponseDto,
   ServerMessageDto,
   type GameStateDto,
@@ -14,6 +30,7 @@ import type {
   BrowserContextOptions,
   Locator,
   Page,
+  Response,
   WebSocketRoute,
 } from 'playwright';
 import type {
@@ -24,6 +41,7 @@ import type {
   InvitationMethod,
   JoinRefusal,
   PlayerView,
+  PublicPageView,
   RecordedAnswer,
   ReportReason,
   RevealView,
@@ -35,9 +53,49 @@ import type { E2eStack } from './e2e-stack.ts';
 import {
   catalogEntryOf,
   explorationSlotsFor,
+  SPANISH_OPTION_TEXTS,
   TEST_DILEMMAS,
   TWO_OPTION_DILEMMA_IDS,
 } from './test-catalog.ts';
+
+/** Who opens the public web, by the name the driver gives their screen. */
+const VISITOR = 'Visitor';
+
+/**
+ * Test data: the numbers of the curated catalog the scenarios load into the database of their
+ * worker, apart from those of the other workers and of the catalog itself.
+ */
+let nextCatalogNumber = 900_000 + Number(process.env.CUCUMBER_WORKER_ID ?? 0) * 10_000;
+
+/** What the visitor sees on the public page of a dilemma open on that page. */
+async function publicPageSeenOn(page: Page, response: Response | null): Promise<PublicPageView> {
+  const language = (await page.locator('html').getAttribute('lang')) ?? '';
+  const robots = await page.locator('meta[name="robots"]').count();
+  const header = (await response?.allHeaders())?.['x-robots-tag'];
+  const alternates = await page
+    .locator('link[rel="alternate"]')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('hreflang') ?? ''));
+  const argued = await page.locator('.argument').all();
+  return {
+    language,
+    text: (await page.locator('.dilemma-text').textContent())?.trim() ?? '',
+    options: (await page.locator('.options li').allTextContents()).map((text) => text.trim()),
+    arguments: await Promise.all(
+      argued.map(async (argument) => {
+        const [forIt, againstIt] = await argument.locator('p').allTextContents();
+        return { for: forIt?.trim() ?? '', against: againstIt?.trim() ?? '' };
+      }),
+    ),
+    ...((await page.locator('[itemprop="author"]').count()) > 0 && {
+      author: (await page.locator('[itemprop="author"]').first().textContent()) ?? '',
+    }),
+    ...((await page.locator('[data-world-result]').count()) > 0 && {
+      worldResult: (await page.locator('[data-world-result]').first().textContent()) ?? '',
+    }),
+    otherLanguages: alternates.filter((other) => other !== language && other !== 'x-default'),
+    indexable: robots === 0 && header === undefined,
+  };
+}
 
 /** What the driver looks for on screen, in the language of the browsers: es.json of the web. */
 const SCREEN = {
@@ -235,6 +293,11 @@ export class E2eDriver implements GameDriver {
   #fillers = 0;
   /** The players whose device asks for reduced motion, set before their screen opens. */
   readonly #reducedMotion = new Set<string>();
+  /** The public web: the curated catalog of the scenario, its numbers by name and what was generated. */
+  readonly #curatedCatalog = new InMemoryCuratedCatalog();
+  readonly #publicNumbers = new Map<string, number>();
+  #site: BuiltSite | undefined;
+  #visitorRoomId: string | undefined;
 
   constructor(stack: E2eStack) {
     this.#stack = stack;
@@ -253,6 +316,13 @@ export class E2eDriver implements GameDriver {
     await Promise.all(
       [...this.#players.values()].map(async ({ screen }) => screen?.context.close()),
     );
+    // The dilemmas a scenario of the public web loaded leave the catalog of the worker, so the
+    // games and searches of the scenarios after it never draw them.
+    const loaded = this.#curatedCatalog.approved.splice(0);
+    if (loaded.length > 0) {
+      this.#curatedCatalog.discarded.push(...loaded.map(({ number }) => number));
+      await this.#importCatalog();
+    }
   }
 
   // Lobby
@@ -1011,6 +1081,143 @@ export class E2eDriver implements GameDriver {
     throw new Error(
       'Only the application keeps the status of a dilemma: the scenario must not be @ui',
     );
+  }
+
+  // Public web (CU-14): the curation team loads the catalog into the database of the run, the job
+  // generates the web into the files the service of the stack reads, and a visitor opens it.
+
+  async catalogDilemmaNamed(name: string, minimumAge: 16 | 18 = 16): Promise<void> {
+    const number = nextCatalogNumber++;
+    this.#publicNumbers.set(name, number);
+    this.#curatedCatalog.approved.push({
+      number,
+      language: 'es',
+      name,
+      text: `Dilema público ${number}: ${name}`,
+      options: [...SPANISH_OPTION_TEXTS],
+      category: 'life-and-death',
+      minimumAge,
+      tags: [],
+    });
+    await this.#importCatalog();
+  }
+
+  async dilemmaOutsideTheCatalogNamed(): Promise<void> {
+    throw new Error(
+      'Only the application keeps the dilemmas of players: the scenario must not be @ui',
+    );
+  }
+
+  async reviewArgumentsOf(name: string): Promise<void> {
+    const index = this.#curatedCatalog.approved.findIndex((curated) => curated.name === name);
+    const curated = this.#curatedCatalog.approved[index]!;
+    this.#curatedCatalog.approved[index] = {
+      ...curated,
+      arguments: {
+        context: `Contexto de ${name}`,
+        options: curated.options.map((option) => ({
+          for: `A favor de ${option}`,
+          against: `En contra de ${option}`,
+        })),
+      },
+    };
+    await this.#importCatalog();
+  }
+
+  async removeFromTheCatalog(): Promise<void> {
+    throw new Error('Only the application withdraws a dilemma: the scenario must not be @ui');
+  }
+
+  async generatePublicPages(): Promise<void> {
+    await this.#withDatabase(async (db) => {
+      const catalog = await new GetPublicCatalogUseCase(
+        new PostgresDilemmaRepository(db),
+      ).execute();
+      this.#site = buildSite(catalog, SITE_LANGUAGES, {
+        origin: this.#stack.siteUrl,
+        appBase: this.#stack.webUrl,
+      });
+      await publishSite(this.#site, this.#stack.siteFiles);
+    });
+  }
+
+  async publicPageOf(name: string, language: string): Promise<PublicPageView | undefined> {
+    const path = this.#publicPathIn(name, language);
+    if (!path) return undefined;
+    const { page } = screenOf(await this.#withScreen(VISITOR));
+    const response = await page.goto(`${this.#stack.siteUrl}${path}`);
+    return publicPageSeenOn(page, response);
+  }
+
+  async switchLanguageOfThePublicPage(name: string, language: string): Promise<PublicPageView> {
+    const { page } = screenOf(await this.#withScreen(VISITOR));
+    await page.goto(`${this.#stack.siteUrl}${this.#publicPathIn(name, 'es')}`);
+    await page.locator('details.languages summary').click();
+    const [response] = await Promise.all([
+      page.waitForEvent('response', (answer) => answer.request().isNavigationRequest()),
+      page.locator(`details.languages a[hreflang="${language}"]`).click(),
+    ]);
+    return publicPageSeenOn(page, response);
+  }
+
+  async statusOfThePublicPageOf(): Promise<number> {
+    throw new Error(
+      'Only the application checks the address of a withdrawn dilemma: the scenario must not be @ui',
+    );
+  }
+
+  async sitemapIncludes(): Promise<boolean> {
+    throw new Error('Only the application reads the sitemap: the scenario must not be @ui');
+  }
+
+  async playWithTheGroupFromThePublicPage(name: string): Promise<void> {
+    const { page } = screenOf(await this.#withScreen(VISITOR));
+    await page.goto(`${this.#stack.siteUrl}${this.#publicPathIn(name, 'es')}`);
+    await page.getByRole('link', { name: SITE_LANGUAGES.get('es')!.dilemma.play }).click();
+    await page.getByTestId('first-dilemma').waitFor();
+  }
+
+  async createTheRoomOfTheDilemma(): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    await page.getByRole('textbox', { name: SCREEN.nickname }).fill(VISITOR);
+    await chooseOption(page, SCREEN.natures.friends);
+    await chooseOption(page, SCREEN.places.together);
+    await page.getByRole('button', { name: SCREEN.create }).click();
+    await page.waitForURL(/\/rooms\//);
+    const visitor = this.#playerCalled(VISITOR);
+    await waitUntil(() => lastLobbyOf(visitor), `${VISITOR} gets the lobby of their room`);
+    this.#visitorRoomId = new URL(page.url()).pathname.split('/').at(-1);
+  }
+
+  async firstDilemmaOfTheVisitorRoom(): Promise<string | undefined> {
+    const roomId = this.#visitorRoomId;
+    if (!roomId) return undefined;
+    const room = await this.#withDatabase((db) =>
+      db.selectFrom('rooms').select('first_dilemma_id').where('id', '=', roomId).executeTakeFirst(),
+    );
+    const first = room?.first_dilemma_id;
+    return [...this.#publicNumbers].find(([, number]) => `dlm-${number}` === first)?.[0];
+  }
+
+  /** Loads the curated catalog of the scenario into the database of the run, as the job does. */
+  async #importCatalog(): Promise<void> {
+    await this.#withDatabase(async (db) => {
+      await new ImportCatalogUseCase(
+        this.#curatedCatalog,
+        new LanguageTagTranslator(),
+        new PostgresDilemmaRepository(db),
+        { generate: () => randomUUID() },
+        LanguageDto.options,
+      ).execute();
+    });
+  }
+
+  /** The address of the page of the dilemma in that language, as the job generated it. */
+  #publicPathIn(name: string, language: string): string | undefined {
+    const number = this.#publicNumbers.get(name);
+    return this.#site?.pages.find(
+      ({ dilemma }) => dilemma?.number === number && dilemma?.language === language,
+    )?.path;
   }
 
   /**

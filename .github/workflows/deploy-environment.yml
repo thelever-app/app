@@ -59,7 +59,7 @@ jobs:
             --image "$(cat image.txt)" \
             --service-account "migrator@$PROJECT.iam.gserviceaccount.com" \
             --command node --args packages/db/src/migrate.ts \
-            --set-env-vars "CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=migrator@$PROJECT.iam,DB_APP_USER=realtime@$PROJECT.iam,DB_CATALOG_USER=catalog-import@$PROJECT.iam" \
+            --set-env-vars "CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=migrator@$PROJECT.iam,DB_APP_USER=realtime@$PROJECT.iam,DB_CATALOG_USER=catalog-import@$PROJECT.iam,DB_SITE_USER=public-site@$PROJECT.iam" \
             --max-retries 0 --task-timeout 10m \
             --quiet
           gcloud run jobs execute migrate --project "$PROJECT" --region europe-southwest1 \
@@ -70,6 +70,8 @@ jobs:
       # 2 instances each, with a pool of 3 and the LISTEN connection, are 16 connections; with 1 of
       # the migrate job, 1 of the close-rooms job and 1 of the catalog-import job, 19, the 19 the
       # micro instance leaves to the app users (25, minus 3 for superusers and 3 Cloud SQL uses).
+      # The generate-site job takes the one of catalog-import: the workflow Import the catalog runs
+      # it once the load has ended, and its schedule runs it at night, when nobody loads.
       # Each open socket is one of the 250 requests an instance takes at once: 500 sockets in all,
       # which the capacity alert in ops/monitoring counts on.
       # The CPU stays with the instance between requests: its beat, the check of LISTEN, the cleaning
@@ -92,6 +94,52 @@ jobs:
         run: |
           url=$(gcloud run services describe realtime --project "$PROJECT" --region europe-southwest1 --format 'value(status.url)')
           curl --silent --show-error --fail --retry 5 --retry-all-errors "$url/health"
+
+      # The public web: the job reads the public catalog with a user that only reads the tables of
+      # Dilemmas and writes the pages into the bucket of the environment; it runs now, so the pages
+      # come out of the code just deployed, and every night at 04:00, after any load of the day.
+      # Its service answers from the bucket behind Firebase Hosting, which sends it /{language}/…;
+      # it only reads the bucket, and goes before the web, whose rewrites need it. Hosting calls it
+      # as anyone, so anyone may invoke it; the deploy waits until its new revision is ready.
+      - name: Deploy the job that generates the public web, run it and schedule it
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
+        run: |
+          gcloud run jobs deploy generate-site --project "$PROJECT" --region europe-southwest1 \
+            --image "$(cat site-image.txt)" \
+            --service-account "public-site@$PROJECT.iam.gserviceaccount.com" \
+            --command node --args apps/site/src/jobs/generate-site.ts \
+            --set-env-vars "CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=public-site@$PROJECT.iam,SITE_BUCKET=$PROJECT-site,SITE_ORIGIN=https://$WEB_DOMAIN,ADSENSE_CLIENT=$ADSENSE_CLIENT" \
+            --max-retries 1 --task-timeout 30m \
+            --quiet
+          gcloud run jobs execute generate-site --project "$PROJECT" --region europe-southwest1 \
+            --wait --quiet
+          schedule=(
+            --project "$PROJECT" --location europe-west1
+            --schedule "0 4 * * *" --time-zone Etc/UTC
+            --uri "https://run.googleapis.com/v2/projects/$PROJECT/locations/europe-southwest1/jobs/generate-site:run"
+            --http-method POST
+            --oauth-service-account-email "scheduler@$PROJECT.iam.gserviceaccount.com"
+            --quiet
+          )
+          if gcloud scheduler jobs describe generate-site --project "$PROJECT" --location europe-west1 >/dev/null 2>&1; then
+            gcloud scheduler jobs update http generate-site "${schedule[@]}"
+          else
+            gcloud scheduler jobs create http generate-site "${schedule[@]}"
+          fi
+
+      - name: Deploy the service of the public web
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
+        run: |
+          gcloud run deploy site --project "$PROJECT" --region europe-southwest1 \
+            --image "$(cat site-image.txt)" \
+            --service-account "public-site@$PROJECT.iam.gserviceaccount.com" \
+            --set-env-vars "ENVIRONMENT=$ENVIRONMENT,SITE_BUCKET=$PROJECT-site,SITE_ORIGIN=https://$WEB_DOMAIN,ADSENSE_CLIENT=$ADSENSE_CLIENT" \
+            --min-instances 0 --max-instances 2 --concurrency 80 \
+            --quiet
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:

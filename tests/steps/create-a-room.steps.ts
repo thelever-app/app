@@ -83,8 +83,10 @@ Given('a player creating a room', async function (this: GameWorld) {
   await this.driver.openRoomCreation(this.player);
 });
 
+// From the public page of a dilemma, the visitor creates the room the screen offers to play it.
 When('creates the room', async function (this: GameWorld) {
-  await this.host();
+  if (this.dilemmaToPlayWithTheGroup) await this.driver.createTheRoomOfTheDilemma();
+  else await this.host();
 });
 
 Then(

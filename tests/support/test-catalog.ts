@@ -182,7 +182,11 @@ class FixedIds implements IdGenerator {
 export async function loadTestDilemmas(repository: DilemmaRepository): Promise<void> {
   for (const test of TEST_DILEMMAS) {
     const { dilemmaId, text, minimumAge, category, tags, status, options, language } = test;
-    const ids = new FixedIds([dilemmaId, ...options.map((_, n) => `${dilemmaId}-option-${n + 1}`)]);
+    const ids = new FixedIds([
+      dilemmaId,
+      ...options.map((_, n) => `${dilemmaId}-option-${n + 1}`),
+      `${dilemmaId}-public`,
+    ]);
     const created = Dilemma.create(
       { text, language, options, category, tags, minimumAge },
       ids,
@@ -194,6 +198,7 @@ export async function loadTestDilemmas(repository: DilemmaRepository): Promise<v
       const translationIds = new FixedIds([
         translationId,
         ...translation.options.map((_, n) => `${translationId}-option-${n + 1}`),
+        `${translationId}-public`,
       ]);
       await repository.save(
         Dilemma.translate(original, { ...translation, tags: [] }, translationIds),

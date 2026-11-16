@@ -33,3 +33,18 @@ export async function grantDilemmaAccess<DB>(db: Kysely<DB>, user: string): Prom
     );
   }
 }
+
+/**
+ * Lets that user only read the rows of the tables of Dilemmas, which the job that generates the
+ * public web needs, and nothing of the rooms and games. Run after every migration, like
+ * grantRowAccess.
+ */
+export async function grantDilemmaReadAccess<DB>(db: Kysely<DB>, user: string): Promise<void> {
+  const { rows } = await sql<{ name: string }>`
+    select tablename as name from pg_tables
+    where schemaname = 'public' and (tablename = 'dilemmas' or tablename like 'dilemma\\_%')
+  `.execute(db);
+  for (const { name } of rows) {
+    await sql`grant select on table ${sql.table(name)} to ${sql.id(user)}`.execute(db);
+  }
+}

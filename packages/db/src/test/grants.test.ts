@@ -1,6 +1,6 @@
 import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
-import { grantDilemmaAccess, grantRowAccess } from '../grants.ts';
+import { grantDilemmaAccess, grantDilemmaReadAccess, grantRowAccess } from '../grants.ts';
 import type { Database } from '../schema.ts';
 import { useTestDatabase } from './support/test-database.ts';
 
@@ -8,6 +8,8 @@ import { useTestDatabase } from './support/test-database.ts';
 const APP_USER = 'thelever_test_app_user';
 /** A role of the whole server, as the IAM user of the job that loads the catalog is in Cloud SQL. */
 const CATALOG_USER = 'thelever_test_catalog_user';
+/** A role of the whole server, as the IAM user of the public web is in Cloud SQL. */
+const SITE_USER = 'thelever_test_site_user';
 
 const database = useTestDatabase<Database>();
 
@@ -75,5 +77,30 @@ describe('grantDilemmaAccess', () => {
     expect(await privilegeOf('rooms', 'SELECT', CATALOG_USER)).toBe(false);
     expect(await privilegeOf('game_dilemmas', 'SELECT', CATALOG_USER)).toBe(false);
     expect(await privilegeOf('room_added_dilemmas', 'SELECT', CATALOG_USER)).toBe(false);
+  });
+});
+
+describe('grantDilemmaReadAccess', () => {
+  it('should let the user only read the rows of the tables of Dilemmas', async () => {
+    // Arrange
+    await sql`
+      do $$ begin
+        if not exists (select from pg_roles where rolname = 'thelever_test_site_user') then
+          create role thelever_test_site_user;
+        end if;
+      end $$
+    `.execute(database.db());
+
+    // Act
+    await grantDilemmaReadAccess(database.db(), SITE_USER);
+
+    // Assert
+    for (const table of ['dilemmas', 'dilemma_versions', 'dilemma_version_option_arguments']) {
+      expect(await privilegeOf(table, 'SELECT', SITE_USER)).toBe(true);
+      for (const privilege of ['INSERT', 'UPDATE', 'DELETE']) {
+        expect(await privilegeOf(table, privilege, SITE_USER)).toBe(false);
+      }
+    }
+    expect(await privilegeOf('rooms', 'SELECT', SITE_USER)).toBe(false);
   });
 });

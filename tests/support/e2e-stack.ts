@@ -14,6 +14,8 @@ import {
 } from '@thelever-app/db';
 import { onServer, urlOf } from '@thelever-app/db/test';
 import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
+import { cachedSite, createSiteApp, InMemorySiteFiles } from '@thelever-app/site';
+import type { Server } from 'node:http';
 import { chromium, type Browser } from 'playwright';
 import { loadTestDilemmas } from './test-catalog.ts';
 
@@ -30,6 +32,7 @@ const WORKER = Number(process.env.CUCUMBER_WORKER_ID ?? 0);
  */
 const REALTIME_PORT = Number(process.env.E2E_REALTIME_PORT ?? 3000) + WORKER;
 const WEB_PORT = 4173 + WORKER;
+const SITE_PORT = 4273 + WORKER;
 const READY_TIMEOUT_MS = 30_000;
 /**
  * Test data: the access code of the run. The room server asks for it, as dev and prod do, and
@@ -55,12 +58,17 @@ export interface E2eStack {
   readonly authEmulatorHost: string;
   /** The access code the room server asks for. */
   readonly accessCode: string;
+  /** Where the service of the public web answers, as prod does, from the files of `siteFiles`. */
+  readonly siteUrl: string;
+  /** Where a step writes the public web it generates, which the service reads at once. */
+  readonly siteFiles: InMemorySiteFiles;
 }
 
 let running:
   | {
       readonly stack: E2eStack;
       readonly processes: readonly ChildProcess[];
+      readonly site: Server;
       readonly database: string;
       /** Where the access code is, as Cloud Run mounts the secret. */
       readonly secrets: string;
@@ -99,10 +107,21 @@ export async function startE2eStack(): Promise<void> {
 
   const realtimeUrl = `http://localhost:${REALTIME_PORT}`;
   const webUrl = `http://localhost:${WEB_PORT}`;
+  const siteUrl = `http://localhost:${SITE_PORT}`;
   const database = await createE2eDatabase();
   const secrets = await mkdtemp(join(tmpdir(), 'thelever-e2e-secrets-'));
   const accessCodeFile = join(secrets, 'access-code');
   await writeFile(accessCodeFile, ACCESS_CODE);
+  // The service of the public web in this process, as prod has it: nothing cached, so a page the
+  // step just generated answers at once.
+  const siteFiles = new InMemorySiteFiles();
+  const site = await new Promise<Server>((resolve) => {
+    const server = createSiteApp({
+      site: cachedSite(siteFiles, 0),
+      environment: 'prod',
+      origin: siteUrl,
+    }).listen(SITE_PORT, () => resolve(server));
+  });
   const processes = [
     start('node', ['apps/realtime/src/server.ts'], {
       PORT: String(REALTIME_PORT),
@@ -135,13 +154,17 @@ export async function startE2eStack(): Promise<void> {
         databaseUrl: urlOf(database),
         authEmulatorHost: authEmulator,
         accessCode: ACCESS_CODE,
+        siteUrl,
+        siteFiles,
       },
       processes,
+      site,
       database,
       secrets,
     };
   } catch (error) {
     await Promise.all(processes.map(stop));
+    await new Promise((resolve) => site.close(resolve));
     await dropE2eDatabase(database);
     await rm(secrets, { recursive: true, force: true });
     throw error;
@@ -150,10 +173,11 @@ export async function startE2eStack(): Promise<void> {
 
 export async function stopE2eStack(): Promise<void> {
   if (!running) return;
-  const { stack, processes, database, secrets } = running;
+  const { stack, processes, site, database, secrets } = running;
   running = undefined;
   await stack.browser.close();
   await Promise.all(processes.map(stop));
+  await new Promise((resolve) => site.close(resolve));
   await dropE2eDatabase(database);
   await rm(secrets, { recursive: true, force: true });
 }

@@ -56,9 +56,28 @@ import {
   type InMemoryDilemma,
 } from '@thelever-app/game/in-memory';
 import {
+  Dilemma,
+  FindDilemmaIdsUseCase,
+  GetDilemmaPreviewUseCase,
+  type GetDilemmaPreviewOutput,
+  GetDilemmasUseCase,
+  GetPublicCatalogUseCase,
   ImportCatalogUseCase,
   SearchDilemmasUseCase as SearchCatalogUseCase,
 } from '@thelever-app/dilemmas';
+import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
+import {
+  buildSite,
+  type BuiltSite,
+  dilemmaPath,
+  InMemorySiteFiles,
+  LANGUAGES as SITE_LANGUAGES,
+  type Page,
+  publishedSite,
+  publishSite,
+  readable,
+  respond,
+} from '@thelever-app/site';
 import {
   InMemoryCuratedCatalog,
   InMemoryDilemmaRepository,
@@ -74,6 +93,7 @@ import type {
   InvitationMethod,
   JoinRefusal,
   PlayerView,
+  PublicPageView,
   RecordedAnswer,
   ReportReason,
   RevealView,
@@ -97,6 +117,29 @@ const OTHER_VOTE = 'option-2';
 
 /** Test data: what the creation screen gets when a step does not choose. */
 const DEFAULT_CHOICES = { groupNature: 'friends', place: 'together', deviceLanguage: 'es' };
+
+/** Test data: where the public web is, for its canonical addresses and its sitemap. */
+const SITE_ORIGIN = 'https://thelever.test';
+
+/** What a visitor sees on a page of a dilemma, as the job generated it. */
+function publicPageViewOf(page: Page): PublicPageView {
+  const dilemma = page.dilemma!;
+  const texts = SITE_LANGUAGES.get(page.language)!;
+  const args = dilemma.arguments;
+  return {
+    language: page.language,
+    text: readable(dilemma.text, texts),
+    options: dilemma.options.map(({ text }) => readable(text, texts)),
+    arguments: args
+      ? dilemma.options.map(({ optionId }) => {
+          const argued = args.options.find((option) => option.optionId === optionId)!;
+          return { for: argued.for, against: argued.against };
+        })
+      : [],
+    otherLanguages: Object.keys(page.alternates).filter((language) => language !== page.language),
+    indexable: page.indexable,
+  };
+}
 
 /** The test data, as the catalog of Game keeps it: every dilemma with the same two options. */
 const DILEMMAS: readonly InMemoryDilemma[] = TEST_DILEMMAS.map(
@@ -205,6 +248,13 @@ export class AcceptanceDriver implements GameDriver {
   );
   /** The language of the device of each player who does not use the app in Spanish. */
   readonly #languages = new Map<string, string>();
+  /** The public web: the number of the catalog of each dilemma by its name, and what was generated. */
+  readonly #publicNumbers = new Map<string, number>();
+  readonly #siteFiles = new InMemorySiteFiles();
+  #site: BuiltSite | undefined;
+  /** What the screen to play a dilemma with the group shows of the one the visitor chose. */
+  #dilemmaToPlay: GetDilemmaPreviewOutput | undefined;
+  #visitorRoomId: string | undefined;
 
   readonly #createRoom: CreateRoomUseCase;
   readonly #getRoomPreview: GetRoomPreviewUseCase;
@@ -814,6 +864,162 @@ export class AcceptanceDriver implements GameDriver {
       size: 1,
     });
     return dilemmas.length === 1;
+  }
+
+  async catalogDilemmaNamed(name: string, minimumAge: 16 | 18 = 16): Promise<void> {
+    const number = this.#curatedCatalog.approved.length + this.#curatedCatalog.discarded.length + 1;
+    this.#publicNumbers.set(name, number);
+    this.#curatedCatalog.approved.push({
+      number,
+      language: 'es',
+      name,
+      text: `Dilema público ${number}: ${name}`,
+      options: [...SPANISH_OPTION_TEXTS],
+      category: 'life-and-death',
+      minimumAge,
+      tags: [],
+    });
+    await this.#importCatalog.execute();
+  }
+
+  async dilemmaOutsideTheCatalogNamed(
+    name: string,
+    kind: 'private' | 'in-exploration',
+  ): Promise<void> {
+    const id = `player-dilemma-${this.#publicNumbers.size + 1}`;
+    await this.#dilemmaRepository.save(
+      Dilemma.restore({
+        id,
+        publicId: `${id}-public`,
+        language: 'es',
+        name,
+        creator: { type: 'player', identity: 'TestCreatorIdentity' },
+        visibility: kind === 'private' ? 'private' : 'public',
+        version: {
+          number: 1,
+          text: `Texto de ${name}`,
+          options: SPANISH_OPTION_TEXTS.map((text, index) => ({
+            id: `${id}-option-${index + 1}`,
+            text,
+          })),
+          category: 'life-and-death',
+          tags: [],
+          minimumAge: 16,
+          status: kind === 'private' ? 'approved' : 'in-exploration',
+        },
+      }),
+    );
+  }
+
+  async reviewArgumentsOf(name: string): Promise<void> {
+    const index = this.#curatedCatalog.approved.findIndex((curated) => curated.name === name);
+    const curated = this.#curatedCatalog.approved[index]!;
+    this.#curatedCatalog.approved[index] = {
+      ...curated,
+      arguments: {
+        context: `Contexto de ${name}`,
+        options: curated.options.map((option) => ({
+          for: `A favor de ${option}`,
+          against: `En contra de ${option}`,
+        })),
+      },
+    };
+    await this.#importCatalog.execute();
+  }
+
+  async removeFromTheCatalog(name: string): Promise<void> {
+    const index = this.#curatedCatalog.approved.findIndex((curated) => curated.name === name);
+    const [removed] = this.#curatedCatalog.approved.splice(index, 1);
+    this.#curatedCatalog.discarded.push(removed!.number);
+    await this.#importCatalog.execute();
+  }
+
+  async generatePublicPages(): Promise<void> {
+    const catalog = await new GetPublicCatalogUseCase(this.#dilemmaRepository).execute();
+    this.#site = buildSite(catalog, SITE_LANGUAGES, { origin: SITE_ORIGIN, appBase: '' });
+    await publishSite(this.#site, this.#siteFiles);
+  }
+
+  async publicPageOf(name: string, language: string): Promise<PublicPageView | undefined> {
+    const page = this.#publicPageIn(name, language);
+    return page && publicPageViewOf(page);
+  }
+
+  async switchLanguageOfThePublicPage(name: string, language: string): Promise<PublicPageView> {
+    const path = this.#publicPageIn(name, 'es')!.alternates[language];
+    const page = this.#site?.pages.find((candidate) => candidate.path === path);
+    if (!page) throw new Error(`The public page of "${name}" has no version in ${language}`);
+    return publicPageViewOf(page);
+  }
+
+  async statusOfThePublicPageOf(name: string): Promise<number> {
+    return (await this.#answerOfThePublicWeb(this.#publicPathOf(name))).status;
+  }
+
+  async sitemapIncludes(name: string): Promise<boolean> {
+    const sitemap = await this.#answerOfThePublicWeb('/sitemap.xml');
+    return sitemap.body?.includes(`${SITE_ORIGIN}${this.#publicPathOf(name)}<`) ?? false;
+  }
+
+  async playWithTheGroupFromThePublicPage(name: string): Promise<void> {
+    const publicId = this.#publicPageIn(name, 'es')?.dilemma?.publicId;
+    if (!publicId) throw new Error(`"${name}" has no public page to play it from`);
+    this.#dilemmaToPlay = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
+      publicId,
+    });
+  }
+
+  async createTheRoomOfTheDilemma(): Promise<void> {
+    const preview = this.#dilemmaToPlay;
+    if (!preview) throw new Error('The visitor chose no dilemma to play with the group');
+    const catalog = new PublishedDilemmasCatalog(
+      new GetDilemmasUseCase(this.#dilemmaRepository),
+      new SearchCatalogUseCase(this.#dilemmaRepository),
+      new FindDilemmaIdsUseCase(this.#dilemmaRepository),
+    );
+    const { roomId } = await new CreateRoomUseCase(
+      this.#roomRepository,
+      catalog,
+      new SequentialIdGenerator(),
+      new SequentialRandomness(),
+      this.#clock,
+    ).execute({
+      hostNickname: 'Visitor',
+      hostIdentity: 'TestVisitorIdentity',
+      hostAvatar: { face: 'face-01', color: 'khaki' },
+      groupNature: DEFAULT_CHOICES.groupNature,
+      place: DEFAULT_CHOICES.place,
+      dilemmaLanguage: preview.language,
+      firstDilemmaId: preview.dilemmaId,
+    });
+    this.#visitorRoomId = roomId;
+  }
+
+  async firstDilemmaOfTheVisitorRoom(): Promise<string | undefined> {
+    const room = this.#visitorRoomId && (await this.#roomRepository.findById(this.#visitorRoomId));
+    const first = room ? room.firstDilemma?.dilemmaId : undefined;
+    const curated = this.#curatedCatalog.approved.find(({ number }) => `dlm-${number}` === first);
+    return curated?.name;
+  }
+
+  /** The page of the dilemma of the public web in that language, as the job generated it. */
+  #publicPageIn(name: string, language: string): Page | undefined {
+    const number = this.#publicNumbers.get(name);
+    return this.#site?.pages.find(
+      ({ dilemma }) => dilemma?.number === number && dilemma?.language === language,
+    );
+  }
+
+  /** The address the page of the dilemma has in Spanish, or had before it was withdrawn. */
+  #publicPathOf(name: string): string {
+    const category = SITE_LANGUAGES.get('es')!.categories['life-and-death'].name;
+    return dilemmaPath('es', category, name, this.#publicNumbers.get(name)!);
+  }
+
+  async #answerOfThePublicWeb(path: string) {
+    const site = await publishedSite(this.#siteFiles);
+    if (!site) throw new Error('The public pages were never generated');
+    return respond(path, site, { environment: 'prod', origin: SITE_ORIGIN });
   }
 
   usesTheAppIn(player: string, language: string): Promise<void> {

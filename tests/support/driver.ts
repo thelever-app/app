@@ -392,4 +392,49 @@ export interface GameDriver {
   curationTeamCreatesADilemma(): Promise<string>;
   /** Whether the public dilemma with that id has that status at its current version. Only in the application. */
   dilemmaHasStatus(dilemmaId: string, status: 'in-catalog' | 'in-exploration'): Promise<boolean>;
+
+  /**
+   * The curation team approves a dilemma with that name in the curated catalog, for everyone or
+   * for adults, without reviewed arguments, and the catalog is loaded into the app.
+   */
+  catalogDilemmaNamed(name: string, minimumAge?: 16 | 18): Promise<void>;
+  /** A dilemma of a player with that name, private or in exploration. Only in the application. */
+  dilemmaOutsideTheCatalogNamed(name: string, kind: 'private' | 'in-exploration'): Promise<void>;
+  /** The curation team reviews the arguments of the dilemma, and the catalog is loaded again. */
+  reviewArgumentsOf(name: string): Promise<void>;
+  /** The curation team discards the dilemma, and the catalog is loaded again. */
+  removeFromTheCatalog(name: string): Promise<void>;
+  /** The job generates the public web from the catalog, as every day. */
+  generatePublicPages(): Promise<void>;
+  /** The public page of the dilemma in that language as a visitor opens it; none if it has none. */
+  publicPageOf(name: string, language: string): Promise<PublicPageView | undefined>;
+  /** A visitor on the public page of the dilemma in Spanish chooses that language in its menu. */
+  switchLanguageOfThePublicPage(name: string, language: string): Promise<PublicPageView>;
+  /** The status code the address of the public page of the dilemma answers with. */
+  statusOfThePublicPageOf(name: string): Promise<number>;
+  /** Whether the sitemap of the public web lists the page of the dilemma. */
+  sitemapIncludes(name: string): Promise<boolean>;
+  /** A visitor chooses to play the dilemma with the group on its public page, in Spanish. */
+  playWithTheGroupFromThePublicPage(name: string): Promise<void>;
+  /** The visitor creates the room the screen offers to play the dilemma with the group. */
+  createTheRoomOfTheDilemma(): Promise<void>;
+  /** The name of the dilemma the room the visitor created plays first. */
+  firstDilemmaOfTheVisitorRoom(): Promise<string | undefined>;
+}
+
+/** What a visitor sees on the public page of a dilemma. */
+export interface PublicPageView {
+  readonly language: string;
+  readonly text: string;
+  readonly options: readonly string[];
+  /** For and against each option, in the order of the options; none without reviewed arguments. */
+  readonly arguments: readonly { readonly for: string; readonly against: string }[];
+  /** Who created it, if the page said it. */
+  readonly author?: string;
+  /** How the world voted, if the page said it. */
+  readonly worldResult?: string;
+  /** The languages of the other versions it links to. */
+  readonly otherLanguages: readonly string[];
+  /** Whether search engines may index it. */
+  readonly indexable: boolean;
 }
