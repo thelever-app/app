@@ -1136,6 +1136,7 @@ export class E2eDriver implements GameDriver {
       this.#site = buildSite(catalog, SITE_LANGUAGES, {
         origin: this.#stack.siteUrl,
         appBase: this.#stack.webUrl,
+        owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
       });
       await publishSite(this.#site, this.#stack.siteFiles);
     });

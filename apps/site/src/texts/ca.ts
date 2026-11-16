@@ -53,7 +53,8 @@ export const ca: SiteTexts = {
     heading: 'Dilemes morals per jugar amb la teva gent',
     intro:
       'Cadascú vota en privat des del mòbil, prediu què votaran els altres i després descobriu junts qui pensa què. Gratis, sense instal·lar res.',
-    createRoom: 'Crear una sala',
+    play: 'Jugar ara',
+    scene: 'La Palanca, saludant al costat d’un canvi d’agulles',
     howToPlay: 'Com es juga',
     steps: [
       'Crea una sala i comparteix l’enllaç o el codi.',
@@ -101,7 +102,7 @@ export const ca: SiteTexts = {
       {
         heading: 'Qui és el responsable',
         paragraphs: [
-          'TheLever és un projecte de Mario Villacorta García, NIF 71320322J, amb domicili a Calle Arrabal 24, 47130 Simancas (Valladolid), Espanya. Per a qualsevol qüestió sobre les teves dades, escriu a privacidad@thelever.app. Responem en castellà i en anglès.',
+          'TheLever és un projecte de {owner}. Per a qualsevol qüestió sobre les teves dades, escriu a privacidad@thelever.app. Responem en castellà i en anglès.',
         ],
       },
       {
@@ -165,9 +166,9 @@ export const ca: SiteTexts = {
       {
         heading: 'Titular',
         paragraphs: [
-          '- Titular: Mario Villacorta García.',
-          '- NIF: 71320322J.',
-          '- Domicili: Calle Arrabal 24, 47130 Simancas (Valladolid), Espanya.',
+          '- Titular: {owner}.',
+          '- NIF: {taxId}.',
+          '- Domicili: {address}, Espanya.',
           '- Correu: privacidad@thelever.app.',
           '- Web i app: thelever.app.',
           '- Activitat: joc en línia gratuït finançat amb publicitat.',

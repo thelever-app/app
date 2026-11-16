@@ -17,10 +17,8 @@ export interface PublicDilemma {
   readonly text: string;
   readonly options: readonly { readonly optionId: string; readonly text: string }[];
   readonly category: Category;
-  /** Whether search engines may index its page: only with reviewed arguments. */
-  readonly indexable: boolean;
-  /** Only when they are reviewed. */
-  readonly arguments?: ArgumentsSnapshot;
+  /** Reviewed: a dilemma without them has no page. */
+  readonly arguments: ArgumentsSnapshot;
 }
 
 export interface GetPublicCatalogOutput {
@@ -34,9 +32,9 @@ export interface GetPublicCatalogOutput {
 }
 
 /**
- * What the public web shows: each dilemma of the curated catalog in the general catalog and
- * suitable from 16, in its language and in each translation of its current version, and the
- * numbers of the ones withdrawn. The dilemmas for adults have no page: the web asks no age.
+ * What the public web shows: each dilemma of the curated catalog with a public page, in its
+ * language and in each translation that has one, and the numbers of the ones withdrawn. Which
+ * dilemmas have a page the repository decides, so the rest of the catalog never reaches the web.
  */
 export class GetPublicCatalogUseCase {
   readonly #dilemmaRepository: DilemmaRepository;
@@ -46,41 +44,22 @@ export class GetPublicCatalogUseCase {
   }
 
   async execute(): Promise<GetPublicCatalogOutput> {
-    const found = (await this.#dilemmaRepository.findPublicCatalog()).filter(
-      (dilemma) => numberOf(dilemma.id) !== undefined,
-    );
-    const originals = new Map(
-      found.filter((dilemma) => !dilemma.translationOf).map((dilemma) => [dilemma.id, dilemma]),
-    );
-    const dilemmas = found
-      .filter((dilemma) => this.#hasPage(dilemma, originals))
-      .map((dilemma) => publicDilemmaOf(dilemma))
-      .sort((a, b) => a.number - b.number || a.language.localeCompare(b.language));
-    const withdrawn = [...originals.values()]
-      .filter((original) => original.status === 'withdrawn')
-      .map((original) => ({ number: numberOf(original.id)!, category: original.category }))
-      .sort((a, b) => a.number - b.number);
-    return { dilemmas, withdrawn };
-  }
-
-  /** In the catalog, for everyone, named and, if a translation, of the current version of its original. */
-  #hasPage(dilemma: Dilemma, originals: ReadonlyMap<string, Dilemma>): boolean {
-    if (dilemma.status !== 'in-catalog' || !dilemma.isSuitableForMinors() || !dilemma.name) {
-      return false;
-    }
-    const of = dilemma.translationOf;
-    if (!of) return true;
-    const original = originals.get(of.dilemmaId);
-    return (
-      original?.status === 'in-catalog' &&
-      original.version === of.version &&
-      original.options.length === dilemma.options.length
-    );
+    const [withPage, withdrawn] = await Promise.all([
+      this.#dilemmaRepository.findWithPublicPage(),
+      this.#dilemmaRepository.findWithdrawnFromCatalog(),
+    ]);
+    return {
+      dilemmas: withPage
+        .map((dilemma) => publicDilemmaOf(dilemma))
+        .sort((a, b) => a.number - b.number || a.language.localeCompare(b.language)),
+      withdrawn: withdrawn
+        .map((dilemma) => ({ number: numberOf(dilemma.id)!, category: dilemma.category }))
+        .sort((a, b) => a.number - b.number),
+    };
   }
 }
 
 function publicDilemmaOf(dilemma: Dilemma): PublicDilemma {
-  const args = dilemma.arguments;
   return {
     number: numberOf(dilemma.id)!,
     dilemmaId: dilemma.id,
@@ -90,7 +69,6 @@ function publicDilemmaOf(dilemma: Dilemma): PublicDilemma {
     text: dilemma.text,
     options: dilemma.options.map(({ id, text }) => ({ optionId: id, text })),
     category: dilemma.category,
-    indexable: args !== undefined,
-    ...(args && { arguments: args }),
+    arguments: dilemma.arguments!,
   };
 }

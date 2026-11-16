@@ -40,6 +40,12 @@ try {
   const site = buildSite(catalog, LANGUAGES, {
     origin: required('SITE_ORIGIN'),
     appBase: process.env.APP_BASE?.trim() ?? '',
+    // Secrets of the environment: the repository is public, and they are not in it.
+    owner: {
+      name: required('LEGAL_OWNER_NAME'),
+      taxId: required('LEGAL_OWNER_TAX_ID'),
+      address: required('LEGAL_OWNER_ADDRESS'),
+    },
     ...(adsenseClient && { adsenseClient }),
   });
   const { written, removed } = await publishSite(

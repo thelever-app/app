@@ -90,13 +90,13 @@ Feature: Public dilemma pages
     When the public pages are generated
     Then the address of its page answers that it no longer exists
 
-  Scenario: A page without reviewed arguments is not indexed
+  Scenario: A dilemma without reviewed arguments has no public page
     Given the dilemma "La herencia" is in the general catalog without reviewed arguments
     When the public pages are generated
-    Then "La herencia" has a public page without arguments that search engines must not index
+    Then "La herencia" has no public page
     And the sitemap does not include it
 
-  Scenario: A page becomes indexable when its arguments are reviewed
+  Scenario: A dilemma gets its public page when its arguments are reviewed
     Given the dilemma "La herencia" is in the general catalog without reviewed arguments
     And the arguments of "La herencia" are reviewed
     When the public pages are generated

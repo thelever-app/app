@@ -30,11 +30,13 @@ describe('HomeScreen', () => {
     expect(location()).toBe('/join');
   });
 
-  it('should greet with La Palanca next to the title', async () => {
+  it('should show La Palanca in the logo, which takes to the home of the public web', async () => {
     // Act
-    const { t } = await renderAtRoute(<HomeScreen />);
+    await renderAtRoute(<HomeScreen />);
 
     // Assert
-    expect(screen.getByRole('img', { name: t('home.mascot') })).toBeDefined();
+    const logo = screen.getByRole('link', { name: 'TheLever.app' });
+    expect(logo.getAttribute('href')).toBe('/');
+    expect(logo.querySelector('img')).not.toBeNull();
   });
 });

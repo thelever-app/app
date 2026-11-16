@@ -53,7 +53,8 @@ export const en: SiteTexts = {
     heading: 'Moral dilemmas to play with your people',
     intro:
       'Everyone votes in private on their phone, predicts what the others will vote, and then you find out together who thinks what. Free, nothing to install.',
-    createRoom: 'Create a room',
+    play: 'Play now',
+    scene: 'La Palanca, waving next to a railway junction',
     howToPlay: 'How to play',
     steps: [
       'Create a room and share the link or the code.',
@@ -99,7 +100,7 @@ export const en: SiteTexts = {
       {
         heading: 'Who is responsible',
         paragraphs: [
-          'TheLever is a project of Mario Villacorta García, tax ID 71320322J, with address at Calle Arrabal 24, 47130 Simancas (Valladolid), Spain. For anything about your data, write to privacidad@thelever.app. We answer in Spanish and in English.',
+          'TheLever is a project of {owner}. For anything about your data, write to privacidad@thelever.app. We answer in Spanish and in English.',
         ],
       },
       {
@@ -163,9 +164,9 @@ export const en: SiteTexts = {
       {
         heading: 'Owner',
         paragraphs: [
-          '- Owner: Mario Villacorta García.',
-          '- Tax ID: 71320322J.',
-          '- Address: Calle Arrabal 24, 47130 Simancas (Valladolid), Spain.',
+          '- Owner: {owner}.',
+          '- Tax ID: {taxId}.',
+          '- Address: {address}, Spain.',
           '- Email: privacidad@thelever.app.',
           '- Web and app: thelever.app.',
           '- Activity: free online game funded by advertising.',

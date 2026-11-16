@@ -6,6 +6,8 @@
   min-height: 100dvh;
   background: #17140f;
   color: #f5efe2;
+  /* Wider than the column, the dark of the intro reaches both edges of the window. */
+  border-image: linear-gradient(#17140f, #17140f) fill 0 / 0 / 0 100vmax;
 }
 
 .hazard {

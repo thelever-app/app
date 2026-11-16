@@ -8,6 +8,7 @@ import type {
   PageRequest,
 } from '../../application/ports/dilemma-queries.port.ts';
 import type { DilemmaRepository } from '../../application/ports/dilemma-repository.port.ts';
+import { numberOf } from '../../application/catalog-number.ts';
 import { rankOf } from './text-match.ts';
 import {
   Dilemma,
@@ -68,14 +69,33 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
     return undefined;
   }
 
-  async findPublicCatalog(): Promise<Dilemma[]> {
-    const ids = [...this.#dilemmas.keys()].sort();
+  async findWithPublicPage(): Promise<Dilemma[]> {
+    const current = await this.#currentOfTheCatalog();
+    const originals = new Map(
+      current.filter((dilemma) => !dilemma.translationOf).map((dilemma) => [dilemma.id, dilemma]),
+    );
+    return current.filter((dilemma) => {
+      if (!hasPage(dilemma)) return false;
+      const of = dilemma.translationOf;
+      if (!of) return true;
+      const original = originals.get(of.dilemmaId);
+      return original?.status === 'in-catalog' && original.version === of.version;
+    });
+  }
+
+  async findWithdrawnFromCatalog(): Promise<Dilemma[]> {
+    return (await this.#currentOfTheCatalog()).filter(
+      (dilemma) =>
+        !dilemma.translationOf && dilemma.status === 'withdrawn' && isPublishable(dilemma),
+    );
+  }
+
+  /** The public dilemmas of the curated catalog at their current version, by id. */
+  async #currentOfTheCatalog(): Promise<Dilemma[]> {
+    const ids = [...this.#dilemmas.keys()].filter((id) => numberOf(id) !== undefined).sort();
     const current = await Promise.all(ids.map((id) => this.findById(id)));
     return current.filter(
-      (dilemma): dilemma is Dilemma =>
-        dilemma !== undefined &&
-        dilemma.visibility === 'public' &&
-        (dilemma.status === 'in-catalog' || dilemma.status === 'withdrawn'),
+      (dilemma): dilemma is Dilemma => dilemma !== undefined && dilemma.visibility === 'public',
     );
   }
 
@@ -180,4 +200,16 @@ function pageEndOf(after: string): PageEnd {
 function summaryOf(dilemma: Dilemma): DilemmaSummary {
   const { id, version, text, minimumAge, category, tags, options } = dilemma;
   return { id, version, text, minimumAge, category, tags, optionCount: options.length };
+}
+
+/** Whether its current version has a page of its own: in the catalog, and publishable. */
+function hasPage(dilemma: Dilemma): boolean {
+  return dilemma.status === 'in-catalog' && isPublishable(dilemma);
+}
+
+/** Whether its current version could be on the web: for everyone, named and argued. */
+function isPublishable(dilemma: Dilemma): boolean {
+  return (
+    dilemma.isSuitableForMinors() && dilemma.name !== undefined && dilemma.arguments !== undefined
+  );
 }
