@@ -103,6 +103,6 @@ describe('JoinCodeScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: t('home.back') }));
 
     // Assert
-    expect(location()).toBe('/');
+    expect(location()).toBe('/app');
   });
 });

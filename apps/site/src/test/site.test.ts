@@ -58,7 +58,11 @@ async function answer(
   catalog: GetPublicCatalogOutput,
   environment: Environment = 'prod',
 ) {
-  return respond(path, published(catalog), { environment, origin: CONFIG.origin });
+  return respond(path, published(catalog), {
+    environment,
+    origin: CONFIG.origin,
+    languages: [...LANGUAGES.keys()],
+  });
 }
 
 describe('the public web', () => {
@@ -199,9 +203,14 @@ describe('the public web', () => {
     const declared = await respond('/ads.txt', site, {
       environment: 'prod',
       origin: CONFIG.origin,
+      languages: ['es'],
       adsenseClient: 'ca-pub-1234567890',
     });
-    const none = await respond('/ads.txt', site, { environment: 'prod', origin: CONFIG.origin });
+    const none = await respond('/ads.txt', site, {
+      environment: 'prod',
+      origin: CONFIG.origin,
+      languages: ['es'],
+    });
 
     // Assert
     expect(declared.body).toBe('google.com, pub-1234567890, DIRECT, f08c47fec0942fa0\n');
@@ -239,5 +248,36 @@ describe('the public web', () => {
     for (const other of [moved, gone, missing]) {
       expect(other.headers['Cache-Control']).toBe('public, max-age=60');
     }
+  });
+
+  it('should send the root to the home in the language of the browser, and never keep it in the CDN', async () => {
+    // Arrange
+    const site = published({ dilemmas: [], withdrawn: [] });
+    const options = {
+      environment: 'prod' as const,
+      origin: CONFIG.origin,
+      languages: ['es', 'en'],
+    };
+
+    // Act
+    const english = await respond('/', site, options, 'de-DE,de;q=0.9,en;q=0.8');
+    const other = await respond('/', site, options, 'ja');
+    const none = await respond('/', site, options);
+
+    // Assert
+    expect(english.status).toBe(302);
+    expect(english.headers.Location).toBe('/en/');
+    expect(english.headers['Cache-Control']).toBe('private, no-store');
+    expect(other.headers.Location).toBe('/es/');
+    expect(none.headers.Location).toBe('/es/');
+  });
+
+  it('should take the home to the start of the app to create a room', async () => {
+    // Act
+    const home = await answer('/es/', { dilemmas: [], withdrawn: [] });
+
+    // Assert
+    expect(home.body).toContain('href="/app"');
+    expect(home.body).toContain('hreflang="x-default" href="https://thelever.test/"');
   });
 });

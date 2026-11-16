@@ -6,6 +6,7 @@ import { SubmitButton } from '../components/submit-button.tsx';
 import { CODE_LENGTH, CodeField } from './code-field.tsx';
 import screen from './screen.module.css';
 import styles from './home-screen.module.css';
+import { HOME_PATH } from '../home-path.ts';
 
 /**
  * /join: the code of a room, which goes through with the button once it is complete, to the same
@@ -35,7 +36,7 @@ export function JoinCodeScreen() {
           type="button"
           className={styles.back}
           aria-label={t('home.back')}
-          onClick={() => void navigate('/')}
+          onClick={() => void navigate(HOME_PATH)}
         >
           <Icon name="arrowBack" />
         </button>

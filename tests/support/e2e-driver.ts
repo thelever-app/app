@@ -331,7 +331,7 @@ export class E2eDriver implements GameDriver {
     const player = await this.#withScreen(host, LOCALES[deviceLanguage] ?? SPANISH);
     if (player.creatingRoom) return;
     const { page } = screenOf(player);
-    await page.goto(`${this.#stack.webUrl}/`);
+    await page.goto(`${this.#stack.webUrl}/app`);
     await page.getByRole('button', { name: SCREEN.create }).click();
     await page.getByRole('button', { name: SCREEN.changeAvatar }).waitFor();
     player.creatingRoom = true;
@@ -454,7 +454,7 @@ export class E2eDriver implements GameDriver {
   async typeRoomCode(player: string, code: string): Promise<void> {
     const opener = await this.#withScreen(player);
     const { page } = screenOf(opener);
-    await page.goto(`${this.#stack.webUrl}/`);
+    await page.goto(`${this.#stack.webUrl}/app`);
     await page.getByRole('button', { name: SCREEN.joinWithCode }).click();
     await page.getByRole('textbox', { name: SCREEN.code }).fill(code);
   }

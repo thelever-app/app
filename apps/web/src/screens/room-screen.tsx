@@ -14,6 +14,7 @@ import { useOpenRoom } from '../room/open-room-context.tsx';
 import { RoomProvider, useRoom } from '../room/room-provider.tsx';
 import { RoomMoments } from '../sound/room-moments.tsx';
 import { NoReturnScreen } from './no-return-screen.tsx';
+import { HOME_PATH } from '../home-path.ts';
 
 /**
  * /rooms/:roomId: the link to that room opens when the screen does and closes when it goes, and
@@ -59,7 +60,7 @@ export function RoomScreen() {
           <NoReturnScreen
             code={code}
             onReload={() => window.location.reload()}
-            onHome={() => void navigate('/')}
+            onHome={() => void navigate(HOME_PATH)}
           />
         )}
       >

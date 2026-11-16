@@ -1019,7 +1019,11 @@ export class AcceptanceDriver implements GameDriver {
   async #answerOfThePublicWeb(path: string) {
     const site = await publishedSite(this.#siteFiles);
     if (!site) throw new Error('The public pages were never generated');
-    return respond(path, site, { environment: 'prod', origin: SITE_ORIGIN });
+    return respond(path, site, {
+      environment: 'prod',
+      origin: SITE_ORIGIN,
+      languages: [...SITE_LANGUAGES.keys()],
+    });
   }
 
   usesTheAppIn(player: string, language: string): Promise<void> {

@@ -123,8 +123,12 @@ jobs:
           run-id: ${{ inputs.run-id }}
           github-token: ${{ github.token }}
 
-      - name: Put the config of the environment next to the web
-        run: cp "apps/web/config/${{ inputs.environment }}.json" apps/web/dist/config.json
+      # Hosting answers a file before any rewrite: the app goes as app.html, so the root of the
+      # domain reaches the service of the public web, and every address of the app gets app.html.
+      - name: Put the config of the environment next to the web, and the app as app.html
+        run: |
+          cp "apps/web/config/${{ inputs.environment }}.json" apps/web/dist/config.json
+          mv apps/web/dist/index.html apps/web/dist/app.html
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

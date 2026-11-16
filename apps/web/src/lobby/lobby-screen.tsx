@@ -17,6 +17,7 @@ import { PickDilemmasSheet } from './pick-dilemmas-sheet.tsx';
 import { QrScreen } from './qr-screen.tsx';
 import { RoomSettingsSheet } from './room-settings-sheet.tsx';
 import styles from './lobby-screen.module.css';
+import { HOME_PATH } from '../home-path.ts';
 
 type Open =
   | { readonly sheet: 'none' | 'settings' | 'pick' | 'add' | 'avatar' | 'qr' }
@@ -70,7 +71,7 @@ export function LobbyScreen() {
               type="button"
               className={styles.iconButton}
               aria-label={t('lobby.leave')}
-              onClick={() => void navigate('/')}
+              onClick={() => void navigate(HOME_PATH)}
             >
               <Icon name="close" />
             </button>

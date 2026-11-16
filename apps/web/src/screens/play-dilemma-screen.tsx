@@ -9,6 +9,7 @@ import { CreateRoomForm } from './create-room-form.tsx';
 import { useAccessGate } from './use-access-gate.tsx';
 import screen from './screen.module.css';
 import styles from './play-dilemma-screen.module.css';
+import { HOME_PATH } from '../home-path.ts';
 
 type Preview =
   | { readonly status: 'loading' }
@@ -28,7 +29,7 @@ export function PlayDilemmaScreen() {
   const api = useRoomApi();
   // The answer keeps the public id it answers: while it answers another one, the screen is loading.
   const [answer, setAnswer] = useState<{ readonly publicId: string; readonly preview: Preview }>();
-  const home = () => void navigate('/');
+  const home = () => void navigate(HOME_PATH);
   // Whoever came by a link without the access code writes it before seeing the dilemma.
   const { withAccess, accessCodeScreen } = useAccessGate(home);
 

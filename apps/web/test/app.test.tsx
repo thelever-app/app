@@ -4,9 +4,9 @@ import { App } from '../src/App.tsx';
 import { fakeRoomApi, renderAtRoute } from './support/routing.tsx';
 
 describe('App', () => {
-  it('should open the start at /', async () => {
+  it('should open the start at /app', async () => {
     // Act
-    const { t } = await renderAtRoute(<App />);
+    const { t } = await renderAtRoute(<App />, { at: '/app' });
 
     // Assert
     expect(screen.getByRole('heading', { name: t('home.title') })).toBeDefined();
@@ -41,6 +41,6 @@ describe('App', () => {
     const { location } = await renderAtRoute(<App />, { at: '/games/old-game-id' });
 
     // Assert
-    expect(location()).toBe('/');
+    expect(location()).toBe('/app');
   });
 });
