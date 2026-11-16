@@ -2,6 +2,7 @@ import { CloudStorageSiteFiles } from './files/cloud-storage-site-files.ts';
 import type { Environment } from './respond.ts';
 import { cachedSite } from './serve/cached-site.ts';
 import { createSiteApp } from './serve/site-app.ts';
+import { LANGUAGES } from './texts/index.ts';
 
 // The Cloud Run service site, behind Firebase Hosting, which sends it /{language}/…, /_site/…,
 // /robots.txt, /sitemap.xml and /ads.txt: it answers from the bucket the job generate-site writes,
@@ -26,6 +27,7 @@ const app = createSiteApp({
   site: cachedSite(new CloudStorageSiteFiles(required('SITE_BUCKET')), MANIFEST_TTL_MS),
   environment: environment satisfies Environment,
   origin: required('SITE_ORIGIN'),
+  languages: [...LANGUAGES.keys()],
   ...(adsenseClient && { adsenseClient }),
 });
 const port = Number(process.env.PORT ?? 8080);

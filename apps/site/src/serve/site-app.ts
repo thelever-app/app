@@ -44,11 +44,14 @@ export function createSiteApp({ site, ...options }: SiteAppOptions): Express {
       res.status(503).set('Retry-After', '3600').end();
       return;
     }
-    let answer = await respond(req.path, published, options);
+    const acceptLanguage = req.get('Accept-Language') ?? '';
+    let answer = await respond(req.path, published, options, acceptLanguage);
     // An address that moved or does not exist may only be news to this instance: it asks again.
     if (answer.status !== 200) {
       const newer = await site.newerThan(RECHECK_AFTER_MS);
-      if (newer && newer !== published) answer = await respond(req.path, newer, options);
+      if (newer && newer !== published) {
+        answer = await respond(req.path, newer, options, acceptLanguage);
+      }
     }
     res.status(answer.status).set(answer.headers);
     if (answer.body === undefined) res.end();

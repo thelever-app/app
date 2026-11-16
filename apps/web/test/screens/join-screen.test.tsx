@@ -97,7 +97,7 @@ describe('JoinScreen', () => {
     fireEvent.click(await screen.findByRole('button', { name: t('joinRefusal.room-full.action') }));
 
     // Assert
-    expect(location()).toBe('/');
+    expect(location()).toBe('/app');
   });
 
   it('should leave the room behind, at full screen, when it turns the player away on joining', async () => {

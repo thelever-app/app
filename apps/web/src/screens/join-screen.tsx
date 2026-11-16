@@ -11,6 +11,7 @@ import { JoinRoomForm } from './join-room-form.tsx';
 import { useAccessGate } from './use-access-gate.tsx';
 import screen from './screen.module.css';
 import styles from './join-screen.module.css';
+import { HOME_PATH } from '../home-path.ts';
 
 type Preview =
   | { readonly status: 'loading' }
@@ -37,7 +38,7 @@ export function JoinScreen() {
   // Whoever typed the code goes back to it, as they left it; whoever came by the link or the QR,
   // to the start. A room that does not exist sends everyone to type another code.
   const fromCode = (useLocation().state as { fromCode?: boolean } | null)?.fromCode === true;
-  const back = () => void (fromCode ? navigate(-1) : navigate('/'));
+  const back = () => void (fromCode ? navigate(-1) : navigate(HOME_PATH));
   // Whoever came by a link without the access code writes it before seeing the room.
   const { withAccess, accessCodeScreen } = useAccessGate(back);
 
@@ -66,7 +67,7 @@ export function JoinScreen() {
   const preview: Preview = answer?.code === code ? answer.preview : { status: 'loading' };
 
   const tryAnotherCode = () => void (fromCode ? navigate(-1) : navigate('/join'));
-  const home = () => void navigate('/');
+  const home = () => void navigate(HOME_PATH);
   if (preview.status === 'refused') {
     const action = preview.code === 'room-code-not-found' ? tryAnotherCode : home;
     return <JoinRefusal code={preview.code} onAction={action} />;

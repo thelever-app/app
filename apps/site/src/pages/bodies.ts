@@ -18,7 +18,7 @@ export function readable(text: string, texts: SiteTexts): string {
 export function homeBody(language: string, texts: SiteTexts, appBase: string): Html {
   return html`<h1>${texts.home.heading}</h1>
     <p class="intro">${texts.home.intro}</p>
-    <a class="button primary" href="${appBase}/">${texts.home.createRoom}</a>
+    <a class="button primary" href="${appBase}/app">${texts.home.createRoom}</a>
     <h2>${texts.home.howToPlay}</h2>
     <ol class="steps">
       ${texts.home.steps.map((step) => html`<li>${step}</li>`)}

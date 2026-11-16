@@ -19,6 +19,7 @@ async function appWithASite() {
   return createSiteApp({
     site: cachedSite(files, 60_000),
     environment: 'prod',
+    languages: [...LANGUAGES.keys()],
     origin: 'https://thelever.test',
   });
 }
@@ -55,6 +56,7 @@ describe('the service of the public web', () => {
     const app = createSiteApp({
       site: cachedSite(new InMemorySiteFiles(), 60_000),
       environment: 'prod',
+      languages: [...LANGUAGES.keys()],
       origin: 'https://thelever.test',
     });
 
@@ -82,6 +84,7 @@ describe('the service of the public web', () => {
     const app = createSiteApp({
       site: cachedSite(files, 300_000, () => now),
       environment: 'prod',
+      languages: [...LANGUAGES.keys()],
       origin: config.origin,
     });
     await request(app).get('/es/');

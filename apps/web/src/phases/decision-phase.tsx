@@ -11,6 +11,7 @@ import { RevealEarlyDialog } from '../game/reveal-early-dialog.tsx';
 import { useGame } from '../room/room-provider.tsx';
 import { DilemmaScreen } from '../screens/dilemma-screen.tsx';
 import { WaitingScreen } from '../screens/waiting-screen.tsx';
+import { HOME_PATH } from '../home-path.ts';
 
 /**
  * The decision of a round: its dilemma, or waiting for the others once the player answered it or
@@ -68,7 +69,7 @@ export function DecisionPhase({ onShowQr }: { readonly onShowQr: () => void }) {
           onSkip={(skippedId) => send({ type: 'skip-dilemma', dilemmaId: skippedId })}
           onLeave={() => {
             send({ type: 'leave-room' });
-            void navigate('/');
+            void navigate(HOME_PATH);
           }}
         />
       )}
