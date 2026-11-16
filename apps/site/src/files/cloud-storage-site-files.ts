@@ -5,8 +5,8 @@ const API = 'https://storage.googleapis.com/storage/v1';
 const UPLOAD = 'https://storage.googleapis.com/upload/storage/v1';
 
 /**
- * The files in a bucket of Cloud Storage, through its JSON API, as the service account of the job
- * or of the service: the job writes them, the service only reads them.
+ * The files in a bucket of Cloud Storage, through its JSON API, as the service account of the job,
+ * which writes them, or of the service, which may only read them.
  */
 export class CloudStorageSiteFiles implements SiteFiles {
   readonly #bucket: string;

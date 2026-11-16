@@ -27,7 +27,12 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
+    # One deploy or load of the catalog at a time per environment: together they would take more
+    # connections of the database than its budget leaves (see the room server below).
+    concurrency:
+      group: database-${{ inputs.environment }}
+      cancel-in-progress: false
     environment: ${{ inputs.environment }}
     env:
       PROJECT: thelever-app-${{ inputs.environment }}
@@ -70,8 +75,8 @@ jobs:
       # 2 instances each, with a pool of 3 and the LISTEN connection, are 16 connections; with 1 of
       # the migrate job, 1 of the close-rooms job and 1 of the catalog-import job, 19, the 19 the
       # micro instance leaves to the app users (25, minus 3 for superusers and 3 Cloud SQL uses).
-      # The generate-site job takes the one of catalog-import: the workflow Import the catalog runs
-      # it once the load has ended, and its schedule runs it at night, when nobody loads.
+      # The generate-site job takes the one of catalog-import: a deploy and a load of the catalog never
+      # run at the same time (the concurrency of this job), and its schedule runs it at night.
       # Each open socket is one of the 250 requests an instance takes at once: 500 sockets in all,
       # which the capacity alert in ops/monitoring counts on.
       # The CPU stays with the instance between requests: its beat, the check of LISTEN, the cleaning
@@ -95,40 +100,10 @@ jobs:
           url=$(gcloud run services describe realtime --project "$PROJECT" --region europe-southwest1 --format 'value(status.url)')
           curl --silent --show-error --fail --retry 5 --retry-all-errors "$url/health"
 
-      # The public web: the job reads the public catalog with a user that only reads the tables of
-      # Dilemmas and writes the pages into the bucket of the environment; it runs now, so the pages
-      # come out of the code just deployed, and every night at 04:00, after any load of the day.
-      # Its service answers from the bucket behind Firebase Hosting, which sends it /{language}/…;
-      # it only reads the bucket, and goes before the web, whose rewrites need it. Hosting calls it
-      # as anyone, so anyone may invoke it; the deploy waits until its new revision is ready.
-      - name: Deploy the job that generates the public web, run it and schedule it
-        env:
-          ENVIRONMENT: ${{ inputs.environment }}
-          ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
-        run: |
-          gcloud run jobs deploy generate-site --project "$PROJECT" --region europe-southwest1 \
-            --image "$(cat site-image.txt)" \
-            --service-account "public-site@$PROJECT.iam.gserviceaccount.com" \
-            --command node --args apps/site/src/jobs/generate-site.ts \
-            --set-env-vars "CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=public-site@$PROJECT.iam,SITE_BUCKET=$PROJECT-site,SITE_ORIGIN=https://$WEB_DOMAIN,ADSENSE_CLIENT=$ADSENSE_CLIENT" \
-            --max-retries 1 --task-timeout 30m \
-            --quiet
-          gcloud run jobs execute generate-site --project "$PROJECT" --region europe-southwest1 \
-            --wait --quiet
-          schedule=(
-            --project "$PROJECT" --location europe-west1
-            --schedule "0 4 * * *" --time-zone Etc/UTC
-            --uri "https://run.googleapis.com/v2/projects/$PROJECT/locations/europe-southwest1/jobs/generate-site:run"
-            --http-method POST
-            --oauth-service-account-email "scheduler@$PROJECT.iam.gserviceaccount.com"
-            --quiet
-          )
-          if gcloud scheduler jobs describe generate-site --project "$PROJECT" --location europe-west1 >/dev/null 2>&1; then
-            gcloud scheduler jobs update http generate-site "${schedule[@]}"
-          else
-            gcloud scheduler jobs create http generate-site "${schedule[@]}"
-          fi
-
+      # The service of the public web answers from the bucket behind Firebase Hosting, which sends it
+      # /{language}/…, so it goes before the web, whose rewrites need it. Hosting calls it as anyone,
+      # so anyone may invoke it; it runs as an account that may only read the bucket. The deploy
+      # waits until its new revision is ready.
       - name: Deploy the service of the public web
         env:
           ENVIRONMENT: ${{ inputs.environment }}
@@ -136,7 +111,7 @@ jobs:
         run: |
           gcloud run deploy site --project "$PROJECT" --region europe-southwest1 \
             --image "$(cat site-image.txt)" \
-            --service-account "public-site@$PROJECT.iam.gserviceaccount.com" \
+            --service-account "site-server@$PROJECT.iam.gserviceaccount.com" \
             --set-env-vars "ENVIRONMENT=$ENVIRONMENT,SITE_BUCKET=$PROJECT-site,SITE_ORIGIN=https://$WEB_DOMAIN,ADSENSE_CLIENT=$ADSENSE_CLIENT" \
             --min-instances 0 --max-instances 2 --concurrency 80 \
             --quiet
@@ -170,6 +145,38 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm exec firebase deploy --only hosting --project "$PROJECT" --non-interactive
+
+      # The job of the public web reads the public catalog with a user that only reads the tables of
+      # Dilemmas and writes the pages into the bucket of the environment. It runs here, after the
+      # web, so a failure leaves the room server and its web in step; and every night at 04:00,
+      # after any load of the day. The schedule signs in as the scheduler account.
+      - name: Deploy the job that generates the public web, run it and schedule it
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
+        run: |
+          gcloud run jobs deploy generate-site --project "$PROJECT" --region europe-southwest1 \
+            --image "$(cat site-image.txt)" \
+            --service-account "public-site@$PROJECT.iam.gserviceaccount.com" \
+            --command node --args apps/site/src/jobs/generate-site.ts \
+            --set-env-vars "CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=public-site@$PROJECT.iam,SITE_BUCKET=$PROJECT-site,SITE_ORIGIN=https://$WEB_DOMAIN,ADSENSE_CLIENT=$ADSENSE_CLIENT" \
+            --max-retries 1 --task-timeout 30m \
+            --quiet
+          gcloud run jobs execute generate-site --project "$PROJECT" --region europe-southwest1 \
+            --wait --quiet
+          schedule=(
+            --project "$PROJECT" --location europe-west1
+            --schedule "0 4 * * *" --time-zone Etc/UTC
+            --uri "https://run.googleapis.com/v2/projects/$PROJECT/locations/europe-southwest1/jobs/generate-site:run"
+            --http-method POST
+            --oauth-service-account-email "scheduler@$PROJECT.iam.gserviceaccount.com"
+            --quiet
+          )
+          if gcloud scheduler jobs describe generate-site --project "$PROJECT" --location europe-west1 >/dev/null 2>&1; then
+            gcloud scheduler jobs update http generate-site "${schedule[@]}"
+          else
+            gcloud scheduler jobs create http generate-site "${schedule[@]}"
+          fi
 
       # Every hour, Cloud Scheduler runs the job that deletes the closed rooms with their game data,
       # so no closed room lasts more than an hour and a quarter. Same image and service account as
