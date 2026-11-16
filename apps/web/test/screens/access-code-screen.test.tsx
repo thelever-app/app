@@ -230,6 +230,6 @@ describe('AccessCodeScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: t('home.back') }));
 
     // Assert
-    await waitFor(() => expect(location()).toBe('/'));
+    await waitFor(() => expect(location()).toBe('/app'));
   });
 });

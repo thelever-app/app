@@ -19,6 +19,8 @@ export interface PublishedSite {
 export interface RespondOptions {
   readonly environment: Environment;
   readonly origin: string;
+  /** The languages of the web, in the order the root falls back on them: the first one last. */
+  readonly languages: readonly string[];
   /** The publisher id of AdSense, ca-pub-…, which ads.txt declares; none until there is an account. */
   readonly adsenseClient?: string;
 }
@@ -37,14 +39,17 @@ const FALLBACK_LANGUAGE = 'es';
 /**
  * How the service answers an address of the public web: a page as it was generated; the address
  * of a dilemma whose name or category changed, with a permanent redirect to the new one; the
- * address of a withdrawn dilemma, with 410 and the page that says so; and anything else, with 404.
+ * address of a withdrawn dilemma, with 410 and the page that says so; the root of the domain, with
+ * the home in the language of the browser; and anything else, with 404.
  * In dev, and for the pages that may not be indexed, it tells search engines to leave them out.
  */
 export async function respond(
   path: string,
   site: PublishedSite,
-  { environment, origin, adsenseClient }: RespondOptions,
+  { environment, origin, adsenseClient, languages }: RespondOptions,
+  acceptLanguage = '',
 ): Promise<SiteResponse> {
+  if (path === '/') return home(languageFor(acceptLanguage, languages));
   if (path === '/robots.txt') return robots(environment, origin);
   if (path === '/ads.txt') return adsTxt(adsenseClient);
   if (path === '/sitemap.xml') {
@@ -96,6 +101,41 @@ function page(
 
 function redirect(location: string): SiteResponse {
   return { status: 301, headers: { Location: location, 'Cache-Control': SHORT_CACHE } };
+}
+
+/**
+ * The root sends each visitor to the home in their language: temporary, since another browser goes
+ * elsewhere, and never kept by the CDN, which would send everyone to the first one.
+ */
+function home(language: string): SiteResponse {
+  return {
+    status: 302,
+    headers: {
+      Location: `/${language}/`,
+      'Cache-Control': 'private, no-store',
+      Vary: 'Accept-Language',
+    },
+  };
+}
+
+/**
+ * The first language of the web the browser asks for, by its preference; the first language of
+ * the web if it asks for none of them.
+ */
+export function languageFor(acceptLanguage: string, languages: readonly string[]): string {
+  const asked = acceptLanguage
+    .split(',')
+    .map((part) => {
+      const [tag = '', ...params] = part.trim().split(';');
+      const quality = params.find((param) => param.trim().startsWith('q='));
+      return {
+        language: tag.split('-')[0]!.toLowerCase(),
+        q: quality ? Number(quality.trim().slice(2)) : 1,
+      };
+    })
+    .filter(({ language, q }) => language !== '' && q > 0)
+    .sort((a, b) => b.q - a.q);
+  return asked.find(({ language }) => languages.includes(language))?.language ?? languages[0]!;
 }
 
 /** The only seller of the ads of the web, as AdSense asks every site to declare at its root. */

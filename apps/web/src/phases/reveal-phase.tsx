@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useGame } from '../room/room-provider.tsx';
 import { REVEAL_INTRO_MS, RevealIntro } from '../reveal/reveal-intro.tsx';
 import { RevealScreen } from '../reveal/reveal-screen.tsx';
+import { HOME_PATH } from '../home-path.ts';
 
 /**
  * The reveal of a round, after a brief passage from its decision: any player takes everyone on to
@@ -40,7 +41,7 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
       onMoveOn={isLast ? undefined : () => send({ type: 'move-on', fromPosition: position })}
       onLeave={() => {
         send({ type: 'leave-room' });
-        void navigate('/');
+        void navigate(HOME_PATH);
       }}
     />
   );

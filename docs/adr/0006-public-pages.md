@@ -14,6 +14,7 @@ CU-14 asks for a public page of every dilemma of the general catalog, in each la
 - **Service:** the Cloud Run service `site` answers `/{language}/…`, `/_site/…`, `/robots.txt` and `/sitemap.xml` from the bucket, behind Firebase Hosting, which rewrites those addresses to it. It sends the old address of a dilemma to its new one with 301, answers 410 to a withdrawn one and decides `X-Robots-Tag` per page and environment.
 - **HTML without React:** TypeScript templates with an `html` tag that escapes every text, run by Node as the rest of the repo, with no build step.
 - **Addresses:** `/{language}/{category}/{name}-{number}`, the number of the curated catalog, which never changes.
+- **The root of the domain:** the home of the public web. The service answers `/` with a temporary redirect to `/{language}/` by the language of the browser, never kept by the CDN, and the app starts at `/app`. Hosting answers a file before any rewrite, so the deploy publishes the app as `app.html` and rewrites every address of the app to it.
 - **Links into the app:** `/new/{publicId}`, a random id each dilemma gets when it is created, so nobody reaches a dilemma by guessing ids.
 
 ## Consequences

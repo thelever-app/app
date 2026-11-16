@@ -14,7 +14,12 @@ import {
 } from '@thelever-app/db';
 import { onServer, urlOf } from '@thelever-app/db/test';
 import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
-import { cachedSite, createSiteApp, InMemorySiteFiles } from '@thelever-app/site';
+import {
+  cachedSite,
+  createSiteApp,
+  InMemorySiteFiles,
+  LANGUAGES as SITE_LANGUAGES,
+} from '@thelever-app/site';
 import type { Server } from 'node:http';
 import { chromium, type Browser } from 'playwright';
 import { loadTestDilemmas } from './test-catalog.ts';
@@ -120,6 +125,7 @@ export async function startE2eStack(): Promise<void> {
       site: cachedSite(siteFiles, 0),
       environment: 'prod',
       origin: siteUrl,
+      languages: [...SITE_LANGUAGES.keys()],
     }).listen(SITE_PORT, () => resolve(server));
   });
   const processes = [
