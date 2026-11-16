@@ -1,6 +1,7 @@
 import { Dilemma } from '../../domain/entities/dilemma.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import type { ArgumentsSnapshot } from '../../domain/vos/arguments.vo.ts';
+import { idOf } from '../catalog-number.ts';
 import { CatalogImportFailedError } from '../errors/catalog-import-failed.error.ts';
 import type {
   CuratedArguments,
@@ -34,11 +35,6 @@ class IdsInOrder implements IdGenerator {
     if (id === undefined) throw new Error('the catalog ran out of ids');
     return id;
   }
-}
-
-/** The id of the dilemma with that number of the catalog, or of its translation into a language. */
-function idOf(number: number, language?: string): string {
-  return language === undefined ? `dlm-${number}` : `dlm-${number}-${language}`;
 }
 
 /** The ids of the options from position `from` (from 0) of a dilemma with `count` options. */

@@ -159,6 +159,25 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
     return row && dilemmaOf(row);
   }
 
+  async findPublicCatalog(): Promise<Dilemma[]> {
+    const rows = await this.#versions()
+      .where('dilemmas.visibility', '=', 'public')
+      .where('dilemma_versions.status', 'in', ['in-catalog', 'withdrawn'])
+      .where(({ not, exists, selectFrom }) =>
+        not(
+          exists(
+            selectFrom('dilemma_versions as later')
+              .select('later.number')
+              .whereRef('later.dilemma_id', '=', 'dilemma_versions.dilemma_id')
+              .whereRef('later.number', '>', 'dilemma_versions.number'),
+          ),
+        ),
+      )
+      .orderBy('dilemmas.id')
+      .execute();
+    return rows.map(dilemmaOf);
+  }
+
   /** Every version of every dilemma, with its content, to narrow down. */
   #versions(db: Kysely<DilemmasTables> = currentTransaction<DilemmasTables>() ?? this.#db) {
     return db

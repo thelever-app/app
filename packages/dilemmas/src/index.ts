@@ -79,6 +79,11 @@ export {
   type SearchDilemmasOutput,
 } from './application/use-cases/search-dilemmas.use-case.ts';
 export {
+  GetPublicCatalogUseCase,
+  type GetPublicCatalogOutput,
+  type PublicDilemma,
+} from './application/use-cases/get-public-catalog.use-case.ts';
+export {
   FindDilemmaIdsUseCase,
   type FindDilemmaIdsInput,
   type FindDilemmaIdsOutput,

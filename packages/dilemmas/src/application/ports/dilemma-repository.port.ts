@@ -12,4 +12,9 @@ export interface DilemmaRepository {
   findVersion(id: string, version: number): Promise<Dilemma | undefined>;
   /** The translation of that version of an original into that language, at the version that translates it. */
   findTranslation(original: TranslationOf, language: string): Promise<Dilemma | undefined>;
+  /**
+   * Every public dilemma, original or translation, whose current version is in the general catalog
+   * or withdrawn, at that version: what the public web is made of.
+   */
+  findPublicCatalog(): Promise<Dilemma[]>;
 }

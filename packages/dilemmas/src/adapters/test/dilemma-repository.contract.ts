@@ -336,5 +336,53 @@ export function describeDilemmaRepositoryContract(
         expect(otherVersion).toBeUndefined();
       });
     });
+
+    describe('findPublicCatalog', () => {
+      it('should find the public dilemmas in the catalog or withdrawn, at their current version, with their content', async () => {
+        // Arrange
+        const repository = await create();
+        const argued = revised();
+        argued.argue({
+          options: argued.options.map(({ id }) => ({
+            optionId: id,
+            for: `TestFor${id}`,
+            against: `TestAgainst${id}`,
+          })),
+        });
+        await repository.save(dilemma());
+        await repository.save(argued);
+        const withdrawn = translation();
+        withdrawn.withdraw();
+        await repository.save(withdrawn);
+
+        // Act
+        const found = await repository.findPublicCatalog();
+
+        // Assert
+        expect(found.map((dilemma) => dilemma.toSnapshot())).toEqual([
+          argued.toSnapshot(),
+          withdrawn.toSnapshot(),
+        ]);
+      });
+
+      it('should leave out the private dilemmas and those whose current version is elsewhere', async () => {
+        // Arrange
+        const repository = await create();
+        const { version, ...rest } = dilemma().toSnapshot();
+        await repository.save(Dilemma.restore({ ...rest, visibility: 'private', version }));
+        await repository.save(
+          Dilemma.restore({
+            ...translation().toSnapshot(),
+            version: { ...translation().toSnapshot().version, status: 'in-exploration' },
+          }),
+        );
+
+        // Act
+        const found = await repository.findPublicCatalog();
+
+        // Assert
+        expect(found).toEqual([]);
+      });
+    });
   });
 }

@@ -61,6 +61,17 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
     return undefined;
   }
 
+  async findPublicCatalog(): Promise<Dilemma[]> {
+    const ids = [...this.#dilemmas.keys()].sort();
+    const current = await Promise.all(ids.map((id) => this.findById(id)));
+    return current.filter(
+      (dilemma): dilemma is Dilemma =>
+        dilemma !== undefined &&
+        dilemma.visibility === 'public' &&
+        (dilemma.status === 'in-catalog' || dilemma.status === 'withdrawn'),
+    );
+  }
+
   async idsOf(criteria: CandidateCriteria): Promise<string[]> {
     return (await this.#matching(criteria)).map(({ dilemma }) => dilemma.id);
   }
