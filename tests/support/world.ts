@@ -1,6 +1,12 @@
 import { setWorldConstructor, World, type IWorldOptions } from '@cucumber/cucumber';
 import { AcceptanceDriver } from './acceptance-driver.ts';
-import type { AnswerPlan, GameDriver, RoomChoices, SettingsView } from './driver.ts';
+import type {
+  AnswerPlan,
+  GameDriver,
+  PublicPageView,
+  RoomChoices,
+  SettingsView,
+} from './driver.ts';
 import { E2eDriver } from './e2e-driver.ts';
 import { e2eStack } from './e2e-stack.ts';
 
@@ -43,6 +49,15 @@ export class GameWorld extends World {
 
   /** The dilemma of the test data a step made the first one of the game. */
   dilemmaId = '';
+
+  /** The dilemma of the public web a scenario talks about as "it", by its name. */
+  dilemmaName = '';
+
+  /** The public page a visitor has open. */
+  publicPage: PublicPageView | undefined;
+
+  /** The dilemma a visitor chose to play with the group from its public page, by its name. */
+  dilemmaToPlayWithTheGroup: string | undefined;
 
   /** The game in progress before a step tried to start one. */
   gameBefore: string | undefined;

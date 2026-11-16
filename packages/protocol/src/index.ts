@@ -20,6 +20,7 @@ export {
   AnswerDilemmaDto,
   AvatarDto,
   AvatarFaceDto,
+  CategoryDto,
   ChangeAvatarDto,
   ChangeSettingsDto,
   ClientMessageDto,
@@ -47,5 +48,6 @@ export {
 export { CreateRoomRequestDto, CreateRoomResponseDto } from './http/create-room.ts';
 export { JoinRoomRequestDto, JoinRoomResponseDto } from './http/join-room.ts';
 export { RoomPreviewResponseDto } from './http/room-preview.ts';
+export { DilemmaPreviewResponseDto } from './http/dilemma-preview.ts';
 export { SearchDilemmasQueryDto, SearchDilemmasResponseDto } from './http/search-dilemmas.ts';
 export { HttpErrorDto } from './http/http-error.ts';

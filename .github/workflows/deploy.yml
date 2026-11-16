@@ -44,17 +44,28 @@ jobs:
             --config apps/realtime/cloudbuild.yaml --substitutions "_TAG=$GITHUB_SHA" \
             --gcs-source-staging-dir gs://thelever-app-shared-build-sources/source .
 
-      - name: Pin the image by its digest
+      - name: Build the image of the public web once, tagged with the commit
         run: |
-          name="europe-southwest1-docker.pkg.dev/thelever-app-shared/thelever-app/realtime"
-          digest=$(gcloud artifacts docker images describe "$name:$GITHUB_SHA" --format 'value(image_summary.digest)')
-          echo "$name@$digest" >image.txt
+          gcloud builds submit --project thelever-app-shared --region europe-southwest1 \
+            --config apps/site/cloudbuild.yaml --substitutions "_TAG=$GITHUB_SHA" \
+            --gcs-source-staging-dir gs://thelever-app-shared-build-sources/source .
+
+      - name: Pin the images by their digest
+        run: |
+          for image in realtime site; do
+            name="europe-southwest1-docker.pkg.dev/thelever-app-shared/thelever-app/$image"
+            digest=$(gcloud artifacts docker images describe "$name:$GITHUB_SHA" --format 'value(image_summary.digest)')
+            echo "$name@$digest" >"$image-image.txt"
+          done
+          mv realtime-image.txt image.txt
 
       # The image and the web are kept as long as an approval of prod can wait, so prod promotes them as they are.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: image
-          path: image.txt
+          path: |
+            image.txt
+            site-image.txt
           if-no-files-found: error
           retention-days: 30
 

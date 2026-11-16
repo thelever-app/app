@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CategoryDto } from '../client-messages.ts';
 
 /**
  * GET /rooms/:roomId/dilemmas?category=…&q=…&after=…: the dilemmas of the catalog that suit the
@@ -6,7 +7,7 @@ import { z } from 'zod';
  * best matches first. `after` is the `next` of the page before. Only a player of the room may ask.
  */
 export const SearchDilemmasQueryDto = z.strictObject({
-  category: z.string().min(1).optional(),
+  category: CategoryDto.optional(),
   q: z.string().min(1).max(100).optional(),
   after: z.string().min(1).max(500).optional(),
 });
@@ -17,7 +18,7 @@ export const SearchDilemmasResponseDto = z.strictObject({
       dilemmaId: z.string().min(1),
       text: z.string().min(1),
       minimumAge: z.union([z.literal(16), z.literal(18)]),
-      category: z.string().min(1),
+      category: CategoryDto,
       tags: z.array(z.string().min(1)),
       optionCount: z.number().int().min(2).max(4),
     }),

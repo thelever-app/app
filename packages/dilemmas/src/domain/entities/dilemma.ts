@@ -65,6 +65,8 @@ export interface VersionSnapshot {
 
 export interface DilemmaSnapshot {
   readonly id: string;
+  /** Random, and never changes: a link opens the dilemma with it without letting anyone guess others. */
+  readonly publicId: string;
   /** The language the dilemma was written or translated in; each translation is a dilemma of its own. */
   readonly language: string;
   /** The short title the public web gives it; changing it makes no new version. */
@@ -95,6 +97,7 @@ const UNREADABLE: readonly DilemmaStatus[] = [
 
 export class Dilemma {
   readonly #id: IdVO;
+  readonly #publicId: IdVO;
   readonly #language: LanguageVO;
   #name: TextVO | undefined;
   readonly #creator: Creator;
@@ -107,6 +110,7 @@ export class Dilemma {
 
   private constructor(snapshot: DilemmaSnapshot) {
     this.#id = new IdVO(snapshot.id);
+    this.#publicId = new IdVO(snapshot.publicId);
     this.#language = new LanguageVO(snapshot.language);
     this.#name = snapshot.name === undefined ? undefined : new TextVO(snapshot.name);
     this.#creator =
@@ -155,6 +159,7 @@ export class Dilemma {
     });
     return new Dilemma({
       id,
+      publicId: idGenerator.generate(),
       language,
       ...(name === undefined ? {} : { name }),
       creator: { type: 'curation-team' },
@@ -189,6 +194,7 @@ export class Dilemma {
     });
     return new Dilemma({
       id,
+      publicId: idGenerator.generate(),
       language: content.language,
       ...(content.name === undefined ? {} : { name: content.name }),
       creator: original.creator,
@@ -204,6 +210,10 @@ export class Dilemma {
 
   get id(): string {
     return this.#id.value;
+  }
+
+  get publicId(): string {
+    return this.#publicId.value;
   }
 
   get language(): string {
@@ -385,6 +395,7 @@ export class Dilemma {
   toSnapshot(): DilemmaSnapshot {
     return {
       id: this.id,
+      publicId: this.publicId,
       language: this.language,
       ...(this.name === undefined ? {} : { name: this.name }),
       creator: this.#creator,

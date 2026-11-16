@@ -56,6 +56,7 @@ import {
   SequentialIdGenerator,
 } from '@thelever-app/game/in-memory';
 import {
+  type CategoryDto,
   type ChangeSettingsDto,
   ClientMessageDto,
   ServerMessageDto,
@@ -178,7 +179,7 @@ export class SimulatedRoomConnection implements RoomConnection {
     const idGenerator = this.#idGenerator;
     const clock = BROWSER_CLOCK;
     this.#useCases = {
-      createRoom: new CreateRoomUseCase(rooms, idGenerator, MATH_RANDOMNESS, clock),
+      createRoom: new CreateRoomUseCase(rooms, catalog, idGenerator, MATH_RANDOMNESS, clock),
       joinRoom: new JoinRoomUseCase({
         roomRepository: rooms,
         gameRepository: games,
@@ -273,7 +274,7 @@ export class SimulatedRoomConnection implements RoomConnection {
 
   /** A page of the dilemmas of the catalog that suit the room, as the room server answers the search. */
   async searchDilemmas(criteria: {
-    readonly category?: string;
+    readonly category?: CategoryDto;
     readonly q?: string;
     readonly after?: string;
   }): Promise<SearchDilemmasResponseDto> {

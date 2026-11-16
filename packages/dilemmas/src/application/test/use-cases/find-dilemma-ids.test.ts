@@ -23,7 +23,7 @@ async function findInCatalog() {
           tags: [],
           minimumAge,
         },
-        new FixedIdGenerator(id, `${id}OptionA`, `${id}OptionB`),
+        new FixedIdGenerator(id, `${id}OptionA`, `${id}OptionB`, `${id}-public`),
       ),
     );
   }
@@ -46,22 +46,6 @@ describe('FindDilemmaIdsUseCase', () => {
 
       // Assert
       expect(dilemmaIds).toEqual(['TestHonesty']);
-    });
-
-    it('should find nothing in a category that does not exist', async () => {
-      // Arrange
-      const findDilemmaIds = await findInCatalog();
-
-      // Act
-      const { dilemmaIds } = await findDilemmaIds.execute({
-        categories: ['TestNoCategory'],
-        maximumMinimumAge: 16,
-        status: 'in-catalog',
-        language: 'es',
-      });
-
-      // Assert
-      expect(dilemmaIds).toEqual([]);
     });
 
     it('should throw InvalidLanguageError if the language is not a language code', async () => {

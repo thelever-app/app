@@ -19,6 +19,29 @@ describe('POST /rooms', () => {
     });
   });
 
+  it('should create a room whose first game starts with the dilemma it is given', async () => {
+    // Act
+    const response = await request(await composedHttpServer())
+      .post('/rooms')
+      .set('Authorization', bearer('ana'))
+      .send({ nickname: 'Ana', ...ROOM_CHOICES, firstDilemmaId: 'seed-trolley' });
+
+    // Assert
+    expect(response.status).toBe(201);
+  });
+
+  it('should answer dilemma-not-found for a first dilemma that is not in the general catalog', async () => {
+    // Act
+    const response = await request(await composedHttpServer())
+      .post('/rooms')
+      .set('Authorization', bearer('ana'))
+      .send({ nickname: 'Ana', ...ROOM_CHOICES, firstDilemmaId: 'TestMissingDilemma' });
+
+    // Assert
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ code: 'dilemma-not-found' });
+  });
+
   it('should reject a request without a token or with an invalid one', async () => {
     // Arrange
     const server = await composedHttpServer();

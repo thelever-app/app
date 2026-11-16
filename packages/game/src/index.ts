@@ -52,6 +52,7 @@ export {
   type TimePerDilemmaSeconds,
   type DilemmasPerPlayer,
 } from './domain/vos/room-settings.vo.ts';
+export { CATEGORIES, isCategory, type Category } from './domain/vos/category.vo.ts';
 export { GROUP_NATURES, PLACES, type GroupNature, type Place } from './domain/vos/group.vo.ts';
 export {
   composeGame,

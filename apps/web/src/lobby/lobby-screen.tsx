@@ -12,7 +12,6 @@ import { useLeavingPlayers } from './leaving-players.ts';
 import { AddDilemmaSheet } from './add-dilemma-sheet.tsx';
 import { AvatarPickerSheet } from './avatar-picker-sheet.tsx';
 import { ExpelSheet } from './expel-sheet.tsx';
-import { isCategory } from './categories.ts';
 import { shareInvitation, spelled } from './invitation.ts';
 import { PickDilemmasSheet } from './pick-dilemmas-sheet.tsx';
 import { QrScreen } from './qr-screen.tsx';
@@ -340,7 +339,7 @@ function categoriesOf({ categories }: RoomSettingsDto, t: Translate): string {
   if (categories === null) return t('lobby.categories.all');
   const [only] = categories;
   if (only === undefined) return t('lobby.categories.none');
-  if (categories.length === 1 && isCategory(only)) return t(`categories.${only}`);
+  if (categories.length === 1 && only) return t(`categories.${only}`);
   return t('lobby.categories.some', { count: categories.length });
 }
 

@@ -15,6 +15,7 @@ const EXPLORATION = ['TestNew1', 'TestNew2', 'TestNew3', 'TestNew4'];
 function input(changes: Partial<ComposeGameInput> = {}): ComposeGameInput {
   return {
     settings: RoomSettingsVO.defaults('es'),
+    firstDilemma: null,
     pickedDilemmas: [],
     addedDilemmas: [],
     candidates: { inCatalog: CATALOG, inExploration: EXPLORATION },
@@ -28,6 +29,47 @@ function ids(dilemmas: readonly { readonly dilemmaId: string }[]): string[] {
 }
 
 describe('composeGame', () => {
+  it('should play the first dilemma first, as picked by the host, within the number of dilemmas', () => {
+    // Act
+    const composed = composeGame(
+      input({ firstDilemma: { dilemmaId: 'TestFirst', minimumAge: 16 } }),
+      new FixedRandomness(),
+    );
+
+    // Assert
+    expect(composed[0]).toEqual({ dilemmaId: 'TestFirst', origin: 'picked-by-the-host' });
+    expect(composed).toHaveLength(8);
+  });
+
+  it('should play the first dilemma first also with the dilemmas the host picked', () => {
+    // Act
+    const composed = composeGame(
+      input({
+        firstDilemma: { dilemmaId: 'TestFirst', minimumAge: 16 },
+        pickedDilemmas: [{ dilemmaId: 'TestCatalog1', minimumAge: 16 }],
+      }),
+      new FixedRandomness(),
+    );
+
+    // Assert
+    expect(ids(composed)).toEqual(['TestFirst', 'TestCatalog1']);
+  });
+
+  it('should not play the first dilemma twice when a player also added it', () => {
+    // Act
+    const composed = composeGame(
+      input({
+        firstDilemma: { dilemmaId: 'TestFirst', minimumAge: 16 },
+        addedDilemmas: [{ dilemmaId: 'TestFirst', minimumAge: 16, playerId: 'TestLuisId' }],
+      }),
+      new FixedRandomness(),
+    );
+
+    // Assert
+    expect(ids(composed).filter((id) => id === 'TestFirst')).toHaveLength(1);
+    expect(composed[0]?.dilemmaId).toBe('TestFirst');
+  });
+
   it('should fill the number of dilemmas of the room, without repeating any', () => {
     // Act
     const composed = composeGame(input(), new FixedRandomness());

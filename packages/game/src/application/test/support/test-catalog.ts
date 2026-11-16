@@ -41,7 +41,7 @@ export function lobbyCatalog(): InMemoryDilemmaCatalog {
     })),
     ...['TestHonesty1', 'TestHonesty2'].map((dilemmaId) => ({
       ...dilemma(dilemmaId),
-      category: 'honesty',
+      category: 'honesty' as const,
     })),
     ...Array.from({ length: 10 }, (_, index) => ({
       ...dilemma(`TestCatalan${index + 1}`),

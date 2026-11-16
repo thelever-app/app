@@ -1,7 +1,9 @@
 import {
   type AvatarDto,
   type CreateRoomRequestDto,
+  type CategoryDto,
   CreateRoomResponseDto,
+  DilemmaPreviewResponseDto,
   type ErrorCodeDto,
   HttpErrorDto,
   JoinRoomResponseDto,
@@ -27,12 +29,14 @@ export interface RoomApi {
   createRoom(request: CreateRoomRequestDto): Promise<CreateRoomResponseDto>;
   /** The room of a code, as the player typed it or as the link carries it. */
   previewRoom(code: string): Promise<RoomPreviewResponseDto>;
+  /** The dilemma a room starts with, from the public id its public page links with. */
+  previewDilemma(publicId: string): Promise<DilemmaPreviewResponseDto>;
   joinRoom(roomId: string, nickname: string, avatar: AvatarDto): Promise<JoinRoomResponseDto>;
   /** A page of the search: the first one, or the one after the `next` of the page before. */
   searchDilemmas(
     roomId: string,
     /** One category, or every one; what the player typed, looked for in the text and the tags. */
-    criteria: { readonly category?: string; readonly q?: string; readonly after?: string },
+    criteria: { readonly category?: CategoryDto; readonly q?: string; readonly after?: string },
   ): Promise<SearchDilemmasResponseDto>;
   /** The access code the player wrote, which every call carries from now on. */
   enterAccessCode(code: string): void;
@@ -104,6 +108,8 @@ export function httpRoomApi({
     createRoom: (request) => call('POST', '/rooms', CreateRoomResponseDto, request),
     previewRoom: (code) =>
       call('GET', `/rooms/by-code/${encodeURIComponent(code)}`, RoomPreviewResponseDto),
+    previewDilemma: (publicId) =>
+      call('GET', `/dilemmas/${encodeURIComponent(publicId)}`, DilemmaPreviewResponseDto),
     joinRoom: (roomId, nickname, avatar) =>
       call('POST', `/rooms/${encodeURIComponent(roomId)}/players`, JoinRoomResponseDto, {
         nickname,

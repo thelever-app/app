@@ -228,6 +228,22 @@ export function describeRoomRepositoryContract(
         expect(comparable(found?.toSnapshot())).toEqual(comparable(saved.toSnapshot()));
       });
 
+      it('should keep the dilemma its first game plays first', async () => {
+        // Arrange
+        const repository = await create();
+        const saved = Room.restore({
+          ...room().toSnapshot(),
+          firstDilemma: { dilemmaId: 'TestFirstDilemma', minimumAge: 16 },
+        });
+
+        // Act
+        await repository.save(saved);
+
+        // Assert
+        const found = await repository.findById('TestRoomId');
+        expect(found?.firstDilemma).toEqual({ dilemmaId: 'TestFirstDilemma', minimumAge: 16 });
+      });
+
       it('should keep two players with the same avatar and different nicknames', async () => {
         // Arrange
         const repository = await create();

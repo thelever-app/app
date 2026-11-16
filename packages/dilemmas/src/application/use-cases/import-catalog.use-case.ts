@@ -1,6 +1,7 @@
 import { Dilemma } from '../../domain/entities/dilemma.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import type { ArgumentsSnapshot } from '../../domain/vos/arguments.vo.ts';
+import { idOf } from '../catalog-number.ts';
 import { CatalogImportFailedError } from '../errors/catalog-import-failed.error.ts';
 import type {
   CuratedArguments,
@@ -34,11 +35,6 @@ class IdsInOrder implements IdGenerator {
     if (id === undefined) throw new Error('the catalog ran out of ids');
     return id;
   }
-}
-
-/** The id of the dilemma with that number of the catalog, or of its translation into a language. */
-function idOf(number: number, language?: string): string {
-  return language === undefined ? `dlm-${number}` : `dlm-${number}-${language}`;
 }
 
 /** The ids of the options from position `from` (from 0) of a dilemma with `count` options. */
@@ -79,10 +75,13 @@ export class ImportCatalogUseCase {
   readonly #catalog: CuratedCatalog;
   readonly #translator: Translator;
   readonly #dilemmaRepository: DilemmaRepository;
+  readonly #publicIds: IdGenerator;
   readonly #languages: readonly string[];
   readonly #concurrency: number;
 
   /**
+   * `publicIds`: random, for the public id of each dilemma and translation it creates; the
+   * catalog fixes every other id.
    * `languages`: every language a dilemma of the catalog is played in, its own included.
    * `concurrency`: how many dilemmas it loads at once, each with its own request to the translator.
    */
@@ -90,12 +89,14 @@ export class ImportCatalogUseCase {
     catalog: CuratedCatalog,
     translator: Translator,
     dilemmaRepository: DilemmaRepository,
+    publicIds: IdGenerator,
     languages: readonly string[],
     { concurrency = 1 }: { readonly concurrency?: number } = {},
   ) {
     this.#catalog = catalog;
     this.#translator = translator;
     this.#dilemmaRepository = dilemmaRepository;
+    this.#publicIds = publicIds;
     this.#languages = languages;
     this.#concurrency = concurrency;
   }
@@ -158,7 +159,11 @@ export class ImportCatalogUseCase {
     if (!original) {
       original = Dilemma.create(
         { ...content, language: curated.language, name: curated.name, options: curated.options },
-        new IdsInOrder([id, ...optionIds(id, 0, curated.options.length)]),
+        new IdsInOrder([
+          id,
+          ...optionIds(id, 0, curated.options.length),
+          this.#publicIds.generate(),
+        ]),
       );
       versioned = true;
     } else {
@@ -254,7 +259,11 @@ export class ImportCatalogUseCase {
         saved = Dilemma.translate(
           original,
           { ...content!, language },
-          new IdsInOrder([id, ...optionIds(id, 0, content!.options.length)]),
+          new IdsInOrder([
+            id,
+            ...optionIds(id, 0, content!.options.length),
+            this.#publicIds.generate(),
+          ]),
         );
       } else {
         saved = translation;

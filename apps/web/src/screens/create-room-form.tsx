@@ -1,4 +1,4 @@
-import { GroupNatureDto, PlaceDto } from '@thelever-app/protocol';
+import { GroupNatureDto, type LanguageDto, PlaceDto } from '@thelever-app/protocol';
 import { useActionState, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -29,6 +29,11 @@ function missingOf({ nickname, groupNature, place }: CreateRoomChoices) {
   return undefined;
 }
 
+export interface CreateRoomFormProps {
+  /** The dilemma of the general catalog the first game plays first, with its language. */
+  readonly firstDilemma?: { readonly dilemmaId: string; readonly language: LanguageDto };
+}
+
 const NATURES: readonly (readonly [GroupNatureDto, IconName])[] = [
   ['family', 'familyRestroom'],
   ['friends', 'groups'],
@@ -44,11 +49,11 @@ const PLACES: readonly (readonly [PlaceDto, IconName])[] = [
 /**
  * Creating a room: the avatar, the nickname, the nature of the group and the place, each one a
  * single choice, on the same screen. The avatar starts at random and may be any: nobody is in the
- * room yet. The dilemmas take the language of the device; the host changes it
- * in the lobby. The button says what is still missing, and creates the room once nothing is.
- * Once created, the host enters its lobby.
+ * room yet. The dilemmas take the language of the device, or that of the dilemma the room starts
+ * with; the host changes it in the lobby. The button says what is still missing, and creates the
+ * room once nothing is. Once created, the host enters its lobby.
  */
-export function CreateRoomForm() {
+export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const api = useRoomApi();
@@ -76,7 +81,8 @@ export function CreateRoomForm() {
           avatar,
           groupNature,
           place,
-          dilemmaLanguage: deviceLanguage(i18n),
+          dilemmaLanguage: firstDilemma?.language ?? deviceLanguage(i18n),
+          ...(firstDilemma && { firstDilemmaId: firstDilemma.dilemmaId }),
         }),
       );
       // Back from the access code: the form stays as the player left it.

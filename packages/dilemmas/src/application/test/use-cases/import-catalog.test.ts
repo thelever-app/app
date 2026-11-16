@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InMemoryDilemmaRepository } from '../../../adapters/in-memory/in-memory-dilemma-repository.ts';
+import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
 import { CatalogImportFailedError } from '../../errors/catalog-import-failed.error.ts';
 import type {
   CuratedCatalog,
@@ -99,7 +100,13 @@ function arrange(...dilemmas: CuratedDilemma[]) {
   const catalog = new StubCatalog(...dilemmas);
   const translator = new RecordingTranslator();
   const repository = new InMemoryDilemmaRepository();
-  const importCatalog = new ImportCatalogUseCase(catalog, translator, repository, LANGUAGES);
+  const importCatalog = new ImportCatalogUseCase(
+    catalog,
+    translator,
+    repository,
+    new SequentialIdGenerator('public'),
+    LANGUAGES,
+  );
   return { catalog, translator, repository, importCatalog };
 }
 
@@ -116,6 +123,7 @@ describe('ImportCatalogUseCase', () => {
       const dilemma = await repository.findById('dlm-183');
       expect(dilemma?.toSnapshot()).toEqual({
         id: 'dlm-183',
+        publicId: 'public-1',
         language: 'es',
         name: 'TestName',
         creator: { type: 'curation-team' },
@@ -434,9 +442,16 @@ describe('ImportCatalogUseCase', () => {
       );
       const repository = new InMemoryDilemmaRepository();
       const translator = new SlowTranslator();
-      const importCatalog = new ImportCatalogUseCase(catalog, translator, repository, LANGUAGES, {
-        concurrency: 4,
-      });
+      const importCatalog = new ImportCatalogUseCase(
+        catalog,
+        translator,
+        repository,
+        new SequentialIdGenerator('public'),
+        LANGUAGES,
+        {
+          concurrency: 4,
+        },
+      );
 
       // Act
       const output = await importCatalog.execute();

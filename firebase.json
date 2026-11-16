@@ -2,10 +2,16 @@
   "hosting": {
     "public": "apps/web/dist",
     "ignore": ["**/.*"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "rewrites": [
+      {
+        "source": "{/@(es|en|fr|de|it|pt|ca){,/**},/_site/**,/robots.txt,/sitemap.xml,/ads.txt}",
+        "run": { "serviceId": "site", "region": "europe-southwest1" }
+      },
+      { "source": "**", "destination": "/index.html" }
+    ],
     "headers": [
       {
-        "source": "**",
+        "source": "!{/@(es|en|fr|de|it|pt|ca){,/**},/_site/**,/robots.txt,/sitemap.xml,/ads.txt}",
         "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
       },
       {

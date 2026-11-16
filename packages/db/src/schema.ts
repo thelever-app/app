@@ -6,6 +6,7 @@ import type {
   Visibility,
 } from '@thelever-app/dilemmas';
 import type {
+  Category as RoomCategory,
   AvatarFace,
   DilemmaCount,
   DilemmaLanguage,
@@ -27,6 +28,8 @@ import type { ColumnType, Generated, Kysely } from 'kysely';
 export interface Database {
   dilemmas: {
     id: string;
+    /** Random: a link opens the dilemma with it. */
+    public_id: string;
     language: string;
     creator_type: 'curation-team' | 'player' | 'unlinked-player';
     creator_identity: string | null;
@@ -85,7 +88,7 @@ export interface Database {
     adults_only: boolean;
     dilemma_language: DilemmaLanguage;
     /** Null, every category; an empty list, none. */
-    categories: string[] | null;
+    categories: RoomCategory[] | null;
     dilemma_count: DilemmaCount;
     time_per_dilemma_seconds: TimePerDilemmaSeconds;
     new_dilemmas: boolean;
@@ -98,6 +101,9 @@ export interface Database {
     last_connected_at: Date;
     /** When every player had left. */
     closed_at: Date | null;
+    /** The dilemma its first game plays first, with the minimum age it had; both or neither. */
+    first_dilemma_id: string | null;
+    first_dilemma_minimum_age: 16 | 18 | null;
   };
   room_players: {
     id: string;

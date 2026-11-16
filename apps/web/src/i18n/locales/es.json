@@ -497,5 +497,16 @@
     "mute": "Silenciar el juego",
     "label": "Sonido",
     "hint": "También la vibración"
+  },
+  "playDilemma": {
+    "title": "Nueva sala",
+    "firstDilemma": "Empezaréis por este dilema",
+    "about_one": "{{category}} · {{count}} opción",
+    "about_other": "{{category}} · {{count}} opciones",
+    "about_many": "{{category}} · {{count}} opciones",
+    "rest": "El resto de la partida se completa con el catálogo, según los ajustes de la sala.",
+    "loading": "Buscando el dilema…",
+    "notFound": "Este dilema ya no está en TheLever. Puedes crear una sala con otros del catálogo.",
+    "home": "Ir al inicio"
   }
 }

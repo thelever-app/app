@@ -80,6 +80,7 @@ export class StartGameUseCase {
     const composed = composeGame(
       {
         settings,
+        firstDilemma: room.firstDilemma,
         pickedDilemmas: room.pickedDilemmas,
         addedDilemmas: room.addedDilemmas,
         candidates: { inCatalog, inExploration },

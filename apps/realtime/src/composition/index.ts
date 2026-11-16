@@ -1,5 +1,6 @@
 import { createServer, type Server } from 'node:http';
 import type { Logger } from '@thelever-app/db';
+import { GetDilemmaPreviewUseCase } from '@thelever-app/dilemmas';
 import type { WebSocketServer } from 'ws';
 import { createApp } from '../app.ts';
 import { KeyedLock } from '../concurrency/keyed-lock.ts';
@@ -13,6 +14,7 @@ import type { TokenVerifier } from '../identity/token-verifier.ts';
 import { CryptoRandomness } from '../rooms/crypto-randomness.ts';
 import { errorCodeOf } from '../rooms/error-codes.ts';
 import { CreateRoomEndpoint } from '../rooms/http/create-room.endpoint.ts';
+import { DilemmaPreviewEndpoint } from '../rooms/http/dilemma-preview.endpoint.ts';
 import { JoinRoomEndpoint } from '../rooms/http/join-room.endpoint.ts';
 import { RoomPreviewEndpoint } from '../rooms/http/room-preview.endpoint.ts';
 import { SearchDilemmasEndpoint } from '../rooms/http/search-dilemmas.endpoint.ts';
@@ -110,15 +112,24 @@ export async function composeRealtimeServer(
 
   // 4. The HTTP routes and the room sockets on the same server.
   const http = createServer(
-    createApp(httpEndpoints(commands, queries, roomLock, runCommand), {
-      authenticate: authentication(
-        configuration.tokenVerifier,
-        configuration.appCheckVerifier,
-        configuration.accessGate,
+    createApp(
+      httpEndpoints(
+        commands,
+        queries,
+        new GetDilemmaPreviewUseCase(repositories.dilemmaRepository),
+        roomLock,
+        runCommand,
       ),
-      errorHandler: httpErrorHandler(errorCodeOf),
-      webOrigins: configuration.webOrigins,
-    }),
+      {
+        authenticate: authentication(
+          configuration.tokenVerifier,
+          configuration.appCheckVerifier,
+          configuration.accessGate,
+        ),
+        errorHandler: httpErrorHandler(errorCodeOf),
+        webOrigins: configuration.webOrigins,
+      },
+    ),
   );
   const roomSockets = roomSocketServer(configuration, {
     commands,
@@ -154,6 +165,7 @@ export async function composeRealtimeServer(
 function httpEndpoints(
   commands: GameCommands,
   queries: GameQueries,
+  getDilemmaPreview: GetDilemmaPreviewUseCase,
   roomLock: KeyedLock,
   runCommand: RunCommand,
 ): HttpEndpoint[] {
@@ -163,6 +175,7 @@ function httpEndpoints(
     new RoomPreviewEndpoint(queries.getRoomPreview),
     new JoinRoomEndpoint(commands.joinRoom, roomLock, runCommand),
     new SearchDilemmasEndpoint(queries.searchDilemmas),
+    new DilemmaPreviewEndpoint(getDilemmaPreview),
   ];
 }
 

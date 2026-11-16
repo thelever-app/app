@@ -1,7 +1,8 @@
 name: Import the catalog
 
 # Loads the Catalog of dilemmas of Notion into the database of an environment, with its
-# translations, by running the job catalog-import that Deploy left there with the image it serves.
+# translations, by running the job catalog-import that Deploy left there with the image it serves,
+# and then generates the public web again with the job generate-site.
 # By hand, when the curation team has approved, discarded or changed dilemmas; prod waits for
 # Mario's approval, as a deploy does. Loading again changes only what changed in Notion.
 on:
@@ -44,4 +45,10 @@ jobs:
       - name: Load the catalog
         run: |
           gcloud run jobs execute catalog-import --project "$PROJECT" --region europe-southwest1 \
+            --wait --quiet
+
+      # So a change in Notion reaches the public web now, and not with the schedule of the night.
+      - name: Generate the public web again
+        run: |
+          gcloud run jobs execute generate-site --project "$PROJECT" --region europe-southwest1 \
             --wait --quiet

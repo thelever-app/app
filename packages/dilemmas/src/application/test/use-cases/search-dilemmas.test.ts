@@ -18,7 +18,7 @@ async function searchInCatalog() {
         tags: ['testfamily'],
         minimumAge: 16,
       },
-      new FixedIdGenerator('TestDilemma1', 'TestOption1A', 'TestOption1B'),
+      new FixedIdGenerator('TestDilemma1', 'TestOption1A', 'TestOption1B', 'TestDilemma1PublicId'),
     ),
   );
   await repository.save(
@@ -31,7 +31,7 @@ async function searchInCatalog() {
         tags: [],
         minimumAge: 18,
       },
-      new FixedIdGenerator('TestDilemma2', 'TestOption2C', 'TestOption2D'),
+      new FixedIdGenerator('TestDilemma2', 'TestOption2C', 'TestOption2D', 'TestDilemma2PublicId'),
     ),
   );
   return new SearchDilemmasUseCase(repository);
@@ -134,23 +134,6 @@ describe('SearchDilemmasUseCase', () => {
         maximumMinimumAge: 16,
         status: 'in-catalog',
         language: 'en',
-        size: 10,
-      });
-
-      // Assert
-      expect(dilemmas).toEqual([]);
-    });
-
-    it('should find nothing in a category that does not exist', async () => {
-      // Arrange
-      const searchDilemmas = await searchInCatalog();
-
-      // Act
-      const { dilemmas } = await searchDilemmas.execute({
-        categories: ['TestNoCategory'],
-        maximumMinimumAge: 16,
-        status: 'in-catalog',
-        language: 'es',
         size: 10,
       });
 

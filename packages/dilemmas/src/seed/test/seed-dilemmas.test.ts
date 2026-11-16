@@ -12,6 +12,7 @@ async function repositoryWithAnEarlierWallet() {
   await repository.save(
     Dilemma.restore({
       id,
+      publicId: 'TestWalletPublicId',
       language,
       creator: { type: 'curation-team' },
       visibility: 'public',
@@ -59,6 +60,7 @@ describe('loadSeedDilemmas', () => {
     for (const { id, language, ...content } of SEED_DILEMMAS) {
       expect((await repository.findById(id))?.toSnapshot()).toEqual({
         id,
+        publicId: `${id}-public`,
         language,
         creator: { type: 'curation-team' },
         visibility: 'public',

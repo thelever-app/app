@@ -10,6 +10,7 @@ import {
 import { CatalogImportFailedError, ImportCatalogUseCase } from '@thelever-app/dilemmas';
 import { withdrawSeedDilemmas } from '@thelever-app/dilemmas/seed';
 import { LanguageDto } from '@thelever-app/protocol';
+import { RandomIdGenerator } from '../rooms/random-id-generator.ts';
 import { CloudLoggingLogger } from '../telemetry/cloud-logging-logger.ts';
 import { AnthropicTranslator } from './catalog-import/anthropic-translator.ts';
 import { NotionCuratedCatalog } from './catalog-import/notion-curated-catalog.ts';
@@ -51,6 +52,7 @@ try {
     }),
     new AnthropicTranslator(new Anthropic({ apiKey: required('ANTHROPIC_API_KEY') }).messages),
     dilemmaRepository,
+    new RandomIdGenerator(),
     LanguageDto.options,
     { concurrency: CONCURRENCY },
   );

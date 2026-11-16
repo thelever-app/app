@@ -48,6 +48,7 @@ export async function lobbyOfThree(
 
   const { roomId, hostId: anaId } = await new CreateRoomUseCase(
     roomRepository,
+    catalog,
     idGenerator,
     randomness,
     clock,

@@ -1,0 +1,19 @@
+# gcloud builds submit --config apps/site/cloudbuild.yaml --substitutions _TAG=<commit> \
+#   --gcs-source-staging-dir gs://thelever-app-shared-build-sources/source .
+# As the image of the room server: the sources go to the bucket in Madrid that deletes them after
+# 7 days, the context is the repository root and the build runs as the builder account.
+substitutions:
+  _REGION: europe-southwest1
+  _TAG: latest
+serviceAccount: projects/${PROJECT_ID}/serviceAccounts/builder@${PROJECT_ID}.iam.gserviceaccount.com
+options:
+  logging: CLOUD_LOGGING_ONLY
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=apps/site/Dockerfile
+      - --tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/thelever-app/site:${_TAG}
+      - .
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/thelever-app/site:${_TAG}

@@ -1,11 +1,12 @@
 import type { SearchDilemmasResponseDto } from '@thelever-app/protocol';
 import { useEffect, useState } from 'react';
 import { useRoomApi } from '../room/room-api-context.tsx';
+import type { Category } from './categories.ts';
 
 export type FoundDilemma = SearchDilemmasResponseDto['dilemmas'][number];
 
 export interface DilemmaCriteria {
-  readonly category?: string | undefined;
+  readonly category?: Category | undefined;
   /** As the player types it: looked for in the text and the tags of each dilemma. */
   readonly text: string;
 }

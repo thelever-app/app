@@ -294,6 +294,7 @@ describe('Closing the room', () => {
       undeletable.add(arranged.roomId);
       const { roomId: otherRoomId } = await new CreateRoomUseCase(
         failing,
+        arranged.catalog,
         arranged.idGenerator,
         arranged.randomness,
         arranged.clock,
