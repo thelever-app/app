@@ -18,7 +18,7 @@ function curated(number: number, minimumAge: MinimumAge = 16): Dilemma {
       tags: ['testtag'],
       minimumAge,
     },
-    new FixedIdGenerator(id, `${id}-option-1`, `${id}-option-2`),
+    new FixedIdGenerator(id, `${id}-option-1`, `${id}-option-2`, `${id}-public`),
   );
 }
 
@@ -34,7 +34,7 @@ function inEnglish(original: Dilemma): Dilemma {
       options: ['TestOptionAEn', 'TestOptionBEn'],
       tags: [],
     },
-    new FixedIdGenerator(id, `${id}-option-1`, `${id}-option-2`),
+    new FixedIdGenerator(id, `${id}-option-1`, `${id}-option-2`, `${id}-public`),
   );
 }
 
@@ -78,6 +78,7 @@ describe('GetPublicCatalogUseCase', () => {
         {
           number: 1,
           dilemmaId: 'dlm-1',
+          publicId: 'dlm-1-public',
           language: 'es',
           name: 'TestName1',
           text: 'TestText1',
@@ -158,7 +159,12 @@ describe('GetPublicCatalogUseCase', () => {
           tags: [],
           minimumAge: 16,
         },
-        new FixedIdGenerator('TestSeedId', 'TestSeedOptionA', 'TestSeedOptionB'),
+        new FixedIdGenerator(
+          'TestSeedId',
+          'TestSeedOptionA',
+          'TestSeedOptionB',
+          'TestSeedPublicId',
+        ),
       );
       const getPublicCatalog = await catalogWith(seed);
 

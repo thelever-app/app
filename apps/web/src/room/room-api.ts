@@ -1,6 +1,7 @@
 import {
   type AvatarDto,
   type CreateRoomRequestDto,
+  type CategoryDto,
   CreateRoomResponseDto,
   type ErrorCodeDto,
   HttpErrorDto,
@@ -32,7 +33,7 @@ export interface RoomApi {
   searchDilemmas(
     roomId: string,
     /** One category, or every one; what the player typed, looked for in the text and the tags. */
-    criteria: { readonly category?: string; readonly q?: string; readonly after?: string },
+    criteria: { readonly category?: CategoryDto; readonly q?: string; readonly after?: string },
   ): Promise<SearchDilemmasResponseDto>;
   /** The access code the player wrote, which every call carries from now on. */
   enterAccessCode(code: string): void;

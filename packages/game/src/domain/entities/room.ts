@@ -70,6 +70,8 @@ export interface RoomSnapshot {
   readonly addedDilemmas: readonly AddedDilemma[];
   /** The dilemmas the host picked one by one; none, and the game is put together by categories. */
   readonly pickedDilemmas: readonly LobbyDilemma[];
+  /** The dilemma the room was created with, which its first game plays first. */
+  readonly firstDilemma: LobbyDilemma | null;
   readonly currentGameId: string | null;
   /** The host who lost the role while disconnected, and gets it back on connecting again. */
   readonly absentHostId: string | null;
@@ -93,6 +95,8 @@ export interface CreateRoomProps {
   readonly code: string;
   /** Which also counts as the last moment someone was connected: the host has not connected yet. */
   readonly createdAt: Date;
+  /** A dilemma of the general catalog the first game plays first, checked as an added one. */
+  readonly firstDilemma?: LobbyDilemma;
 }
 
 export class Room {
@@ -112,6 +116,7 @@ export class Room {
   readonly #expelledIdentities = new Set<string>();
   #addedDilemmas: AddedDilemma[] = [];
   #pickedDilemmas: LobbyDilemma[] = [];
+  #firstDilemma: LobbyDilemma | null = null;
   #currentGameId: IdVO | null = null;
   readonly #leftPlayerIds = new Set<string>();
   #lastConnectedAt: Date;
@@ -140,7 +145,10 @@ export class Room {
     this.#lastConnectedAt = new Date(snapshot.lastConnectedAt);
   }
 
-  /** The room is born with its host, who is its first player, and the default settings. */
+  /**
+   * The room is born with its host, who is its first player, and the default settings, and with
+   * the dilemma its first game plays first if it is given one that suits it.
+   */
   static create(props: CreateRoomProps, idGenerator: IdGenerator): Room {
     const id = idGenerator.generate();
     const settings = RoomSettingsVO.defaults(props.dilemmaLanguage).toSnapshot();
@@ -150,7 +158,15 @@ export class Room {
     );
     const { code, groupNature, place, createdAt } = props;
     const lastConnectedAt = createdAt;
-    return new Room({ id, code, groupNature, place, settings, lastConnectedAt }, host, [host]);
+    const room = new Room({ id, code, groupNature, place, settings, lastConnectedAt }, host, [
+      host,
+    ]);
+    if (props.firstDilemma) {
+      const { dilemmaId, minimumAge } = props.firstDilemma;
+      if (!room.#suits(props.firstDilemma)) throw new DilemmaNotSuitableError(dilemmaId);
+      room.#firstDilemma = { dilemmaId, minimumAge };
+    }
+    return room;
   }
 
   get id(): string {
@@ -191,6 +207,10 @@ export class Room {
 
   get pickedDilemmas(): readonly LobbyDilemma[] {
     return [...this.#pickedDilemmas];
+  }
+
+  get firstDilemma(): LobbyDilemma | null {
+    return this.#firstDilemma && { ...this.#firstDilemma };
   }
 
   get currentGameId(): string | null {
@@ -286,6 +306,7 @@ export class Room {
       .filter(suits)
       .filter((added, index, all) => this.#addedBefore(added.playerId, all, index) < allowed);
     this.#pickedDilemmas = this.#pickedDilemmas.filter(suits);
+    if (this.#firstDilemma && !suits(this.#firstDilemma)) this.#firstDilemma = null;
     this.#changeLobby('settings-changed');
   }
 
@@ -367,11 +388,15 @@ export class Room {
     if (this.#players.length < minimum) throw new NotEnoughPlayersError(minimum);
   }
 
-  /** The host starts the game the lobby got ready, with the players its variant needs. */
+  /**
+   * The host starts the game the lobby got ready, with the players its variant needs. The first
+   * dilemma goes to this game only.
+   */
   startGame(playerId: string, gameId: string): void {
     this.ensureCanStartGame(playerId);
 
     this.#currentGameId = new IdVO(gameId);
+    this.#firstDilemma = null;
     this.#changeLobby('game-started');
   }
 
@@ -480,6 +505,7 @@ export class Room {
       expelledIdentities: [...this.#expelledIdentities],
       addedDilemmas: this.addedDilemmas,
       pickedDilemmas: this.pickedDilemmas,
+      firstDilemma: this.firstDilemma,
       currentGameId: this.currentGameId,
       absentHostId: this.#absentHostId,
       leftPlayerIds: [...this.#leftPlayerIds],
@@ -503,6 +529,7 @@ export class Room {
     for (const identity of snapshot.expelledIdentities) room.#expelledIdentities.add(identity);
     room.#addedDilemmas = [...snapshot.addedDilemmas];
     room.#pickedDilemmas = [...snapshot.pickedDilemmas];
+    room.#firstDilemma = snapshot.firstDilemma && { ...snapshot.firstDilemma };
     room.#currentGameId = snapshot.currentGameId === null ? null : new IdVO(snapshot.currentGameId);
     room.#absentHostId = snapshot.absentHostId;
     for (const playerId of snapshot.leftPlayerIds) room.#leftPlayerIds.add(playerId);

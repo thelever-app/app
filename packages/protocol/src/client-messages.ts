@@ -19,6 +19,17 @@ export const GAP_MARKER = '{gap}';
 /** The languages a player can read the dilemmas in. */
 export const LanguageDto = z.enum(['es', 'en', 'fr', 'de', 'it', 'pt', 'ca']);
 
+/** The categories of the dilemmas, from the closed list of the glossary, in the order the screens offer them. */
+export const CategoryDto = z.enum([
+  'life-and-death',
+  'honesty',
+  'loyalty',
+  'justice',
+  'love-and-relationships',
+  'work-and-money',
+  'technology-and-the-future',
+]);
+
 /** The faces of the avatars, from a closed list; the web keeps how each one is drawn. */
 export const AvatarFaceDto = z.enum([
   'face-01',
@@ -61,11 +72,8 @@ export const RoomSettingsDto = z.strictObject({
   variant: z.enum(['nominal', 'anonymous']),
   adultsOnly: z.boolean(),
   dilemmaLanguage: LanguageDto,
-  /**
-   * Categories of Dilemmas, which Game does not know: null plays every category, and an empty
-   * list none, so only the dilemmas the players add.
-   */
-  categories: z.array(z.string().min(1)).max(20).nullable(),
+  /** Null plays every category, and an empty list none, so only the dilemmas the players add. */
+  categories: z.array(CategoryDto).max(CategoryDto.options.length).nullable(),
   dilemmaCount: z.union([z.literal(6), z.literal(8), z.literal(10), z.literal(12)]),
   timePerDilemmaSeconds: z.union([z.literal(30), z.literal(45), z.literal(60), z.literal(90)]),
   /** Whether a game by categories keeps room for dilemmas in exploration. */
@@ -242,6 +250,7 @@ export const ClientMessageTypeDto = z.enum([
 ]);
 
 export type LanguageDto = z.infer<typeof LanguageDto>;
+export type CategoryDto = z.infer<typeof CategoryDto>;
 export type AvatarFaceDto = z.infer<typeof AvatarFaceDto>;
 export type PlayerColorDto = z.infer<typeof PlayerColorDto>;
 export type AvatarDto = z.infer<typeof AvatarDto>;

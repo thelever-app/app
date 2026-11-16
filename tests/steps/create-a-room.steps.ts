@@ -1,8 +1,15 @@
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import { type Category, isCategory } from '@thelever-app/game';
 import type { SettingsView } from '../support/driver.ts';
 import { catalogDilemmasSuiting } from '../support/test-catalog.ts';
 import { SOMEONE, type GameWorld } from '../support/world.ts';
+
+/** A category as a scenario writes it: its id. */
+function categoryNamed(text: string): Category {
+  assert.ok(isCategory(text), `${text} is not a category`);
+  return text;
+}
 
 /** The words of the scenarios for where the group plays, and how the room keeps them. */
 const PLACES: Readonly<Record<string, string>> = { together: 'together', remotely: 'remote' };
@@ -423,7 +430,7 @@ Then('that dilemma is shown', function (this: GameWorld) {
 When(
   'the host chooses the categories {string} and {string}',
   async function (this: GameWorld, first: string, second: string) {
-    this.changes = { categories: [first, second] };
+    this.changes = { categories: [categoryNamed(first), categoryNamed(second)] };
     await this.driver.changeSettings(await this.host(), this.changes);
   },
 );

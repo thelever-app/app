@@ -133,7 +133,7 @@ export function gameCommands({
   clock,
 }: GameCommandsDependencies): GameCommands {
   return {
-    createRoom: new CreateRoomUseCase(roomRepository, idGenerator, randomness, clock),
+    createRoom: new CreateRoomUseCase(roomRepository, catalog, idGenerator, randomness, clock),
     joinRoom: new JoinRoomUseCase({
       roomRepository,
       gameRepository,

@@ -1,3 +1,4 @@
+import type { CategoryDto } from '@thelever-app/protocol';
 import type { RoomStateDto } from '@thelever-app/protocol';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
@@ -162,13 +163,16 @@ describe('LobbyScreen', () => {
       [[], 'Ninguna categoría'],
       [['honesty'], 'Honestidad'],
       [['honesty', 'loyalty', 'justice'], '3 categorías'],
-    ])('should name the categories %o of the room as %s', async (categories, named) => {
-      // Act
-      await renderLobby(aRoom({ settings: { ...aRoom().settings, categories } }));
+    ] satisfies [CategoryDto[], string][])(
+      'should name the categories %o of the room as %s',
+      async (categories, named) => {
+        // Act
+        await renderLobby(aRoom({ settings: { ...aRoom().settings, categories } }));
 
-      // Assert
-      expect(screen.getByTestId('room-dilemmas').textContent).toBe(named);
-    });
+        // Assert
+        expect(screen.getByTestId('room-dilemmas').textContent).toBe(named);
+      },
+    );
 
     it('should count the dilemmas the host picked instead of the categories', async () => {
       // Act

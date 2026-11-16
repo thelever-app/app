@@ -40,6 +40,7 @@ function dilemmaOf(row: Row): Dilemma {
   };
   return Dilemma.restore({
     id: row.id,
+    publicId: row.public_id,
     language: row.language,
     ...(row.name === null ? {} : { name: row.name }),
     creator: creatorOf(row),
@@ -159,6 +160,15 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
     return row && dilemmaOf(row);
   }
 
+  async findByPublicId(publicId: string): Promise<Dilemma | undefined> {
+    const dilemma = await (currentTransaction<DilemmasTables>() ?? this.#db)
+      .selectFrom('dilemmas')
+      .select('id')
+      .where('public_id', '=', publicId)
+      .executeTakeFirst();
+    return dilemma && this.findById(dilemma.id);
+  }
+
   async findPublicCatalog(): Promise<Dilemma[]> {
     const rows = await this.#versions()
       .where('dilemmas.visibility', '=', 'public')
@@ -199,6 +209,7 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
       .insertInto('dilemmas')
       .values({
         id,
+        public_id: snapshot.publicId,
         language,
         translation_of: version.translationOf?.dilemmaId ?? null,
         ...changing,

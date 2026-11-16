@@ -42,6 +42,13 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
     return stored && this.findVersion(id, Math.max(...stored.versions.keys()));
   }
 
+  async findByPublicId(publicId: string): Promise<Dilemma | undefined> {
+    for (const [id, { dilemma }] of this.#dilemmas) {
+      if (dilemma.publicId === publicId) return this.findById(id);
+    }
+    return undefined;
+  }
+
   async findVersion(id: string, version: number): Promise<Dilemma | undefined> {
     const stored = this.#dilemmas.get(id);
     const snapshot = stored?.versions.get(version);

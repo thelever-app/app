@@ -73,6 +73,27 @@ function lobbyOfThree(): Room {
 const FOR_EVERYONE = { dilemmaId: 'TestDilemma', minimumAge: 16 } as const;
 const FOR_ADULTS = { dilemmaId: 'TestAdultDilemma', minimumAge: 18 } as const;
 
+/** Ana creates the room from the public page of a dilemma, which the game plays first. */
+function roomStartingWith(firstDilemma: {
+  readonly dilemmaId: string;
+  readonly minimumAge: 16 | 18;
+}): Room {
+  return Room.create(
+    {
+      hostNickname: 'Ana',
+      hostIdentity: 'TestAnaIdentity',
+      hostAvatar: ANA_AVATAR,
+      groupNature: 'friends',
+      place: 'together',
+      dilemmaLanguage: 'es',
+      code: 'K7M2Q',
+      createdAt: NOW,
+      firstDilemma,
+    },
+    new FixedIdGenerator('TestId', 'TestHostId'),
+  );
+}
+
 describe('Room', () => {
   describe('create', () => {
     it('should have an id, a code and a host with that nickname', () => {
@@ -156,6 +177,26 @@ describe('Room', () => {
           new FixedIdGenerator('', 'TestHostId'),
         ),
       ).toThrow(IdMissingError);
+    });
+    it('should keep the first dilemma it is created with', () => {
+      // Act
+      const room = roomStartingWith(FOR_EVERYONE);
+
+      // Assert
+      expect(room.firstDilemma).toEqual(FOR_EVERYONE);
+    });
+
+    it('should have no first dilemma when it is created without one', () => {
+      // Act
+      const room = roomHostedByAna();
+
+      // Assert
+      expect(room.firstDilemma).toBeNull();
+    });
+
+    it('should throw an error if the first dilemma does not suit the room', () => {
+      // Act & Assert
+      expect(() => roomStartingWith(FOR_ADULTS)).toThrow(DilemmaNotSuitableError);
     });
   });
 
@@ -400,6 +441,34 @@ describe('Room', () => {
       // Assert
       expect(afterOne).toEqual(['TestDilemma', 'TestThird']);
       expect(room.addedDilemmas).toEqual([]);
+    });
+  });
+
+  describe('changeSettings and the first dilemma', () => {
+    it('should drop the first dilemma if the room no longer suits it', () => {
+      // Arrange
+      const room = Room.restore({
+        ...roomStartingWith(FOR_EVERYONE).toSnapshot(),
+        settings: { ...roomHostedByAna().settings.toSnapshot(), adultsOnly: true },
+        firstDilemma: FOR_ADULTS,
+      });
+
+      // Act
+      room.changeSettings('TestHostId', { adultsOnly: false });
+
+      // Assert
+      expect(room.firstDilemma).toBeNull();
+    });
+
+    it('should keep the first dilemma if the room still suits it', () => {
+      // Arrange
+      const room = roomStartingWith(FOR_EVERYONE);
+
+      // Act
+      room.changeSettings('TestHostId', { adultsOnly: true });
+
+      // Assert
+      expect(room.firstDilemma).toEqual(FOR_EVERYONE);
     });
   });
 
@@ -684,6 +753,18 @@ describe('Room', () => {
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'game-started', 3)]);
     });
 
+    it('should leave the first dilemma to the game it starts, not to the next one', () => {
+      // Arrange
+      const room = roomStartingWith(FOR_EVERYONE);
+      join(room, 'TestLuisId', 'Luis');
+
+      // Act
+      room.startGame('TestHostId', 'TestGameId');
+
+      // Assert
+      expect(room.firstDilemma).toBeNull();
+    });
+
     it('should start a nominal room with two players', () => {
       // Arrange
       const room = roomHostedByAna();
@@ -954,6 +1035,7 @@ describe('Room', () => {
         expelledIdentities: [],
         addedDilemmas: [],
         pickedDilemmas: [],
+        firstDilemma: null,
         currentGameId: null,
         absentHostId: null,
         leftPlayerIds: [],

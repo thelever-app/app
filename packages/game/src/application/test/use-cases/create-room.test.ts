@@ -8,6 +8,9 @@ import { SequentialRandomness } from '../../../adapters/in-memory/sequential-ran
 import { InvalidAvatarError } from '../../../domain/errors/invalid-avatar.error.ts';
 import { NicknameMissingError } from '../../../domain/errors/nickname-missing.error.ts';
 import { FixedRandomness } from '../../../domain/test/support/fixed-randomness.ts';
+import { DilemmaNotSuitableError } from '../../../domain/errors/dilemma-not-suitable.error.ts';
+import { DilemmaNotFoundError } from '../../errors/dilemma-not-found.error.ts';
+import { lobbyCatalog, testCatalog } from '../support/test-catalog.ts';
 
 const ANA = {
   hostNickname: 'Ana',
@@ -25,6 +28,7 @@ describe('CreateRoomUseCase', () => {
       const roomRepository = new InMemoryRoomRepository();
       const createRoom = new CreateRoomUseCase(
         roomRepository,
+        testCatalog(),
         new SequentialIdGenerator(),
         new SequentialRandomness(),
         new ManualClock(),
@@ -51,6 +55,7 @@ describe('CreateRoomUseCase', () => {
       const idGenerator = new SequentialIdGenerator();
       const first = await new CreateRoomUseCase(
         roomRepository,
+        testCatalog(),
         idGenerator,
         new FixedRandomness(0, 0, 0, 0, 0),
         new ManualClock(),
@@ -59,6 +64,7 @@ describe('CreateRoomUseCase', () => {
       // Act
       const second = await new CreateRoomUseCase(
         roomRepository,
+        testCatalog(),
         idGenerator,
         new FixedRandomness(0, 0, 0, 0, 0, 1, 1, 1, 1, 1),
         new ManualClock(),
@@ -75,6 +81,7 @@ describe('CreateRoomUseCase', () => {
       const idGenerator = new SequentialIdGenerator();
       await new CreateRoomUseCase(
         roomRepository,
+        testCatalog(),
         idGenerator,
         new FixedRandomness(),
         new ManualClock(),
@@ -84,6 +91,7 @@ describe('CreateRoomUseCase', () => {
       await expect(
         new CreateRoomUseCase(
           roomRepository,
+          testCatalog(),
           idGenerator,
           new FixedRandomness(),
           new ManualClock(),
@@ -91,10 +99,71 @@ describe('CreateRoomUseCase', () => {
       ).rejects.toThrow(RoomCodeUnavailableError);
     });
 
+    it('should create a room whose first game plays first the dilemma it is given', async () => {
+      // Arrange
+      const roomRepository = new InMemoryRoomRepository();
+      const createRoom = new CreateRoomUseCase(
+        roomRepository,
+        lobbyCatalog(),
+        new SequentialIdGenerator(),
+        new SequentialRandomness(),
+        new ManualClock(),
+      );
+
+      // Act
+      const { roomId } = await createRoom.execute({
+        ...ANA,
+        dilemmaLanguage: 'es',
+        firstDilemmaId: 'TestCatalog5',
+      });
+
+      // Assert
+      const room = await roomRepository.findById(roomId);
+      expect(room?.firstDilemma).toEqual({ dilemmaId: 'TestCatalog5', minimumAge: 16 });
+    });
+
+    it.each([
+      ['in exploration', 'TestNew1'],
+      ['in another language', 'TestCatalan1'],
+      ['that does not exist', 'TestMissing'],
+    ])('should create no room with a first dilemma %s', async (_case, firstDilemmaId) => {
+      // Arrange
+      const roomRepository = new InMemoryRoomRepository();
+      const createRoom = new CreateRoomUseCase(
+        roomRepository,
+        lobbyCatalog(),
+        new SequentialIdGenerator(),
+        new SequentialRandomness(),
+        new ManualClock(),
+      );
+
+      // Act & Assert
+      await expect(
+        createRoom.execute({ ...ANA, dilemmaLanguage: 'es', firstDilemmaId }),
+      ).rejects.toThrow(DilemmaNotFoundError);
+    });
+
+    it('should create no room with a first dilemma for adults: a new room is for everyone', async () => {
+      // Arrange
+      const createRoom = new CreateRoomUseCase(
+        new InMemoryRoomRepository(),
+        lobbyCatalog(),
+        new SequentialIdGenerator(),
+        new SequentialRandomness(),
+        new ManualClock(),
+      );
+
+      // Act & Assert
+      await expect(
+        createRoom.execute({ ...ANA, dilemmaLanguage: 'es', firstDilemmaId: 'TestCatalog1' }),
+      ).rejects.toThrow(DilemmaNotSuitableError);
+    });
+
     it('should throw an error if the avatar is not one of the closed list', async () => {
       // Arrange
       const createRoom = new CreateRoomUseCase(
         new InMemoryRoomRepository(),
+        testCatalog(),
         new SequentialIdGenerator(),
         new SequentialRandomness(),
         new ManualClock(),
@@ -110,6 +179,7 @@ describe('CreateRoomUseCase', () => {
       // Arrange
       const createRoom = new CreateRoomUseCase(
         new InMemoryRoomRepository(),
+        testCatalog(),
         new SequentialIdGenerator(),
         new SequentialRandomness(),
         new ManualClock(),

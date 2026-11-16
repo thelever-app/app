@@ -8,6 +8,8 @@ export interface DilemmaRepository {
   save(dilemma: Dilemma): Promise<void>;
   /** The dilemma at its current version. */
   findById(id: string): Promise<Dilemma | undefined>;
+  /** The dilemma with that public id, at its current version. */
+  findByPublicId(publicId: string): Promise<Dilemma | undefined>;
   /** The dilemma as it was at that version, to read what was played; never to revise it. */
   findVersion(id: string, version: number): Promise<Dilemma | undefined>;
   /** The translation of that version of an original into that language, at the version that translates it. */

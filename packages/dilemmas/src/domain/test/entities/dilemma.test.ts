@@ -39,7 +39,13 @@ const CONTENT = {
 };
 
 function ids() {
-  return new FixedIdGenerator('TestDilemmaId', 'TestOptionId1', 'TestOptionId2', 'TestOptionId3');
+  return new FixedIdGenerator(
+    'TestDilemmaId',
+    'TestOptionId1',
+    'TestOptionId2',
+    'TestOptionId3',
+    'TestDilemmaPublicId',
+  );
 }
 
 /** A dilemma of a player, which only the snapshot can build until players create dilemmas. */
@@ -94,7 +100,7 @@ describe('Dilemma', () => {
       // Act
       const dilemma = Dilemma.create(
         { ...DATA, options: ['TestOption1', 'TestOption2', 'TestOption3', 'TestOption4'] },
-        new FixedIdGenerator('TestDilemmaId', 'O1', 'O2', 'O3', 'O4'),
+        new FixedIdGenerator('TestDilemmaId', 'O1', 'O2', 'O3', 'O4', 'TestDilemmaPublicId'),
       );
 
       // Assert
@@ -133,7 +139,15 @@ describe('Dilemma', () => {
       expect(() =>
         Dilemma.create(
           { ...DATA, options: ['A', 'B', 'C', 'D', 'E'] },
-          new FixedIdGenerator('TestDilemmaId', 'O1', 'O2', 'O3', 'O4', 'O5'),
+          new FixedIdGenerator(
+            'TestDilemmaId',
+            'O1',
+            'O2',
+            'O3',
+            'O4',
+            'O5',
+            'TestDilemmaPublicId',
+          ),
         ),
       ).toThrow(OptionCountError);
     });
@@ -159,7 +173,7 @@ describe('Dilemma', () => {
 
     it('should throw an error if the id is missing', () => {
       // Act & Assert
-      expect(() => Dilemma.create(DATA, new FixedIdGenerator('', 'O1', 'O2'))).toThrow(
+      expect(() => Dilemma.create(DATA, new FixedIdGenerator('', 'O1', 'O2', 'PublicId'))).toThrow(
         IdMissingError,
       );
     });
@@ -379,6 +393,7 @@ describe('Dilemma', () => {
         'TestTranslationId',
         'TestTranslationOptionId1',
         'TestTranslationOptionId2',
+        'TestTranslationPublicId',
       );
     }
 
@@ -464,7 +479,7 @@ describe('Dilemma', () => {
             ...TRANSLATION,
             options: ['TestTranslatedOption1', 'TestTranslatedOption2', 'TestTranslatedOption3'],
           },
-          new FixedIdGenerator('TestTranslationId', 'O1', 'O2', 'O3'),
+          new FixedIdGenerator('TestTranslationId', 'O1', 'O2', 'O3', 'TestTranslationPublicId'),
         ),
       ).toThrow(TranslationOptionCountError);
     });
@@ -492,7 +507,7 @@ describe('Dilemma', () => {
         Dilemma.translate(
           translation,
           { ...TRANSLATION, language: 'fr' },
-          new FixedIdGenerator('TestOtherId', 'O1', 'O2'),
+          new FixedIdGenerator('TestOtherId', 'O1', 'O2', 'TestOtherPublicId'),
         ),
       ).toThrow(NotAnOriginalError);
     });
@@ -514,6 +529,7 @@ describe('Dilemma', () => {
           'TestTranslationId',
           'TestTranslationOptionId1',
           'TestTranslationOptionId2',
+          'TestTranslationPublicId',
         ),
       );
     }
@@ -589,7 +605,10 @@ describe('Dilemma', () => {
     it('should throw an error if the dilemma given is not its original', () => {
       // Arrange
       const translation = translationOf(Dilemma.create(DATA, ids()));
-      const other = Dilemma.create(DATA, new FixedIdGenerator('TestOtherId', 'O1', 'O2'));
+      const other = Dilemma.create(
+        DATA,
+        new FixedIdGenerator('TestOtherId', 'O1', 'O2', 'TestOtherPublicId'),
+      );
 
       // Act & Assert
       expect(() => translation.retranslate(other, TRANSLATION, new FixedIdGenerator())).toThrow(
@@ -803,7 +822,15 @@ describe('Dilemma', () => {
   describe('toSnapshot and restore', () => {
     it('should rebuild the dilemma from its snapshot', () => {
       // Arrange
-      const dilemma = Dilemma.create(DATA, ids());
+      const dilemma = Dilemma.create(
+        DATA,
+        new FixedIdGenerator(
+          'TestDilemmaId',
+          'TestOptionId1',
+          'TestOptionId2',
+          'TestDilemmaPublicId',
+        ),
+      );
 
       // Act
       const restored = Dilemma.restore(dilemma.toSnapshot());
@@ -811,6 +838,7 @@ describe('Dilemma', () => {
       // Assert
       expect(restored.toSnapshot()).toEqual({
         id: 'TestDilemmaId',
+        publicId: 'TestDilemmaPublicId',
         language: 'es',
         creator: { type: 'curation-team' },
         visibility: 'public',
@@ -854,7 +882,7 @@ describe('Dilemma', () => {
           options: ['TestA', 'TestB'],
           tags: [],
         },
-        new FixedIdGenerator('TestTranslationId', 'TestA', 'TestB'),
+        new FixedIdGenerator('TestTranslationId', 'TestA', 'TestB', 'TestTranslationPublicId'),
       );
       translation.argue({
         options: [

@@ -1,0 +1,20 @@
+{
+  "name": "@thelever-app/site",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@thelever-app/dilemmas": "workspace:*",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@thelever-app/config": "workspace:*",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.0",
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.3.0"
+  }
+}

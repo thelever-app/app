@@ -41,6 +41,7 @@ import {
   RoomNotFoundError,
   TooManyAddedDilemmasError,
 } from '@thelever-app/game';
+import { DilemmaNotFoundError as NoSuchDilemmaError } from '@thelever-app/dilemmas';
 import type { ErrorCodeDto } from '@thelever-app/protocol';
 import { InvalidAccessCodeError } from '../identity/access-gate.ts';
 import { InvalidAppCheckError } from '../identity/app-check-verifier.ts';
@@ -78,6 +79,8 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [PlayerLeftGameError, 'player-left'],
   [OptionNotInDilemmaError, 'option-not-in-dilemma'],
   [DilemmaNotFoundError, 'dilemma-not-found'],
+  // Dilemmas' own, from the preview of a dilemma by its public id.
+  [NoSuchDilemmaError, 'dilemma-not-found'],
   [InvalidPageError, 'invalid-page'],
   [NicknameMissingError, 'nickname-missing'],
   [DuplicateDilemmaError, 'duplicate-dilemma'],

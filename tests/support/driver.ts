@@ -1,3 +1,5 @@
+import type { Category } from '@thelever-app/game';
+
 /** What the host chooses on the screen to create a room; the driver picks test data for the rest. */
 export interface RoomChoices {
   readonly groupNature?: string;
@@ -12,7 +14,7 @@ export interface SettingsView {
   readonly adultsOnly: boolean;
   readonly dilemmaLanguage: string;
   /** Null, every category; an empty list, none. */
-  readonly categories: readonly string[] | null;
+  readonly categories: readonly Category[] | null;
   readonly dilemmaCount: number;
   readonly timePerDilemmaSeconds: number;
   readonly newDilemmas: boolean;
@@ -48,7 +50,7 @@ export interface GameSettingsView {
 export interface CatalogEntry {
   readonly text: string;
   readonly minimumAge: number;
-  readonly category: string;
+  readonly category: Category;
   readonly status: 'in-catalog' | 'in-exploration';
 }
 

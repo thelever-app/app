@@ -1,3 +1,4 @@
+import type { Category } from '../../vos/category.vo.ts';
 import { describe, expect, it } from 'vitest';
 import { RoomSettingsVO } from '../../vos/room-settings.vo.ts';
 import { InvalidRoomSettingError } from '../../errors/invalid-room-setting.error.ts';
@@ -69,14 +70,21 @@ describe('RoomSettingsVO', () => {
       expect(none.categories).toEqual([]);
     });
 
-    it('should keep each category once, without the spaces around it', () => {
+    it('should keep each category once', () => {
       // Act
       const settings = RoomSettingsVO.defaults('es').with({
-        categories: [' honesty', 'loyalty', 'honesty '],
+        categories: ['honesty', 'loyalty', 'honesty'],
       });
 
       // Assert
       expect(settings.categories).toEqual(['honesty', 'loyalty']);
+    });
+
+    it('should throw an error for a category that is not one of the closed list', () => {
+      // Act & Assert
+      expect(() =>
+        RoomSettingsVO.defaults('es').with({ categories: ['TestNoCategory' as Category] }),
+      ).toThrow(InvalidRoomSettingError);
     });
   });
 

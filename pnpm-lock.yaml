@@ -142,6 +142,31 @@ importers:
         specifier: ^4.23.15
         version: 4.23.15
 
+  apps/site:
+    dependencies:
+      '@thelever-app/dilemmas':
+        specifier: workspace:*
+        version: link:../../packages/dilemmas
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@types/express':
+        specifier: ^5.0.6
+        version: 5.0.6
+      '@types/node':
+        specifier: ^24.19.0
+        version: 24.19.0
+      '@types/supertest':
+        specifier: ^7.2.1
+        version: 7.2.1
+      supertest:
+        specifier: ^7.3.0
+        version: 7.3.0
+
   apps/web:
     dependencies:
       '@dicebear/core':

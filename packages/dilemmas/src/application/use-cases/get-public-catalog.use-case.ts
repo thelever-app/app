@@ -9,6 +9,8 @@ export interface PublicDilemma {
   /** Its number in the curated catalog, the same in every language. */
   readonly number: number;
   readonly dilemmaId: string;
+  /** What a link to play it carries. */
+  readonly publicId: string;
   readonly language: string;
   readonly name: string;
   /** With the gap "someone in the group" as Dilemmas keeps it. */
@@ -82,6 +84,7 @@ function publicDilemmaOf(dilemma: Dilemma): PublicDilemma {
   return {
     number: numberOf(dilemma.id)!,
     dilemmaId: dilemma.id,
+    publicId: dilemma.publicId,
     language: dilemma.language,
     name: dilemma.name!,
     text: dilemma.text,

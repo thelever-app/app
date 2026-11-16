@@ -1,3 +1,4 @@
+import type { Category } from '../../domain/vos/category.vo.ts';
 import { DilemmaNotFoundError } from '../../application/errors/dilemma-not-found.error.ts';
 import { InvalidPageError } from '../../application/errors/invalid-page.error.ts';
 import {
@@ -30,7 +31,7 @@ export interface InMemoryDilemma extends Omit<DilemmaContent, 'language'> {
   readonly language?: string;
   readonly translations?: readonly InMemoryTranslation[];
   readonly minimumAge?: 16 | 18;
-  readonly category?: string;
+  readonly category?: Category;
   readonly tags?: readonly string[];
   readonly status?: 'in-catalog' | 'in-exploration';
 }

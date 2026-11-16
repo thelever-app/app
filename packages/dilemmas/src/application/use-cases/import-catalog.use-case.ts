@@ -75,10 +75,13 @@ export class ImportCatalogUseCase {
   readonly #catalog: CuratedCatalog;
   readonly #translator: Translator;
   readonly #dilemmaRepository: DilemmaRepository;
+  readonly #publicIds: IdGenerator;
   readonly #languages: readonly string[];
   readonly #concurrency: number;
 
   /**
+   * `publicIds`: random, for the public id of each dilemma and translation it creates; the
+   * catalog fixes every other id.
    * `languages`: every language a dilemma of the catalog is played in, its own included.
    * `concurrency`: how many dilemmas it loads at once, each with its own request to the translator.
    */
@@ -86,12 +89,14 @@ export class ImportCatalogUseCase {
     catalog: CuratedCatalog,
     translator: Translator,
     dilemmaRepository: DilemmaRepository,
+    publicIds: IdGenerator,
     languages: readonly string[],
     { concurrency = 1 }: { readonly concurrency?: number } = {},
   ) {
     this.#catalog = catalog;
     this.#translator = translator;
     this.#dilemmaRepository = dilemmaRepository;
+    this.#publicIds = publicIds;
     this.#languages = languages;
     this.#concurrency = concurrency;
   }
@@ -154,7 +159,11 @@ export class ImportCatalogUseCase {
     if (!original) {
       original = Dilemma.create(
         { ...content, language: curated.language, name: curated.name, options: curated.options },
-        new IdsInOrder([id, ...optionIds(id, 0, curated.options.length)]),
+        new IdsInOrder([
+          id,
+          ...optionIds(id, 0, curated.options.length),
+          this.#publicIds.generate(),
+        ]),
       );
       versioned = true;
     } else {
@@ -250,7 +259,11 @@ export class ImportCatalogUseCase {
         saved = Dilemma.translate(
           original,
           { ...content!, language },
-          new IdsInOrder([id, ...optionIds(id, 0, content!.options.length)]),
+          new IdsInOrder([
+            id,
+            ...optionIds(id, 0, content!.options.length),
+            this.#publicIds.generate(),
+          ]),
         );
       } else {
         saved = translation;

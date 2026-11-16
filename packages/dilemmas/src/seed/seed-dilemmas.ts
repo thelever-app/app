@@ -132,7 +132,9 @@ export async function loadSeedDilemmas(repository: DilemmaRepository): Promise<r
       await repository.save(
         Dilemma.create(
           { ...seed, options: seed.options.map(({ text }) => text) },
-          new SeedIdGenerator([seed.id, ...seed.options.map(({ id }) => id)]),
+          // A fixed public id, unlike any other dilemma's: the seed is withdrawn once the curated
+          // catalog is loaded, and never gets a public page.
+          new SeedIdGenerator([seed.id, ...seed.options.map(({ id }) => id), `${seed.id}-public`]),
         ),
       );
     }

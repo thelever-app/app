@@ -15,7 +15,7 @@ async function catalogWithTwoDilemmas() {
   await repository.save(
     Dilemma.create(
       { ...CLASSIFICATION, text: 'TestText1', options: ['TestOptionA', 'TestOptionB'] },
-      new FixedIdGenerator('TestDilemma1', 'TestOption1A', 'TestOption1B'),
+      new FixedIdGenerator('TestDilemma1', 'TestOption1A', 'TestOption1B', 'TestDilemma1PublicId'),
     ),
   );
   await repository.save(
@@ -25,7 +25,13 @@ async function catalogWithTwoDilemmas() {
         text: 'TestText2',
         options: ['TestOptionC', 'TestOptionD', 'TestOptionE'],
       },
-      new FixedIdGenerator('TestDilemma2', 'TestOption2C', 'TestOption2D', 'TestOption2E'),
+      new FixedIdGenerator(
+        'TestDilemma2',
+        'TestOption2C',
+        'TestOption2D',
+        'TestOption2E',
+        'TestDilemma2PublicId',
+      ),
     ),
   );
   const first = await repository.findById('TestDilemma1');
@@ -62,6 +68,7 @@ describe('GetDilemmasUseCase', () => {
               `TestDilemma${index}`,
               `TestOption${index}A`,
               `TestOption${index}B`,
+              `TestDilemma${index}-public`,
             ),
           ),
         );
@@ -158,6 +165,7 @@ describe('GetDilemmasUseCase', () => {
             `TestDilemma${language}`,
             `TestOption${language}IdA`,
             `TestOption${language}IdB`,
+            `TestDilemma${language}-public`,
           ),
         );
       }
@@ -167,7 +175,12 @@ describe('GetDilemmasUseCase', () => {
         const repository = new InMemoryDilemmaRepository();
         const original = Dilemma.create(
           ORIGINAL,
-          new FixedIdGenerator('TestDilemmaEs', 'TestOptionEsIdA', 'TestOptionEsIdB'),
+          new FixedIdGenerator(
+            'TestDilemmaEs',
+            'TestOptionEsIdA',
+            'TestOptionEsIdB',
+            'TestDilemmaEsPublicId',
+          ),
         );
         await repository.save(original);
         await repository.save(translationOf(original, 'en'));

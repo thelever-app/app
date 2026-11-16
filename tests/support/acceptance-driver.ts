@@ -63,6 +63,7 @@ import {
   InMemoryCuratedCatalog,
   InMemoryDilemmaRepository,
   LanguageTagTranslator,
+  SequentialIdGenerator as SequentialDilemmaIds,
 } from '@thelever-app/dilemmas/in-memory';
 import type {
   AnswerPlan,
@@ -199,6 +200,7 @@ export class AcceptanceDriver implements GameDriver {
     this.#curatedCatalog,
     new LanguageTagTranslator(),
     this.#dilemmaRepository,
+    new SequentialDilemmaIds('public'),
     ['es', 'en', 'fr', 'de', 'it', 'pt', 'ca'],
   );
   /** The language of the device of each player who does not use the app in Spanish. */
@@ -256,7 +258,7 @@ export class AcceptanceDriver implements GameDriver {
     const games = this.#gameRepository;
     const clock = this.#clock;
 
-    this.#createRoom = new CreateRoomUseCase(rooms, idGenerator, randomness, clock);
+    this.#createRoom = new CreateRoomUseCase(rooms, catalog, idGenerator, randomness, clock);
     this.#getRoomPreview = new GetRoomPreviewUseCase(rooms, randomness, clock);
     this.#joinRoom = new JoinRoomUseCase({
       roomRepository: rooms,

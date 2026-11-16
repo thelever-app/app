@@ -13,7 +13,13 @@ function dilemma(): Dilemma {
       tags: ['testtag1', 'testtag2'],
       minimumAge: 16,
     },
-    new FixedIdGenerator('TestDilemmaId', 'TestOptionId1', 'TestOptionId2', 'TestOptionId3'),
+    new FixedIdGenerator(
+      'TestDilemmaId',
+      'TestOptionId1',
+      'TestOptionId2',
+      'TestOptionId3',
+      'TestDilemmaPublicId',
+    ),
   );
 }
 
@@ -53,6 +59,7 @@ function translation(): Dilemma {
       'TestTranslationOptionId1',
       'TestTranslationOptionId2',
       'TestTranslationOptionId3',
+      'TestTranslationPublicId',
     ),
   );
 }
@@ -124,6 +131,34 @@ export function describeDilemmaRepositoryContract(
 
         // Assert
         expect(found?.toSnapshot()).toEqual(revised().toSnapshot());
+      });
+    });
+
+    describe('findByPublicId', () => {
+      it('should find the dilemma with that public id at its current version', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(dilemma());
+        await repository.save(revised());
+
+        // Act
+        const found = await repository.findByPublicId('TestDilemmaPublicId');
+
+        // Assert
+        expect(found?.id).toBe('TestDilemmaId');
+        expect(found?.version).toBe(2);
+      });
+
+      it('should return undefined if no dilemma has that public id', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(dilemma());
+
+        // Act
+        const found = await repository.findByPublicId('TestDilemmaId');
+
+        // Assert
+        expect(found).toBeUndefined();
       });
     });
 

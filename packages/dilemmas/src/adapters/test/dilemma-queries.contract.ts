@@ -24,6 +24,7 @@ function catalogDilemma(
 ): Dilemma {
   return Dilemma.restore({
     id,
+    publicId: `${id}PublicId`,
     language: 'es',
     creator: { type: 'curation-team' },
     visibility: facts.visibility ?? 'public',
@@ -53,7 +54,13 @@ function threeOptions(): Dilemma {
       tags: ['testtag1', 'testtag2'],
       minimumAge: 16,
     },
-    new FixedIdGenerator('TestDilemmaId', 'TestOptionId1', 'TestOptionId2', 'TestOptionId3'),
+    new FixedIdGenerator(
+      'TestDilemmaId',
+      'TestOptionId1',
+      'TestOptionId2',
+      'TestOptionId3',
+      'TestDilemmaPublicId',
+    ),
   );
 }
 
@@ -85,7 +92,13 @@ function translation(): Dilemma {
       options: ['TestTranslatedOption1', 'TestTranslatedOption2', 'TestTranslatedOption3'],
       tags: [],
     },
-    new FixedIdGenerator('TestTranslationId', 'TestTrOption1', 'TestTrOption2', 'TestTrOption3'),
+    new FixedIdGenerator(
+      'TestTranslationId',
+      'TestTrOption1',
+      'TestTrOption2',
+      'TestTrOption3',
+      'TestTranslationPublicId',
+    ),
   );
 }
 
