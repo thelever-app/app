@@ -166,15 +166,6 @@ Then('the address of its page answers that it no longer exists', async function 
 });
 
 Then(
-  '{string} has a public page without arguments that search engines must not index',
-  async function (this: GameWorld, name: string) {
-    const page = await pageOf(this, name);
-    assert.deepEqual(page.arguments, []);
-    assert.equal(page.indexable, false);
-  },
-);
-
-Then(
   'the public page of {string} shows its arguments and can be indexed',
   async function (this: GameWorld, name: string) {
     const page = await pageOf(this, name);

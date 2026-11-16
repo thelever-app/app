@@ -2,6 +2,7 @@ import type { PublicDilemma } from '@thelever-app/dilemmas';
 import { pagePath } from '../addresses.ts';
 import { type Html, html } from '../html.ts';
 import type { SiteTexts } from '../texts/site-texts.ts';
+import { icon } from './icons.ts';
 
 /** Where the site is and what it links to, by environment. */
 export interface SiteConfig {
@@ -9,8 +10,17 @@ export interface SiteConfig {
   readonly origin: string;
   /** Where the app is, before its paths; empty when it is on the same origin as the web. */
   readonly appBase: string;
+  /** Who is behind TheLever, as the legal notice and the privacy policy name them. */
+  readonly owner: Owner;
   /** The publisher id of AdSense, whose meta tag lets Google verify the site; none until there is an account. */
   readonly adsenseClient?: string;
+}
+
+/** Who is behind TheLever: given by the environment, never written in the repository. */
+export interface Owner {
+  readonly name: string;
+  readonly taxId: string;
+  readonly address: string;
 }
 
 /** A page of the public web in one language, before it is written out. */
@@ -31,9 +41,13 @@ export interface Page {
 /** The languages of the web, each with its texts, in the order the menu shows them. */
 export type Languages = ReadonlyMap<string, SiteTexts>;
 
-/** The whole document of a page: its head, the header with the logo and the languages, and the footer. */
+/**
+ * The whole document of a page: its head, the header with the logo, the languages and the way into
+ * the app, and the footer.
+ */
 export function document(page: Page, languages: Languages, config: SiteConfig): Html {
   const texts = languages.get(page.language)!;
+  const home = page.path === `/${page.language}/`;
   return html`<!doctype html>
     <html lang="${page.language}">
       <head>
@@ -47,17 +61,18 @@ export function document(page: Page, languages: Languages, config: SiteConfig): 
           ([language, path]) =>
             html`<link rel="alternate" hreflang="${language}" href="${config.origin}${path}" />`,
         )}
-        ${page.path === `/${page.language}/` ? html`<link rel="alternate" hreflang="x-default" href="${config.origin}/" />` : ''}
+        ${home ? html`<link rel="alternate" hreflang="x-default" href="${config.origin}/" />` : ''}
         ${config.adsenseClient ? html`<meta name="google-adsense-account" content="${config.adsenseClient}" />` : ''}
         <link rel="icon" href="/_site/mascot-waving.svg" type="image/svg+xml" />
         <link rel="stylesheet" href="/_site/site.css" />
       </head>
       <body>
-        <header class="header">
+        <header class="header${home ? ' at-home' : ''}">
           <a class="logo" href="/${page.language}/"
             ><img src="/_site/mascot-waving.svg" alt="" width="32" height="32" />TheLever.app</a
           >
           ${languageMenu(page, languages)}
+          <a class="button primary header-play" href="${config.appBase}/app">${texts.home.play}</a>
         </header>
         <div class="stripe" aria-hidden="true"></div>
         <main class="main">${page.main}</main>
@@ -76,7 +91,7 @@ function languageMenu(page: Page, languages: Languages): Html {
   const texts = languages.get(page.language)!;
   return html`<details class="languages">
     <summary aria-label="${texts.languageMenu}">
-      <span aria-hidden="true">${page.language.toUpperCase()}</span>
+      ${icon('translate')}<span aria-hidden="true">${page.language.toUpperCase()}</span>
     </summary>
     <div class="languages-sheet">
       <h2 class="languages-title">${texts.languageMenu}</h2>

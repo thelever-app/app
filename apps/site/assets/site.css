@@ -102,15 +102,31 @@ h2 {
   text-decoration: none;
 }
 
+.icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+/* Only on wide screens, where there is room for it: on a phone, the home offers it below. */
+.header .header-play {
+  display: none;
+}
+
 .stripe {
   height: 8px;
   background: repeating-linear-gradient(135deg, var(--primary) 0 12px, var(--ink) 12px 24px);
+}
+
+.languages {
+  position: relative;
 }
 
 .languages summary {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   padding: 0 10px;
   font-size: 14px;
   font-weight: 600;
@@ -124,8 +140,8 @@ h2 {
 
 .languages-sheet {
   position: absolute;
-  right: 8px;
-  top: 56px;
+  right: 0;
+  top: 100%;
   z-index: 1;
   width: min(320px, calc(100vw - 16px));
   padding: 8px 8px 16px;
@@ -215,9 +231,47 @@ h2 {
   font-weight: 600;
 }
 
+.home,
+.hero,
+.hero-text,
+.home-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.home {
+  gap: 24px;
+  padding-top: 4px;
+}
+
+.home h1 {
+  font-size: 36px;
+  line-height: 40px;
+}
+
+.home h2 {
+  margin-top: 0;
+}
+
+.home .intro {
+  color: var(--ink);
+}
+
+.play {
+  gap: 8px;
+}
+
+.hero-scene {
+  display: none;
+}
+
 .steps {
   margin: 0;
   padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   font-size: 15px;
   line-height: 22px;
 }
@@ -383,8 +437,142 @@ h2 {
 }
 
 @media (min-width: 1024px) {
+  /* The header, the content and the footer line up 80 px in from the edges, up to 1280 px. */
+  .header {
+    gap: 32px;
+    padding: 16px 80px;
+  }
+
+  .logo {
+    gap: 10px;
+    font-size: 28px;
+    line-height: 32px;
+  }
+
+  .logo img {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* On the home, La Palanca is at the junction, and the logo goes without her. */
+  .at-home .logo img {
+    display: none;
+  }
+
+  .languages {
+    margin-left: auto;
+  }
+
+  .languages summary {
+    padding: 0;
+  }
+
+  .header .header-play {
+    display: inline-flex;
+    min-height: 44px;
+    font-size: 15px;
+  }
+
   .main {
-    padding: 32px 40px 48px;
+    max-width: 1280px;
+    padding: 32px 80px 48px;
+  }
+
+  .home {
+    gap: 40px;
+    padding-top: 16px;
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    gap: 56px;
+    align-items: center;
+  }
+
+  .hero-text {
+    gap: 20px;
+  }
+
+  .home h1 {
+    font-size: 56px;
+    line-height: 58px;
+  }
+
+  .home .intro {
+    font-size: 19px;
+    line-height: 29px;
+  }
+
+  .play {
+    align-self: flex-start;
+    min-height: 56px;
+    padding: 0 24px;
+    font-size: 17px;
+  }
+
+  .play .icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .hero-scene {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .home h2 {
+    font-size: 30px;
+    line-height: 34px;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px;
+    border-radius: 16px;
+    background: var(--raised);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  /* The number of the step, which the list already says: drawn, and silent for screen readers. */
+  .steps li::before {
+    content: counter(step);
+    content: counter(step) / '';
+    font-family: var(--display);
+    font-size: 36px;
+    line-height: 36px;
+    font-weight: 700;
+  }
+
+  .home .chips {
+    gap: 10px;
+  }
+
+  .home .chip {
+    min-height: 44px;
+    padding: 0 18px;
+    font-size: 15px;
+  }
+
+  .footer {
+    gap: 8px 24px;
+    padding: 24px 80px;
+    font-size: 14px;
   }
 
   h1 {

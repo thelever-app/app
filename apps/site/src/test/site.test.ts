@@ -5,7 +5,11 @@ import type { Languages } from '../pages/page.ts';
 import { type Environment, respond } from '../respond.ts';
 import { es } from '../texts/es.ts';
 
-const CONFIG = { origin: 'https://thelever.test', appBase: '' };
+const CONFIG = {
+  origin: 'https://thelever.test',
+  appBase: '',
+  owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
+};
 const ENGLISH = {
   ...es,
   languageName: 'English',
@@ -29,7 +33,6 @@ function trolley(changes: Partial<PublicDilemma> = {}): PublicDilemma {
       { optionId: 'dlm-7-option-2', text: '<b>No</b> hago nada' },
     ],
     category: 'life-and-death',
-    indexable: true,
     arguments: {
       context: 'TestContext',
       options: [
@@ -98,21 +101,44 @@ describe('the public web', () => {
     expect(body).toContain('href="/new/TestPublicId"');
   });
 
-  it('should keep a page without reviewed arguments out of search engines and of the sitemap', async () => {
+  it('should keep the privacy policy and the legal notice out of search engines and of the sitemap', async () => {
     // Arrange
-    const { arguments: reviewed, ...unargued } = trolley({ indexable: false });
-    const catalog = { dilemmas: [unargued], withdrawn: [] };
-    expect(reviewed).toBeDefined();
+    const catalog = { dilemmas: [trolley()], withdrawn: [] };
 
     // Act
-    const page = await answer('/es/vida-y-muerte/el-tranvia-7', catalog);
+    const privacy = await answer('/es/privacidad', catalog);
+    const notice = await answer('/es/aviso-legal', catalog);
     const sitemap = await answer('/sitemap.xml', catalog);
 
     // Assert
-    expect(page.headers['X-Robots-Tag']).toBe('noindex');
-    expect(page.body).toContain('<meta name="robots" content="noindex" />');
-    expect(page.body).not.toContain('TestFor1');
-    expect(sitemap.body).not.toContain('el-tranvia-7');
+    for (const page of [privacy, notice]) {
+      expect(page.status).toBe(200);
+      expect(page.headers['X-Robots-Tag']).toBe('noindex');
+    }
+    expect(sitemap.body).not.toContain('/es/privacidad');
+    expect(sitemap.body).not.toContain('/es/aviso-legal');
+  });
+
+  it('should name the one responsible in the privacy policy without the tax id or the address', async () => {
+    // Act
+    const { body } = await answer('/es/privacidad', { dilemmas: [], withdrawn: [] });
+
+    // Assert
+    expect(body).toContain('TestOwner');
+    expect(body).toContain('privacidad@thelever.app');
+    expect(body).not.toContain('TestTaxId');
+    expect(body).not.toContain('TestAddress');
+  });
+
+  it('should give in the legal notice who is behind TheLever, as the environment gives it', async () => {
+    // Act
+    const { body } = await answer('/es/aviso-legal', { dilemmas: [], withdrawn: [] });
+
+    // Assert
+    expect(body).toContain('TestOwner');
+    expect(body).toContain('TestTaxId');
+    expect(body).toContain('TestAddress');
+    expect(body).not.toContain('{');
   });
 
   it('should let search engines index a page with reviewed arguments, and list it in the sitemap', async () => {
@@ -279,5 +305,34 @@ describe('the public web', () => {
     // Assert
     expect(home.body).toContain('href="/app"');
     expect(home.body).toContain('hreflang="x-default" href="https://thelever.test/"');
+  });
+
+  it('should open the home with La Palanca at the junction, the way into the app and the steps', async () => {
+    // Act
+    const home = String((await answer('/es/', { dilemmas: [], withdrawn: [] })).body);
+
+    // Assert
+    expect(home).toMatch(
+      new RegExp(`src="/_site/waving-at-junction.svg"\\s+alt="${es.home.scene}"`),
+    );
+    expect(home).toMatch(
+      /<a class="button primary play" href="\/app"\s*><svg[^>]*aria-hidden="true"/,
+    );
+    expect(home).toContain('<ol class="steps">');
+  });
+
+  it('should offer to play from the header of every page, next to the languages', async () => {
+    // Act
+    const page = String(
+      (await answer('/es/vida-y-muerte/el-tranvia-7', { dilemmas: [trolley()], withdrawn: [] }))
+        .body,
+    );
+
+    // Assert
+    const header = page.slice(page.indexOf('<header'), page.indexOf('</header>'));
+    expect(header).toContain(
+      `<a class="button primary header-play" href="/app">${es.home.play}</a>`,
+    );
+    expect(header).toMatch(/<summary[^>]*>\s*<svg[^>]*aria-hidden="true"/);
   });
 });

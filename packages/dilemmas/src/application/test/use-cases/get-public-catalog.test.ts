@@ -73,7 +73,6 @@ describe('GetPublicCatalogUseCase', () => {
           dilemmaId: 'dlm-1-en',
           language: 'en',
           name: 'TestName1En',
-          indexable: true,
         }),
         {
           number: 1,
@@ -87,7 +86,6 @@ describe('GetPublicCatalogUseCase', () => {
             { optionId: 'dlm-1-option-2', text: 'TestOptionB' },
           ],
           category: 'honesty',
-          indexable: true,
           arguments: {
             context: 'TestContext',
             options: [
@@ -107,104 +105,13 @@ describe('GetPublicCatalogUseCase', () => {
       ]);
     });
 
-    it('should return a dilemma without reviewed arguments without them, not to be indexed', async () => {
-      // Arrange
-      const getPublicCatalog = await catalogWith(curated(1));
-
-      // Act
-      const { dilemmas } = await getPublicCatalog.execute();
-
-      // Assert
-      expect(dilemmas).toEqual([expect.objectContaining({ dilemmaId: 'dlm-1', indexable: false })]);
-      expect(dilemmas[0]).not.toHaveProperty('arguments');
-    });
-
-    it('should leave out the dilemmas for adults', async () => {
-      // Arrange
-      const getPublicCatalog = await catalogWith(curated(1, 18));
-
-      // Act
-      const { dilemmas } = await getPublicCatalog.execute();
-
-      // Assert
-      expect(dilemmas).toEqual([]);
-    });
-
-    it('should leave out the dilemmas outside the general catalog', async () => {
-      // Arrange
-      const original = curated(1);
-      const inExploration = Dilemma.restore({
-        ...curated(2).toSnapshot(),
-        version: { ...curated(2).toSnapshot().version, status: 'in-exploration' },
-      });
-      const privateDilemma = Dilemma.restore({ ...curated(3).toSnapshot(), visibility: 'private' });
-      const getPublicCatalog = await catalogWith(original, inExploration, privateDilemma);
-
-      // Act
-      const { dilemmas } = await getPublicCatalog.execute();
-
-      // Assert
-      expect(dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(['dlm-1']);
-    });
-
-    it('should leave out the dilemmas that are not from the curated catalog', async () => {
-      // Arrange
-      const seed = Dilemma.create(
-        {
-          text: 'TestSeedText',
-          language: 'es',
-          name: 'TestSeedName',
-          options: ['TestOptionA', 'TestOptionB'],
-          category: 'honesty',
-          tags: [],
-          minimumAge: 16,
-        },
-        new FixedIdGenerator(
-          'TestSeedId',
-          'TestSeedOptionA',
-          'TestSeedOptionB',
-          'TestSeedPublicId',
-        ),
-      );
-      const getPublicCatalog = await catalogWith(seed);
-
-      // Act
-      const { dilemmas } = await getPublicCatalog.execute();
-
-      // Assert
-      expect(dilemmas).toEqual([]);
-    });
-
-    it('should leave out a translation of an earlier version of its original', async () => {
-      // Arrange
-      const original = curated(1);
-      const translation = inEnglish(original);
-      original.revise(
-        {
-          text: 'TestRevisedText',
-          options: original.options.map(({ id, text }) => ({ id, text })),
-          category: 'honesty',
-          tags: [],
-          minimumAge: 16,
-        },
-        new FixedIdGenerator(),
-      );
-      const getPublicCatalog = await catalogWith(original, translation);
-
-      // Act
-      const { dilemmas } = await getPublicCatalog.execute();
-
-      // Assert
-      expect(dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual(['dlm-1']);
-    });
-
     it('should return the number and the category of the dilemmas withdrawn from the catalog, and no page of them', async () => {
       // Arrange
-      const withdrawn = curated(2);
+      const withdrawn = argued(curated(2));
       withdrawn.withdraw();
-      const translation = inEnglish(curated(2));
+      const translation = argued(inEnglish(curated(2)));
       translation.withdraw();
-      const getPublicCatalog = await catalogWith(curated(1), withdrawn, translation);
+      const getPublicCatalog = await catalogWith(argued(curated(1)), withdrawn, translation);
 
       // Act
       const output = await getPublicCatalog.execute();

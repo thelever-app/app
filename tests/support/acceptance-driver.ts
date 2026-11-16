@@ -936,7 +936,11 @@ export class AcceptanceDriver implements GameDriver {
 
   async generatePublicPages(): Promise<void> {
     const catalog = await new GetPublicCatalogUseCase(this.#dilemmaRepository).execute();
-    this.#site = buildSite(catalog, SITE_LANGUAGES, { origin: SITE_ORIGIN, appBase: '' });
+    this.#site = buildSite(catalog, SITE_LANGUAGES, {
+      origin: SITE_ORIGIN,
+      appBase: '',
+      owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
+    });
     await publishSite(this.#site, this.#siteFiles);
   }
 

@@ -41,6 +41,12 @@ body {
   margin-inline: auto;
 }
 
+/* A screen that spans the whole window, as the start with the header of the public web, keeps its
+   own column below it. */
+#root:has([data-layout='wide']) {
+  max-width: none;
+}
+
 h1,
 h2,
 p,

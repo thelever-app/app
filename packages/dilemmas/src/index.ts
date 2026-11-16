@@ -44,6 +44,7 @@ export type { ArgumentsSnapshot } from './domain/vos/arguments.vo.ts';
 
 // Application
 export type { DilemmaRepository } from './application/ports/dilemma-repository.port.ts';
+export { CATALOG_ID_PATTERN } from './application/catalog-number.ts';
 export {
   type CandidateCriteria,
   type DilemmaCriteria,

@@ -1,12 +1,19 @@
 import {
   type ArgumentsSnapshot,
+  CATALOG_ID_PATTERN,
   type Creator,
   Dilemma,
   type DilemmaRepository,
   type DilemmaSnapshot,
   type TranslationOf,
 } from '@thelever-app/dilemmas';
-import { type ExpressionBuilder, type Kysely, type Selectable, type Transaction } from 'kysely';
+import {
+  type ExpressionBuilder,
+  type Kysely,
+  type Selectable,
+  sql,
+  type Transaction,
+} from 'kysely';
 import { jsonArrayFrom } from 'kysely/helpers/postgres';
 import type { DilemmasTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
@@ -169,10 +176,71 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
     return dilemma && this.findById(dilemma.id);
   }
 
-  async findPublicCatalog(): Promise<Dilemma[]> {
-    const rows = await this.#versions()
+  async findWithPublicPage(): Promise<Dilemma[]> {
+    const rows = await this.#publishableOfTheCatalog()
+      .where('dilemma_versions.status', '=', 'in-catalog')
+      .where(({ eb, or, exists, selectFrom }) =>
+        or([
+          eb('dilemmas.translation_of', 'is', null),
+          exists(
+            selectFrom('dilemmas as original')
+              .innerJoin('dilemma_versions as original_version', (join) =>
+                join
+                  .onRef('original_version.dilemma_id', '=', 'original.id')
+                  .onRef('original_version.number', '=', 'dilemma_versions.translation_of_version'),
+              )
+              .select('original.id')
+              .whereRef('original.id', '=', 'dilemmas.translation_of')
+              .where('original.visibility', '=', 'public')
+              .where('original_version.status', '=', 'in-catalog')
+              .where(({ not, exists, selectFrom }) =>
+                not(
+                  exists(
+                    selectFrom('dilemma_versions as later')
+                      .select('later.number')
+                      .whereRef('later.dilemma_id', '=', 'original_version.dilemma_id')
+                      .whereRef('later.number', '>', 'original_version.number'),
+                  ),
+                ),
+              ),
+          ),
+        ]),
+      )
+      .execute();
+    return rows.map(dilemmaOf);
+  }
+
+  async findWithdrawnFromCatalog(): Promise<Dilemma[]> {
+    const rows = await this.#publishableOfTheCatalog()
+      .where('dilemmas.translation_of', 'is', null)
+      .where('dilemma_versions.status', '=', 'withdrawn')
+      .execute();
+    return rows.map(dilemmaOf);
+  }
+
+  /**
+   * The public dilemmas of the curated catalog whose current version could be on the web: suitable
+   * from 16, as the web asks no age, named and with reviewed arguments; by id.
+   */
+  #publishableOfTheCatalog() {
+    return this.#currentOfTheCatalog()
+      .where('dilemma_versions.minimum_age', '=', 16)
+      .where('dilemmas.name', 'is not', null)
+      .where(({ exists, selectFrom }) =>
+        exists(
+          selectFrom('dilemma_version_arguments as reviewed')
+            .select('reviewed.version')
+            .whereRef('reviewed.dilemma_id', '=', 'dilemma_versions.dilemma_id')
+            .whereRef('reviewed.version', '=', 'dilemma_versions.number'),
+        ),
+      );
+  }
+
+  /** The public dilemmas of the curated catalog at their current version, by id. */
+  #currentOfTheCatalog() {
+    return this.#versions()
       .where('dilemmas.visibility', '=', 'public')
-      .where('dilemma_versions.status', 'in', ['in-catalog', 'withdrawn'])
+      .where(sql<boolean>`dilemmas.id ~ ${CATALOG_ID_PATTERN}`)
       .where(({ not, exists, selectFrom }) =>
         not(
           exists(
@@ -183,9 +251,7 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
           ),
         ),
       )
-      .orderBy('dilemmas.id')
-      .execute();
-    return rows.map(dilemmaOf);
+      .orderBy('dilemmas.id');
   }
 
   /** Every version of every dilemma, with its content, to narrow down. */

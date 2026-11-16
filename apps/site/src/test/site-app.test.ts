@@ -13,6 +13,7 @@ async function appWithASite() {
     buildSite({ dilemmas: [], withdrawn: [] }, LANGUAGES, {
       origin: 'https://thelever.test',
       appBase: '',
+      owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
     }),
     files,
   );
@@ -44,11 +45,13 @@ describe('the service of the public web', () => {
     const css = await request(app).get('/_site/site.css');
     const font = await request(app).get('/_site/fonts/barlow-400.woff2');
     const mascot = await request(app).get('/_site/mascot-waving.svg');
+    const scene = await request(app).get('/_site/waving-at-junction.svg');
 
     // Assert
     expect(css.status).toBe(200);
     expect(font.headers['content-type']).toBe('font/woff2');
     expect(mascot.headers['content-type']).toBe('image/svg+xml');
+    expect(scene.headers['content-type']).toBe('image/svg+xml');
   });
 
   it('should answer 503 while no site has been generated', async () => {
@@ -78,7 +81,11 @@ describe('the service of the public web', () => {
   it('should read the site again before answering that an address does not exist', async () => {
     // Arrange: the instance read the site before the dilemma was published.
     const files = new InMemorySiteFiles();
-    const config = { origin: 'https://thelever.test', appBase: '' };
+    const config = {
+      origin: 'https://thelever.test',
+      appBase: '',
+      owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
+    };
     await publishSite(buildSite({ dilemmas: [], withdrawn: [] }, LANGUAGES, config), files);
     let now = 0;
     const app = createSiteApp({
@@ -104,7 +111,12 @@ describe('the service of the public web', () => {
                 { optionId: 'b', text: 'TestB' },
               ],
               category: 'life-and-death',
-              indexable: false,
+              arguments: {
+                options: [
+                  { optionId: 'a', for: 'TestForA', against: 'TestAgainstA' },
+                  { optionId: 'b', for: 'TestForB', against: 'TestAgainstB' },
+                ],
+              },
             },
           ],
           withdrawn: [],
