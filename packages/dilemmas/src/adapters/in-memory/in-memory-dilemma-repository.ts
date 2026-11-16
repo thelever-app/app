@@ -42,6 +42,13 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
     return stored && this.findVersion(id, Math.max(...stored.versions.keys()));
   }
 
+  async findByPublicId(publicId: string): Promise<Dilemma | undefined> {
+    for (const [id, { dilemma }] of this.#dilemmas) {
+      if (dilemma.publicId === publicId) return this.findById(id);
+    }
+    return undefined;
+  }
+
   async findVersion(id: string, version: number): Promise<Dilemma | undefined> {
     const stored = this.#dilemmas.get(id);
     const snapshot = stored?.versions.get(version);
@@ -59,6 +66,17 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
       }
     }
     return undefined;
+  }
+
+  async findPublicCatalog(): Promise<Dilemma[]> {
+    const ids = [...this.#dilemmas.keys()].sort();
+    const current = await Promise.all(ids.map((id) => this.findById(id)));
+    return current.filter(
+      (dilemma): dilemma is Dilemma =>
+        dilemma !== undefined &&
+        dilemma.visibility === 'public' &&
+        (dilemma.status === 'in-catalog' || dilemma.status === 'withdrawn'),
+    );
   }
 
   async idsOf(criteria: CandidateCriteria): Promise<string[]> {

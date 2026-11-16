@@ -29,7 +29,9 @@ export class AddDilemmaUseCase {
 
   async execute({ roomId, playerId, dilemmaId }: AddDilemmaInput): Promise<void> {
     const room = await findRoom(this.#roomRepository, roomId);
-    const [dilemma] = await findLobbyDilemmas(this.#dilemmaCatalog, room, [dilemmaId]);
+    const [dilemma] = await findLobbyDilemmas(this.#dilemmaCatalog, room.settings.dilemmaLanguage, [
+      dilemmaId,
+    ]);
 
     room.addDilemma(playerId, dilemma!);
     const events = room.pullEvents();

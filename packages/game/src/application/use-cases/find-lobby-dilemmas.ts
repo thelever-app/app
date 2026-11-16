@@ -1,14 +1,14 @@
-import type { LobbyDilemma, Room } from '../../domain/entities/room.ts';
+import type { LobbyDilemma } from '../../domain/entities/room.ts';
 import { DilemmaNotFoundError } from '../errors/dilemma-not-found.error.ts';
 import type { DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 
 /**
- * The dilemmas of the general catalog with those ids, in that order, with the minimum age the room
- * checks; a dilemma that is not there is not found.
+ * The dilemmas of the general catalog in the language of the dilemmas of the room with those ids,
+ * in that order, with the minimum age the room checks; a dilemma that is not there is not found.
  */
 export async function findLobbyDilemmas(
   dilemmaCatalog: DilemmaCatalog,
-  room: Room,
+  dilemmaLanguage: string,
   dilemmaIds: readonly string[],
 ): Promise<LobbyDilemma[]> {
   if (dilemmaIds.length === 0) return [];
@@ -17,7 +17,7 @@ export async function findLobbyDilemmas(
       dilemmaIds,
       maximumMinimumAge: 18,
       status: 'in-catalog',
-      language: room.settings.dilemmaLanguage,
+      language: dilemmaLanguage,
     },
     // One page with all of them: no more than were asked for.
     { size: dilemmaIds.length },

@@ -1,3 +1,4 @@
+import type { Category } from '../../domain/vos/category.vo.ts';
 import { IdentityNotInRoomError } from '../errors/identity-not-in-room.error.ts';
 import type { CatalogPage, DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
@@ -8,7 +9,7 @@ export interface SearchDilemmasInput {
   /** Whoever searches must be a player of the room: a query asked over HTTP knows only their identity. */
   readonly identity: string;
   /** One category, or every one. */
-  readonly category?: string;
+  readonly category?: Category;
   /** What the player typed, looked for in the text and the tags. */
   readonly text?: string;
   /** The `next` of the page before; none for the first page. */

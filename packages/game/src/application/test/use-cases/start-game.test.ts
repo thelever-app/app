@@ -7,6 +7,7 @@ import { DilemmasMissingError } from '../../../domain/errors/dilemmas-missing.er
 import { GameInProgressError } from '../../../domain/errors/game-in-progress.error.ts';
 import { NotEnoughPlayersError } from '../../../domain/errors/not-enough-players.error.ts';
 import { NotHostError } from '../../../domain/errors/not-host.error.ts';
+import { Room } from '../../../domain/entities/room.ts';
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
 import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
 import { EXPLORATION_SLOTS, lobbyCatalog } from '../support/test-catalog.ts';
@@ -153,6 +154,29 @@ describe('StartGameUseCase', () => {
         dilemmaLanguage: 'ca',
         timePerDilemmaSeconds: 60,
       });
+    });
+
+    it('should play first the dilemma the room was created with', async () => {
+      // Arrange
+      const { startGame, gameRepository, roomRepository, roomId, anaId } = await arrange();
+      const room = (await roomRepository.findById(roomId))!;
+      await roomRepository.save(
+        Room.restore({
+          ...room.toSnapshot(),
+          firstDilemma: { dilemmaId: 'TestCatalog5', minimumAge: 16 },
+        }),
+      );
+
+      // Act
+      const { gameId } = await startGame.execute({ roomId, playerId: anaId });
+
+      // Assert
+      const game = await gameRepository.findById(gameId);
+      expect(game?.dilemmas[0]).toMatchObject({
+        dilemmaId: 'TestCatalog5',
+        origin: 'picked-by-the-host',
+      });
+      expect((await roomRepository.findById(roomId))?.firstDilemma).toBeNull();
     });
 
     it('should play exactly the dilemmas the host picked', async () => {

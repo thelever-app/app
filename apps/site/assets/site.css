@@ -1,0 +1,406 @@
+/* The public web of TheLever: the artboards of CU-14, mobile first and two columns from 1024 px. */
+@font-face {
+  font-family: Barlow;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/_site/fonts/barlow-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: Barlow;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/_site/fonts/barlow-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: Barlow;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/_site/fonts/barlow-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-weight: 600;
+  font-display: swap;
+  src: url('/_site/fonts/barlow-condensed-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-weight: 700;
+  font-display: swap;
+  src: url('/_site/fonts/barlow-condensed-700.woff2') format('woff2');
+}
+
+:root {
+  color-scheme: only light;
+  --bg: #fbf6ec;
+  --surface: #f1e9d8;
+  --raised: #ffffff;
+  --ink: #17140f;
+  --ink-soft: #3a352c;
+  --muted: #5e574b;
+  --border: #e2d8c3;
+  --border-strong: #8c8372;
+  --primary: #ffd23f;
+  --display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --text: Barlow, system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--text);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+a {
+  color: var(--ink);
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 32px;
+  line-height: 36px;
+}
+
+h2 {
+  margin-top: 12px;
+  font-size: 24px;
+  line-height: 28px;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 8px 12px 20px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--display);
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.stripe {
+  height: 8px;
+  background: repeating-linear-gradient(135deg, var(--primary) 0 12px, var(--ink) 12px 24px);
+}
+
+.languages summary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.languages summary::-webkit-details-marker {
+  display: none;
+}
+
+.languages-sheet {
+  position: absolute;
+  right: 8px;
+  top: 56px;
+  z-index: 1;
+  width: min(320px, calc(100vw - 16px));
+  padding: 8px 8px 16px;
+  border-radius: 20px;
+  background: var(--bg);
+  box-shadow: 0 8px 32px rgb(23 20 15 / 25%);
+}
+
+.languages-title {
+  margin: 0;
+  padding: 4px 12px 8px;
+  font-family: var(--text);
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.languages ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.languages li a {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.languages li a[aria-current='page'] {
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.languages-note {
+  margin: 8px 12px 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+
+.main {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 16px 28px;
+}
+
+.intro {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.crumbs {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+
+.crumbs a {
+  color: var(--muted);
+}
+
+.button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1.5px var(--border-strong);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.button.primary {
+  min-height: 52px;
+  background: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--ink);
+  font-weight: 600;
+}
+
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.chips,
+.dilemmas,
+.options {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  gap: 8px;
+}
+
+.chips {
+  flex-wrap: wrap;
+}
+
+.chip {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.dilemmas,
+.options {
+  flex-direction: column;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--border);
+  text-decoration: none;
+}
+
+.card-title {
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.card-meta {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+
+.dilemma {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dilemma-main,
+.dilemma-arguments {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dilemma-text {
+  margin: 0;
+}
+
+.options li {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.argument {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.argument h3 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 700;
+}
+
+.argument p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.argument strong {
+  font-weight: 600;
+}
+
+.credit,
+.updated {
+  margin: 0;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--muted);
+}
+
+.more {
+  align-self: flex-start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.scene {
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+}
+
+.own-page {
+  max-width: 720px;
+}
+
+.own-page p,
+.own-page li {
+  color: var(--ink-soft);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 20px;
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+@media (min-width: 1024px) {
+  .main {
+    padding: 32px 40px 48px;
+  }
+
+  h1 {
+    font-size: 40px;
+    line-height: 44px;
+  }
+
+  .dilemma {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
+  }
+
+  .dilemmas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -3,7 +3,7 @@ import { Dialog } from 'radix-ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
-import { CATEGORIES } from './categories.ts';
+import { CATEGORIES, type Category } from './categories.ts';
 import styles from './room-settings-sheet.module.css';
 import sheet from './sheet.module.css';
 
@@ -40,7 +40,7 @@ function changesBetween(before: RoomSettingsDto, after: RoomSettingsDto): Partia
  * The categories marked, in the order the screen offers them. From every category (null),
  * marking one plays only that one; unmarking the last one plays none.
  */
-function toggled(categories: readonly string[] | null, category: string): string[] {
+function toggled(categories: readonly Category[] | null, category: Category): Category[] {
   const before = categories ?? [];
   const marked = before.includes(category)
     ? before.filter((marked) => marked !== category)

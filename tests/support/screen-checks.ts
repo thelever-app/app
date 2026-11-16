@@ -14,7 +14,7 @@ const COLUMN_MAX_WIDTH = 480;
 
 /**
  * What is wrong with the screen of the page, as it is now, at every width: content that scrolls
- * sideways, a column that is not centred or too wide, and any failure of accessibility.
+ * sideways, a column of the app that is not centred or too wide, and any failure of accessibility.
  */
 export async function problemsOn(page: Page): Promise<string[]> {
   const problems: string[] = [];
@@ -26,10 +26,12 @@ export async function problemsOn(page: Page): Promise<string[]> {
     const contentWidth: number = await page.evaluate('document.documentElement.scrollWidth');
     if (contentWidth > size.width) problems.push(`${at}, the content scrolls sideways`);
 
-    const column = await page.locator('#root').boundingBox();
-    if (!column) {
+    // The app is one column; a page of the public web, which has no #root, its own layout.
+    const app = (await page.locator('#root').count()) > 0;
+    const column = app ? await page.locator('#root').boundingBox() : undefined;
+    if (app && !column) {
       problems.push(`${at}, there is no column`);
-    } else {
+    } else if (column) {
       if (column.width > COLUMN_MAX_WIDTH) {
         problems.push(`${at}, the column is ${column.width} px wide`);
       }

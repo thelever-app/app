@@ -8,8 +8,10 @@ export const CreateRoomRequestDto = z.strictObject({
   avatar: AvatarDto,
   groupNature: GroupNatureDto,
   place: PlaceDto,
-  /** The language of the device, which the room takes for its dilemmas. */
+  /** The language of the device, or of the first dilemma, which the room takes for its dilemmas. */
   dilemmaLanguage: LanguageDto,
+  /** A dilemma of the general catalog in that language, which the first game plays first. */
+  firstDilemmaId: z.string().min(1).max(200).optional(),
 });
 
 export const CreateRoomResponseDto = z.strictObject({

@@ -6,7 +6,7 @@ import type { HttpEndpoint } from '../../http/http-endpoint.ts';
 import type { RunCommand } from '../run-command.ts';
 import { parseBody } from '../../http/parse-body.ts';
 
-/** POST /rooms: whoever calls creates a room and becomes its host. */
+/** POST /rooms: whoever calls creates a room and becomes its host, starting with a dilemma if given one. */
 export class CreateRoomEndpoint implements HttpEndpoint {
   readonly method = 'post';
   readonly path = '/rooms';
@@ -20,7 +20,7 @@ export class CreateRoomEndpoint implements HttpEndpoint {
   }
 
   async handle(req: Request, res: Response): Promise<void> {
-    const { nickname, avatar, groupNature, place, dilemmaLanguage } = parseBody(
+    const { nickname, avatar, groupNature, place, dilemmaLanguage, firstDilemmaId } = parseBody(
       CreateRoomRequestDto,
       req.body,
     );
@@ -32,6 +32,7 @@ export class CreateRoomEndpoint implements HttpEndpoint {
         groupNature,
         place,
         dilemmaLanguage,
+        ...(firstDilemmaId && { firstDilemmaId }),
       }),
     );
     res.status(201).json(CreateRoomResponseDto.parse({ roomId, code, playerId: hostId }));

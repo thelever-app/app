@@ -1,13 +1,13 @@
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import type { DilemmaStatus } from '../../domain/entities/dilemma.ts';
-import { isCategory } from '../../domain/vos/category.vo.ts';
+import type { Category } from '../../domain/vos/category.vo.ts';
 import { LanguageVO } from '../../domain/vos/language.vo.ts';
 import type { DilemmaQueries } from '../ports/dilemma-queries.port.ts';
 
 export interface SearchDilemmasInput {
   readonly dilemmaIds?: readonly string[];
   /** Any of them; an empty list finds nothing, and without it every category is searched. */
-  readonly categories?: readonly string[];
+  readonly categories?: readonly Category[];
   /** What a player typed, looked for in the text and the tags as DilemmaCriteria says. */
   readonly text?: string;
   /** 16 leaves out the dilemmas for adults. */
@@ -27,7 +27,7 @@ export interface SearchDilemmasOutput {
     readonly version: number;
     readonly text: string;
     readonly minimumAge: MinimumAge;
-    readonly category: string;
+    readonly category: Category;
     readonly tags: readonly string[];
     readonly optionCount: number;
   }[];
@@ -38,7 +38,7 @@ export interface SearchDilemmasOutput {
 /**
  * What Dilemmas publishes to the other contexts to look for dilemmas: a page of the public ones
  * that match every criterion given, at their current version, in the order the catalog gives them.
- * A category that does not exist has no dilemmas, and a `next` that does not come from that search
+ * A `next` that does not come from that search
  * throws InvalidPageError.
  */
 export interface SearchDilemmas {
@@ -52,23 +52,12 @@ export class SearchDilemmasUseCase implements SearchDilemmas {
     this.#dilemmaQueries = dilemmaQueries;
   }
 
-  async execute({
-    size,
-    after,
-    categories,
-    ...criteria
-  }: SearchDilemmasInput): Promise<SearchDilemmasOutput> {
+  async execute({ size, after, ...criteria }: SearchDilemmasInput): Promise<SearchDilemmasOutput> {
     new LanguageVO(criteria.language);
-    const { summaries, next } = await this.#dilemmaQueries.search(
-      {
-        ...criteria,
-        ...(categories && { categories: categories.filter(isCategory) }),
-      },
-      {
-        size,
-        ...(after !== undefined && { after }),
-      },
-    );
+    const { summaries, next } = await this.#dilemmaQueries.search(criteria, {
+      size,
+      ...(after !== undefined && { after }),
+    });
     return {
       dilemmas: summaries.map(({ id, ...summary }) => ({ dilemmaId: id, ...summary })),
       ...(next !== undefined && { next }),

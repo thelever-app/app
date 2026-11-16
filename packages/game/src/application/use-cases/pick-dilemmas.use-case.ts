@@ -30,7 +30,11 @@ export class PickDilemmasUseCase {
 
   async execute({ roomId, playerId, dilemmaIds }: PickDilemmasInput): Promise<void> {
     const room = await findRoom(this.#roomRepository, roomId);
-    const dilemmas = await findLobbyDilemmas(this.#dilemmaCatalog, room, dilemmaIds);
+    const dilemmas = await findLobbyDilemmas(
+      this.#dilemmaCatalog,
+      room.settings.dilemmaLanguage,
+      dilemmaIds,
+    );
 
     room.pickDilemmas(playerId, dilemmas);
     const events = room.pullEvents();

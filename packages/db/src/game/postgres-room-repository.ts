@@ -217,6 +217,8 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     absent_host_player_id: snapshot.absentHostId,
     last_connected_at: snapshot.lastConnectedAt,
     closed_at: snapshot.closedAt,
+    first_dilemma_id: snapshot.firstDilemma?.dilemmaId ?? null,
+    first_dilemma_minimum_age: snapshot.firstDilemma?.minimumAge ?? null,
   };
 }
 
@@ -318,6 +320,10 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
     expelledIdentities: row.expelled.map(({ identity }) => identity),
     addedDilemmas: row.added,
     pickedDilemmas: row.picked,
+    firstDilemma:
+      row.first_dilemma_id === null || row.first_dilemma_minimum_age === null
+        ? null
+        : { dilemmaId: row.first_dilemma_id, minimumAge: row.first_dilemma_minimum_age },
     currentGameId: row.current_game_id,
     absentHostId: row.absent_host_player_id,
     leftPlayerIds: row.players.filter(({ has_left }) => has_left).map(({ id }) => id),

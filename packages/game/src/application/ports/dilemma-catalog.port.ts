@@ -1,4 +1,5 @@
 import type { GameDilemma } from '../../domain/entities/game.ts';
+import type { Category } from '../../domain/vos/category.vo.ts';
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a dilemma
@@ -20,7 +21,7 @@ export interface CatalogDilemma {
   readonly dilemmaId: string;
   readonly text: string;
   readonly minimumAge: 16 | 18;
-  readonly category: string;
+  readonly category: Category;
   readonly tags: readonly string[];
   /** How many options it has, which the lobby says next to it. */
   readonly optionCount: number;
@@ -30,7 +31,7 @@ export interface CatalogDilemma {
 export interface DilemmaSearch {
   readonly dilemmaIds?: readonly string[];
   /** Any of them; an empty list finds nothing, and without it every category is searched. */
-  readonly categories?: readonly string[];
+  readonly categories?: readonly Category[];
   /** What a player typed, looked for in the text and the tags; the best matches may come first. */
   readonly text?: string;
   /** 16 leaves out the dilemmas for adults. */

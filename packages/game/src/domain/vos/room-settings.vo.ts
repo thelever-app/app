@@ -1,4 +1,5 @@
 import { InvalidRoomSettingError } from '../errors/invalid-room-setting.error.ts';
+import { type Category, isCategory } from './category.vo.ts';
 
 /** The languages of the app, in which a room can play its dilemmas. */
 export const DILEMMA_LANGUAGES = ['es', 'en', 'fr', 'de', 'it', 'pt', 'ca'] as const;
@@ -20,10 +21,10 @@ export interface RoomSettingsSnapshot {
   readonly adultsOnly: boolean;
   readonly dilemmaLanguage: DilemmaLanguage;
   /**
-   * The ids of the categories of Dilemmas a game by categories plays, which the room does not
-   * check: null plays every category, and an empty list none, so only what the players add.
+   * The categories a game by categories plays: null plays every category, and an empty list none,
+   * so only what the players add.
    */
-  readonly categories: readonly string[] | null;
+  readonly categories: readonly Category[] | null;
   readonly dilemmaCount: DilemmaCount;
   readonly timePerDilemmaSeconds: TimePerDilemmaSeconds;
   /** Whether a game by categories keeps room for dilemmas in exploration. */
@@ -42,9 +43,8 @@ export class RoomSettingsVO {
     if (!(DILEMMA_LANGUAGES as readonly string[]).includes(settings.dilemmaLanguage)) {
       throw new InvalidRoomSettingError('dilemma language', settings.dilemmaLanguage);
     }
-    const categories = settings.categories?.map((category) => category.trim()) ?? null;
-    const blank = categories?.findIndex((category) => category === '') ?? -1;
-    if (blank !== -1) throw new InvalidRoomSettingError('category', settings.categories?.[blank]);
+    const unknown = settings.categories?.find((category) => !isCategory(category));
+    if (unknown !== undefined) throw new InvalidRoomSettingError('category', unknown);
     if (!(DILEMMA_COUNTS as readonly number[]).includes(settings.dilemmaCount)) {
       throw new InvalidRoomSettingError('number of dilemmas', settings.dilemmaCount);
     }
@@ -56,6 +56,7 @@ export class RoomSettingsVO {
     if (!(DILEMMAS_PER_PLAYER as readonly number[]).includes(settings.dilemmasPerPlayer)) {
       throw new InvalidRoomSettingError('dilemmas per player', settings.dilemmasPerPlayer);
     }
+    const { categories } = settings;
     this.#settings = { ...settings, categories: categories && [...new Set(categories)] };
   }
 
@@ -85,7 +86,7 @@ export class RoomSettingsVO {
     return this.#settings.dilemmaLanguage;
   }
 
-  get categories(): readonly string[] | null {
+  get categories(): readonly Category[] | null {
     return this.#settings.categories && [...this.#settings.categories];
   }
 
