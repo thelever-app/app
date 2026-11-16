@@ -882,11 +882,18 @@ export class AcceptanceDriver implements GameDriver {
     await this.#importCatalog.execute();
   }
 
+  /**
+   * A dilemma with all a page needs, an id of the curated catalog and its arguments reviewed, but
+   * private or in exploration, so that is all that keeps it off the web. Its number is far beyond
+   * those the scenario imports.
+   */
   async dilemmaOutsideTheCatalogNamed(
     name: string,
     kind: 'private' | 'in-exploration',
   ): Promise<void> {
-    const id = `player-dilemma-${this.#publicNumbers.size + 1}`;
+    const number = 9000 + this.#publicNumbers.size + 1;
+    this.#publicNumbers.set(name, number);
+    const id = `dlm-${number}`;
     await this.#dilemmaRepository.save(
       Dilemma.restore({
         id,
@@ -905,7 +912,14 @@ export class AcceptanceDriver implements GameDriver {
           category: 'life-and-death',
           tags: [],
           minimumAge: 16,
-          status: kind === 'private' ? 'approved' : 'in-exploration',
+          status: kind === 'private' ? 'in-catalog' : 'in-exploration',
+          arguments: {
+            options: SPANISH_OPTION_TEXTS.map((text, index) => ({
+              optionId: `${id}-option-${index + 1}`,
+              for: `A favor de ${text}`,
+              against: `En contra de ${text}`,
+            })),
+          },
         },
       }),
     );
@@ -936,7 +950,11 @@ export class AcceptanceDriver implements GameDriver {
 
   async generatePublicPages(): Promise<void> {
     const catalog = await new GetPublicCatalogUseCase(this.#dilemmaRepository).execute();
-    this.#site = buildSite(catalog, SITE_LANGUAGES, { origin: SITE_ORIGIN, appBase: '' });
+    this.#site = buildSite(catalog, SITE_LANGUAGES, {
+      origin: SITE_ORIGIN,
+      appBase: '',
+      owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
+    });
     await publishSite(this.#site, this.#siteFiles);
   }
 

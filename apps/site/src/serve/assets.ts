@@ -21,6 +21,10 @@ export const ASSETS: ReadonlyMap<string, { readonly file: string; readonly type:
         file: fileURLToPath(new URL('mascot-waving.svg', BRAND)),
         type: 'image/svg+xml',
       },
+      'waving-at-junction.svg': {
+        file: fileURLToPath(new URL('waving-at-junction.svg', BRAND)),
+        type: 'image/svg+xml',
+      },
       'doubting-at-track-end.svg': {
         file: fileURLToPath(new URL('doubting-at-track-end.svg', BRAND)),
         type: 'image/svg+xml',

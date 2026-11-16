@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DilemmaRepository } from '../../application/ports/dilemma-repository.port.ts';
-import { Dilemma } from '../../domain/entities/dilemma.ts';
+import { Dilemma, type DilemmaSnapshot } from '../../domain/entities/dilemma.ts';
+import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.ts';
 
 function dilemma(): Dilemma {
@@ -73,6 +74,63 @@ const ARGUMENTS = {
     against: `TestAgainst${optionId}`,
   })),
 };
+
+/** A dilemma of the curated catalog with that number, in Spanish, in the catalog and named unless said. */
+function curated(number: number, minimumAge: MinimumAge = 16, named = true): Dilemma {
+  const id = `dlm-${number}`;
+  return Dilemma.create(
+    {
+      text: `TestText${number}`,
+      language: 'es',
+      ...(named ? { name: `TestName${number}` } : {}),
+      options: ['TestOptionA', 'TestOptionB'],
+      category: 'honesty',
+      tags: ['testtag'],
+      minimumAge,
+    },
+    new FixedIdGenerator(id, `${id}-option-1`, `${id}-option-2`, `${id}-public`),
+  );
+}
+
+/** Its English translation, as the import makes it. */
+function inEnglish(original: Dilemma): Dilemma {
+  const options = ['TestOptionAEn', 'TestOptionBEn'];
+  const id = `${original.id}-en`;
+  return Dilemma.translate(
+    original,
+    {
+      language: 'en',
+      name: `${original.name}En`,
+      text: `${original.text}En`,
+      options,
+      tags: [],
+    },
+    new FixedIdGenerator(
+      id,
+      ...options.map((_, index) => `${id}-option-${index + 1}`),
+      `${id}-public`,
+    ),
+  );
+}
+
+/** The dilemma with its arguments reviewed. */
+function argued(dilemma: Dilemma): Dilemma {
+  dilemma.argue({
+    context: 'TestContext',
+    options: dilemma.options.map(({ id }) => ({
+      optionId: id,
+      for: `TestFor${id}`,
+      against: `TestAgainst${id}`,
+    })),
+  });
+  return dilemma;
+}
+
+/** The dilemma with its current version in that status. */
+function inStatus(dilemma: Dilemma, status: DilemmaSnapshot['version']['status']): Dilemma {
+  const snapshot = dilemma.toSnapshot();
+  return Dilemma.restore({ ...snapshot, version: { ...snapshot.version, status } });
+}
 
 /**
  * What every DilemmaRepository must do, in memory or in PostgreSQL (ADR 0002).
@@ -372,48 +430,123 @@ export function describeDilemmaRepositoryContract(
       });
     });
 
-    describe('findPublicCatalog', () => {
-      it('should find the public dilemmas in the catalog or withdrawn, at their current version, with their content', async () => {
+    describe('findWithPublicPage', () => {
+      it('should find each dilemma of the curated catalog with a public page, in each language, with its content', async () => {
         // Arrange
         const repository = await create();
-        const argued = revised();
-        argued.argue({
-          options: argued.options.map(({ id }) => ({
-            optionId: id,
-            for: `TestFor${id}`,
-            against: `TestAgainst${id}`,
-          })),
-        });
-        await repository.save(dilemma());
-        await repository.save(argued);
-        const withdrawn = translation();
-        withdrawn.withdraw();
-        await repository.save(withdrawn);
+        const original = argued(curated(1));
+        const translation = argued(inEnglish(original));
+        await repository.save(original);
+        await repository.save(translation);
 
         // Act
-        const found = await repository.findPublicCatalog();
+        const found = await repository.findWithPublicPage();
 
         // Assert
         expect(found.map((dilemma) => dilemma.toSnapshot())).toEqual([
-          argued.toSnapshot(),
-          withdrawn.toSnapshot(),
+          original.toSnapshot(),
+          translation.toSnapshot(),
         ]);
       });
 
-      it('should leave out the private dilemmas and those whose current version is elsewhere', async () => {
+      it('should leave out the dilemmas without a name or reviewed arguments, for adults, private or out of the catalog', async () => {
         // Arrange
         const repository = await create();
-        const { version, ...rest } = dilemma().toSnapshot();
-        await repository.save(Dilemma.restore({ ...rest, visibility: 'private', version }));
+        await repository.save(argued(curated(1, 16, false)));
+        await repository.save(curated(2));
+        await repository.save(argued(curated(3, 18)));
         await repository.save(
-          Dilemma.restore({
-            ...translation().toSnapshot(),
-            version: { ...translation().toSnapshot().version, status: 'in-exploration' },
-          }),
+          Dilemma.restore({ ...argued(curated(4)).toSnapshot(), visibility: 'private' }),
         );
+        await repository.save(inStatus(argued(curated(5)), 'in-exploration'));
+        await repository.save(inStatus(argued(curated(6)), 'withdrawn'));
 
         // Act
-        const found = await repository.findPublicCatalog();
+        const found = await repository.findWithPublicPage();
+
+        // Assert
+        expect(found).toEqual([]);
+      });
+
+      it('should leave out the dilemmas that are not from the curated catalog', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(argued(dilemma()));
+
+        // Act
+        const found = await repository.findWithPublicPage();
+
+        // Assert
+        expect(found).toEqual([]);
+      });
+
+      it('should leave out a translation without arguments, of an earlier version or of an original out of the catalog', async () => {
+        // Arrange
+        const repository = await create();
+        const first = argued(curated(1));
+        await repository.save(first);
+        await repository.save(inEnglish(first));
+        const second = curated(2);
+        const ofTheFirstVersion = argued(inEnglish(second));
+        second.revise(
+          {
+            text: 'TestRevisedText',
+            options: second.options.map(({ id, text }) => ({ id, text })),
+            category: 'honesty',
+            tags: [],
+            minimumAge: 16,
+          },
+          new FixedIdGenerator(),
+        );
+        await repository.save(argued(second));
+        await repository.save(ofTheFirstVersion);
+        const third = curated(3);
+        await repository.save(inStatus(argued(third), 'withdrawn'));
+        await repository.save(argued(inEnglish(third)));
+
+        // Act
+        const found = await repository.findWithPublicPage();
+
+        // Assert
+        expect(found.map(({ id }) => id)).toEqual(['dlm-1', 'dlm-2']);
+      });
+    });
+
+    describe('findWithdrawnFromCatalog', () => {
+      it('should find the originals of the curated catalog withdrawn from it, and not their translations', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.save(argued(curated(1)));
+        const withdrawn = argued(curated(2));
+        withdrawn.withdraw();
+        const translation = argued(inEnglish(curated(2)));
+        translation.withdraw();
+        await repository.save(withdrawn);
+        await repository.save(translation);
+        const seed = argued(dilemma());
+        seed.withdraw();
+        await repository.save(seed);
+
+        // Act
+        const found = await repository.findWithdrawnFromCatalog();
+
+        // Assert
+        expect(found.map((dilemma) => dilemma.toSnapshot())).toEqual([withdrawn.toSnapshot()]);
+      });
+
+      it('should leave out the withdrawn ones that never could have had a page: without a name or arguments, or for adults', async () => {
+        // Arrange
+        const repository = await create();
+        const unnamed = argued(curated(1, 16, false));
+        const withoutArguments = curated(2);
+        const forAdults = argued(curated(3, 18));
+        for (const never of [unnamed, withoutArguments, forAdults]) {
+          never.withdraw();
+          await repository.save(never);
+        }
+
+        // Act
+        const found = await repository.findWithdrawnFromCatalog();
 
         // Assert
         expect(found).toEqual([]);

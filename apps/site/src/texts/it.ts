@@ -52,7 +52,8 @@ export const it: SiteTexts = {
     heading: 'Dilemmi morali da giocare con la tua gente',
     intro:
       'Ognuno vota in segreto dal proprio telefono, prevede cosa voteranno gli altri e poi scoprite insieme chi pensa cosa. Gratis, senza installare nulla.',
-    createRoom: 'Crea una stanza',
+    play: 'Gioca ora',
+    scene: 'La Palanca che saluta accanto a uno scambio ferroviario',
     howToPlay: 'Come si gioca',
     steps: [
       'Crea una stanza e condividi il link o il codice.',
@@ -100,7 +101,7 @@ export const it: SiteTexts = {
       {
         heading: 'Chi è il titolare',
         paragraphs: [
-          'TheLever è un progetto di Mario Villacorta García, NIF [REDACTED], con domicilio in [REDACTED], Spagna. Per qualsiasi questione sui tuoi dati, scrivi a privacidad@thelever.app. Rispondiamo in spagnolo e in inglese.',
+          'TheLever è un progetto di {owner}. Per qualsiasi questione sui tuoi dati, scrivi a privacidad@thelever.app. Rispondiamo in spagnolo e in inglese.',
         ],
       },
       {
@@ -164,9 +165,9 @@ export const it: SiteTexts = {
       {
         heading: 'Titolare',
         paragraphs: [
-          '- Titolare: Mario Villacorta García.',
-          '- NIF: [REDACTED].',
-          '- Domicilio: [REDACTED], Spagna.',
+          '- Titolare: {owner}.',
+          '- NIF: {taxId}.',
+          '- Domicilio: {address}, Spagna.',
           '- Email: privacidad@thelever.app.',
           '- Sito e app: thelever.app.',
           '- Attività: gioco online gratuito finanziato dalla pubblicità.',

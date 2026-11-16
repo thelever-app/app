@@ -57,7 +57,9 @@ Given(
 Given(
   'the dilemma {string} is a dilemma for adults',
   async function (this: GameWorld, name: string) {
+    // With its arguments reviewed, so its age is all that keeps it off the web.
     await this.driver.catalogDilemmaNamed(name, 18);
+    await this.driver.reviewArgumentsOf(name);
   },
 );
 
@@ -164,15 +166,6 @@ Then(
 Then('the address of its page answers that it no longer exists', async function (this: GameWorld) {
   assert.equal(await this.driver.statusOfThePublicPageOf(this.dilemmaName), 410);
 });
-
-Then(
-  '{string} has a public page without arguments that search engines must not index',
-  async function (this: GameWorld, name: string) {
-    const page = await pageOf(this, name);
-    assert.deepEqual(page.arguments, []);
-    assert.equal(page.indexable, false);
-  },
-);
 
 Then(
   'the public page of {string} shows its arguments and can be indexed',

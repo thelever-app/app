@@ -84,6 +84,7 @@ export function buildSite(
       description: texts.home.description,
       alternates: everywhere(homePath),
       indexable: true,
+      home: true,
       main: homeBody(language, texts, config.appBase),
     });
     for (const category of CATEGORIES) {
@@ -115,8 +116,10 @@ export function buildSite(
         title: `${own.title} | TheLever`,
         description: own.description,
         alternates: everywhere((other) => pagePath(other, languages.get(other)![which].title)),
-        indexable: true,
-        main: ownPageBody(own),
+        // Kept out of search engines: they name who is behind TheLever, and the law asks
+        // only that they be at hand, which the footer of every page does.
+        indexable: false,
+        main: ownPageBody(own, config.owner),
       });
     }
   }
@@ -132,7 +135,7 @@ export function buildSite(
       alternates: Object.fromEntries(
         versions.map(({ dilemma: other, path }) => [other.language, path]),
       ),
-      indexable: dilemma.indexable,
+      indexable: true,
       main: dilemmaBody(one, texts, config.appBase),
       dilemma,
     });

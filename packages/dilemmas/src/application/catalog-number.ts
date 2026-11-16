@@ -3,7 +3,13 @@ export function idOf(number: number, language?: string): string {
   return language === undefined ? `dlm-${number}` : `dlm-${number}-${language}`;
 }
 
-const CATALOG_ID = /^dlm-([1-9]\d*)(-[a-z]{2}(-[A-Z]{2})?)?$/;
+/**
+ * The ids of the curated catalog, its originals and their translations, as a pattern that
+ * JavaScript and PostgreSQL read alike.
+ */
+export const CATALOG_ID_PATTERN = '^dlm-([1-9][0-9]*)(-[a-z]{2}(-[A-Z]{2})?)?$';
+
+const CATALOG_ID = new RegExp(CATALOG_ID_PATTERN);
 
 /** The number of the curated catalog a dilemma or its translation has; none if it is not from that catalog. */
 export function numberOf(dilemmaId: string): number | undefined {

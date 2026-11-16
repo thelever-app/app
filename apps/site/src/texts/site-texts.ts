@@ -1,6 +1,10 @@
 import type { Category } from '@thelever-app/dilemmas';
 
-/** A section of a page of its own, such as the privacy policy: a heading and its paragraphs. */
+/**
+ * A section of a page of its own, such as the privacy policy: a heading and its paragraphs. Who is
+ * behind TheLever is not written here but given when the site is generated: `{owner}`, `{taxId}`
+ * and `{address}` stand for them.
+ */
 export interface Section {
   readonly heading: string;
   /** Each one a paragraph; one that starts with "- " is an item of a list. */
@@ -34,7 +38,10 @@ export interface SiteTexts {
     readonly description: string;
     readonly heading: string;
     readonly intro: string;
-    readonly createRoom: string;
+    /** The way into the app, to create a room or join one. */
+    readonly play: string;
+    /** What the illustration of the home shows, for those who cannot see it. */
+    readonly scene: string;
     readonly howToPlay: string;
     readonly steps: readonly string[];
     readonly categories: string;

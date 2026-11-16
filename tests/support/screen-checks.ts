@@ -13,11 +13,13 @@ const SCREENS = [
 const COLUMN_MAX_WIDTH = 480;
 
 /**
- * What is wrong with the screen of the page, as it is now, at every width: content that scrolls
- * sideways, a column of the app that is not centred or too wide, and any failure of accessibility.
+ * What is wrong with the screen of the page, as it is now, at every width: an icon for its tab
+ * that is missing, content that scrolls sideways, a column of the app that is not centred or too
+ * wide, and any failure of accessibility.
  */
 export async function problemsOn(page: Page): Promise<string[]> {
   const problems: string[] = [];
+  if (!(await hasAnIcon(page))) problems.push('the page has no icon for its tab');
   for (const size of SCREENS) {
     await page.setViewportSize(size);
     await settled(page);
@@ -26,9 +28,12 @@ export async function problemsOn(page: Page): Promise<string[]> {
     const contentWidth: number = await page.evaluate('document.documentElement.scrollWidth');
     if (contentWidth > size.width) problems.push(`${at}, the content scrolls sideways`);
 
-    // The app is one column; a page of the public web, which has no #root, its own layout.
+    // The app is one column, #root or, on a screen that spans the window, the part it marks; a page
+    // of the public web, which has no #root, has a layout of its own.
     const app = (await page.locator('#root').count()) > 0;
-    const column = app ? await page.locator('#root').boundingBox() : undefined;
+    const marked = page.locator('[data-column]');
+    const columnOf = (await marked.count()) > 0 ? marked.first() : page.locator('#root');
+    const column = app ? await columnOf.boundingBox() : undefined;
     if (app && !column) {
       problems.push(`${at}, there is no column`);
     } else if (column) {
@@ -46,6 +51,16 @@ export async function problemsOn(page: Page): Promise<string[]> {
     }
   }
   return problems;
+}
+
+/** Whether the page names an icon for its tab that answers with an image. */
+async function hasAnIcon(page: Page): Promise<boolean> {
+  return page.evaluate(`(async () => {
+    const icon = document.querySelector('link[rel="icon"]');
+    if (!icon) return false;
+    const response = await fetch(icon.href);
+    return response.ok && (response.headers.get('content-type') ?? '').startsWith('image/');
+  })()`);
 }
 
 /**
