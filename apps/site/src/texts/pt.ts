@@ -120,7 +120,7 @@ export const pt: SiteTexts = {
       {
         heading: 'Anúncios e cookies',
         paragraphs: [
-          'Este site é financiado com anúncios do Google AdSense. A Google e os seus parceiros só usam cookies para os mostrar ou personalizar se o aceitares no gestor de cookies, que aparece antes de qualquer anúncio; se não aceitares, só vês anúncios limitados, sem cookies. Nenhum anúncio recebe o que votas na app.',
+          'Por agora, este site não mostra anúncios nem usa cookies. Quando os mostrar, serão anúncios do Google AdSense: a Google e os seus parceiros só usarão cookies para os mostrar ou personalizar se o aceitares no gestor de cookies, que aparecerá antes de qualquer anúncio; se não aceitares, só verás anúncios limitados, sem cookies. Nenhum anúncio receberá o que votas na app.',
           'A Google é responsável por conta própria pelo que faz com esses cookies. Sabe mais em policies.google.com/technologies/ads.',
         ],
       },

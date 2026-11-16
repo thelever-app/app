@@ -25,6 +25,11 @@ export interface RespondOptions {
 
 /** A page changes at most once a day, when the site is generated again. */
 const CACHE = 'public, max-age=300, s-maxage=3600';
+/**
+ * An address that moved, is gone or does not exist may change with the next generation, and an
+ * instance may answer it with an old manifest: only a minute in the browser, never in the CDN.
+ */
+const SHORT_CACHE = 'public, max-age=60';
 const HTML = 'text/html; charset=utf-8';
 const NOINDEX = { 'X-Robots-Tag': 'noindex' } as const;
 const FALLBACK_LANGUAGE = 'es';
@@ -48,10 +53,10 @@ export async function respond(
 
   const { manifest } = site;
   const language = languageIn(path);
-  if (language && path === `/${language}` && manifest.pages[`${path}/`]) {
-    return redirect(`${path}/`);
-  }
   const found = manifest.pages[path];
+  // The same address with or without the slash at the end, as a visitor may type it.
+  const other = path.endsWith('/') ? path.slice(0, -1) : `${path}/`;
+  if (!found && manifest.pages[other]) return redirect(other);
   if (found) {
     return page(200, await site.read(found.file), HTML, environment, found.indexable);
   }
@@ -77,17 +82,20 @@ function page(
   environment: Environment,
   indexable = true,
 ): SiteResponse {
-  if (body === undefined) return { status: 404, headers: { ...NOINDEX } };
+  if (body === undefined) {
+    return { status: 404, headers: { 'Cache-Control': SHORT_CACHE, ...NOINDEX } };
+  }
   const kept = environment === 'prod' && indexable ? {} : NOINDEX;
+  const cache = status === 200 ? CACHE : SHORT_CACHE;
   return {
     status,
-    headers: { 'Content-Type': contentType, 'Cache-Control': CACHE, ...kept },
+    headers: { 'Content-Type': contentType, 'Cache-Control': cache, ...kept },
     body,
   };
 }
 
 function redirect(location: string): SiteResponse {
-  return { status: 301, headers: { Location: location, 'Cache-Control': CACHE } };
+  return { status: 301, headers: { Location: location, 'Cache-Control': SHORT_CACHE } };
 }
 
 /** The only seller of the ads of the web, as AdSense asks every site to declare at its root. */

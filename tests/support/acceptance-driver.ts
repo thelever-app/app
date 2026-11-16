@@ -133,7 +133,7 @@ function publicPageViewOf(page: Page): PublicPageView {
     arguments: args
       ? dilemma.options.map(({ optionId }) => {
           const argued = args.options.find((option) => option.optionId === optionId)!;
-          return { for: argued.for, against: argued.against };
+          return { for: readable(argued.for, texts), against: readable(argued.against, texts) };
         })
       : [],
     otherLanguages: Object.keys(page.alternates).filter((language) => language !== page.language),

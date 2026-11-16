@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { html, raw } from '../html.ts';
+import { html } from '../html.ts';
 
 describe('html', () => {
   it('should escape the text it is given, so a dilemma cannot add markup to its page', () => {
@@ -15,7 +15,7 @@ describe('html', () => {
   it('should keep the markup of the pieces it is given, and join lists of them', () => {
     // Act
     // prettier-ignore
-    const page = html`<ul>${['a', 'b'].map((item) => html`<li>${item}</li>`)}</ul>${raw('<br>')}`;
+    const page = html`<ul>${['a', 'b'].map((item) => html`<li>${item}</li>`)}</ul>${html`<br>`}`;
 
     // Assert
     expect(page.value).toBe('<ul><li>a</li><li>b</li></ul><br>');

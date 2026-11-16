@@ -86,12 +86,17 @@ export function dilemmaBody({ dilemma }: ShownDilemma, texts: SiteTexts, appBase
                 const argument = argued(option.optionId);
                 return html`<article class="argument">
                   <h3>${readable(option.text, texts)}</h3>
-                  <p><strong>${texts.dilemma.for}</strong> ${argument?.for}</p>
-                  <p><strong>${texts.dilemma.against}</strong> ${argument?.against}</p>
+                  <p>
+                    <strong>${texts.dilemma.for}</strong> ${readable(argument?.for ?? '', texts)}
+                  </p>
+                  <p>
+                    <strong>${texts.dilemma.against}</strong>
+                    ${readable(argument?.against ?? '', texts)}
+                  </p>
                 </article>`;
               })}
               <p class="credit">
-                ${texts.dilemma.byTheTeam}${args.context ? html` ${args.context}` : ''}
+                ${texts.dilemma.byTheTeam}${args.context ? html` ${readable(args.context, texts)}` : ''}
               </p>
             </section>`
           : ''

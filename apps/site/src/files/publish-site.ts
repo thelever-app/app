@@ -15,15 +15,19 @@ export interface PublishOutput {
 
 /**
  * Writes the files of the site that changed, then the manifest, which the service reads first, and
- * last removes the files no page uses any longer. While it writes, the service keeps answering with
- * the manifest before, whose pages are still there.
+ * last removes the files neither this site nor the one before uses: an instance may still answer
+ * with the manifest before for a few minutes, and its pages must be there until the next run.
  */
 export async function publishSite(site: BuiltSite, files: SiteFiles): Promise<PublishOutput> {
   const kept = await files.list();
+  const before = await publishedSite(files);
+  const usedBefore = new Set(Object.values(before?.manifest.pages ?? {}).map(({ file }) => file));
   const changed = [...site.files].filter(([name, { body }]) => kept.get(name) !== md5Of(body));
   await inBatches(changed, ([name, { body, contentType }]) => files.put(name, body, contentType));
   await files.put(MANIFEST_FILE, JSON.stringify(site.manifest), 'application/json');
-  const stale = [...kept.keys()].filter((name) => name !== MANIFEST_FILE && !site.files.has(name));
+  const stale = [...kept.keys()].filter(
+    (name) => name !== MANIFEST_FILE && !site.files.has(name) && !usedBefore.has(name),
+  );
   await inBatches(stale, (name) => files.remove(name));
   return { written: changed.length, removed: stale.length };
 }

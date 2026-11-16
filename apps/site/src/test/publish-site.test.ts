@@ -30,6 +30,27 @@ describe('publishSite', () => {
   });
 });
 
+describe('publishSite and the site before', () => {
+  it('should keep the pages of the site before until the next run, for instances that still read it', async () => {
+    // Arrange
+    const files = new InMemorySiteFiles();
+    const withPage = (file: string, body: string): BuiltSite => ({
+      ...siteWith({ [file]: body }),
+      manifest: { pages: { [`/${file}`]: { file, indexable: true } }, dilemmas: {}, withdrawn: {} },
+    });
+    await publishSite(withPage('old.html', 'TestOld'), files);
+
+    // Act
+    await publishSite(withPage('new.html', 'TestNew'), files);
+    const afterOne = await files.get('old.html');
+    await publishSite(withPage('new.html', 'TestNew'), files);
+
+    // Assert
+    expect(afterOne).toBe('TestOld');
+    expect(await files.get('old.html')).toBeUndefined();
+  });
+});
+
 describe('publishedSite', () => {
   it('should read the site as it was published, and nothing before it ever was', async () => {
     // Arrange

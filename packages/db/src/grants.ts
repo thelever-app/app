@@ -34,17 +34,23 @@ export async function grantDilemmaAccess<DB>(db: Kysely<DB>, user: string): Prom
   }
 }
 
+/** The tables the job that generates the public web reads: the dilemmas and their versions. */
+const PUBLIC_CATALOG_TABLES = [
+  'dilemmas',
+  'dilemma_versions',
+  'dilemma_version_options',
+  'dilemma_version_tags',
+  'dilemma_version_arguments',
+  'dilemma_version_option_arguments',
+] as const;
+
 /**
- * Lets that user only read the rows of the tables of Dilemmas, which the job that generates the
- * public web needs, and nothing of the rooms and games. Run after every migration, like
- * grantRowAccess.
+ * Lets that user only read the tables the public web is made of, and nothing else: not the rooms
+ * and games, nor any table Dilemmas adds later, such as the reports. Run after every migration,
+ * like grantRowAccess.
  */
 export async function grantDilemmaReadAccess<DB>(db: Kysely<DB>, user: string): Promise<void> {
-  const { rows } = await sql<{ name: string }>`
-    select tablename as name from pg_tables
-    where schemaname = 'public' and (tablename = 'dilemmas' or tablename like 'dilemma\\_%')
-  `.execute(db);
-  for (const { name } of rows) {
+  for (const name of PUBLIC_CATALOG_TABLES) {
     await sql`grant select on table ${sql.table(name)} to ${sql.id(user)}`.execute(db);
   }
 }

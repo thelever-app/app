@@ -64,4 +64,59 @@ describe('the service of the public web', () => {
     // Assert
     expect(response.status).toBe(503);
   });
+
+  it('should answer 404 to an asset that does not exist, whatever its name', async () => {
+    // Act
+    const response = await request(await appWithASite()).get('/_site/__proto__');
+
+    // Assert
+    expect(response.status).toBe(404);
+  });
+
+  it('should read the site again before answering that an address does not exist', async () => {
+    // Arrange: the instance read the site before the dilemma was published.
+    const files = new InMemorySiteFiles();
+    const config = { origin: 'https://thelever.test', appBase: '' };
+    await publishSite(buildSite({ dilemmas: [], withdrawn: [] }, LANGUAGES, config), files);
+    let now = 0;
+    const app = createSiteApp({
+      site: cachedSite(files, 300_000, () => now),
+      environment: 'prod',
+      origin: config.origin,
+    });
+    await request(app).get('/es/');
+    await publishSite(
+      buildSite(
+        {
+          dilemmas: [
+            {
+              number: 7,
+              dilemmaId: 'dlm-7',
+              publicId: 'TestPublicId',
+              language: 'es',
+              name: 'El tranvía',
+              text: 'TestText',
+              options: [
+                { optionId: 'a', text: 'TestA' },
+                { optionId: 'b', text: 'TestB' },
+              ],
+              category: 'life-and-death',
+              indexable: false,
+            },
+          ],
+          withdrawn: [],
+        },
+        LANGUAGES,
+        config,
+      ),
+      files,
+    );
+
+    // Act
+    now = 60_000;
+    const response = await request(app).get('/es/vida-y-muerte/el-tranvia-7');
+
+    // Assert
+    expect(response.status).toBe(200);
+  });
 });
