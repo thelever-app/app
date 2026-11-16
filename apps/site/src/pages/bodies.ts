@@ -37,7 +37,7 @@ export function homeBody(language: string, texts: SiteTexts, appBase: string): H
     </div>
     <section class="home-section">
       <h2>${texts.home.howToPlay}</h2>
-      <ol class="steps">
+      <ol class="steps" role="list">
         ${texts.home.steps.map((step) => html`<li>${step}</li>`)}
       </ol>
     </section>

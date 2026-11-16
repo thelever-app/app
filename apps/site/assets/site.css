@@ -527,6 +527,7 @@ h2 {
     line-height: 34px;
   }
 
+  /* Without its numbers, VoiceOver no longer reads it as a list: the page says role="list". */
   .steps {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

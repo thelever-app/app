@@ -1,9 +1,11 @@
 import type { GetPublicCatalogOutput, PublicDilemma } from '@thelever-app/dilemmas';
 import { describe, expect, it } from 'vitest';
-import { buildSite } from '../build-site.ts';
+import { pagePath } from '../addresses.ts';
+import { buildSite, fileOf } from '../build-site.ts';
 import type { Languages } from '../pages/page.ts';
 import { type Environment, respond } from '../respond.ts';
 import { es } from '../texts/es.ts';
+import { LANGUAGES as SITE_LANGUAGES } from '../texts/index.ts';
 
 const CONFIG = {
   origin: 'https://thelever.test',
@@ -139,6 +141,21 @@ describe('the public web', () => {
     expect(body).toContain('TestTaxId');
     expect(body).toContain('TestAddress');
     expect(body).not.toContain('{');
+  });
+
+  it('should fill in who is behind TheLever in the privacy policy and the legal notice of every language', () => {
+    // Act
+    const { files } = buildSite({ dilemmas: [], withdrawn: [] }, SITE_LANGUAGES, CONFIG);
+
+    // Assert
+    for (const [language, texts] of SITE_LANGUAGES) {
+      const privacy = files.get(fileOf(pagePath(language, texts.privacy.title)))!.body;
+      const notice = files.get(fileOf(pagePath(language, texts.legalNotice.title)))!.body;
+      expect(privacy, language).toContain('TestOwner');
+      expect(notice, language).toContain('TestTaxId');
+      expect(notice, language).toContain('TestAddress');
+      expect(`${privacy}${notice}`, language).not.toMatch(/\{(owner|taxId|address)\}/);
+    }
   });
 
   it('should let search engines index a page with reviewed arguments, and list it in the sitemap', async () => {
@@ -318,7 +335,19 @@ describe('the public web', () => {
     expect(home).toMatch(
       /<a class="button primary play" href="\/app"\s*><svg[^>]*aria-hidden="true"/,
     );
-    expect(home).toContain('<ol class="steps">');
+    expect(home).toContain('<ol class="steps" role="list">');
+  });
+
+  it('should leave the logo of the home and its x-default to the home, not to the page of an address that does not exist', async () => {
+    // Act
+    const home = String((await answer('/es/', { dilemmas: [], withdrawn: [] })).body);
+    const missing = String((await answer('/es/nada', { dilemmas: [], withdrawn: [] })).body);
+
+    // Assert
+    expect(home).toContain('class="header at-home"');
+    expect(home).toContain('hreflang="x-default"');
+    expect(missing).toContain('class="header"');
+    expect(missing).not.toContain('hreflang="x-default"');
   });
 
   it('should offer to play from the header of every page, next to the languages', async () => {

@@ -33,6 +33,8 @@ export interface Page {
   readonly alternates: Readonly<Record<string, string>>;
   /** Whether search engines may index it. */
   readonly indexable: boolean;
+  /** Whether it is the home, which draws its own logo and is what x-default points to. */
+  readonly home?: boolean;
   readonly main: Html;
   /** The dilemma it shows, if it is the page of one. */
   readonly dilemma?: PublicDilemma;
@@ -47,7 +49,7 @@ export type Languages = ReadonlyMap<string, SiteTexts>;
  */
 export function document(page: Page, languages: Languages, config: SiteConfig): Html {
   const texts = languages.get(page.language)!;
-  const home = page.path === `/${page.language}/`;
+  const home = page.home === true;
   return html`<!doctype html>
     <html lang="${page.language}">
       <head>

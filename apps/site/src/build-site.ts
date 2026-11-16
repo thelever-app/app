@@ -84,6 +84,7 @@ export function buildSite(
       description: texts.home.description,
       alternates: everywhere(homePath),
       indexable: true,
+      home: true,
       main: homeBody(language, texts, config.appBase),
     });
     for (const category of CATEGORIES) {
