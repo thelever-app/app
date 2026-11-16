@@ -33,7 +33,7 @@ function trolley(changes: Partial<PublicDilemma> = {}): PublicDilemma {
     arguments: {
       context: 'TestContext',
       options: [
-        { optionId: 'dlm-7-option-1', for: 'TestFor1', against: 'TestAgainst1' },
+        { optionId: 'dlm-7-option-1', for: 'TestFor1 de {gap}', against: 'TestAgainst1' },
         { optionId: 'dlm-7-option-2', for: 'TestFor2', against: 'TestAgainst2' },
       ],
     },
@@ -89,6 +89,8 @@ describe('the public web', () => {
     expect(body).toContain('&lt;b&gt;No&lt;/b&gt; hago nada');
     expect(body).toContain('TestFor2');
     expect(body).toContain('TestAgainst1');
+    expect(body).toContain('TestFor1 de alguien de tu grupo');
+    expect(body).not.toContain('{gap}');
     expect(body).toContain('href="/new/TestPublicId"');
   });
 
@@ -204,5 +206,38 @@ describe('the public web', () => {
     // Assert
     expect(declared.body).toBe('google.com, pub-1234567890, DIRECT, f08c47fec0942fa0\n');
     expect(none.status).toBe(404);
+  });
+
+  it('should send an address without its slash at the end to the one with it, and the other way round', async () => {
+    // Arrange
+    const catalog = { dilemmas: [trolley()], withdrawn: [] };
+
+    // Act
+    const category = await answer('/es/vida-y-muerte', catalog);
+    const privacy = await answer('/es/privacidad/', catalog);
+
+    // Assert
+    expect(category.headers.Location).toBe('/es/vida-y-muerte/');
+    expect(privacy.headers.Location).toBe('/es/privacidad');
+  });
+
+  it('should keep in the CDN only the pages, never an address that moved, is gone or does not exist', async () => {
+    // Arrange
+    const catalog = {
+      dilemmas: [trolley()],
+      withdrawn: [{ number: 8, category: 'honesty' as const }],
+    };
+
+    // Act
+    const page = await answer('/es/vida-y-muerte/el-tranvia-7', catalog);
+    const moved = await answer('/es/vida-y-muerte/viejo-7', catalog);
+    const gone = await answer('/es/honestidad/otro-8', catalog);
+    const missing = await answer('/es/nada', catalog);
+
+    // Assert
+    expect(page.headers['Cache-Control']).toContain('s-maxage');
+    for (const other of [moved, gone, missing]) {
+      expect(other.headers['Cache-Control']).toBe('public, max-age=60');
+    }
   });
 });

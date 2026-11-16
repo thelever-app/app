@@ -35,8 +35,3 @@ export function html(strings: TemplateStringsArray, ...pieces: readonly Piece[])
     strings.reduce((page, string, index) => page + render(pieces[index - 1]) + string),
   );
 }
-
-/** Markup written by hand that must not be escaped, such as an inline SVG. */
-export function raw(markup: string): Html {
-  return new Html(markup);
-}

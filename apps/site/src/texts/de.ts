@@ -119,7 +119,7 @@ export const de: SiteTexts = {
       {
         heading: 'Werbung und Cookies',
         paragraphs: [
-          'Diese Website finanziert sich über Werbung von Google AdSense. Google und seine Partner verwenden Cookies, um Werbung anzuzeigen oder zu personalisieren, nur wenn du im Cookie-Manager zustimmst, der vor jeder Werbung erscheint; ohne Zustimmung siehst du nur eingeschränkte Werbung ohne Cookies. Keine Werbung erhält, was du in der App abstimmst.',
+          'Derzeit zeigt diese Website keine Werbung und verwendet keine Cookies. Wenn sie Werbung zeigt, wird es Werbung von Google AdSense sein: Google und seine Partner werden Cookies, um sie anzuzeigen oder zu personalisieren, nur verwenden, wenn du im Cookie-Manager zustimmst, der vor jeder Werbung erscheinen wird; ohne Zustimmung siehst du nur eingeschränkte Werbung ohne Cookies. Keine Werbung wird erhalten, was du in der App abstimmst.',
           'Google ist für das, was es mit diesen Cookies tut, selbst verantwortlich. Mehr dazu unter policies.google.com/technologies/ads.',
         ],
       },

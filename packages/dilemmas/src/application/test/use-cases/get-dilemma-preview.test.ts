@@ -56,16 +56,41 @@ describe('GetDilemmaPreviewUseCase', () => {
       );
     });
 
-    it('should throw DilemmaNotFoundError if the dilemma cannot be read', async () => {
-      // Arrange
-      const withdrawn = trolley();
-      withdrawn.withdraw();
-      const getDilemmaPreview = await previewOf(withdrawn);
+    it.each([
+      ['withdrawn', (dilemma: Dilemma) => dilemma.withdraw()],
+      [
+        'in exploration',
+        (dilemma: Dilemma) =>
+          Dilemma.restore({
+            ...dilemma.toSnapshot(),
+            version: { ...dilemma.toSnapshot().version, status: 'in-exploration' },
+          }),
+      ],
+      [
+        'private',
+        (dilemma: Dilemma) => Dilemma.restore({ ...dilemma.toSnapshot(), visibility: 'private' }),
+      ],
+      [
+        'for adults',
+        (dilemma: Dilemma) =>
+          Dilemma.restore({
+            ...dilemma.toSnapshot(),
+            version: { ...dilemma.toSnapshot().version, minimumAge: 18 },
+          }),
+      ],
+    ] as const)(
+      'should throw DilemmaNotFoundError if the dilemma is %s: no new room may start with it',
+      async (_case, change) => {
+        // Arrange
+        const dilemma = trolley();
+        const changed = change(dilemma) ?? dilemma;
+        const getDilemmaPreview = await previewOf(changed);
 
-      // Act & Assert
-      await expect(getDilemmaPreview.execute({ publicId: 'TestPublicId' })).rejects.toThrow(
-        DilemmaNotFoundError,
-      );
-    });
+        // Act & Assert
+        await expect(getDilemmaPreview.execute({ publicId: 'TestPublicId' })).rejects.toThrow(
+          DilemmaNotFoundError,
+        );
+      },
+    );
   });
 });

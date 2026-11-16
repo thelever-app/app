@@ -120,7 +120,7 @@ export const ca: SiteTexts = {
       {
         heading: 'Anuncis i galetes',
         paragraphs: [
-          'Aquesta web es finança amb anuncis de Google AdSense. Google i els seus socis només fan servir galetes per mostrar-los o personalitzar-los si ho acceptes al gestor de galetes, que apareix abans de qualsevol anunci; si no ho acceptes, només veus anuncis limitats, sense galetes. Cap anunci rep el que votes a l’app.',
+          'Ara per ara, aquesta web no mostra anuncis ni fa servir galetes. Quan en mostri, seran anuncis de Google AdSense: Google i els seus socis només faran servir galetes per mostrar-los o personalitzar-los si ho acceptes al gestor de galetes, que apareixerà abans de qualsevol anunci; si no ho acceptes, només veuràs anuncis limitats, sense galetes. Cap anunci rebrà el que votes a l’app.',
           'Google és responsable pel seu compte del que fa amb aquestes galetes. Pots saber-ne més a policies.google.com/technologies/ads.',
         ],
       },

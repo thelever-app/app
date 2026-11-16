@@ -118,7 +118,7 @@ export const en: SiteTexts = {
       {
         heading: 'Ads and cookies',
         paragraphs: [
-          'This web is funded by Google AdSense ads. Google and its partners only use cookies to show or personalise them if you accept it in the cookie manager, which appears before any ad; if you do not accept, you only see limited ads, without cookies. No ad receives what you vote in the app.',
+          'For now this web shows no ads and uses no cookies. When it does, they will be Google AdSense ads: Google and its partners will only use cookies to show or personalise them if you accept it in the cookie manager, which will appear before any ad; if you do not accept, you will only see limited ads, without cookies. No ad will receive what you vote in the app.',
           'Google is responsible on its own for what it does with those cookies. You can learn more at policies.google.com/technologies/ads.',
         ],
       },

@@ -85,4 +85,14 @@ describe('PlayDilemmaScreen', () => {
       t('playDilemma.notFound'),
     );
   });
+
+  it('should say something went wrong, not that the dilemma is gone, when the server does not answer', async () => {
+    // Act
+    const { t } = await renderPlay(async () => {
+      throw new Error('TestNetworkDown');
+    });
+
+    // Assert
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', t('roomErrors.unknown'));
+  });
 });

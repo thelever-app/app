@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { Icon } from '../components/icon.tsx';
+import { RoomApiError } from '../room/room-api.ts';
 import { useRoomApi } from '../room/room-api-context.tsx';
 import { CreateRoomForm } from './create-room-form.tsx';
 import { useAccessGate } from './use-access-gate.tsx';
@@ -12,6 +13,7 @@ import styles from './play-dilemma-screen.module.css';
 type Preview =
   | { readonly status: 'loading' }
   | { readonly status: 'found'; readonly dilemma: DilemmaPreviewResponseDto }
+  | { readonly status: 'not-found' }
   | { readonly status: 'failed' };
 
 /**
@@ -37,8 +39,10 @@ export function PlayDilemmaScreen() {
         // Without a dilemma, the visitor went back from the access code, and leaves the screen.
         if (current && dilemma) setAnswer({ publicId, preview: { status: 'found', dilemma } });
       },
-      () => {
-        if (current) setAnswer({ publicId, preview: { status: 'failed' } });
+      (error: unknown) => {
+        if (!current) return;
+        const notFound = error instanceof RoomApiError && error.code === 'dilemma-not-found';
+        setAnswer({ publicId, preview: { status: notFound ? 'not-found' : 'failed' } });
       },
     );
     return () => {
@@ -57,7 +61,8 @@ export function PlayDilemmaScreen() {
           <h1 className={styles.title}>{t('playDilemma.title')}</h1>
         </div>
         {preview.status === 'loading' && <p>{t('playDilemma.loading')}</p>}
-        {preview.status === 'failed' && <p role="alert">{t('playDilemma.notFound')}</p>}
+        {preview.status === 'not-found' && <p role="alert">{t('playDilemma.notFound')}</p>}
+        {preview.status === 'failed' && <p role="alert">{t('roomErrors.unknown')}</p>}
         {preview.status === 'found' && (
           <>
             <section className={styles.first} data-testid="first-dilemma">

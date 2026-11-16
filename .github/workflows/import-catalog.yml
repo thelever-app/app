@@ -18,9 +18,11 @@ permissions:
   contents: read
   id-token: write
 
-# One load per environment at a time: two would translate the same dilemmas twice.
+# One load per environment at a time, and never during a deploy of it: two loads would translate
+# the same dilemmas twice, and a load and a deploy together take more connections of the database
+# than its budget leaves.
 concurrency:
-  group: import-catalog-${{ inputs.environment }}
+  group: database-${{ inputs.environment }}
   cancel-in-progress: false
 
 jobs:

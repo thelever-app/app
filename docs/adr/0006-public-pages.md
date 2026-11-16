@@ -10,7 +10,7 @@ CU-14 asks for a public page of every dilemma of the general catalog, in each la
 
 ## Decision
 
-- **Generation:** the Cloud Run job `generate-site` reads the public catalog (`GetPublicCatalogUseCase`, with a database user that only reads the tables of Dilemmas) and writes the HTML, the sitemap and a `manifest.json` into the bucket `{project}-site`. Cloud Scheduler runs it every night, Deploy runs it after each deploy and Import the catalog after each load. It writes only the files that changed, then the manifest, then removes the files no page uses.
+- **Generation:** the Cloud Run job `generate-site` reads the public catalog (`GetPublicCatalogUseCase`, with a database user that only reads the tables of Dilemmas) and writes the HTML, the sitemap and a `manifest.json` into the bucket `{project}-site`. Cloud Scheduler runs it every night, Deploy runs it at the end of each deploy, once the web is published, and Import the catalog after each load. It writes only the files that changed, then the manifest, then removes the files no page uses.
 - **Service:** the Cloud Run service `site` answers `/{language}/…`, `/_site/…`, `/robots.txt` and `/sitemap.xml` from the bucket, behind Firebase Hosting, which rewrites those addresses to it. It sends the old address of a dilemma to its new one with 301, answers 410 to a withdrawn one and decides `X-Robots-Tag` per page and environment.
 - **HTML without React:** TypeScript templates with an `html` tag that escapes every text, run by Node as the rest of the repo, with no build step.
 - **Addresses:** `/{language}/{category}/{name}-{number}`, the number of the curated catalog, which never changes.
