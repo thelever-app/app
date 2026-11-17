@@ -16,6 +16,7 @@ export { migrateToLatest } from './migrator.ts';
 export { inTransaction } from './transaction.ts';
 export { PostgresDilemmaRepository } from './dilemmas/postgres-dilemma-repository.ts';
 export { PostgresDilemmaQueries } from './dilemmas/postgres-dilemma-queries.ts';
+export { PostgresWorldResultRepository } from './dilemmas/postgres-world-result-repository.ts';
 export { PostgresRoomRepository } from './game/postgres-room-repository.ts';
 export { PostgresGameRepository } from './game/postgres-game-repository.ts';
 export { PostgresPlayerNotifier, GAME_EVENTS_CHANNEL } from './game/postgres-player-notifier.ts';

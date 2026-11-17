@@ -9,6 +9,7 @@ import {
   JoinRoomResponseDto,
   RoomPreviewResponseDto,
   SearchDilemmasResponseDto,
+  WorldResultResponseDto,
 } from '@thelever-app/protocol';
 import type { AccessCode } from '../identity/access-code.ts';
 import type { PlayerIdentity } from '../identity/anonymous-player.ts';
@@ -29,8 +30,16 @@ export interface RoomApi {
   createRoom(request: CreateRoomRequestDto): Promise<CreateRoomResponseDto>;
   /** The room of a code, as the player typed it or as the link carries it. */
   previewRoom(code: string): Promise<RoomPreviewResponseDto>;
-  /** The dilemma a room starts with, from the public id its public page links with. */
+  /** The dilemma a link of the public web leads to, to start a room with it or vote it alone. */
   previewDilemma(publicId: string): Promise<DilemmaPreviewResponseDto>;
+  /** Votes the option of the dilemma alone, for its world result: once, already-voted the second time. */
+  voteAlone(publicId: string, optionId: string): Promise<void>;
+  /** How the world voted the dilemma, for the vote and the prediction the device keeps. */
+  worldResult(
+    publicId: string,
+    optionId: string,
+    prediction: number,
+  ): Promise<WorldResultResponseDto>;
   joinRoom(roomId: string, nickname: string, avatar: AvatarDto): Promise<JoinRoomResponseDto>;
   /** A page of the search: the first one, or the one after the `next` of the page before. */
   searchDilemmas(
@@ -56,6 +65,9 @@ export interface HttpRoomApiOptions {
 interface Schema<T> {
   safeParse(body: unknown): { success: true; data: T } | { success: false };
 }
+
+/** An answer with no body, as 204 is. */
+const NO_CONTENT: Schema<void> = { safeParse: () => ({ success: true, data: undefined }) };
 
 /**
  * The HTTP routes of the room server, as the player who signed in: every call carries their
@@ -110,6 +122,16 @@ export function httpRoomApi({
       call('GET', `/rooms/by-code/${encodeURIComponent(code)}`, RoomPreviewResponseDto),
     previewDilemma: (publicId) =>
       call('GET', `/dilemmas/${encodeURIComponent(publicId)}`, DilemmaPreviewResponseDto),
+    voteAlone: (publicId, optionId) =>
+      call('POST', `/dilemmas/${encodeURIComponent(publicId)}/vote`, NO_CONTENT, { optionId }),
+    worldResult: (publicId, optionId, prediction) => {
+      const query = new URLSearchParams({ option: optionId, prediction: String(prediction) });
+      return call(
+        'GET',
+        `/dilemmas/${encodeURIComponent(publicId)}/world-result?${query.toString()}`,
+        WorldResultResponseDto,
+      );
+    },
     joinRoom: (roomId, nickname, avatar) =>
       call('POST', `/rooms/${encodeURIComponent(roomId)}/players`, JoinRoomResponseDto, {
         nickname,

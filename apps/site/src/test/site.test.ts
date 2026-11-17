@@ -71,6 +71,21 @@ async function answer(
   });
 }
 
+/** What the environment configures for the ads of the web, once AdSense has its ad units. */
+const ADS = {
+  adsenseClient: 'ca-pub-0000000000000001',
+  adSlots: { phone: '1111111111', top: '2222222222', side: '3333333333' },
+};
+
+async function answerWithAds(path: string, catalog: GetPublicCatalogOutput, ads: object = ADS) {
+  const { files, manifest } = buildSite(catalog, LANGUAGES, { ...CONFIG, ...ads });
+  return respond(
+    path,
+    { manifest, read: async (file: string) => files.get(file)?.body },
+    { environment: 'prod', origin: CONFIG.origin, languages: [...LANGUAGES.keys()] },
+  );
+}
+
 describe('the public web', () => {
   it('should give each dilemma a page in each language, which links to the others', async () => {
     // Act
@@ -101,25 +116,152 @@ describe('the public web', () => {
     expect(body).toContain('TestAgainst1');
     expect(body).toContain('TestFor1 de alguien de tu grupo');
     expect(body).not.toContain('{gap}');
-    expect(body).toContain('href="/new/TestPublicId"');
+    expect(body).toContain('href="/new/TestPublicId?lang=es"');
   });
 
-  it('should keep the privacy policy and the legal notice out of search engines and of the sitemap', async () => {
+  it('should keep the privacy policy, the cookie policy and the legal notice out of search engines and of the sitemap', async () => {
     // Arrange
     const catalog = { dilemmas: [trolley()], withdrawn: [] };
 
     // Act
     const privacy = await answer('/es/privacidad', catalog);
+    const cookies = await answer('/es/cookies', catalog);
     const notice = await answer('/es/aviso-legal', catalog);
     const sitemap = await answer('/sitemap.xml', catalog);
 
     // Assert
-    for (const page of [privacy, notice]) {
+    for (const page of [privacy, cookies, notice]) {
       expect(page.status).toBe(200);
       expect(page.headers['X-Robots-Tag']).toBe('noindex');
     }
     expect(sitemap.body).not.toContain('/es/privacidad');
+    expect(sitemap.body).not.toContain('/es/cookies');
     expect(sitemap.body).not.toContain('/es/aviso-legal');
+  });
+
+  it('should keep the paragraphs and the lists of a page of its own in the order it has them', async () => {
+    // Act
+    const page = String((await answer('/es/cookies', { dilemmas: [], withdrawn: [] })).body);
+
+    // Assert
+    const at = (text: string) => page.indexOf(text);
+    expect(at('Todas las demás')).toBeLessThan(at('<li>Para mostrar y medir'));
+    expect(at('<li>Para personalizar')).toBeLessThan(at('Google también puede guardar'));
+  });
+
+  it('should list in the cookie policy of every language the cookies Google sets, with what they are for and how long they last', () => {
+    // Act
+    const { files } = buildSite({ dilemmas: [], withdrawn: [] }, SITE_LANGUAGES, CONFIG);
+
+    // Assert
+    for (const [language, texts] of SITE_LANGUAGES) {
+      const page = files.get(fileOf(pagePath(language, texts.cookies.title)))?.body;
+      expect(page, language).toBeDefined();
+      for (const name of ['FCCDCF', 'FCNEC', '__gads', '__gpi', '__eoi', 'IDE', 'DSID']) {
+        expect(page, `${language}: ${name}`).toContain(`<td>${name}</td>`);
+      }
+    }
+  });
+
+  it('should show on a dilemma page the ads of the environment: below the arguments on a phone, above and beside them on a wide screen', async () => {
+    // Act
+    const page = String(
+      (
+        await answerWithAds('/es/vida-y-muerte/el-tranvia-7', {
+          dilemmas: [trolley()],
+          withdrawn: [],
+        })
+      ).body,
+    );
+
+    // Assert
+    expect(page).toMatch(
+      /<script\s+async\s+src="https:\/\/pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js\?client=ca-pub-0000000000000001"\s+crossorigin="anonymous"\s*><\/script>/,
+    );
+    for (const [where, slot] of [
+      ['phone', '1111111111'],
+      ['top', '2222222222'],
+      ['side', '3333333333'],
+    ]) {
+      expect(page).toMatch(
+        new RegExp(
+          `<aside class="ad ad-${where}" aria-label="${es.dilemma.ad}">[\\s\\S]*?data-ad-client="ca-pub-0000000000000001"[\\s\\S]*?data-ad-slot="${slot}"`,
+        ),
+      );
+    }
+    const at = (text: string) => page.indexOf(text);
+    expect(at('ad ad-top')).toBeLessThan(at('class="crumbs"'));
+    expect(at('class="dilemma-arguments"')).toBeLessThan(at('ad ad-side'));
+    expect(at('class="credit"')).toBeLessThan(at('ad ad-phone'));
+    expect(at('ad ad-phone')).toBeLessThan(at('class="more"'));
+  });
+
+  it('should ask for ads that are not personalised when the browser sends Global Privacy Control', async () => {
+    // Act
+    const page = String(
+      (
+        await answerWithAds('/es/vida-y-muerte/el-tranvia-7', {
+          dilemmas: [trolley()],
+          withdrawn: [],
+        })
+      ).body,
+    );
+
+    // Assert: before the script of Google, which reads it when it loads.
+    expect(page).toMatch(
+      /navigator\.globalPrivacyControl[\s\S]*requestNonPersonalizedAds = 1[\s\S]*adsbygoogle\.js/,
+    );
+  });
+
+  it('should show no ad on the home, the categories or the pages of their own', async () => {
+    // Arrange
+    const catalog = { dilemmas: [trolley()], withdrawn: [] };
+
+    // Act
+    const pages = await Promise.all(
+      ['/es/', '/es/vida-y-muerte/', '/es/privacidad', '/es/cookies'].map(
+        async (path) => (await answerWithAds(path, catalog)).body,
+      ),
+    );
+
+    // Assert
+    for (const page of pages) expect(page).not.toContain('adsbygoogle');
+  });
+
+  it('should show no ad while the environment has no ad units, though it declares its publisher', async () => {
+    // Act
+    const page = String(
+      (
+        await answerWithAds(
+          '/es/vida-y-muerte/el-tranvia-7',
+          { dilemmas: [trolley()], withdrawn: [] },
+          { adsenseClient: ADS.adsenseClient },
+        )
+      ).body,
+    );
+
+    // Assert
+    expect(page).toContain('<meta name="google-adsense-account"');
+    expect(page).not.toContain('adsbygoogle');
+    expect(page).not.toContain('data-consent');
+  });
+
+  it('should link the cookie policy from every page, and let whoever reads a dilemma with ads change what they accepted', async () => {
+    // Arrange
+    const catalog = { dilemmas: [trolley()], withdrawn: [] };
+
+    // Act
+    const home = String((await answerWithAds('/es/', catalog)).body);
+    const dilemma = String((await answerWithAds('/es/vida-y-muerte/el-tranvia-7', catalog)).body);
+
+    // Assert
+    for (const page of [home, dilemma]) {
+      expect(page).toContain(`<a href="/es/cookies">${es.cookies.title}</a>`);
+    }
+    expect(dilemma).toMatch(
+      new RegExp(`<button type="button" class="link" data-consent>\\s*${es.footer.manageCookies}`),
+    );
+    expect(home).not.toContain('data-consent');
   });
 
   it('should name the one responsible in the privacy policy without the tax id or the address', async () => {
@@ -316,12 +458,41 @@ describe('the public web', () => {
     expect(none.headers.Location).toBe('/es/');
   });
 
+  it('should offer to vote the dilemma alone in the app, in the language of the page and with the way back to it', async () => {
+    // Act
+    const page = String(
+      (await answer('/es/vida-y-muerte/el-tranvia-7', { dilemmas: [trolley()], withdrawn: [] }))
+        .body,
+    );
+
+    // Assert
+    expect(page).toMatch(
+      new RegExp(
+        `<a\\s+class="button primary"\\s+href="/vote/TestPublicId\\?lang=es&back=%2Fes%2Fvida-y-muerte%2Fel-tranvia-7"\\s*>[\\s\\S]*?${es.dilemma.vote}`,
+      ),
+    );
+    expect(page).toContain(es.dilemma.worldResultLater);
+    expect(page.indexOf(es.dilemma.vote)).toBeLessThan(page.indexOf(es.dilemma.play));
+  });
+
+  it('should open the app in the language of the page, from the dilemma, the home and the header', async () => {
+    // Act
+    const catalog = { dilemmas: [trolley(), IN_ENGLISH], withdrawn: [] };
+    const dilemma = String((await answer('/en/life-and-death/the-trolley-7', catalog)).body);
+    const home = String((await answer('/en/', catalog)).body);
+
+    // Assert
+    expect(dilemma).toContain('href="/new/TestEnglishPublicId?lang=en"');
+    expect(dilemma).toContain('class="button primary header-play" href="/app?lang=en"');
+    expect(home).toMatch(/class="button primary play" href="\/app\?lang=en"/);
+  });
+
   it('should take the home to the start of the app to create a room', async () => {
     // Act
     const home = await answer('/es/', { dilemmas: [], withdrawn: [] });
 
     // Assert
-    expect(home.body).toContain('href="/app"');
+    expect(home.body).toContain('href="/app?lang=es"');
     expect(home.body).toContain('hreflang="x-default" href="https://thelever.test/"');
   });
 
@@ -334,7 +505,7 @@ describe('the public web', () => {
       new RegExp(`src="/_site/waving-at-junction.svg\\?v=[0-9a-f]+"\\s+alt="${es.home.scene}"`),
     );
     expect(home).toMatch(
-      /<a class="button primary play" href="\/app"\s*><svg[^>]*aria-hidden="true"/,
+      /<a class="button primary play" href="\/app\?lang=es"\s*><svg[^>]*aria-hidden="true"/,
     );
     expect(home).toContain('<ol class="steps" role="list">');
   });
@@ -371,8 +542,10 @@ describe('the public web', () => {
 
     // Assert
     const header = page.slice(page.indexOf('<header'), page.indexOf('</header>'));
-    expect(header).toContain(
-      `<a class="button primary header-play" href="/app">${es.home.play}</a>`,
+    expect(header).toMatch(
+      new RegExp(
+        `<a class="button primary header-play" href="/app\\?lang=es"\\s*>${es.home.play}</a`,
+      ),
     );
     expect(header).toMatch(/<summary[^>]*>\s*<svg[^>]*aria-hidden="true"/);
   });

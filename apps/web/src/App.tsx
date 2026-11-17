@@ -4,6 +4,7 @@ import { HomeScreen } from './screens/home-screen.tsx';
 import { JoinCodeScreen } from './screens/join-code-screen.tsx';
 import { JoinScreen } from './screens/join-screen.tsx';
 import { PlayDilemmaScreen } from './screens/play-dilemma-screen.tsx';
+import { VoteAloneScreen } from './vote-alone/vote-alone-screen.tsx';
 import { RoomScreen } from './screens/room-screen.tsx';
 
 /**
@@ -19,6 +20,7 @@ export function App() {
       <Route path="/join" element={<JoinCodeScreen />} />
       <Route path="/join/:code" element={<JoinScreen />} />
       <Route path="/new/:publicId" element={<PlayDilemmaScreen />} />
+      <Route path="/vote/:publicId" element={<VoteAloneScreen />} />
       <Route path="/rooms/:roomId" element={<RoomScreen />} />
       <Route path="*" element={<Navigate to={HOME_PATH} replace />} />
     </Routes>

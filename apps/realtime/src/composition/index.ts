@@ -1,6 +1,12 @@
 import { createServer, type Server } from 'node:http';
 import type { Logger } from '@thelever-app/db';
-import { GetDilemmaPreviewUseCase } from '@thelever-app/dilemmas';
+import {
+  type DilemmaRepository,
+  GetDilemmaPreviewUseCase,
+  GetWorldResultUseCase,
+  VoteAloneUseCase,
+  type WorldResultRepository,
+} from '@thelever-app/dilemmas';
 import type { WebSocketServer } from 'ws';
 import { createApp } from '../app.ts';
 import { KeyedLock } from '../concurrency/keyed-lock.ts';
@@ -15,6 +21,8 @@ import { CryptoRandomness } from '../rooms/crypto-randomness.ts';
 import { errorCodeOf } from '../rooms/error-codes.ts';
 import { CreateRoomEndpoint } from '../rooms/http/create-room.endpoint.ts';
 import { DilemmaPreviewEndpoint } from '../rooms/http/dilemma-preview.endpoint.ts';
+import { VoteAloneEndpoint } from '../rooms/http/vote-alone.endpoint.ts';
+import { WorldResultEndpoint } from '../rooms/http/world-result.endpoint.ts';
 import { JoinRoomEndpoint } from '../rooms/http/join-room.endpoint.ts';
 import { RoomPreviewEndpoint } from '../rooms/http/room-preview.endpoint.ts';
 import { SearchDilemmasEndpoint } from '../rooms/http/search-dilemmas.endpoint.ts';
@@ -116,7 +124,7 @@ export async function composeRealtimeServer(
       httpEndpoints(
         commands,
         queries,
-        new GetDilemmaPreviewUseCase(repositories.dilemmaRepository),
+        dilemmaEndpoints(repositories.dilemmaRepository, repositories.worldResults),
         roomLock,
         runCommand,
       ),
@@ -165,7 +173,7 @@ export async function composeRealtimeServer(
 function httpEndpoints(
   commands: GameCommands,
   queries: GameQueries,
-  getDilemmaPreview: GetDilemmaPreviewUseCase,
+  dilemmas: readonly HttpEndpoint[],
   roomLock: KeyedLock,
   runCommand: RunCommand,
 ): HttpEndpoint[] {
@@ -175,7 +183,22 @@ function httpEndpoints(
     new RoomPreviewEndpoint(queries.getRoomPreview),
     new JoinRoomEndpoint(commands.joinRoom, roomLock, runCommand),
     new SearchDilemmasEndpoint(queries.searchDilemmas),
-    new DilemmaPreviewEndpoint(getDilemmaPreview),
+    ...dilemmas,
+  ];
+}
+
+/**
+ * The routes of Dilemmas a link of the public web leads to: the preview of a dilemma, to play it
+ * with the group or vote it alone, the vote and its world result.
+ */
+function dilemmaEndpoints(
+  dilemmaRepository: DilemmaRepository,
+  worldResults: WorldResultRepository,
+): HttpEndpoint[] {
+  return [
+    new DilemmaPreviewEndpoint(new GetDilemmaPreviewUseCase(dilemmaRepository)),
+    new VoteAloneEndpoint(new VoteAloneUseCase(dilemmaRepository, worldResults)),
+    new WorldResultEndpoint(new GetWorldResultUseCase(dilemmaRepository, worldResults)),
   ];
 }
 

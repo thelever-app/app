@@ -58,3 +58,11 @@ export async function createI18n(language?: string): Promise<i18n> {
 export function deviceLanguage({ language }: Pick<i18n, 'language'>): LanguageDto {
   return LanguageDto.safeParse(language?.split('-')[0]).data ?? SOURCE_LANGUAGE;
 }
+
+/**
+ * The language a link opens the app in, as the public web writes it in its links (`?lang=en`):
+ * none if it has no language or one the app does not have.
+ */
+export function languageOfTheLink(search: string): LanguageDto | undefined {
+  return LanguageDto.safeParse(new URLSearchParams(search).get('lang')).data;
+}

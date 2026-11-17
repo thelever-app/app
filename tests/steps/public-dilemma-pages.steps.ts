@@ -114,6 +114,23 @@ When(
   },
 );
 
+Given('the visitor has never chosen a language in the app', async function (this: GameWorld) {
+  await this.driver.visitorWithoutAChosenLanguage();
+});
+
+When(
+  'a visitor chooses to play {string} with the group from its public page in {word}',
+  async function (this: GameWorld, name: string, language: string) {
+    await this.driver.generatePublicPages();
+    await this.driver.playWithTheGroupFromThePublicPage(name, codeOf(language));
+    this.dilemmaToPlayWithTheGroup = name;
+  },
+);
+
+Then('the app opens in {word}', async function (this: GameWorld, language: string) {
+  assert.equal(await this.driver.languageOfTheApp(), codeOf(language));
+});
+
 Then(
   '{string} has a public page in each language of the app',
   async function (this: GameWorld, name: string) {
@@ -191,4 +208,53 @@ Then('the sitemap does not include it', async function (this: GameWorld) {
 
 Then('the sitemap includes it', async function (this: GameWorld) {
   assert.equal(await this.driver.sitemapIncludes(this.dilemmaName), true);
+});
+
+Then('a banner ad appears below the arguments', async function (this: GameWorld) {
+  assert.ok(await this.driver.bannerAdBelowTheArguments(), 'no ad appears below the arguments');
+});
+
+When(
+  'a visitor chooses to vote on the public page of {string}',
+  async function (this: GameWorld, name: string) {
+    await this.driver.generatePublicPages();
+    await this.driver.voteFromThePublicPage(name);
+  },
+);
+
+Then(
+  'the app opens on {string} ready to vote alone',
+  async function (this: GameWorld, name: string) {
+    assert.equal(await this.driver.dilemmaReadyToVoteAlone(), name);
+  },
+);
+
+When('a visitor votes {string} alone in the app', async function (this: GameWorld, name: string) {
+  await this.driver.voteAlone(name);
+});
+
+Then(
+  'the vote counts for the world result of {string}',
+  async function (this: GameWorld, name: string) {
+    assert.equal(await this.driver.worldAnswersOf(name), 1);
+  },
+);
+
+Then('nobody can see what the visitor voted', async function (this: GameWorld) {
+  assert.equal(await this.driver.voteOfTheVisitorIsKept(), false);
+});
+
+Given(
+  '{string} has {int} answers',
+  async function (this: GameWorld, name: string, answers: number) {
+    await this.driver.dilemmaWithWorldAnswers(name, answers);
+  },
+);
+
+Then('the visitor sees that there are still too few answers', async function (this: GameWorld) {
+  assert.equal((await this.driver.worldResultSeen()).tooFewAnswers, true);
+});
+
+Then('sees no figures of the world result', async function (this: GameWorld) {
+  assert.deepEqual((await this.driver.worldResultSeen()).figures, []);
 });

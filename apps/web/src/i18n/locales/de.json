@@ -1,0 +1,511 @@
+{
+  "app": {
+    "connecting": "Verbinden…",
+    "unavailable": "Raum noch nicht verfügbar."
+  },
+  "playerList": {
+    "you": "{{name}} (du)",
+    "disconnected": "offline",
+    "pending_one": "Noch offen · {{count}}",
+    "pending_other": "Noch offen · {{count, number}}",
+    "done_one": "Geantwortet · {{count}}",
+    "done_other": "Geantwortet · {{count, number}}",
+    "answered": "hat geantwortet",
+    "anonymousAnswered_one": "hat geantwortet",
+    "anonymousAnswered_other": "haben geantwortet",
+    "anonymousPending_one": "noch {{count}} offen",
+    "anonymousPending_other": "noch {{count, number}} offen",
+    "anonymousNote": "Im anonymen Raum sieht niemand, wer geantwortet hat, nur wie viele.",
+    "inRoom_one": "Im Raum · {{count}}",
+    "inRoom_other": "Im Raum · {{count, number}}"
+  },
+  "progressStrip": {
+    "position": "Dilemma {{position, number}} von {{total, number}}",
+    "group": "Wer geantwortet hat",
+    "more": "+{{count, number}}",
+    "showAll": "Alle ansehen",
+    "predicting": "Dilemma {{position, number}} von {{total, number}} · Vorhersage",
+    "anonymousGroup": "Wie viele geantwortet haben",
+    "anonymousCount_one": "{{count}} hat geantwortet · noch {{pending, number}} offen",
+    "anonymousCount_other": "{{count, number}} haben geantwortet · noch {{pending, number}} offen",
+    "playerAnswered": "{{name}} · hat geantwortet",
+    "playerPending": "{{name}} · hat noch nicht geantwortet",
+    "playerDisconnected": "{{name}} (offline)",
+    "movedOn": "{{name}} ist schon beim nächsten",
+    "playerMovedOn": "{{label}} · ist schon beim nächsten"
+  },
+  "groupSheet": {
+    "title": "Die Gruppe",
+    "close": "Schließen",
+    "summary_one": "{{count}} Spieler · man sieht, wer geantwortet hat, nicht was",
+    "summary_other": "{{count, number}} Spieler · man sieht, wer geantwortet hat, nicht was",
+    "summaryAnonymous_one": "{{count}} Spieler · niemand sieht, wer geantwortet hat",
+    "summaryAnonymous_other": "{{count, number}} Spieler · niemand sieht, wer geantwortet hat"
+  },
+  "dilemma": {
+    "privacy": "Niemand aus der Gruppe sieht deine Stimme vor der Auflösung. Bis dahin kannst du sie ändern.",
+    "choose": "Wähle eine Option",
+    "continue": "Weiter",
+    "privacyAnonymous": "Niemand aus der Gruppe sieht deine Stimme, auch nicht bei der Auflösung. Ändern kannst du sie, bis das Dilemma aufgedeckt wird.",
+    "done": "Fertig"
+  },
+  "waiting": {
+    "position": "Dilemma {{position, number}} von {{total, number}} · Beantwortet",
+    "title": "Warten auf die anderen",
+    "subtitle": "Das Dilemma wird aufgedeckt, wenn alle geantwortet haben oder die Zeit abläuft. Bis dahin kannst du deine Antwort ändern.",
+    "change": "Antwort ändern",
+    "mascotWaiting": "La Palanca wartet",
+    "revealEarly": "Jetzt aufdecken",
+    "revealCaption_one": "Eine Person fehlt noch. Sie zählt bei diesem Dilemma als „nicht abgestimmt“.",
+    "revealCaption_other": "{{count, number}} fehlen noch. Sie zählen bei diesem Dilemma als „nicht abgestimmt“.",
+    "guest": "{{host}} kann früher aufdecken; sonst wird aufgedeckt, wenn alle geantwortet haben oder die Zeit abläuft."
+  },
+  "game": {
+    "timeLeft": "Noch {{time}}"
+  },
+  "predict": {
+    "voted": "Deine Stimme: „",
+    "votedEnd": "“",
+    "voteQuestion": "Wer hat was gewählt?",
+    "voteOf": "Stimme von {{name}}",
+    "back": "Zurück zu deiner Stimme",
+    "missing_one": "Noch {{count}} Antwort offen",
+    "missing_other": "Noch {{count, number}} Antworten offen",
+    "next": "Fertig"
+  },
+  "gameMenu": {
+    "open": "Weitere Optionen",
+    "title": "Spielmenü",
+    "revealEarly": "Jetzt aufdecken",
+    "onlyHost": "Nur der Gastgeber",
+    "showGroup": "Gruppe ansehen",
+    "share": "Link teilen",
+    "copied": "Link kopiert",
+    "code": "Code {{code}}",
+    "showQr": "QR-Code zeigen",
+    "report": "Dilemma melden",
+    "reportSubtitle": "Niemand aus der Gruppe erfährt es",
+    "reported": "Du hast dieses Dilemma schon gemeldet",
+    "leave": "Spiel verlassen"
+  },
+  "report": {
+    "title": "Was stimmt mit diesem Dilemma nicht?",
+    "reasons": {
+      "offensive": "Beleidigend",
+      "confusing": "Unklar",
+      "mistranslated": "Schlecht übersetzt",
+      "other": "Anderes"
+    },
+    "comment": "Kommentar (optional)",
+    "placeholder": "Was ist dir aufgefallen?",
+    "noPersonalData": "Gib keine persönlichen Daten an.",
+    "counter": "{{count, number}}/{{max, number}}",
+    "chooseReason": "Wähle einen Grund",
+    "send": "Meldung senden",
+    "note": "Das Team sieht es sich an. Niemand aus der Gruppe erfährt, dass du es gemeldet hast."
+  },
+  "reportSent": {
+    "thanks": "Danke.",
+    "text": "Das Team sieht es sich an; niemand aus der Gruppe weiß davon.",
+    "canSkip": "Wenn du es lieber nicht beantworten willst, kannst du es überspringen.",
+    "skip": "Dilemma überspringen"
+  },
+  "revealEarly": {
+    "title": "Dilemma jetzt aufdecken?",
+    "body_one": "{{count}} Spieler hat noch nicht geantwortet. Bei diesem Dilemma zählt das als „nicht abgestimmt“, und antworten ist dann nicht mehr möglich.",
+    "body_other": "{{count, number}} Spieler haben noch nicht geantwortet. Bei diesem Dilemma zählt das als „nicht abgestimmt“, und antworten ist dann nicht mehr möglich.",
+    "reveal": "Jetzt aufdecken",
+    "wait": "Weiter warten"
+  },
+  "newHost": {
+    "title": "Du bist jetzt Gastgeber",
+    "disconnected": "{{host}} ist weiterhin offline. Ab der nächsten Runde kannst du im Menü ⋮ früher aufdecken. Kommt {{host}} zurück, geht die Rolle wieder zurück.",
+    "left": "{{host}} hat das Spiel verlassen. Deine Optionen findest du im Menü ⋮."
+  },
+  "lateJoin": {
+    "illustration": "La Palanca neben einer Weiche",
+    "room": "Raum von {{host}}",
+    "title": "Das Spiel hat schon begonnen",
+    "round": "Du steigst in die laufende Runde ein, Dilemma {{position, number}} von {{total, number}}; wird es gerade aufgedeckt, siehst du es mit der Gruppe.",
+    "onlyVote": "In diesem Spiel stimmst du nur ab: Du sagst nichts voraus, niemand sagt deine Stimme voraus und du kommst nicht in die Rangliste.",
+    "enter": "In die Runde"
+  },
+  "reveal": {
+    "region": "Auflösung",
+    "position": "Dilemma {{position, number}} von {{total, number}} · Auflösung",
+    "addedBy": "Hinzugefügt von {{name}}",
+    "about": "Dieses Dilemma ging um {{name}}",
+    "yourHitsRegion": "Deine Treffer",
+    "hitsAll": "Du hast alle durchschaut!",
+    "hitsCount": "{{right, number}} von {{count, number}} richtig",
+    "missedOne": "Nur bei {{name}} lagst du falsch",
+    "missedSome": "Falsch lagst du bei {{names}}",
+    "missedMany": "Falsch lagst du bei {{names}} und {{count, number}} weiteren",
+    "missedAll": "Heute hast du niemanden durchschaut",
+    "whoVoted": "Wer was gewählt hat",
+    "nobodyChose": "Niemand hat sie gewählt",
+    "guessed": "· dein Tipp: {{letter}}",
+    "voterRight": "{{name}}, richtig getippt",
+    "voterMissed": "{{name}}, daneben: dein Tipp war {{letter}}",
+    "optionCount": "{{count, number}} · {{percent}}",
+    "didNotVote_one": "Nicht abgestimmt · {{names}}",
+    "didNotVote_other": "Nicht abgestimmt · {{names}}",
+    "next": "Nächstes Dilemma",
+    "anonymousDidNotVote_one": "{{count}} Person hat nicht abgestimmt.",
+    "anonymousDidNotVote_other": "{{count, number}} Personen haben nicht abgestimmt.",
+    "anonymousNote": "In diesem Raum sieht niemand, wer was gewählt hat.",
+    "fewVotesTitle": "Zu wenige Stimmen, um die Verteilung zu zeigen",
+    "fewVotesVoted_one": "Nur {{count}} Person hat abgestimmt",
+    "fewVotesVoted_other": "Nur {{count, number}} Personen haben abgestimmt",
+    "fewVotesNobody": "Niemand hat abgestimmt",
+    "fewVotesDidNot_one": "und {{count}} nicht",
+    "fewVotesDidNot_other": "und {{count, number}} nicht",
+    "fewVotesWhy": "Bei weniger als 3 Stimmen ließe die Verteilung erraten, wer was gewählt hat.",
+    "introPosition": "Dilemma {{position, number}} von {{total, number}} · Abstimmung beendet",
+    "introTitle": "Das Dilemma wird aufgedeckt",
+    "introMascot": "La Palanca jubelt",
+    "introAnswered_one": "{{count}} von {{total, number}} hat geantwortet.",
+    "introAnswered_other": "{{count, number}} von {{total, number}} haben geantwortet.",
+    "introNominal": "Jetzt seht ihr, wer was gewählt hat.",
+    "introAnonymous": "Jetzt seht ihr, wie viele welche Option gewählt haben."
+  },
+  "notices": {
+    "reconnecting": "Verbinde neu… deine Antworten sind gespeichert",
+    "paused": "Pausiert. Tippe, um weiterzumachen",
+    "answerNotSaved": "Deine letzte Antwort wurde nicht gespeichert. Wähle sie noch einmal.",
+    "dismiss": "Hinweis schließen"
+  },
+  "noReturn": {
+    "gone": {
+      "title": "Dieses Spiel gibt es nicht mehr",
+      "text": "Es ist zu Ende oder wurde geschlossen. Spielt die Gruppe weiter, lass dir den neuen Link schicken."
+    },
+    "device": {
+      "title": "Dieses Gerät ist nicht im Spiel",
+      "text": "Bist du über ein anderes Gerät beigetreten, spiel dort weiter. Sonst bitte die Gruppe um einen neuen Link."
+    },
+    "update": {
+      "title": "Es gibt eine neue Version von TheLever",
+      "text": "Lade neu, um mit der neuesten weiterzuspielen.",
+      "action": "Neu laden"
+    },
+    "identity": {
+      "title": "Wir konnten dich nicht erkennen",
+      "text": "Das ist meist nur vorübergehend. Versuch es gleich noch einmal.",
+      "action": "Erneut versuchen"
+    },
+    "expelled": {
+      "title": "Du wurdest aus dem Raum entfernt",
+      "text": "Wer den Raum erstellt hat, hat dich aus diesem Spiel entfernt. Spielt die Gruppe eine Revanche, kannst du dabei sein.",
+      "action": "Zur Startseite"
+    }
+  },
+  "createRoom": {
+    "title": "Neuer Raum",
+    "nickname": "Dein Spitzname",
+    "nicknamePlaceholder": "So sieht dich die Gruppe",
+    "groupNature": {
+      "label": "Mit wem spielst du?",
+      "family": "Familie",
+      "friends": "Freunde",
+      "work": "Kollegen",
+      "mixed": "Gemischt",
+      "hint": "Damit wir verstehen, wie sich die Stimmen je nach Gruppe ändern."
+    },
+    "place": {
+      "label": "Wo seid ihr?",
+      "together": "Am selben Ort",
+      "remote": "Aus der Ferne"
+    },
+    "submit": "Raum erstellen",
+    "submitting": "Raum wird erstellt…",
+    "missing": {
+      "nickname": "Gib deinen Spitznamen ein",
+      "groupNature": "Wähle, mit wem du spielst",
+      "place": "Sag uns, wo ihr seid"
+    }
+  },
+  "joinRoom": {
+    "roomOf": "Raum von {{host}} · {{code}}",
+    "inTheRoom_one": "{{count}} im Raum",
+    "inTheRoom_other": "{{count}} im Raum",
+    "adultsOnly": "Nur ab 18: kann Dilemmas für Erwachsene enthalten.",
+    "nickname": "Dein Spitzname",
+    "submit": "Raum betreten",
+    "submitting": "Beitreten…",
+    "loading": "Raum wird gesucht…",
+    "missingNickname": "Gib deinen Spitznamen ein",
+    "namesake": "{{nickname}} ist schon im Raum; der Avatar unterscheidet euch.",
+    "missingAvatar": "Wähle einen anderen Avatar",
+    "lookalikeJustJoined": "Gerade ist jemand als {{nickname}} mit diesem Avatar beigetreten. Wähle einen anderen."
+  },
+  "roomErrors": {
+    "nickname-missing": "Gib einen Spitznamen ein.",
+    "room-full": "Der Raum ist voll: Es sind schon 50 Spieler drin.",
+    "player-expelled": "Der Gastgeber hat dich aus diesem Spiel entfernt.",
+    "room-code-not-found": "Es gibt keinen Raum mit diesem Code.",
+    "room-not-found": "Diesen Raum gibt es nicht mehr.",
+    "unknown": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "dilemmas-missing": "Für diese Einstellungen gibt es keine Dilemmas. Probier andere Kategorien.",
+    "nickname-and-avatar-taken": "Jemand mit deinem Namen hat schon diesen Avatar. Wähle einen anderen."
+  },
+  "home": {
+    "title": "Lust auf eine Runde?",
+    "create": "Raum erstellen",
+    "joinWithCode": "Mit Code beitreten",
+    "back": "Zurück"
+  },
+  "joinCode": {
+    "title": "Gib den Raumcode ein",
+    "text": "Er hat 5 Zeichen. Wer den Raum erstellt hat, kann ihn dir sagen.",
+    "label": "Raumcode",
+    "hint": "Du kannst ihn auch einfügen.",
+    "enter": "Beitreten",
+    "missing_one": "Noch {{count}} Zeichen",
+    "missing_other": "Noch {{count, number}} Zeichen"
+  },
+  "accessCode": {
+    "title": "TheLever ist in der Testphase",
+    "text": "Vorerst kann nur spielen, wer den Zugangscode hat. Gib ihn einmal ein, dann fragen wir auf diesem Gerät nicht mehr danach.",
+    "label": "Zugangscode",
+    "invalid": "Dieser Code ist ungültig.",
+    "check": "Prüfe, ob er richtig geschrieben ist.",
+    "enter": "Weiter",
+    "entering": "Wird geprüft…"
+  },
+  "variant": {
+    "nominal": {
+      "name": "Namentlicher Raum:",
+      "text": "Bei der Auflösung sehen alle, wer was gewählt hat."
+    },
+    "anonymous": {
+      "name": "Anonymer Raum:",
+      "text": "Niemand sieht, wer was gewählt hat."
+    }
+  },
+  "joinRefusal": {
+    "illustration": "La Palanca zögert neben einem Gleisende",
+    "room-code-not-found": {
+      "title": "Diesen Raum gibt es nicht",
+      "text": "Prüfe den Code: Er hat 5 Zeichen. Frag noch einmal, wer den Raum erstellt hat.",
+      "action": "Anderen Code probieren"
+    },
+    "room-full": {
+      "title": "Dieser Raum ist voll",
+      "text": "Es sind schon 50 Spieler drin, mehr geht nicht. Du kannst deinen eigenen Raum erstellen.",
+      "action": "Zur Startseite"
+    },
+    "player-expelled": {
+      "title": "Du kannst diesem Spiel nicht wieder beitreten",
+      "text": "Spielt die Gruppe eine Revanche, kannst du dabei sein.",
+      "action": "Zur Startseite"
+    },
+    "room-not-found": {
+      "title": "Diesen Raum gibt es nicht mehr",
+      "text": "Er wurde geschlossen. Spielt die Gruppe weiter, lass dir den neuen Code schicken.",
+      "action": "Zur Startseite"
+    }
+  },
+  "lobby": {
+    "codeLabel": "Raumcode",
+    "leave": "Raum verlassen",
+    "share": "Link teilen",
+    "shareText": "Komm in meinen TheLever-Raum mit dem Code {{code}}",
+    "copied": "Link kopiert",
+    "showQr": "QR-Code zeigen",
+    "summary": "{{count}} Dilemmas · {{seconds}} s pro Dilemma · {{language}} · {{nature}}",
+    "change": "Ändern",
+    "adultsOnly": "Nur ab 18",
+    "remote": "Ihr spielt auf Distanz: am besten per Videoanruf, um die Auflösung live zu besprechen.",
+    "added": {
+      "title": "Hinzugefügte Dilemmas · {{count}} von {{total}}",
+      "remove": "Dilemma entfernen",
+      "hint": "Du weißt nicht, wer sie hinzugefügt hat: Das zeigt sich bei der Auflösung. Der Rest kommt aus dem Katalog."
+    },
+    "add": {
+      "title": "Füg dem Spiel Dilemmas hinzu",
+      "count": "Du hast {{count}} von {{total}} hinzugefügt. Bis zur Auflösung weiß niemand, dass sie von dir sind.",
+      "action": "Dilemma hinzufügen",
+      "remove": "Dilemma entfernen"
+    },
+    "picked": {
+      "title": "Gewählte Dilemmas · {{count}}"
+    },
+    "players": "Im Raum · {{count}}",
+    "you": "{{name}} (du)",
+    "host": "Gastgeber",
+    "toExpel": "{{name}}. Tippen zum Entfernen",
+    "toChangeAvatar": "{{name}}. Tippen, um deinen Avatar zu ändern",
+    "waiting": "Warten auf weitere Leute. Teile den Code oder den Link, damit sie beitreten.",
+    "start": "Spiel starten",
+    "missing_one": "Es fehlt noch {{count}} Spieler zum Start",
+    "missing_other": "Es fehlen noch {{count}} Spieler zum Start",
+    "guestWait": "{{host}} startet das Spiel, wenn alle da sind.",
+    "categories": {
+      "all": "Alle Kategorien",
+      "some_one": "{{count}} Kategorie",
+      "some_other": "{{count}} Kategorien",
+      "none": "Keine Kategorie"
+    },
+    "pickedCount_one": "{{count}} Dilemma gewählt",
+    "pickedCount_other": "{{count}} Dilemmas gewählt",
+    "summaryPicked": "{{seconds}} s pro Dilemma · {{language}} · {{nature}}"
+  },
+  "languages": {
+    "es": "Español",
+    "en": "English",
+    "fr": "Français",
+    "de": "Deutsch",
+    "it": "Italiano",
+    "pt": "Português",
+    "ca": "Català"
+  },
+  "categories": {
+    "life-and-death": "Leben und Tod",
+    "honesty": "Ehrlichkeit",
+    "loyalty": "Loyalität",
+    "justice": "Gerechtigkeit",
+    "love-and-relationships": "Liebe und Beziehungen",
+    "work-and-money": "Arbeit und Geld",
+    "technology-and-the-future": "Technologie und Zukunft"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "close": "Schließen",
+    "reveal": "Auflösung",
+    "nominal": "Namentlich",
+    "anonymous": "Anonym",
+    "nominalHint": "Bei der Auflösung sieht man, wer was gewählt hat, und ihr sagt die Stimmen voraus.",
+    "anonymousHint": "Niemand sieht, wer was gewählt hat. Ohne Vorhersagen und Punkte: nur abstimmen.",
+    "adultsOnly": {
+      "label": "Nur ab 18",
+      "hint": "Erlaubt Dilemmas für Erwachsene. Beitreten können nur Volljährige."
+    },
+    "language": "Sprache der Dilemmas",
+    "howPicked": "Wie die Dilemmas gewählt werden",
+    "byCategories": "Nach Kategorien",
+    "byHand": "Von Hand",
+    "categories": "Kategorien",
+    "allCategories": "Alle",
+    "categoriesHint": "Das Spiel mischt Dilemmas aus den gewählten Kategorien.",
+    "dilemmaCount": "Dilemmas",
+    "timePerDilemma": "Zeit pro Dilemma",
+    "seconds": "{{count}} s",
+    "timeHint": "Jedes Dilemma wird aufgedeckt, wenn alle geantwortet haben oder die Zeit abläuft.",
+    "newDilemmas": {
+      "label": "Neue Dilemmas zulassen",
+      "hint": "Ihr helft, Dilemmas zu bewerten, die neu im Katalog sind."
+    },
+    "dilemmasPerPlayer": {
+      "label": "Dilemmas pro Spieler",
+      "none": "Keine",
+      "hint": "Auch der Gastgeber. Sie zählen zur Zahl der Dilemmas, und bis zur Auflösung weiß niemand, von wem welches ist."
+    },
+    "pick": "Dilemmas einzeln wählen",
+    "picked_one": "{{count}} Dilemma gewählt",
+    "picked_other": "{{count}} Dilemmas gewählt",
+    "noPicked": "Kein Dilemma gewählt",
+    "changePicked": "Ändern",
+    "choosePicked": "Wählen",
+    "byHandHint": "Das Spiel nutzt diese und die von den Spielern hinzugefügten, ohne Kategorien oder neue Dilemmas. „Nach Kategorien“ entfernt sie mit einem Tippen.",
+    "save": "Speichern"
+  },
+  "pickDilemmas": {
+    "title": "Dilemmas wählen",
+    "back": "Zurück zu den Einstellungen",
+    "search": "Dilemmas suchen",
+    "searchPlaceholder": "Suche nach Text oder Tag: Familie, Straßenbahn…",
+    "all": "Alle",
+    "hint": "Hier stehen nur Dilemmas, die zu diesem Raum passen. Wählst du von Hand, kommen keine neuen Dilemmas dazu.",
+    "none": "Wähle mindestens eins",
+    "play_one": "Dieses spielen",
+    "play_other": "Diese {{count}} spielen",
+    "empty": "Keine passenden Dilemmas für diese Suche.",
+    "tags": "#{{tags}}",
+    "byCategory": "Wieder nach Kategorie spielen",
+    "options_one": "{{count}} Option",
+    "options_other": "{{count, number}} Optionen",
+    "someone": "jemand aus der Gruppe",
+    "more": "Mehr anzeigen",
+    "moreFailed": "Weitere Dilemmas konnten nicht geladen werden. Versuch es noch einmal."
+  },
+  "addDilemma": {
+    "title": "Dilemma hinzufügen",
+    "search": "Dilemmas suchen",
+    "close": "Schließen",
+    "empty": "Keine passenden Dilemmas für diese Suche.",
+    "searchPlaceholder": "Suche nach Text oder Tag"
+  },
+  "expel": {
+    "title": "{{name}} entfernen?",
+    "text": "Die Person verlässt den Raum und kann diesem Spiel nicht wieder beitreten. Andere Spiele sind weiter möglich.",
+    "confirm": "Entfernen",
+    "cancel": "Abbrechen"
+  },
+  "avatarPicker": {
+    "title": "Wähle deinen Avatar",
+    "face": "Gesicht {{number}}",
+    "hint": "Gesichter, die schon jemand mit deinem Namen trägt, sind deaktiviert.",
+    "use": "Diesen nehmen",
+    "close": "Schließen",
+    "colors": {
+      "khaki": "Khaki",
+      "teal": "Petrol",
+      "brown": "Braun",
+      "slate": "Schiefer",
+      "cyan": "Cyan",
+      "rust": "Rost",
+      "olive": "Oliv",
+      "stone": "Stein"
+    },
+    "change": "Avatar ändern",
+    "changeCurrent": "Avatar ändern: Gesicht {{face}}, {{color}}"
+  },
+  "qr": {
+    "title": "Mit der Kamera scannen und beitreten",
+    "close": "Schließen",
+    "label": "QR-Code für Raum {{code}}",
+    "or": "oder öffne {{host}} und gib den Code ein",
+    "code": "Code {{code}}"
+  },
+  "sound": {
+    "mute": "Spiel stummschalten",
+    "label": "Ton",
+    "hint": "Auch die Vibration"
+  },
+  "playDilemma": {
+    "title": "Neuer Raum",
+    "firstDilemma": "Ihr startet mit diesem Dilemma",
+    "about_one": "{{category}} · {{count}} Option",
+    "about_other": "{{category}} · {{count}} Optionen",
+    "rest": "Der Rest des Spiels kommt aus dem Katalog, je nach Raumeinstellungen.",
+    "loading": "Dilemma wird gesucht…",
+    "notFound": "Dieses Dilemma gibt es auf TheLever nicht mehr. Du kannst einen Raum mit anderen aus dem Katalog erstellen.",
+    "home": "Zur Startseite"
+  },
+  "voteAlone": {
+    "loading": "Dilemma wird gesucht…",
+    "notFound": "Dieses Dilemma gibt es auf TheLever nicht mehr.",
+    "someoneInYourGroup": "jemand aus deiner Gruppe",
+    "yourVote": "Deine Stimme, geheim",
+    "prediction": "Wie viel Prozent der Welt haben wie du abgestimmt?",
+    "percent": "{{value}} %",
+    "private": "Deine Stimme zählt für das Weltergebnis dieses Dilemmas. Niemand erfährt, wie du abgestimmt hast.",
+    "see": "Sehen, wie die Welt abgestimmt hat",
+    "sending": "Deine Stimme wird gesendet…",
+    "loadingResult": "Das Weltergebnis wird geladen…",
+    "sameAsYou": "{{percentage}} %",
+    "thoughtLikeYou": "haben wie du gedacht.",
+    "predictionOff_one": "Du hast {{prediction}} % gesagt: {{count}} Punkt daneben.",
+    "predictionOff_other": "Du hast {{prediction}} % gesagt: {{count, number}} Punkte daneben.",
+    "predictionRight": "Du hast {{prediction}} % gesagt: genau getroffen.",
+    "yours": "{{option}} · deine Stimme",
+    "answers_one": "{{count, number}} Antwort weltweit. Wird einmal am Tag aktualisiert.",
+    "answers_other": "{{count, number}} Antworten weltweit. Wird einmal am Tag aktualisiert.",
+    "fewTitle": "Noch gibt es wenige Antworten",
+    "fewBody_one": "Wir haben {{count, number}} der nötigen {{needed}}. Schau später wieder vorbei, um zu sehen, wie die Welt abgestimmt hat und ob du richtig lagst.",
+    "fewBody_other": "Wir haben {{count, number}} der nötigen {{needed}}. Schau später wieder vorbei, um zu sehen, wie die Welt abgestimmt hat und ob du richtig lagst.",
+    "play": "Mit meiner Gruppe spielen",
+    "arguments": "Die Argumente zu jeder Option lesen"
+  }
+}

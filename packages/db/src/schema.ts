@@ -58,6 +58,16 @@ export interface Database {
     translation_of_version: number | null;
     translation: Translation | null;
   };
+  /** The answers of the moment to each option of a version, by its position, translations included. */
+  world_counts: WorldAnswers;
+  /** The answers last published, once a day: all the app reads of the world result. */
+  world_results: WorldAnswers;
+  /** Who voted each version alone, to count them once: never the option, nor the time. */
+  world_vote_receipts: {
+    identity: string;
+    dilemma_id: string;
+    version: number;
+  };
   /** The arguments of a version, for the public web; they change without a new version. */
   dilemma_version_arguments: {
     dilemma_id: string;
@@ -229,6 +239,14 @@ export interface Database {
   };
 }
 
+/** The answers to each option of a version of a dilemma, by its position. */
+interface WorldAnswers {
+  dilemma_id: string;
+  version: number;
+  position: number;
+  answers: number;
+}
+
 /** The tables of Dilemmas: only its adapters read or write them. */
 export type DilemmasTables = Pick<
   Database,
@@ -238,6 +256,9 @@ export type DilemmasTables = Pick<
   | 'dilemma_version_tags'
   | 'dilemma_version_arguments'
   | 'dilemma_version_option_arguments'
+  | 'world_counts'
+  | 'world_results'
+  | 'world_vote_receipts'
 >;
 
 /** The tables of Game: its adapters see only these, never those of another context (ADR 0001). */

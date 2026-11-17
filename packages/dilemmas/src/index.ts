@@ -44,6 +44,8 @@ export { SameLanguageTranslationError } from './domain/errors/same-language-tran
 export { NotAnOriginalError } from './domain/errors/not-an-original.error.ts';
 export { NotItsOriginalError } from './domain/errors/not-its-original.error.ts';
 export { ArgumentsDoNotMatchOptionsError } from './domain/errors/arguments-do-not-match-options.error.ts';
+export { InvalidPredictionError } from './domain/errors/invalid-prediction.error.ts';
+export { MINIMUM_WORLD_ANSWERS } from './domain/vos/world-result.vo.ts';
 export type { ArgumentsSnapshot } from './domain/vos/arguments.vo.ts';
 
 // Application
@@ -59,6 +61,21 @@ export {
   WORD_SIMILARITY,
 } from './application/ports/dilemma-queries.port.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
+export { AlreadyVotedError } from './application/errors/already-voted.error.ts';
+export type {
+  Ballot,
+  WorldResultRepository,
+} from './application/ports/world-result-repository.port.ts';
+export {
+  VoteAloneUseCase,
+  type VoteAloneInput,
+} from './application/use-cases/vote-alone.use-case.ts';
+export {
+  GetWorldResultUseCase,
+  type GetWorldResultInput,
+  type GetWorldResultOutput,
+} from './application/use-cases/get-world-result.use-case.ts';
+export { PublishWorldResultsUseCase } from './application/use-cases/publish-world-results.use-case.ts';
 export { InvalidPageError } from './application/errors/invalid-page.error.ts';
 export {
   GetDilemmasUseCase,

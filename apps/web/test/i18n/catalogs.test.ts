@@ -35,7 +35,54 @@ function expectedKeys(language: string): string[] {
   ].sort();
 }
 
+/** Each text of the catalog by its key, nested keys joined with dots. */
+function textsOf(catalog: object, prefix = ''): [string, string][] {
+  return Object.entries(catalog).flatMap(([key, value]) =>
+    typeof value === 'object' && value !== null
+      ? textsOf(value, `${prefix}${key}.`)
+      : [[`${prefix}${key}`, String(value)] as [string, string]],
+  );
+}
+
+/** The values a text interpolates, by name, whatever their format. */
+function variablesOf(text: string): string[] {
+  return [...new Set([...text.matchAll(/\{\{\s*(\w+)/g)].map((match) => match[1]!))].sort();
+}
+
 describe('catalogs', () => {
+  it('should exist for every supported language', () => {
+    // Act
+    const languages = Object.keys(catalogs).map(languageOf);
+
+    // Assert
+    expect(languages.sort()).toEqual([...SUPPORTED_LANGUAGES].sort());
+  });
+
+  it('should interpolate in each text the same values as the source', () => {
+    // Arrange
+    const source = new Map(
+      textsOf(catalogs[`../../src/i18n/locales/${SOURCE_LANGUAGE}.json`]!).map(([key, text]) => [
+        key.replace(PLURAL_SUFFIX, ''),
+        variablesOf(text),
+      ]),
+    );
+
+    // Act & Assert
+    for (const [path, catalog] of Object.entries(catalogs)) {
+      for (const [key, text] of textsOf(catalog)) {
+        const base = key.replace(PLURAL_SUFFIX, '');
+        const expected = (source.get(base) ?? []).filter(
+          // A singular may say "one" in words instead of interpolating the count.
+          (name) => name !== 'count' || !key.endsWith('_one'),
+        );
+        expect(
+          variablesOf(text).filter((name) => name !== 'count' || !key.endsWith('_one')),
+          `${languageOf(path)}: ${key}`,
+        ).toEqual(expected);
+      }
+    }
+  });
+
   it('should only exist for supported languages', () => {
     // Act & Assert
     for (const path of Object.keys(catalogs)) {

@@ -41,18 +41,17 @@ Feature: Public dilemma pages
     When a visitor opens its public page
     Then the visitor does not see how the world voted
 
-  @ui @todo
+  @ui
   Scenario: The visitor votes in the app
     When a visitor chooses to vote on the public page of "El tranvía"
     Then the app opens on "El tranvía" ready to vote alone
 
-  @todo
   Scenario: A vote alone counts for the world result
     When a visitor votes "El tranvía" alone in the app
     Then the vote counts for the world result of "El tranvía"
     And nobody can see what the visitor voted
 
-  @ui @todo
+  @ui
   Scenario: Too few answers show no figures
     Given "La herencia" has 12 answers
     When a visitor votes "La herencia" alone in the app
@@ -73,7 +72,7 @@ Feature: Public dilemma pages
     Then the visitor goes through the first access
     And then sees "El tranvía" ready to vote alone
 
-  @ui @todo
+  @ui
   Scenario: The app opens in the language of the page
     Given the visitor has never chosen a language in the app
     When a visitor chooses to play "El tranvía" with the group from its public page in English
@@ -108,7 +107,7 @@ Feature: Public dilemma pages
     Then the public page of "La herencia" shows its arguments and can be indexed
     And the sitemap includes it
 
-  @ui @screen @todo
+  @ui @screen
   Scenario: The page shows a banner ad below the content
     When a visitor opens the public page of "El tranvía"
     Then a banner ad appears below the arguments

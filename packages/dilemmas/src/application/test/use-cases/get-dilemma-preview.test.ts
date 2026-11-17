@@ -32,6 +32,29 @@ async function previewOf(dilemma: Dilemma): Promise<GetDilemmaPreviewUseCase> {
 
 describe('GetDilemmaPreviewUseCase', () => {
   describe('execute', () => {
+    it('should tell the version of the original its votes alone count for, also from a translation', async () => {
+      // Arrange
+      const getDilemmaPreview = await previewOf(trolley());
+
+      // Act
+      const { version } = await getDilemmaPreview.execute({ publicId: 'TestPublicId' });
+
+      // Assert
+      expect(version).toBe(trolley().translationOf?.version ?? trolley().version);
+    });
+
+    it('should give the text and the options in the language of the link, to vote it alone', async () => {
+      // Arrange
+      const getDilemmaPreview = await previewOf(trolley());
+
+      // Act
+      const { text, options } = await getDilemmaPreview.execute({ publicId: 'TestPublicId' });
+
+      // Assert
+      expect(text).toBe(trolley().text);
+      expect(options).toEqual(trolley().options.map(({ id, text }) => ({ optionId: id, text })));
+    });
+
     it('should tell what a room needs to start with the dilemma of that public id', async () => {
       // Arrange
       const getDilemmaPreview = await previewOf(trolley());
@@ -40,14 +63,16 @@ describe('GetDilemmaPreviewUseCase', () => {
       const preview = await getDilemmaPreview.execute({ publicId: 'TestPublicId' });
 
       // Assert
-      expect(preview).toEqual({
-        dilemmaId: 'dlm-7',
-        name: 'TestName',
-        category: 'life-and-death',
-        optionCount: 2,
-        minimumAge: 16,
-        language: 'en',
-      });
+      expect(preview).toEqual(
+        expect.objectContaining({
+          dilemmaId: 'dlm-7',
+          name: 'TestName',
+          category: 'life-and-death',
+          optionCount: 2,
+          minimumAge: 16,
+          language: 'en',
+        }),
+      );
     });
 
     it('should throw DilemmaNotFoundError if no dilemma has that public id', async () => {

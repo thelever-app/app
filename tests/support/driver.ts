@@ -418,12 +418,40 @@ export interface GameDriver {
   statusOfThePublicPageOf(name: string): Promise<number>;
   /** Whether the sitemap of the public web lists the page of the dilemma. */
   sitemapIncludes(name: string): Promise<boolean>;
-  /** A visitor chooses to play the dilemma with the group on its public page, in Spanish. */
-  playWithTheGroupFromThePublicPage(name: string): Promise<void>;
+  /** A visitor chooses to play the dilemma with the group on its public page, in Spanish unless said. */
+  playWithTheGroupFromThePublicPage(name: string, language?: string): Promise<void>;
+  /** A visitor with a device in Spanish who never chose a language in the app. */
+  visitorWithoutAChosenLanguage(): Promise<void>;
+  /** The language the app the visitor opened from the public web is in. */
+  languageOfTheApp(): Promise<string | undefined>;
+  /** Whether the public page the visitor has open shows an ad in the space below the arguments. */
+  bannerAdBelowTheArguments(): Promise<boolean>;
+  /** A visitor chooses to vote and see what the world did on the public page of the dilemma, in Spanish. */
+  voteFromThePublicPage(name: string): Promise<void>;
+  /** The dilemma the app the visitor opened offers to vote alone, if it offers one. */
+  dilemmaReadyToVoteAlone(): Promise<string | undefined>;
+  /** The visitor votes the dilemma alone in the app: its first option, predicting that half the world voted the same. */
+  voteAlone(name: string): Promise<void>;
+  /** The answers the world result of the dilemma counts, once the results of the day are published. */
+  worldAnswersOf(name: string): Promise<number>;
+  /** Whether anything kept links the visitor to the option they voted. */
+  voteOfTheVisitorIsKept(): Promise<boolean>;
+  /** The dilemma, in the general catalog with its arguments reviewed, has that many answers in its published world result. */
+  dilemmaWithWorldAnswers(name: string, answers: number): Promise<void>;
+  /** What the visitor sees of the world result after voting alone. */
+  worldResultSeen(): Promise<WorldResultView>;
   /** The visitor creates the room the screen offers to play the dilemma with the group. */
   createTheRoomOfTheDilemma(): Promise<void>;
   /** The name of the dilemma the room the visitor created plays first. */
   firstDilemmaOfTheVisitorRoom(): Promise<string | undefined>;
+}
+
+/** What the visitor sees of the world result of a dilemma after voting it alone. */
+export interface WorldResultView {
+  /** Whether it says there are still too few answers to show it. */
+  readonly tooFewAnswers: boolean;
+  /** The percentages it shows, as the screen writes them. */
+  readonly figures: readonly string[];
 }
 
 /** What a visitor sees on the public page of a dilemma. */

@@ -1,0 +1,511 @@
+{
+  "app": {
+    "connecting": "Connecting…",
+    "unavailable": "Room not available yet."
+  },
+  "playerList": {
+    "you": "{{name}} (you)",
+    "disconnected": "disconnected",
+    "pending_one": "Yet to answer · {{count}}",
+    "pending_other": "Yet to answer · {{count, number}}",
+    "done_one": "Answered · {{count}}",
+    "done_other": "Answered · {{count, number}}",
+    "answered": "answered",
+    "anonymousAnswered_one": "answered",
+    "anonymousAnswered_other": "answered",
+    "anonymousPending_one": "{{count}} to go",
+    "anonymousPending_other": "{{count, number}} to go",
+    "anonymousNote": "In an anonymous room no one sees who has answered, only how many.",
+    "inRoom_one": "In the room · {{count}}",
+    "inRoom_other": "In the room · {{count, number}}"
+  },
+  "progressStrip": {
+    "position": "Dilemma {{position, number}} of {{total, number}}",
+    "group": "Who has answered",
+    "more": "+{{count, number}}",
+    "showAll": "See all",
+    "predicting": "Dilemma {{position, number}} of {{total, number}} · Predict",
+    "anonymousGroup": "How many have answered",
+    "anonymousCount_one": "{{count}} answered · {{pending, number}} to go",
+    "anonymousCount_other": "{{count, number}} answered · {{pending, number}} to go",
+    "playerAnswered": "{{name}} · answered",
+    "playerPending": "{{name}} · hasn't answered yet",
+    "playerDisconnected": "{{name}} (disconnected)",
+    "movedOn": "{{name}} moved on",
+    "playerMovedOn": "{{label}} · moved on"
+  },
+  "groupSheet": {
+    "title": "The group",
+    "close": "Close",
+    "summary_one": "{{count}} player · you see who has answered, not what",
+    "summary_other": "{{count, number}} players · you see who has answered, not what",
+    "summaryAnonymous_one": "{{count}} player · no one sees who has answered",
+    "summaryAnonymous_other": "{{count, number}} players · no one sees who has answered"
+  },
+  "dilemma": {
+    "privacy": "No one in the group will see your vote until the reveal. You can change it until then.",
+    "choose": "Pick an option",
+    "continue": "Continue",
+    "privacyAnonymous": "No one in the group will see your vote, not even in the reveal. You can change it until the dilemma is revealed.",
+    "done": "Done"
+  },
+  "waiting": {
+    "position": "Dilemma {{position, number}} of {{total, number}} · Answered",
+    "title": "Waiting for the others",
+    "subtitle": "The dilemma is revealed when you've all answered or its time runs out. Until then you can change your answer.",
+    "change": "Change my answer",
+    "mascotWaiting": "La Palanca, waiting",
+    "revealEarly": "Reveal now",
+    "revealCaption_one": "{{count}} still to answer. They'll count as “didn't vote” on this dilemma.",
+    "revealCaption_other": "{{count, number}} still to answer. They'll count as “didn't vote” on this dilemma.",
+    "guest": "{{host}} can reveal it sooner; if not, it's revealed when you've all answered or its time runs out."
+  },
+  "game": {
+    "timeLeft": "{{time}} left"
+  },
+  "predict": {
+    "voted": "You voted “",
+    "votedEnd": "”",
+    "voteQuestion": "What did each person vote?",
+    "voteOf": "{{name}}'s vote",
+    "back": "Back to your vote",
+    "missing_one": "{{count}} answer to go",
+    "missing_other": "{{count, number}} answers to go",
+    "next": "Done"
+  },
+  "gameMenu": {
+    "open": "More options",
+    "title": "Game menu",
+    "revealEarly": "Reveal now",
+    "onlyHost": "Host only",
+    "showGroup": "See the group",
+    "share": "Share link",
+    "copied": "Link copied",
+    "code": "Code {{code}}",
+    "showQr": "Show QR",
+    "report": "Report this dilemma",
+    "reportSubtitle": "No one in the group will know",
+    "reported": "You already reported this dilemma",
+    "leave": "Leave the game"
+  },
+  "report": {
+    "title": "What's wrong with this dilemma?",
+    "reasons": {
+      "offensive": "Offensive",
+      "confusing": "Confusing",
+      "mistranslated": "Badly translated",
+      "other": "Other"
+    },
+    "comment": "Comment (optional)",
+    "placeholder": "What did you notice?",
+    "noPersonalData": "Don't include personal details.",
+    "counter": "{{count, number}}/{{max, number}}",
+    "chooseReason": "Pick a reason",
+    "send": "Send report",
+    "note": "The team will review it. No one in the group will know you reported it."
+  },
+  "reportSent": {
+    "thanks": "Thanks.",
+    "text": "The team will review it; no one in the group knows.",
+    "canSkip": "If you'd rather not answer it, you can skip it.",
+    "skip": "Skip dilemma"
+  },
+  "revealEarly": {
+    "title": "Reveal the dilemma now?",
+    "body_one": "{{count}} player hasn't answered yet. They'll count as “didn't vote” on this dilemma and won't be able to answer it anymore.",
+    "body_other": "{{count, number}} players haven't answered yet. They'll count as “didn't vote” on this dilemma and won't be able to answer it anymore.",
+    "reveal": "Reveal now",
+    "wait": "Keep waiting"
+  },
+  "newHost": {
+    "title": "You're the host now",
+    "disconnected": "{{host}} is still offline. From the next round you can reveal early from the ⋮ menu. If they come back, they get the role back.",
+    "left": "{{host}} has left the game. Your options are in the ⋮ menu."
+  },
+  "lateJoin": {
+    "illustration": "La Palanca, next to a railway junction",
+    "room": "{{host}}'s room",
+    "title": "The game has already started",
+    "round": "You're joining the current round, dilemma {{position, number}} of {{total, number}}; if it's already being revealed, you'll see it with the group.",
+    "onlyVote": "In this game you only vote: you don't predict, no one predicts your vote and you're not on the leaderboard.",
+    "enter": "Join the round"
+  },
+  "reveal": {
+    "region": "Reveal",
+    "position": "Dilemma {{position, number}} of {{total, number}} · Reveal",
+    "addedBy": "Added by {{name}}",
+    "about": "This dilemma was about {{name}}",
+    "yourHitsRegion": "Your guesses",
+    "hitsAll": "You read them all!",
+    "hitsCount": "You got {{right, number}} of {{count, number}} right",
+    "missedOne": "You only missed {{name}}",
+    "missedSome": "You missed {{names}}",
+    "missedMany": "You missed {{names}} and {{count, number}} more",
+    "missedAll": "You couldn't read them today",
+    "whoVoted": "What each person voted",
+    "nobodyChose": "No one picked it",
+    "guessed": "· you said {{letter}}",
+    "voterRight": "{{name}}, you got it right",
+    "voterMissed": "{{name}}, you missed: you said {{letter}}",
+    "optionCount": "{{count, number}} · {{percent}}",
+    "didNotVote_one": "Didn't vote · {{names}}",
+    "didNotVote_other": "Didn't vote · {{names}}",
+    "next": "Next dilemma",
+    "anonymousDidNotVote_one": "{{count}} person didn't vote.",
+    "anonymousDidNotVote_other": "{{count, number}} people didn't vote.",
+    "anonymousNote": "In this room no one sees who voted what.",
+    "fewVotesTitle": "Too few votes to show the split",
+    "fewVotesVoted_one": "Only {{count}} person voted",
+    "fewVotesVoted_other": "Only {{count, number}} people voted",
+    "fewVotesNobody": "No one voted",
+    "fewVotesDidNot_one": "and {{count}} didn't vote",
+    "fewVotesDidNot_other": "and {{count, number}} didn't vote",
+    "fewVotesWhy": "With fewer than 3 votes, the split would give away who voted what.",
+    "introPosition": "Dilemma {{position, number}} of {{total, number}} · Voting closed",
+    "introTitle": "Time for the reveal",
+    "introMascot": "La Palanca, celebrating",
+    "introAnswered_one": "{{count}} of {{total, number}} answered.",
+    "introAnswered_other": "{{count, number}} of {{total, number}} of you answered.",
+    "introNominal": "Here it comes: you're about to see what each person voted.",
+    "introAnonymous": "Here it comes: you're about to see how many picked each option."
+  },
+  "notices": {
+    "reconnecting": "Reconnecting… your answers are saved",
+    "paused": "Paused. Tap to come back",
+    "answerNotSaved": "Your last answer wasn't saved. Pick it again.",
+    "dismiss": "Dismiss notice"
+  },
+  "noReturn": {
+    "gone": {
+      "title": "This game is gone",
+      "text": "It has ended or been closed. If the group is still playing, ask them to send you the new link."
+    },
+    "device": {
+      "title": "This device isn't in the game",
+      "text": "If you joined from another one, keep playing there. If not, ask the group for a new link."
+    },
+    "update": {
+      "title": "There's a new version of TheLever",
+      "text": "Reload to keep playing with the latest one.",
+      "action": "Reload"
+    },
+    "identity": {
+      "title": "We couldn't recognise you",
+      "text": "It's usually temporary. Try again in a moment.",
+      "action": "Try again"
+    },
+    "expelled": {
+      "title": "You've been removed from the room",
+      "text": "Whoever created the room removed you from this game. If the group plays a rematch, you can join it.",
+      "action": "Back to home"
+    }
+  },
+  "createRoom": {
+    "title": "New room",
+    "nickname": "Your nickname",
+    "nicknamePlaceholder": "How the group will see you",
+    "groupNature": {
+      "label": "Who are you playing with?",
+      "family": "Family",
+      "friends": "Friends",
+      "work": "Colleagues",
+      "mixed": "Mixed",
+      "hint": "It helps us understand how votes change depending on who you play with."
+    },
+    "place": {
+      "label": "Where are you?",
+      "together": "In the same place",
+      "remote": "Remotely"
+    },
+    "submit": "Create room",
+    "submitting": "Creating the room…",
+    "missing": {
+      "nickname": "Type your nickname",
+      "groupNature": "Pick who you're playing with",
+      "place": "Tell us where you are"
+    }
+  },
+  "joinRoom": {
+    "roomOf": "{{host}}'s room · {{code}}",
+    "inTheRoom_one": "{{count}} in the room",
+    "inTheRoom_other": "{{count}} in the room",
+    "adultsOnly": "Over-18s only: it may have adult dilemmas.",
+    "nickname": "Your nickname",
+    "submit": "Join the room",
+    "submitting": "Joining…",
+    "loading": "Finding the room…",
+    "missingNickname": "Type your nickname",
+    "namesake": "{{nickname}} is already in the room; your avatars will tell you apart.",
+    "missingAvatar": "Pick another avatar",
+    "lookalikeJustJoined": "Someone just joined as {{nickname}} with this avatar. Pick another one."
+  },
+  "roomErrors": {
+    "nickname-missing": "Type a nickname.",
+    "room-full": "The room is full: there are already 50 players.",
+    "player-expelled": "The host has removed you from this game.",
+    "room-code-not-found": "There's no room with that code.",
+    "room-not-found": "That room no longer exists.",
+    "unknown": "That didn't work. Try again.",
+    "dilemmas-missing": "There are no dilemmas for these settings. Try other categories.",
+    "nickname-and-avatar-taken": "Someone with your name already has that avatar. Pick another one."
+  },
+  "home": {
+    "title": "Shall we play?",
+    "create": "Create room",
+    "joinWithCode": "Join with a code",
+    "back": "Back"
+  },
+  "joinCode": {
+    "title": "Type the room code",
+    "text": "It's 5 characters. Whoever created the room can read it out to you.",
+    "label": "Room code",
+    "hint": "You can also paste it.",
+    "enter": "Join",
+    "missing_one": "{{count}} character to go",
+    "missing_other": "{{count, number}} characters to go"
+  },
+  "accessCode": {
+    "title": "TheLever is in testing",
+    "text": "For now only people with the access code can play. Type it once and we won't ask for it again on this device.",
+    "label": "Access code",
+    "invalid": "That code isn't valid.",
+    "check": "Check that it's typed correctly.",
+    "enter": "Enter",
+    "entering": "Entering…"
+  },
+  "variant": {
+    "nominal": {
+      "name": "Named room:",
+      "text": "in the reveal everyone will see what each person voted."
+    },
+    "anonymous": {
+      "name": "Anonymous room:",
+      "text": "no one will see who voted what."
+    }
+  },
+  "joinRefusal": {
+    "illustration": "La Palanca, unsure, next to the end of a track",
+    "room-code-not-found": {
+      "title": "That room doesn't exist",
+      "text": "Check the code: it's 5 characters. Ask whoever created the room for it again.",
+      "action": "Try another code"
+    },
+    "room-full": {
+      "title": "This room is full",
+      "text": "There are already 50 players inside, which is the maximum. You can create your own room.",
+      "action": "Back to home"
+    },
+    "player-expelled": {
+      "title": "You can't rejoin this game",
+      "text": "If the group plays a rematch, you can join it.",
+      "action": "Back to home"
+    },
+    "room-not-found": {
+      "title": "That room no longer exists",
+      "text": "It's been closed. If the group is still playing, ask them to send you the new code.",
+      "action": "Back to home"
+    }
+  },
+  "lobby": {
+    "codeLabel": "Room code",
+    "leave": "Leave the room",
+    "share": "Share link",
+    "shareText": "Join my TheLever room with the code {{code}}",
+    "copied": "Link copied",
+    "showQr": "Show QR",
+    "summary": "{{count}} dilemmas · {{seconds}} s per dilemma · {{language}} · {{nature}}",
+    "change": "Change",
+    "adultsOnly": "Over-18s only",
+    "remote": "You're playing remotely: a video call works best, so you can talk over the reveal live.",
+    "added": {
+      "title": "Added dilemmas · {{count}} of {{total}}",
+      "remove": "Remove this dilemma",
+      "hint": "You don't know who added them: you'll find out in the reveal. The rest will come from the catalog."
+    },
+    "add": {
+      "title": "Add dilemmas to the game",
+      "count": "You've added {{count}} of {{total}}. No one will know they're yours until the reveal.",
+      "action": "Add a dilemma",
+      "remove": "Remove this dilemma"
+    },
+    "picked": {
+      "title": "Chosen dilemmas · {{count}}"
+    },
+    "players": "In the room · {{count}}",
+    "you": "{{name}} (you)",
+    "host": "Host",
+    "toExpel": "{{name}}. Tap to remove",
+    "toChangeAvatar": "{{name}}. Tap to change your avatar",
+    "waiting": "Waiting for more people. Share the code or the link so they can join.",
+    "start": "Start the game",
+    "missing_one": "{{count}} more player needed to start",
+    "missing_other": "{{count}} more players needed to start",
+    "guestWait": "{{host}} will start the game when you're all here.",
+    "categories": {
+      "all": "All categories",
+      "some_one": "{{count}} category",
+      "some_other": "{{count}} categories",
+      "none": "No categories"
+    },
+    "pickedCount_one": "{{count}} dilemma chosen",
+    "pickedCount_other": "{{count}} dilemmas chosen",
+    "summaryPicked": "{{seconds}} s per dilemma · {{language}} · {{nature}}"
+  },
+  "languages": {
+    "es": "Español",
+    "en": "English",
+    "fr": "Français",
+    "de": "Deutsch",
+    "it": "Italiano",
+    "pt": "Português",
+    "ca": "Català"
+  },
+  "categories": {
+    "life-and-death": "Life and death",
+    "honesty": "Honesty",
+    "loyalty": "Loyalty",
+    "justice": "Justice",
+    "love-and-relationships": "Love and relationships",
+    "work-and-money": "Work and money",
+    "technology-and-the-future": "Technology and the future"
+  },
+  "settings": {
+    "title": "Game settings",
+    "close": "Close",
+    "reveal": "Reveal",
+    "nominal": "Named",
+    "anonymous": "Anonymous",
+    "nominalHint": "The reveal shows what each person voted, and you play at predicting it.",
+    "anonymousHint": "No one will see who voted what. No predictions or points: just voting.",
+    "adultsOnly": {
+      "label": "Over-18s only",
+      "hint": "Allows adult dilemmas. Only over-18s will be able to join."
+    },
+    "language": "Dilemma language",
+    "howPicked": "How dilemmas are picked",
+    "byCategories": "By category",
+    "byHand": "By hand",
+    "categories": "Categories",
+    "allCategories": "All",
+    "categoriesHint": "The game mixes dilemmas from the selected categories.",
+    "dilemmaCount": "Dilemmas",
+    "timePerDilemma": "Time per dilemma",
+    "seconds": "{{count}} s",
+    "timeHint": "Each dilemma is revealed when everyone has answered or its time runs out.",
+    "newDilemmas": {
+      "label": "Include new dilemmas",
+      "hint": "You help rate dilemmas that have just joined the catalog."
+    },
+    "dilemmasPerPlayer": {
+      "label": "Dilemmas each player adds",
+      "none": "None",
+      "hint": "The host too. They count towards the number of dilemmas, and no one will know whose each one is until the reveal."
+    },
+    "pick": "Pick dilemmas one by one",
+    "picked_one": "{{count}} dilemma chosen",
+    "picked_other": "{{count}} dilemmas chosen",
+    "noPicked": "No dilemmas chosen",
+    "changePicked": "Change",
+    "choosePicked": "Choose",
+    "byHandHint": "The game plays these and the ones players add, with no categories or new dilemmas. “By category” clears them in one tap.",
+    "save": "Save"
+  },
+  "pickDilemmas": {
+    "title": "Pick dilemmas",
+    "back": "Back to settings",
+    "search": "Search dilemmas",
+    "searchPlaceholder": "Search by text or tag: family, trolley…",
+    "all": "All",
+    "hint": "Only dilemmas suitable for this room appear. Picking them by hand adds no new dilemmas.",
+    "none": "Pick at least one",
+    "play_one": "Play this one",
+    "play_other": "Play these {{count}}",
+    "empty": "No suitable dilemmas match that search.",
+    "tags": "#{{tags}}",
+    "byCategory": "Back to playing by category",
+    "options_one": "{{count}} option",
+    "options_other": "{{count, number}} options",
+    "someone": "someone in your group",
+    "more": "Show more",
+    "moreFailed": "Couldn't load more dilemmas. Try again."
+  },
+  "addDilemma": {
+    "title": "Add a dilemma",
+    "search": "Search dilemmas",
+    "close": "Close",
+    "empty": "No suitable dilemmas match that search.",
+    "searchPlaceholder": "Search by text or tag"
+  },
+  "expel": {
+    "title": "Remove {{name}}?",
+    "text": "They'll leave the room and can't come back to this game. They can still play others.",
+    "confirm": "Remove",
+    "cancel": "Cancel"
+  },
+  "avatarPicker": {
+    "title": "Pick your avatar",
+    "face": "Face {{number}}",
+    "hint": "Faces already taken by someone with your name are greyed out.",
+    "use": "Use this one",
+    "close": "Close",
+    "colors": {
+      "khaki": "Khaki",
+      "teal": "Teal",
+      "brown": "Brown",
+      "slate": "Slate",
+      "cyan": "Cyan",
+      "rust": "Rust",
+      "olive": "Olive",
+      "stone": "Stone"
+    },
+    "change": "Change avatar",
+    "changeCurrent": "Change avatar: face {{face}}, {{color}}"
+  },
+  "qr": {
+    "title": "Point your camera to join",
+    "close": "Close",
+    "label": "QR code for room {{code}}",
+    "or": "or go to {{host}} and type the code",
+    "code": "Code {{code}}"
+  },
+  "sound": {
+    "mute": "Mute the game",
+    "label": "Sound",
+    "hint": "Vibration too"
+  },
+  "playDilemma": {
+    "title": "New room",
+    "firstDilemma": "You'll start with this dilemma",
+    "about_one": "{{category}} · {{count}} option",
+    "about_other": "{{category}} · {{count}} options",
+    "rest": "The rest of the game is filled from the catalog, following the room settings.",
+    "loading": "Finding the dilemma…",
+    "notFound": "This dilemma is no longer on TheLever. You can create a room with others from the catalog.",
+    "home": "Go home"
+  },
+  "voteAlone": {
+    "loading": "Finding the dilemma…",
+    "notFound": "This dilemma is no longer on TheLever.",
+    "someoneInYourGroup": "someone in your group",
+    "yourVote": "Your vote, in private",
+    "prediction": "What share of the world voted the same as you?",
+    "percent": "{{value}}%",
+    "private": "Your vote counts towards the world result of this dilemma. Nobody will know what you voted.",
+    "see": "See how the world voted",
+    "sending": "Sending your vote…",
+    "loadingResult": "Finding how the world voted…",
+    "sameAsYou": "{{percentage}}%",
+    "thoughtLikeYou": "thought like you.",
+    "predictionOff_one": "You said {{prediction}}%: you were {{count}} point off.",
+    "predictionOff_other": "You said {{prediction}}%: you were {{count, number}} points off.",
+    "predictionRight": "You said {{prediction}}%: spot on.",
+    "yours": "{{option}} · your vote",
+    "answers_one": "{{count, number}} answer around the world. Updated once a day.",
+    "answers_other": "{{count, number}} answers around the world. Updated once a day.",
+    "fewTitle": "There are still few answers",
+    "fewBody_one": "We have {{count, number}} of the {{needed}} needed. Come back later to see how the world voted and whether you got it right.",
+    "fewBody_other": "We have {{count, number}} of the {{needed}} needed. Come back later to see how the world voted and whether you got it right.",
+    "play": "Play it with my group",
+    "arguments": "Read the arguments for each option"
+  }
+}

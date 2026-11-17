@@ -16,6 +16,12 @@ const PREVIEW: DilemmaPreviewResponseDto = {
   optionCount: 2,
   minimumAge: 16,
   language: 'en',
+  text: 'TestText',
+  options: [
+    { optionId: 'TestOptionA', text: 'TestOptionA' },
+    { optionId: 'TestOptionB', text: 'TestOptionB' },
+  ],
+  version: 1,
 };
 
 async function renderPlay(

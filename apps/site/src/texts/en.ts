@@ -1,6 +1,6 @@
 import type { SiteTexts } from './site-texts.ts';
 
-const UPDATED = '16 November 2026';
+const UPDATED = '17 November 2026';
 
 export const en: SiteTexts = {
   languageName: 'English',
@@ -76,6 +76,7 @@ export const en: SiteTexts = {
     for: 'For:',
     against: 'Against:',
     byTheTeam: 'Text by the TheLever team.',
+    ad: 'Advertisement',
     moreOf: (name) => `More dilemmas of ${name.toLowerCase()}`,
   },
   gone: {
@@ -89,7 +90,7 @@ export const en: SiteTexts = {
     heading: 'This page does not exist',
     body: 'The address may be mistyped. From the home page you reach every dilemma.',
   },
-  footer: { label: 'Legal information' },
+  footer: { label: 'Legal information', manageCookies: 'Manage cookies' },
   privacy: {
     title: 'Privacy',
     description: 'What data the public web of TheLever processes, what for, and your rights.',
@@ -117,14 +118,15 @@ export const en: SiteTexts = {
       {
         heading: 'Ads and cookies',
         paragraphs: [
-          'For now this web shows no ads and uses no cookies. When it does, they will be Google AdSense ads: Google and its partners will only use cookies to show or personalise them if you accept it in the cookie manager, which will appear before any ad; if you do not accept, you will only see limited ads, without cookies. No ad will receive what you vote in the app.',
-          'Google is responsible on its own for what it does with those cookies. You can learn more at policies.google.com/technologies/ads.',
+          "The dilemma pages show Google AdSense ads. Before using cookies, Google's cookie manager asks you what you accept, and Google only uses them with your consent (art. 6.1.a GDPR and art. 22.2 LSSI). If you do not accept, you only see limited ads, without cookies.",
+          'Ads are only personalised if you accept it: on this web, which does not ask your age, it depends only on that. If your browser sends the Global Privacy Control signal, ads are not personalised even if you accept it. TheLever does not give Google or its partners what you vote in the app.',
+          "When the ads load, even if you accept nothing, Google receives your IP address, your browser's data and the page you visit. We allow it out of our legitimate interest in funding a free game with advertising (art. 6.1.f GDPR), and we answer for that collection together with Google. What Google and its partners then do with that data and with their cookies is their own responsibility, according to what you accept and the Google Ads data protection terms (business.safety.google/adscontrollerterms). Which cookies they are and how to change what you accept is in the cookie policy; Google explains it at policies.google.com/technologies/ads.",
         ],
       },
       {
         heading: 'Who we share your data with',
         paragraphs: [
-          'We do not sell your data. Google Cloud processes it on our behalf, under contract, only to host the web. We may also have to give it to the authorities when the law requires us to.',
+          'We do not sell your data. Google Cloud processes it on our behalf, under contract, only to host the web. Google AdSense and its partners receive it as controllers in their own right, as the section on ads explains. We may also have to give it to the authorities when the law requires us to.',
         ],
       },
       {
@@ -136,7 +138,7 @@ export const en: SiteTexts = {
       {
         heading: 'How long we keep it',
         paragraphs: [
-          'TheLever keeps nothing of your visit. Google keeps its technical logs for as long as it needs for the security of the service.',
+          'TheLever keeps nothing of your visit. Google keeps its technical logs for as long as it needs for the security of the service, and each cookie lasts as long as the cookie policy states.',
         ],
       },
       {
@@ -150,6 +152,103 @@ export const en: SiteTexts = {
         heading: 'Changes to this policy',
         paragraphs: [
           'If we change it in an important way, we will say so on this page before it affects you.',
+        ],
+      },
+    ],
+  },
+  cookies: {
+    title: 'Cookies',
+    description:
+      'Which cookies are used on the public web of TheLever, what for, and how to change what you accept.',
+    updated: UPDATED,
+    sections: [
+      {
+        heading: 'What they are',
+        paragraphs: [
+          "Cookies are small files that a website stores in your browser and reads again later. This policy also calls similar technologies, such as the browser's local storage, “cookies”.",
+        ],
+      },
+      {
+        heading: 'The ones this web uses',
+        paragraphs: [
+          "TheLever sets no cookies of its own on any page of this web. They are set by Google AdSense, which shows the ads, and by Google's cookie manager, which asks you what you accept. All of them are Google's, as a third party, and they only load on the dilemma pages: the home page, the categories and the legal pages have no ads and no cookies.",
+        ],
+      },
+      {
+        heading: 'The ones that do not need your consent',
+        paragraphs: [
+          'Only the ones that store your choice, to respect it without asking you again on every page: what you answer in the cookie manager (FCCDCF) and, if you do not accept ads with cookies, that you do not accept them (__gpi_optout).',
+        ],
+      },
+      {
+        heading: 'The ones that need your consent',
+        paragraphs: [
+          'All the others, and Google only uses them if you accept it in the cookie manager:',
+          '- To show and measure ads: storing and reading information on your device, limiting how many times you see an ad, measuring how it performs and preventing fraud. If you do not accept it, you only see limited ads, without cookies.',
+          '- To personalise ads based on your interests. On this web, which does not ask your age, it depends only on whether you accept it. If your browser sends the Global Privacy Control signal, ads are not personalised even if you accept it. They are never chosen based on what you vote in the app.',
+          "Google may also store similar information in the browser's local storage, for the same purposes and with the same consent.",
+        ],
+      },
+      {
+        heading: 'Cookie table',
+        paragraphs: [
+          'The names, purposes and durations are the ones Google publishes at business.safety.google/adscookies, which has its full list.',
+        ],
+        table: {
+          headers: ['Cookie', 'Belongs to', 'What for', 'Duration'],
+          rows: [
+            [
+              'FCCDCF',
+              "Google's cookie manager",
+              'Storing what you answer in the manager',
+              '13 months',
+            ],
+            ['FCNEC', "Google's cookie manager", 'Statistics of the manager', '365 days'],
+            ['__gads', 'Google AdSense', 'Ads and security', '13 months'],
+            ['__gpi', 'Google AdSense', 'Ads and security', '13 months'],
+            [
+              '__gpi_optout',
+              'Google AdSense',
+              'Remembering that you do not accept ads with cookies',
+              '13 months',
+            ],
+            ['__eoi', 'Google AdSense', 'Security', '6 months'],
+            [
+              'TESTCOOKIESENABLED',
+              'Google AdSense',
+              'Checking whether your browser accepts cookies',
+              '60 seconds',
+            ],
+            ['IDE', 'Google (doubleclick.net)', 'Ads and security', '13 months'],
+            ['id', 'Google (doubleclick.net)', 'Ads, security and operation', '13 months'],
+            ['DSID', 'Google (doubleclick.net)', 'Ads, security and operation', '2 weeks'],
+            [
+              'test_cookie',
+              'Google (doubleclick.net)',
+              'Checking whether your browser accepts cookies',
+              '15 minutes',
+            ],
+          ],
+        },
+      },
+      {
+        heading: 'How to change what you accept',
+        paragraphs: [
+          "On any dilemma page, with “Manage cookies” at the foot of the page: it opens Google's cookie manager again, where you can withdraw or change your consent as easily as you gave it.",
+          'You can also delete or block cookies in the settings of your browser.',
+        ],
+      },
+      {
+        heading: 'Third parties and transfers',
+        paragraphs: [
+          'Google and the advertising partners you accept use their cookies as controllers in their own right. The cookie manager follows the IAB Europe Transparency and Consent Framework and shows you who those partners are and what each one uses your data for.',
+          'Google may process data outside the European Economic Area, under the EU-US Data Privacy Framework and the standard contractual clauses of the European Commission. Google explains it at policies.google.com/technologies/ads.',
+        ],
+      },
+      {
+        heading: 'More information',
+        paragraphs: [
+          'How we process your data is in the privacy policy. For any question, write to privacidad@thelever.app.',
         ],
       },
     ],
@@ -173,7 +272,7 @@ export const en: SiteTexts = {
       {
         heading: 'Privacy',
         paragraphs: [
-          'How we process data on this web is in the privacy policy. The app explains its own before you play, and its use is governed by its terms of use, which you accept when you enter.',
+          'How we process data on this web is in the privacy policy, and which cookies it uses, in the cookie policy. The app explains its own before you play, and its use is governed by its terms of use, which you accept when you enter.',
         ],
       },
       {

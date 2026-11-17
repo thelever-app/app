@@ -1,6 +1,6 @@
 import type { SiteTexts } from './site-texts.ts';
 
-const UPDATED = '16 novembre 2026';
+const UPDATED = '17 novembre 2026';
 
 export const fr: SiteTexts = {
   languageName: 'Français',
@@ -77,6 +77,7 @@ export const fr: SiteTexts = {
     for: 'Pour :',
     against: 'Contre :',
     byTheTeam: 'Texte de l’équipe de TheLever.',
+    ad: 'Publicité',
     moreOf: (name) => `Plus de dilemmes : ${name.toLowerCase()}`,
   },
   gone: {
@@ -90,7 +91,7 @@ export const fr: SiteTexts = {
     heading: 'Cette page n’existe pas',
     body: 'L’adresse est peut-être mal écrite. Depuis l’accueil, tu accèdes à tous les dilemmes.',
   },
-  footer: { label: 'Informations légales' },
+  footer: { label: 'Informations légales', manageCookies: 'Gérer les cookies' },
   privacy: {
     title: 'Confidentialité',
     description:
@@ -119,26 +120,27 @@ export const fr: SiteTexts = {
       {
         heading: 'Publicités et cookies',
         paragraphs: [
-          'Pour l’instant, ce site n’affiche pas de publicités et n’utilise pas de cookies. Quand il en affichera, ce seront des publicités Google AdSense : Google et ses partenaires n’utiliseront des cookies pour les afficher ou les personnaliser que si tu l’acceptes dans le gestionnaire de cookies, qui apparaîtra avant toute publicité ; sinon, tu ne verras que des publicités limitées, sans cookies. Aucune publicité ne recevra ce que tu votes dans l’app.',
-          'Google est responsable pour son propre compte de ce qu’il fait de ces cookies. Pour en savoir plus : policies.google.com/technologies/ads.',
+          'Les pages des dilemmes affichent des publicités Google AdSense. Avant d’utiliser des cookies, le gestionnaire de cookies de Google te demande ce que tu acceptes, et Google ne les utilise qu’avec ton consentement (art. 6.1.a RGPD et art. 22.2 LSSI). Si tu n’acceptes pas, tu ne vois que des publicités limitées, sans cookies.',
+          'Les publicités ne sont personnalisées que si tu l’acceptes : sur ce site, qui ne demande pas ton âge, cela ne dépend que de ton acceptation. Si ton navigateur envoie le signal Global Privacy Control, les publicités ne sont pas personnalisées, même si tu l’acceptes. TheLever ne donne ni à Google ni à ses partenaires ce que tu votes dans l’app.',
+          'Au chargement des publicités, même si tu n’acceptes rien, Google reçoit ton adresse IP, les données de ton navigateur et la page que tu visites. Nous le permettons au titre de notre intérêt légitime à financer un jeu gratuit par la publicité (art. 6.1.f RGPD), et nous répondons de cette collecte conjointement avec Google. Ce que Google et ses partenaires font ensuite de ces données et de leurs cookies relève de leur propre responsabilité, selon ce que tu acceptes et les conditions de protection des données de Google Ads (business.safety.google/adscontrollerterms). La politique de cookies indique quels sont ces cookies et comment modifier ce que tu acceptes ; Google l’explique sur policies.google.com/technologies/ads.',
         ],
       },
       {
         heading: 'Avec qui nous partageons tes données',
         paragraphs: [
-          'Nous ne vendons pas tes données. Google Cloud les traite pour notre compte, sous contrat, uniquement pour héberger le site. Nous pouvons aussi devoir les communiquer aux autorités lorsque la loi l’exige.',
+          'Nous ne vendons pas tes données. Google Cloud les traite pour notre compte, sous contrat, uniquement pour héberger le site. Google AdSense et ses partenaires les reçoivent en tant que responsables pour leur propre compte, comme l’explique la section sur les publicités. Nous pouvons aussi devoir les communiquer aux autorités lorsque la loi l’exige.',
         ],
       },
       {
         heading: 'Transferts hors de l’Espace économique européen',
         paragraphs: [
-          'Google peut traiter des données hors de l’Espace économique européen, dans le cadre du Data Privacy Framework UE-États-Unis et des clauses contractuelles types de la Commission européenne.',
+          'Google peut traiter des données hors de l’Espace économique européen, sur la base du cadre de protection des données UE-États-Unis et des clauses contractuelles types de la Commission européenne.',
         ],
       },
       {
         heading: 'Combien de temps nous les conservons',
         paragraphs: [
-          'TheLever ne conserve rien de ta visite. Google conserve ses journaux techniques le temps nécessaire à la sécurité du service.',
+          'TheLever ne conserve rien de ta visite. Google conserve ses journaux techniques le temps nécessaire à la sécurité du service, et chaque cookie est conservé pendant la durée qu’indique la politique de cookies.',
         ],
       },
       {
@@ -152,6 +154,113 @@ export const fr: SiteTexts = {
         heading: 'Modifications de cette politique',
         paragraphs: [
           'Si nous la modifions de façon importante, nous l’indiquerons sur cette page avant que cela ne te concerne.',
+        ],
+      },
+    ],
+  },
+  cookies: {
+    title: 'Cookies',
+    description:
+      'Quels cookies sont utilisés sur le site public de TheLever, pourquoi, et comment modifier ce que tu acceptes.',
+    updated: UPDATED,
+    sections: [
+      {
+        heading: 'Ce que c’est',
+        paragraphs: [
+          'Les cookies sont de petits fichiers qu’un site enregistre dans ton navigateur et relit ensuite. Cette politique appelle aussi « cookies » les technologies similaires, comme le stockage local du navigateur.',
+        ],
+      },
+      {
+        heading: 'Ceux qu’utilise ce site',
+        paragraphs: [
+          'TheLever ne dépose de cookies propres sur aucune page de ce site. Ils sont déposés par Google AdSense, qui affiche les publicités, et par le gestionnaire de cookies de Google, qui te demande ce que tu acceptes. Tous sont des cookies de Google, en tant que tiers, et ils ne se chargent que sur les pages des dilemmes : l’accueil, les catégories et les pages légales n’ont ni publicités ni cookies.',
+        ],
+      },
+      {
+        heading: 'Ceux qui ne nécessitent pas ton consentement',
+        paragraphs: [
+          'Seulement ceux qui enregistrent ton choix, pour le respecter sans te le redemander à chaque page : ce que tu réponds dans le gestionnaire de cookies (FCCDCF) et, si tu n’acceptes pas les publicités avec cookies, le fait que tu ne les acceptes pas (__gpi_optout).',
+        ],
+      },
+      {
+        heading: 'Ceux qui nécessitent ton consentement',
+        paragraphs: [
+          'Tous les autres, et Google ne les utilise que si tu l’acceptes dans le gestionnaire de cookies :',
+          '- Pour afficher et mesurer les publicités : enregistrer et lire des informations sur ton appareil, limiter le nombre de fois où tu vois une publicité, mesurer ses performances et prévenir la fraude. Si tu ne l’acceptes pas, tu ne vois que des publicités limitées, sans cookies.',
+          '- Pour personnaliser les publicités selon tes centres d’intérêt. Sur ce site, qui ne demande pas ton âge, cela ne dépend que du fait que tu l’acceptes. Si ton navigateur envoie le signal Global Privacy Control, les publicités ne sont pas personnalisées, même si tu l’acceptes. Elles ne sont jamais choisies à partir de ce que tu votes dans l’app.',
+          'Google peut aussi enregistrer des informations similaires dans le stockage local du navigateur, aux mêmes fins et avec le même consentement.',
+        ],
+      },
+      {
+        heading: 'Tableau des cookies',
+        paragraphs: [
+          'Les noms, les finalités et les durées sont ceux que publie Google sur business.safety.google/adscookies, où figure sa liste complète.',
+        ],
+        table: {
+          headers: ['Cookie', 'Émetteur', 'Finalité', 'Durée'],
+          rows: [
+            [
+              'FCCDCF',
+              'Gestionnaire de cookies de Google',
+              'Enregistrer ce que tu réponds dans le gestionnaire',
+              '13 mois',
+            ],
+            [
+              'FCNEC',
+              'Gestionnaire de cookies de Google',
+              'Statistiques du gestionnaire',
+              '365 jours',
+            ],
+            ['__gads', 'Google AdSense', 'Publicités et sécurité', '13 mois'],
+            ['__gpi', 'Google AdSense', 'Publicités et sécurité', '13 mois'],
+            [
+              '__gpi_optout',
+              'Google AdSense',
+              'Mémoriser que tu n’acceptes pas les publicités avec cookies',
+              '13 mois',
+            ],
+            ['__eoi', 'Google AdSense', 'Sécurité', '6 mois'],
+            [
+              'TESTCOOKIESENABLED',
+              'Google AdSense',
+              'Vérifier si ton navigateur accepte les cookies',
+              '60 secondes',
+            ],
+            ['IDE', 'Google (doubleclick.net)', 'Publicités et sécurité', '13 mois'],
+            ['id', 'Google (doubleclick.net)', 'Publicités, sécurité et fonctionnement', '13 mois'],
+            [
+              'DSID',
+              'Google (doubleclick.net)',
+              'Publicités, sécurité et fonctionnement',
+              '2 semaines',
+            ],
+            [
+              'test_cookie',
+              'Google (doubleclick.net)',
+              'Vérifier si ton navigateur accepte les cookies',
+              '15 minutes',
+            ],
+          ],
+        },
+      },
+      {
+        heading: 'Comment modifier ce que tu acceptes',
+        paragraphs: [
+          'Sur n’importe quelle page d’un dilemme, avec « Gérer les cookies » en bas de page : cela rouvre le gestionnaire de cookies de Google, où tu peux retirer ou modifier ton consentement aussi facilement que tu l’as donné.',
+          'Tu peux aussi supprimer ou bloquer les cookies dans les réglages de ton navigateur.',
+        ],
+      },
+      {
+        heading: 'Tiers et transferts',
+        paragraphs: [
+          'Google et les partenaires publicitaires que tu acceptes utilisent leurs cookies en tant que responsables pour leur propre compte. Le gestionnaire de cookies suit le Transparency and Consent Framework d’IAB Europe et te montre qui sont ces partenaires et à quelles fins chacun utilise tes données.',
+          'Google peut traiter des données hors de l’Espace économique européen, sur la base du cadre de protection des données UE-États-Unis et des clauses contractuelles types de la Commission européenne. Il l’explique sur policies.google.com/technologies/ads.',
+        ],
+      },
+      {
+        heading: 'Plus d’informations',
+        paragraphs: [
+          'La façon dont nous traitons tes données figure dans la politique de confidentialité. Pour toute question, écris à privacidad@thelever.app.',
         ],
       },
     ],
@@ -175,7 +284,7 @@ export const fr: SiteTexts = {
       {
         heading: 'Confidentialité',
         paragraphs: [
-          'La façon dont nous traitons les données sur ce site figure dans la politique de confidentialité. L’app explique la sienne avant de jouer, et son usage est régi par ses conditions d’utilisation, acceptées à l’entrée.',
+          'La façon dont nous traitons les données sur ce site figure dans la politique de confidentialité, et les cookies qu’il utilise, dans la politique de cookies. L’app explique la sienne avant de jouer, et son usage est régi par ses conditions d’utilisation, acceptées à l’entrée.',
         ],
       },
       {

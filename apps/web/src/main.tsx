@@ -8,7 +8,7 @@ import { loadWebConfig } from './config/web-config.ts';
 import { deviceAccessCode } from './identity/access-code.ts';
 import { signInAnonymousPlayer } from './identity/anonymous-player.ts';
 import { lazyPlayer } from './identity/lazy-player.ts';
-import { createI18n, deviceLanguage } from './i18n/i18n.ts';
+import { createI18n, deviceLanguage, languageOfTheLink } from './i18n/i18n.ts';
 import source from './i18n/locales/es.json';
 import { connectRoom } from './room/connect-room.ts';
 import { documentActivity } from './room/document-activity.ts';
@@ -35,7 +35,8 @@ const root = createRoot(container);
  * of the game.
  */
 async function start(): Promise<void> {
-  const i18n = await createI18n();
+  // A link from the public web opens the app in the language of its page; otherwise, the device's.
+  const i18n = await createI18n(languageOfTheLink(window.location.search));
   try {
     const language = deviceLanguage(i18n);
     const config = await loadWebConfig();

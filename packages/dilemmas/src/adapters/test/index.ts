@@ -5,3 +5,4 @@
  */
 export { describeDilemmaRepositoryContract } from './dilemma-repository.contract.ts';
 export { describeDilemmaQueriesContract } from './dilemma-queries.contract.ts';
+export { describeWorldResultRepositoryContract } from './world-result-repository.contract.ts';

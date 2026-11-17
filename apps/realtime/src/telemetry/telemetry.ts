@@ -21,14 +21,20 @@ const TELEMETRY_ENDPOINT = `https://telemetry.${REGION}.rep.googleapis.com`;
 const SHUTDOWN_TIMEOUT_MS = 2000;
 
 /**
- * The address of the player and their browser never reach a span: the hook runs after the
- * instrumentation computes its attributes, and the SDK drops the ones left undefined.
+ * The address of the player and their browser never reach a span, nor the query of the address
+ * they ask for, which may carry what they voted alone and predicted: the hook runs after the
+ * instrumentation computes its attributes, and the SDK drops the ones left undefined. The path
+ * stays, which is all a trace needs.
  */
 const WITHOUT_THE_CLIENT: Attributes = {
   'client.address': undefined,
   'network.peer.address': undefined,
   'network.peer.port': undefined,
   'user_agent.original': undefined,
+  'url.query': undefined,
+  'url.full': undefined,
+  'http.target': undefined,
+  'http.url': undefined,
 };
 
 /** HTTP, without the client in its spans and without the health check of Cloud Run. */

@@ -1,0 +1,539 @@
+{
+  "app": {
+    "connecting": "A ligar…",
+    "unavailable": "Sala ainda não disponível."
+  },
+  "playerList": {
+    "you": "{{name}} (tu)",
+    "disconnected": "sem ligação",
+    "pending_one": "Por responder · {{count}}",
+    "pending_many": "Por responder · {{count, number}}",
+    "pending_other": "Por responder · {{count, number}}",
+    "done_one": "Já respondeu · {{count}}",
+    "done_many": "Já responderam · {{count, number}}",
+    "done_other": "Já responderam · {{count, number}}",
+    "answered": "já respondeu",
+    "anonymousAnswered_one": "já respondeu",
+    "anonymousAnswered_many": "já responderam",
+    "anonymousAnswered_other": "já responderam",
+    "anonymousPending_one": "falta {{count}}",
+    "anonymousPending_many": "faltam {{count, number}}",
+    "anonymousPending_other": "faltam {{count, number}}",
+    "anonymousNote": "Numa sala anónima ninguém vê quem respondeu, só quantos.",
+    "inRoom_one": "Na sala · {{count}}",
+    "inRoom_many": "Na sala · {{count, number}}",
+    "inRoom_other": "Na sala · {{count, number}}"
+  },
+  "progressStrip": {
+    "position": "Dilema {{position, number}} de {{total, number}}",
+    "group": "Quem já respondeu",
+    "more": "+{{count, number}}",
+    "showAll": "Ver todos",
+    "predicting": "Dilema {{position, number}} de {{total, number}} · Prevê",
+    "anonymousGroup": "Quantos já responderam",
+    "anonymousCount_one": "Respondeu {{count}} · faltam {{pending, number}}",
+    "anonymousCount_many": "Responderam {{count, number}} · faltam {{pending, number}}",
+    "anonymousCount_other": "Responderam {{count, number}} · faltam {{pending, number}}",
+    "playerAnswered": "{{name}} · já respondeu",
+    "playerPending": "{{name}} · ainda não respondeu",
+    "playerDisconnected": "{{name}} (sem ligação)",
+    "movedOn": "{{name}} passou ao seguinte",
+    "playerMovedOn": "{{label}} · passou ao seguinte"
+  },
+  "groupSheet": {
+    "title": "O grupo",
+    "close": "Fechar",
+    "summary_one": "{{count}} jogador · vê-se quem respondeu, não o quê",
+    "summary_many": "{{count, number}} jogadores · vê-se quem respondeu, não o quê",
+    "summary_other": "{{count, number}} jogadores · vê-se quem respondeu, não o quê",
+    "summaryAnonymous_one": "{{count}} jogador · ninguém vê quem respondeu",
+    "summaryAnonymous_many": "{{count, number}} jogadores · ninguém vê quem respondeu",
+    "summaryAnonymous_other": "{{count, number}} jogadores · ninguém vê quem respondeu"
+  },
+  "dilemma": {
+    "privacy": "Ninguém do grupo verá o teu voto até à revelação. Até lá, podes mudá-lo.",
+    "choose": "Escolhe uma opção",
+    "continue": "Continuar",
+    "privacyAnonymous": "Ninguém do grupo verá o teu voto, nem na revelação. Podes mudá-lo até o dilema ser revelado.",
+    "done": "Pronto"
+  },
+  "waiting": {
+    "position": "Dilema {{position, number}} de {{total, number}} · Já respondeste",
+    "title": "À espera dos outros",
+    "subtitle": "O dilema é revelado quando todos responderem ou o tempo acabar. Até lá, podes mudar a tua resposta.",
+    "change": "Mudar a minha resposta",
+    "mascotWaiting": "La Palanca, à espera",
+    "revealEarly": "Revelar já",
+    "revealCaption_one": "Falta {{count}}. Neste dilema ficará como «não votou».",
+    "revealCaption_many": "Faltam {{count, number}}. Neste dilema ficarão como «não votou».",
+    "revealCaption_other": "Faltam {{count, number}}. Neste dilema ficarão como «não votou».",
+    "guest": "{{host}} pode revelá-lo antes; se não, é revelado quando todos responderem ou o tempo acabar."
+  },
+  "game": {
+    "timeLeft": "Faltam {{time}}"
+  },
+  "predict": {
+    "voted": "Votaste «",
+    "votedEnd": "»",
+    "voteQuestion": "O que votou cada um?",
+    "voteOf": "O voto de {{name}}",
+    "back": "Voltar ao teu voto",
+    "missing_one": "Falta {{count}} resposta",
+    "missing_many": "Faltam {{count, number}} respostas",
+    "missing_other": "Faltam {{count, number}} respostas",
+    "next": "Pronto"
+  },
+  "gameMenu": {
+    "open": "Mais opções",
+    "title": "Menu da partida",
+    "revealEarly": "Revelar já",
+    "onlyHost": "Só o anfitrião",
+    "showGroup": "Ver o grupo",
+    "share": "Partilhar link",
+    "copied": "Link copiado",
+    "code": "Código {{code}}",
+    "showQr": "Mostrar QR",
+    "report": "Reportar este dilema",
+    "reportSubtitle": "Ninguém do grupo vai saber",
+    "reported": "Já reportaste este dilema",
+    "leave": "Sair da partida"
+  },
+  "report": {
+    "title": "O que se passa com este dilema?",
+    "reasons": {
+      "offensive": "Ofensivo",
+      "confusing": "Confuso",
+      "mistranslated": "Mal traduzido",
+      "other": "Outro"
+    },
+    "comment": "Comentário (opcional)",
+    "placeholder": "O que viste?",
+    "noPersonalData": "Não incluas dados pessoais.",
+    "counter": "{{count, number}}/{{max, number}}",
+    "chooseReason": "Escolhe um motivo",
+    "send": "Enviar",
+    "note": "A equipa vai revê-lo. Ninguém do grupo saberá que o reportaste."
+  },
+  "reportSent": {
+    "thanks": "Obrigado.",
+    "text": "A equipa vai revê-lo; ninguém do grupo sabe.",
+    "canSkip": "Se preferires não lhe responder, podes saltá-lo.",
+    "skip": "Saltar dilema"
+  },
+  "revealEarly": {
+    "title": "Revelar o dilema já?",
+    "body_one": "Há {{count}} jogador por responder. Neste dilema ficará como «não votou» e já não poderá responder.",
+    "body_many": "Há {{count, number}} jogadores por responder. Neste dilema ficarão como «não votou» e já não poderão responder.",
+    "body_other": "Há {{count, number}} jogadores por responder. Neste dilema ficarão como «não votou» e já não poderão responder.",
+    "reveal": "Revelar já",
+    "wait": "Continuar à espera"
+  },
+  "newHost": {
+    "title": "Agora és o anfitrião",
+    "disconnected": "{{host}} continua sem ligação. A partir da próxima ronda podes revelar antes do tempo no menu ⋮. Se voltar, recupera o papel.",
+    "left": "{{host}} saiu da partida. As tuas opções estão no menu ⋮."
+  },
+  "lateJoin": {
+    "illustration": "La Palanca, junto a uma agulha da linha",
+    "room": "Sala de {{host}}",
+    "title": "A partida já começou",
+    "round": "Entras na ronda em curso, o dilema {{position, number}} de {{total, number}}; se já estiver a ser revelado, vais vê-lo com o grupo.",
+    "onlyVote": "Nesta partida só votas: não fazes previsões, ninguém prevê o teu voto e não entras na classificação.",
+    "enter": "Entrar na ronda"
+  },
+  "reveal": {
+    "region": "Revelação",
+    "position": "Dilema {{position, number}} de {{total, number}} · Revelação",
+    "addedBy": "Adicionado por {{name}}",
+    "about": "Este dilema era sobre {{name}}",
+    "yourHitsRegion": "Os teus acertos",
+    "hitsAll": "Leste-os a todos!",
+    "hitsCount": "Acertaste em {{right, number}} de {{count, number}}",
+    "missedOne": "Só falhaste com {{name}}",
+    "missedSome": "Falhaste com {{names}}",
+    "missedMany": "Falhaste com {{names}} e mais {{count, number}}",
+    "missedAll": "Hoje não os leste",
+    "whoVoted": "O que votou cada um",
+    "nobodyChose": "Ninguém a escolheu",
+    "guessed": "· disseste {{letter}}",
+    "voterRight": "{{name}}, acertaste",
+    "voterMissed": "{{name}}, falhaste: disseste {{letter}}",
+    "optionCount": "{{count, number}} · {{percent}}",
+    "didNotVote_one": "Não votou · {{names}}",
+    "didNotVote_many": "Não votaram · {{names}}",
+    "didNotVote_other": "Não votaram · {{names}}",
+    "next": "Dilema seguinte",
+    "anonymousDidNotVote_one": "{{count}} pessoa não votou.",
+    "anonymousDidNotVote_many": "{{count, number}} pessoas não votaram.",
+    "anonymousDidNotVote_other": "{{count, number}} pessoas não votaram.",
+    "anonymousNote": "Nesta sala ninguém vê quem votou o quê.",
+    "fewVotesTitle": "Poucos votos para mostrar a distribuição",
+    "fewVotesVoted_one": "Só votou {{count}} pessoa",
+    "fewVotesVoted_many": "Só votaram {{count, number}} pessoas",
+    "fewVotesVoted_other": "Só votaram {{count, number}} pessoas",
+    "fewVotesNobody": "Ninguém votou",
+    "fewVotesDidNot_one": "e {{count}} não votou",
+    "fewVotesDidNot_many": "e {{count, number}} não votaram",
+    "fewVotesDidNot_other": "e {{count, number}} não votaram",
+    "fewVotesWhy": "Com menos de 3 votos, a distribuição deixaria adivinhar quem votou o quê.",
+    "introPosition": "Dilema {{position, number}} de {{total, number}} · Fim da decisão",
+    "introTitle": "Chegou a revelação",
+    "introMascot": "La Palanca, a festejar",
+    "introAnswered_one": "Respondeu {{count}} de {{total, number}}.",
+    "introAnswered_many": "Responderam {{count, number}} de {{total, number}}.",
+    "introAnswered_other": "Responderam {{count, number}} de {{total, number}}.",
+    "introNominal": "Agora sim: vão ver o que votou cada um.",
+    "introAnonymous": "Agora sim: vão ver quantos escolheram cada opção."
+  },
+  "notices": {
+    "reconnecting": "A restabelecer a ligação… as tuas respostas estão guardadas",
+    "paused": "Em pausa. Toca para voltar",
+    "answerNotSaved": "A tua última resposta não foi guardada. Escolhe-a outra vez.",
+    "dismiss": "Fechar aviso"
+  },
+  "noReturn": {
+    "gone": {
+      "title": "Esta partida já não existe",
+      "text": "Terminou ou foi fechada. Se o grupo continuar a jogar, pede que te enviem o link novo."
+    },
+    "device": {
+      "title": "Este dispositivo não está na partida",
+      "text": "Se entraste a partir de outro, continua a jogar nesse. Se não, pede ao grupo um link novo."
+    },
+    "update": {
+      "title": "Há uma versão nova do TheLever",
+      "text": "Recarrega para continuar a jogar com a mais recente.",
+      "action": "Recarregar"
+    },
+    "identity": {
+      "title": "Não conseguimos reconhecer-te",
+      "text": "Costuma ser passageiro. Tenta outra vez daqui a pouco.",
+      "action": "Tentar outra vez"
+    },
+    "expelled": {
+      "title": "Tiraram-te da sala",
+      "text": "Quem criou a sala expulsou-te desta partida. Se o grupo jogar a desforra, podes juntar-te a ela.",
+      "action": "Voltar ao início"
+    }
+  },
+  "createRoom": {
+    "title": "Nova sala",
+    "nickname": "A tua alcunha",
+    "nicknamePlaceholder": "Como o grupo te vai ver",
+    "groupNature": {
+      "label": "Com quem vais jogar?",
+      "family": "Família",
+      "friends": "Amigos",
+      "work": "Colegas",
+      "mixed": "Mistura",
+      "hint": "Serve para perceber como mudam os votos consoante com quem jogas."
+    },
+    "place": {
+      "label": "Onde estão?",
+      "together": "No mesmo sítio",
+      "remote": "À distância"
+    },
+    "submit": "Criar sala",
+    "submitting": "A criar a sala…",
+    "missing": {
+      "nickname": "Escreve a tua alcunha",
+      "groupNature": "Escolhe com quem jogas",
+      "place": "Diz-nos onde estão"
+    }
+  },
+  "joinRoom": {
+    "roomOf": "Sala de {{host}} · {{code}}",
+    "inTheRoom_one": "{{count}} na sala",
+    "inTheRoom_other": "{{count}} na sala",
+    "adultsOnly": "Só para maiores de 18: pode ter dilemas para adultos.",
+    "nickname": "A tua alcunha",
+    "submit": "Entrar na sala",
+    "submitting": "A entrar…",
+    "loading": "À procura da sala…",
+    "inTheRoom_many": "{{count}} na sala",
+    "missingNickname": "Escreve a tua alcunha",
+    "namesake": "{{nickname}} já está na sala; o avatar vai distinguir-vos.",
+    "missingAvatar": "Escolhe outro avatar",
+    "lookalikeJustJoined": "Alguém acabou de entrar como {{nickname}} com este avatar. Escolhe outro."
+  },
+  "roomErrors": {
+    "nickname-missing": "Escreve uma alcunha.",
+    "room-full": "A sala está cheia: já tem 50 jogadores.",
+    "player-expelled": "O anfitrião tirou-te desta partida.",
+    "room-code-not-found": "Não há nenhuma sala com esse código.",
+    "room-not-found": "Essa sala já não existe.",
+    "unknown": "Algo correu mal. Tenta outra vez.",
+    "dilemmas-missing": "Não há dilemas para esta configuração. Experimenta outras categorias.",
+    "nickname-and-avatar-taken": "Alguém com o teu nome já usa esse avatar. Escolhe outro."
+  },
+  "home": {
+    "title": "Jogamos?",
+    "create": "Criar sala",
+    "joinWithCode": "Entrar com um código",
+    "back": "Voltar"
+  },
+  "joinCode": {
+    "title": "Escreve o código da sala",
+    "text": "São 5 caracteres. Quem criou a sala pode ditar-to.",
+    "label": "Código da sala",
+    "hint": "Também o podes colar.",
+    "enter": "Entrar",
+    "missing_one": "Falta {{count}} carácter",
+    "missing_many": "Faltam {{count, number}} caracteres",
+    "missing_other": "Faltam {{count, number}} caracteres"
+  },
+  "accessCode": {
+    "title": "O TheLever está em testes",
+    "text": "Por agora só pode jogar quem tem o código de acesso. Escreve-o uma vez e não to voltamos a pedir neste dispositivo.",
+    "label": "Código de acesso",
+    "invalid": "Esse código não é válido.",
+    "check": "Confirma que está bem escrito.",
+    "enter": "Entrar",
+    "entering": "A entrar…"
+  },
+  "variant": {
+    "nominal": {
+      "name": "Sala nominal:",
+      "text": "na revelação todos verão o que votou cada um."
+    },
+    "anonymous": {
+      "name": "Sala anónima:",
+      "text": "ninguém verá quem votou o quê."
+    }
+  },
+  "joinRefusal": {
+    "illustration": "La Palanca, hesitante, junto a um fim de linha",
+    "room-code-not-found": {
+      "title": "Essa sala não existe",
+      "text": "Confirma o código: são 5 caracteres. Pede-o outra vez a quem criou a sala.",
+      "action": "Tentar outro código"
+    },
+    "room-full": {
+      "title": "Esta sala está completa",
+      "text": "Já tem 50 jogadores, que é o máximo. Podes criar a tua própria sala.",
+      "action": "Voltar ao início"
+    },
+    "player-expelled": {
+      "title": "Não podes voltar a entrar nesta partida",
+      "text": "Se o grupo jogar a desforra, podes juntar-te a ela.",
+      "action": "Voltar ao início"
+    },
+    "room-not-found": {
+      "title": "Essa sala já não existe",
+      "text": "Foi fechada. Se o grupo continuar a jogar, pede que te enviem o código novo.",
+      "action": "Voltar ao início"
+    }
+  },
+  "lobby": {
+    "codeLabel": "Código da sala",
+    "leave": "Sair da sala",
+    "share": "Partilhar link",
+    "shareText": "Junta-te à minha sala do TheLever com o código {{code}}",
+    "copied": "Link copiado",
+    "showQr": "Mostrar QR",
+    "summary": "{{count}} dilemas · {{seconds}} s por dilema · {{language}} · {{nature}}",
+    "change": "Mudar",
+    "adultsOnly": "Só para maiores de 18",
+    "remote": "Jogam à distância: melhor por videochamada, para comentar a revelação em direto.",
+    "added": {
+      "title": "Dilemas adicionados · {{count}} de {{total}}",
+      "remove": "Retirar este dilema",
+      "hint": "Não sabes quem os adicionou: vê-se na revelação. Os restantes vêm do catálogo."
+    },
+    "add": {
+      "title": "Adiciona dilemas à partida",
+      "count": "Adicionaste {{count}} de {{total}}. Ninguém saberá que são teus até à revelação.",
+      "action": "Adicionar um dilema",
+      "remove": "Retirar este dilema"
+    },
+    "picked": {
+      "title": "Dilemas escolhidos · {{count}}"
+    },
+    "players": "Na sala · {{count}}",
+    "you": "{{name}} (tu)",
+    "host": "Anfitrião",
+    "toExpel": "{{name}}. Toca para expulsar",
+    "toChangeAvatar": "{{name}}. Toca para mudar o teu avatar",
+    "waiting": "À espera de mais pessoas. Partilha o código ou o link para entrarem.",
+    "start": "Começar a partida",
+    "missing_one": "Falta {{count}} jogador para começar",
+    "missing_other": "Faltam {{count}} jogadores para começar",
+    "guestWait": "{{host}} vai começar a partida quando estiverem todos.",
+    "missing_many": "Faltam {{count}} jogadores para começar",
+    "categories": {
+      "all": "Todas as categorias",
+      "some_one": "{{count}} categoria",
+      "some_other": "{{count}} categorias",
+      "some_many": "{{count}} categorias",
+      "none": "Nenhuma categoria"
+    },
+    "pickedCount_one": "{{count}} dilema escolhido",
+    "pickedCount_other": "{{count}} dilemas escolhidos",
+    "pickedCount_many": "{{count}} dilemas escolhidos",
+    "summaryPicked": "{{seconds}} s por dilema · {{language}} · {{nature}}"
+  },
+  "languages": {
+    "es": "Español",
+    "en": "English",
+    "fr": "Français",
+    "de": "Deutsch",
+    "it": "Italiano",
+    "pt": "Português",
+    "ca": "Català"
+  },
+  "categories": {
+    "life-and-death": "Vida e morte",
+    "honesty": "Honestidade",
+    "loyalty": "Lealdade",
+    "justice": "Justiça",
+    "love-and-relationships": "Amor e relações",
+    "work-and-money": "Trabalho e dinheiro",
+    "technology-and-the-future": "Tecnologia e futuro"
+  },
+  "settings": {
+    "title": "Definições da partida",
+    "close": "Fechar",
+    "reveal": "Revelação",
+    "nominal": "Nominal",
+    "anonymous": "Anónimo",
+    "nominalHint": "Na revelação vê-se o que votou cada um, e joga-se a prever.",
+    "anonymousHint": "Ninguém verá quem votou o quê. Sem previsões nem pontos: só votar.",
+    "adultsOnly": {
+      "label": "Só maiores de 18",
+      "hint": "Permite dilemas para adultos. Só poderão entrar maiores de 18."
+    },
+    "language": "Idioma dos dilemas",
+    "howPicked": "Como se escolhem os dilemas",
+    "byCategories": "Por categorias",
+    "byHand": "À mão",
+    "categories": "Categorias",
+    "allCategories": "Todas",
+    "categoriesHint": "A partida mistura dilemas das categorias marcadas.",
+    "dilemmaCount": "Dilemas",
+    "timePerDilemma": "Tempo por dilema",
+    "seconds": "{{count}} s",
+    "timeHint": "Cada dilema é revelado quando todos respondem ou o tempo acaba.",
+    "newDilemmas": {
+      "label": "Incluir dilemas novos",
+      "hint": "Ajudam a avaliar dilemas acabados de chegar ao catálogo."
+    },
+    "dilemmasPerPlayer": {
+      "label": "Dilemas que cada jogador adiciona",
+      "none": "Nenhum",
+      "hint": "O anfitrião também. Contam para o número de dilemas, e ninguém saberá de quem é cada um até à revelação."
+    },
+    "pick": "Escolher dilemas um a um",
+    "picked_one": "{{count}} dilema escolhido",
+    "picked_other": "{{count}} dilemas escolhidos",
+    "picked_many": "{{count}} dilemas escolhidos",
+    "noPicked": "Nenhum dilema escolhido",
+    "changePicked": "Mudar",
+    "choosePicked": "Escolher",
+    "byHandHint": "A partida joga estes e os que os jogadores adicionarem, sem categorias nem dilemas novos. «Por categorias» retira-os com um toque.",
+    "save": "Guardar"
+  },
+  "pickDilemmas": {
+    "title": "Escolher dilemas",
+    "back": "Voltar às definições",
+    "search": "Pesquisar dilemas",
+    "searchPlaceholder": "Pesquisa por texto ou etiqueta: família, elétrico…",
+    "all": "Todas",
+    "hint": "Só aparecem dilemas adequados a esta sala. Ao escolhê-los à mão, não se adicionam dilemas novos.",
+    "none": "Escolhe pelo menos um",
+    "play_one": "Jogar este",
+    "play_other": "Jogar estes {{count}}",
+    "empty": "Não há dilemas adequados com essa pesquisa.",
+    "tags": "#{{tags}}",
+    "play_many": "Jogar estes {{count}}",
+    "byCategory": "Voltar a jogar por categoria",
+    "options_one": "{{count}} opção",
+    "options_many": "{{count, number}} opções",
+    "options_other": "{{count, number}} opções",
+    "someone": "alguém do grupo",
+    "more": "Ver mais",
+    "moreFailed": "Não foi possível carregar mais dilemas. Tenta outra vez."
+  },
+  "addDilemma": {
+    "title": "Adiciona um dilema",
+    "search": "Pesquisar dilemas",
+    "close": "Fechar",
+    "empty": "Não há dilemas adequados com essa pesquisa.",
+    "searchPlaceholder": "Pesquisa por texto ou etiqueta"
+  },
+  "expel": {
+    "title": "Expulsar {{name}}?",
+    "text": "Vai sair da sala e não poderá voltar a esta partida. Poderá jogar outras.",
+    "confirm": "Expulsar",
+    "cancel": "Cancelar"
+  },
+  "avatarPicker": {
+    "title": "Escolhe o teu avatar",
+    "face": "Cara {{number}}",
+    "hint": "As que alguém com o teu nome já usa aparecem desativadas.",
+    "use": "Usar este",
+    "close": "Fechar",
+    "colors": {
+      "khaki": "Caqui",
+      "teal": "Azul-petróleo",
+      "brown": "Castanho",
+      "slate": "Ardósia",
+      "cyan": "Ciano",
+      "rust": "Ferrugem",
+      "olive": "Azeitona",
+      "stone": "Pedra"
+    },
+    "change": "Mudar avatar",
+    "changeCurrent": "Mudar avatar: cara {{face}}, {{color}}"
+  },
+  "qr": {
+    "title": "Aponta a câmara para entrar",
+    "close": "Fechar",
+    "label": "Código QR da sala {{code}}",
+    "or": "ou entra em {{host}} e escreve o código",
+    "code": "Código {{code}}"
+  },
+  "sound": {
+    "mute": "Silenciar o jogo",
+    "label": "Som",
+    "hint": "Também a vibração"
+  },
+  "playDilemma": {
+    "title": "Nova sala",
+    "firstDilemma": "Vão começar por este dilema",
+    "about_one": "{{category}} · {{count}} opção",
+    "about_other": "{{category}} · {{count}} opções",
+    "about_many": "{{category}} · {{count}} opções",
+    "rest": "O resto da partida é completado com o catálogo, segundo as definições da sala.",
+    "loading": "À procura do dilema…",
+    "notFound": "Este dilema já não está no TheLever. Podes criar uma sala com outros do catálogo.",
+    "home": "Ir para o início"
+  },
+  "voteAlone": {
+    "loading": "A procurar o dilema…",
+    "notFound": "Este dilema já não está no TheLever.",
+    "someoneInYourGroup": "alguém do teu grupo",
+    "yourVote": "O teu voto, em privado",
+    "prediction": "Que percentagem do mundo votou o mesmo que tu?",
+    "percent": "{{value}}%",
+    "private": "O teu voto conta para o resultado mundial deste dilema. Ninguém saberá o que votaste.",
+    "see": "Ver como votou o mundo",
+    "sending": "A enviar o teu voto…",
+    "loadingResult": "A procurar como votou o mundo…",
+    "sameAsYou": "{{percentage}}%",
+    "thoughtLikeYou": "pensou como tu.",
+    "predictionOff_one": "Disseste {{prediction}}%: ficaste a {{count}} ponto.",
+    "predictionOff_many": "Disseste {{prediction}}%: ficaste a {{count, number}} pontos.",
+    "predictionOff_other": "Disseste {{prediction}}%: ficaste a {{count, number}} pontos.",
+    "predictionRight": "Disseste {{prediction}}%: acertaste em cheio.",
+    "yours": "{{option}} · o teu voto",
+    "answers_one": "{{count, number}} resposta em todo o mundo. Atualiza-se uma vez por dia.",
+    "answers_many": "{{count, number}} respostas em todo o mundo. Atualiza-se uma vez por dia.",
+    "answers_other": "{{count, number}} respostas em todo o mundo. Atualiza-se uma vez por dia.",
+    "fewTitle": "Ainda há poucas respostas",
+    "fewBody_one": "Temos {{count, number}} das {{needed}} necessárias. Volta mais tarde para veres como votou o mundo e se acertaste.",
+    "fewBody_many": "Temos {{count, number}} das {{needed}} necessárias. Volta mais tarde para veres como votou o mundo e se acertaste.",
+    "fewBody_other": "Temos {{count, number}} das {{needed}} necessárias. Volta mais tarde para veres como votou o mundo e se acertaste.",
+    "play": "Jogá-lo com o meu grupo",
+    "arguments": "Ler os argumentos de cada opção"
+  }
+}

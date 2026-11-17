@@ -1,6 +1,6 @@
 import type { SiteTexts } from './site-texts.ts';
 
-const UPDATED = '16. November 2026';
+const UPDATED = '17. November 2026';
 
 export const de: SiteTexts = {
   languageName: 'Deutsch',
@@ -76,6 +76,7 @@ export const de: SiteTexts = {
     for: 'Dafür:',
     against: 'Dagegen:',
     byTheTeam: 'Text des TheLever-Teams.',
+    ad: 'Anzeige',
     moreOf: (name) => `Weitere Dilemmas: ${name}`,
   },
   gone: {
@@ -89,7 +90,7 @@ export const de: SiteTexts = {
     heading: 'Diese Seite gibt es nicht',
     body: 'Vielleicht ist die Adresse falsch geschrieben. Von der Startseite aus erreichst du alle Dilemmas.',
   },
-  footer: { label: 'Rechtliche Hinweise' },
+  footer: { label: 'Rechtliche Hinweise', manageCookies: 'Cookies verwalten' },
   privacy: {
     title: 'Datenschutz',
     description:
@@ -118,14 +119,15 @@ export const de: SiteTexts = {
       {
         heading: 'Werbung und Cookies',
         paragraphs: [
-          'Derzeit zeigt diese Website keine Werbung und verwendet keine Cookies. Wenn sie Werbung zeigt, wird es Werbung von Google AdSense sein: Google und seine Partner werden Cookies, um sie anzuzeigen oder zu personalisieren, nur verwenden, wenn du im Cookie-Manager zustimmst, der vor jeder Werbung erscheinen wird; ohne Zustimmung siehst du nur eingeschränkte Werbung ohne Cookies. Keine Werbung wird erhalten, was du in der App abstimmst.',
-          'Google ist für das, was es mit diesen Cookies tut, selbst verantwortlich. Mehr dazu unter policies.google.com/technologies/ads.',
+          'Die Seiten der Dilemmas zeigen Werbung von Google AdSense. Bevor Cookies verwendet werden, fragt dich der Cookie-Manager von Google, was du akzeptierst, und Google verwendet sie nur mit deiner Einwilligung (Art. 6 Abs. 1 lit. a DSGVO und Art. 22 Abs. 2 LSSI). Wenn du nicht zustimmst, siehst du nur eingeschränkte Werbung ohne Cookies.',
+          'Die Werbung wird nur personalisiert, wenn du zustimmst: Auf dieser Website, die nicht nach deinem Alter fragt, hängt das nur davon ab. Wenn dein Browser das Signal Global Privacy Control sendet, wird die Werbung nicht personalisiert, auch wenn du zustimmst. TheLever gibt weder Google noch seinen Partnern weiter, was du in der App abstimmst.',
+          'Beim Laden der Werbung erhält Google, auch wenn du nichts akzeptierst, deine IP-Adresse, die Daten deines Browsers und die Seite, die du besuchst. Wir erlauben das aufgrund unseres berechtigten Interesses, ein kostenloses Spiel mit Werbung zu finanzieren (Art. 6 Abs. 1 lit. f DSGVO), und für diese Erhebung sind wir gemeinsam mit Google verantwortlich. Was Google und seine Partner danach mit diesen Daten und mit ihren Cookies tun, verantworten sie selbst, je nachdem, was du akzeptierst, und nach den Datenschutzbedingungen von Google Ads (business.safety.google/adscontrollerterms). Welche Cookies das sind und wie du änderst, was du akzeptierst, steht in der Cookie-Richtlinie; Google erklärt es unter policies.google.com/technologies/ads.',
         ],
       },
       {
         heading: 'Mit wem wir deine Daten teilen',
         paragraphs: [
-          'Wir verkaufen deine Daten nicht. Google Cloud verarbeitet sie in unserem Auftrag, mit Vertrag, nur um die Website zu hosten. Behörden müssen wir sie geben, wenn das Gesetz es verlangt.',
+          'Wir verkaufen deine Daten nicht. Google Cloud verarbeitet sie in unserem Auftrag, mit Vertrag, nur um die Website zu hosten. Google AdSense und seine Partner erhalten sie als eigenständige Verantwortliche, wie im Abschnitt zur Werbung erklärt. Behörden müssen wir sie geben, wenn das Gesetz es verlangt.',
         ],
       },
       {
@@ -137,7 +139,7 @@ export const de: SiteTexts = {
       {
         heading: 'Wie lange wir sie speichern',
         paragraphs: [
-          'TheLever speichert nichts von deinem Besuch. Google bewahrt seine technischen Protokolle so lange auf, wie es für die Sicherheit des Dienstes nötig ist.',
+          'TheLever speichert nichts von deinem Besuch. Google bewahrt seine technischen Protokolle so lange auf, wie es für die Sicherheit des Dienstes nötig ist, und jedes Cookie bleibt so lange bestehen, wie es die Cookie-Richtlinie angibt.',
         ],
       },
       {
@@ -151,6 +153,113 @@ export const de: SiteTexts = {
         heading: 'Änderungen dieser Erklärung',
         paragraphs: [
           'Wenn wir sie wesentlich ändern, sagen wir es auf dieser Seite, bevor es dich betrifft.',
+        ],
+      },
+    ],
+  },
+  cookies: {
+    title: 'Cookies',
+    description:
+      'Welche Cookies auf der öffentlichen Website von TheLever verwendet werden, wozu und wie du änderst, was du akzeptierst.',
+    updated: UPDATED,
+    sections: [
+      {
+        heading: 'Was sie sind',
+        paragraphs: [
+          'Cookies sind kleine Dateien, die eine Website in deinem Browser speichert und später wieder ausliest. Diese Richtlinie nennt auch ähnliche Technologien „Cookies“, etwa den lokalen Speicher des Browsers.',
+        ],
+      },
+      {
+        heading: 'Welche diese Website verwendet',
+        paragraphs: [
+          'TheLever setzt auf keiner Seite dieser Website eigene Cookies. Sie werden von Google AdSense gesetzt, das die Werbung anzeigt, und vom Cookie-Manager von Google, der dich fragt, was du akzeptierst. Alle stammen von Google als Drittanbieter und werden nur auf den Seiten der Dilemmas geladen: Die Startseite, die Kategorien und die rechtlichen Seiten haben weder Werbung noch Cookies.',
+        ],
+      },
+      {
+        heading: 'Welche keine Einwilligung brauchen',
+        paragraphs: [
+          'Nur die, die deine Wahl speichern, um sie zu respektieren, ohne dich auf jeder Seite erneut danach zu fragen: was du im Cookie-Manager antwortest (FCCDCF) und, wenn du Werbung mit Cookies nicht akzeptierst, dass du sie nicht akzeptierst (__gpi_optout).',
+        ],
+      },
+      {
+        heading: 'Welche deine Einwilligung brauchen',
+        paragraphs: [
+          'Alle anderen, und Google verwendet sie nur, wenn du im Cookie-Manager zustimmst:',
+          '- Um die Werbung anzuzeigen und zu messen: Informationen auf deinem Gerät speichern und auslesen, begrenzen, wie oft du eine Anzeige siehst, messen, wie sie funktioniert, und Betrug verhindern. Wenn du dem nicht zustimmst, siehst du nur eingeschränkte Werbung ohne Cookies.',
+          '- Um die Werbung nach deinen Interessen zu personalisieren. Auf dieser Website, die nicht nach deinem Alter fragt, hängt das nur davon ab, dass du zustimmst. Wenn dein Browser das Signal Global Privacy Control sendet, wird die Werbung nicht personalisiert, auch wenn du zustimmst. Sie wird nie anhand dessen ausgewählt, was du in der App abstimmst.',
+          'Google kann ähnliche Informationen auch im lokalen Speicher des Browsers speichern, für dieselben Zwecke und mit derselben Einwilligung.',
+        ],
+      },
+      {
+        heading: 'Cookie-Tabelle',
+        paragraphs: [
+          'Die Namen, die Zwecke und die Laufzeiten sind die, die Google unter business.safety.google/adscookies veröffentlicht, wo seine vollständige Liste steht.',
+        ],
+        table: {
+          headers: ['Cookie', 'Von wem', 'Wozu', 'Laufzeit'],
+          rows: [
+            [
+              'FCCDCF',
+              'Cookie-Manager von Google',
+              'Speichern, was du im Cookie-Manager antwortest',
+              '13 Monate',
+            ],
+            ['FCNEC', 'Cookie-Manager von Google', 'Statistiken des Cookie-Managers', '365 Tage'],
+            ['__gads', 'Google AdSense', 'Werbung und Sicherheit', '13 Monate'],
+            ['__gpi', 'Google AdSense', 'Werbung und Sicherheit', '13 Monate'],
+            [
+              '__gpi_optout',
+              'Google AdSense',
+              'Sich merken, dass du Werbung mit Cookies nicht akzeptierst',
+              '13 Monate',
+            ],
+            ['__eoi', 'Google AdSense', 'Sicherheit', '6 Monate'],
+            [
+              'TESTCOOKIESENABLED',
+              'Google AdSense',
+              'Prüfen, ob dein Browser Cookies akzeptiert',
+              '60 Sekunden',
+            ],
+            ['IDE', 'Google (doubleclick.net)', 'Werbung und Sicherheit', '13 Monate'],
+            [
+              'id',
+              'Google (doubleclick.net)',
+              'Werbung, Sicherheit und Funktionsfähigkeit',
+              '13 Monate',
+            ],
+            [
+              'DSID',
+              'Google (doubleclick.net)',
+              'Werbung, Sicherheit und Funktionsfähigkeit',
+              '2 Wochen',
+            ],
+            [
+              'test_cookie',
+              'Google (doubleclick.net)',
+              'Prüfen, ob dein Browser Cookies akzeptiert',
+              '15 Minuten',
+            ],
+          ],
+        },
+      },
+      {
+        heading: 'Wie du änderst, was du akzeptierst',
+        paragraphs: [
+          'Auf jeder Seite eines Dilemmas, mit „Cookies verwalten“ in der Fußzeile: Damit öffnest du erneut den Cookie-Manager von Google, wo du deine Einwilligung so einfach widerrufen oder ändern kannst, wie du sie gegeben hast.',
+          'Du kannst Cookies auch in den Einstellungen deines Browsers löschen oder blockieren.',
+        ],
+      },
+      {
+        heading: 'Drittanbieter und Übermittlungen',
+        paragraphs: [
+          'Google und die Werbepartner, die du akzeptierst, verwenden ihre Cookies als eigenständige Verantwortliche. Der Cookie-Manager folgt dem Transparency and Consent Framework von IAB Europe und zeigt dir, wer diese Partner sind und wozu jeder von ihnen deine Daten verwendet.',
+          'Google kann Daten außerhalb des Europäischen Wirtschaftsraums verarbeiten, auf Grundlage des EU-US-Datenschutzrahmens und der Standardvertragsklauseln der Europäischen Kommission. Google erklärt es unter policies.google.com/technologies/ads.',
+        ],
+      },
+      {
+        heading: 'Weitere Informationen',
+        paragraphs: [
+          'Wie wir deine Daten verarbeiten, steht in der Datenschutzerklärung. Bei Fragen schreib an privacidad@thelever.app.',
         ],
       },
     ],
@@ -174,7 +283,7 @@ export const de: SiteTexts = {
       {
         heading: 'Datenschutz',
         paragraphs: [
-          'Wie wir auf dieser Website Daten verarbeiten, steht in der Datenschutzerklärung. Die App erklärt ihre eigene vor dem Spielen, und für ihre Nutzung gelten ihre Nutzungsbedingungen, die beim Einstieg akzeptiert werden.',
+          'Wie wir auf dieser Website Daten verarbeiten, steht in der Datenschutzerklärung, und welche Cookies sie verwendet, in der Cookie-Richtlinie. Die App erklärt ihre eigene vor dem Spielen, und für ihre Nutzung gelten ihre Nutzungsbedingungen, die beim Einstieg akzeptiert werden.',
         ],
       },
       {

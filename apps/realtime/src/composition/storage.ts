@@ -6,10 +6,18 @@ import {
   PostgresGameRepository,
   PostgresPlayerNotifier,
   PostgresRoomRepository,
+  PostgresWorldResultRepository,
   type openListenClient,
 } from '@thelever-app/db';
-import type { DilemmaQueries, DilemmaRepository } from '@thelever-app/dilemmas';
-import { InMemoryDilemmaRepository } from '@thelever-app/dilemmas/in-memory';
+import type {
+  DilemmaQueries,
+  DilemmaRepository,
+  WorldResultRepository,
+} from '@thelever-app/dilemmas';
+import {
+  InMemoryDilemmaRepository,
+  InMemoryWorldResultRepository,
+} from '@thelever-app/dilemmas/in-memory';
 import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
 import type { GameRepository, PlayerNotifier, RoomRepository } from '@thelever-app/game';
 import { InMemoryGameRepository, InMemoryRoomRepository } from '@thelever-app/game/in-memory';
@@ -38,6 +46,7 @@ export interface SharedStorage {
 export interface StorageAdapters {
   readonly dilemmaRepository: DilemmaRepository;
   readonly dilemmaQueries: DilemmaQueries;
+  readonly worldResults: WorldResultRepository;
   readonly roomRepository: RoomRepository;
   readonly gameRepository: GameRepository;
   /**
@@ -55,6 +64,9 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
     return {
       dilemmaRepository,
       dilemmaQueries: dilemmaRepository,
+      worldResults: new InMemoryWorldResultRepository(
+        async (id) => (await dilemmaRepository.findById(id))?.version,
+      ),
       roomRepository: new InMemoryRoomRepository(),
       gameRepository: new InMemoryGameRepository(),
       notifierFor: (sockets) => sockets,
@@ -66,6 +78,7 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
   return {
     dilemmaRepository: new PostgresDilemmaRepository(db),
     dilemmaQueries: new PostgresDilemmaQueries(db),
+    worldResults: new PostgresWorldResultRepository(db),
     roomRepository: new PostgresRoomRepository(db, instanceId),
     gameRepository: new PostgresGameRepository(db),
     notifierFor: () => new PostgresPlayerNotifier(db),

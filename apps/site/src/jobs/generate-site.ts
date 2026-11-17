@@ -37,6 +37,10 @@ try {
     new PostgresDilemmaRepository(database.db),
   ).execute();
   const adsenseClient = process.env.ADSENSE_CLIENT?.trim();
+  // The ad units of AdSense, all three or none: until AdSense has them, the web shows no ads.
+  const [phone, top, side] = ['ADSENSE_SLOT_PHONE', 'ADSENSE_SLOT_TOP', 'ADSENSE_SLOT_SIDE'].map(
+    (name) => process.env[name]?.trim(),
+  );
   const site = buildSite(catalog, LANGUAGES, {
     origin: required('SITE_ORIGIN'),
     appBase: process.env.APP_BASE?.trim() ?? '',
@@ -47,6 +51,7 @@ try {
       address: required('LEGAL_OWNER_ADDRESS'),
     },
     ...(adsenseClient && { adsenseClient }),
+    ...(phone && top && side && { adSlots: { phone, top, side } }),
   });
   const { written, removed } = await publishSite(
     site,

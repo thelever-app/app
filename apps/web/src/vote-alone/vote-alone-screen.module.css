@@ -1,0 +1,309 @@
+/* Voting a dilemma alone and its world result, as the artboards WebVote, WebVoteResult and WebVoteFew draw them. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.back {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.category {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.note {
+  margin: 0;
+  padding: 20px 16px;
+}
+
+.form {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 16px 16px;
+}
+
+.dilemma {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.name,
+.resultName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.name {
+  font-size: 30px;
+  line-height: 34px;
+}
+
+.resultName {
+  font-size: 26px;
+  line-height: 30px;
+}
+
+.text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--color-ink-soft, var(--color-ink));
+}
+
+.options {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.legend {
+  margin-bottom: var(--space-2);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.option {
+  composes: press from '../styles/motion.module.css';
+  min-height: 56px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option[aria-pressed='true'] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: inset 0 0 0 2px var(--color-on-primary);
+}
+
+.prediction {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.question {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slider input {
+  flex-grow: 1;
+  min-height: 44px;
+  accent-color: var(--color-ink);
+}
+
+.value {
+  flex-shrink: 0;
+  min-width: 64px;
+  white-space: nowrap;
+  text-align: right;
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.private,
+.answers {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-ink-muted);
+}
+
+.footer {
+  display: flex;
+  padding: 12px 16px 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.see {
+  composes: primary from '../styles/buttons.module.css';
+  flex-grow: 1;
+  min-height: 52px;
+  font-weight: 600;
+}
+
+.see:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The share of the world that thought like the visitor, on the dark card of the artboard. */
+.headline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: var(--color-ink);
+  color: var(--color-bg);
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.share {
+  font-family: var(--font-display);
+  font-size: 44px;
+  line-height: 46px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* What is read out as the result comes: the result itself, laid out as the rest of the screen. */
+.status {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bars {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.barLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.bar[data-yours='true'] .barOption {
+  font-weight: 600;
+}
+
+.barValue {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.track {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 10px;
+  background: var(--color-border-strong);
+}
+
+.bar[data-yours='true'] .fill {
+  background: var(--color-ink);
+}
+
+.few {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+}
+
+.fewText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.fewTitle {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.play {
+  composes: primary from '../styles/buttons.module.css';
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.arguments {
+  align-self: center;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 600;
+}

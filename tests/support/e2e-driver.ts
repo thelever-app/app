@@ -1,12 +1,19 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import {
   type Database,
   type DatabaseClient,
   ConsoleLogger,
   openDatabase,
   PostgresDilemmaRepository,
+  PostgresWorldResultRepository,
 } from '@thelever-app/db';
-import { GetPublicCatalogUseCase, ImportCatalogUseCase } from '@thelever-app/dilemmas';
+import {
+  GetPublicCatalogUseCase,
+  ImportCatalogUseCase,
+  PublishWorldResultsUseCase,
+  VoteAloneUseCase,
+} from '@thelever-app/dilemmas';
 import { InMemoryCuratedCatalog, LanguageTagTranslator } from '@thelever-app/dilemmas/in-memory';
 import {
   buildSite,
@@ -48,6 +55,7 @@ import type {
   RoomChoices,
   RoomPreview,
   SettingsView,
+  WorldResultView,
 } from './driver.ts';
 import type { E2eStack } from './e2e-stack.ts';
 import {
@@ -96,6 +104,45 @@ async function publicPageSeenOn(page: Page, response: Response | null): Promise<
     indexable: robots === 0 && header === undefined,
   };
 }
+
+/** The catalogs of the web, by language: what a player whose app is in that language reads. */
+const CATALOGS: ReadonlyMap<string, object> = new Map(
+  LanguageDto.options.map((language) => [
+    language,
+    JSON.parse(
+      readFileSync(
+        new URL(`../../apps/web/src/i18n/locales/${language}.json`, import.meta.url),
+        'utf8',
+      ),
+    ) as object,
+  ]),
+);
+
+/** The text of the catalog of that language under the key, with its nested parts joined by dots. */
+function textIn(language: string, key: string): string {
+  const text = key
+    .split('.')
+    .reduce<unknown>(
+      (part, name) => (part as Record<string, unknown> | undefined)?.[name],
+      CATALOGS.get(language),
+    );
+  if (typeof text !== 'string') throw new Error(`The ${language} catalog has no text "${key}"`);
+  return text;
+}
+
+/**
+ * The position of the dilemma on screen as each language writes it, with the position as its only
+ * group: «Dilema 2 de 5», «Dilemma 2 of 5»…
+ */
+const POSITIONS = LanguageDto.options.map(
+  (language) =>
+    new RegExp(
+      textIn(language, 'progressStrip.position')
+        .replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+        .replace(/\{\{position[^}]*\}\}/, '(\\d+)')
+        .replace(/\{\{total[^}]*\}\}/, '\\d+'),
+    ),
+);
 
 /** What the driver looks for on screen, in the language of the browsers: es.json of the web. */
 const SCREEN = {
@@ -183,8 +230,12 @@ const SCREEN = {
   roomOf: /^Sala de (.+) · [A-Z0-9]{5}$/,
   inTheRoom: /^(\d+) en la sala$/,
   anonymous: 'Sala anónima',
-  position: /Dilema (\d+) de \d+/,
-  positionOf: (position: number) => new RegExp(`Dilema ${position} de \\d+`),
+  /** The position of the dilemma, in the language of whoever reads it. */
+  position: new RegExp(POSITIONS.map(({ source }) => `(?:${source})`).join('|')),
+  positionOf: (position: number) =>
+    new RegExp(
+      POSITIONS.map(({ source }) => `(?:${source.replace('(\\d+)', String(position))})`).join('|'),
+    ),
   disconnected: 'desconectado',
   showGroup: 'Ver el grupo',
   groupTitle: 'El grupo',
@@ -227,6 +278,31 @@ const ACCESS_CODE_KEY = 'thelever.accessCode';
 const LOCALES: Readonly<Record<string, string>> = { es: 'es-ES', en: 'en-US', fr: 'fr-FR' };
 /** The language of the browsers when a scenario does not name one. */
 const SPANISH = 'es-ES';
+
+/** The publisher and the ad units the public web of the run shows ads with. */
+const TEST_ADS = {
+  client: 'ca-pub-0000000000000000',
+  slots: { phone: '1000000001', top: '1000000002', side: '1000000003' },
+} as const;
+
+/** Where the pages load AdSense from, which the browsers of the run answer with TEST_ADSENSE. */
+const ADSENSE_SCRIPT = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+
+/**
+ * What the browsers of the run load instead of AdSense: like it, it fills an ad unit for each
+ * request the page queued before it loaded or makes after, and marks it as filled.
+ */
+const TEST_ADSENSE = `(() => {
+  const fill = () => {
+    const unit = document.querySelector('ins.adsbygoogle:not([data-ad-status])');
+    if (!unit) return;
+    unit.setAttribute('data-ad-status', 'filled');
+    unit.style.background = '#d9d4c7';
+  };
+  const queued = Array.isArray(window.adsbygoogle) ? window.adsbygoogle.length : 0;
+  window.adsbygoogle = { push: fill };
+  for (let request = 0; request < queued; request += 1) fill();
+})();`;
 
 /** The narrowest phone the web supports: every scenario plays on it. */
 const PHONE = { width: 320, height: 640 };
@@ -332,8 +408,10 @@ export class E2eDriver implements GameDriver {
     if (player.creatingRoom) return;
     const { page } = screenOf(player);
     await page.goto(`${this.#stack.webUrl}/app`);
-    await page.getByRole('button', { name: SCREEN.create }).click();
-    await page.getByRole('button', { name: SCREEN.changeAvatar }).waitFor();
+    await page.getByRole('button', { name: textIn(deviceLanguage, 'home.create') }).click();
+    await page
+      .getByRole('button', { name: textIn(deviceLanguage, 'avatarPicker.change') })
+      .waitFor();
     player.creatingRoom = true;
   }
 
@@ -342,13 +420,18 @@ export class E2eDriver implements GameDriver {
     const player = this.#playerCalled(host);
     const { page } = screenOf(player);
 
-    const nickname = page.getByRole('textbox', { name: SCREEN.nickname });
-    const natures = page.getByRole('group', { name: SCREEN.natureGroup });
+    // The screen to create it, in the language of the device of the host.
+    const language = choices.deviceLanguage ?? 'es';
+    const nickname = page.getByRole('textbox', { name: textIn(language, 'createRoom.nickname') });
+    const natures = page.getByRole('group', {
+      name: textIn(language, 'createRoom.groupNature.label'),
+    });
     this.#askedTogether = (await nickname.isVisible()) && (await natures.isVisible());
     await nickname.fill(host);
-    await chooseOption(page, SCREEN.natures[(choices.groupNature ?? 'friends') as 'friends']);
-    await chooseOption(page, SCREEN.places[(choices.place ?? 'together') as 'together']);
-    await page.getByRole('button', { name: SCREEN.create }).click();
+    const nature = choices.groupNature ?? 'friends';
+    await chooseOption(page, textIn(language, `createRoom.groupNature.${nature}`));
+    await chooseOption(page, textIn(language, `createRoom.place.${choices.place ?? 'together'}`));
+    await page.getByRole('button', { name: textIn(language, 'createRoom.submit') }).click();
 
     await page.waitForURL(/\/rooms\//);
     await waitUntil(() => lastLobbyOf(player), `${host} gets the lobby of their room`);
@@ -1147,6 +1230,8 @@ export class E2eDriver implements GameDriver {
         origin: this.#stack.siteUrl,
         appBase: this.#stack.webUrl,
         owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
+        adsenseClient: TEST_ADS.client,
+        adSlots: TEST_ADS.slots,
       });
       await publishSite(this.#site, this.#stack.siteFiles);
     });
@@ -1181,11 +1266,101 @@ export class E2eDriver implements GameDriver {
     throw new Error('Only the application reads the sitemap: the scenario must not be @ui');
   }
 
-  async playWithTheGroupFromThePublicPage(name: string): Promise<void> {
+  async playWithTheGroupFromThePublicPage(name: string, language = 'es'): Promise<void> {
+    const { page } = screenOf(await this.#withScreen(VISITOR));
+    await page.goto(`${this.#stack.siteUrl}${this.#publicPathIn(name, language)}`);
+    await page.getByRole('link', { name: SITE_LANGUAGES.get(language)!.dilemma.play }).click();
+    await page.getByTestId('first-dilemma').waitFor();
+  }
+
+  async visitorWithoutAChosenLanguage(): Promise<void> {
+    // The visitor opens a browser of their own, in Spanish, and the app keeps no language yet.
+  }
+
+  async languageOfTheApp(): Promise<string | undefined> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    return page.evaluate('document.documentElement.lang');
+  }
+
+  async voteFromThePublicPage(name: string): Promise<void> {
     const { page } = screenOf(await this.#withScreen(VISITOR));
     await page.goto(`${this.#stack.siteUrl}${this.#publicPathIn(name, 'es')}`);
-    await page.getByRole('link', { name: SITE_LANGUAGES.get('es')!.dilemma.play }).click();
-    await page.getByTestId('first-dilemma').waitFor();
+    await page.getByRole('link', { name: SITE_LANGUAGES.get('es')!.dilemma.vote }).click();
+    await page.getByTestId('vote-alone').waitFor();
+  }
+
+  async dilemmaReadyToVoteAlone(): Promise<string | undefined> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    const form = page.getByTestId('vote-alone');
+    const ready =
+      (await form.getByRole('slider').isVisible()) &&
+      (await form.getByRole('button', { name: textIn('es', 'voteAlone.see') }).isVisible());
+    return ready ? ((await form.getByRole('heading').textContent()) ?? undefined) : undefined;
+  }
+
+  async voteAlone(name: string): Promise<void> {
+    const { page } = screenOf(await this.#withScreen(VISITOR));
+    await page.goto(`${this.#stack.webUrl}/vote/${await this.#publicIdOf(name)}?lang=es`);
+    const form = page.getByTestId('vote-alone');
+    await form.locator('button[aria-pressed]').first().click();
+    await form.getByRole('button', { name: textIn('es', 'voteAlone.see') }).click();
+    await page.getByTestId('world-result').waitFor();
+    // The result has come once the screen no longer says it is looking for it.
+    await page.getByText(textIn('es', 'voteAlone.loadingResult')).waitFor({ state: 'detached' });
+  }
+
+  async worldAnswersOf(): Promise<number> {
+    throw new Error('Only the application counts the world result: the scenario must not be @ui');
+  }
+
+  async voteOfTheVisitorIsKept(): Promise<boolean> {
+    throw new Error('Only the application keeps the votes: the scenario must not be @ui');
+  }
+
+  async dilemmaWithWorldAnswers(name: string, answers: number): Promise<void> {
+    await this.catalogDilemmaNamed(name);
+    const publicId = await this.#publicIdOf(name);
+    await this.#withDatabase(async (db) => {
+      const dilemmas = new PostgresDilemmaRepository(db);
+      const results = new PostgresWorldResultRepository(db);
+      const optionId = (await dilemmas.findByPublicId(publicId))!.options[0]!.id;
+      const voteAlone = new VoteAloneUseCase(dilemmas, results);
+      for (let voter = 0; voter < answers; voter += 1) {
+        await voteAlone.execute({ identity: `world-voter-${voter}`, publicId, optionId });
+      }
+      await new PublishWorldResultsUseCase(results).execute();
+    });
+  }
+
+  async worldResultSeen(): Promise<WorldResultView> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    const text = (await page.getByTestId('world-result').textContent()) ?? '';
+    return {
+      tooFewAnswers: text.includes(textIn('es', 'voteAlone.fewTitle')),
+      figures: text.match(/\d+\s?%/g) ?? [],
+    };
+  }
+
+  /** The public id of the dilemma of the curated catalog with that name, in Spanish. */
+  async #publicIdOf(name: string): Promise<string> {
+    const number = this.#publicNumbers.get(name);
+    if (number === undefined) throw new Error(`"${name}" is not a dilemma of the curated catalog`);
+    const dilemma = await this.#withDatabase((db) =>
+      new PostgresDilemmaRepository(db).findById(`dlm-${number}`),
+    );
+    if (!dilemma) throw new Error(`"${name}" is not in the database of the run`);
+    return dilemma.publicId;
+  }
+
+  async bannerAdBelowTheArguments(): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    const ad = page.locator('.ad ins[data-ad-status="filled"]');
+    await ad.waitFor();
+    const [shown, args] = await Promise.all([
+      ad.boundingBox(),
+      page.locator('.dilemma-arguments').boundingBox(),
+    ]);
+    return shown !== null && args !== null && shown.y >= args.y + args.height;
   }
 
   async createTheRoomOfTheDilemma(): Promise<void> {
@@ -2194,6 +2369,10 @@ export class E2eDriver implements GameDriver {
    */
   async #newContext(options: BrowserContextOptions): Promise<BrowserContext> {
     const context = await this.#stack.browser.newContext({ viewport: PHONE, ...options });
+    // The script of AdSense never leaves the run: a script of test fills the ad units instead.
+    await context.route(`${ADSENSE_SCRIPT}*`, (route) =>
+      route.fulfill({ contentType: 'text/javascript', body: TEST_ADSENSE }),
+    );
     await context.addInitScript(
       ([key, value]) => {
         localStorage.setItem(key, value);
@@ -2553,8 +2732,8 @@ async function chooseOption(within: Page | Locator, label: string): Promise<void
 
 /** The position (from 1) of the dilemma on the screen of the page. */
 async function positionOn(page: Page): Promise<number> {
-  const text = await page.getByText(SCREEN.position).textContent();
-  const position = text?.match(SCREEN.position)?.[1];
+  const text = (await page.getByText(SCREEN.position).textContent()) ?? '';
+  const position = POSITIONS.map((pattern) => text.match(pattern)?.[1]).find(Boolean);
   if (position === undefined) throw new Error('The screen shows no dilemma');
   return Number(position);
 }
