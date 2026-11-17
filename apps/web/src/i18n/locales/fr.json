@@ -1,0 +1,511 @@
+{
+  "app": {
+    "connecting": "Connexion…",
+    "unavailable": "Salle pas encore disponible."
+  },
+  "playerList": {
+    "you": "{{name}} (toi)",
+    "disconnected": "hors ligne",
+    "pending_one": "Doit encore répondre · {{count}}",
+    "pending_many": "Doivent encore répondre · {{count, number}}",
+    "pending_other": "Doivent encore répondre · {{count, number}}",
+    "done_one": "A répondu · {{count}}",
+    "done_many": "Ont répondu · {{count, number}}",
+    "done_other": "Ont répondu · {{count, number}}",
+    "answered": "a répondu",
+    "anonymousAnswered_one": "a répondu",
+    "anonymousAnswered_many": "ont répondu",
+    "anonymousAnswered_other": "ont répondu",
+    "anonymousPending_one": "{{count}} en attente",
+    "anonymousPending_many": "{{count, number}} en attente",
+    "anonymousPending_other": "{{count, number}} en attente",
+    "anonymousNote": "En salle anonyme, personne ne voit qui a répondu, seulement combien.",
+    "inRoom_one": "Dans la salle · {{count}}",
+    "inRoom_many": "Dans la salle · {{count, number}}",
+    "inRoom_other": "Dans la salle · {{count, number}}"
+  },
+  "progressStrip": {
+    "position": "Dilemme {{position, number}} sur {{total, number}}",
+    "group": "Qui a répondu",
+    "more": "+{{count, number}}",
+    "showAll": "Tout voir",
+    "predicting": "Dilemme {{position, number}} sur {{total, number}} · Prédis",
+    "anonymousGroup": "Combien ont répondu",
+    "anonymousCount_one": "{{count}} a répondu · {{pending, number}} en attente",
+    "anonymousCount_many": "{{count, number}} ont répondu · {{pending, number}} en attente",
+    "anonymousCount_other": "{{count, number}} ont répondu · {{pending, number}} en attente",
+    "playerAnswered": "{{name}} · a répondu",
+    "playerPending": "{{name}} · n’a pas encore répondu",
+    "playerDisconnected": "{{name}} (hors ligne)",
+    "movedOn": "{{name}} a passé ce dilemme",
+    "playerMovedOn": "{{label}} · a passé ce dilemme"
+  },
+  "groupSheet": {
+    "title": "Le groupe",
+    "close": "Fermer",
+    "summary_one": "{{count}} joueur · on voit qui a répondu, pas quoi",
+    "summary_many": "{{count, number}} joueurs · on voit qui a répondu, pas quoi",
+    "summary_other": "{{count, number}} joueurs · on voit qui a répondu, pas quoi",
+    "summaryAnonymous_one": "{{count}} joueur · personne ne voit qui a répondu",
+    "summaryAnonymous_many": "{{count, number}} joueurs · personne ne voit qui a répondu",
+    "summaryAnonymous_other": "{{count, number}} joueurs · personne ne voit qui a répondu"
+  },
+  "dilemma": {
+    "privacy": "Personne du groupe ne verra ton vote avant la révélation. Tu peux le changer d’ici là.",
+    "choose": "Choisis une option",
+    "continue": "Continuer",
+    "privacyAnonymous": "Personne du groupe ne verra ton vote, même à la révélation. Tu peux le changer jusqu’à ce que le dilemme soit révélé.",
+    "done": "Terminé"
+  },
+  "waiting": {
+    "position": "Dilemme {{position, number}} sur {{total, number}} · Tu as répondu",
+    "title": "En attente des autres",
+    "subtitle": "Le dilemme est révélé quand vous avez tous répondu ou que le temps est écoulé. D’ici là, tu peux changer ta réponse.",
+    "change": "Changer ma réponse",
+    "mascotWaiting": "La Palanca, qui attend",
+    "revealEarly": "Révéler maintenant",
+    "revealCaption_one": "Il manque {{count}} réponse : pour ce dilemme, ce sera « n’a pas voté ».",
+    "revealCaption_many": "Il manque {{count, number}} réponses : pour ce dilemme, ce sera « n’a pas voté ».",
+    "revealCaption_other": "Il manque {{count, number}} réponses : pour ce dilemme, ce sera « n’a pas voté ».",
+    "guest": "{{host}} peut le révéler plus tôt ; sinon, il est révélé quand vous avez tous répondu ou que le temps est écoulé."
+  },
+  "game": {
+    "timeLeft": "Il reste {{time}}"
+  },
+  "predict": {
+    "voted": "Tu as voté « ",
+    "votedEnd": " »",
+    "voteQuestion": "Qu’a voté chacun ?",
+    "voteOf": "Le vote de {{name}}",
+    "back": "Revenir à ton vote",
+    "missing_one": "Il manque {{count}} réponse",
+    "missing_many": "Il manque {{count, number}} réponses",
+    "missing_other": "Il manque {{count, number}} réponses",
+    "next": "Terminé"
+  },
+  "gameMenu": {
+    "open": "Plus d’options",
+    "title": "Menu de la partie",
+    "revealEarly": "Révéler maintenant",
+    "onlyHost": "Réservé à l’hôte",
+    "showGroup": "Voir le groupe",
+    "share": "Partager le lien",
+    "copied": "Lien copié",
+    "code": "Code {{code}}",
+    "showQr": "Afficher le QR code",
+    "report": "Signaler ce dilemme",
+    "reportSubtitle": "Personne du groupe ne le saura",
+    "reported": "Tu as déjà signalé ce dilemme",
+    "leave": "Quitter la partie"
+  },
+  "report": {
+    "title": "Quel est le problème avec ce dilemme ?",
+    "reasons": {
+      "offensive": "Offensant",
+      "confusing": "Confus",
+      "mistranslated": "Mal traduit",
+      "other": "Autre"
+    },
+    "comment": "Commentaire (facultatif)",
+    "placeholder": "Qu’as-tu remarqué ?",
+    "noPersonalData": "N’inclus pas de données personnelles.",
+    "counter": "{{count, number}}/{{max, number}}",
+    "chooseReason": "Choisis un motif",
+    "send": "Envoyer le signalement",
+    "note": "L’équipe l’examinera. Personne du groupe ne saura que tu l’as signalé."
+  },
+  "reportSent": {
+    "thanks": "Merci.",
+    "text": "L’équipe l’examinera ; personne du groupe ne le sait.",
+    "canSkip": "Si tu préfères ne pas y répondre, tu peux le passer.",
+    "skip": "Passer le dilemme"
+  },
+  "revealEarly": {
+    "title": "Révéler le dilemme maintenant ?",
+    "body_one": "{{count}} joueur n’a pas encore répondu. Pour ce dilemme, ce sera « n’a pas voté » et il ne pourra plus y répondre.",
+    "body_many": "{{count, number}} joueurs n’ont pas encore répondu. Pour ce dilemme, ce sera « n’a pas voté » et ils ne pourront plus y répondre.",
+    "body_other": "{{count, number}} joueurs n’ont pas encore répondu. Pour ce dilemme, ce sera « n’a pas voté » et ils ne pourront plus y répondre.",
+    "reveal": "Révéler maintenant",
+    "wait": "Attendre encore"
+  },
+  "newHost": {
+    "title": "Tu es maintenant l’hôte",
+    "disconnected": "{{host}} est toujours hors ligne. Dès la prochaine manche, tu peux révéler avant la fin du temps depuis le menu ⋮. En cas de retour, le rôle lui revient.",
+    "left": "{{host}} a quitté la partie. Tes options sont dans le menu ⋮."
+  },
+  "lateJoin": {
+    "illustration": "La Palanca, à côté d’un aiguillage",
+    "room": "Salle de {{host}}",
+    "title": "La partie a déjà commencé",
+    "round": "Tu rejoins la manche en cours, le dilemme {{position, number}} sur {{total, number}} ; s’il est déjà en train d’être révélé, tu le verras avec le groupe.",
+    "onlyVote": "Dans cette partie, tu votes seulement : tu ne prédis pas, personne ne prédit ton vote et tu n’entres pas dans le classement.",
+    "enter": "Rejoindre la manche"
+  },
+  "reveal": {
+    "region": "Révélation",
+    "position": "Dilemme {{position, number}} sur {{total, number}} · Révélation",
+    "addedBy": "Ajouté par {{name}}",
+    "about": "Ce dilemme parlait de {{name}}",
+    "yourHitsRegion": "Tes bonnes prédictions",
+    "hitsAll": "Tu as lu dans leurs pensées !",
+    "hitsCount": "Tu en as trouvé {{right, number}} sur {{count, number}}",
+    "missedOne": "Tu n’as raté que {{name}}",
+    "missedSome": "Tu as raté {{names}}",
+    "missedMany": "Tu as raté {{names}} et {{count, number}} autres",
+    "missedAll": "Pas ton jour pour lire dans leurs pensées",
+    "whoVoted": "Qu’a voté chacun",
+    "nobodyChose": "Personne ne l’a choisie",
+    "guessed": "· tu as dit {{letter}}",
+    "voterRight": "{{name}}, bien vu",
+    "voterMissed": "{{name}}, raté : tu as dit {{letter}}",
+    "optionCount": "{{count, number}} · {{percent}}",
+    "didNotVote_one": "N’a pas voté · {{names}}",
+    "didNotVote_many": "N’ont pas voté · {{names}}",
+    "didNotVote_other": "N’ont pas voté · {{names}}",
+    "next": "Dilemme suivant",
+    "anonymousDidNotVote_one": "{{count}} personne n’a pas voté.",
+    "anonymousDidNotVote_many": "{{count, number}} personnes n’ont pas voté.",
+    "anonymousDidNotVote_other": "{{count, number}} personnes n’ont pas voté.",
+    "anonymousNote": "Dans cette salle, personne ne voit qui a voté quoi.",
+    "fewVotesTitle": "Trop peu de votes pour afficher la répartition",
+    "fewVotesVoted_one": "Seule {{count}} personne a voté",
+    "fewVotesVoted_many": "Seules {{count, number}} personnes ont voté",
+    "fewVotesVoted_other": "Seules {{count, number}} personnes ont voté",
+    "fewVotesNobody": "Personne n’a voté",
+    "fewVotesDidNot_one": "et {{count}} n’a pas voté",
+    "fewVotesDidNot_many": "et {{count, number}} n’ont pas voté",
+    "fewVotesDidNot_other": "et {{count, number}} n’ont pas voté",
+    "fewVotesWhy": "Avec moins de 3 votes, la répartition permettrait de deviner qui a voté quoi.",
+    "introPosition": "Dilemme {{position, number}} sur {{total, number}} · Fin du vote",
+    "introTitle": "Le dilemme est révélé",
+    "introMascot": "La Palanca, qui fait la fête",
+    "introAnswered_one": "{{count}} personne sur {{total, number}} a répondu.",
+    "introAnswered_many": "Vous êtes {{count, number}} sur {{total, number}} à avoir répondu.",
+    "introAnswered_other": "Vous êtes {{count, number}} sur {{total, number}} à avoir répondu.",
+    "introNominal": "C’est le moment : vous allez voir qui a voté quoi.",
+    "introAnonymous": "C’est le moment : vous allez voir combien ont choisi chaque option."
+  },
+  "notices": {
+    "reconnecting": "Reconnexion… tes réponses sont enregistrées",
+    "paused": "En pause. Touche pour revenir",
+    "answerNotSaved": "Ta dernière réponse n’a pas été enregistrée. Choisis-la à nouveau.",
+    "dismiss": "Fermer le message"
+  },
+  "noReturn": {
+    "gone": {
+      "title": "Cette partie n’existe plus",
+      "text": "Elle est terminée ou a été fermée. Si le groupe joue encore, demande qu’on t’envoie le nouveau lien."
+    },
+    "device": {
+      "title": "Cet appareil n’est pas dans la partie",
+      "text": "Si tu l’as rejointe depuis un autre, continue sur celui-là. Sinon, demande un nouveau lien au groupe."
+    },
+    "update": {
+      "title": "Une nouvelle version de TheLever est disponible",
+      "text": "Recharge pour continuer à jouer avec la dernière.",
+      "action": "Recharger"
+    },
+    "identity": {
+      "title": "Nous n’avons pas pu te reconnaître",
+      "text": "C’est souvent passager. Réessaie dans un instant.",
+      "action": "Réessayer"
+    },
+    "expelled": {
+      "title": "Tu ne fais plus partie de la salle",
+      "text": "La personne qui a créé la salle a décidé de t’exclure de cette partie. Si le groupe joue la revanche, tu pourras la rejoindre.",
+      "action": "Retour à l’accueil"
+    }
+  },
+  "createRoom": {
+    "title": "Nouvelle salle",
+    "nickname": "Ton pseudo",
+    "nicknamePlaceholder": "Le nom que verra le groupe",
+    "groupNature": {
+      "label": "Avec qui vas-tu jouer ?",
+      "family": "Famille",
+      "friends": "Amis",
+      "work": "Collègues",
+      "mixed": "Mélange",
+      "hint": "Cela sert à comprendre comment les votes changent selon les personnes avec qui tu joues."
+    },
+    "place": {
+      "label": "Où êtes-vous ?",
+      "together": "Au même endroit",
+      "remote": "À distance"
+    },
+    "submit": "Créer la salle",
+    "submitting": "Création de la salle…",
+    "missing": {
+      "nickname": "Écris ton pseudo",
+      "groupNature": "Choisis avec qui tu joues",
+      "place": "Dis-nous où vous êtes"
+    }
+  },
+  "joinRoom": {
+    "roomOf": "Salle de {{host}} · {{code}}",
+    "inTheRoom_one": "{{count}} dans la salle",
+    "inTheRoom_other": "{{count}} dans la salle",
+    "adultsOnly": "Réservé aux plus de 18 ans : peut contenir des dilemmes pour adultes.",
+    "nickname": "Ton pseudo",
+    "submit": "Entrer dans la salle",
+    "submitting": "Connexion à la salle…",
+    "loading": "Recherche de la salle…",
+    "inTheRoom_many": "{{count}} dans la salle",
+    "missingNickname": "Écris ton pseudo",
+    "namesake": "{{nickname}} est déjà dans la salle ; l’avatar vous distinguera.",
+    "missingAvatar": "Choisis un autre avatar",
+    "lookalikeJustJoined": "Quelqu’un vient d’entrer sous le nom {{nickname}} avec cet avatar. Choisis-en un autre."
+  },
+  "roomErrors": {
+    "nickname-missing": "Écris un pseudo.",
+    "room-full": "La salle est pleine : il y a déjà 50 joueurs.",
+    "player-expelled": "L’hôte a décidé de t’exclure de cette partie.",
+    "room-code-not-found": "Aucune salle ne correspond à ce code.",
+    "room-not-found": "Cette salle n’existe plus.",
+    "unknown": "Ça n’a pas marché. Réessaie.",
+    "dilemmas-missing": "Aucun dilemme ne correspond à cette configuration. Essaie d’autres catégories.",
+    "nickname-and-avatar-taken": "Quelqu’un qui a le même pseudo que toi porte déjà cet avatar. Choisis-en un autre."
+  },
+  "home": {
+    "title": "On joue ?",
+    "create": "Créer une salle",
+    "joinWithCode": "Rejoindre avec un code",
+    "back": "Retour"
+  },
+  "joinCode": {
+    "title": "Écris le code de la salle",
+    "text": "Il fait 5 caractères. La personne qui a créé la salle peut te le dicter.",
+    "label": "Code de la salle",
+    "hint": "Tu peux aussi le coller.",
+    "enter": "Entrer",
+    "missing_one": "Il manque {{count}} caractère",
+    "missing_many": "Il manque {{count, number}} caractères",
+    "missing_other": "Il manque {{count, number}} caractères"
+  },
+  "accessCode": {
+    "title": "TheLever est en phase de test",
+    "text": "Pour l’instant, seules les personnes qui ont le code d’accès peuvent jouer. Écris-le une fois et nous ne te le redemanderons plus sur cet appareil.",
+    "label": "Code d’accès",
+    "invalid": "Ce code n’est pas valide.",
+    "check": "Vérifie qu’il est bien écrit.",
+    "enter": "Entrer",
+    "entering": "Vérification…"
+  },
+  "variant": {
+    "nominal": {
+      "name": "Salle nominative :",
+      "text": "à la révélation, tout le monde verra qui a voté quoi."
+    },
+    "anonymous": {
+      "name": "Salle anonyme :",
+      "text": "personne ne verra qui a voté quoi."
+    }
+  },
+  "joinRefusal": {
+    "illustration": "La Palanca, hésitante, devant une fin de voie",
+    "room-code-not-found": {
+      "title": "Cette salle n’existe pas",
+      "text": "Vérifie le code : il fait 5 caractères. Redemande-le à la personne qui a créé la salle.",
+      "action": "Essayer un autre code"
+    },
+    "room-full": {
+      "title": "Cette salle est complète",
+      "text": "Il y a déjà 50 joueurs, c’est le maximum. Tu peux créer ta propre salle.",
+      "action": "Retour à l’accueil"
+    },
+    "player-expelled": {
+      "title": "Tu ne peux pas revenir dans cette partie",
+      "text": "Si le groupe joue la revanche, tu pourras la rejoindre.",
+      "action": "Retour à l’accueil"
+    },
+    "room-not-found": {
+      "title": "Cette salle n’existe plus",
+      "text": "Elle a été fermée. Si le groupe joue encore, demande qu’on t’envoie le nouveau code.",
+      "action": "Retour à l’accueil"
+    }
+  },
+  "lobby": {
+    "codeLabel": "Code de la salle",
+    "leave": "Quitter la salle",
+    "share": "Partager le lien",
+    "shareText": "Rejoins ma salle TheLever avec le code {{code}}",
+    "copied": "Lien copié",
+    "showQr": "Afficher le QR code",
+    "summary": "{{count}} dilemmes · {{seconds}} s par dilemme · {{language}} · {{nature}}",
+    "change": "Modifier",
+    "adultsOnly": "Réservé aux plus de 18 ans",
+    "remote": "Vous jouez à distance : mieux vaut être en visio, pour commenter la révélation en direct.",
+    "added": {
+      "title": "Dilemmes ajoutés · {{count}} sur {{total}}",
+      "remove": "Retirer ce dilemme",
+      "hint": "Tu ne sais pas qui les a ajoutés : tu le verras à la révélation. Les autres viendront du catalogue."
+    },
+    "add": {
+      "title": "Ajoute des dilemmes à la partie",
+      "count": "Tu en as ajouté {{count}} sur {{total}}. Personne ne saura qu’ils viennent de toi avant la révélation.",
+      "action": "Ajouter un dilemme",
+      "remove": "Retirer ce dilemme"
+    },
+    "picked": {
+      "title": "Dilemmes choisis · {{count}}"
+    },
+    "players": "Dans la salle · {{count}}",
+    "you": "{{name}} (toi)",
+    "host": "Hôte",
+    "toExpel": "{{name}}. Touche pour exclure",
+    "toChangeAvatar": "{{name}}. Touche pour changer ton avatar",
+    "waiting": "En attente d’autres joueurs. Partage le code ou le lien pour qu’ils entrent.",
+    "start": "Lancer la partie",
+    "missing_one": "Il manque {{count}} joueur pour commencer",
+    "missing_other": "Il manque {{count}} joueurs pour commencer",
+    "guestWait": "{{host}} lancera la partie quand vous serez tous là.",
+    "missing_many": "Il manque {{count}} joueurs pour commencer",
+    "categories": {
+      "all": "Toutes les catégories",
+      "some_one": "{{count}} catégorie",
+      "some_other": "{{count}} catégories",
+      "some_many": "{{count}} catégories",
+      "none": "Aucune catégorie"
+    },
+    "pickedCount_one": "{{count}} dilemme choisi",
+    "pickedCount_other": "{{count}} dilemmes choisis",
+    "pickedCount_many": "{{count}} dilemmes choisis",
+    "summaryPicked": "{{seconds}} s par dilemme · {{language}} · {{nature}}"
+  },
+  "languages": {
+    "es": "Español",
+    "en": "English",
+    "fr": "Français",
+    "de": "Deutsch",
+    "it": "Italiano",
+    "pt": "Português",
+    "ca": "Català"
+  },
+  "categories": {
+    "life-and-death": "Vie et mort",
+    "honesty": "Honnêteté",
+    "loyalty": "Loyauté",
+    "justice": "Justice",
+    "love-and-relationships": "Amour et relations",
+    "work-and-money": "Travail et argent",
+    "technology-and-the-future": "Technologie et avenir"
+  },
+  "settings": {
+    "title": "Réglages de la partie",
+    "close": "Fermer",
+    "reveal": "Révélation",
+    "nominal": "Nominative",
+    "anonymous": "Anonyme",
+    "nominalHint": "À la révélation, on verra qui a voté quoi, et on joue à prédire.",
+    "anonymousHint": "Personne ne verra qui a voté quoi. Ni prédictions ni points : on vote, c’est tout.",
+    "adultsOnly": {
+      "label": "Réservé aux plus de 18 ans",
+      "hint": "Autorise les dilemmes pour adultes. Seuls les plus de 18 ans pourront entrer."
+    },
+    "language": "Langue des dilemmes",
+    "howPicked": "Choix des dilemmes",
+    "byCategories": "Par catégories",
+    "byHand": "À la main",
+    "categories": "Catégories",
+    "allCategories": "Toutes",
+    "categoriesHint": "La partie mélange des dilemmes des catégories cochées.",
+    "dilemmaCount": "Dilemmes",
+    "timePerDilemma": "Temps par dilemme",
+    "seconds": "{{count}} s",
+    "timeHint": "Chaque dilemme est révélé quand tout le monde a répondu ou que le temps est écoulé.",
+    "newDilemmas": {
+      "label": "Inclure de nouveaux dilemmes",
+      "hint": "Vous aidez à évaluer des dilemmes tout juste arrivés dans le catalogue."
+    },
+    "dilemmasPerPlayer": {
+      "label": "Dilemmes ajoutés par joueur",
+      "none": "Aucun",
+      "hint": "L’hôte aussi. Ils comptent dans le nombre de dilemmes, et personne ne saura qui a ajouté quoi avant la révélation."
+    },
+    "pick": "Choisir les dilemmes un par un",
+    "picked_one": "{{count}} dilemme choisi",
+    "picked_other": "{{count}} dilemmes choisis",
+    "picked_many": "{{count}} dilemmes choisis",
+    "noPicked": "Aucun dilemme choisi",
+    "changePicked": "Modifier",
+    "choosePicked": "Choisir",
+    "byHandHint": "La partie joue ceux-ci et ceux qu’ajoutent les joueurs, sans catégories ni nouveaux dilemmes. « Par catégories » les retire d’un geste.",
+    "save": "Enregistrer"
+  },
+  "pickDilemmas": {
+    "title": "Choisir les dilemmes",
+    "back": "Retour aux réglages",
+    "search": "Rechercher des dilemmes",
+    "searchPlaceholder": "Cherche par texte ou étiquette : famille, tramway…",
+    "all": "Toutes",
+    "hint": "Seuls les dilemmes adaptés à cette salle apparaissent. En les choisissant à la main, aucun nouveau dilemme n’est ajouté.",
+    "none": "Choisis-en au moins un",
+    "play_one": "Jouer celui-ci",
+    "play_other": "Jouer ces {{count}}",
+    "empty": "Aucun dilemme adapté pour cette recherche.",
+    "tags": "#{{tags}}",
+    "play_many": "Jouer ces {{count}}",
+    "byCategory": "Revenir au choix par catégorie",
+    "options_one": "{{count}} option",
+    "options_many": "{{count, number}} options",
+    "options_other": "{{count, number}} options",
+    "someone": "quelqu’un de ton groupe",
+    "more": "Voir plus",
+    "moreFailed": "Impossible de charger plus de dilemmes. Réessaie."
+  },
+  "addDilemma": {
+    "title": "Ajoute un dilemme",
+    "search": "Rechercher des dilemmes",
+    "close": "Fermer",
+    "empty": "Aucun dilemme adapté pour cette recherche.",
+    "searchPlaceholder": "Cherche par texte ou étiquette"
+  },
+  "expel": {
+    "title": "Exclure {{name}} ?",
+    "text": "Cette personne quittera la salle et ne pourra pas revenir dans cette partie. Elle pourra en jouer d’autres.",
+    "confirm": "Exclure",
+    "cancel": "Annuler"
+  },
+  "avatarPicker": {
+    "title": "Choisis ton avatar",
+    "face": "Visage {{number}}",
+    "hint": "Ceux que porte déjà quelqu’un qui a le même pseudo que toi sont désactivés.",
+    "use": "Choisir celui-ci",
+    "close": "Fermer",
+    "colors": {
+      "khaki": "Kaki",
+      "teal": "Bleu canard",
+      "brown": "Marron",
+      "slate": "Ardoise",
+      "cyan": "Cyan",
+      "rust": "Rouille",
+      "olive": "Olive",
+      "stone": "Pierre"
+    },
+    "change": "Changer d’avatar",
+    "changeCurrent": "Changer d’avatar : visage {{face}}, {{color}}"
+  },
+  "qr": {
+    "title": "Vise avec l’appareil photo pour entrer",
+    "close": "Fermer",
+    "label": "QR code de la salle {{code}}",
+    "or": "ou va sur {{host}} et saisis le code",
+    "code": "Code {{code}}"
+  },
+  "sound": {
+    "mute": "Couper le son du jeu",
+    "label": "Son",
+    "hint": "Et les vibrations"
+  },
+  "playDilemma": {
+    "title": "Nouvelle salle",
+    "firstDilemma": "Vous commencerez par ce dilemme",
+    "about_one": "{{category}} · {{count}} option",
+    "about_other": "{{category}} · {{count}} options",
+    "about_many": "{{category}} · {{count}} options",
+    "rest": "Le reste de la partie est complété avec le catalogue, selon les réglages de la salle.",
+    "loading": "Recherche du dilemme…",
+    "notFound": "Ce dilemme n’est plus sur TheLever. Tu peux créer une salle avec d’autres dilemmes du catalogue.",
+    "home": "Aller à l’accueil"
+  }
+}

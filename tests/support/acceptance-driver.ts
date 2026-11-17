@@ -254,6 +254,8 @@ export class AcceptanceDriver implements GameDriver {
   #site: BuiltSite | undefined;
   /** What the screen to play a dilemma with the group shows of the one the visitor chose. */
   #dilemmaToPlay: GetDilemmaPreviewOutput | undefined;
+  /** The language the link from the public web opens the app in. */
+  #appLanguage: string | undefined;
   #visitorRoomId: string | undefined;
 
   readonly #createRoom: CreateRoomUseCase;
@@ -998,12 +1000,24 @@ export class AcceptanceDriver implements GameDriver {
     return sitemap.body?.includes(`${SITE_ORIGIN}${this.#publicPathOf(name)}<`) ?? false;
   }
 
-  async playWithTheGroupFromThePublicPage(name: string): Promise<void> {
-    const publicId = this.#publicPageIn(name, 'es')?.dilemma?.publicId;
-    if (!publicId) throw new Error(`"${name}" has no public page to play it from`);
+  async playWithTheGroupFromThePublicPage(name: string, language = 'es'): Promise<void> {
+    // The visitor follows the link of the page, as it is written: to the dilemma, in its language.
+    const page = this.#publicPageIn(name, language);
+    const href = page?.main.value.match(/href="([^"]*\/new\/[^"]*)"/)?.[1];
+    if (!href) throw new Error(`"${name}" has no public page in ${language} to play it from`);
+    const link = new URL(href, SITE_ORIGIN);
+    this.#appLanguage = link.searchParams.get('lang') ?? undefined;
     this.#dilemmaToPlay = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
-      publicId,
+      publicId: link.pathname.split('/').at(-1)!,
     });
+  }
+
+  async visitorWithoutAChosenLanguage(): Promise<void> {
+    // The application keeps no language of the player yet: the app takes the one of the link.
+  }
+
+  async languageOfTheApp(): Promise<string | undefined> {
+    return this.#appLanguage;
   }
 
   async createTheRoomOfTheDilemma(): Promise<void> {

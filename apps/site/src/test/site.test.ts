@@ -101,7 +101,7 @@ describe('the public web', () => {
     expect(body).toContain('TestAgainst1');
     expect(body).toContain('TestFor1 de alguien de tu grupo');
     expect(body).not.toContain('{gap}');
-    expect(body).toContain('href="/new/TestPublicId"');
+    expect(body).toContain('href="/new/TestPublicId?lang=es"');
   });
 
   it('should keep the privacy policy and the legal notice out of search engines and of the sitemap', async () => {
@@ -316,12 +316,24 @@ describe('the public web', () => {
     expect(none.headers.Location).toBe('/es/');
   });
 
+  it('should open the app in the language of the page, from the dilemma, the home and the header', async () => {
+    // Act
+    const catalog = { dilemmas: [trolley(), IN_ENGLISH], withdrawn: [] };
+    const dilemma = String((await answer('/en/life-and-death/the-trolley-7', catalog)).body);
+    const home = String((await answer('/en/', catalog)).body);
+
+    // Assert
+    expect(dilemma).toContain('href="/new/TestEnglishPublicId?lang=en"');
+    expect(dilemma).toContain('class="button primary header-play" href="/app?lang=en"');
+    expect(home).toMatch(/class="button primary play" href="\/app\?lang=en"/);
+  });
+
   it('should take the home to the start of the app to create a room', async () => {
     // Act
     const home = await answer('/es/', { dilemmas: [], withdrawn: [] });
 
     // Assert
-    expect(home.body).toContain('href="/app"');
+    expect(home.body).toContain('href="/app?lang=es"');
     expect(home.body).toContain('hreflang="x-default" href="https://thelever.test/"');
   });
 
@@ -334,7 +346,7 @@ describe('the public web', () => {
       new RegExp(`src="/_site/waving-at-junction.svg\\?v=[0-9a-f]+"\\s+alt="${es.home.scene}"`),
     );
     expect(home).toMatch(
-      /<a class="button primary play" href="\/app"\s*><svg[^>]*aria-hidden="true"/,
+      /<a class="button primary play" href="\/app\?lang=es"\s*><svg[^>]*aria-hidden="true"/,
     );
     expect(home).toContain('<ol class="steps" role="list">');
   });
@@ -371,8 +383,10 @@ describe('the public web', () => {
 
     // Assert
     const header = page.slice(page.indexOf('<header'), page.indexOf('</header>'));
-    expect(header).toContain(
-      `<a class="button primary header-play" href="/app">${es.home.play}</a>`,
+    expect(header).toMatch(
+      new RegExp(
+        `<a class="button primary header-play" href="/app\\?lang=es"\\s*>${es.home.play}</a`,
+      ),
     );
     expect(header).toMatch(/<summary[^>]*>\s*<svg[^>]*aria-hidden="true"/);
   });

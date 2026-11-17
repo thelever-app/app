@@ -114,6 +114,23 @@ When(
   },
 );
 
+Given('the visitor has never chosen a language in the app', async function (this: GameWorld) {
+  await this.driver.visitorWithoutAChosenLanguage();
+});
+
+When(
+  'a visitor chooses to play {string} with the group from its public page in {word}',
+  async function (this: GameWorld, name: string, language: string) {
+    await this.driver.generatePublicPages();
+    await this.driver.playWithTheGroupFromThePublicPage(name, codeOf(language));
+    this.dilemmaToPlayWithTheGroup = name;
+  },
+);
+
+Then('the app opens in {word}', async function (this: GameWorld, language: string) {
+  assert.equal(await this.driver.languageOfTheApp(), codeOf(language));
+});
+
 Then(
   '{string} has a public page in each language of the app',
   async function (this: GameWorld, name: string) {

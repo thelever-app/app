@@ -418,8 +418,12 @@ export interface GameDriver {
   statusOfThePublicPageOf(name: string): Promise<number>;
   /** Whether the sitemap of the public web lists the page of the dilemma. */
   sitemapIncludes(name: string): Promise<boolean>;
-  /** A visitor chooses to play the dilemma with the group on its public page, in Spanish. */
-  playWithTheGroupFromThePublicPage(name: string): Promise<void>;
+  /** A visitor chooses to play the dilemma with the group on its public page, in Spanish unless said. */
+  playWithTheGroupFromThePublicPage(name: string, language?: string): Promise<void>;
+  /** A visitor with a device in Spanish who never chose a language in the app. */
+  visitorWithoutAChosenLanguage(): Promise<void>;
+  /** The language the app the visitor opened from the public web is in. */
+  languageOfTheApp(): Promise<string | undefined>;
   /** The visitor creates the room the screen offers to play the dilemma with the group. */
   createTheRoomOfTheDilemma(): Promise<void>;
   /** The name of the dilemma the room the visitor created plays first. */

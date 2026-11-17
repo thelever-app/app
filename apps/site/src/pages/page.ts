@@ -80,7 +80,9 @@ export function document(page: Page, languages: Languages, config: SiteConfig): 
             />TheLever.app</a
           >
           ${languageMenu(page, languages)}
-          <a class="button primary header-play" href="${config.appBase}/app">${texts.home.play}</a>
+          <a class="button primary header-play" href="${config.appBase}/app?lang=${page.language}"
+            >${texts.home.play}</a
+          >
         </header>
         <div class="stripe" aria-hidden="true"></div>
         <main class="main">${page.main}</main>

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import {
   type Database,
   type DatabaseClient,
@@ -97,6 +98,45 @@ async function publicPageSeenOn(page: Page, response: Response | null): Promise<
   };
 }
 
+/** The catalogs of the web, by language: what a player whose app is in that language reads. */
+const CATALOGS: ReadonlyMap<string, object> = new Map(
+  LanguageDto.options.map((language) => [
+    language,
+    JSON.parse(
+      readFileSync(
+        new URL(`../../apps/web/src/i18n/locales/${language}.json`, import.meta.url),
+        'utf8',
+      ),
+    ) as object,
+  ]),
+);
+
+/** The text of the catalog of that language under the key, with its nested parts joined by dots. */
+function textIn(language: string, key: string): string {
+  const text = key
+    .split('.')
+    .reduce<unknown>(
+      (part, name) => (part as Record<string, unknown> | undefined)?.[name],
+      CATALOGS.get(language),
+    );
+  if (typeof text !== 'string') throw new Error(`The ${language} catalog has no text "${key}"`);
+  return text;
+}
+
+/**
+ * The position of the dilemma on screen as each language writes it, with the position as its only
+ * group: «Dilema 2 de 5», «Dilemma 2 of 5»…
+ */
+const POSITIONS = LanguageDto.options.map(
+  (language) =>
+    new RegExp(
+      textIn(language, 'progressStrip.position')
+        .replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+        .replace(/\{\{position[^}]*\}\}/, '(\\d+)')
+        .replace(/\{\{total[^}]*\}\}/, '\\d+'),
+    ),
+);
+
 /** What the driver looks for on screen, in the language of the browsers: es.json of the web. */
 const SCREEN = {
   create: 'Crear sala',
@@ -183,8 +223,12 @@ const SCREEN = {
   roomOf: /^Sala de (.+) · [A-Z0-9]{5}$/,
   inTheRoom: /^(\d+) en la sala$/,
   anonymous: 'Sala anónima',
-  position: /Dilema (\d+) de \d+/,
-  positionOf: (position: number) => new RegExp(`Dilema ${position} de \\d+`),
+  /** The position of the dilemma, in the language of whoever reads it. */
+  position: new RegExp(POSITIONS.map(({ source }) => `(?:${source})`).join('|')),
+  positionOf: (position: number) =>
+    new RegExp(
+      POSITIONS.map(({ source }) => `(?:${source.replace('(\\d+)', String(position))})`).join('|'),
+    ),
   disconnected: 'desconectado',
   showGroup: 'Ver el grupo',
   groupTitle: 'El grupo',
@@ -332,8 +376,10 @@ export class E2eDriver implements GameDriver {
     if (player.creatingRoom) return;
     const { page } = screenOf(player);
     await page.goto(`${this.#stack.webUrl}/app`);
-    await page.getByRole('button', { name: SCREEN.create }).click();
-    await page.getByRole('button', { name: SCREEN.changeAvatar }).waitFor();
+    await page.getByRole('button', { name: textIn(deviceLanguage, 'home.create') }).click();
+    await page
+      .getByRole('button', { name: textIn(deviceLanguage, 'avatarPicker.change') })
+      .waitFor();
     player.creatingRoom = true;
   }
 
@@ -342,13 +388,18 @@ export class E2eDriver implements GameDriver {
     const player = this.#playerCalled(host);
     const { page } = screenOf(player);
 
-    const nickname = page.getByRole('textbox', { name: SCREEN.nickname });
-    const natures = page.getByRole('group', { name: SCREEN.natureGroup });
+    // The screen to create it, in the language of the device of the host.
+    const language = choices.deviceLanguage ?? 'es';
+    const nickname = page.getByRole('textbox', { name: textIn(language, 'createRoom.nickname') });
+    const natures = page.getByRole('group', {
+      name: textIn(language, 'createRoom.groupNature.label'),
+    });
     this.#askedTogether = (await nickname.isVisible()) && (await natures.isVisible());
     await nickname.fill(host);
-    await chooseOption(page, SCREEN.natures[(choices.groupNature ?? 'friends') as 'friends']);
-    await chooseOption(page, SCREEN.places[(choices.place ?? 'together') as 'together']);
-    await page.getByRole('button', { name: SCREEN.create }).click();
+    const nature = choices.groupNature ?? 'friends';
+    await chooseOption(page, textIn(language, `createRoom.groupNature.${nature}`));
+    await chooseOption(page, textIn(language, `createRoom.place.${choices.place ?? 'together'}`));
+    await page.getByRole('button', { name: textIn(language, 'createRoom.submit') }).click();
 
     await page.waitForURL(/\/rooms\//);
     await waitUntil(() => lastLobbyOf(player), `${host} gets the lobby of their room`);
@@ -1181,11 +1232,20 @@ export class E2eDriver implements GameDriver {
     throw new Error('Only the application reads the sitemap: the scenario must not be @ui');
   }
 
-  async playWithTheGroupFromThePublicPage(name: string): Promise<void> {
+  async playWithTheGroupFromThePublicPage(name: string, language = 'es'): Promise<void> {
     const { page } = screenOf(await this.#withScreen(VISITOR));
-    await page.goto(`${this.#stack.siteUrl}${this.#publicPathIn(name, 'es')}`);
-    await page.getByRole('link', { name: SITE_LANGUAGES.get('es')!.dilemma.play }).click();
+    await page.goto(`${this.#stack.siteUrl}${this.#publicPathIn(name, language)}`);
+    await page.getByRole('link', { name: SITE_LANGUAGES.get(language)!.dilemma.play }).click();
     await page.getByTestId('first-dilemma').waitFor();
+  }
+
+  async visitorWithoutAChosenLanguage(): Promise<void> {
+    // The visitor opens a browser of their own, in Spanish, and the app keeps no language yet.
+  }
+
+  async languageOfTheApp(): Promise<string | undefined> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    return page.evaluate('document.documentElement.lang');
   }
 
   async createTheRoomOfTheDilemma(): Promise<void> {
@@ -2553,8 +2613,8 @@ async function chooseOption(within: Page | Locator, label: string): Promise<void
 
 /** The position (from 1) of the dilemma on the screen of the page. */
 async function positionOn(page: Page): Promise<number> {
-  const text = await page.getByText(SCREEN.position).textContent();
-  const position = text?.match(SCREEN.position)?.[1];
+  const text = (await page.getByText(SCREEN.position).textContent()) ?? '';
+  const position = POSITIONS.map((pattern) => text.match(pattern)?.[1]).find(Boolean);
   if (position === undefined) throw new Error('The screen shows no dilemma');
   return Number(position);
 }

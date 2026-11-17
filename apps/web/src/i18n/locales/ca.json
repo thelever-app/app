@@ -1,0 +1,511 @@
+{
+  "app": {
+    "connecting": "Connectant…",
+    "unavailable": "La sala encara no està disponible."
+  },
+  "playerList": {
+    "you": "{{name}} (tu)",
+    "disconnected": "desconnectat",
+    "pending_one": "Falta per respondre · {{count}}",
+    "pending_many": "Falten per respondre · {{count, number}}",
+    "pending_other": "Falten per respondre · {{count, number}}",
+    "done_one": "Ha respost · {{count}}",
+    "done_many": "Han respost · {{count, number}}",
+    "done_other": "Han respost · {{count, number}}",
+    "answered": "ha respost",
+    "anonymousAnswered_one": "ha respost",
+    "anonymousAnswered_many": "han respost",
+    "anonymousAnswered_other": "han respost",
+    "anonymousPending_one": "en falta {{count}}",
+    "anonymousPending_many": "en falten {{count, number}}",
+    "anonymousPending_other": "en falten {{count, number}}",
+    "anonymousNote": "En una sala anònima ningú no veu qui ha respost, només quants.",
+    "inRoom_one": "A la sala · {{count}}",
+    "inRoom_many": "A la sala · {{count, number}}",
+    "inRoom_other": "A la sala · {{count, number}}"
+  },
+  "progressStrip": {
+    "position": "Dilema {{position, number}} de {{total, number}}",
+    "group": "Qui ha respost",
+    "more": "+{{count, number}}",
+    "showAll": "Veure’ls tots",
+    "predicting": "Dilema {{position, number}} de {{total, number}} · Prediu",
+    "anonymousGroup": "Quants han respost",
+    "anonymousCount_one": "Ha respost {{count}} · en falten {{pending, number}}",
+    "anonymousCount_many": "Han respost {{count, number}} · en falten {{pending, number}}",
+    "anonymousCount_other": "Han respost {{count, number}} · en falten {{pending, number}}",
+    "playerAnswered": "{{name}} · ha respost",
+    "playerPending": "{{name}} · encara no ha respost",
+    "playerDisconnected": "{{name}} (desconnectat)",
+    "movedOn": "{{name}} ha passat al següent",
+    "playerMovedOn": "{{label}} · ha passat al següent"
+  },
+  "groupSheet": {
+    "title": "El grup",
+    "close": "Tancar",
+    "summary_one": "{{count}} jugador · es veu qui ha respost, no què",
+    "summary_many": "{{count, number}} jugadors · es veu qui ha respost, no què",
+    "summary_other": "{{count, number}} jugadors · es veu qui ha respost, no què",
+    "summaryAnonymous_one": "{{count}} jugador · ningú no veu qui ha respost",
+    "summaryAnonymous_many": "{{count, number}} jugadors · ningú no veu qui ha respost",
+    "summaryAnonymous_other": "{{count, number}} jugadors · ningú no veu qui ha respost"
+  },
+  "dilemma": {
+    "privacy": "Ningú del grup no veurà el teu vot fins a la revelació. Mentrestant, el pots canviar.",
+    "choose": "Tria una opció",
+    "continue": "Continuar",
+    "privacyAnonymous": "Ningú del grup no veurà el teu vot, ni tan sols a la revelació. El pots canviar fins que es reveli el dilema.",
+    "done": "Fet"
+  },
+  "waiting": {
+    "position": "Dilema {{position, number}} de {{total, number}} · Has respost",
+    "title": "Esperant els altres",
+    "subtitle": "El dilema es revela quan respongueu tots o se n’acabi el temps. Fins llavors, pots canviar la teva resposta.",
+    "change": "Canviar la meva resposta",
+    "mascotWaiting": "La Palanca, esperant",
+    "revealEarly": "Revelar ara",
+    "revealCaption_one": "En falta {{count}}. En aquest dilema constarà com a «no ha votat».",
+    "revealCaption_many": "En falten {{count, number}}. En aquest dilema constaran com a «no ha votat».",
+    "revealCaption_other": "En falten {{count, number}}. En aquest dilema constaran com a «no ha votat».",
+    "guest": "{{host}} el pot revelar abans; si no, es revela quan respongueu tots o se n’acabi el temps."
+  },
+  "game": {
+    "timeLeft": "Queden {{time}}"
+  },
+  "predict": {
+    "voted": "Has votat «",
+    "votedEnd": "»",
+    "voteQuestion": "Què ha votat cadascú?",
+    "voteOf": "El vot de {{name}}",
+    "back": "Tornar al teu vot",
+    "missing_one": "Falta {{count}} resposta",
+    "missing_many": "Falten {{count, number}} respostes",
+    "missing_other": "Falten {{count, number}} respostes",
+    "next": "Fet"
+  },
+  "gameMenu": {
+    "open": "Més opcions",
+    "title": "Menú de la partida",
+    "revealEarly": "Revelar ara",
+    "onlyHost": "Només l’amfitrió",
+    "showGroup": "Veure el grup",
+    "share": "Compartir l’enllaç",
+    "copied": "Enllaç copiat",
+    "code": "Codi {{code}}",
+    "showQr": "Mostrar el QR",
+    "report": "Denunciar aquest dilema",
+    "reportSubtitle": "Ningú del grup no ho sabrà",
+    "reported": "Ja has denunciat aquest dilema",
+    "leave": "Sortir de la partida"
+  },
+  "report": {
+    "title": "Què li passa a aquest dilema?",
+    "reasons": {
+      "offensive": "Ofensiu",
+      "confusing": "Confús",
+      "mistranslated": "Mal traduït",
+      "other": "Altres"
+    },
+    "comment": "Comentari (opcional)",
+    "placeholder": "Què hi has vist?",
+    "noPersonalData": "No hi incloguis dades personals.",
+    "counter": "{{count, number}}/{{max, number}}",
+    "chooseReason": "Tria un motiu",
+    "send": "Enviar la denúncia",
+    "note": "Ho revisarà l’equip. Ningú del grup no sabrà que l’has denunciat."
+  },
+  "reportSent": {
+    "thanks": "Gràcies.",
+    "text": "Ho revisarà l’equip; ningú del grup no ho sap.",
+    "canSkip": "Si prefereixes no respondre’l, el pots saltar.",
+    "skip": "Saltar el dilema"
+  },
+  "revealEarly": {
+    "title": "Vols revelar el dilema ara?",
+    "body_one": "Falta {{count}} jugador per respondre. En aquest dilema constarà com a «no ha votat» i ja no el podrà respondre.",
+    "body_many": "Falten {{count, number}} jugadors per respondre. En aquest dilema constaran com a «no ha votat» i ja no el podran respondre.",
+    "body_other": "Falten {{count, number}} jugadors per respondre. En aquest dilema constaran com a «no ha votat» i ja no el podran respondre.",
+    "reveal": "Revelar ara",
+    "wait": "Continuar esperant"
+  },
+  "newHost": {
+    "title": "Ara ets l’amfitrió",
+    "disconnected": "{{host}} continua sense connexió. A partir de la ronda següent pots revelar abans d’hora des del menú ⋮. Si torna, recupera el rol.",
+    "left": "{{host}} ha sortit de la partida. Les teves opcions són al menú ⋮."
+  },
+  "lateJoin": {
+    "illustration": "La Palanca, al costat d’un canvi d’agulles",
+    "room": "Sala de {{host}}",
+    "title": "La partida ja ha començat",
+    "round": "Entres a la ronda en curs, el dilema {{position, number}} de {{total, number}}; si ja s’està revelant, el veuràs amb el grup.",
+    "onlyVote": "En aquesta partida només votes: no predius, ningú no prediu el teu vot i no entres al rànquing.",
+    "enter": "Entrar a la ronda"
+  },
+  "reveal": {
+    "region": "Revelació",
+    "position": "Dilema {{position, number}} de {{total, number}} · Revelació",
+    "addedBy": "L’ha afegit {{name}}",
+    "about": "Aquest dilema era sobre {{name}}",
+    "yourHitsRegion": "Els teus encerts",
+    "hitsAll": "Els has calat a tots!",
+    "hitsCount": "N’has encertat {{right, number}} de {{count, number}}",
+    "missedOne": "Només has fallat amb {{name}}",
+    "missedSome": "Has fallat amb {{names}}",
+    "missedMany": "Has fallat amb {{names}} i {{count, number}} més",
+    "missedAll": "Avui no els has calat",
+    "whoVoted": "Què ha votat cadascú",
+    "nobodyChose": "Ningú no l’ha triada",
+    "guessed": "· has dit {{letter}}",
+    "voterRight": "{{name}}, has encertat",
+    "voterMissed": "{{name}}, has fallat: has dit {{letter}}",
+    "optionCount": "{{count, number}} · {{percent}}",
+    "didNotVote_one": "No ha votat · {{names}}",
+    "didNotVote_many": "No han votat · {{names}}",
+    "didNotVote_other": "No han votat · {{names}}",
+    "next": "Dilema següent",
+    "anonymousDidNotVote_one": "{{count}} persona no ha votat.",
+    "anonymousDidNotVote_many": "{{count, number}} persones no han votat.",
+    "anonymousDidNotVote_other": "{{count, number}} persones no han votat.",
+    "anonymousNote": "En aquesta sala ningú no veu qui ha votat què.",
+    "fewVotesTitle": "Massa pocs vots per mostrar el repartiment",
+    "fewVotesVoted_one": "Només ha votat {{count}} persona",
+    "fewVotesVoted_many": "Només han votat {{count, number}} persones",
+    "fewVotesVoted_other": "Només han votat {{count, number}} persones",
+    "fewVotesNobody": "No ha votat ningú",
+    "fewVotesDidNot_one": "i {{count}} no ha votat",
+    "fewVotesDidNot_many": "i {{count, number}} no han votat",
+    "fewVotesDidNot_other": "i {{count, number}} no han votat",
+    "fewVotesWhy": "Amb menys de 3 vots, el repartiment deixaria endevinar qui ha votat què.",
+    "introPosition": "Dilema {{position, number}} de {{total, number}} · Fi de la decisió",
+    "introTitle": "Es revela el dilema",
+    "introMascot": "La Palanca, celebrant-ho",
+    "introAnswered_one": "Ha respost {{count}} de {{total, number}}.",
+    "introAnswered_many": "Heu respost {{count, number}} de {{total, number}}.",
+    "introAnswered_other": "Heu respost {{count, number}} de {{total, number}}.",
+    "introNominal": "Ara sí: veureu què ha votat cadascú.",
+    "introAnonymous": "Ara sí: veureu quants han triat cada opció."
+  },
+  "notices": {
+    "reconnecting": "Tornant a connectar… les teves respostes estan desades",
+    "paused": "En pausa. Toca per tornar",
+    "answerNotSaved": "No s’ha desat la teva última resposta. Torna-la a triar.",
+    "dismiss": "Tancar l’avís"
+  },
+  "noReturn": {
+    "gone": {
+      "title": "Aquesta partida ja no hi és",
+      "text": "Ha acabat o s’ha tancat. Si el grup continua jugant, demana que et passin l’enllaç nou."
+    },
+    "device": {
+      "title": "Aquest dispositiu no és a la partida",
+      "text": "Si t’hi vas unir des d’un altre, continua jugant en aquell. Si no, demana al grup un enllaç nou."
+    },
+    "update": {
+      "title": "Hi ha una versió nova de TheLever",
+      "text": "Recarrega per continuar jugant amb la més recent.",
+      "action": "Recarregar"
+    },
+    "identity": {
+      "title": "No t’hem pogut reconèixer",
+      "text": "Sol ser una cosa passatgera. Torna-ho a provar d’aquí a un moment.",
+      "action": "Tornar-ho a provar"
+    },
+    "expelled": {
+      "title": "T’han tret de la sala",
+      "text": "Qui ha creat la sala t’ha expulsat d’aquesta partida. Si el grup juga la revenja, t’hi podràs unir.",
+      "action": "Tornar a l’inici"
+    }
+  },
+  "createRoom": {
+    "title": "Sala nova",
+    "nickname": "El teu sobrenom",
+    "nicknamePlaceholder": "Com et veurà el grup",
+    "groupNature": {
+      "label": "Amb qui jugaràs?",
+      "family": "Família",
+      "friends": "Amics",
+      "work": "Companys",
+      "mixed": "Barreja",
+      "hint": "Serveix per entendre com canvien els vots segons amb qui jugues."
+    },
+    "place": {
+      "label": "On sou?",
+      "together": "Al mateix lloc",
+      "remote": "A distància"
+    },
+    "submit": "Crear una sala",
+    "submitting": "Creant la sala…",
+    "missing": {
+      "nickname": "Escriu el teu sobrenom",
+      "groupNature": "Tria amb qui jugues",
+      "place": "Digues-nos on sou"
+    }
+  },
+  "joinRoom": {
+    "roomOf": "Sala de {{host}} · {{code}}",
+    "inTheRoom_one": "{{count}} a la sala",
+    "inTheRoom_other": "{{count}} a la sala",
+    "adultsOnly": "Només per a majors de 18 anys: pot tenir dilemes per a adults.",
+    "nickname": "El teu sobrenom",
+    "submit": "Entrar a la sala",
+    "submitting": "Entrant…",
+    "loading": "Buscant la sala…",
+    "inTheRoom_many": "{{count}} a la sala",
+    "missingNickname": "Escriu el teu sobrenom",
+    "namesake": "{{nickname}} ja és a la sala; us distingirà l’avatar.",
+    "missingAvatar": "Tria un altre avatar",
+    "lookalikeJustJoined": "Algú acaba d’entrar com a {{nickname}} amb aquest avatar. Tria’n un altre."
+  },
+  "roomErrors": {
+    "nickname-missing": "Escriu un sobrenom.",
+    "room-full": "La sala és plena: ja hi ha 50 jugadors.",
+    "player-expelled": "L’amfitrió t’ha tret d’aquesta partida.",
+    "room-code-not-found": "No hi ha cap sala amb aquest codi.",
+    "room-not-found": "Aquesta sala ja no existeix.",
+    "unknown": "No ha sortit bé. Torna-ho a provar.",
+    "dilemmas-missing": "No hi ha dilemes per a aquesta configuració. Prova amb altres categories.",
+    "nickname-and-avatar-taken": "Algú que es diu com tu ja porta aquest avatar. Tria’n un altre."
+  },
+  "home": {
+    "title": "Juguem?",
+    "create": "Crear una sala",
+    "joinWithCode": "Unir-me amb un codi",
+    "back": "Tornar"
+  },
+  "joinCode": {
+    "title": "Escriu el codi de la sala",
+    "text": "Són 5 caràcters. Te’l pot dictar qui ha creat la sala.",
+    "label": "Codi de la sala",
+    "hint": "També el pots enganxar.",
+    "enter": "Entrar",
+    "missing_one": "Falta {{count}} caràcter",
+    "missing_many": "Falten {{count, number}} caràcters",
+    "missing_other": "Falten {{count, number}} caràcters"
+  },
+  "accessCode": {
+    "title": "TheLever està en proves",
+    "text": "De moment només hi pot jugar qui té el codi d’accés. Escriu-lo una vegada i no te’l tornarem a demanar en aquest dispositiu.",
+    "label": "Codi d’accés",
+    "invalid": "Aquest codi no és vàlid.",
+    "check": "Comprova que estigui ben escrit.",
+    "enter": "Entrar",
+    "entering": "Entrant…"
+  },
+  "variant": {
+    "nominal": {
+      "name": "Sala nominal:",
+      "text": "a la revelació tothom veurà què ha votat cadascú."
+    },
+    "anonymous": {
+      "name": "Sala anònima:",
+      "text": "ningú no veurà qui ha votat què."
+    }
+  },
+  "joinRefusal": {
+    "illustration": "La Palanca, dubtant, al costat d’un final de via",
+    "room-code-not-found": {
+      "title": "Aquesta sala no existeix",
+      "text": "Revisa el codi: són 5 caràcters. Torna’l a demanar a qui ha creat la sala.",
+      "action": "Provar un altre codi"
+    },
+    "room-full": {
+      "title": "Aquesta sala és plena",
+      "text": "Ja hi ha 50 jugadors a dins, que és el màxim. Pots crear la teva pròpia sala.",
+      "action": "Tornar a l’inici"
+    },
+    "player-expelled": {
+      "title": "No pots tornar a entrar en aquesta partida",
+      "text": "Si el grup juga la revenja, t’hi podràs unir.",
+      "action": "Tornar a l’inici"
+    },
+    "room-not-found": {
+      "title": "Aquesta sala ja no existeix",
+      "text": "S’ha tancat. Si el grup continua jugant, demana que et passin el codi nou.",
+      "action": "Tornar a l’inici"
+    }
+  },
+  "lobby": {
+    "codeLabel": "Codi de la sala",
+    "leave": "Sortir de la sala",
+    "share": "Compartir l’enllaç",
+    "shareText": "Uneix-te a la meva sala de TheLever amb el codi {{code}}",
+    "copied": "Enllaç copiat",
+    "showQr": "Mostrar el QR",
+    "summary": "{{count}} dilemes · {{seconds}} s per dilema · {{language}} · {{nature}}",
+    "change": "Canviar",
+    "adultsOnly": "Només per a majors de 18 anys",
+    "remote": "Jugueu a distància: millor en videotrucada, per comentar la revelació en directe.",
+    "added": {
+      "title": "Dilemes afegits · {{count}} de {{total}}",
+      "remove": "Treure aquest dilema",
+      "hint": "No saps qui els ha afegit: es veurà a la revelació. La resta sortirà del catàleg."
+    },
+    "add": {
+      "title": "Afegeix dilemes a la partida",
+      "count": "N’has afegit {{count}} de {{total}}. Ningú no sabrà que són teus fins a la revelació.",
+      "action": "Afegir un dilema",
+      "remove": "Treure aquest dilema"
+    },
+    "picked": {
+      "title": "Dilemes triats · {{count}}"
+    },
+    "players": "A la sala · {{count}}",
+    "you": "{{name}} (tu)",
+    "host": "Amfitrió",
+    "toExpel": "{{name}}. Toca per expulsar",
+    "toChangeAvatar": "{{name}}. Toca per canviar el teu avatar",
+    "waiting": "Esperant més gent. Comparteix el codi o l’enllaç perquè entrin.",
+    "start": "Començar la partida",
+    "missing_one": "Falta {{count}} jugador per començar",
+    "missing_other": "Falten {{count}} jugadors per començar",
+    "guestWait": "{{host}} començarà la partida quan hi sigueu tots.",
+    "missing_many": "Falten {{count}} jugadors per començar",
+    "categories": {
+      "all": "Totes les categories",
+      "some_one": "{{count}} categoria",
+      "some_other": "{{count}} categories",
+      "some_many": "{{count}} categories",
+      "none": "Cap categoria"
+    },
+    "pickedCount_one": "{{count}} dilema triat",
+    "pickedCount_other": "{{count}} dilemes triats",
+    "pickedCount_many": "{{count}} dilemes triats",
+    "summaryPicked": "{{seconds}} s per dilema · {{language}} · {{nature}}"
+  },
+  "languages": {
+    "es": "Español",
+    "en": "English",
+    "fr": "Français",
+    "de": "Deutsch",
+    "it": "Italiano",
+    "pt": "Português",
+    "ca": "Català"
+  },
+  "categories": {
+    "life-and-death": "Vida i mort",
+    "honesty": "Honestedat",
+    "loyalty": "Lleialtat",
+    "justice": "Justícia",
+    "love-and-relationships": "Amor i relacions",
+    "work-and-money": "Feina i diners",
+    "technology-and-the-future": "Tecnologia i futur"
+  },
+  "settings": {
+    "title": "Configuració de la partida",
+    "close": "Tancar",
+    "reveal": "Revelació",
+    "nominal": "Nominal",
+    "anonymous": "Anònim",
+    "nominalHint": "A la revelació es veurà què ha votat cadascú, i es juga a predir.",
+    "anonymousHint": "Ningú no veurà qui ha votat què. Sense prediccions ni punts: només votar.",
+    "adultsOnly": {
+      "label": "Només majors de 18 anys",
+      "hint": "Permet dilemes per a adults. Només hi podran entrar majors de 18 anys."
+    },
+    "language": "Idioma dels dilemes",
+    "howPicked": "Com es trien els dilemes",
+    "byCategories": "Per categories",
+    "byHand": "A mà",
+    "categories": "Categories",
+    "allCategories": "Totes",
+    "categoriesHint": "La partida barreja dilemes de les categories marcades.",
+    "dilemmaCount": "Dilemes",
+    "timePerDilemma": "Temps per dilema",
+    "seconds": "{{count}} s",
+    "timeHint": "Cada dilema es revela quan responen tots o se n’acaba el temps.",
+    "newDilemmas": {
+      "label": "Incloure dilemes nous",
+      "hint": "Ajudeu a valorar dilemes acabats d’arribar al catàleg."
+    },
+    "dilemmasPerPlayer": {
+      "label": "Dilemes que afegeix cada jugador",
+      "none": "Cap",
+      "hint": "L’amfitrió també. Compten dins del nombre de dilemes, i ningú no sabrà de qui és cadascun fins a la revelació."
+    },
+    "pick": "Triar els dilemes un per un",
+    "picked_one": "{{count}} dilema triat",
+    "picked_other": "{{count}} dilemes triats",
+    "picked_many": "{{count}} dilemes triats",
+    "noPicked": "Cap dilema triat",
+    "changePicked": "Canviar",
+    "choosePicked": "Triar",
+    "byHandHint": "La partida juga aquests i els que afegeixin els jugadors, sense categories ni dilemes nous. «Per categories» els treu d’un toc.",
+    "save": "Desar"
+  },
+  "pickDilemmas": {
+    "title": "Triar dilemes",
+    "back": "Tornar a la configuració",
+    "search": "Cercar dilemes",
+    "searchPlaceholder": "Cerca per text o etiqueta: família, tramvia…",
+    "all": "Totes",
+    "hint": "Només hi surten dilemes aptes per a aquesta sala. Si els tries a mà, no s’hi afegeixen dilemes nous.",
+    "none": "Tria’n almenys un",
+    "play_one": "Jugar aquest",
+    "play_other": "Jugar aquests {{count}}",
+    "empty": "No hi ha dilemes aptes amb aquesta cerca.",
+    "tags": "#{{tags}}",
+    "play_many": "Jugar aquests {{count}}",
+    "byCategory": "Tornar a jugar per categoria",
+    "options_one": "{{count}} opció",
+    "options_many": "{{count, number}} opcions",
+    "options_other": "{{count, number}} opcions",
+    "someone": "algú del grup",
+    "more": "Veure’n més",
+    "moreFailed": "No s’han pogut carregar més dilemes. Torna-ho a provar."
+  },
+  "addDilemma": {
+    "title": "Afegeix un dilema",
+    "search": "Cercar dilemes",
+    "close": "Tancar",
+    "empty": "No hi ha dilemes aptes amb aquesta cerca.",
+    "searchPlaceholder": "Cerca per text o etiqueta"
+  },
+  "expel": {
+    "title": "Vols expulsar {{name}}?",
+    "text": "Sortirà de la sala i no podrà tornar a aquesta partida. En podrà jugar d’altres.",
+    "confirm": "Expulsar",
+    "cancel": "Cancel·lar"
+  },
+  "avatarPicker": {
+    "title": "Tria el teu avatar",
+    "face": "Cara {{number}}",
+    "hint": "Les que ja porta algú que es diu com tu surten desactivades.",
+    "use": "Fer servir aquest",
+    "close": "Tancar",
+    "colors": {
+      "khaki": "Caqui",
+      "teal": "Verd blavós",
+      "brown": "Marró",
+      "slate": "Pissarra",
+      "cyan": "Cian",
+      "rust": "Rovell",
+      "olive": "Oliva",
+      "stone": "Pedra"
+    },
+    "change": "Canviar l’avatar",
+    "changeCurrent": "Canviar l’avatar: cara {{face}}, {{color}}"
+  },
+  "qr": {
+    "title": "Apunta amb la càmera per entrar",
+    "close": "Tancar",
+    "label": "Codi QR de la sala {{code}}",
+    "or": "o entra a {{host}} i escriu el codi",
+    "code": "Codi {{code}}"
+  },
+  "sound": {
+    "mute": "Silenciar el joc",
+    "label": "So",
+    "hint": "També la vibració"
+  },
+  "playDilemma": {
+    "title": "Sala nova",
+    "firstDilemma": "Començareu per aquest dilema",
+    "about_one": "{{category}} · {{count}} opció",
+    "about_other": "{{category}} · {{count}} opcions",
+    "about_many": "{{category}} · {{count}} opcions",
+    "rest": "La resta de la partida es completa amb el catàleg, segons la configuració de la sala.",
+    "loading": "Buscant el dilema…",
+    "notFound": "Aquest dilema ja no és a TheLever. Pots crear una sala amb d’altres del catàleg.",
+    "home": "Anar a l’inici"
+  }
+}

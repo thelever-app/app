@@ -73,7 +73,7 @@ Feature: Public dilemma pages
     Then the visitor goes through the first access
     And then sees "El tranvía" ready to vote alone
 
-  @ui @todo
+  @ui
   Scenario: The app opens in the language of the page
     Given the visitor has never chosen a language in the app
     When a visitor chooses to play "El tranvía" with the group from its public page in English

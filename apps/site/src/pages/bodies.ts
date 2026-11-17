@@ -24,7 +24,7 @@ export function homeBody(language: string, texts: SiteTexts, appBase: string): H
       <div class="hero-text">
         <h1>${texts.home.heading}</h1>
         <p class="intro">${texts.home.intro}</p>
-        <a class="button primary play" href="${appBase}/app"
+        <a class="button primary play" href="${appBase}/app?lang=${language}"
           >${icon('add-circle')}${texts.home.play}</a
         >
       </div>
@@ -98,7 +98,9 @@ export function dilemmaBody({ dilemma }: ShownDilemma, texts: SiteTexts, appBase
           ${dilemma.options.map((option) => html`<li>${readable(option.text, texts)}</li>`)}
         </ul>
         <div class="actions">
-          <a class="button" href="${appBase}/new/${dilemma.publicId}">${texts.dilemma.play}</a>
+          <a class="button" href="${appBase}/new/${dilemma.publicId}?lang=${dilemma.language}"
+            >${texts.dilemma.play}</a
+          >
         </div>
       </section>
       ${html`<section class="dilemma-arguments">

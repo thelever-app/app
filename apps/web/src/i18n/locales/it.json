@@ -1,0 +1,511 @@
+{
+  "app": {
+    "connecting": "Connessione…",
+    "unavailable": "Stanza non ancora disponibile."
+  },
+  "playerList": {
+    "you": "{{name}} (tu)",
+    "disconnected": "disconnesso",
+    "pending_one": "Deve rispondere · {{count}}",
+    "pending_many": "Devono rispondere · {{count, number}}",
+    "pending_other": "Devono rispondere · {{count, number}}",
+    "done_one": "Ha risposto · {{count}}",
+    "done_many": "Hanno risposto · {{count, number}}",
+    "done_other": "Hanno risposto · {{count, number}}",
+    "answered": "ha risposto",
+    "anonymousAnswered_one": "ha risposto",
+    "anonymousAnswered_many": "hanno risposto",
+    "anonymousAnswered_other": "hanno risposto",
+    "anonymousPending_one": "manca {{count}}",
+    "anonymousPending_many": "mancano {{count, number}}",
+    "anonymousPending_other": "mancano {{count, number}}",
+    "anonymousNote": "Nella stanza anonima nessuno vede chi ha risposto, solo quanti.",
+    "inRoom_one": "Nella stanza · {{count}}",
+    "inRoom_many": "Nella stanza · {{count, number}}",
+    "inRoom_other": "Nella stanza · {{count, number}}"
+  },
+  "progressStrip": {
+    "position": "Dilemma {{position, number}} di {{total, number}}",
+    "group": "Chi ha risposto",
+    "more": "+{{count, number}}",
+    "showAll": "Vedi tutti",
+    "predicting": "Dilemma {{position, number}} di {{total, number}} · Prevedi",
+    "anonymousGroup": "Quanti hanno risposto",
+    "anonymousCount_one": "Ha risposto {{count}} · {{pending, number}} in attesa",
+    "anonymousCount_many": "Hanno risposto {{count, number}} · {{pending, number}} in attesa",
+    "anonymousCount_other": "Hanno risposto {{count, number}} · {{pending, number}} in attesa",
+    "playerAnswered": "{{name}} · ha risposto",
+    "playerPending": "{{name}} · non ha ancora risposto",
+    "playerDisconnected": "{{name}} (disconnesso)",
+    "movedOn": "{{name}} è già al dilemma successivo",
+    "playerMovedOn": "{{label}} · è già al successivo"
+  },
+  "groupSheet": {
+    "title": "Il gruppo",
+    "close": "Chiudi",
+    "summary_one": "{{count}} giocatore · si vede chi ha risposto, non cosa",
+    "summary_many": "{{count, number}} giocatori · si vede chi ha risposto, non cosa",
+    "summary_other": "{{count, number}} giocatori · si vede chi ha risposto, non cosa",
+    "summaryAnonymous_one": "{{count}} giocatore · nessuno vede chi ha risposto",
+    "summaryAnonymous_many": "{{count, number}} giocatori · nessuno vede chi ha risposto",
+    "summaryAnonymous_other": "{{count, number}} giocatori · nessuno vede chi ha risposto"
+  },
+  "dilemma": {
+    "privacy": "Nessuno del gruppo vedrà il tuo voto fino al risultato. Nel frattempo puoi cambiarlo.",
+    "choose": "Scegli un’opzione",
+    "continue": "Continua",
+    "privacyAnonymous": "Nessuno del gruppo vedrà il tuo voto, nemmeno nel risultato. Puoi cambiarlo finché il dilemma non viene svelato.",
+    "done": "Fatto"
+  },
+  "waiting": {
+    "position": "Dilemma {{position, number}} di {{total, number}} · Hai risposto",
+    "title": "In attesa degli altri",
+    "subtitle": "Il dilemma si svela quando avrete risposto tutti o quando finisce il tempo. Fino ad allora puoi cambiare la tua risposta.",
+    "change": "Cambia la mia risposta",
+    "mascotWaiting": "La Palanca, in attesa",
+    "revealEarly": "Svela ora",
+    "revealCaption_one": "Ne manca {{count}}. In questo dilemma risulterà «non ha votato».",
+    "revealCaption_many": "Ne mancano {{count, number}}. In questo dilemma risulteranno «non ha votato».",
+    "revealCaption_other": "Ne mancano {{count, number}}. In questo dilemma risulteranno «non ha votato».",
+    "guest": "{{host}} può svelarlo prima; altrimenti si svela quando avrete risposto tutti o quando finisce il tempo."
+  },
+  "game": {
+    "timeLeft": "Restano {{time}}"
+  },
+  "predict": {
+    "voted": "Hai votato «",
+    "votedEnd": "»",
+    "voteQuestion": "Cosa ha votato ciascuno?",
+    "voteOf": "Il voto di {{name}}",
+    "back": "Torna al tuo voto",
+    "missing_one": "Manca {{count}} risposta",
+    "missing_many": "Mancano {{count, number}} risposte",
+    "missing_other": "Mancano {{count, number}} risposte",
+    "next": "Fatto"
+  },
+  "gameMenu": {
+    "open": "Altre opzioni",
+    "title": "Menu della partita",
+    "revealEarly": "Svela ora",
+    "onlyHost": "Solo l’host",
+    "showGroup": "Vedi il gruppo",
+    "share": "Condividi link",
+    "copied": "Link copiato",
+    "code": "Codice {{code}}",
+    "showQr": "Mostra QR",
+    "report": "Segnala questo dilemma",
+    "reportSubtitle": "Nessuno del gruppo lo saprà",
+    "reported": "Hai già segnalato questo dilemma",
+    "leave": "Esci dalla partita"
+  },
+  "report": {
+    "title": "Cosa non va in questo dilemma?",
+    "reasons": {
+      "offensive": "Offensivo",
+      "confusing": "Confuso",
+      "mistranslated": "Tradotto male",
+      "other": "Altro"
+    },
+    "comment": "Commento (facoltativo)",
+    "placeholder": "Cosa hai notato?",
+    "noPersonalData": "Non inserire dati personali.",
+    "counter": "{{count, number}}/{{max, number}}",
+    "chooseReason": "Scegli un motivo",
+    "send": "Invia segnalazione",
+    "note": "Lo esaminerà il team. Nessuno del gruppo saprà che l’hai segnalato."
+  },
+  "reportSent": {
+    "thanks": "Grazie.",
+    "text": "Lo esaminerà il team; nessuno del gruppo lo sa.",
+    "canSkip": "Se preferisci non rispondere, puoi saltarlo.",
+    "skip": "Salta il dilemma"
+  },
+  "revealEarly": {
+    "title": "Svelare subito il dilemma?",
+    "body_one": "Deve ancora rispondere {{count}} giocatore. In questo dilemma risulterà «non ha votato» e non potrà più rispondere.",
+    "body_many": "Devono ancora rispondere {{count, number}} giocatori. In questo dilemma risulteranno «non ha votato» e non potranno più rispondere.",
+    "body_other": "Devono ancora rispondere {{count, number}} giocatori. In questo dilemma risulteranno «non ha votato» e non potranno più rispondere.",
+    "reveal": "Svela ora",
+    "wait": "Continua ad aspettare"
+  },
+  "newHost": {
+    "title": "Ora sei l’host",
+    "disconnected": "{{host}} è ancora offline. Dal prossimo turno puoi svelare in anticipo dal menu ⋮. Se torna, riprende il ruolo.",
+    "left": "{{host}} ha lasciato la partita. Le tue opzioni sono nel menu ⋮."
+  },
+  "lateJoin": {
+    "illustration": "La Palanca accanto a uno scambio ferroviario",
+    "room": "Stanza di {{host}}",
+    "title": "La partita è già iniziata",
+    "round": "Entri nel turno in corso, il dilemma {{position, number}} di {{total, number}}; se si sta già svelando, lo vedrai con il gruppo.",
+    "onlyVote": "In questa partita voti e basta: non fai previsioni, nessuno prevede il tuo voto e non entri in classifica.",
+    "enter": "Entra nel turno"
+  },
+  "reveal": {
+    "region": "Risultato",
+    "position": "Dilemma {{position, number}} di {{total, number}} · Risultato",
+    "addedBy": "L’ha aggiunto {{name}}",
+    "about": "Questo dilemma era su {{name}}",
+    "yourHitsRegion": "Le tue previsioni",
+    "hitsAll": "Li hai indovinati tutti!",
+    "hitsCount": "Ne hai indovinati {{right, number}} su {{count, number}}",
+    "missedOne": "Hai sbagliato solo con {{name}}",
+    "missedSome": "Hai sbagliato con {{names}}",
+    "missedMany": "Hai sbagliato con {{names}} e altri {{count, number}}",
+    "missedAll": "Oggi non ne hai indovinato nessuno",
+    "whoVoted": "Cosa ha votato ciascuno",
+    "nobodyChose": "Nessuno l’ha scelta",
+    "guessed": "· hai detto {{letter}}",
+    "voterRight": "{{name}}, hai indovinato",
+    "voterMissed": "{{name}}, hai sbagliato: avevi detto {{letter}}",
+    "optionCount": "{{count, number}} · {{percent}}",
+    "didNotVote_one": "Non ha votato · {{names}}",
+    "didNotVote_many": "Non hanno votato · {{names}}",
+    "didNotVote_other": "Non hanno votato · {{names}}",
+    "next": "Dilemma successivo",
+    "anonymousDidNotVote_one": "{{count}} persona non ha votato.",
+    "anonymousDidNotVote_many": "{{count, number}} persone non hanno votato.",
+    "anonymousDidNotVote_other": "{{count, number}} persone non hanno votato.",
+    "anonymousNote": "In questa stanza nessuno vede chi ha votato cosa.",
+    "fewVotesTitle": "Troppo pochi voti per mostrare come si sono divisi",
+    "fewVotesVoted_one": "Ha votato solo {{count}} persona",
+    "fewVotesVoted_many": "Hanno votato solo {{count, number}} persone",
+    "fewVotesVoted_other": "Hanno votato solo {{count, number}} persone",
+    "fewVotesNobody": "Nessuno ha votato",
+    "fewVotesDidNot_one": "e {{count}} non ha votato",
+    "fewVotesDidNot_many": "e {{count, number}} non hanno votato",
+    "fewVotesDidNot_other": "e {{count, number}} non hanno votato",
+    "fewVotesWhy": "Con meno di 3 voti, vedere come si sono divisi farebbe indovinare chi ha votato cosa.",
+    "introPosition": "Dilemma {{position, number}} di {{total, number}} · Fine del voto",
+    "introTitle": "Si svela il dilemma",
+    "introMascot": "La Palanca che festeggia",
+    "introAnswered_one": "Ha risposto {{count}} su {{total, number}}.",
+    "introAnswered_many": "Hanno risposto {{count, number}} su {{total, number}}.",
+    "introAnswered_other": "Hanno risposto {{count, number}} su {{total, number}}.",
+    "introNominal": "Ci siamo: ora vedrete cosa ha votato ciascuno.",
+    "introAnonymous": "Ci siamo: ora vedrete quanti hanno scelto ogni opzione."
+  },
+  "notices": {
+    "reconnecting": "Riconnessione… le tue risposte sono salvate",
+    "paused": "In pausa. Tocca per tornare",
+    "answerNotSaved": "La tua ultima risposta non è stata salvata. Sceglila di nuovo.",
+    "dismiss": "Chiudi avviso"
+  },
+  "noReturn": {
+    "gone": {
+      "title": "Questa partita non c’è più",
+      "text": "È finita o è stata chiusa. Se il gruppo sta ancora giocando, chiedi che ti mandino il nuovo link."
+    },
+    "device": {
+      "title": "Questo dispositivo non è nella partita",
+      "text": "Se giochi da un altro dispositivo, continua su quello. Altrimenti, chiedi al gruppo un nuovo link."
+    },
+    "update": {
+      "title": "C’è una nuova versione di TheLever",
+      "text": "Ricarica per continuare a giocare con l’ultima.",
+      "action": "Ricarica"
+    },
+    "identity": {
+      "title": "Non siamo riusciti a riconoscerti",
+      "text": "Di solito è un problema passeggero. Riprova tra un momento.",
+      "action": "Riprova"
+    },
+    "expelled": {
+      "title": "Ti hanno tolto dalla stanza",
+      "text": "Chi ha creato la stanza ti ha espulso da questa partita. Se il gruppo gioca la rivincita, potrai unirti.",
+      "action": "Torna all’inizio"
+    }
+  },
+  "createRoom": {
+    "title": "Nuova stanza",
+    "nickname": "Il tuo nickname",
+    "nicknamePlaceholder": "Come ti vedrà il gruppo",
+    "groupNature": {
+      "label": "Con chi giocherai?",
+      "family": "Famiglia",
+      "friends": "Amici",
+      "work": "Colleghi",
+      "mixed": "Misto",
+      "hint": "Serve a capire come cambiano i voti a seconda di con chi giochi."
+    },
+    "place": {
+      "label": "Dove siete?",
+      "together": "Nello stesso posto",
+      "remote": "A distanza"
+    },
+    "submit": "Crea stanza",
+    "submitting": "Creazione della stanza…",
+    "missing": {
+      "nickname": "Scrivi il tuo nickname",
+      "groupNature": "Scegli con chi giochi",
+      "place": "Dicci dove siete"
+    }
+  },
+  "joinRoom": {
+    "roomOf": "Stanza di {{host}} · {{code}}",
+    "inTheRoom_one": "{{count}} nella stanza",
+    "inTheRoom_other": "{{count}} nella stanza",
+    "adultsOnly": "Solo per maggiorenni: può contenere dilemmi per adulti.",
+    "nickname": "Il tuo nickname",
+    "submit": "Entra nella stanza",
+    "submitting": "Accesso…",
+    "loading": "Cerco la stanza…",
+    "inTheRoom_many": "{{count}} nella stanza",
+    "missingNickname": "Scrivi il tuo nickname",
+    "namesake": "{{nickname}} è già nella stanza; vi distinguerà l’avatar.",
+    "missingAvatar": "Scegli un altro avatar",
+    "lookalikeJustJoined": "Qualcuno è appena entrato come {{nickname}} con questo avatar. Scegline un altro."
+  },
+  "roomErrors": {
+    "nickname-missing": "Scrivi un nickname.",
+    "room-full": "La stanza è piena: ci sono già 50 giocatori.",
+    "player-expelled": "L’host ti ha tolto da questa partita.",
+    "room-code-not-found": "Non c’è nessuna stanza con questo codice.",
+    "room-not-found": "Quella stanza non esiste più.",
+    "unknown": "Qualcosa è andato storto. Riprova.",
+    "dilemmas-missing": "Non ci sono dilemmi per queste impostazioni. Prova con altre categorie.",
+    "nickname-and-avatar-taken": "Qualcuno con il tuo stesso nome ha già quell’avatar. Scegline un altro."
+  },
+  "home": {
+    "title": "Giochiamo?",
+    "create": "Crea stanza",
+    "joinWithCode": "Entra con un codice",
+    "back": "Indietro"
+  },
+  "joinCode": {
+    "title": "Scrivi il codice della stanza",
+    "text": "Sono 5 caratteri. Può dettartelo chi ha creato la stanza.",
+    "label": "Codice della stanza",
+    "hint": "Puoi anche incollarlo.",
+    "enter": "Entra",
+    "missing_one": "Manca {{count}} carattere",
+    "missing_many": "Mancano {{count, number}} caratteri",
+    "missing_other": "Mancano {{count, number}} caratteri"
+  },
+  "accessCode": {
+    "title": "TheLever è in prova",
+    "text": "Per ora può giocare solo chi ha il codice di accesso. Scrivilo una volta e non te lo chiederemo più su questo dispositivo.",
+    "label": "Codice di accesso",
+    "invalid": "Questo codice non è valido.",
+    "check": "Controlla di averlo scritto bene.",
+    "enter": "Entra",
+    "entering": "Accesso…"
+  },
+  "variant": {
+    "nominal": {
+      "name": "Stanza nominale:",
+      "text": "nel risultato tutti vedranno cosa ha votato ciascuno."
+    },
+    "anonymous": {
+      "name": "Stanza anonima:",
+      "text": "nessuno vedrà chi ha votato cosa."
+    }
+  },
+  "joinRefusal": {
+    "illustration": "La Palanca, dubbiosa, accanto a un binario morto",
+    "room-code-not-found": {
+      "title": "Questa stanza non esiste",
+      "text": "Controlla il codice: sono 5 caratteri. Richiedilo a chi ha creato la stanza.",
+      "action": "Prova un altro codice"
+    },
+    "room-full": {
+      "title": "Questa stanza è al completo",
+      "text": "Ci sono già 50 giocatori, il massimo. Puoi creare una stanza tutta tua.",
+      "action": "Torna all’inizio"
+    },
+    "player-expelled": {
+      "title": "Non puoi rientrare in questa partita",
+      "text": "Se il gruppo gioca la rivincita, potrai unirti.",
+      "action": "Torna all’inizio"
+    },
+    "room-not-found": {
+      "title": "Quella stanza non esiste più",
+      "text": "È stata chiusa. Se il gruppo sta ancora giocando, chiedi che ti mandino il nuovo codice.",
+      "action": "Torna all’inizio"
+    }
+  },
+  "lobby": {
+    "codeLabel": "Codice della stanza",
+    "leave": "Esci dalla stanza",
+    "share": "Condividi link",
+    "shareText": "Entra nella mia stanza di TheLever con il codice {{code}}",
+    "copied": "Link copiato",
+    "showQr": "Mostra QR",
+    "summary": "{{count}} dilemmi · {{seconds}} s per dilemma · {{language}} · {{nature}}",
+    "change": "Cambia",
+    "adultsOnly": "Solo per maggiorenni",
+    "remote": "Giocate a distanza: meglio in videochiamata, per commentare il risultato in diretta.",
+    "added": {
+      "title": "Dilemmi aggiunti · {{count}} di {{total}}",
+      "remove": "Togli questo dilemma",
+      "hint": "Non sai chi li ha aggiunti: si vedrà nel risultato. Gli altri arriveranno dal catalogo."
+    },
+    "add": {
+      "title": "Aggiungi dilemmi alla partita",
+      "count": "Ne hai aggiunti {{count}} su {{total}}. Nessuno saprà che sono tuoi fino al risultato.",
+      "action": "Aggiungi un dilemma",
+      "remove": "Togli questo dilemma"
+    },
+    "picked": {
+      "title": "Dilemmi scelti · {{count}}"
+    },
+    "players": "Nella stanza · {{count}}",
+    "you": "{{name}} (tu)",
+    "host": "Host",
+    "toExpel": "{{name}}. Tocca per espellere",
+    "toChangeAvatar": "{{name}}. Tocca per cambiare il tuo avatar",
+    "waiting": "In attesa di altre persone. Condividi il codice o il link per farle entrare.",
+    "start": "Inizia la partita",
+    "missing_one": "Manca {{count}} giocatore per iniziare",
+    "missing_other": "Mancano {{count}} giocatori per iniziare",
+    "guestWait": "{{host}} inizierà la partita quando ci sarete tutti.",
+    "missing_many": "Mancano {{count}} giocatori per iniziare",
+    "categories": {
+      "all": "Tutte le categorie",
+      "some_one": "{{count}} categoria",
+      "some_other": "{{count}} categorie",
+      "some_many": "{{count}} categorie",
+      "none": "Nessuna categoria"
+    },
+    "pickedCount_one": "{{count}} dilemma scelto",
+    "pickedCount_other": "{{count}} dilemmi scelti",
+    "pickedCount_many": "{{count}} dilemmi scelti",
+    "summaryPicked": "{{seconds}} s per dilemma · {{language}} · {{nature}}"
+  },
+  "languages": {
+    "es": "Español",
+    "en": "English",
+    "fr": "Français",
+    "de": "Deutsch",
+    "it": "Italiano",
+    "pt": "Português",
+    "ca": "Català"
+  },
+  "categories": {
+    "life-and-death": "Vita e morte",
+    "honesty": "Onestà",
+    "loyalty": "Lealtà",
+    "justice": "Giustizia",
+    "love-and-relationships": "Amore e relazioni",
+    "work-and-money": "Lavoro e denaro",
+    "technology-and-the-future": "Tecnologia e futuro"
+  },
+  "settings": {
+    "title": "Impostazioni della partita",
+    "close": "Chiudi",
+    "reveal": "Risultato",
+    "nominal": "Nominale",
+    "anonymous": "Anonimo",
+    "nominalHint": "Nel risultato si vedrà cosa ha votato ciascuno, e si gioca a prevedere.",
+    "anonymousHint": "Nessuno vedrà chi ha votato cosa. Niente previsioni né punti: si vota e basta.",
+    "adultsOnly": {
+      "label": "Solo maggiorenni",
+      "hint": "Consente dilemmi per adulti. Potranno entrare solo i maggiorenni."
+    },
+    "language": "Lingua dei dilemmi",
+    "howPicked": "Come si scelgono i dilemmi",
+    "byCategories": "Per categorie",
+    "byHand": "A mano",
+    "categories": "Categorie",
+    "allCategories": "Tutte",
+    "categoriesHint": "La partita mescola dilemmi delle categorie selezionate.",
+    "dilemmaCount": "Dilemmi",
+    "timePerDilemma": "Tempo per dilemma",
+    "seconds": "{{count}} s",
+    "timeHint": "Ogni dilemma si svela quando rispondono tutti o quando finisce il tempo.",
+    "newDilemmas": {
+      "label": "Includi dilemmi nuovi",
+      "hint": "Aiutate a valutare i dilemmi appena arrivati nel catalogo."
+    },
+    "dilemmasPerPlayer": {
+      "label": "Dilemmi aggiunti da ogni giocatore",
+      "none": "Nessuno",
+      "hint": "Anche l’host. Rientrano nel numero di dilemmi, e nessuno saprà di chi è ciascuno fino al risultato."
+    },
+    "pick": "Scegli i dilemmi uno a uno",
+    "picked_one": "{{count}} dilemma scelto",
+    "picked_other": "{{count}} dilemmi scelti",
+    "picked_many": "{{count}} dilemmi scelti",
+    "noPicked": "Nessun dilemma scelto",
+    "changePicked": "Cambia",
+    "choosePicked": "Scegli",
+    "byHandHint": "La partita gioca questi e quelli aggiunti dai giocatori, senza categorie né dilemmi nuovi. «Per categorie» li toglie con un tocco.",
+    "save": "Salva"
+  },
+  "pickDilemmas": {
+    "title": "Scegli i dilemmi",
+    "back": "Torna alle impostazioni",
+    "search": "Cerca dilemmi",
+    "searchPlaceholder": "Cerca per testo o tag: famiglia, tram…",
+    "all": "Tutte",
+    "hint": "Compaiono solo dilemmi adatti a questa stanza. Se li scegli a mano, non si aggiungono dilemmi nuovi.",
+    "none": "Scegline almeno uno",
+    "play_one": "Gioca questo",
+    "play_other": "Gioca questi {{count}}",
+    "empty": "Nessun dilemma adatto per questa ricerca.",
+    "tags": "#{{tags}}",
+    "play_many": "Gioca questi {{count}}",
+    "byCategory": "Torna a giocare per categoria",
+    "options_one": "{{count}} opzione",
+    "options_many": "{{count, number}} opzioni",
+    "options_other": "{{count, number}} opzioni",
+    "someone": "qualcuno del gruppo",
+    "more": "Vedi altri",
+    "moreFailed": "Non è stato possibile caricare altri dilemmi. Riprova."
+  },
+  "addDilemma": {
+    "title": "Aggiungi un dilemma",
+    "search": "Cerca dilemmi",
+    "close": "Chiudi",
+    "empty": "Nessun dilemma adatto per questa ricerca.",
+    "searchPlaceholder": "Cerca per testo o tag"
+  },
+  "expel": {
+    "title": "Espellere {{name}}?",
+    "text": "Uscirà dalla stanza e non potrà tornare in questa partita. Potrà giocarne altre.",
+    "confirm": "Espelli",
+    "cancel": "Annulla"
+  },
+  "avatarPicker": {
+    "title": "Scegli il tuo avatar",
+    "face": "Faccia {{number}}",
+    "hint": "Quelle che ha già qualcuno con il tuo stesso nome sono disattivate.",
+    "use": "Usa questo",
+    "close": "Chiudi",
+    "colors": {
+      "khaki": "Cachi",
+      "teal": "Verde acqua",
+      "brown": "Marrone",
+      "slate": "Ardesia",
+      "cyan": "Ciano",
+      "rust": "Ruggine",
+      "olive": "Oliva",
+      "stone": "Pietra"
+    },
+    "change": "Cambia avatar",
+    "changeCurrent": "Cambia avatar: faccia {{face}}, {{color}}"
+  },
+  "qr": {
+    "title": "Inquadra con la fotocamera per entrare",
+    "close": "Chiudi",
+    "label": "Codice QR della stanza {{code}}",
+    "or": "oppure vai su {{host}} e scrivi il codice",
+    "code": "Codice {{code}}"
+  },
+  "sound": {
+    "mute": "Disattiva l’audio del gioco",
+    "label": "Suono",
+    "hint": "Anche la vibrazione"
+  },
+  "playDilemma": {
+    "title": "Nuova stanza",
+    "firstDilemma": "Inizierete con questo dilemma",
+    "about_one": "{{category}} · {{count}} opzione",
+    "about_other": "{{category}} · {{count}} opzioni",
+    "about_many": "{{category}} · {{count}} opzioni",
+    "rest": "Il resto della partita si completa con il catalogo, secondo le impostazioni della stanza.",
+    "loading": "Cerco il dilemma…",
+    "notFound": "Questo dilemma non è più su TheLever. Puoi creare una stanza con altri del catalogo.",
+    "home": "Vai all’inizio"
+  }
+}
