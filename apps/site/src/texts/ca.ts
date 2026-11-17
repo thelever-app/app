@@ -5,8 +5,6 @@ const UPDATED = '16 de novembre de 2026';
 export const ca: SiteTexts = {
   languageName: 'Català',
   languageMenu: 'Idioma',
-  languageMenuNote:
-    'Et porta a aquesta mateixa pàgina en l’idioma que triïs. Si obres l’app des d’aquí, s’obrirà en aquest idioma.',
   homeLink: 'Inici',
   someoneInYourGroup: 'algú del teu grup',
   categories: {

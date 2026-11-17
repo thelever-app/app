@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildSite } from '../build-site.ts';
 import { InMemorySiteFiles } from '../files/in-memory-site-files.ts';
 import { publishSite } from '../files/publish-site.ts';
+import { assetPath } from '../serve/assets.ts';
 import { cachedSite } from '../serve/cached-site.ts';
 import { createSiteApp } from '../serve/site-app.ts';
 import { LANGUAGES } from '../texts/index.ts';
@@ -42,7 +43,7 @@ describe('the service of the public web', () => {
     const app = await appWithASite();
 
     // Act
-    const css = await request(app).get('/_site/site.css');
+    const css = await request(app).get(assetPath('site.css'));
     const font = await request(app).get('/_site/fonts/barlow-400.woff2');
     const mascot = await request(app).get('/_site/mascot-waving.svg');
     const scene = await request(app).get('/_site/waving-at-junction.svg');

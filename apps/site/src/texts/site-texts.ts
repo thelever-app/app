@@ -26,7 +26,6 @@ export interface SiteTexts {
   /** The name of the language in that language, as the menu of languages shows it. */
   readonly languageName: string;
   readonly languageMenu: string;
-  readonly languageMenuNote: string;
   readonly homeLink: string;
   /** What "someone in the group" reads as in a dilemma on the web, where there is no group yet. */
   readonly someoneInYourGroup: string;

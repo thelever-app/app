@@ -5,6 +5,7 @@ import { buildSite, fileOf } from '../build-site.ts';
 import type { Languages } from '../pages/page.ts';
 import { type Environment, respond } from '../respond.ts';
 import { es } from '../texts/es.ts';
+import { assetPath } from '../serve/assets.ts';
 import { LANGUAGES as SITE_LANGUAGES } from '../texts/index.ts';
 
 const CONFIG = {
@@ -330,7 +331,7 @@ describe('the public web', () => {
 
     // Assert
     expect(home).toMatch(
-      new RegExp(`src="/_site/waving-at-junction.svg"\\s+alt="${es.home.scene}"`),
+      new RegExp(`src="/_site/waving-at-junction.svg\\?v=[0-9a-f]+"\\s+alt="${es.home.scene}"`),
     );
     expect(home).toMatch(
       /<a class="button primary play" href="\/app"\s*><svg[^>]*aria-hidden="true"/,
@@ -348,6 +349,17 @@ describe('the public web', () => {
     expect(home).toContain('hreflang="x-default"');
     expect(missing).toContain('class="header"');
     expect(missing).not.toContain('hreflang="x-default"');
+  });
+
+  it('should give the stylesheet and the illustrations an address that changes with their content', async () => {
+    // Act
+    const home = String((await answer('/es/', { dilemmas: [], withdrawn: [] })).body);
+
+    // Assert: a browser that kept an earlier stylesheet asks for this one, at its new address.
+    expect(home).toContain(`href="${assetPath('site.css')}"`);
+    expect(home).toContain(`src="${assetPath('mascot-waving.svg')}"`);
+    expect(home).toContain(`src="${assetPath('waving-at-junction.svg')}"`);
+    expect(assetPath('site.css')).toMatch(/^\/_site\/site\.css\?v=[0-9a-f]{12}$/);
   });
 
   it('should offer to play from the header of every page, next to the languages', async () => {

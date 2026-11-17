@@ -179,13 +179,6 @@ h2 {
   font-weight: 600;
 }
 
-.languages-note {
-  margin: 8px 12px 0;
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--muted);
-}
-
 .main {
   flex-grow: 1;
   width: 100%;

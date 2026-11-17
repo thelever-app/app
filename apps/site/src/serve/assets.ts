@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 function fileOf(specifier: string): string {
@@ -51,3 +53,21 @@ export const ASSETS: ReadonlyMap<string, { readonly file: string; readonly type:
       },
     }),
   );
+
+/** The first characters of the hash of each asset, read once: what its address changes with. */
+const VERSIONS = new Map(
+  [...ASSETS].map(([name, { file }]) => [
+    name,
+    createHash('sha256').update(readFileSync(file)).digest('hex').slice(0, 12),
+  ]),
+);
+
+/**
+ * The address a page loads an asset from, which changes with its content: a browser or the CDN
+ * that kept an earlier version asks for the new one instead of using it with pages it does not fit.
+ */
+export function assetPath(name: string): string {
+  const version = VERSIONS.get(name);
+  if (version === undefined) throw new Error(`There is no asset ${name}`);
+  return `/_site/${name}?v=${version}`;
+}
