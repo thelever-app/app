@@ -9,6 +9,8 @@ import { OptionCountError } from '../../errors/option-count.error.ts';
 import { TagCountError } from '../../errors/tag-count.error.ts';
 import { TextMissingError } from '../../errors/text-missing.error.ts';
 import { UnknownCategoryError } from '../../errors/unknown-category.error.ts';
+import { UnknownDilemmaTypeError } from '../../errors/unknown-dilemma-type.error.ts';
+import { UnknownScaleError } from '../../errors/unknown-scale.error.ts';
 import { UnknownOptionError } from '../../errors/unknown-option.error.ts';
 import { ArgumentsDoNotMatchOptionsError } from '../../errors/arguments-do-not-match-options.error.ts';
 import { NotAnOriginalError } from '../../errors/not-an-original.error.ts';
@@ -24,6 +26,10 @@ const DATA = {
   category: 'honesty',
   tags: ['testtag'],
   minimumAge: 16,
+  type: 'standard',
+  compromising: false,
+  scale: 'everyday',
+  fixedOrder: false,
 };
 
 /** The content of the first version of the dilemma created from DATA, as `revise` takes it. */
@@ -36,6 +42,10 @@ const CONTENT = {
   category: 'honesty',
   tags: ['testtag'],
   minimumAge: 16,
+  type: 'standard',
+  compromising: false,
+  scale: 'everyday',
+  fixedOrder: false,
 };
 
 function ids() {
@@ -83,6 +93,28 @@ describe('Dilemma', () => {
       expect(dilemma.category).toBe('honesty');
       expect(dilemma.tags).toEqual(['testtag']);
       expect(dilemma.minimumAge).toBe(16);
+    });
+
+    it('should have its type, whether it is compromising, its scale and whether its options keep their order', () => {
+      // Act
+      const dilemma = Dilemma.create(
+        { ...DATA, type: 'game-theory', compromising: true, scale: 'extreme', fixedOrder: true },
+        ids(),
+      );
+
+      // Assert
+      expect(dilemma.type).toBe('game-theory');
+      expect(dilemma.compromising).toBe(true);
+      expect(dilemma.scale).toBe('extreme');
+      expect(dilemma.fixedOrder).toBe(true);
+    });
+
+    it('should throw an error if the type or the scale is not in its list', () => {
+      // Act & Assert
+      expect(() => Dilemma.create({ ...DATA, type: 'teoría de juegos' }, ids())).toThrow(
+        UnknownDilemmaTypeError,
+      );
+      expect(() => Dilemma.create({ ...DATA, scale: 'extremo' }, ids())).toThrow(UnknownScaleError);
     });
 
     it('should be the first version, by the curation team, public and straight in the catalog', () => {
@@ -244,6 +276,27 @@ describe('Dilemma', () => {
       expect(dilemma.category).toBe('loyalty');
       expect(dilemma.tags).toEqual(['testothertag']);
       expect(dilemma.minimumAge).toBe(18);
+    });
+
+    it('should create the next version when only its type, compromising, scale or fixed order change', () => {
+      // Arrange
+      const changes = [
+        { type: 'would-you-rather' },
+        { compromising: true },
+        { scale: 'medium' },
+        { fixedOrder: true },
+      ];
+
+      for (const change of changes) {
+        const dilemma = Dilemma.create(DATA, ids());
+
+        // Act
+        dilemma.revise({ ...CONTENT, ...change }, new FixedIdGenerator());
+
+        // Assert
+        expect(dilemma.version).toBe(2);
+        expect(dilemma.toSnapshot().version).toMatchObject(change);
+      }
     });
 
     it('should keep the ids of the options it keeps and give new ids to the new ones', () => {
@@ -431,9 +484,19 @@ describe('Dilemma', () => {
       expect(original.translation).toBeUndefined();
     });
 
-    it('should keep the category, the minimum age, the creator and the visibility of its original', () => {
+    it('should keep the classification, the creator and the visibility of its original', () => {
       // Arrange
-      const original = Dilemma.create({ ...DATA, minimumAge: 18 }, ids());
+      const original = Dilemma.create(
+        {
+          ...DATA,
+          minimumAge: 18,
+          type: 'game-theory',
+          compromising: true,
+          scale: 'medium',
+          fixedOrder: true,
+        },
+        ids(),
+      );
 
       // Act
       const translation = Dilemma.translate(original, TRANSLATION, translationIds());
@@ -441,6 +504,10 @@ describe('Dilemma', () => {
       // Assert
       expect(translation.category).toBe('honesty');
       expect(translation.minimumAge).toBe(18);
+      expect(translation.type).toBe('game-theory');
+      expect(translation.compromising).toBe(true);
+      expect(translation.scale).toBe('medium');
+      expect(translation.fixedOrder).toBe(true);
       expect(translation.creator).toEqual({ type: 'curation-team' });
       expect(translation.visibility).toBe('public');
     });
@@ -539,7 +606,7 @@ describe('Dilemma', () => {
       const original = Dilemma.create(DATA, ids());
       const translation = translationOf(original);
       original.revise(
-        { ...CONTENT, text: 'TestRevisedText', minimumAge: 18 },
+        { ...CONTENT, text: 'TestRevisedText', minimumAge: 18, scale: 'extreme' },
         new FixedIdGenerator(),
       );
 
@@ -554,6 +621,7 @@ describe('Dilemma', () => {
       expect(translation.version).toBe(2);
       expect(translation.text).toBe('TestRetranslatedText');
       expect(translation.minimumAge).toBe(18);
+      expect(translation.scale).toBe('extreme');
       expect(translation.translationOf).toEqual({ dilemmaId: 'TestDilemmaId', version: 2 });
       expect(translation.translation).toBe('automatic');
     });
@@ -624,6 +692,183 @@ describe('Dilemma', () => {
       expect(() => original.retranslate(original, TRANSLATION, new FixedIdGenerator())).toThrow(
         NotItsOriginalError,
       );
+    });
+  });
+
+  describe('hasTheWordingOf', () => {
+    it('should be true when only the classification changes', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+      const earlier = Dilemma.restore(dilemma.toSnapshot());
+      dilemma.revise(
+        { ...CONTENT, category: 'loyalty', minimumAge: 18, type: 'would-you-rather' },
+        new FixedIdGenerator(),
+      );
+
+      // Act & Assert
+      expect(dilemma.hasTheWordingOf(earlier)).toBe(true);
+    });
+
+    it('should be true when it is left without tags', () => {
+      // Arrange
+      const dilemma = Dilemma.create(DATA, ids());
+      const earlier = Dilemma.restore(dilemma.toSnapshot());
+      dilemma.revise({ ...CONTENT, tags: [] }, new FixedIdGenerator());
+
+      // Act & Assert
+      expect(dilemma.hasTheWordingOf(earlier)).toBe(true);
+    });
+
+    it('should be false when its text, an option or its tags read differently', () => {
+      // Arrange
+      const changes = [
+        { text: 'TestRevisedText' },
+        { options: [CONTENT.options[0]!, { id: 'TestOptionId2', text: 'TestRevisedOption' }] },
+        { options: [...CONTENT.options, { text: 'TestOption3' }] },
+        { tags: ['testothertag'] },
+      ];
+
+      for (const change of changes) {
+        const dilemma = Dilemma.create(DATA, ids());
+        const earlier = Dilemma.restore(dilemma.toSnapshot());
+        dilemma.revise({ ...CONTENT, ...change }, new FixedIdGenerator('TestOptionId3'));
+
+        // Act & Assert
+        expect(dilemma.hasTheWordingOf(earlier)).toBe(false);
+      }
+    });
+  });
+
+  describe('follow', () => {
+    const TRANSLATION = {
+      language: 'en',
+      text: 'TestTranslatedText',
+      options: ['TestTranslatedOption1', 'TestTranslatedOption2'],
+      tags: ['testtranslatedtag'],
+    };
+
+    function translationOf(original: Dilemma): Dilemma {
+      return Dilemma.translate(
+        original,
+        TRANSLATION,
+        new FixedIdGenerator(
+          'TestTranslationId',
+          'TestTranslationOptionId1',
+          'TestTranslationOptionId2',
+          'TestTranslationPublicId',
+        ),
+      );
+    }
+
+    it('should create the next version with the classification of its original and its own wording', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+      const translation = translationOf(original);
+      original.revise(
+        {
+          ...CONTENT,
+          category: 'loyalty',
+          minimumAge: 18,
+          type: 'game-theory',
+          compromising: true,
+          scale: 'extreme',
+          fixedOrder: true,
+        },
+        new FixedIdGenerator(),
+      );
+
+      // Act
+      translation.follow(original);
+
+      // Assert
+      expect(translation.version).toBe(2);
+      expect(translation.text).toBe('TestTranslatedText');
+      expect(translation.options).toEqual([
+        { id: 'TestTranslationOptionId1', text: 'TestTranslatedOption1' },
+        { id: 'TestTranslationOptionId2', text: 'TestTranslatedOption2' },
+      ]);
+      expect(translation.tags).toEqual(['testtranslatedtag']);
+      expect(translation.toSnapshot().version).toMatchObject({
+        category: 'loyalty',
+        minimumAge: 18,
+        type: 'game-theory',
+        compromising: true,
+        scale: 'extreme',
+        fixedOrder: true,
+        translationOf: { dilemmaId: 'TestDilemmaId', version: 2 },
+        translation: 'automatic',
+        status: 'in-catalog',
+      });
+    });
+
+    it('should be left without tags when its original has none', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+      const translation = translationOf(original);
+      original.revise({ ...CONTENT, tags: [] }, new FixedIdGenerator());
+
+      // Act
+      translation.follow(original);
+
+      // Assert
+      expect(translation.tags).toEqual([]);
+    });
+
+    it('should keep its arguments, which still argue the same options', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+      const translation = translationOf(original);
+      translation.argue({
+        options: [
+          { optionId: 'TestTranslationOptionId1', for: 'TestFor', against: 'TestAgainst' },
+          { optionId: 'TestTranslationOptionId2', for: 'TestFor', against: 'TestAgainst' },
+        ],
+      });
+      original.revise({ ...CONTENT, scale: 'medium' }, new FixedIdGenerator());
+
+      // Act
+      translation.follow(original);
+
+      // Assert
+      expect(translation.version).toBe(2);
+      expect(translation.arguments?.options).toHaveLength(2);
+    });
+
+    it('should change nothing if its original has no new version', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+      const translation = translationOf(original);
+
+      // Act
+      translation.follow(original);
+
+      // Assert
+      expect(translation.version).toBe(1);
+    });
+
+    it('should throw an error if the dilemma given is not its original', () => {
+      // Arrange
+      const translation = translationOf(Dilemma.create(DATA, ids()));
+      const other = Dilemma.create(
+        DATA,
+        new FixedIdGenerator('TestOtherId', 'O1', 'O2', 'TestOtherPublicId'),
+      );
+
+      // Act & Assert
+      expect(() => translation.follow(other)).toThrow(NotItsOriginalError);
+    });
+
+    it('should throw an error if its original no longer has as many options', () => {
+      // Arrange
+      const original = Dilemma.create(DATA, ids());
+      const translation = translationOf(original);
+      original.revise(
+        { ...CONTENT, options: [...CONTENT.options, { text: 'TestOption3' }] },
+        new FixedIdGenerator('TestOptionId3'),
+      );
+
+      // Act & Assert
+      expect(() => translation.follow(original)).toThrow(TranslationOptionCountError);
     });
   });
 
@@ -852,6 +1097,10 @@ describe('Dilemma', () => {
           category: 'honesty',
           tags: ['testtag'],
           minimumAge: 16,
+          type: 'standard',
+          compromising: false,
+          scale: 'everyday',
+          fixedOrder: false,
           status: 'in-catalog',
         },
       } satisfies DilemmaSnapshot);

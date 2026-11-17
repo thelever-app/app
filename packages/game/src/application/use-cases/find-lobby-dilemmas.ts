@@ -4,7 +4,8 @@ import type { DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 
 /**
  * The dilemmas of the general catalog in the language of the dilemmas of the room with those ids,
- * in that order, with the minimum age the room checks; a dilemma that is not there is not found.
+ * in that order, with what the room checks; a dilemma that is not there is not found. Whether each
+ * one suits the room is for the room to say, so it finds those for adults and the compromising ones.
  */
 export async function findLobbyDilemmas(
   dilemmaCatalog: DilemmaCatalog,
@@ -18,6 +19,7 @@ export async function findLobbyDilemmas(
       maximumMinimumAge: 18,
       status: 'in-catalog',
       language: dilemmaLanguage,
+      includeCompromising: true,
     },
     // One page with all of them: no more than were asked for.
     { size: dilemmaIds.length },
@@ -25,6 +27,6 @@ export async function findLobbyDilemmas(
   return dilemmaIds.map((dilemmaId) => {
     const dilemma = found.find((candidate) => candidate.dilemmaId === dilemmaId);
     if (!dilemma) throw new DilemmaNotFoundError(dilemmaId);
-    return { dilemmaId, minimumAge: dilemma.minimumAge };
+    return { dilemmaId, minimumAge: dilemma.minimumAge, compromising: dilemma.compromising };
   });
 }

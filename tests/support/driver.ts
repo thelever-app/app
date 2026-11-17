@@ -394,10 +394,14 @@ export interface GameDriver {
   dilemmaHasStatus(dilemmaId: string, status: 'in-catalog' | 'in-exploration'): Promise<boolean>;
 
   /**
-   * The curation team approves a dilemma with that name in the curated catalog, for everyone or
-   * for adults, without reviewed arguments, and the catalog is loaded into the app.
+   * The curation team approves a dilemma with that name in the curated catalog, for everyone unless
+   * for adults, not compromising unless said, without reviewed arguments, and the catalog is loaded
+   * into the app.
    */
-  catalogDilemmaNamed(name: string, minimumAge?: 16 | 18): Promise<void>;
+  catalogDilemmaNamed(
+    name: string,
+    facts?: { readonly minimumAge?: 16 | 18; readonly compromising?: boolean },
+  ): Promise<void>;
   /** A dilemma of a player with that name, private or in exploration. Only in the application. */
   dilemmaOutsideTheCatalogNamed(name: string, kind: 'private' | 'in-exploration'): Promise<void>;
   /** The curation team reviews the arguments of the dilemma, and the catalog is loaded again. */

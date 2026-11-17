@@ -85,7 +85,15 @@ export interface SimulatedRoomOptions {
 }
 
 /** The dilemmas given to the simulation are all of one category. */
-const CLASSIFICATION = { category: 'life-and-death', tags: [], minimumAge: 16 } as const;
+const CLASSIFICATION = {
+  category: 'life-and-death',
+  tags: [],
+  minimumAge: 16,
+  type: 'standard',
+  compromising: false,
+  scale: 'everyday',
+  fixedOrder: false,
+} as const;
 
 /** The same as the room server, so a game of the simulation is composed like a real one. */
 const EXPLORATION_SLOTS: ExplorationSlots = [
@@ -285,7 +293,20 @@ export class SimulatedRoomConnection implements RoomConnection {
       ...(criteria.q && { text: criteria.q }),
       ...(criteria.after && { after: criteria.after }),
     });
-    return SearchDilemmasResponseDto.parse(page);
+    // As the room server answers: whether a dilemma is compromising stays in the server.
+    return SearchDilemmasResponseDto.parse({
+      dilemmas: page.dilemmas.map(
+        ({ dilemmaId, text, minimumAge, category, tags, optionCount }) => ({
+          dilemmaId,
+          text,
+          minimumAge,
+          category,
+          tags,
+          optionCount,
+        }),
+      ),
+      ...(page.next !== undefined && { next: page.next }),
+    });
   }
 
   async #setUp(): Promise<void> {

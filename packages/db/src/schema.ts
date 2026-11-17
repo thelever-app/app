@@ -1,7 +1,9 @@
 import type {
   Category,
   DilemmaStatus,
+  DilemmaType,
   MinimumAge,
+  Scale,
   Translation,
   Visibility,
 } from '@thelever-app/dilemmas';
@@ -46,6 +48,11 @@ export interface Database {
     text: string;
     category: Category;
     minimum_age: MinimumAge;
+    type: DilemmaType;
+    compromising: boolean;
+    scale: Scale;
+    /** Whether every player sees its options in their order instead of shuffled. */
+    fixed_order: boolean;
     status: DilemmaStatus;
     /** In a translation, the version of the original this version translates. */
     translation_of_version: number | null;
@@ -101,9 +108,10 @@ export interface Database {
     last_connected_at: Date;
     /** When every player had left. */
     closed_at: Date | null;
-    /** The dilemma its first game plays first, with the minimum age it had; both or neither. */
+    /** The dilemma its first game plays first, with the minimum age it had and whether it was compromising; all or none. */
     first_dilemma_id: string | null;
     first_dilemma_minimum_age: 16 | 18 | null;
+    first_dilemma_compromising: boolean | null;
   };
   room_players: {
     id: string;
@@ -119,19 +127,21 @@ export interface Database {
     room_id: string;
     identity: string;
   };
-  /** What the room keeps of each dilemma added: its id and the minimum age it had when added. */
+  /** What the room keeps of each dilemma added: its id, and the minimum age it had and whether it was compromising when added. */
   room_added_dilemmas: {
     room_id: string;
     player_id: string;
     position: number;
     dilemma_id: string;
     minimum_age: 16 | 18;
+    compromising: boolean;
   };
   room_picked_dilemmas: {
     room_id: string;
     position: number;
     dilemma_id: string;
     minimum_age: 16 | 18;
+    compromising: boolean;
   };
   instances: {
     id: string;

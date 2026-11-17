@@ -70,6 +70,7 @@ export class StartGameUseCase {
         maximumMinimumAge: settings.maximumMinimumAge,
         status,
         language: settings.dilemmaLanguage,
+        includeCompromising: settings.includesCompromisingDilemmas,
       })),
     ];
     // The dilemmas the host picked are the game: no candidates to look for.

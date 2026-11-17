@@ -101,7 +101,7 @@ describe('StartGameUseCase', () => {
         changes: { categories: [], dilemmasPerPlayer: 1 },
       });
       const room = (await roomRepository.findById(roomId))!;
-      room.addDilemma(luisId, { dilemmaId: 'TestCatalog5', minimumAge: 16 });
+      room.addDilemma(luisId, { dilemmaId: 'TestCatalog5', minimumAge: 16, compromising: false });
       await roomRepository.save(room);
 
       // Act
@@ -163,7 +163,7 @@ describe('StartGameUseCase', () => {
       await roomRepository.save(
         Room.restore({
           ...room.toSnapshot(),
-          firstDilemma: { dilemmaId: 'TestCatalog5', minimumAge: 16 },
+          firstDilemma: { dilemmaId: 'TestCatalog5', minimumAge: 16, compromising: false },
         }),
       );
 
@@ -273,6 +273,21 @@ describe('StartGameUseCase', () => {
 
       // Assert
       expect(search).not.toHaveBeenCalled();
+    });
+
+    it('should never draw a compromising dilemma', async () => {
+      // Arrange: love-and-relationships has only a compromising dilemma.
+      const { startGame, changeSettings, roomId, anaId } = await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { categories: ['love-and-relationships'] },
+      });
+
+      // Act & Assert
+      await expect(startGame.execute({ roomId, playerId: anaId })).rejects.toThrow(
+        DilemmasMissingError,
+      );
     });
 
     it('should not start a game without dilemmas, in categories that have none for the room', async () => {

@@ -70,13 +70,19 @@ function lobbyOfThree(): Room {
   return room;
 }
 
-const FOR_EVERYONE = { dilemmaId: 'TestDilemma', minimumAge: 16 } as const;
-const FOR_ADULTS = { dilemmaId: 'TestAdultDilemma', minimumAge: 18 } as const;
+const FOR_EVERYONE = { dilemmaId: 'TestDilemma', minimumAge: 16, compromising: false } as const;
+const FOR_ADULTS = { dilemmaId: 'TestAdultDilemma', minimumAge: 18, compromising: false } as const;
+const COMPROMISING = {
+  dilemmaId: 'TestCompromisingDilemma',
+  minimumAge: 16,
+  compromising: true,
+} as const;
 
 /** Ana creates the room from the public page of a dilemma, which the game plays first. */
 function roomStartingWith(firstDilemma: {
   readonly dilemmaId: string;
   readonly minimumAge: 16 | 18;
+  readonly compromising: boolean;
 }): Room {
   return Room.create(
     {
@@ -197,6 +203,11 @@ describe('Room', () => {
     it('should throw an error if the first dilemma does not suit the room', () => {
       // Act & Assert
       expect(() => roomStartingWith(FOR_ADULTS)).toThrow(DilemmaNotSuitableError);
+    });
+
+    it('should throw an error if the first dilemma is compromising', () => {
+      // Act & Assert
+      expect(() => roomStartingWith(COMPROMISING)).toThrow(DilemmaNotSuitableError);
     });
   });
 
@@ -430,8 +441,16 @@ describe('Room', () => {
       const room = lobbyOfThree();
       room.changeSettings('TestHostId', { dilemmasPerPlayer: 3 });
       room.addDilemma('TestLuisId', FOR_EVERYONE);
-      room.addDilemma('TestLuisId', { dilemmaId: 'TestSecond', minimumAge: 16 });
-      room.addDilemma('TestMartaId', { dilemmaId: 'TestThird', minimumAge: 16 });
+      room.addDilemma('TestLuisId', {
+        dilemmaId: 'TestSecond',
+        minimumAge: 16,
+        compromising: false,
+      });
+      room.addDilemma('TestMartaId', {
+        dilemmaId: 'TestThird',
+        minimumAge: 16,
+        compromising: false,
+      });
 
       // Act
       room.changeSettings('TestHostId', { dilemmasPerPlayer: 1 });
@@ -478,7 +497,10 @@ describe('Room', () => {
       const room = lobbyOfThree();
 
       // Act
-      room.pickDilemmas('TestHostId', [FOR_EVERYONE, { dilemmaId: 'TestSecond', minimumAge: 16 }]);
+      room.pickDilemmas('TestHostId', [
+        FOR_EVERYONE,
+        { dilemmaId: 'TestSecond', minimumAge: 16, compromising: false },
+      ]);
 
       // Assert
       expect(room.pickedDilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual([
@@ -494,6 +516,17 @@ describe('Room', () => {
 
       // Act & Assert
       expect(() => room.pickDilemmas('TestHostId', [FOR_ADULTS])).toThrow(DilemmaNotSuitableError);
+    });
+
+    it('should throw an error for a compromising dilemma, even in an anonymous room for adults', () => {
+      // Arrange
+      const room = lobbyOfThree();
+      room.changeSettings('TestHostId', { variant: 'anonymous', adultsOnly: true });
+
+      // Act & Assert
+      expect(() => room.pickDilemmas('TestHostId', [COMPROMISING])).toThrow(
+        DilemmaNotSuitableError,
+      );
     });
 
     it('should throw an error for a dilemma picked twice', () => {
@@ -549,11 +582,19 @@ describe('Room', () => {
       // Arrange
       const room = lobbyWhereAddingIsAllowed(2);
       room.addDilemma('TestLuisId', FOR_EVERYONE);
-      room.addDilemma('TestLuisId', { dilemmaId: 'TestSecond', minimumAge: 16 });
+      room.addDilemma('TestLuisId', {
+        dilemmaId: 'TestSecond',
+        minimumAge: 16,
+        compromising: false,
+      });
 
       // Act & Assert
       expect(() =>
-        room.addDilemma('TestLuisId', { dilemmaId: 'TestThird', minimumAge: 16 }),
+        room.addDilemma('TestLuisId', {
+          dilemmaId: 'TestThird',
+          minimumAge: 16,
+          compromising: false,
+        }),
       ).toThrow(TooManyAddedDilemmasError);
       expect(room.addedDilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual([
         'TestDilemma',
@@ -587,6 +628,14 @@ describe('Room', () => {
 
       // Act & Assert
       expect(() => room.addDilemma('TestLuisId', FOR_ADULTS)).toThrow(DilemmaNotSuitableError);
+    });
+
+    it('should throw an error for a compromising dilemma', () => {
+      // Arrange
+      const room = lobbyWhereAddingIsAllowed();
+
+      // Act & Assert
+      expect(() => room.addDilemma('TestLuisId', COMPROMISING)).toThrow(DilemmaNotSuitableError);
     });
 
     it('should throw an error once the game has started', () => {
@@ -627,11 +676,15 @@ describe('Room', () => {
 
       // Act
       room.removeAddedDilemma('TestLuisId', 'TestDilemma');
-      room.addDilemma('TestLuisId', { dilemmaId: 'TestSecond', minimumAge: 16 });
+      room.addDilemma('TestLuisId', {
+        dilemmaId: 'TestSecond',
+        minimumAge: 16,
+        compromising: false,
+      });
 
       // Assert
       expect(room.addedDilemmas).toEqual([
-        { dilemmaId: 'TestSecond', minimumAge: 16, playerId: 'TestLuisId' },
+        { dilemmaId: 'TestSecond', minimumAge: 16, compromising: false, playerId: 'TestLuisId' },
       ]);
     });
 

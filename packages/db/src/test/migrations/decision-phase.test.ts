@@ -44,6 +44,10 @@ async function gameInProgressBefore(db: Kysely<Database>): Promise<void> {
       category: 'honesty',
       tags: [],
       minimumAge: 16,
+      type: 'standard',
+      compromising: false,
+      scale: 'everyday',
+      fixedOrder: false,
     },
     new SequentialIdGenerator('dilemma'),
   );

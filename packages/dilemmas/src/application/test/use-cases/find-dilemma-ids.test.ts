@@ -22,6 +22,10 @@ async function findInCatalog() {
           category,
           tags: [],
           minimumAge,
+          type: 'standard',
+          compromising: false,
+          scale: 'everyday',
+          fixedOrder: false,
         },
         new FixedIdGenerator(id, `${id}OptionA`, `${id}OptionB`, `${id}-public`),
       ),
@@ -41,6 +45,7 @@ describe('FindDilemmaIdsUseCase', () => {
         categories: ['honesty'],
         maximumMinimumAge: 16,
         status: 'in-catalog',
+        includeCompromising: false,
         language: 'es',
       });
 
@@ -56,6 +61,7 @@ describe('FindDilemmaIdsUseCase', () => {
       const find = findDilemmaIds.execute({
         maximumMinimumAge: 16,
         status: 'in-catalog',
+        includeCompromising: false,
         language: 'Spanish',
       });
 

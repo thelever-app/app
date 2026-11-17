@@ -21,7 +21,7 @@ export interface GetDilemmaPreviewOutput {
 /**
  * What the screen to play a dilemma with the group shows of it, from the public id a link carries,
  * so nobody reaches a dilemma by guessing ids. Only a dilemma a new room may start with: public, in
- * the general catalog and suitable from 16, as the public web shows them. Any other is not found,
+ * the general catalog, suitable from 16 and not compromising, as the public web shows them. Any other is not found,
  * as one that does not exist: DilemmaNotFoundError.
  */
 export interface GetDilemmaPreview {
@@ -40,7 +40,8 @@ export class GetDilemmaPreviewUseCase implements GetDilemmaPreview {
     const startsARoom =
       dilemma?.visibility === 'public' &&
       dilemma.status === 'in-catalog' &&
-      dilemma.isSuitableForMinors();
+      dilemma.isSuitableForMinors() &&
+      !dilemma.compromising;
     if (!startsARoom) throw new DilemmaNotFoundError(publicId);
     return {
       dilemmaId: dilemma.id,

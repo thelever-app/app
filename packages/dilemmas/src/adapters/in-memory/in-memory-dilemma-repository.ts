@@ -114,7 +114,7 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
     const page = rest.slice(0, size);
     const last = page.at(-1);
     return {
-      summaries: page.map(({ dilemma }) => summaryOf(dilemma)),
+      summaries: page.map(({ dilemma, compromising }) => ({ ...summaryOf(dilemma), compromising })),
       ...(last && rest.length > size && { next: JSON.stringify(pageEnd(last)) }),
     };
   }
@@ -126,21 +126,34 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
   async #matching(criteria: DilemmaCriteria): Promise<Found[]> {
     const ids = [...this.#dilemmas.keys()].sort();
     const current = await Promise.all(ids.map((id) => this.findById(id)));
-    const found = current.filter(
-      (dilemma): dilemma is Dilemma =>
-        dilemma !== undefined &&
-        dilemma.visibility === 'public' &&
-        dilemma.status === criteria.status &&
-        dilemma.minimumAge <= criteria.maximumMinimumAge &&
-        (criteria.language === undefined || dilemma.language === criteria.language) &&
-        (!criteria.dilemmaIds || criteria.dilemmaIds.includes(dilemma.id)) &&
-        (!criteria.categories || criteria.categories.includes(dilemma.category)),
+    const byId = new Map(
+      current.flatMap((dilemma) => (dilemma ? [[dilemma.id, dilemma] as const] : [])),
     );
+    // A translation the translator has not caught up with is compromising if its original is now.
+    const compromisingNow = (dilemma: Dilemma): boolean => {
+      const of = dilemma.translationOf;
+      return (
+        dilemma.compromising || (of !== undefined && byId.get(of.dilemmaId)?.compromising === true)
+      );
+    };
+    const found = current
+      .filter(
+        (dilemma): dilemma is Dilemma =>
+          dilemma !== undefined &&
+          dilemma.visibility === 'public' &&
+          dilemma.status === criteria.status &&
+          dilemma.minimumAge <= criteria.maximumMinimumAge &&
+          (criteria.includeCompromising || !compromisingNow(dilemma)) &&
+          (criteria.language === undefined || dilemma.language === criteria.language) &&
+          (!criteria.dilemmaIds || criteria.dilemmaIds.includes(dilemma.id)) &&
+          (!criteria.categories || criteria.categories.includes(dilemma.category)),
+      )
+      .map((dilemma) => ({ dilemma, compromising: compromisingNow(dilemma) }));
     const typed = criteria.text?.trim();
-    if (!typed) return found.map((dilemma) => ({ dilemma }));
-    const ranked = found.flatMap((dilemma) => {
-      const rank = rankOf(typed, dilemma);
-      return rank ? [{ dilemma, rank }] : [];
+    if (!typed) return found;
+    const ranked = found.flatMap((matched) => {
+      const rank = rankOf(typed, matched.dilemma);
+      return rank ? [{ ...matched, rank }] : [];
     });
     // A stable sort: the same rank keeps the order by id.
     ranked.sort((a, b) => byRank(a.rank, b.rank));
@@ -153,9 +166,10 @@ interface Rank {
   readonly similarity: number;
 }
 
-/** A dilemma a search found, with its rank when it searched a text. */
+/** A dilemma a search found, whether it is compromising now, and its rank when it searched a text. */
 interface Found {
   readonly dilemma: Dilemma;
+  readonly compromising: boolean;
   readonly rank?: Rank;
 }
 
@@ -198,8 +212,17 @@ function pageEndOf(after: string): PageEnd {
 }
 
 function summaryOf(dilemma: Dilemma): DilemmaSummary {
-  const { id, version, text, minimumAge, category, tags, options } = dilemma;
-  return { id, version, text, minimumAge, category, tags, optionCount: options.length };
+  const { id, version, text, minimumAge, category, tags, options, compromising } = dilemma;
+  return {
+    id,
+    version,
+    text,
+    minimumAge,
+    category,
+    tags,
+    optionCount: options.length,
+    compromising,
+  };
 }
 
 /** Whether its current version has a page of its own: in the catalog, and publishable. */
@@ -207,9 +230,12 @@ function hasPage(dilemma: Dilemma): boolean {
   return dilemma.status === 'in-catalog' && isPublishable(dilemma);
 }
 
-/** Whether its current version could be on the web: for everyone, named and argued. */
+/** Whether its current version could be on the web: for everyone, not compromising, named and argued. */
 function isPublishable(dilemma: Dilemma): boolean {
   return (
-    dilemma.isSuitableForMinors() && dilemma.name !== undefined && dilemma.arguments !== undefined
+    dilemma.isSuitableForMinors() &&
+    !dilemma.compromising &&
+    dilemma.name !== undefined &&
+    dilemma.arguments !== undefined
   );
 }

@@ -1,5 +1,7 @@
 import type { Category } from '../../domain/vos/category.vo.ts';
+import type { DilemmaType } from '../../domain/vos/dilemma-type.vo.ts';
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
+import type { Scale } from '../../domain/vos/scale.vo.ts';
 
 /** The arguments of a dilemma of the curated catalog, option n arguing option n. */
 export interface CuratedArguments {
@@ -19,6 +21,12 @@ export interface CuratedDilemma {
   readonly category: Category;
   readonly minimumAge: MinimumAge;
   readonly tags: readonly string[];
+  readonly type: DilemmaType;
+  /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
+  readonly compromising: boolean;
+  readonly scale: Scale;
+  /** Whether its options make a scale, which every player sees in their order. */
+  readonly fixedOrder: boolean;
   /** Only when the curation team has reviewed them. */
   readonly arguments?: CuratedArguments;
 }

@@ -49,6 +49,7 @@ export class SearchDilemmasUseCase {
         maximumMinimumAge: room.settings.maximumMinimumAge,
         status: 'in-catalog',
         language: room.settings.dilemmaLanguage,
+        includeCompromising: room.settings.includesCompromisingDilemmas,
       },
       { size: SEARCH_PAGE_SIZE, ...(after !== undefined && { after }) },
     );

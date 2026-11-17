@@ -127,6 +127,7 @@ export class PostgresDilemmaQueries implements DilemmaQueries {
         'dilemma_versions.text',
         'dilemma_versions.minimum_age',
         'dilemma_versions.category',
+        compromisingNow().as('compromising'),
         sql<string[]>`array(
           select tag from dilemma_version_tags as tags
           where tags.dilemma_id = dilemma_versions.dilemma_id
@@ -161,6 +162,9 @@ export class PostgresDilemmaQueries implements DilemmaQueries {
         )
         .where('dilemma_versions.status', '=', criteria.status)
         .where('dilemma_versions.minimum_age', '<=', criteria.maximumMinimumAge)
+        .$if(!criteria.includeCompromising, (query) =>
+          query.where(sql<boolean>`not ${compromisingNow()}`),
+        )
         .$if(criteria.language !== undefined, (query) =>
           query.where('dilemmas.language', '=', criteria.language ?? ''),
         )
@@ -190,6 +194,7 @@ interface SummaryRow {
   readonly category: Category;
   readonly tags: string[];
   readonly option_count: number;
+  readonly compromising: boolean;
   readonly whole_tag?: boolean;
   readonly similarity?: number;
 }
@@ -203,6 +208,7 @@ function summaryOf(row: SummaryRow): DilemmaSummary {
     category: row.category,
     tags: row.tags,
     optionCount: row.option_count,
+    compromising: row.compromising,
   };
 }
 
@@ -234,6 +240,23 @@ function pageEndOf(after: string): PageEnd {
     // Not a page of a search.
   }
   throw new InvalidPageError(after);
+}
+
+/**
+ * Whether the version of the dilemma is compromising, or it is a translation whose original is
+ * compromising at its current version: one the translator has not caught up with yet.
+ */
+function compromisingNow(): RawBuilder<boolean> {
+  return sql<boolean>`(dilemma_versions.compromising or exists (
+    select 1 from dilemma_versions as original_now
+    where original_now.dilemma_id = dilemmas.translation_of
+      and original_now.compromising
+      and not exists (
+        select 1 from dilemma_versions as later_original
+        where later_original.dilemma_id = original_now.dilemma_id
+          and later_original.number > original_now.number
+      )
+  ))`;
 }
 
 /** Whether a tag of the version of the dilemma, as search_text leaves it, holds the condition. */

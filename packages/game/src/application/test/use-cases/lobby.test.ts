@@ -244,8 +244,8 @@ describe('PickDilemmasUseCase', () => {
     // Assert
     const room = await roomRepository.findById(roomId);
     expect(room?.pickedDilemmas).toEqual([
-      { dilemmaId: 'TestCatalog4', minimumAge: 16 },
-      { dilemmaId: 'TestCatalog3', minimumAge: 16 },
+      { dilemmaId: 'TestCatalog4', minimumAge: 16, compromising: false },
+      { dilemmaId: 'TestCatalog3', minimumAge: 16, compromising: false },
     ]);
   });
 
@@ -268,6 +268,16 @@ describe('PickDilemmasUseCase', () => {
     // Act & Assert
     await expect(
       pickDilemmas.execute({ roomId, playerId: anaId, dilemmaIds: ['TestCatalog1'] }),
+    ).rejects.toThrow(DilemmaNotSuitableError);
+  });
+
+  it('should throw an error for a compromising dilemma', async () => {
+    // Arrange
+    const { pickDilemmas, roomId, anaId } = await arrange();
+
+    // Act & Assert
+    await expect(
+      pickDilemmas.execute({ roomId, playerId: anaId, dilemmaIds: ['TestCompromising1'] }),
     ).rejects.toThrow(DilemmaNotSuitableError);
   });
 
@@ -295,7 +305,9 @@ describe('AddDilemmaUseCase and RemoveAddedDilemmaUseCase', () => {
     await removeAddedDilemma.execute({ roomId, playerId: anaId, dilemmaId: 'TestCatalog5' });
 
     // Assert
-    expect(added).toEqual([{ dilemmaId: 'TestCatalog5', minimumAge: 16, playerId: luisId }]);
+    expect(added).toEqual([
+      { dilemmaId: 'TestCatalog5', minimumAge: 16, compromising: false, playerId: luisId },
+    ]);
     expect((await roomRepository.findById(roomId))?.addedDilemmas).toEqual([]);
   });
 
@@ -327,6 +339,17 @@ describe('AddDilemmaUseCase and RemoveAddedDilemmaUseCase', () => {
     // Act & Assert
     await expect(
       addDilemma.execute({ roomId, playerId: luisId, dilemmaId: 'TestCatalog2' }),
+    ).rejects.toThrow(DilemmaNotSuitableError);
+  });
+
+  it('should throw an error for a compromising dilemma', async () => {
+    // Arrange
+    const { allowAdding, addDilemma, roomId, luisId } = await arrange();
+    await allowAdding();
+
+    // Act & Assert
+    await expect(
+      addDilemma.execute({ roomId, playerId: luisId, dilemmaId: 'TestCompromising1' }),
     ).rejects.toThrow(DilemmaNotSuitableError);
   });
 });
@@ -362,6 +385,7 @@ describe('SearchDilemmasUseCase', () => {
     const ids = found.map(({ dilemmaId }) => dilemmaId);
     expect(ids).not.toContain('TestCatalog1');
     expect(ids).not.toContain('TestNew1');
+    expect(ids).not.toContain('TestCompromising1');
     expect(found.every(({ minimumAge }) => minimumAge === 16)).toBe(true);
   });
 

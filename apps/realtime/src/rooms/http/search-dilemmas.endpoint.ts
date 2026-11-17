@@ -28,6 +28,21 @@ export class SearchDilemmasEndpoint implements HttpEndpoint {
       ...(q && { text: q }),
       ...(after && { after }),
     });
-    res.status(200).json(SearchDilemmasResponseDto.parse(page));
+    // What the lobby shows: whether a dilemma is compromising stays in the server.
+    res.status(200).json(
+      SearchDilemmasResponseDto.parse({
+        dilemmas: page.dilemmas.map(
+          ({ dilemmaId, text, minimumAge, category, tags, optionCount }) => ({
+            dilemmaId,
+            text,
+            minimumAge,
+            category,
+            tags,
+            optionCount,
+          }),
+        ),
+        ...(page.next !== undefined && { next: page.next }),
+      }),
+    );
   }
 }

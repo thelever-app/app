@@ -7,7 +7,16 @@ import { InMemoryDilemmaRepository } from '../../../adapters/in-memory/in-memory
 import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
 import { GAP_MARKER } from '../../../domain/vos/gap.ts';
 
-const CLASSIFICATION = { language: 'es', category: 'honesty', tags: [], minimumAge: 16 };
+const CLASSIFICATION = {
+  language: 'es',
+  category: 'honesty',
+  tags: [],
+  minimumAge: 16,
+  type: 'standard',
+  compromising: false,
+  scale: 'everyday',
+  fixedOrder: false,
+};
 
 /** Two dilemmas; the first one is at its second version, whose text is TestRevisedText1. */
 async function catalogWithTwoDilemmas() {

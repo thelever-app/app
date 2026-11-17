@@ -15,6 +15,10 @@ function trolley(): Dilemma {
       category: 'life-and-death',
       tags: [],
       minimumAge: 16,
+      type: 'standard',
+      compromising: false,
+      scale: 'everyday',
+      fixedOrder: false,
     },
     new FixedIdGenerator('dlm-7', 'dlm-7-option-1', 'dlm-7-option-2', 'TestPublicId'),
   );
@@ -76,6 +80,14 @@ describe('GetDilemmaPreviewUseCase', () => {
           Dilemma.restore({
             ...dilemma.toSnapshot(),
             version: { ...dilemma.toSnapshot().version, minimumAge: 18 },
+          }),
+      ],
+      [
+        'compromising',
+        (dilemma: Dilemma) =>
+          Dilemma.restore({
+            ...dilemma.toSnapshot(),
+            version: { ...dilemma.toSnapshot().version, compromising: true },
           }),
       ],
     ] as const)(

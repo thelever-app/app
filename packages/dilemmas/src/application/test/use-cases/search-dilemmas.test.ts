@@ -17,6 +17,10 @@ async function searchInCatalog() {
         category: 'honesty',
         tags: ['testfamily'],
         minimumAge: 16,
+        type: 'standard',
+        compromising: false,
+        scale: 'everyday',
+        fixedOrder: false,
       },
       new FixedIdGenerator('TestDilemma1', 'TestOption1A', 'TestOption1B', 'TestDilemma1PublicId'),
     ),
@@ -30,6 +34,10 @@ async function searchInCatalog() {
         category: 'honesty',
         tags: [],
         minimumAge: 18,
+        type: 'standard',
+        compromising: false,
+        scale: 'everyday',
+        fixedOrder: false,
       },
       new FixedIdGenerator('TestDilemma2', 'TestOption2C', 'TestOption2D', 'TestDilemma2PublicId'),
     ),
@@ -47,6 +55,7 @@ describe('SearchDilemmasUseCase', () => {
       const { dilemmas } = await searchDilemmas.execute({
         maximumMinimumAge: 18,
         status: 'in-catalog',
+        includeCompromising: false,
         language: 'es',
         size: 10,
       });
@@ -61,6 +70,7 @@ describe('SearchDilemmasUseCase', () => {
           category: 'honesty',
           tags: ['testfamily'],
           optionCount: 2,
+          compromising: false,
         },
         {
           dilemmaId: 'TestDilemma2',
@@ -70,6 +80,7 @@ describe('SearchDilemmasUseCase', () => {
           category: 'honesty',
           tags: [],
           optionCount: 2,
+          compromising: false,
         },
       ]);
     });
@@ -77,7 +88,12 @@ describe('SearchDilemmasUseCase', () => {
     it('should give a page as big as asked for, and where the next one starts', async () => {
       // Arrange
       const searchDilemmas = await searchInCatalog();
-      const criteria = { maximumMinimumAge: 18, status: 'in-catalog', language: 'es' } as const;
+      const criteria = {
+        maximumMinimumAge: 18,
+        status: 'in-catalog',
+        includeCompromising: false,
+        language: 'es',
+      } as const;
 
       // Act
       const first = await searchDilemmas.execute({ ...criteria, size: 1 });
@@ -99,6 +115,7 @@ describe('SearchDilemmasUseCase', () => {
         categories: ['honesty'],
         maximumMinimumAge: 16,
         status: 'in-catalog',
+        includeCompromising: false,
         language: 'es',
         size: 10,
       });
@@ -116,6 +133,7 @@ describe('SearchDilemmasUseCase', () => {
         text: 'FAMILY',
         maximumMinimumAge: 18,
         status: 'in-catalog',
+        includeCompromising: false,
         language: 'es',
         size: 10,
       });
@@ -133,6 +151,7 @@ describe('SearchDilemmasUseCase', () => {
         dilemmaIds: ['TestDilemma1'],
         maximumMinimumAge: 16,
         status: 'in-catalog',
+        includeCompromising: false,
         language: 'en',
         size: 10,
       });
@@ -149,6 +168,7 @@ describe('SearchDilemmasUseCase', () => {
       const search = searchDilemmas.execute({
         maximumMinimumAge: 16,
         status: 'in-catalog',
+        includeCompromising: false,
         language: 'Spanish',
         size: 10,
       });

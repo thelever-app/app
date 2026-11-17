@@ -20,6 +20,7 @@ function catalogDilemma(
     readonly minimumAge?: MinimumAge;
     readonly status?: DilemmaStatus;
     readonly visibility?: Visibility;
+    readonly compromising?: boolean;
   } = {},
 ): Dilemma {
   return Dilemma.restore({
@@ -38,6 +39,10 @@ function catalogDilemma(
       category: facts.category ?? 'honesty',
       tags: facts.tags ?? [],
       minimumAge: facts.minimumAge ?? 16,
+      type: 'standard',
+      compromising: facts.compromising ?? false,
+      scale: 'everyday',
+      fixedOrder: false,
       status: facts.status ?? 'in-catalog',
     },
   });
@@ -53,6 +58,10 @@ function threeOptions(): Dilemma {
       category: 'honesty',
       tags: ['testtag1', 'testtag2'],
       minimumAge: 16,
+      type: 'standard',
+      compromising: false,
+      scale: 'everyday',
+      fixedOrder: false,
     },
     new FixedIdGenerator(
       'TestDilemmaId',
@@ -76,6 +85,10 @@ function revised(): Dilemma {
       category: 'loyalty',
       tags: ['testtag3'],
       minimumAge: 18,
+      type: 'standard',
+      compromising: false,
+      scale: 'everyday',
+      fixedOrder: false,
     },
     new FixedIdGenerator(),
   );
@@ -102,7 +115,35 @@ function translation(): Dilemma {
   );
 }
 
-const EVERYONE: DilemmaCriteria = { maximumMinimumAge: 16, status: 'in-catalog' };
+/**
+ * threeOptions() at its second version, now compromising and with a new text, and the English
+ * translation of its first version, not compromising, which the translator has not caught up with.
+ */
+function compromisingWithAnOutdatedTranslation(): Dilemma[] {
+  const original = threeOptions();
+  const outdated = translation();
+  original.revise(
+    {
+      text: 'TestRevisedText',
+      options: original.options,
+      category: 'honesty',
+      tags: [],
+      minimumAge: 16,
+      type: 'standard',
+      compromising: true,
+      scale: 'everyday',
+      fixedOrder: false,
+    },
+    new FixedIdGenerator(),
+  );
+  return [threeOptions(), original, outdated];
+}
+
+const EVERYONE: DilemmaCriteria = {
+  maximumMinimumAge: 16,
+  status: 'in-catalog',
+  includeCompromising: false,
+};
 
 /** Big enough for every test to get a single page. */
 const ALL = { size: 100 };
@@ -149,6 +190,7 @@ export function describeDilemmaQueriesContract(
             category: 'loyalty',
             tags: ['testtag3'],
             optionCount: 2,
+            compromising: false,
           },
         ]);
       });
@@ -194,6 +236,41 @@ export function describeDilemmaQueriesContract(
         // Assert
         expect(forEveryone).toEqual(['TestDilemma']);
         expect(forAdults).toEqual(['TestAdultDilemma', 'TestDilemma']);
+      });
+
+      it('should leave out the compromising dilemmas unless they are included', async () => {
+        // Arrange
+        const queries = await saved(
+          catalogDilemma('TestDilemma'),
+          catalogDilemma('TestCompromisingDilemma', { compromising: true }),
+        );
+
+        // Act
+        const without = await queries.search(EVERYONE, ALL);
+        const included = await queries.search({ ...EVERYONE, includeCompromising: true }, ALL);
+
+        // Assert
+        expect(without.summaries.map(({ id }) => id)).toEqual(['TestDilemma']);
+        expect(included.summaries.map(({ id, compromising }) => ({ id, compromising }))).toEqual([
+          { id: 'TestCompromisingDilemma', compromising: true },
+          { id: 'TestDilemma', compromising: false },
+        ]);
+      });
+
+      it('should treat as compromising a translation whose original is compromising now, though it translates an earlier version', async () => {
+        // Arrange
+        const queries = await saved(...compromisingWithAnOutdatedTranslation());
+        const inEnglish = { ...EVERYONE, language: 'en' };
+
+        // Act
+        const without = await queries.search(inEnglish, ALL);
+        const included = await queries.search({ ...inEnglish, includeCompromising: true }, ALL);
+
+        // Assert
+        expect(without.summaries).toEqual([]);
+        expect(included.summaries.map(({ id, compromising }) => ({ id, compromising }))).toEqual([
+          { id: 'TestTranslationId', compromising: true },
+        ]);
       });
 
       it('should find only the dilemmas of any of the categories given, or of every one without them', async () => {
@@ -445,6 +522,33 @@ export function describeDilemmaQueriesContract(
 
         // Assert
         expect(found).toEqual(['TestDilemmaA', 'TestDilemmaB']);
+      });
+
+      it('should leave out the compromising dilemmas unless they are included', async () => {
+        // Arrange
+        const queries = await saved(
+          catalogDilemma('TestDilemma'),
+          catalogDilemma('TestCompromisingDilemma', { compromising: true }),
+        );
+
+        // Act
+        const without = await queries.idsOf(EVERYONE);
+        const included = await queries.idsOf({ ...EVERYONE, includeCompromising: true });
+
+        // Assert
+        expect(without).toEqual(['TestDilemma']);
+        expect(included).toEqual(['TestCompromisingDilemma', 'TestDilemma']);
+      });
+
+      it('should leave out a translation whose original is compromising now, though it translates an earlier version', async () => {
+        // Arrange
+        const queries = await saved(...compromisingWithAnOutdatedTranslation());
+
+        // Act
+        const found = await queries.idsOf({ ...EVERYONE, language: 'en' });
+
+        // Assert
+        expect(found).toEqual([]);
       });
 
       it('should give only the dilemmas in the language given, at their current version', async () => {

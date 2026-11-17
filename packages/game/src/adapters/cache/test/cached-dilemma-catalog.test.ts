@@ -203,6 +203,7 @@ describe('CachedDilemmaCatalog', () => {
         maximumMinimumAge: 16,
         status: 'in-catalog',
         language: 'es',
+        includeCompromising: false,
       } as const;
 
       // Act

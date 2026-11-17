@@ -847,6 +847,10 @@ export class AcceptanceDriver implements GameDriver {
       category: 'justice',
       minimumAge: 16,
       tags: [],
+      type: 'standard',
+      compromising: false,
+      scale: 'everyday',
+      fixedOrder: false,
     });
     await this.#importCatalog.execute();
     return `dlm-${number}`;
@@ -861,12 +865,19 @@ export class AcceptanceDriver implements GameDriver {
       maximumMinimumAge: 18,
       status,
       language: 'es',
+      includeCompromising: false,
       size: 1,
     });
     return dilemmas.length === 1;
   }
 
-  async catalogDilemmaNamed(name: string, minimumAge: 16 | 18 = 16): Promise<void> {
+  async catalogDilemmaNamed(
+    name: string,
+    {
+      minimumAge = 16,
+      compromising = false,
+    }: { readonly minimumAge?: 16 | 18; readonly compromising?: boolean } = {},
+  ): Promise<void> {
     const number = this.#curatedCatalog.approved.length + this.#curatedCatalog.discarded.length + 1;
     this.#publicNumbers.set(name, number);
     this.#curatedCatalog.approved.push({
@@ -878,6 +889,10 @@ export class AcceptanceDriver implements GameDriver {
       category: 'life-and-death',
       minimumAge,
       tags: [],
+      type: 'standard',
+      compromising,
+      scale: 'everyday',
+      fixedOrder: false,
     });
     await this.#importCatalog.execute();
   }
@@ -912,6 +927,10 @@ export class AcceptanceDriver implements GameDriver {
           category: 'life-and-death',
           tags: [],
           minimumAge: 16,
+          type: 'standard',
+          compromising: false,
+          scale: 'everyday',
+          fixedOrder: false,
           status: kind === 'private' ? 'in-catalog' : 'in-exploration',
           arguments: {
             options: SPANISH_OPTION_TEXTS.map((text, index) => ({

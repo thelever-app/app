@@ -58,7 +58,16 @@ Given(
   'the dilemma {string} is a dilemma for adults',
   async function (this: GameWorld, name: string) {
     // With its arguments reviewed, so its age is all that keeps it off the web.
-    await this.driver.catalogDilemmaNamed(name, 18);
+    await this.driver.catalogDilemmaNamed(name, { minimumAge: 18 });
+    await this.driver.reviewArgumentsOf(name);
+  },
+);
+
+Given(
+  'the dilemma {string} is a compromising dilemma',
+  async function (this: GameWorld, name: string) {
+    // With its arguments reviewed, so being compromising is all that keeps it off the web.
+    await this.driver.catalogDilemmaNamed(name, { compromising: true });
     await this.driver.reviewArgumentsOf(name);
   },
 );

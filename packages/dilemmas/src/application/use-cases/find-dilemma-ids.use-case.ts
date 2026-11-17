@@ -12,6 +12,8 @@ export interface FindDilemmaIdsInput {
   readonly status: DilemmaStatus;
   /** Only the dilemmas written or translated in it. */
   readonly language: string;
+  /** Whether the compromising dilemmas are found too. */
+  readonly includeCompromising: boolean;
 }
 
 export interface FindDilemmaIdsOutput {

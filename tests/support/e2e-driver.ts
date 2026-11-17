@@ -1086,7 +1086,13 @@ export class E2eDriver implements GameDriver {
   // Public web (CU-14): the curation team loads the catalog into the database of the run, the job
   // generates the web into the files the service of the stack reads, and a visitor opens it.
 
-  async catalogDilemmaNamed(name: string, minimumAge: 16 | 18 = 16): Promise<void> {
+  async catalogDilemmaNamed(
+    name: string,
+    {
+      minimumAge = 16,
+      compromising = false,
+    }: { readonly minimumAge?: 16 | 18; readonly compromising?: boolean } = {},
+  ): Promise<void> {
     const number = nextCatalogNumber++;
     this.#publicNumbers.set(name, number);
     this.#curatedCatalog.approved.push({
@@ -1098,6 +1104,10 @@ export class E2eDriver implements GameDriver {
       category: 'life-and-death',
       minimumAge,
       tags: [],
+      type: 'standard',
+      compromising,
+      scale: 'everyday',
+      fixedOrder: false,
     });
     await this.#importCatalog();
   }

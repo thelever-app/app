@@ -28,6 +28,10 @@ function row(facts: Record<string, unknown> = {}) {
       Etiquetas: { type: 'multi_select', multi_select: value('tags', [{ name: 'clásico' }]) },
       Argumentos: richText(value('arguments', '')),
       'Argumentos revisados': { type: 'checkbox', checkbox: value('reviewed', false) },
+      Tipo: { type: 'select', select: value('type', { name: 'standard' }) },
+      Comprometido: { type: 'checkbox', checkbox: value('compromising', false) },
+      Escala: { type: 'select', select: value('scale', { name: 'everyday' }) },
+      'Orden fijo': { type: 'checkbox', checkbox: value('fixedOrder', false) },
     },
   };
 }
@@ -73,8 +77,35 @@ describe('NotionCuratedCatalog', () => {
           category: 'honesty',
           minimumAge: 16,
           tags: ['clásico'],
+          type: 'standard',
+          compromising: false,
+          scale: 'everyday',
+          fixedOrder: false,
         },
       ]);
+    });
+
+    it('should read the type, whether it is compromising, the scale and the fixed order', async () => {
+      // Arrange
+      const { catalog } = notionWith([
+        row({
+          type: { name: 'game-theory' },
+          compromising: true,
+          scale: { name: 'extreme' },
+          fixedOrder: true,
+        }),
+      ]);
+
+      // Act
+      const { approved } = await catalog.read();
+
+      // Assert
+      expect(approved[0]).toMatchObject({
+        type: 'game-theory',
+        compromising: true,
+        scale: 'extreme',
+        fixedOrder: true,
+      });
     });
 
     it('should ask only for the approved and discarded dilemmas, with the token and the version of the API', async () => {
@@ -174,6 +205,8 @@ describe('NotionCuratedCatalog', () => {
         row({ minimumAge: null }),
         row({ number: 184, arguments: 'Otra cosa\nA favor: F.\nEn contra: C.', reviewed: true }),
         row({ number: 185 }),
+        row({ number: 186, type: null }),
+        row({ number: 187, scale: { name: 'extremo' } }),
       ]);
 
       // Act
@@ -181,8 +214,10 @@ describe('NotionCuratedCatalog', () => {
 
       // Assert
       expect(approved.map(({ number }) => number)).toEqual([185]);
-      expect(unreadable.map(({ number }) => number)).toEqual([183, 184]);
+      expect(unreadable.map(({ number }) => number)).toEqual([183, 184, 186, 187]);
       expect(unreadable[1]?.reason).toContain('Otra cosa');
+      expect(unreadable[2]?.reason).toContain('Tipo');
+      expect(unreadable[3]?.reason).toContain('Escala');
     });
 
     it('should throw an error when Notion refuses the query', async () => {

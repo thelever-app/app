@@ -21,6 +21,8 @@ export interface DilemmaCriteria {
   readonly status: DilemmaStatus;
   /** Only the dilemmas written or translated in it; without it, every language. */
   readonly language?: string;
+  /** Whether the compromising dilemmas are found too: no room plays them unless it includes them. */
+  readonly includeCompromising: boolean;
 }
 
 /** The criteria a game is put together with: no text, no ids. */
@@ -35,6 +37,8 @@ export interface DilemmaSummary {
   readonly category: Category;
   readonly tags: readonly string[];
   readonly optionCount: number;
+  /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
+  readonly compromising: boolean;
 }
 
 /** Which page of a search: the first one, or the one after the `next` of the page before. */

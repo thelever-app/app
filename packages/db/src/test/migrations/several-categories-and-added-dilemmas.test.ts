@@ -80,8 +80,11 @@ describe('the migration that lets a room play several categories and each player
     await lobbiesOfOneCategory(db);
     await migrateTo(db, THIS);
 
-    // Act
-    const added = db
+    // Act: the dilemmas added, as the table was then, before it kept whether they are compromising.
+    const then = db as unknown as Kysely<{
+      room_added_dilemmas: Omit<Database['room_added_dilemmas'], 'compromising'>;
+    }>;
+    const added = then
       .insertInto('room_added_dilemmas')
       .values([
         {

@@ -47,6 +47,8 @@ export const CLOSES_WITH_NOBODY_CONNECTED_AFTER_MS = 15 * 60 * 1000;
 export interface LobbyDilemma {
   readonly dilemmaId: string;
   readonly minimumAge: 16 | 18;
+  /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
+  readonly compromising: boolean;
 }
 
 /** A dilemma a player added in the lobby. Who added it stays in the room until the reveal. */
@@ -162,9 +164,9 @@ export class Room {
       host,
     ]);
     if (props.firstDilemma) {
-      const { dilemmaId, minimumAge } = props.firstDilemma;
+      const { dilemmaId, minimumAge, compromising } = props.firstDilemma;
       if (!room.#suits(props.firstDilemma)) throw new DilemmaNotSuitableError(dilemmaId);
-      room.#firstDilemma = { dilemmaId, minimumAge };
+      room.#firstDilemma = { dilemmaId, minimumAge, compromising };
     }
     return room;
   }
@@ -319,7 +321,11 @@ export class Room {
     const unsuitable = dilemmas.find((dilemma) => !this.#suits(dilemma));
     if (unsuitable) throw new DilemmaNotSuitableError(unsuitable.dilemmaId);
 
-    this.#pickedDilemmas = dilemmas.map(({ dilemmaId, minimumAge }) => ({ dilemmaId, minimumAge }));
+    this.#pickedDilemmas = dilemmas.map(({ dilemmaId, minimumAge, compromising }) => ({
+      dilemmaId,
+      minimumAge,
+      compromising,
+    }));
     this.#changeLobby('dilemmas-changed');
   }
 
@@ -569,8 +575,12 @@ export class Room {
     if (lookalike) throw new NicknameAndAvatarTakenError(nickname.value, avatar.face, avatar.color);
   }
 
+  /** For the age of the room, and not compromising unless the room includes those. */
   #suits(dilemma: LobbyDilemma): boolean {
-    return dilemma.minimumAge <= this.#settings.maximumMinimumAge;
+    return (
+      dilemma.minimumAge <= this.#settings.maximumMinimumAge &&
+      (!dilemma.compromising || this.#settings.includesCompromisingDilemmas)
+    );
   }
 
   #changeLobby(change: LobbyChange): void {

@@ -212,11 +212,19 @@ export function describeRoomRepositoryContract(
           newDilemmas: false,
           dilemmasPerPlayer: 2,
         });
-        saved.addDilemma('TestLuisId', { dilemmaId: 'TestAddedDilemma', minimumAge: 18 });
-        saved.addDilemma('TestLuisId', { dilemmaId: 'TestOtherAddedDilemma', minimumAge: 16 });
+        saved.addDilemma('TestLuisId', {
+          dilemmaId: 'TestAddedDilemma',
+          minimumAge: 18,
+          compromising: false,
+        });
+        saved.addDilemma('TestLuisId', {
+          dilemmaId: 'TestOtherAddedDilemma',
+          minimumAge: 16,
+          compromising: false,
+        });
         saved.pickDilemmas('TestAnaId', [
-          { dilemmaId: 'TestPickedDilemma1', minimumAge: 16 },
-          { dilemmaId: 'TestPickedDilemma2', minimumAge: 18 },
+          { dilemmaId: 'TestPickedDilemma1', minimumAge: 16, compromising: false },
+          { dilemmaId: 'TestPickedDilemma2', minimumAge: 18, compromising: false },
         ]);
         saved.expel('TestAnaId', 'TestPabloId');
 
@@ -228,12 +236,19 @@ export function describeRoomRepositoryContract(
         expect(comparable(found?.toSnapshot())).toEqual(comparable(saved.toSnapshot()));
       });
 
-      it('should keep the dilemma its first game plays first', async () => {
+      it('should keep whether each dilemma of the lobby is compromising', async () => {
         // Arrange
         const repository = await create();
+        const lobby = room();
+        join(lobby, 'Luis');
+        const compromising = { minimumAge: 16, compromising: true } as const;
         const saved = Room.restore({
-          ...room().toSnapshot(),
-          firstDilemma: { dilemmaId: 'TestFirstDilemma', minimumAge: 16 },
+          ...lobby.toSnapshot(),
+          firstDilemma: { dilemmaId: 'TestFirstDilemma', ...compromising },
+          pickedDilemmas: [{ dilemmaId: 'TestPickedDilemma', ...compromising }],
+          addedDilemmas: [
+            { dilemmaId: 'TestAddedDilemma', ...compromising, playerId: 'TestLuisId' },
+          ],
         });
 
         // Act
@@ -241,7 +256,29 @@ export function describeRoomRepositoryContract(
 
         // Assert
         const found = await repository.findById('TestRoomId');
-        expect(found?.firstDilemma).toEqual({ dilemmaId: 'TestFirstDilemma', minimumAge: 16 });
+        expect(found?.firstDilemma?.compromising).toBe(true);
+        expect(found?.pickedDilemmas.map(({ compromising }) => compromising)).toEqual([true]);
+        expect(found?.addedDilemmas.map(({ compromising }) => compromising)).toEqual([true]);
+      });
+
+      it('should keep the dilemma its first game plays first', async () => {
+        // Arrange
+        const repository = await create();
+        const saved = Room.restore({
+          ...room().toSnapshot(),
+          firstDilemma: { dilemmaId: 'TestFirstDilemma', minimumAge: 16, compromising: false },
+        });
+
+        // Act
+        await repository.save(saved);
+
+        // Assert
+        const found = await repository.findById('TestRoomId');
+        expect(found?.firstDilemma).toEqual({
+          dilemmaId: 'TestFirstDilemma',
+          minimumAge: 16,
+          compromising: false,
+        });
       });
 
       it('should keep two players with the same avatar and different nicknames', async () => {

@@ -32,7 +32,7 @@ describe('composeGame', () => {
   it('should play the first dilemma first, as picked by the host, within the number of dilemmas', () => {
     // Act
     const composed = composeGame(
-      input({ firstDilemma: { dilemmaId: 'TestFirst', minimumAge: 16 } }),
+      input({ firstDilemma: { dilemmaId: 'TestFirst', minimumAge: 16, compromising: false } }),
       new FixedRandomness(),
     );
 
@@ -45,8 +45,8 @@ describe('composeGame', () => {
     // Act
     const composed = composeGame(
       input({
-        firstDilemma: { dilemmaId: 'TestFirst', minimumAge: 16 },
-        pickedDilemmas: [{ dilemmaId: 'TestCatalog1', minimumAge: 16 }],
+        firstDilemma: { dilemmaId: 'TestFirst', minimumAge: 16, compromising: false },
+        pickedDilemmas: [{ dilemmaId: 'TestCatalog1', minimumAge: 16, compromising: false }],
       }),
       new FixedRandomness(),
     );
@@ -59,8 +59,10 @@ describe('composeGame', () => {
     // Act
     const composed = composeGame(
       input({
-        firstDilemma: { dilemmaId: 'TestFirst', minimumAge: 16 },
-        addedDilemmas: [{ dilemmaId: 'TestFirst', minimumAge: 16, playerId: 'TestLuisId' }],
+        firstDilemma: { dilemmaId: 'TestFirst', minimumAge: 16, compromising: false },
+        addedDilemmas: [
+          { dilemmaId: 'TestFirst', minimumAge: 16, compromising: false, playerId: 'TestLuisId' },
+        ],
       }),
       new FixedRandomness(),
     );
@@ -119,8 +121,13 @@ describe('composeGame', () => {
   it('should play the dilemmas the players added first, as added by a player', () => {
     // Arrange
     const addedDilemmas = [
-      { dilemmaId: 'TestAddedByLuis', minimumAge: 16, playerId: 'TestLuisId' },
-      { dilemmaId: 'TestAddedByMarta', minimumAge: 16, playerId: 'TestMartaId' },
+      { dilemmaId: 'TestAddedByLuis', minimumAge: 16, compromising: false, playerId: 'TestLuisId' },
+      {
+        dilemmaId: 'TestAddedByMarta',
+        minimumAge: 16,
+        compromising: false,
+        playerId: 'TestMartaId',
+      },
     ] as const;
 
     // Act
@@ -141,6 +148,7 @@ describe('composeGame', () => {
     const pickedDilemmas = Array.from({ length: 6 }, (_, index) => ({
       dilemmaId: `TestPicked${index + 1}`,
       minimumAge: 16 as const,
+      compromising: false,
     }));
 
     // Act
