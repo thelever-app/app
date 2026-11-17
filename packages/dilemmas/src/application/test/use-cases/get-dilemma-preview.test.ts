@@ -82,6 +82,14 @@ describe('GetDilemmaPreviewUseCase', () => {
             version: { ...dilemma.toSnapshot().version, minimumAge: 18 },
           }),
       ],
+      [
+        'compromising',
+        (dilemma: Dilemma) =>
+          Dilemma.restore({
+            ...dilemma.toSnapshot(),
+            version: { ...dilemma.toSnapshot().version, compromising: true },
+          }),
+      ],
     ] as const)(
       'should throw DilemmaNotFoundError if the dilemma is %s: no new room may start with it',
       async (_case, change) => {

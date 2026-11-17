@@ -1,8 +1,9 @@
 import { type Kysely, sql } from 'kysely';
 
 // The room keeps whether each dilemma of its lobby is compromising, as it keeps its minimum age, to
-// leave it out when the room no longer suits it. The dilemmas already in a lobby were not, since no
-// room could take one. A direct migration, with no expand and contract, until real players arrive.
+// leave it out when the room no longer suits it. The dilemmas already in a lobby take false, since
+// nothing marked them until now; those rooms close within the day. A direct migration, with no
+// expand and contract, until real players arrive.
 export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`set local lock_timeout = '5s'`.execute(db);
   for (const table of ['room_added_dilemmas', 'room_picked_dilemmas']) {

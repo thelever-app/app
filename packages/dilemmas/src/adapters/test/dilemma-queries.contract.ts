@@ -115,6 +115,30 @@ function translation(): Dilemma {
   );
 }
 
+/**
+ * threeOptions() at its second version, now compromising and with a new text, and the English
+ * translation of its first version, not compromising, which the translator has not caught up with.
+ */
+function compromisingWithAnOutdatedTranslation(): Dilemma[] {
+  const original = threeOptions();
+  const outdated = translation();
+  original.revise(
+    {
+      text: 'TestRevisedText',
+      options: original.options,
+      category: 'honesty',
+      tags: [],
+      minimumAge: 16,
+      type: 'standard',
+      compromising: true,
+      scale: 'everyday',
+      fixedOrder: false,
+    },
+    new FixedIdGenerator(),
+  );
+  return [threeOptions(), original, outdated];
+}
+
 const EVERYONE: DilemmaCriteria = {
   maximumMinimumAge: 16,
   status: 'in-catalog',
@@ -230,6 +254,22 @@ export function describeDilemmaQueriesContract(
         expect(included.summaries.map(({ id, compromising }) => ({ id, compromising }))).toEqual([
           { id: 'TestCompromisingDilemma', compromising: true },
           { id: 'TestDilemma', compromising: false },
+        ]);
+      });
+
+      it('should treat as compromising a translation whose original is compromising now, though it translates an earlier version', async () => {
+        // Arrange
+        const queries = await saved(...compromisingWithAnOutdatedTranslation());
+        const inEnglish = { ...EVERYONE, language: 'en' };
+
+        // Act
+        const without = await queries.search(inEnglish, ALL);
+        const included = await queries.search({ ...inEnglish, includeCompromising: true }, ALL);
+
+        // Assert
+        expect(without.summaries).toEqual([]);
+        expect(included.summaries.map(({ id, compromising }) => ({ id, compromising }))).toEqual([
+          { id: 'TestTranslationId', compromising: true },
         ]);
       });
 
@@ -498,6 +538,17 @@ export function describeDilemmaQueriesContract(
         // Assert
         expect(without).toEqual(['TestDilemma']);
         expect(included).toEqual(['TestCompromisingDilemma', 'TestDilemma']);
+      });
+
+      it('should leave out a translation whose original is compromising now, though it translates an earlier version', async () => {
+        // Arrange
+        const queries = await saved(...compromisingWithAnOutdatedTranslation());
+
+        // Act
+        const found = await queries.idsOf({ ...EVERYONE, language: 'en' });
+
+        // Assert
+        expect(found).toEqual([]);
       });
 
       it('should give only the dilemmas in the language given, at their current version', async () => {
