@@ -30,8 +30,8 @@ const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId
   version: index + 1,
   optionIds: OPTION_IDS,
   hasGap: false,
-  origin: 'picked-by-the-system' as const,
-  addedBy: null,
+  origin: 'random' as const,
+  chosenBy: null,
 }));
 const SETTINGS = {
   variant: 'anonymous',
@@ -145,8 +145,8 @@ describe('Game', () => {
         version: 1,
         optionIds: OPTION_IDS,
         hasGap: false,
-        origin: 'picked-by-the-host',
-        addedBy: null,
+        origin: 'specific',
+        chosenBy: null,
       });
 
       // Assert
@@ -667,8 +667,8 @@ describe('Game', () => {
                 version: 1,
                 optionIds: [],
                 hasGap: false,
-                origin: 'picked-by-the-host',
-                addedBy: null,
+                origin: 'specific',
+                chosenBy: null,
               },
             ],
             settings: SETTINGS,
@@ -691,8 +691,8 @@ describe('Game', () => {
                   version,
                   optionIds: OPTION_IDS,
                   hasGap: false,
-                  origin: 'picked-by-the-host',
-                  addedBy: null,
+                  origin: 'specific',
+                  chosenBy: null,
                 },
               ],
               settings: SETTINGS,
@@ -714,8 +714,8 @@ describe('Game', () => {
               version: 1,
               optionIds: OPTION_IDS,
               hasGap: false,
-              origin: 'picked-by-the-host' as const,
-              addedBy: null,
+              origin: 'specific' as const,
+              chosenBy: null,
             })),
             settings: SETTINGS,
           },
@@ -753,8 +753,8 @@ describe('Game', () => {
     it('should keep the settings it copied from its room and how each dilemma got in', () => {
       // Arrange
       const dilemmas = [
-        { ...DILEMMAS[0]!, origin: 'added-by-a-player' as const },
-        { ...DILEMMAS[1]!, origin: 'picked-by-the-host' as const },
+        { ...DILEMMAS[0]!, origin: 'players' as const },
+        { ...DILEMMAS[1]!, origin: 'specific' as const },
       ];
 
       // Act
@@ -765,10 +765,7 @@ describe('Game', () => {
 
       // Assert
       expect(game.settings).toEqual(SETTINGS);
-      expect(game.dilemmas.map(({ origin }) => origin)).toEqual([
-        'added-by-a-player',
-        'picked-by-the-host',
-      ]);
+      expect(game.dilemmas.map(({ origin }) => origin)).toEqual(['players', 'specific']);
     });
   });
 });

@@ -12,6 +12,23 @@ export async function findLobbyDilemmas(
   dilemmaLanguage: string,
   dilemmaIds: readonly string[],
 ): Promise<LobbyDilemma[]> {
+  const found = await findRoundDilemmas(dilemmaCatalog, dilemmaLanguage, dilemmaIds);
+  return dilemmaIds.map((dilemmaId) => {
+    const dilemma = found.find((candidate) => candidate.dilemmaId === dilemmaId);
+    if (!dilemma) throw new DilemmaNotFoundError(dilemmaId);
+    return dilemma;
+  });
+}
+
+/**
+ * The same, for the dilemmas of the rounds when the settings change: only those the catalog has in
+ * that language, since the room leaves the others out.
+ */
+export async function findRoundDilemmas(
+  dilemmaCatalog: DilemmaCatalog,
+  dilemmaLanguage: string,
+  dilemmaIds: readonly string[],
+): Promise<LobbyDilemma[]> {
   if (dilemmaIds.length === 0) return [];
   const { dilemmas: found } = await dilemmaCatalog.search(
     {
@@ -24,9 +41,9 @@ export async function findLobbyDilemmas(
     // One page with all of them: no more than were asked for.
     { size: dilemmaIds.length },
   );
-  return dilemmaIds.map((dilemmaId) => {
-    const dilemma = found.find((candidate) => candidate.dilemmaId === dilemmaId);
-    if (!dilemma) throw new DilemmaNotFoundError(dilemmaId);
-    return { dilemmaId, minimumAge: dilemma.minimumAge, compromising: dilemma.compromising };
-  });
+  return found.map(({ dilemmaId, minimumAge, compromising }) => ({
+    dilemmaId,
+    minimumAge,
+    compromising,
+  }));
 }

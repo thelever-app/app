@@ -15,7 +15,12 @@ import { tokenOf } from '../../support/fake-token-verifier.ts';
 async function nominalGame(server: Awaited<ReturnType<typeof startRoomServer>>) {
   const { roomId } = await lobbyOfThree(server.http);
   const ana = await TestClient.connected(server.url, 'ana', roomId, 'room-state');
-  ana.send({ type: 'pick-dilemmas', dilemmaIds: SEED_DILEMMAS.map(({ id }) => id) });
+  ana.send({
+    type: 'change-settings',
+    changes: {
+      rounds: SEED_DILEMMAS.map(({ id }) => ({ origin: 'specific' as const, dilemmaId: id })),
+    },
+  });
   await ana.next('room-state');
   const luis = await TestClient.connected(server.url, 'luis', roomId, 'room-state');
   const marta = await TestClient.connected(server.url, 'marta', roomId, 'room-state');

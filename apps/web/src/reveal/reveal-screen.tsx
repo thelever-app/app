@@ -39,7 +39,7 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave, onShowQr }: Reve
   const anonymous = isAnonymous(game);
   const playerOf = (playerId: string | null) =>
     game.players.find((player) => player.playerId === playerId);
-  const adder = playerOf(reveal.addedBy);
+  const adder = playerOf(reveal.chosenBy);
 
   return (
     <div className={styles.screen}>
@@ -72,7 +72,7 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave, onShowQr }: Reve
             {adder && (
               <span className={styles.chip}>
                 <Avatar avatar={adder.avatar} size="xs" />
-                {t('reveal.addedBy', { name: adder.nickname })}
+                {t('reveal.chosenBy', { name: adder.nickname })}
               </span>
             )}
             {person && (

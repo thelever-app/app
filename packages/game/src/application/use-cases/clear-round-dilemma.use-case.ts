@@ -3,14 +3,14 @@ import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findRoom } from './find-room.ts';
 import { notifyRoom } from './notify-room.ts';
 
-export interface RemoveAddedDilemmaInput {
+export interface ClearRoundDilemmaInput {
   readonly roomId: string;
   readonly playerId: string;
-  readonly dilemmaId: string;
+  readonly roundId: number;
 }
 
-/** The host removes a dilemma a player added, without knowing who; a player, one they added. */
-export class RemoveAddedDilemmaUseCase {
+/** The player who chose the dilemma of a round of the players takes it out; the round is empty again. */
+export class ClearRoundDilemmaUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #notifier: PlayerNotifier;
 
@@ -19,10 +19,10 @@ export class RemoveAddedDilemmaUseCase {
     this.#notifier = notifier;
   }
 
-  async execute({ roomId, playerId, dilemmaId }: RemoveAddedDilemmaInput): Promise<void> {
+  async execute({ roomId, playerId, roundId }: ClearRoundDilemmaInput): Promise<void> {
     const room = await findRoom(this.#roomRepository, roomId);
 
-    room.removeAddedDilemma(playerId, dilemmaId);
+    room.clearRoundDilemma(playerId, roundId);
     const events = room.pullEvents();
     if (events.length > 0) await this.#roomRepository.save(room);
     await notifyRoom(room, events, this.#notifier);

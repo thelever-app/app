@@ -10,7 +10,6 @@ import type {
 import type {
   Category as RoomCategory,
   AvatarFace,
-  DilemmaCount,
   DilemmaLanguage,
   DilemmaOrigin,
   GroupNature,
@@ -18,7 +17,6 @@ import type {
   PlayerColor,
   RoomVariant,
   TimePerDilemmaSeconds,
-  DilemmasPerPlayer,
   DidNotVoteReason,
   RevealedBy,
   RoundPhase,
@@ -104,12 +102,8 @@ export interface Database {
     variant: RoomVariant;
     adults_only: boolean;
     dilemma_language: DilemmaLanguage;
-    /** Null, every category; an empty list, none. */
-    categories: RoomCategory[] | null;
-    dilemma_count: DilemmaCount;
     time_per_dilemma_seconds: TimePerDilemmaSeconds;
     new_dilemmas: boolean;
-    dilemmas_per_player: DilemmasPerPlayer;
     current_game_id: string | null;
     /** The host who lost the role while disconnected, and gets it back on connecting again. */
     absent_host_player_id: string | null;
@@ -118,10 +112,6 @@ export interface Database {
     last_connected_at: Date;
     /** When every player had left. */
     closed_at: Date | null;
-    /** The dilemma its first game plays first, with the minimum age it had and whether it was compromising; all or none. */
-    first_dilemma_id: string | null;
-    first_dilemma_minimum_age: 16 | 18 | null;
-    first_dilemma_compromising: boolean | null;
   };
   room_players: {
     id: string;
@@ -137,21 +127,21 @@ export interface Database {
     room_id: string;
     identity: string;
   };
-  /** What the room keeps of each dilemma added: its id, and the minimum age it had and whether it was compromising when added. */
-  room_added_dilemmas: {
-    room_id: string;
-    player_id: string;
-    position: number;
-    dilemma_id: string;
-    minimum_age: 16 | 18;
-    compromising: boolean;
-  };
-  room_picked_dilemmas: {
+  /**
+   * The rounds of a room in order. A random one has its categories (null, every one); a specific
+   * one, its dilemma; one of the players, the dilemma a player chose and who, once chosen. Of each
+   * dilemma, the minimum age it had and whether it was compromising when it got into the round.
+   */
+  room_rounds: {
     room_id: string;
     position: number;
-    dilemma_id: string;
-    minimum_age: 16 | 18;
-    compromising: boolean;
+    round_id: number;
+    origin: DilemmaOrigin;
+    categories: RoomCategory[] | null;
+    dilemma_id: string | null;
+    minimum_age: 16 | 18 | null;
+    compromising: boolean | null;
+    chosen_by_player_id: string | null;
   };
   instances: {
     id: string;
@@ -187,8 +177,8 @@ export interface Database {
     origin: DilemmaOrigin;
     has_gap: boolean;
     person_in_the_gap: string | null;
-    /** The player who added it in the lobby; null for the others. */
-    added_by_player_id: string | null;
+    /** The player who chose it in the lobby, for a round of the players; null for the others. */
+    chosen_by_player_id: string | null;
   };
   /** The options of each dilemma a game plays, copied when it starts: Game reads only its own tables. */
   game_dilemma_options: {
@@ -267,8 +257,7 @@ export type GameTables = Pick<
   | 'rooms'
   | 'room_players'
   | 'room_expelled_identities'
-  | 'room_added_dilemmas'
-  | 'room_picked_dilemmas'
+  | 'room_rounds'
   | 'instances'
   | 'room_connections'
   | 'games'

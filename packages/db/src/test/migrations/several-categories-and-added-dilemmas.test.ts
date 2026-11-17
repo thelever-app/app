@@ -62,8 +62,11 @@ describe('the migration that lets a room play several categories and each player
     // Act
     await migrateTo(db, THIS);
 
-    // Assert
-    const rooms = await db
+    // Assert: the rooms as the table was then, before the rounds took the place of the categories.
+    const then = db as unknown as Kysely<{
+      rooms: { id: string; categories: string[] | null; dilemmas_per_player: number };
+    }>;
+    const rooms = await then
       .selectFrom('rooms')
       .select(['id', 'categories', 'dilemmas_per_player'])
       .orderBy('id')
@@ -82,7 +85,13 @@ describe('the migration that lets a room play several categories and each player
 
     // Act: the dilemmas added, as the table was then, before it kept whether they are compromising.
     const then = db as unknown as Kysely<{
-      room_added_dilemmas: Omit<Database['room_added_dilemmas'], 'compromising'>;
+      room_added_dilemmas: {
+        room_id: string;
+        player_id: string;
+        position: number;
+        dilemma_id: string;
+        minimum_age: 16 | 18;
+      };
     }>;
     const added = then
       .insertInto('room_added_dilemmas')

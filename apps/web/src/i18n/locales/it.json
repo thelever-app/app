@@ -144,7 +144,7 @@
   "reveal": {
     "region": "Risultato",
     "position": "Dilemma {{position, number}} di {{total, number}} · Risultato",
-    "addedBy": "L’ha aggiunto {{name}}",
+    "chosenBy": "L’ha scelto {{name}}",
     "about": "Questo dilemma era su {{name}}",
     "yourHitsRegion": "Le tue previsioni",
     "hitsAll": "Li hai indovinati tutti!",
@@ -264,7 +264,9 @@
     "room-not-found": "Quella stanza non esiste più.",
     "unknown": "Qualcosa è andato storto. Riprova.",
     "dilemmas-missing": "Non ci sono dilemmi per queste impostazioni. Prova con altre categorie.",
-    "nickname-and-avatar-taken": "Qualcuno con il tuo stesso nome ha già quell’avatar. Scegline un altro."
+    "nickname-and-avatar-taken": "Qualcuno con il tuo stesso nome ha già quell’avatar. Scegline un altro.",
+    "round-taken": "Un altro giocatore ha appena scelto il dilemma di quel turno.",
+    "duplicate-dilemma": "Quel dilemma è già in un altro turno."
   },
   "home": {
     "title": "Giochiamo?",
@@ -331,23 +333,34 @@
     "shareText": "Entra nella mia stanza di TheLever con il codice {{code}}",
     "copied": "Link copiato",
     "showQr": "Mostra QR",
-    "summary": "{{count}} dilemmi · {{seconds}} s per dilemma · {{language}} · {{nature}}",
+    "summary": "{{seconds}} s per dilemma · {{language}}",
+    "roundCount_one": "{{count}} turno",
+    "roundCount_many": "{{count}} turni",
+    "roundCount_other": "{{count}} turni",
     "change": "Cambia",
     "adultsOnly": "Solo per maggiorenni",
     "remote": "Giocate a distanza: meglio in videochiamata, per commentare il risultato in diretta.",
-    "added": {
-      "title": "Dilemmi aggiunti · {{count}} di {{total}}",
-      "remove": "Togli questo dilemma",
-      "hint": "Non sai chi li ha aggiunti: si vedrà nel risultato. Gli altri arriveranno dal catalogo."
-    },
-    "add": {
-      "title": "Aggiungi dilemmi alla partita",
-      "count": "Ne hai aggiunti {{count}} su {{total}}. Nessuno saprà che sono tuoi fino al risultato.",
-      "action": "Aggiungi un dilemma",
-      "remove": "Togli questo dilemma"
-    },
-    "picked": {
-      "title": "Dilemmi scelti · {{count}}"
+    "rounds": {
+      "title": "Turni · {{count}}",
+      "hint": "Si giocano in quest’ordine.",
+      "secretHint": "Si giocano in quest’ordine. Nessuno saprà quale giocatore ha scelto ogni dilemma fino al risultato.",
+      "allCategories": "Tutte le categorie",
+      "twoCategories": "{{first}} o {{second}}",
+      "someCategories": "{{count}} categorie",
+      "randomAll": "Casuale dal catalogo",
+      "randomOne": "Casuale, da questa categoria",
+      "randomSome": "Casuale, da queste categorie",
+      "randomGroupAll": "{{count}} turni casuali dal catalogo",
+      "randomGroupOne": "{{count}} turni casuali, da questa categoria",
+      "randomGroupSome": "{{count}} turni casuali, da queste categorie",
+      "chosenBy": "L’ha scelto {{name}}",
+      "chosenByYou": "L’hai scelto tu",
+      "chosenByPlayer": "L’ha scelto un giocatore",
+      "playersEmpty": "Lo sceglie un giocatore",
+      "playersEmptyMeta": "Se nessuno lo sceglie, sarà casuale",
+      "choose": "Scegli",
+      "chooseLabel": "Scegli il dilemma del turno {{number}}",
+      "clearLabel": "Togli il tuo dilemma dal turno {{number}}"
     },
     "players": "Nella stanza · {{count}}",
     "you": "{{name}} (tu)",
@@ -359,18 +372,7 @@
     "missing_one": "Manca {{count}} giocatore per iniziare",
     "missing_other": "Mancano {{count}} giocatori per iniziare",
     "guestWait": "{{host}} inizierà la partita quando ci sarete tutti.",
-    "missing_many": "Mancano {{count}} giocatori per iniziare",
-    "categories": {
-      "all": "Tutte le categorie",
-      "some_one": "{{count}} categoria",
-      "some_other": "{{count}} categorie",
-      "some_many": "{{count}} categorie",
-      "none": "Nessuna categoria"
-    },
-    "pickedCount_one": "{{count}} dilemma scelto",
-    "pickedCount_other": "{{count}} dilemmi scelti",
-    "pickedCount_many": "{{count}} dilemmi scelti",
-    "summaryPicked": "{{seconds}} s per dilemma · {{language}} · {{nature}}"
+    "missing_many": "Mancano {{count}} giocatori per iniziare"
   },
   "languages": {
     "es": "Español",
@@ -403,62 +405,61 @@
       "hint": "Consente dilemmi per adulti. Potranno entrare solo i maggiorenni."
     },
     "language": "Lingua dei dilemmi",
-    "howPicked": "Come si scelgono i dilemmi",
-    "byCategories": "Per categorie",
-    "byHand": "A mano",
-    "categories": "Categorie",
-    "allCategories": "Tutte",
-    "categoriesHint": "La partita mescola dilemmi delle categorie selezionate.",
-    "dilemmaCount": "Dilemmi",
     "timePerDilemma": "Tempo per dilemma",
     "seconds": "{{count}} s",
     "timeHint": "Ogni dilemma si svela quando rispondono tutti o quando finisce il tempo.",
+    "rounds": {
+      "title": "Turni · {{count}}",
+      "range": "Da 1 a {{maximum}}",
+      "hint": "Si giocano in quest’ordine. Ogni turno ha un dilemma casuale del catalogo, uno preciso che scegli tu o quello che sceglie un giocatore dalla lobby.",
+      "origin": "Chi sceglie il dilemma del turno {{number}}",
+      "origins": {
+        "random": "Casuale",
+        "specific": "Preciso",
+        "players": "Giocatori"
+      },
+      "remove": "Togli il turno {{number}}",
+      "categoriesOf": "Categorie del turno {{number}}: {{summary}}",
+      "categories": "Categorie del turno {{number}}",
+      "allCategories": "Tutte",
+      "fromAll": "Da tutte le categorie",
+      "fromOne": "Da {{category}}",
+      "fromTwo": "Da {{first}} o {{second}}",
+      "fromSome": "Da {{count}} categorie",
+      "change": "Cambia",
+      "changeLabel": "Cambia il dilemma del turno {{number}}",
+      "choose": "Scegli un dilemma",
+      "chooseLabel": "Scegli un dilemma per il turno {{number}}",
+      "playersHint": "Lo sceglie un giocatore dalla lobby. Se nessuno lo sceglie, ne esce uno casuale.",
+      "playersChosen": "L’ha già scelto un giocatore: «{{title}}».",
+      "add": "Aggiungi un turno",
+      "full": "{{maximum}} turni: il massimo"
+    },
     "newDilemmas": {
       "label": "Includi dilemmi nuovi",
-      "hint": "Aiutate a valutare i dilemmi appena arrivati nel catalogo."
+      "hint": "Nei turni casuali può uscirne uno appena arrivato nel catalogo. Aiutate a valutarlo."
     },
-    "dilemmasPerPlayer": {
-      "label": "Dilemmi aggiunti da ogni giocatore",
-      "none": "Nessuno",
-      "hint": "Anche l’host. Rientrano nel numero di dilemmi, e nessuno saprà di chi è ciascuno fino al risultato."
-    },
-    "pick": "Scegli i dilemmi uno a uno",
-    "picked_one": "{{count}} dilemma scelto",
-    "picked_other": "{{count}} dilemmi scelti",
-    "picked_many": "{{count}} dilemmi scelti",
-    "noPicked": "Nessun dilemma scelto",
-    "changePicked": "Cambia",
-    "choosePicked": "Scegli",
-    "byHandHint": "La partita gioca questi e quelli aggiunti dai giocatori, senza categorie né dilemmi nuovi. «Per categorie» li toglie con un tocco.",
     "save": "Salva"
   },
   "pickDilemmas": {
-    "title": "Scegli i dilemmi",
-    "back": "Torna alle impostazioni",
+    "title": "Dilemma del turno {{number}}",
+    "back": "Indietro",
     "search": "Cerca dilemmi",
     "searchPlaceholder": "Cerca per testo o tag: famiglia, tram…",
     "all": "Tutte",
-    "hint": "Compaiono solo dilemmi adatti a questa stanza. Se li scegli a mano, non si aggiungono dilemmi nuovi.",
-    "none": "Scegline almeno uno",
-    "play_one": "Gioca questo",
-    "play_other": "Gioca questi {{count}}",
+    "categories": "Categorie",
+    "hint": "Compaiono solo dilemmi adatti a questa stanza. Un dilemma che è già in un altro turno non si può ripetere.",
+    "list": "Dilemmi",
+    "taken": "Già nel turno {{number}}",
+    "none": "Scegli un dilemma",
+    "put": "Mettilo nel turno {{number}}",
     "empty": "Nessun dilemma adatto per questa ricerca.",
-    "tags": "#{{tags}}",
-    "play_many": "Gioca questi {{count}}",
-    "byCategory": "Torna a giocare per categoria",
     "options_one": "{{count}} opzione",
     "options_many": "{{count, number}} opzioni",
     "options_other": "{{count, number}} opzioni",
     "someone": "qualcuno del gruppo",
     "more": "Vedi altri",
     "moreFailed": "Non è stato possibile caricare altri dilemmi. Riprova."
-  },
-  "addDilemma": {
-    "title": "Aggiungi un dilemma",
-    "search": "Cerca dilemmi",
-    "close": "Chiudi",
-    "empty": "Nessun dilemma adatto per questa ricerca.",
-    "searchPlaceholder": "Cerca per testo o tag"
   },
   "expel": {
     "title": "Espellere {{name}}?",
@@ -499,11 +500,8 @@
   },
   "playDilemma": {
     "title": "Nuova stanza",
-    "firstDilemma": "Inizierete con questo dilemma",
-    "about_one": "{{category}} · {{count}} opzione",
-    "about_other": "{{category}} · {{count}} opzioni",
-    "about_many": "{{category}} · {{count}} opzioni",
-    "rest": "Il resto della partita si completa con il catalogo, secondo le impostazioni della stanza.",
+    "firstDilemma": "Iniziate con questo dilemma",
+    "about": "{{category}} · Gli altri 7 turni saranno casuali. Potrai cambiarli nelle impostazioni.",
     "loading": "Cerco il dilemma…",
     "notFound": "Questo dilemma non è più su TheLever. Puoi creare una stanza con altri del catalogo.",
     "home": "Vai all’inizio"

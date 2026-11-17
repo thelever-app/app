@@ -4,6 +4,7 @@ import {
   Room,
   type RoomRepository,
   type RoomSnapshot,
+  type RoundSnapshot,
 } from '@thelever-app/game';
 import type { Kysely, Transaction } from 'kysely';
 import { jsonArrayFrom } from 'kysely/helpers/postgres';
@@ -154,47 +155,38 @@ export class PostgresRoomRepository implements RoomRepository {
       .execute();
   }
 
-  /** Who was expelled and the dilemmas added and picked: few rows, written again whole. */
+  /** Who was expelled and the rounds: few rows, written again whole. */
   async #saveLobby(db: Transaction<GameTables>, snapshot: RoomSnapshot): Promise<void> {
-    const { id, expelledIdentities, addedDilemmas, pickedDilemmas } = snapshot;
+    const { id, expelledIdentities, settings, chosenDilemmas } = snapshot;
     await db.deleteFrom('room_expelled_identities').where('room_id', '=', id).execute();
-    await db.deleteFrom('room_added_dilemmas').where('room_id', '=', id).execute();
-    await db.deleteFrom('room_picked_dilemmas').where('room_id', '=', id).execute();
+    await db.deleteFrom('room_rounds').where('room_id', '=', id).execute();
     if (expelledIdentities.length > 0) {
       await db
         .insertInto('room_expelled_identities')
         .values(expelledIdentities.map((identity) => ({ room_id: id, identity })))
         .execute();
     }
-    if (addedDilemmas.length > 0) {
-      await db
-        .insertInto('room_added_dilemmas')
-        .values(
-          addedDilemmas.map(({ dilemmaId, minimumAge, compromising, playerId }, position) => ({
-            room_id: id,
-            player_id: playerId,
-            position,
-            dilemma_id: dilemmaId,
-            minimum_age: minimumAge,
-            compromising,
-          })),
-        )
-        .execute();
-    }
-    if (pickedDilemmas.length > 0) {
-      await db
-        .insertInto('room_picked_dilemmas')
-        .values(
-          pickedDilemmas.map(({ dilemmaId, minimumAge, compromising }, position) => ({
+    await db
+      .insertInto('room_rounds')
+      .values(
+        settings.rounds.map((round, position) => {
+          const chosen = chosenDilemmas.find(({ roundId }) => roundId === round.id);
+          const dilemma = round.origin === 'specific' ? round.dilemma : chosen;
+          return {
             room_id: id,
             position,
-            dilemma_id: dilemmaId,
-            minimum_age: minimumAge,
-            compromising,
-          })),
-        )
-        .execute();
-    }
+            round_id: round.id,
+            origin: round.origin,
+            categories:
+              round.origin === 'random' && round.categories ? [...round.categories] : null,
+            dilemma_id: dilemma?.dilemmaId ?? null,
+            minimum_age: dilemma?.minimumAge ?? null,
+            compromising: dilemma?.compromising ?? null,
+            chosen_by_player_id: round.origin === 'players' ? (chosen?.playerId ?? null) : null,
+          };
+        }),
+      )
+      .execute();
   }
 }
 
@@ -210,18 +202,12 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     variant: settings.variant,
     adults_only: settings.adultsOnly,
     dilemma_language: settings.dilemmaLanguage,
-    categories: settings.categories && [...settings.categories],
-    dilemma_count: settings.dilemmaCount,
     time_per_dilemma_seconds: settings.timePerDilemmaSeconds,
     new_dilemmas: settings.newDilemmas,
-    dilemmas_per_player: settings.dilemmasPerPlayer,
     current_game_id: snapshot.currentGameId,
     absent_host_player_id: snapshot.absentHostId,
     last_connected_at: snapshot.lastConnectedAt,
     closed_at: snapshot.closedAt,
-    first_dilemma_id: snapshot.firstDilemma?.dilemmaId ?? null,
-    first_dilemma_minimum_age: snapshot.firstDilemma?.minimumAge ?? null,
-    first_dilemma_compromising: snapshot.firstDilemma?.compromising ?? null,
   };
 }
 
@@ -262,27 +248,19 @@ function readRoom(db: Kysely<GameTables>, id: string) {
       ).as('expelled'),
       jsonArrayFrom(
         eb
-          .selectFrom('room_added_dilemmas')
+          .selectFrom('room_rounds')
           .select([
-            'room_added_dilemmas.dilemma_id as dilemmaId',
-            'room_added_dilemmas.minimum_age as minimumAge',
-            'room_added_dilemmas.compromising',
-            'room_added_dilemmas.player_id as playerId',
+            'room_rounds.round_id as roundId',
+            'room_rounds.origin',
+            'room_rounds.categories',
+            'room_rounds.dilemma_id as dilemmaId',
+            'room_rounds.minimum_age as minimumAge',
+            'room_rounds.compromising',
+            'room_rounds.chosen_by_player_id as chosenBy',
           ])
-          .whereRef('room_added_dilemmas.room_id', '=', 'rooms.id')
-          .orderBy('room_added_dilemmas.position'),
-      ).as('added'),
-      jsonArrayFrom(
-        eb
-          .selectFrom('room_picked_dilemmas')
-          .select([
-            'room_picked_dilemmas.dilemma_id as dilemmaId',
-            'room_picked_dilemmas.minimum_age as minimumAge',
-            'room_picked_dilemmas.compromising',
-          ])
-          .whereRef('room_picked_dilemmas.room_id', '=', 'rooms.id')
-          .orderBy('room_picked_dilemmas.position'),
-      ).as('picked'),
+          .whereRef('room_rounds.room_id', '=', 'rooms.id')
+          .orderBy('room_rounds.position'),
+      ).as('rounds'),
       jsonArrayFrom(
         eb
           .selectFrom('room_connections')
@@ -308,11 +286,9 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
       variant: row.variant,
       adultsOnly: row.adults_only,
       dilemmaLanguage: row.dilemma_language,
-      categories: row.categories,
-      dilemmaCount: row.dilemma_count,
+      rounds: row.rounds.map(roundOf),
       timePerDilemmaSeconds: row.time_per_dilemma_seconds,
       newDilemmas: row.new_dilemmas,
-      dilemmasPerPlayer: row.dilemmas_per_player,
     },
     players: row.players.map(({ id, nickname, identity, avatar_face, avatar_color }) => ({
       id,
@@ -323,22 +299,27 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
     version: row.version,
     connections: row.connections,
     expelledIdentities: row.expelled.map(({ identity }) => identity),
-    addedDilemmas: row.added,
-    pickedDilemmas: row.picked,
-    firstDilemma:
-      row.first_dilemma_id === null ||
-      row.first_dilemma_minimum_age === null ||
-      row.first_dilemma_compromising === null
-        ? null
-        : {
-            dilemmaId: row.first_dilemma_id,
-            minimumAge: row.first_dilemma_minimum_age,
-            compromising: row.first_dilemma_compromising,
-          },
+    chosenDilemmas: row.rounds.flatMap(
+      ({ roundId, dilemmaId, minimumAge, compromising, chosenBy }) =>
+        chosenBy === null || dilemmaId === null || minimumAge === null || compromising === null
+          ? []
+          : [{ roundId, playerId: chosenBy, dilemmaId, minimumAge, compromising }],
+    ),
     currentGameId: row.current_game_id,
     absentHostId: row.absent_host_player_id,
     leftPlayerIds: row.players.filter(({ has_left }) => has_left).map(({ id }) => id),
     lastConnectedAt: row.last_connected_at,
     closedAt: row.closed_at,
   };
+}
+
+/** A round as the settings keep it; the dilemma a player chose stays apart, in the room. */
+function roundOf(row: RoomRow['rounds'][number]): RoundSnapshot {
+  const { roundId: id, dilemmaId, minimumAge, compromising } = row;
+  if (row.origin === 'random') return { id, origin: 'random', categories: row.categories };
+  if (row.origin === 'players') return { id, origin: 'players' };
+  if (dilemmaId === null || minimumAge === null || compromising === null) {
+    throw new Error(`round ${id} of a room is specific and has no dilemma`);
+  }
+  return { id, origin: 'specific', dilemma: { dilemmaId, minimumAge, compromising } };
 }

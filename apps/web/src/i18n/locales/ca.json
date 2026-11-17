@@ -144,7 +144,7 @@
   "reveal": {
     "region": "Revelació",
     "position": "Dilema {{position, number}} de {{total, number}} · Revelació",
-    "addedBy": "L’ha afegit {{name}}",
+    "chosenBy": "L’ha triat {{name}}",
     "about": "Aquest dilema era sobre {{name}}",
     "yourHitsRegion": "Els teus encerts",
     "hitsAll": "Els has calat a tots!",
@@ -264,7 +264,9 @@
     "room-not-found": "Aquesta sala ja no existeix.",
     "unknown": "No ha sortit bé. Torna-ho a provar.",
     "dilemmas-missing": "No hi ha dilemes per a aquesta configuració. Prova amb altres categories.",
-    "nickname-and-avatar-taken": "Algú que es diu com tu ja porta aquest avatar. Tria’n un altre."
+    "nickname-and-avatar-taken": "Algú que es diu com tu ja porta aquest avatar. Tria’n un altre.",
+    "round-taken": "Un altre jugador acaba de triar el dilema d’aquesta ronda.",
+    "duplicate-dilemma": "Aquest dilema ja és en una altra ronda."
   },
   "home": {
     "title": "Juguem?",
@@ -331,23 +333,34 @@
     "shareText": "Uneix-te a la meva sala de TheLever amb el codi {{code}}",
     "copied": "Enllaç copiat",
     "showQr": "Mostrar el QR",
-    "summary": "{{count}} dilemes · {{seconds}} s per dilema · {{language}} · {{nature}}",
+    "summary": "{{seconds}} s per dilema · {{language}}",
+    "roundCount_one": "{{count}} ronda",
+    "roundCount_many": "{{count}} rondes",
+    "roundCount_other": "{{count}} rondes",
     "change": "Canviar",
     "adultsOnly": "Només per a majors de 18 anys",
     "remote": "Jugueu a distància: millor en videotrucada, per comentar la revelació en directe.",
-    "added": {
-      "title": "Dilemes afegits · {{count}} de {{total}}",
-      "remove": "Treure aquest dilema",
-      "hint": "No saps qui els ha afegit: es veurà a la revelació. La resta sortirà del catàleg."
-    },
-    "add": {
-      "title": "Afegeix dilemes a la partida",
-      "count": "N’has afegit {{count}} de {{total}}. Ningú no sabrà que són teus fins a la revelació.",
-      "action": "Afegir un dilema",
-      "remove": "Treure aquest dilema"
-    },
-    "picked": {
-      "title": "Dilemes triats · {{count}}"
+    "rounds": {
+      "title": "Rondes · {{count}}",
+      "hint": "Es juguen en aquest ordre.",
+      "secretHint": "Es juguen en aquest ordre. Ningú no sabrà quin jugador ha triat cada dilema fins a la revelació.",
+      "allCategories": "Totes les categories",
+      "twoCategories": "{{first}} o {{second}}",
+      "someCategories": "{{count}} categories",
+      "randomAll": "Aleatori del catàleg",
+      "randomOne": "Aleatori, d’aquesta categoria",
+      "randomSome": "Aleatori, d’aquestes categories",
+      "randomGroupAll": "{{count}} rondes aleatòries del catàleg",
+      "randomGroupOne": "{{count}} rondes aleatòries, d’aquesta categoria",
+      "randomGroupSome": "{{count}} rondes aleatòries, d’aquestes categories",
+      "chosenBy": "L’ha triat {{name}}",
+      "chosenByYou": "L’has triat tu",
+      "chosenByPlayer": "L’ha triat un jugador",
+      "playersEmpty": "La tria un jugador",
+      "playersEmptyMeta": "Si ningú no la tria, serà aleatòria",
+      "choose": "Triar",
+      "chooseLabel": "Triar el dilema de la ronda {{number}}",
+      "clearLabel": "Treure el teu dilema de la ronda {{number}}"
     },
     "players": "A la sala · {{count}}",
     "you": "{{name}} (tu)",
@@ -359,18 +372,7 @@
     "missing_one": "Falta {{count}} jugador per començar",
     "missing_other": "Falten {{count}} jugadors per començar",
     "guestWait": "{{host}} començarà la partida quan hi sigueu tots.",
-    "missing_many": "Falten {{count}} jugadors per començar",
-    "categories": {
-      "all": "Totes les categories",
-      "some_one": "{{count}} categoria",
-      "some_other": "{{count}} categories",
-      "some_many": "{{count}} categories",
-      "none": "Cap categoria"
-    },
-    "pickedCount_one": "{{count}} dilema triat",
-    "pickedCount_other": "{{count}} dilemes triats",
-    "pickedCount_many": "{{count}} dilemes triats",
-    "summaryPicked": "{{seconds}} s per dilema · {{language}} · {{nature}}"
+    "missing_many": "Falten {{count}} jugadors per començar"
   },
   "languages": {
     "es": "Español",
@@ -403,62 +405,61 @@
       "hint": "Permet dilemes per a adults. Només hi podran entrar majors de 18 anys."
     },
     "language": "Idioma dels dilemes",
-    "howPicked": "Com es trien els dilemes",
-    "byCategories": "Per categories",
-    "byHand": "A mà",
-    "categories": "Categories",
-    "allCategories": "Totes",
-    "categoriesHint": "La partida barreja dilemes de les categories marcades.",
-    "dilemmaCount": "Dilemes",
     "timePerDilemma": "Temps per dilema",
     "seconds": "{{count}} s",
     "timeHint": "Cada dilema es revela quan responen tots o se n’acaba el temps.",
+    "rounds": {
+      "title": "Rondes · {{count}}",
+      "range": "D’1 a {{maximum}}",
+      "hint": "Es juguen en aquest ordre. Cada ronda té un dilema aleatori del catàleg, un de concret que tries tu o el que triï un jugador des de la sala d’espera.",
+      "origin": "Qui tria el dilema de la ronda {{number}}",
+      "origins": {
+        "random": "Aleatori",
+        "specific": "Concret",
+        "players": "Jugadors"
+      },
+      "remove": "Treure la ronda {{number}}",
+      "categoriesOf": "Categories de la ronda {{number}}: {{summary}}",
+      "categories": "Categories de la ronda {{number}}",
+      "allCategories": "Totes",
+      "fromAll": "De totes les categories",
+      "fromOne": "De {{category}}",
+      "fromTwo": "De {{first}} o {{second}}",
+      "fromSome": "De {{count}} categories",
+      "change": "Canviar",
+      "changeLabel": "Canviar el dilema de la ronda {{number}}",
+      "choose": "Triar un dilema",
+      "chooseLabel": "Triar un dilema per a la ronda {{number}}",
+      "playersHint": "La tria un jugador des de la sala d’espera. Si ningú no la tria, en surt una d’aleatòria.",
+      "playersChosen": "Ja l’ha triat un jugador: «{{title}}».",
+      "add": "Afegir una ronda",
+      "full": "{{maximum}} rondes: el màxim"
+    },
     "newDilemmas": {
       "label": "Incloure dilemes nous",
-      "hint": "Ajudeu a valorar dilemes acabats d’arribar al catàleg."
+      "hint": "A les rondes aleatòries en pot sortir algun d’acabat d’arribar al catàleg. Ajudeu a valorar-lo."
     },
-    "dilemmasPerPlayer": {
-      "label": "Dilemes que afegeix cada jugador",
-      "none": "Cap",
-      "hint": "L’amfitrió també. Compten dins del nombre de dilemes, i ningú no sabrà de qui és cadascun fins a la revelació."
-    },
-    "pick": "Triar els dilemes un per un",
-    "picked_one": "{{count}} dilema triat",
-    "picked_other": "{{count}} dilemes triats",
-    "picked_many": "{{count}} dilemes triats",
-    "noPicked": "Cap dilema triat",
-    "changePicked": "Canviar",
-    "choosePicked": "Triar",
-    "byHandHint": "La partida juga aquests i els que afegeixin els jugadors, sense categories ni dilemes nous. «Per categories» els treu d’un toc.",
     "save": "Desar"
   },
   "pickDilemmas": {
-    "title": "Triar dilemes",
-    "back": "Tornar a la configuració",
+    "title": "Dilema de la ronda {{number}}",
+    "back": "Tornar",
     "search": "Cercar dilemes",
     "searchPlaceholder": "Cerca per text o etiqueta: família, tramvia…",
     "all": "Totes",
-    "hint": "Només hi surten dilemes aptes per a aquesta sala. Si els tries a mà, no s’hi afegeixen dilemes nous.",
-    "none": "Tria’n almenys un",
-    "play_one": "Jugar aquest",
-    "play_other": "Jugar aquests {{count}}",
+    "categories": "Categories",
+    "hint": "Només hi surten dilemes aptes per a aquesta sala. Un dilema que ja és en una altra ronda no es pot repetir.",
+    "list": "Dilemes",
+    "taken": "Ja és a la ronda {{number}}",
+    "none": "Tria un dilema",
+    "put": "Posar-lo a la ronda {{number}}",
     "empty": "No hi ha dilemes aptes amb aquesta cerca.",
-    "tags": "#{{tags}}",
-    "play_many": "Jugar aquests {{count}}",
-    "byCategory": "Tornar a jugar per categoria",
     "options_one": "{{count}} opció",
     "options_many": "{{count, number}} opcions",
     "options_other": "{{count, number}} opcions",
     "someone": "algú del grup",
     "more": "Veure’n més",
     "moreFailed": "No s’han pogut carregar més dilemes. Torna-ho a provar."
-  },
-  "addDilemma": {
-    "title": "Afegeix un dilema",
-    "search": "Cercar dilemes",
-    "close": "Tancar",
-    "empty": "No hi ha dilemes aptes amb aquesta cerca.",
-    "searchPlaceholder": "Cerca per text o etiqueta"
   },
   "expel": {
     "title": "Vols expulsar {{name}}?",
@@ -499,11 +500,8 @@
   },
   "playDilemma": {
     "title": "Sala nova",
-    "firstDilemma": "Començareu per aquest dilema",
-    "about_one": "{{category}} · {{count}} opció",
-    "about_other": "{{category}} · {{count}} opcions",
-    "about_many": "{{category}} · {{count}} opcions",
-    "rest": "La resta de la partida es completa amb el catàleg, segons la configuració de la sala.",
+    "firstDilemma": "Comenceu per aquest dilema",
+    "about": "{{category}} · Les altres 7 rondes seran aleatòries. Les podràs canviar a la configuració.",
     "loading": "Buscant el dilema…",
     "notFound": "Aquest dilema ja no és a TheLever. Pots crear una sala amb d’altres del catàleg.",
     "home": "Anar a l’inici"

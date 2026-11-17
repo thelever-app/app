@@ -26,7 +26,7 @@ import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
 import { RoundStartedEvent } from '../events/round-started.event.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
-import type { DilemmaOrigin } from '../services/compose-game.ts';
+import type { DilemmaOrigin } from '../vos/round.vo.ts';
 import { peopleInTheGap } from '../services/people-in-the-gap.ts';
 import { shuffle } from '../services/random-choice.ts';
 import { scorePredictions } from '../services/score-predictions.ts';
@@ -50,11 +50,11 @@ export interface GameDilemma {
   readonly hasGap: boolean;
 }
 
-/** A dilemma as the game plays it: what the catalog gives, how it got into the game and who added it. */
+/** A dilemma as the game plays it: what the catalog gives, where its round took it from and who chose it. */
 export interface PlayedDilemma extends GameDilemma {
   readonly origin: DilemmaOrigin;
-  /** The player who added it in the lobby; null for the others. */
-  readonly addedBy: string | null;
+  /** The player who chose it in the lobby, for a round of the players; null for the others. */
+  readonly chosenBy: string | null;
 }
 
 /** What the game copies from its room when it starts, and keeps even if the room changes. */
@@ -126,7 +126,7 @@ export interface DilemmaReveal {
     readonly right: boolean;
   }[];
   readonly personInTheGap: string | null;
-  readonly addedBy: string | null;
+  readonly chosenBy: string | null;
 }
 
 export interface GameSnapshot {
@@ -187,7 +187,7 @@ export class Game {
   readonly #dilemmas: readonly DilemmaVO[];
   readonly #origins: ReadonlyMap<
     string,
-    { readonly origin: DilemmaOrigin; readonly addedBy: string | null }
+    { readonly origin: DilemmaOrigin; readonly chosenBy: string | null }
   >;
   readonly #settings: GameSettings;
   #round: RoundState | null = null;
@@ -216,7 +216,7 @@ export class Game {
         new DilemmaVO(dilemmaId, version, optionIds, hasGap),
     );
     this.#origins = new Map(
-      dilemmas.map(({ dilemmaId, origin, addedBy }) => [dilemmaId, { origin, addedBy }]),
+      dilemmas.map(({ dilemmaId, origin, chosenBy }) => [dilemmaId, { origin, chosenBy }]),
     );
     this.#settings = { ...settings };
   }
@@ -247,11 +247,11 @@ export class Game {
   /** In the order every player gets them. */
   get dilemmas(): readonly PlayedDilemma[] {
     return this.#dilemmas.map(({ dilemmaId, version, optionIds, hasGap }) => {
-      const { origin, addedBy } = this.#origins.get(dilemmaId) as {
+      const { origin, chosenBy } = this.#origins.get(dilemmaId) as {
         origin: DilemmaOrigin;
-        addedBy: string | null;
+        chosenBy: string | null;
       };
-      return { dilemmaId, version, optionIds, hasGap, origin, addedBy };
+      return { dilemmaId, version, optionIds, hasGap, origin, chosenBy };
     });
   }
 
@@ -613,7 +613,7 @@ export class Game {
           )
         : [],
       personInTheGap: this.#peopleInTheGap.get(dilemmaId) ?? null,
-      addedBy: nominal ? (this.#origins.get(dilemmaId)?.addedBy ?? null) : null,
+      chosenBy: nominal ? (this.#origins.get(dilemmaId)?.chosenBy ?? null) : null,
     };
   }
 

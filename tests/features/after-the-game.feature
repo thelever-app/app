@@ -79,8 +79,15 @@ Feature: After the game
     @ui @todo
     Scenario: The host changes the configuration before the rematch starts
       Given the players are in the lobby of the rematch
-      When "Ana" changes the number of dilemmas
-      Then the rematch uses the new number of dilemmas
+      When "Ana" changes the rounds
+      Then the rematch uses the new rounds
+
+    @todo
+    Scenario: The rematch keeps the rounds
+      Given round 1 had a specific dilemma and round 3 was chosen by the players
+      When the players are in the lobby of the rematch
+      Then round 1 is random from every category
+      And round 3 is empty
 
     @todo
     Scenario: The rematch does not repeat dilemmas
@@ -89,11 +96,11 @@ Feature: After the game
       Then none of its dilemmas has been played before in that room
 
     @ui @todo
-    Scenario: The category runs out of unplayed dilemmas
-      Given the room has played every dilemma of its category
+    Scenario: The categories of a random round run out
+      Given the room has played every dilemma of the categories of round 2
       When "Ana" starts a rematch
-      Then "Ana" is told there are no new dilemmas in that category
-      And "Ana" can choose another category
+      Then "Ana" is told round 2 has no new dilemmas left
+      And "Ana" can change its categories
 
     @ui @todo
     Scenario: A player leaves instead of playing the rematch

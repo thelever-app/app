@@ -42,22 +42,35 @@ async function renderPlay(
 }
 
 describe('PlayDilemmaScreen', () => {
-  it('should show the dilemma the room starts with, from the public id of the link', async () => {
+  it('should show the dilemma of the first round, from the public id of the link', async () => {
     // Act
     const { t, api } = await renderPlay(async () => PREVIEW);
 
     // Assert
-    expect(await screen.findByTestId('first-dilemma')).toHaveProperty(
-      'textContent',
-      expect.stringContaining('The lever'),
-    );
-    expect(screen.getByTestId('first-dilemma').textContent).toContain(
-      t('playDilemma.about', { category: t('categories.life-and-death'), count: 2 }),
+    const card = await screen.findByRole('region', {
+      name: t('pickDilemmas.title', { number: 1 }),
+    });
+    expect(card.textContent).toBe(
+      'Empezáis por este dilemaThe leverVida y muerte · Las otras 7 rondas serán aleatorias. Podrás cambiarlas en los ajustes.',
     );
     expect(api.previewDilemma).toHaveBeenCalledWith('TestPublicId');
   });
 
-  it('should create a room that starts with that dilemma, in its language', async () => {
+  it('should show the text of the dilemma when it has no name', async () => {
+    // Arrange
+    const withoutName: DilemmaPreviewResponseDto = { ...PREVIEW, text: 'Le mientes a {gap}' };
+    delete withoutName.name;
+
+    // Act
+    const { t } = await renderPlay(async () => withoutName);
+
+    // Assert
+    expect((await screen.findByTestId('first-dilemma')).textContent).toContain(
+      `Le mientes a ${t('pickDilemmas.someone')}`,
+    );
+  });
+
+  it('should create a room with that dilemma in its first round, in its language', async () => {
     // Arrange
     const { t, createRoom } = await renderPlay(async () => PREVIEW);
     await screen.findByTestId('first-dilemma');
@@ -75,7 +88,7 @@ describe('PlayDilemmaScreen', () => {
       expect(screen.getByTestId('location').textContent).toBe('/rooms/test-room-id'),
     );
     expect(createRoom).toHaveBeenCalledWith(
-      expect.objectContaining({ firstDilemmaId: 'dlm-7-en', dilemmaLanguage: 'en' }),
+      expect.objectContaining({ firstRoundDilemmaId: 'dlm-7-en', dilemmaLanguage: 'en' }),
     );
   });
 

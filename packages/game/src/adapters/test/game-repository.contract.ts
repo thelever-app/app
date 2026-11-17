@@ -79,14 +79,14 @@ export function describeGameRepositoryContract(
     );
     await rooms.save(room);
     // Each origin, so a repository that loses them fails.
-    const origins = ['added-by-a-player', 'picked-by-the-host', 'picked-by-the-system'] as const;
+    const origins = ['players', 'specific', 'random'] as const;
     const game = Game.create(
       {
         roomId: room.id,
         dilemmas: dilemmas.map((dilemma, index) => ({
           ...dilemma,
           origin: origins[index % 3]!,
-          addedBy: index % 3 === 0 ? 'TestLuisId' : null,
+          chosenBy: index % 3 === 0 ? 'TestLuisId' : null,
         })),
         settings,
       },
@@ -145,8 +145,8 @@ export function describeGameRepositoryContract(
             roomId: other.id,
             dilemmas: dilemmas.map((dilemma) => ({
               ...dilemma,
-              origin: 'picked-by-the-system' as const,
-              addedBy: null,
+              origin: 'random' as const,
+              chosenBy: null,
             })),
             settings: ANONYMOUS,
           },

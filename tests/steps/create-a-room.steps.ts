@@ -1,8 +1,8 @@
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { type Category, isCategory } from '@thelever-app/game';
-import type { SettingsView } from '../support/driver.ts';
-import { catalogDilemmasSuiting } from '../support/test-catalog.ts';
+import type { RoundSetting, RoundView, SettingsView } from '../support/driver.ts';
+import { catalogDilemmasSuiting, TEST_DILEMMAS } from '../support/test-catalog.ts';
 import { SOMEONE, type GameWorld } from '../support/world.ts';
 
 /** A category as a scenario writes it: its id. */
@@ -20,10 +20,38 @@ const LANGUAGES: Readonly<Record<string, string>> = { English: 'en', Spanish: 'e
 /** Test data: a new value for each part of the configuration the host can change before starting. */
 const NEW_CONFIGURATION: Partial<SettingsView> = {
   dilemmaLanguage: 'fr',
-  categories: ['honesty'],
-  dilemmaCount: 6,
   timePerDilemmaSeconds: 30,
 };
+/** Test data: new rounds for that configuration, as many as the test data has in French. */
+const NEW_ROUNDS: readonly RoundSetting[] = Array.from({ length: 6 }, () => ({
+  origin: 'random',
+  categories: ['honesty'],
+}));
+
+/** How a player of the lobby sees the rounds the host set: no round of the players chosen yet. */
+function viewsOf(rounds: readonly RoundSetting[]): RoundView[] {
+  return rounds.map((round) =>
+    round.origin === 'players' ? { origin: 'players', dilemmaId: null } : round,
+  );
+}
+
+/** The categories of the round as the host set it, or every one. */
+function categoriesOf(round: RoundSetting | undefined): readonly Category[] | null {
+  return round?.origin === 'random' ? round.categories : null;
+}
+
+/** That round of the room as `viewer` sees it. */
+async function roundSeenBy(world: GameWorld, viewer: string, round: number): Promise<RoundView> {
+  const seen = (await world.driver.roundsSeenBy(viewer))[round - 1];
+  assert.ok(seen, `${viewer} sees no round ${round}`);
+  return seen;
+}
+
+/** The host sets that round; the room must take it. */
+async function setRound(world: GameWorld, round: number, setting: RoundSetting): Promise<void> {
+  const host = await world.host();
+  assert.ok(await world.driver.tryToSetRound(host, round, setting), `round ${round} is not set`);
+}
 
 function codeOf(language: string): string {
   const code = LANGUAGES[language];
@@ -156,11 +184,12 @@ Then('the dilemmas of the room are in {word}', async function (this: GameWorld, 
 });
 
 Then(
-  'the room has default categories, number of dilemmas and time per dilemma',
-  async function (this: GameWorld) {
-    const settings = await this.driver.settingsSeenBy(await this.host());
-    assert.equal(settings.categories, null, 'the room does not start with every category');
-    assert.ok(settings.dilemmaCount > 0, 'the room has no number of dilemmas');
+  'the room has {int} random rounds of every category and the default time per dilemma',
+  async function (this: GameWorld, count: number) {
+    const host = await this.host();
+    const random: RoundView = { origin: 'random', categories: null };
+    assert.deepEqual(await this.driver.roundsSeenBy(host), Array(count).fill(random));
+    const settings = await this.driver.settingsSeenBy(host);
     assert.ok(settings.timePerDilemmaSeconds > 0, 'the room has no time per dilemma');
   },
 );
@@ -170,10 +199,13 @@ Given('a host in the lobby', async function (this: GameWorld) {
 });
 
 When(
-  'the host changes the dilemma language, the categories, the number of dilemmas or the time per dilemma',
+  'the host changes the dilemma language, the rounds or the time per dilemma',
   async function (this: GameWorld) {
+    const host = await this.host();
     this.changes = NEW_CONFIGURATION;
-    await this.driver.changeSettings(await this.host(), this.changes);
+    this.rounds = NEW_ROUNDS;
+    await this.driver.changeSettings(host, this.changes);
+    await this.driver.setRounds(host, this.rounds);
   },
 );
 
@@ -183,10 +215,12 @@ Then('the game uses the new configuration', async function (this: GameWorld) {
 
   assert.equal(settings.dilemmaLanguage, this.changes.dilemmaLanguage);
   assert.equal(settings.timePerDilemmaSeconds, this.changes.timePerDilemmaSeconds);
-  assert.equal(dilemmas.length, this.changes.dilemmaCount);
-  for (const dilemmaId of dilemmas) {
-    assert.ok(this.changes.categories?.includes(this.driver.catalogEntryOf(dilemmaId).category));
-  }
+  assert.equal(dilemmas.length, this.rounds.length);
+  dilemmas.forEach((dilemmaId, index) => {
+    const { category } = this.driver.catalogEntryOf(dilemmaId);
+    const categories = categoriesOf(this.rounds[index]);
+    assert.ok(!categories || categories.includes(category), `round ${index + 1} is ${category}`);
+  });
 });
 
 Given(
@@ -199,13 +233,20 @@ Given(
 
 When('{string} changes the configuration', async function (this: GameWorld, host: string) {
   await this.hostIs(host);
-  this.changes = { variant: 'anonymous', categories: ['honesty'], timePerDilemmaSeconds: 90 };
+  this.changes = { variant: 'anonymous', timePerDilemmaSeconds: 90 };
+  this.rounds = [
+    { origin: 'random', categories: ['honesty'] },
+    { origin: 'players' },
+    { origin: 'random', categories: null },
+  ];
   await this.driver.changeSettings(host, this.changes);
+  await this.driver.setRounds(host, this.rounds);
 });
 
 Then(
-  '{string} sees the summary of the new configuration and the type of room',
+  '{string} sees the rounds, the summary of the new configuration and the type of room',
   async function (this: GameWorld, player: string) {
+    assert.deepEqual(await this.driver.roundsSeenBy(player), viewsOf(this.rounds));
     const seen = await this.driver.settingsSeenBy(player);
     for (const [setting, value] of Object.entries(this.changes)) {
       assert.deepEqual(
@@ -279,11 +320,15 @@ Given(
 When('the host tries to start the game', async function (this: GameWorld) {
   const host = await this.host();
   this.gameBefore = await this.driver.currentGameSeenBy(host);
+  this.triedToStartTheGame = true;
   await this.driver.tryToStartGame(host);
 });
 
+// After a step tried to start the game, whether it started; otherwise, the host starts it.
 Then(/^the game (starts|does not start)$/, async function (this: GameWorld, outcome: string) {
-  const game = await this.driver.currentGameSeenBy(await this.host());
+  const host = await this.host();
+  if (outcome === 'starts' && !this.triedToStartTheGame) await this.driver.startGame(host);
+  const game = await this.driver.currentGameSeenBy(host);
   if (outcome === 'starts') assert.ok(game, 'no game started');
   else assert.equal(game, this.gameBefore);
 });
@@ -357,30 +402,20 @@ Then('the game can include dilemmas for adults', async function (this: GameWorld
 });
 
 When(
-  'the host searches {string} and picks {int} dilemmas',
-  async function (this: GameWorld, text: string, count: number) {
-    const host = await this.host();
-    const found = await this.driver.searchDilemmas(host, text);
-    assert.ok(found.length >= count, `the search shows only ${found.length} dilemmas`);
-    this.dilemmas = found.slice(0, count);
-    await this.driver.pickDilemmas(host, [...this.dilemmas]);
+  'the host searches {string} and chooses a dilemma for round {int}',
+  async function (this: GameWorld, text: string, round: number) {
+    const [dilemmaId] = await this.driver.searchDilemmas(await this.host(), text);
+    assert.ok(dilemmaId, `the search for "${text}" shows nothing`);
+    this.dilemmaId = dilemmaId;
+    await setRound(this, round, { origin: 'specific', dilemmaId });
   },
 );
 
-Then('the game uses exactly those {int} dilemmas', async function (this: GameWorld, count: number) {
-  const dilemmas = await dilemmasOfTheGame(this);
-  assert.equal(dilemmas.length, count);
-  assert.deepEqual([...dilemmas].sort(), [...this.dilemmas].sort());
+Then('round {int} of the game plays that dilemma', async function (this: GameWorld, round: number) {
+  assert.equal((await dilemmasOfTheGame(this))[round - 1], this.dilemmaId);
 });
 
-Then('no new dilemmas are added for the exploration', async function (this: GameWorld) {
-  const dilemmas = await dilemmasOfTheGame(this);
-  for (const dilemmaId of dilemmas) {
-    assert.equal(this.driver.catalogEntryOf(dilemmaId).status, 'in-catalog');
-  }
-});
-
-When('the host searches for dilemmas', async function (this: GameWorld) {
+When('the host searches for the dilemma of a round', async function (this: GameWorld) {
   this.dilemmas = await this.driver.searchDilemmas(await this.host());
 });
 
@@ -389,16 +424,19 @@ Then('only dilemmas suitable from 16 are shown', function (this: GameWorld) {
   assert.ok(minimumAgesOf(this, this.dilemmas).every((age) => age === 16));
 });
 
-When('the host searches part of the text of a dilemma', async function (this: GameWorld) {
-  const host = await this.host();
-  const [dilemmaId] = (await this.driver.searchDilemmas(host)).slice(-1);
-  assert.ok(dilemmaId, 'the catalog has no dilemma for the room');
-  const { text } = this.driver.catalogEntryOf(dilemmaId);
-  // The end of its text, in other case: part of a word, as a player types it.
-  const part = text.slice(-Math.ceil(text.length / 3)).toUpperCase();
-  this.dilemmas = [dilemmaId];
-  this.found = await this.driver.searchDilemmas(host, part);
-});
+When(
+  'the host searches part of the text of a dilemma for a round',
+  async function (this: GameWorld) {
+    const host = await this.host();
+    const [dilemmaId] = (await this.driver.searchDilemmas(host)).slice(-1);
+    assert.ok(dilemmaId, 'the catalog has no dilemma for the room');
+    const { text } = this.driver.catalogEntryOf(dilemmaId);
+    // The end of its text, in other case: part of a word, as a player types it.
+    const part = text.slice(-Math.ceil(text.length / 3)).toUpperCase();
+    this.dilemmas = [dilemmaId];
+    this.found = await this.driver.searchDilemmas(host, part);
+  },
+);
 
 Given(
   'more than {int} dilemmas of the catalog suit the room',
@@ -430,36 +468,35 @@ Then('that dilemma is shown', function (this: GameWorld) {
 });
 
 When(
-  'the host chooses the categories {string} and {string}',
-  async function (this: GameWorld, first: string, second: string) {
-    this.changes = { categories: [categoryNamed(first), categoryNamed(second)] };
-    await this.driver.changeSettings(await this.host(), this.changes);
+  'the host sets round {int} as random from {string} and {string}',
+  async function (this: GameWorld, round: number, first: string, second: string) {
+    this.categories = [categoryNamed(first), categoryNamed(second)];
+    await setRound(this, round, { origin: 'random', categories: this.categories });
   },
 );
 
-Then('every dilemma of the game is of one of those categories', async function (this: GameWorld) {
-  const dilemmas = await dilemmasOfTheGame(this);
-  assert.ok(dilemmas.length > 0, 'the game has no dilemmas');
-  for (const dilemmaId of dilemmas) {
+Then(
+  'the dilemma of round {int} is of one of those categories',
+  async function (this: GameWorld, round: number) {
+    const dilemmaId = (await dilemmasOfTheGame(this))[round - 1];
+    assert.ok(dilemmaId, `the game plays no round ${round}`);
     const { category } = this.driver.catalogEntryOf(dilemmaId);
-    assert.ok(this.changes.categories?.includes(category), `${dilemmaId} is of ${category}`);
-  }
+    assert.ok(this.categories.includes(category), `${dilemmaId} is of ${category}`);
+  },
+);
+
+Given('round {int} has a specific dilemma', async function (this: GameWorld, round: number) {
+  await setRound(this, round, { origin: 'specific', dilemmaId: await this.unusedDilemma() });
 });
 
-Given('the host has picked specific dilemmas', async function (this: GameWorld) {
-  const host = await this.host();
-  const found = await this.driver.searchDilemmas(host);
-  await this.driver.pickDilemmas(host, found.slice(0, 2));
-  assert.equal((await this.driver.pickedDilemmasSeenBy(host)).length, 2);
+When('the host sets round {int} as random', async function (this: GameWorld, round: number) {
+  await setRound(this, round, { origin: 'random', categories: null });
 });
 
-When('the host chooses to play by categories', async function (this: GameWorld) {
-  await this.driver.playByCategories(await this.host());
-});
-
-Then('no dilemma is picked for the game', async function (this: GameWorld) {
+Then('round {int} has no dilemma chosen', async function (this: GameWorld, round: number) {
   for (const viewer of this.inRoom) {
-    assert.deepEqual(await this.driver.pickedDilemmasSeenBy(viewer), [], viewer);
+    const seen = await roundSeenBy(this, viewer, round);
+    assert.equal(seen.origin, 'random', `${viewer} sees a dilemma in round ${round}`);
   }
 });
 
@@ -479,44 +516,110 @@ Then('the game does not include dilemmas in exploration', async function (this: 
   }
 });
 
-// Dilemmas added by the players
-
-Given(
-  '{string} has allowed players to add dilemmas',
-  async function (this: GameWorld, host: string) {
-    await this.hostIs(host);
-    await this.driver.changeSettings(host, { dilemmasPerPlayer: 1 });
-  },
-);
-
-Given('the host has allowed players to add dilemmas', async function (this: GameWorld) {
-  await this.driver.changeSettings(await this.host(), { dilemmasPerPlayer: 1 });
-});
-
-Given('a player has added a dilemma', async function (this: GameWorld) {
-  this.player = SOMEONE.player;
-  await this.isInTheRoom(this.player);
-  await this.driver.addDilemma(this.player);
-});
+// The rounds
 
 When(
-  '{string} looks at the added dilemmas in the lobby',
-  async function (this: GameWorld, viewer: string) {
-    this.viewers = [viewer];
-    this.dilemmas = await this.driver.addedDilemmasSeenBy(viewer);
-    assert.ok(this.dilemmas.length > 0, `${viewer} sees no added dilemma`);
+  'the host sets round {int} as chosen by the players',
+  async function (this: GameWorld, round: number) {
+    await setRound(this, round, { origin: 'players' });
   },
 );
 
-Then('she does not see who added it', async function (this: GameWorld) {
-  const [viewer] = this.viewers;
-  assert.ok(viewer, 'no step said who is looking');
-  assert.deepEqual(await this.driver.authorsOfAddedDilemmasSeenBy(viewer), []);
+// The host and, if nobody has joined, someone who does: every player, not only the host.
+Then(
+  'every player in the lobby can choose the dilemma of round {int}',
+  async function (this: GameWorld, round: number) {
+    if ((await this.guests()).length === 0) await this.isInTheRoom(SOMEONE.player);
+    for (const player of this.inRoom) {
+      assert.ok(await this.driver.canChooseRoundDilemma(player, round), `${player} cannot`);
+    }
+  },
+);
+
+Given(
+  'round {int} has the specific dilemma {string} and round {int} is random',
+  async function (this: GameWorld, round: number, name: string, random: number) {
+    await setRound(this, round, { origin: 'specific', dilemmaId: this.dilemmaCalled(name) });
+    const seen = await roundSeenBy(this, await this.host(), random);
+    assert.equal(seen.origin, 'random', `round ${random} is not random`);
+  },
+);
+
+Then('the first round plays {string}', async function (this: GameWorld, name: string) {
+  assert.equal((await dilemmasOfTheGame(this))[0], this.dilemmaCalled(name));
 });
 
-Then('she can remove it', async function (this: GameWorld) {
-  const [viewer] = this.viewers;
-  assert.ok(viewer, 'no step said who is looking');
-  await this.driver.removeAddedDilemma(viewer);
-  assert.deepEqual(await this.driver.addedDilemmasSeenBy(viewer), []);
+Given('a room with {int} rounds', async function (this: GameWorld, count: number) {
+  const random: RoundSetting = { origin: 'random', categories: null };
+  await this.driver.setRounds(await this.host(), Array(count).fill(random));
+  assert.equal((await this.driver.roundsSeenBy(await this.host())).length, count);
+});
+
+When(/^the host tries to (add|remove) a round$/, async function (this: GameWorld, change: string) {
+  const host = await this.host();
+  const { length } = await this.driver.roundsSeenBy(host);
+  this.accepted =
+    change === 'add'
+      ? await this.driver.tryToAddRound(host)
+      : await this.driver.tryToRemoveRound(host, length);
+});
+
+Then('the room still has {int} rounds', async function (this: GameWorld, count: number) {
+  assert.equal(this.accepted, false);
+  for (const viewer of this.inRoom) {
+    assert.equal((await this.driver.roundsSeenBy(viewer)).length, count, viewer);
+  }
+});
+
+Given(
+  'round {int} has the dilemma {string}',
+  async function (this: GameWorld, round: number, name: string) {
+    await setRound(this, round, { origin: 'specific', dilemmaId: this.dilemmaCalled(name) });
+  },
+);
+
+When(
+  'the host tries to choose {string} for round {int}',
+  async function (this: GameWorld, name: string, round: number) {
+    this.dilemmaId = this.dilemmaCalled(name);
+    this.accepted = await this.driver.tryToSetRound(await this.host(), round, {
+      origin: 'specific',
+      dilemmaId: this.dilemmaId,
+    });
+  },
+);
+
+Then('round {int} does not get it', async function (this: GameWorld, round: number) {
+  assert.equal(this.accepted, false);
+  for (const viewer of this.inRoom) {
+    const seen = await roundSeenBy(this, viewer, round);
+    assert.ok(!('dilemmaId' in seen && seen.dilemmaId === this.dilemmaId), viewer);
+  }
+});
+
+Given(
+  'an adults-only room whose round {int} has an adults-only dilemma',
+  async function (this: GameWorld, round: number) {
+    await this.driver.changeSettings(await this.host(), { adultsOnly: true });
+    const forAdults = TEST_DILEMMAS.find(
+      ({ language, minimumAge, status }) =>
+        language === 'es' && minimumAge === 18 && status === 'in-catalog',
+    );
+    assert.ok(forAdults, 'the test data has no dilemma for adults');
+    await setRound(this, round, { origin: 'specific', dilemmaId: forAdults.dilemmaId });
+  },
+);
+
+When('the host turns off adults only', async function (this: GameWorld) {
+  await this.driver.changeSettings(await this.host(), { adultsOnly: false });
+});
+
+Then('round {int} is random from every category', async function (this: GameWorld, round: number) {
+  for (const viewer of this.inRoom) {
+    assert.deepEqual(
+      await roundSeenBy(this, viewer, round),
+      { origin: 'random', categories: null },
+      viewer,
+    );
+  }
 });

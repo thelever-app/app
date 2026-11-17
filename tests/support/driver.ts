@@ -8,18 +8,28 @@ export interface RoomChoices {
   readonly deviceLanguage?: string;
 }
 
-/** The configuration of the room, as a player of the lobby sees it. */
+/** The configuration of the room apart from its rounds, as a player of the lobby sees it. */
 export interface SettingsView {
   readonly variant: string;
   readonly adultsOnly: boolean;
   readonly dilemmaLanguage: string;
-  /** Null, every category; an empty list, none. */
-  readonly categories: readonly Category[] | null;
-  readonly dilemmaCount: number;
   readonly timePerDilemmaSeconds: number;
   readonly newDilemmas: boolean;
-  readonly dilemmasPerPlayer: number;
 }
+
+/** A round as the host sets it, by where its dilemma comes from. */
+export type RoundSetting =
+  /** A dilemma of those categories at random; null, of every one. */
+  | { readonly origin: 'random'; readonly categories: readonly Category[] | null }
+  | { readonly origin: 'specific'; readonly dilemmaId: string }
+  /** A player chooses it in the lobby. */
+  | { readonly origin: 'players' };
+
+/** A round as a player of the lobby sees it; of the players, with the dilemma someone chose, if any. */
+export type RoundView =
+  | { readonly origin: 'random'; readonly categories: readonly Category[] | null }
+  | { readonly origin: 'specific'; readonly dilemmaId: string }
+  | { readonly origin: 'players'; readonly dilemmaId: string | null };
 
 /** What a player sees of a room before entering it. */
 export interface RoomPreview {
@@ -114,7 +124,7 @@ export interface RevealView {
     readonly right: boolean;
   }[];
   readonly personInTheGap: string | null;
-  readonly addedBy: string | null;
+  readonly chosenBy: string | null;
   /** Whether it shows anything about the points of anyone. */
   readonly showsPoints: boolean;
 }
@@ -197,25 +207,33 @@ export interface GameDriver {
   /** Whether `player` has any way to change the configuration. */
   canChangeSettings(player: string): Promise<boolean>;
 
-  /** `player` adds a dilemma of the catalog suitable for the room that nobody added yet. */
-  addDilemma(player: string): Promise<void>;
-  /** As `addDilemma`; whether it was added. */
-  tryToAddAnotherDilemma(player: string): Promise<boolean>;
-  /** The ids of the dilemmas added by the players, as `viewer` sees them. */
-  addedDilemmasSeenBy(viewer: string): Promise<string[]>;
-  /** Who `viewer` can tell added each dilemma, from everything they see of the added dilemmas. */
-  authorsOfAddedDilemmasSeenBy(viewer: string): Promise<string[]>;
-  /** `player` removes the first added dilemma they may: any for the host, their own for anyone else. */
-  removeAddedDilemma(player: string): Promise<void>;
+  /**
+   * The rounds of the room in the order the game plays them, as `viewer` sees them. Rounds are
+   * named by their position, from 1, as people count them.
+   */
+  roundsSeenBy(viewer: string): Promise<RoundView[]>;
+  /** `host` sets all the rounds at once on the settings screen, keeping the others as they are. */
+  setRounds(host: string, rounds: readonly RoundSetting[]): Promise<void>;
+  /** `host` changes that round on the settings screen, and the others stay; whether the room took it. */
+  tryToSetRound(host: string, round: number, setting: RoundSetting): Promise<boolean>;
+  /** `host` adds a random round of every category at the end; whether the room took it. */
+  tryToAddRound(host: string): Promise<boolean>;
+  /** `host` removes that round; whether the room took it. */
+  tryToRemoveRound(host: string, round: number): Promise<boolean>;
+  /** `player` chooses that dilemma for that round of the players in the lobby; whether the round got it. */
+  chooseRoundDilemma(player: string, round: number, dilemmaId: string): Promise<boolean>;
+  /** Whether `player` has any way to choose the dilemma of that round. */
+  canChooseRoundDilemma(player: string, round: number): Promise<boolean>;
+  /** `player` takes out the dilemma they chose for that round. */
+  clearRoundDilemma(player: string, round: number): Promise<void>;
+  /** Whether `player` has any way to take out the dilemma of that round. */
+  canClearRoundDilemma(player: string, round: number): Promise<boolean>;
+  /** Who `viewer` can tell chose the dilemma of a round of the players, from everything they see of the rounds. */
+  choosersSeenBy(viewer: string): Promise<string[]>;
   /** The ids of the dilemmas of the catalog that a search of `player` shows first, for what they typed. */
   searchDilemmas(player: string, text?: string): Promise<string[]>;
   /** The ids of each of the first `pages` pages of a search of `player`, asking for more after each one. */
   searchDilemmaPages(player: string, pages: number): Promise<string[][]>;
-  pickDilemmas(host: string, dilemmaIds: string[]): Promise<void>;
-  /** `host` goes back to a game by categories, leaving the picked dilemmas at once. */
-  playByCategories(host: string): Promise<void>;
-  /** The ids of the dilemmas the host picked, as `viewer` sees them. */
-  pickedDilemmasSeenBy(viewer: string): Promise<string[]>;
   catalogEntryOf(dilemmaId: string): CatalogEntry;
 
   expel(host: string, player: string): Promise<void>;
@@ -232,14 +250,15 @@ export interface GameDriver {
   dilemmasOfTheGame(): Promise<string[]>;
   settingsOfTheGame(): Promise<GameSettingsView>;
 
-  /** How many new dilemmas the room server is configured to reserve in a game of that many dilemmas. */
-  newDilemmasSetForGamesOf(dilemmaCount: number): number;
+  /** How many new dilemmas the room server is configured to reserve in a game with that many random rounds. */
+  newDilemmasSetForRandomRounds(count: number): number;
 
   // Rounds
 
   /**
-   * The host starts the game and every player opens it. With a number of dilemmas, and no dilemma
-   * picked or added by a step, the host picks that many of the test data with the two usual options.
+   * The host starts the game and every player opens it. With a number of dilemmas, the game has
+   * that many rounds: those a step set keep their setting, and the host makes the others specific
+   * with dilemmas of the test data with the two usual options.
    */
   startDecisionPhase(dilemmaCount?: number): Promise<void>;
   /** Everything every other player received, of any kind and about anyone. */
@@ -296,8 +315,8 @@ export interface GameDriver {
   optionsSeenBy(player: string, position: number): Promise<string[]>;
   /** Who takes the gap of each dilemma of the game that has it, by its position (from 1). */
   peopleInTheGap(): Promise<Map<number, string>>;
-  /** The position (from 1) of the dilemma that `player` added in the lobby. */
-  positionAddedBy(player: string): Promise<number>;
+  /** The position (from 1) of the dilemma that `player` chose in the lobby. */
+  positionChosenBy(player: string): Promise<number>;
   /** The text the game keeps of the dilemma in that position, with the gap unfilled. */
   textKeptFor(position: number): Promise<string>;
   answerRecordedFor(player: string, position: number): Promise<RecordedAnswer | undefined>;
@@ -442,8 +461,10 @@ export interface GameDriver {
   worldResultSeen(): Promise<WorldResultView>;
   /** The visitor creates the room the screen offers to play the dilemma with the group. */
   createTheRoomOfTheDilemma(): Promise<void>;
-  /** The name of the dilemma the room the visitor created plays first. */
-  firstDilemmaOfTheVisitorRoom(): Promise<string | undefined>;
+  /** The name of the dilemma the screen to create the room says the game starts with, before creating it. */
+  startingDilemmaShownToTheVisitor(): Promise<string | undefined>;
+  /** The name of the specific dilemma of round 1 of the room the visitor created; none if it is not specific. */
+  firstRoundDilemmaOfTheVisitorRoom(): Promise<string | undefined>;
 }
 
 /** What the visitor sees of the world result of a dilemma after voting it alone. */

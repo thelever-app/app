@@ -24,7 +24,7 @@ describe('POST /rooms', () => {
     const response = await request(await composedHttpServer())
       .post('/rooms')
       .set('Authorization', bearer('ana'))
-      .send({ nickname: 'Ana', ...ROOM_CHOICES, firstDilemmaId: 'seed-trolley' });
+      .send({ nickname: 'Ana', ...ROOM_CHOICES, firstRoundDilemmaId: 'seed-trolley' });
 
     // Assert
     expect(response.status).toBe(201);
@@ -35,7 +35,7 @@ describe('POST /rooms', () => {
     const response = await request(await composedHttpServer())
       .post('/rooms')
       .set('Authorization', bearer('ana'))
-      .send({ nickname: 'Ana', ...ROOM_CHOICES, firstDilemmaId: 'TestMissingDilemma' });
+      .send({ nickname: 'Ana', ...ROOM_CHOICES, firstRoundDilemmaId: 'TestMissingDilemma' });
 
     // Assert
     expect(response.status).toBe(404);

@@ -76,7 +76,7 @@ describe('grantDilemmaAccess', () => {
     }
     expect(await privilegeOf('rooms', 'SELECT', CATALOG_USER)).toBe(false);
     expect(await privilegeOf('game_dilemmas', 'SELECT', CATALOG_USER)).toBe(false);
-    expect(await privilegeOf('room_added_dilemmas', 'SELECT', CATALOG_USER)).toBe(false);
+    expect(await privilegeOf('room_rounds', 'SELECT', CATALOG_USER)).toBe(false);
   });
 });
 

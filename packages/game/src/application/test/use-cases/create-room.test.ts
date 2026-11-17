@@ -114,15 +114,15 @@ describe('CreateRoomUseCase', () => {
       const { roomId } = await createRoom.execute({
         ...ANA,
         dilemmaLanguage: 'es',
-        firstDilemmaId: 'TestCatalog5',
+        firstRoundDilemmaId: 'TestCatalog5',
       });
 
       // Assert
       const room = await roomRepository.findById(roomId);
-      expect(room?.firstDilemma).toEqual({
-        dilemmaId: 'TestCatalog5',
-        minimumAge: 16,
-        compromising: false,
+      expect(room?.settings.rounds[0]).toEqual({
+        id: 1,
+        origin: 'specific',
+        dilemma: { dilemmaId: 'TestCatalog5', minimumAge: 16, compromising: false },
       });
     });
 
@@ -130,7 +130,7 @@ describe('CreateRoomUseCase', () => {
       ['in exploration', 'TestNew1'],
       ['in another language', 'TestCatalan1'],
       ['that does not exist', 'TestMissing'],
-    ])('should create no room with a first dilemma %s', async (_case, firstDilemmaId) => {
+    ])('should create no room with a first dilemma %s', async (_case, firstRoundDilemmaId) => {
       // Arrange
       const roomRepository = new InMemoryRoomRepository();
       const createRoom = new CreateRoomUseCase(
@@ -143,7 +143,7 @@ describe('CreateRoomUseCase', () => {
 
       // Act & Assert
       await expect(
-        createRoom.execute({ ...ANA, dilemmaLanguage: 'es', firstDilemmaId }),
+        createRoom.execute({ ...ANA, dilemmaLanguage: 'es', firstRoundDilemmaId }),
       ).rejects.toThrow(DilemmaNotFoundError);
     });
 
@@ -159,7 +159,7 @@ describe('CreateRoomUseCase', () => {
 
       // Act & Assert
       await expect(
-        createRoom.execute({ ...ANA, dilemmaLanguage: 'es', firstDilemmaId: 'TestCatalog1' }),
+        createRoom.execute({ ...ANA, dilemmaLanguage: 'es', firstRoundDilemmaId: 'TestCatalog1' }),
       ).rejects.toThrow(DilemmaNotSuitableError);
     });
 
@@ -175,7 +175,11 @@ describe('CreateRoomUseCase', () => {
 
       // Act & Assert
       await expect(
-        createRoom.execute({ ...ANA, dilemmaLanguage: 'es', firstDilemmaId: 'TestCompromising1' }),
+        createRoom.execute({
+          ...ANA,
+          dilemmaLanguage: 'es',
+          firstRoundDilemmaId: 'TestCompromising1',
+        }),
       ).rejects.toThrow(DilemmaNotSuitableError);
     });
 

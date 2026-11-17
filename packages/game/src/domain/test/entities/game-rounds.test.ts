@@ -64,8 +64,8 @@ function gameOfThree(settings: GameSettings = NOMINAL, randomness = new KeepOrde
       version: 1,
       optionIds: OPTIONS,
       hasGap: index === 1,
-      origin: index === 2 ? 'added-by-a-player' : 'picked-by-the-system',
-      addedBy: index === 2 ? 'Luis' : null,
+      origin: index === 2 ? 'players' : 'random',
+      chosenBy: index === 2 ? 'Luis' : null,
     }),
   );
   const game = Game.create(
@@ -724,8 +724,8 @@ describe('Game, by rounds', () => {
               version: 1,
               optionIds: OPTIONS,
               hasGap: false,
-              origin: 'picked-by-the-system',
-              addedBy: null,
+              origin: 'random',
+              chosenBy: null,
             },
           ],
           settings: NOMINAL,
@@ -804,7 +804,7 @@ describe('Game, by rounds', () => {
       everyoneAnswers(game);
 
       // Act & Assert
-      expect(game.revealOf(2).addedBy).toBe('Luis');
+      expect(game.revealOf(2).chosenBy).toBe('Luis');
       expect(game.revealOf(1).personInTheGap).toBe(game.personInTheGap('TestDilemma2'));
     });
 
@@ -823,7 +823,7 @@ describe('Game, by rounds', () => {
       expect(reveal.distribution).toBeNull();
       expect(reveal.votes).toEqual([]);
       expect(reveal.votePredictions).toEqual([]);
-      expect(reveal.addedBy).toBeNull();
+      expect(reveal.chosenBy).toBeNull();
       expect(reveal.didNotVoteCount).toBe(1);
     });
   });

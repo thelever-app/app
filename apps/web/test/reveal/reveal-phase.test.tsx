@@ -45,7 +45,7 @@ const NOMINAL_REVEAL: Reveal = {
     { playerId: 'test-luis-id', aboutId: 'test-ana-id', vote: 'test-option-1a', right: true },
   ],
   personInTheGap: null,
-  addedBy: 'test-luis-id',
+  chosenBy: 'test-luis-id',
 };
 
 function revealed(reveal: Reveal, overrides: Partial<GameStateDto> = {}): GameStateDto {
@@ -69,7 +69,7 @@ const ANONYMOUS_REVEAL: Reveal = {
   ...NOMINAL_REVEAL,
   votes: [],
   votePredictions: [],
-  addedBy: null,
+  chosenBy: null,
 };
 const ANONYMOUS_PLAYERS = PLAYERS.map((player) => ({ ...player, answered: null }));
 
@@ -271,7 +271,7 @@ describe('RevealPhase', () => {
       );
 
       // Assert
-      expect(screen.getByText(t('reveal.addedBy', { name: 'Luis' }))).toBeDefined();
+      expect(screen.getByText(t('reveal.chosenBy', { name: 'Luis' }))).toBeDefined();
       expect(screen.getByText(t('reveal.about', { name: 'Marta' }))).toBeDefined();
     });
   });

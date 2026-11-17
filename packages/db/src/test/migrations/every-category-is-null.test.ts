@@ -62,8 +62,15 @@ describe('the migration that plays every category with null and none with an emp
     // Act
     await migrateTo(db, THIS);
 
-    // Assert
-    const rooms = await db.selectFrom('rooms').select(['id', 'categories']).orderBy('id').execute();
+    // Assert: the rooms as the table was then, before the rounds took the place of the categories.
+    const then = db as unknown as Kysely<{
+      rooms: { id: string; categories: string[] | null };
+    }>;
+    const rooms = await then
+      .selectFrom('rooms')
+      .select(['id', 'categories'])
+      .orderBy('id')
+      .execute();
     expect(rooms).toEqual([
       { id: 'TestEvery', categories: null },
       { id: 'TestHonesty', categories: ['honesty'] },

@@ -1,5 +1,8 @@
 import {
-  AddingDilemmasNotAllowedError,
+  NotChooserError,
+  RoundNotFoundError,
+  RoundNotForPlayersError,
+  RoundTakenError,
   AnswerIncompleteError,
   DilemmaAlreadyReportedError,
   DilemmaNotReportedAsOffensiveError,
@@ -39,7 +42,6 @@ import {
   RoomCodeNotFoundError,
   RoomFullError,
   RoomNotFoundError,
-  TooManyAddedDilemmasError,
 } from '@thelever-app/game';
 import {
   AlreadyVotedError,
@@ -71,8 +73,10 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [HostCannotBeExpelledError, 'host-cannot-be-expelled'],
   [NicknameAndAvatarTakenError, 'nickname-and-avatar-taken'],
   [NotEnoughPlayersError, 'not-enough-players'],
-  [AddingDilemmasNotAllowedError, 'adding-dilemmas-not-allowed'],
-  [TooManyAddedDilemmasError, 'too-many-added-dilemmas'],
+  [RoundNotFoundError, 'round-not-found'],
+  [RoundNotForPlayersError, 'round-not-for-players'],
+  [RoundTakenError, 'round-taken'],
+  [NotChooserError, 'not-chooser'],
   [DilemmaNotSuitableError, 'dilemma-not-suitable'],
   [InvalidAvatarError, 'invalid-avatar'],
   [InvalidRoomSettingError, 'invalid-room-setting'],

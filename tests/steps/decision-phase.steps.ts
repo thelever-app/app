@@ -3,6 +3,14 @@ import assert from 'node:assert/strict';
 import { testTextIn } from '../support/test-catalog.ts';
 import type { GameWorld } from '../support/world.ts';
 
+/** The host sets one specific round for each of those dilemmas, in their order, and no more. */
+async function specificRounds(world: GameWorld, dilemmaIds: readonly string[]): Promise<void> {
+  await world.driver.setRounds(
+    await world.host(),
+    dilemmaIds.map((dilemmaId) => ({ origin: 'specific', dilemmaId })),
+  );
+}
+
 /** Test data: the option a step predicts when the scenario does not say which, as the test dilemmas write it. */
 const PREDICTED_VOTE = 'do nothing';
 
@@ -202,11 +210,16 @@ Then(
 // The game, put together
 
 Given(
-  'a game of {int} dilemmas chosen by category with new dilemmas included',
+  'a game of {int} random rounds with new dilemmas included',
   async function (this: GameWorld, count: number) {
-    const settings = await this.driver.settingsSeenBy(await this.host());
-    assert.equal(settings.dilemmaCount, count);
-    assert.equal(settings.newDilemmas, true);
+    const host = await this.host();
+    const rounds = await this.driver.roundsSeenBy(host);
+    assert.equal(rounds.length, count);
+    assert.ok(
+      rounds.every(({ origin }) => origin === 'random'),
+      'not every round is random',
+    );
+    assert.equal((await this.driver.settingsSeenBy(host)).newDilemmas, true);
   },
 );
 
@@ -217,26 +230,41 @@ When('the game is put together', async function (this: GameWorld) {
 });
 
 Then(
-  'it includes the number of new dilemmas set for games of {int} dilemmas',
+  'it includes the number of new dilemmas set for {int} random rounds',
   async function (this: GameWorld, count: number) {
     await this.game();
     const newOnes = this.dilemmas.filter(
       (dilemmaId) => this.driver.catalogEntryOf(dilemmaId).status === 'in-exploration',
     );
-    assert.equal(newOnes.length, this.driver.newDilemmasSetForGamesOf(count));
+    assert.equal(newOnes.length, this.driver.newDilemmasSetForRandomRounds(count));
   },
 );
 
+Then('each new dilemma is of the categories of its round', async function (this: GameWorld) {
+  await this.game();
+  const rounds = await this.driver.roundsSeenBy(await this.host());
+  assert.equal(this.dilemmas.length, rounds.length, 'the game does not play every round');
+  this.dilemmas.forEach((dilemmaId, index) => {
+    const { status, category } = this.driver.catalogEntryOf(dilemmaId);
+    const round = rounds[index];
+    if (status !== 'in-exploration') return;
+    assert.equal(round?.origin, 'random', `round ${index + 1} is not random`);
+    const categories = round.origin === 'random' ? round.categories : null;
+    assert.ok(!categories || categories.includes(category), `round ${index + 1} is ${category}`);
+  });
+});
+
 Then('the rest come from the catalog', async function (this: GameWorld) {
   await this.game();
-  const { dilemmaCount } = await this.driver.settingsSeenBy(await this.host());
+  const rounds = await this.driver.roundsSeenBy(await this.host());
+  const random = rounds.filter(({ origin }) => origin === 'random').length;
   const fromTheCatalog = this.dilemmas.filter(
     (dilemmaId) => this.driver.catalogEntryOf(dilemmaId).status === 'in-catalog',
   );
-  assert.equal(this.dilemmas.length, dilemmaCount);
+  assert.equal(this.dilemmas.length, rounds.length);
   assert.equal(
     fromTheCatalog.length,
-    dilemmaCount - this.driver.newDilemmasSetForGamesOf(dilemmaCount),
+    rounds.length - this.driver.newDilemmasSetForRandomRounds(random),
   );
 });
 
@@ -299,7 +327,7 @@ Given(
     this.beforeTheGame();
     const found = await this.driver.searchDilemmas(await this.host(), 'three-options');
     assert.equal(found.length, 1, 'the test data has no dilemma with three options');
-    await this.driver.pickDilemmas(await this.host(), found);
+    await specificRounds(this, found);
     this.options = [first, second, third];
   },
 );
@@ -339,7 +367,7 @@ async function firstDilemmaIs(world: GameWorld, dilemmaId: string): Promise<void
   const host = await world.host();
   const found = await world.driver.searchDilemmas(host, dilemmaId);
   assert.deepEqual(found, [dilemmaId], `the search does not find only ${dilemmaId}`);
-  await world.driver.pickDilemmas(host, found);
+  await specificRounds(world, found);
   world.dilemmaId = dilemmaId;
 }
 
@@ -503,7 +531,7 @@ async function pickTheDilemmasWithTheGap(world: GameWorld): Promise<number> {
   world.beforeTheGame();
   const host = await world.host();
   const found = await world.driver.searchDilemmas(host, 'about {gap}');
-  await world.driver.pickDilemmas(host, found);
+  await specificRounds(world, found);
   return found.length;
 }
 

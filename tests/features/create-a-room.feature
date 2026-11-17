@@ -32,12 +32,10 @@ Feature: Create a room
     And everyone in the lobby is advised to play on a video call
 
   @ui
-  Scenario: The host lets players add dilemmas and removes one
-    Given "Ana" has allowed players to add dilemmas
-    And a player has added a dilemma
-    When "Ana" looks at the added dilemmas in the lobby
-    Then she does not see who added it
-    And she can remove it
+  Scenario: The host leaves a round to the players
+    Given a host in the lobby
+    When the host sets round 3 as chosen by the players
+    Then every player in the lobby can choose the dilemma of round 3
 
   @ui
   Scenario: Rooms are nominal by default
@@ -55,12 +53,12 @@ Feature: Create a room
     Given a host whose device is in English
     When the host creates a room
     Then the dilemmas of the room are in English
-    And the room has default categories, number of dilemmas and time per dilemma
+    And the room has 8 random rounds of every category and the default time per dilemma
 
   @ui
   Scenario: The host changes the configuration before starting
     Given a host in the lobby
-    When the host changes the dilemma language, the categories, the number of dilemmas or the time per dilemma
+    When the host changes the dilemma language, the rounds or the time per dilemma
     Then the game uses the new configuration
 
   @ui
@@ -74,7 +72,7 @@ Feature: Create a room
   Scenario: The other players see the configuration without changing it
     Given a lobby with the host "Ana" and the player "Luis"
     When "Ana" changes the configuration
-    Then "Luis" sees the summary of the new configuration and the type of room
+    Then "Luis" sees the rounds, the summary of the new configuration and the type of room
     And "Luis" has no option to change the configuration
 
   @ui
@@ -133,41 +131,68 @@ Feature: Create a room
       | mix             | private dilemmas and catalog dilemmas |
 
   @ui
-  Scenario: The host picks specific dilemmas by searching
-    When the host searches "family" and picks 6 dilemmas
-    Then the game uses exactly those 6 dilemmas
-    And no new dilemmas are added for the exploration
+  Scenario: The host chooses a specific dilemma for a round
+    When the host searches "family" and chooses a dilemma for round 2
+    Then round 2 of the game plays that dilemma
 
   @ui
   Scenario: The search only shows suitable dilemmas
     Given a room not marked as adults only
-    When the host searches for dilemmas
+    When the host searches for the dilemma of a round
     Then only dilemmas suitable from 16 are shown
 
   @ui
   Scenario: The search finds a dilemma by part of its text
-    When the host searches part of the text of a dilemma
+    When the host searches part of the text of a dilemma for a round
     Then that dilemma is shown
 
   @ui
   Scenario: The search shows the dilemmas twenty at a time
     Given more than 20 dilemmas of the catalog suit the room
-    When the host searches for dilemmas
+    When the host searches for the dilemma of a round
     Then 20 dilemmas are shown
     And the host can ask for 20 more
 
   @ui
-  Scenario: The host plays several categories
-    When the host chooses the categories "life-and-death" and "honesty"
-    Then every dilemma of the game is of one of those categories
+  Scenario: A random round plays one of its categories
+    When the host sets round 1 as random from "life-and-death" and "honesty"
+    Then the dilemma of round 1 is of one of those categories
 
   @ui
-  Scenario: The host goes back to a game by categories
-    Given the host has picked specific dilemmas
-    When the host chooses to play by categories
-    Then no dilemma is picked for the game
+  Scenario: The host turns a specific round back into a random one
+    Given round 2 has a specific dilemma
+    When the host sets round 2 as random
+    Then round 2 has no dilemma chosen
 
   Scenario: The host turns off new dilemmas
     Given the option to include new dilemmas is on by default
     When the host turns it off
     Then the game does not include dilemmas in exploration
+
+  @ui
+  Scenario: The rounds are played in their order
+    Given round 1 has the specific dilemma "El tranvía" and round 2 is random
+    When the game starts
+    Then the first round plays "El tranvía"
+
+  @ui
+  Scenario Outline: A room has from 1 to 12 rounds
+    Given a room with <rounds> rounds
+    When the host tries to <change>
+    Then the room still has <rounds> rounds
+
+    Examples:
+      | rounds | change         |
+      | 12     | add a round    |
+      | 1      | remove a round |
+
+  @ui
+  Scenario: A dilemma cannot be in two rounds
+    Given round 1 has the dilemma "El tranvía"
+    When the host tries to choose "El tranvía" for round 2
+    Then round 2 does not get it
+
+  Scenario: A change that leaves out a dilemma makes its round random
+    Given an adults-only room whose round 2 has an adults-only dilemma
+    When the host turns off adults only
+    Then round 2 is random from every category

@@ -30,7 +30,7 @@ function missingOf({ nickname, groupNature, place }: CreateRoomChoices) {
 }
 
 export interface CreateRoomFormProps {
-  /** The dilemma of the general catalog the first game plays first, with its language. */
+  /** The dilemma of the general catalog for the first round of the room, with its language. */
   readonly firstDilemma?: { readonly dilemmaId: string; readonly language: LanguageDto };
 }
 
@@ -49,8 +49,8 @@ const PLACES: readonly (readonly [PlaceDto, IconName])[] = [
 /**
  * Creating a room: the avatar, the nickname, the nature of the group and the place, each one a
  * single choice, on the same screen. The avatar starts at random and may be any: nobody is in the
- * room yet. The dilemmas take the language of the device, or that of the dilemma the room starts
- * with; the host changes it in the lobby. The button says what is still missing, and creates the
+ * room yet. The dilemmas take the language of the device, or that of the dilemma of its first
+ * round; the host changes it in the lobby. The button says what is still missing, and creates the
  * room once nothing is. Once created, the host enters its lobby.
  */
 export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
@@ -82,7 +82,7 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
           groupNature,
           place,
           dilemmaLanguage: firstDilemma?.language ?? deviceLanguage(i18n),
-          ...(firstDilemma && { firstDilemmaId: firstDilemma.dilemmaId }),
+          ...(firstDilemma && { firstRoundDilemmaId: firstDilemma.dilemmaId }),
         }),
       );
       // Back from the access code: the form stays as the player left it.

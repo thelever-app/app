@@ -1,13 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ChangeRoomSettingsUseCase } from '../../use-cases/change-room-settings.use-case.ts';
-import { PickDilemmasUseCase } from '../../use-cases/pick-dilemmas.use-case.ts';
+import { ChooseRoundDilemmaUseCase } from '../../use-cases/choose-round-dilemma.use-case.ts';
 import { StartGameUseCase } from '../../use-cases/start-game.use-case.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { DilemmasMissingError } from '../../../domain/errors/dilemmas-missing.error.ts';
 import { GameInProgressError } from '../../../domain/errors/game-in-progress.error.ts';
 import { NotEnoughPlayersError } from '../../../domain/errors/not-enough-players.error.ts';
 import { NotHostError } from '../../../domain/errors/not-host.error.ts';
-import { Room } from '../../../domain/entities/room.ts';
+import type { RoundChange } from '../../../domain/entities/room.ts';
+import type { Category } from '../../../domain/vos/category.vo.ts';
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
 import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
 import { EXPLORATION_SLOTS, lobbyCatalog } from '../support/test-catalog.ts';
@@ -27,8 +28,17 @@ async function arrange() {
     },
     EXPLORATION_SLOTS,
   );
-  const changeSettings = new ChangeRoomSettingsUseCase(lobby.roomRepository, notifier);
+  const changeSettings = new ChangeRoomSettingsUseCase(
+    lobby.roomRepository,
+    lobby.catalog,
+    notifier,
+  );
   return { ...lobby, notifier, startGame, changeSettings };
+}
+
+/** That many random rounds from those categories; every one, for null. */
+function randomRounds(count: number, categories: readonly Category[] | null = null): RoundChange[] {
+  return Array.from({ length: count }, () => ({ origin: 'random', categories }));
 }
 
 describe('StartGameUseCase', () => {
@@ -49,13 +59,13 @@ describe('StartGameUseCase', () => {
       expect((await roomRepository.findById(roomId))?.currentGameId).toBe(gameId);
     });
 
-    it('should put the game together from the settings of the room', async () => {
+    it('should put the game together from the rounds of the room', async () => {
       // Arrange: life-and-death has eight dilemmas for everyone in the catalog and three new ones.
       const { startGame, changeSettings, gameRepository, roomId, anaId } = await arrange();
       await changeSettings.execute({
         roomId,
         playerId: anaId,
-        changes: { categories: ['life-and-death'] },
+        changes: { rounds: randomRounds(8, ['life-and-death']) },
       });
 
       // Act
@@ -68,16 +78,16 @@ describe('StartGameUseCase', () => {
       expect(ids.filter((id) => id.startsWith('TestNew'))).toHaveLength(2);
       expect(ids).not.toContain('TestCatalog1');
       expect(ids.some((id) => id.startsWith('TestHonesty'))).toBe(false);
-      expect(game?.dilemmas.every(({ origin }) => origin === 'picked-by-the-system')).toBe(true);
+      expect(game?.dilemmas.every(({ origin }) => origin === 'random')).toBe(true);
     });
 
-    it('should take the dilemmas from any of the categories of the room', async () => {
+    it('should take the dilemma of a random round from any of its categories, and leave out a round with nothing left', async () => {
       // Arrange: honesty has two dilemmas in the catalog, and justice none.
       const { startGame, changeSettings, gameRepository, roomId, anaId } = await arrange();
       await changeSettings.execute({
         roomId,
         playerId: anaId,
-        changes: { categories: ['honesty', 'justice'], newDilemmas: false },
+        changes: { rounds: randomRounds(3, ['honesty', 'justice']), newDilemmas: false },
       });
 
       // Act
@@ -91,27 +101,34 @@ describe('StartGameUseCase', () => {
       ]);
     });
 
-    it('should play only the dilemmas the players added when the room plays no category', async () => {
+    it('should play the dilemma a player chose in its round, with who chose it', async () => {
       // Arrange
-      const { startGame, changeSettings, gameRepository, roomRepository, roomId, anaId, luisId } =
-        await arrange();
+      const lobby = await arrange();
+      const { startGame, changeSettings, gameRepository, roomId, anaId, luisId } = lobby;
       await changeSettings.execute({
         roomId,
         playerId: anaId,
-        changes: { categories: [], dilemmasPerPlayer: 1 },
+        changes: { rounds: [...randomRounds(1), { origin: 'players' }, { origin: 'players' }] },
       });
-      const room = (await roomRepository.findById(roomId))!;
-      room.addDilemma(luisId, { dilemmaId: 'TestCatalog5', minimumAge: 16, compromising: false });
-      await roomRepository.save(room);
+      const [, chosen] = (await lobby.roomRepository.findById(roomId))!.settings.rounds;
+      await new ChooseRoundDilemmaUseCase(
+        lobby.roomRepository,
+        lobby.catalog,
+        lobby.notifier,
+      ).execute({ roomId, playerId: luisId, roundId: chosen!.id, dilemmaId: 'TestCatalog5' });
 
       // Act
       const { gameId } = await startGame.execute({ roomId, playerId: anaId });
 
       // Assert
-      const ids = (await gameRepository.findById(gameId))?.dilemmas.map(
-        ({ dilemmaId }) => dilemmaId,
-      );
-      expect(ids).toEqual(['TestCatalog5']);
+      const dilemmas = (await gameRepository.findById(gameId))?.dilemmas ?? [];
+      expect(dilemmas).toHaveLength(3);
+      expect(dilemmas[1]).toMatchObject({
+        dilemmaId: 'TestCatalog5',
+        origin: 'players',
+        chosenBy: luisId,
+      });
+      expect(dilemmas[2]).toMatchObject({ origin: 'random', chosenBy: null });
     });
 
     it('should take the dilemmas from every category by default', async () => {
@@ -120,7 +137,7 @@ describe('StartGameUseCase', () => {
       await changeSettings.execute({
         roomId,
         playerId: anaId,
-        changes: { dilemmaCount: 12, newDilemmas: false },
+        changes: { rounds: randomRounds(12), newDilemmas: false },
       });
 
       // Act
@@ -156,49 +173,25 @@ describe('StartGameUseCase', () => {
       });
     });
 
-    it('should play first the dilemma the room was created with', async () => {
+    it('should play the specific dilemma of a round in its place, and leave it to this game only', async () => {
       // Arrange
-      const { startGame, gameRepository, roomRepository, roomId, anaId } = await arrange();
-      const room = (await roomRepository.findById(roomId))!;
-      await roomRepository.save(
-        Room.restore({
-          ...room.toSnapshot(),
-          firstDilemma: { dilemmaId: 'TestCatalog5', minimumAge: 16, compromising: false },
-        }),
-      );
+      const { startGame, changeSettings, gameRepository, roomRepository, roomId, anaId } =
+        await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: {
+          rounds: [...randomRounds(1), { origin: 'specific', dilemmaId: 'TestCatalog5' }],
+        },
+      });
 
       // Act
       const { gameId } = await startGame.execute({ roomId, playerId: anaId });
 
       // Assert
       const game = await gameRepository.findById(gameId);
-      expect(game?.dilemmas[0]).toMatchObject({
-        dilemmaId: 'TestCatalog5',
-        origin: 'picked-by-the-host',
-      });
-      expect((await roomRepository.findById(roomId))?.firstDilemma).toBeNull();
-    });
-
-    it('should play exactly the dilemmas the host picked', async () => {
-      // Arrange
-      const lobby = await arrange();
-      const picked = ['TestCatalog3', 'TestCatalog4', 'TestCatalog5'];
-      await new PickDilemmasUseCase(lobby.roomRepository, lobby.catalog, lobby.notifier).execute({
-        roomId: lobby.roomId,
-        playerId: lobby.anaId,
-        dilemmaIds: picked,
-      });
-
-      // Act
-      const { gameId } = await lobby.startGame.execute({
-        roomId: lobby.roomId,
-        playerId: lobby.anaId,
-      });
-
-      // Assert
-      const game = await lobby.gameRepository.findById(gameId);
-      expect(game?.dilemmas.map(({ dilemmaId }) => dilemmaId).sort()).toEqual(picked);
-      expect(game?.dilemmas.every(({ origin }) => origin === 'picked-by-the-host')).toBe(true);
+      expect(game?.dilemmas[1]).toMatchObject({ dilemmaId: 'TestCatalog5', origin: 'specific' });
+      expect((await roomRepository.findById(roomId))?.roundDilemmaIds).toEqual([]);
     });
 
     it('should tell everyone in the room that the game started', async () => {
@@ -258,21 +251,21 @@ describe('StartGameUseCase', () => {
       expect(search).not.toHaveBeenCalled();
     });
 
-    it('should not look for candidates when the host picked the dilemmas', async () => {
+    it('should not look for candidates when every round has its dilemma', async () => {
       // Arrange
-      const lobby = await arrange();
-      await new PickDilemmasUseCase(lobby.roomRepository, lobby.catalog, lobby.notifier).execute({
-        roomId: lobby.roomId,
-        playerId: lobby.anaId,
-        dilemmaIds: ['TestCatalog3'],
+      const { startGame, changeSettings, catalog, roomId, anaId } = await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { rounds: [{ origin: 'specific', dilemmaId: 'TestCatalog3' }] },
       });
-      const search = vi.spyOn(lobby.catalog, 'search');
+      const findCandidateIds = vi.spyOn(catalog, 'findCandidateIds');
 
       // Act
-      await lobby.startGame.execute({ roomId: lobby.roomId, playerId: lobby.anaId });
+      await startGame.execute({ roomId, playerId: anaId });
 
       // Assert
-      expect(search).not.toHaveBeenCalled();
+      expect(findCandidateIds).not.toHaveBeenCalled();
     });
 
     it('should never draw a compromising dilemma', async () => {
@@ -281,7 +274,7 @@ describe('StartGameUseCase', () => {
       await changeSettings.execute({
         roomId,
         playerId: anaId,
-        changes: { categories: ['love-and-relationships'] },
+        changes: { rounds: randomRounds(8, ['love-and-relationships']) },
       });
 
       // Act & Assert
@@ -296,7 +289,7 @@ describe('StartGameUseCase', () => {
       await changeSettings.execute({
         roomId,
         playerId: anaId,
-        changes: { categories: ['justice'] },
+        changes: { rounds: randomRounds(8, ['justice']) },
       });
 
       // Act & Assert

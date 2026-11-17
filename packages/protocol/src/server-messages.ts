@@ -3,8 +3,11 @@ import {
   AvatarDto,
   ClientMessageTypeDto,
   GroupNatureDto,
+  MAXIMUM_ROUNDS,
   PlaceDto,
   RoomSettingsDto,
+  RoundCategoriesDto,
+  RoundIdDto,
 } from './client-messages.ts';
 
 /** Goes up with every change of the game. The client drops anything older than what it holds (ADR 0003). */
@@ -78,7 +81,7 @@ export const GameStateDto = z.strictObject({
       ),
       personInTheGap: z.string().min(1).nullable(),
       /** Who added it in the lobby, only in a nominal room. */
-      addedBy: z.string().min(1).nullable(),
+      chosenBy: z.string().min(1).nullable(),
     })
     .nullable(),
   /** In the order every player gets them, in the language of the player. */
@@ -139,8 +142,25 @@ export const GameStateDto = z.strictObject({
   ),
 });
 
-/** A dilemma added or picked in the lobby, in the language of the room. Never who added it. */
+/** The dilemma of a round, in the language of the room. Never who chose it. */
 const LobbyDilemmaDto = z.strictObject({ dilemmaId: z.string().min(1), text: z.string() });
+
+/** A round of the lobby, in the order the game plays them. */
+export const LobbyRoundDto = z.discriminatedUnion('origin', [
+  z.strictObject({
+    roundId: RoundIdDto,
+    origin: z.literal('random'),
+    categories: RoundCategoriesDto,
+  }),
+  z.strictObject({ roundId: RoundIdDto, origin: z.literal('specific'), dilemma: LobbyDilemmaDto }),
+  z.strictObject({
+    roundId: RoundIdDto,
+    origin: z.literal('players'),
+    dilemma: LobbyDilemmaDto.nullable(),
+    /** Whether the player who receives the message chose it, so only they can take it out. */
+    chosenByYou: z.boolean(),
+  }),
+]);
 
 /**
  * What the screen needs to draw the lobby, as the player who receives it may see it: sent when
@@ -158,6 +178,7 @@ export const RoomStateDto = z.strictObject({
   groupNature: GroupNatureDto,
   place: PlaceDto,
   settings: RoomSettingsDto,
+  rounds: z.array(LobbyRoundDto).min(1).max(MAXIMUM_ROUNDS),
   /** The fewest players a game of the room starts with, by its variant: 2 nominal, 3 anonymous. */
   minimumPlayers: z.number().int().positive(),
   /** In the order they entered. */
@@ -171,10 +192,6 @@ export const RoomStateDto = z.strictObject({
       }),
     )
     .min(1),
-  addedDilemmas: z.array(LobbyDilemmaDto),
-  /** The ones the player who receives the message added, so they can tell them apart; only theirs. */
-  ownAddedDilemmaIds: z.array(z.string().min(1)),
-  pickedDilemmas: z.array(LobbyDilemmaDto),
   /** Once the game starts, the player gets its state instead. */
   currentGameId: z.string().min(1).nullable(),
 });
@@ -230,8 +247,10 @@ export const ErrorCodeDto = z.enum([
   'host-cannot-be-expelled',
   'nickname-and-avatar-taken',
   'not-enough-players',
-  'adding-dilemmas-not-allowed',
-  'too-many-added-dilemmas',
+  'round-not-found',
+  'round-not-for-players',
+  'round-taken',
+  'not-chooser',
   'dilemma-not-suitable',
   'invalid-avatar',
   'invalid-room-setting',
@@ -280,6 +299,7 @@ export const ServerMessageDto = z.discriminatedUnion('type', [
 ]);
 
 export type RoomStateDto = z.infer<typeof RoomStateDto>;
+export type LobbyRoundDto = z.infer<typeof LobbyRoundDto>;
 export type ExpelledDto = z.infer<typeof ExpelledDto>;
 export type GameStateDto = z.infer<typeof GameStateDto>;
 export type PlayerAnsweredDto = z.infer<typeof PlayerAnsweredDto>;

@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { AddDilemmaUseCase } from '../../use-cases/add-dilemma.use-case.ts';
 import { ChangeAvatarUseCase } from '../../use-cases/change-avatar.use-case.ts';
 import { ChangeRoomSettingsUseCase } from '../../use-cases/change-room-settings.use-case.ts';
 import { ExpelPlayerUseCase } from '../../use-cases/expel-player.use-case.ts';
 import { GetRoomPreviewUseCase } from '../../use-cases/get-room-preview.use-case.ts';
 import { GetRoomStateUseCase } from '../../use-cases/get-room-state.use-case.ts';
 import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
-import { PickDilemmasUseCase } from '../../use-cases/pick-dilemmas.use-case.ts';
-import { RemoveAddedDilemmaUseCase } from '../../use-cases/remove-added-dilemma.use-case.ts';
+import { ChooseRoundDilemmaUseCase } from '../../use-cases/choose-round-dilemma.use-case.ts';
+import { ClearRoundDilemmaUseCase } from '../../use-cases/clear-round-dilemma.use-case.ts';
 import {
   SEARCH_PAGE_SIZE,
   SearchDilemmasUseCase,
@@ -19,6 +18,7 @@ import { IdentityNotInRoomError } from '../../errors/identity-not-in-room.error.
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { NicknameAndAvatarTakenError } from '../../../domain/errors/nickname-and-avatar-taken.error.ts';
 import { DilemmaNotSuitableError } from '../../../domain/errors/dilemma-not-suitable.error.ts';
+import { NotChooserError } from '../../../domain/errors/not-chooser.error.ts';
 import { NotHostError } from '../../../domain/errors/not-host.error.ts';
 import { PlayerNotInRoomError } from '../../../domain/errors/player-not-in-room.error.ts';
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
@@ -33,21 +33,26 @@ async function arrange() {
   const notifier = new InMemoryPlayerNotifier();
   const lobby = await lobbyOfThree(new InMemoryPlayerNotifier(), lobbyCatalog());
   const { roomRepository, catalog } = lobby;
-  const changeSettings = new ChangeRoomSettingsUseCase(roomRepository, notifier);
+  const changeSettings = new ChangeRoomSettingsUseCase(roomRepository, catalog, notifier);
   return {
     ...lobby,
     notifier,
     changeSettings,
-    allowAdding: () =>
+    /** Round 1 random and round 2 for the players. */
+    leaveARoundToThePlayers: () =>
       changeSettings.execute({
         roomId: lobby.roomId,
         playerId: lobby.anaId,
-        changes: { dilemmasPerPlayer: 1 },
+        changes: {
+          rounds: [
+            { id: 1, origin: 'random', categories: null },
+            { id: 2, origin: 'players' },
+          ],
+        },
       }),
     changeAvatar: new ChangeAvatarUseCase(roomRepository, notifier),
-    pickDilemmas: new PickDilemmasUseCase(roomRepository, catalog, notifier),
-    addDilemma: new AddDilemmaUseCase(roomRepository, catalog, notifier),
-    removeAddedDilemma: new RemoveAddedDilemmaUseCase(roomRepository, notifier),
+    chooseRoundDilemma: new ChooseRoundDilemmaUseCase(roomRepository, catalog, notifier),
+    clearRoundDilemma: new ClearRoundDilemmaUseCase(roomRepository, notifier),
     expelPlayer: new ExpelPlayerUseCase(roomRepository, notifier),
     searchDilemmas: new SearchDilemmasUseCase(roomRepository, catalog),
     getRoomPreview: new GetRoomPreviewUseCase(roomRepository, new FixedRandomness(), lobby.clock),
@@ -188,23 +193,75 @@ describe('ChangeRoomSettingsUseCase', () => {
       roomId,
       playerId: anaId,
       changes: {
-        dilemmaLanguage: 'en',
-        categories: ['honesty', 'loyalty'],
-        dilemmaCount: 6,
-        timePerDilemmaSeconds: 60,
+        timePerDilemmaSeconds: 90,
+        rounds: [
+          { origin: 'random', categories: ['honesty', 'loyalty'] },
+          { origin: 'specific', dilemmaId: 'TestCatalog4' },
+        ],
       },
     });
 
     // Assert
     const { settings } = (await roomRepository.findById(roomId))!;
-    expect(settings.toSnapshot()).toMatchObject({
-      dilemmaLanguage: 'en',
-      categories: ['honesty', 'loyalty'],
-      dilemmaCount: 6,
-      timePerDilemmaSeconds: 60,
-    });
+    expect(settings.timePerDilemmaSeconds).toBe(90);
+    expect(settings.rounds).toEqual([
+      { id: 9, origin: 'random', categories: ['honesty', 'loyalty'] },
+      {
+        id: 10,
+        origin: 'specific',
+        dilemma: { dilemmaId: 'TestCatalog4', minimumAge: 16, compromising: false },
+      },
+    ]);
     expect(notifier.receivedBy(luisId)).toEqual([
       new LobbyChangedEvent(roomId, 'settings-changed', 3),
+    ]);
+  });
+
+  it.each([
+    {
+      case: 'for adults in a room for everyone',
+      dilemmaId: 'TestCatalog1',
+      error: DilemmaNotSuitableError,
+    },
+    {
+      case: 'that is compromising',
+      dilemmaId: 'TestCompromising1',
+      error: DilemmaNotSuitableError,
+    },
+    {
+      case: 'that is not in the general catalog',
+      dilemmaId: 'TestNew1',
+      error: DilemmaNotSuitableError,
+    },
+  ])('should throw an error for a specific dilemma $case', async ({ dilemmaId, error }) => {
+    // Arrange
+    const { changeSettings, roomId, anaId } = await arrange();
+
+    // Act & Assert
+    await expect(
+      changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { rounds: [{ origin: 'specific', dilemmaId }] },
+      }),
+    ).rejects.toThrow(error);
+  });
+
+  it('should make random the rounds whose dilemmas are not in the new language', async () => {
+    // Arrange
+    const { changeSettings, roomRepository, roomId, anaId } = await arrange();
+    await changeSettings.execute({
+      roomId,
+      playerId: anaId,
+      changes: { rounds: [{ id: 1, origin: 'specific', dilemmaId: 'TestCatalog4' }] },
+    });
+
+    // Act
+    await changeSettings.execute({ roomId, playerId: anaId, changes: { dilemmaLanguage: 'ca' } });
+
+    // Assert
+    expect((await roomRepository.findById(roomId))?.settings.rounds).toEqual([
+      { id: 1, origin: 'random', categories: null },
     ]);
   });
 
@@ -229,128 +286,70 @@ describe('ChangeRoomSettingsUseCase', () => {
   });
 });
 
-describe('PickDilemmasUseCase', () => {
-  it('should keep the dilemmas of the catalog the host picks', async () => {
+describe('ChooseRoundDilemmaUseCase and ClearRoundDilemmaUseCase', () => {
+  it('should keep a dilemma of the catalog a player chooses for a round, and let only them take it out', async () => {
     // Arrange
-    const { pickDilemmas, roomRepository, roomId, anaId } = await arrange();
+    const lobby = await arrange();
+    const { leaveARoundToThePlayers, chooseRoundDilemma, clearRoundDilemma, roomRepository } =
+      lobby;
+    const { roomId, anaId, luisId, notifier } = lobby;
+    await leaveARoundToThePlayers();
 
     // Act
-    await pickDilemmas.execute({
+    await chooseRoundDilemma.execute({
       roomId,
-      playerId: anaId,
-      dilemmaIds: ['TestCatalog4', 'TestCatalog3'],
-    });
-
-    // Assert
-    const room = await roomRepository.findById(roomId);
-    expect(room?.pickedDilemmas).toEqual([
-      { dilemmaId: 'TestCatalog4', minimumAge: 16, compromising: false },
-      { dilemmaId: 'TestCatalog3', minimumAge: 16, compromising: false },
-    ]);
-  });
-
-  it('should go back to a game by category when the host picks none', async () => {
-    // Arrange
-    const { pickDilemmas, roomRepository, roomId, anaId } = await arrange();
-    await pickDilemmas.execute({ roomId, playerId: anaId, dilemmaIds: ['TestCatalog4'] });
-
-    // Act
-    await pickDilemmas.execute({ roomId, playerId: anaId, dilemmaIds: [] });
-
-    // Assert
-    expect((await roomRepository.findById(roomId))?.pickedDilemmas).toEqual([]);
-  });
-
-  it('should throw an error for a dilemma for adults in a room for everyone', async () => {
-    // Arrange
-    const { pickDilemmas, roomId, anaId } = await arrange();
-
-    // Act & Assert
-    await expect(
-      pickDilemmas.execute({ roomId, playerId: anaId, dilemmaIds: ['TestCatalog1'] }),
-    ).rejects.toThrow(DilemmaNotSuitableError);
-  });
-
-  it('should throw an error for a compromising dilemma', async () => {
-    // Arrange
-    const { pickDilemmas, roomId, anaId } = await arrange();
-
-    // Act & Assert
-    await expect(
-      pickDilemmas.execute({ roomId, playerId: anaId, dilemmaIds: ['TestCompromising1'] }),
-    ).rejects.toThrow(DilemmaNotSuitableError);
-  });
-
-  it('should throw an error for a dilemma that is not in the general catalog', async () => {
-    // Arrange
-    const { pickDilemmas, roomId, anaId } = await arrange();
-
-    // Act & Assert
-    await expect(
-      pickDilemmas.execute({ roomId, playerId: anaId, dilemmaIds: ['TestNew1'] }),
-    ).rejects.toThrow(DilemmaNotFoundError);
-  });
-});
-
-describe('AddDilemmaUseCase and RemoveAddedDilemmaUseCase', () => {
-  it('should add a dilemma of the catalog a player chooses, and let the host remove it', async () => {
-    // Arrange
-    const { allowAdding, addDilemma, removeAddedDilemma, roomRepository, roomId, anaId, luisId } =
-      await arrange();
-    await allowAdding();
-
-    // Act
-    await addDilemma.execute({ roomId, playerId: luisId, dilemmaId: 'TestCatalog5' });
-    const added = (await roomRepository.findById(roomId))?.addedDilemmas;
-    await removeAddedDilemma.execute({ roomId, playerId: anaId, dilemmaId: 'TestCatalog5' });
-
-    // Assert
-    expect(added).toEqual([
-      { dilemmaId: 'TestCatalog5', minimumAge: 16, compromising: false, playerId: luisId },
-    ]);
-    expect((await roomRepository.findById(roomId))?.addedDilemmas).toEqual([]);
-  });
-
-  it('should let the player who added a dilemma remove it, and nobody else but the host', async () => {
-    // Arrange
-    const { allowAdding, addDilemma, removeAddedDilemma, roomRepository, roomId, luisId, martaId } =
-      await arrange();
-    await allowAdding();
-    await addDilemma.execute({ roomId, playerId: luisId, dilemmaId: 'TestCatalog5' });
-
-    // Act
-    const byMarta = removeAddedDilemma.execute({
-      roomId,
-      playerId: martaId,
+      playerId: luisId,
+      roundId: 2,
       dilemmaId: 'TestCatalog5',
     });
-    await expect(byMarta).rejects.toThrow(NotHostError);
-    await removeAddedDilemma.execute({ roomId, playerId: luisId, dilemmaId: 'TestCatalog5' });
+    const chosen = (await roomRepository.findById(roomId))?.chosenDilemmas;
+    const byAna = clearRoundDilemma.execute({ roomId, playerId: anaId, roundId: 2 });
+    await expect(byAna).rejects.toThrow(NotChooserError);
+    await clearRoundDilemma.execute({ roomId, playerId: luisId, roundId: 2 });
 
     // Assert
-    expect((await roomRepository.findById(roomId))?.addedDilemmas).toEqual([]);
+    expect(chosen).toEqual([
+      {
+        dilemmaId: 'TestCatalog5',
+        minimumAge: 16,
+        compromising: false,
+        roundId: 2,
+        playerId: luisId,
+      },
+    ]);
+    expect((await roomRepository.findById(roomId))?.chosenDilemmas).toEqual([]);
+    expect(notifier.receivedBy(anaId).map(({ type }) => type)).toEqual([
+      'LobbyChanged',
+      'LobbyChanged',
+      'LobbyChanged',
+    ]);
   });
 
-  it('should throw an error for a dilemma that does not suit the room', async () => {
+  it.each([
+    {
+      case: 'that does not suit the room',
+      dilemmaId: 'TestCatalog2',
+      error: DilemmaNotSuitableError,
+    },
+    {
+      case: 'that is compromising',
+      dilemmaId: 'TestCompromising1',
+      error: DilemmaNotSuitableError,
+    },
+    {
+      case: 'that is not in the general catalog',
+      dilemmaId: 'TestNew1',
+      error: DilemmaNotFoundError,
+    },
+  ])('should throw an error for a dilemma $case', async ({ dilemmaId, error }) => {
     // Arrange
-    const { allowAdding, addDilemma, roomId, luisId } = await arrange();
-    await allowAdding();
+    const { leaveARoundToThePlayers, chooseRoundDilemma, roomId, luisId } = await arrange();
+    await leaveARoundToThePlayers();
 
     // Act & Assert
     await expect(
-      addDilemma.execute({ roomId, playerId: luisId, dilemmaId: 'TestCatalog2' }),
-    ).rejects.toThrow(DilemmaNotSuitableError);
-  });
-
-  it('should throw an error for a compromising dilemma', async () => {
-    // Arrange
-    const { allowAdding, addDilemma, roomId, luisId } = await arrange();
-    await allowAdding();
-
-    // Act & Assert
-    await expect(
-      addDilemma.execute({ roomId, playerId: luisId, dilemmaId: 'TestCompromising1' }),
-    ).rejects.toThrow(DilemmaNotSuitableError);
+      chooseRoundDilemma.execute({ roomId, playerId: luisId, roundId: 2, dilemmaId }),
+    ).rejects.toThrow(error);
   });
 });
 
@@ -473,12 +472,29 @@ describe('SearchDilemmasUseCase', () => {
 });
 
 describe('GetRoomStateUseCase', () => {
-  it('should give everything the lobby shows, without who added each dilemma', async () => {
+  it('should give everything the lobby shows, without who chose the dilemma of each round', async () => {
     // Arrange
-    const { getRoomState, allowAdding, addDilemma, roomRepository, roomId, anaId, luisId } =
-      await arrange();
-    await allowAdding();
-    await addDilemma.execute({ roomId, playerId: luisId, dilemmaId: 'TestCatalog5' });
+    const lobby = await arrange();
+    const { getRoomState, changeSettings, chooseRoundDilemma, roomRepository } = lobby;
+    const { roomId, anaId, luisId } = lobby;
+    await changeSettings.execute({
+      roomId,
+      playerId: anaId,
+      changes: {
+        rounds: [
+          { id: 1, origin: 'random', categories: ['honesty'] },
+          { id: 2, origin: 'specific', dilemmaId: 'TestCatalog4' },
+          { id: 3, origin: 'players' },
+          { id: 4, origin: 'players' },
+        ],
+      },
+    });
+    await chooseRoundDilemma.execute({
+      roomId,
+      playerId: luisId,
+      roundId: 3,
+      dilemmaId: 'TestCatalog5',
+    });
     const room = (await roomRepository.findById(roomId))!;
 
     // Act
@@ -486,6 +502,7 @@ describe('GetRoomStateUseCase', () => {
     const forLuis = await getRoomState.execute({ roomId, playerId: luisId });
 
     // Assert
+    const { rounds, ...settings } = room.settings.toSnapshot();
     expect(forAna).toMatchObject({
       roomId,
       roomVersion: room.version,
@@ -494,16 +511,29 @@ describe('GetRoomStateUseCase', () => {
       hostId: anaId,
       groupNature: 'friends',
       place: 'together',
-      settings: room.settings.toSnapshot(),
+      settings,
       minimumPlayers: 2,
-      addedDilemmas: [{ dilemmaId: 'TestCatalog5', text: 'TextOfTestCatalog5' }],
-      ownAddedDilemmaIds: [],
-      pickedDilemmas: [],
       currentGameId: null,
     });
+    expect(forAna.rounds).toEqual([
+      { roundId: 1, origin: 'random', categories: ['honesty'] },
+      {
+        roundId: 2,
+        origin: 'specific',
+        dilemma: { dilemmaId: 'TestCatalog4', text: 'TextOfTestCatalog4' },
+      },
+      {
+        roundId: 3,
+        origin: 'players',
+        dilemma: { dilemmaId: 'TestCatalog5', text: 'TextOfTestCatalog5' },
+        chosenByYou: false,
+      },
+      { roundId: 4, origin: 'players', dilemma: null, chosenByYou: false },
+    ]);
+    expect(rounds).toHaveLength(4);
     expect(forAna.players.map(({ nickname }) => nickname)).toEqual(['Ana', 'Luis', 'Marta']);
-    expect(forAna.addedDilemmas[0]).not.toHaveProperty('playerId');
-    expect(forLuis.ownAddedDilemmaIds).toEqual(['TestCatalog5']);
+    expect(forLuis.rounds[2]).toMatchObject({ chosenByYou: true });
+    expect(JSON.stringify(forAna)).not.toContain('playerId":"' + luisId + '","origin');
   });
 
   it('should throw an error if whoever asks is not in the room', async () => {

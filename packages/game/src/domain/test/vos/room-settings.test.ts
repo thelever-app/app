@@ -1,11 +1,23 @@
 import type { Category } from '../../vos/category.vo.ts';
 import { describe, expect, it } from 'vitest';
 import { RoomSettingsVO } from '../../vos/room-settings.vo.ts';
+import type { RoundSnapshot } from '../../vos/round.vo.ts';
+import { DuplicateDilemmaError } from '../../errors/duplicate-dilemma.error.ts';
 import { InvalidRoomSettingError } from '../../errors/invalid-room-setting.error.ts';
+
+const FOR_EVERYONE = { dilemmaId: 'TestDilemma', minimumAge: 16, compromising: false } as const;
+
+function randomRounds(count: number): RoundSnapshot[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: index + 1,
+    origin: 'random',
+    categories: null,
+  }));
+}
 
 describe('RoomSettingsVO', () => {
   describe('defaults', () => {
-    it('should start nominal, for everyone, with every category, new dilemmas and without players adding any', () => {
+    it('should start nominal, for everyone, with new dilemmas and 8 random rounds from every category', () => {
       // Act
       const settings = RoomSettingsVO.defaults('en');
 
@@ -14,11 +26,9 @@ describe('RoomSettingsVO', () => {
         variant: 'nominal',
         adultsOnly: false,
         dilemmaLanguage: 'en',
-        categories: null,
-        dilemmaCount: 8,
+        rounds: randomRounds(8),
         timePerDilemmaSeconds: 60,
         newDilemmas: true,
-        dilemmasPerPlayer: 0,
       });
     });
 
@@ -34,57 +44,90 @@ describe('RoomSettingsVO', () => {
       const settings = RoomSettingsVO.defaults('es');
 
       // Act
-      const changed = settings.with({ variant: 'anonymous', dilemmaCount: 12 });
+      const changed = settings.with({ variant: 'anonymous', rounds: randomRounds(12) });
 
       // Assert
       expect(changed.variant).toBe('anonymous');
-      expect(changed.dilemmaCount).toBe(12);
+      expect(changed.rounds).toHaveLength(12);
       expect(changed.dilemmaLanguage).toBe('es');
       expect(settings.variant).toBe('nominal');
     });
 
-    it.each([
-      { variant: 'secret' },
-      { categories: ['honesty', '  '] },
-      { dilemmasPerPlayer: 4 },
-      { dilemmasPerPlayer: -1 },
-      { dilemmaCount: 7 },
-      { timePerDilemmaSeconds: 5 },
-      { dilemmaLanguage: 'ja' },
-    ])('should throw an error for %o', (change) => {
-      // Act & Assert
-      expect(() => RoomSettingsVO.defaults('es').with(change as never)).toThrow(
-        InvalidRoomSettingError,
-      );
-    });
+    it.each([{ variant: 'secret' }, { timePerDilemmaSeconds: 5 }, { dilemmaLanguage: 'ja' }])(
+      'should throw an error for %o',
+      (change) => {
+        // Act & Assert
+        expect(() => RoomSettingsVO.defaults('es').with(change as never)).toThrow(
+          InvalidRoomSettingError,
+        );
+      },
+    );
   });
 
-  describe('categories', () => {
-    it('should play every category with null, and none with an empty list', () => {
+  describe('rounds', () => {
+    it('should keep each round with its origin, in order', () => {
+      // Arrange
+      const rounds: RoundSnapshot[] = [
+        { id: 1, origin: 'specific', dilemma: FOR_EVERYONE },
+        { id: 2, origin: 'random', categories: ['honesty', 'loyalty'] },
+        { id: 5, origin: 'players' },
+      ];
+
       // Act
-      const every = RoomSettingsVO.defaults('es');
-      const none = every.with({ categories: [] });
+      const settings = RoomSettingsVO.defaults('es').with({ rounds });
 
       // Assert
-      expect(every.categories).toBeNull();
-      expect(none.categories).toEqual([]);
+      expect(settings.rounds).toEqual(rounds);
     });
 
-    it('should keep each category once', () => {
+    it('should keep each category of a random round once', () => {
       // Act
       const settings = RoomSettingsVO.defaults('es').with({
-        categories: ['honesty', 'loyalty', 'honesty'],
+        rounds: [{ id: 1, origin: 'random', categories: ['honesty', 'loyalty', 'honesty'] }],
       });
 
       // Assert
-      expect(settings.categories).toEqual(['honesty', 'loyalty']);
+      expect(settings.rounds).toEqual([
+        { id: 1, origin: 'random', categories: ['honesty', 'loyalty'] },
+      ]);
     });
 
-    it('should throw an error for a category that is not one of the closed list', () => {
+    it.each([0, 13])('should throw an error for %i rounds', (count) => {
+      // Act & Assert
+      expect(() => RoomSettingsVO.defaults('es').with({ rounds: randomRounds(count) })).toThrow(
+        InvalidRoomSettingError,
+      );
+    });
+
+    it.each([
+      { case: 'a repeated id', round: { id: 1, origin: 'players' } },
+      { case: 'an id that is not a positive whole number', round: { id: 0, origin: 'players' } },
+      { case: 'an unknown origin', round: { id: 2, origin: 'TestNoOrigin' } },
+      {
+        case: 'a category not in the closed list',
+        round: { id: 2, origin: 'random', categories: ['TestNoCategory' as Category] },
+      },
+      { case: 'no categories', round: { id: 2, origin: 'random', categories: [] } },
+      { case: 'a specific round without a dilemma', round: { id: 2, origin: 'specific' } },
+    ])('should throw an error for $case', ({ round }) => {
       // Act & Assert
       expect(() =>
-        RoomSettingsVO.defaults('es').with({ categories: ['TestNoCategory' as Category] }),
+        RoomSettingsVO.defaults('es').with({
+          rounds: [{ id: 1, origin: 'players' }, round as never],
+        }),
       ).toThrow(InvalidRoomSettingError);
+    });
+
+    it('should throw an error for a dilemma in two specific rounds', () => {
+      // Act & Assert
+      expect(() =>
+        RoomSettingsVO.defaults('es').with({
+          rounds: [
+            { id: 1, origin: 'specific', dilemma: FOR_EVERYONE },
+            { id: 2, origin: 'specific', dilemma: FOR_EVERYONE },
+          ],
+        }),
+      ).toThrow(DuplicateDilemmaError);
     });
   });
 

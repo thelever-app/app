@@ -6,8 +6,8 @@ export const TEST_OPTION_IDS = ['TestOption', 'TestOtherOption', 'TestSecretOpti
 
 /** The values of the thresholds of exploration: 2 slots from 6 dilemmas and 3 from 11. */
 export const EXPLORATION_SLOTS: ExplorationSlots = [
-  { fromDilemmaCount: 6, slots: 2 },
-  { fromDilemmaCount: 11, slots: 3 },
+  { fromRandomRounds: 6, slots: 2 },
+  { fromRandomRounds: 11, slots: 3 },
 ];
 
 function dilemma(dilemmaId: string) {

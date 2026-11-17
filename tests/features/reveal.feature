@@ -145,10 +145,10 @@ Feature: Reveal
       Then all players see that the dilemma is by "Ana"
 
     @ui
-    Scenario: The reveal shows who added a dilemma
-      Given "Luis" added the first dilemma in the lobby
+    Scenario: The reveal shows who chose a dilemma
+      Given "Luis" chose the dilemma of the first round in the lobby
       When the reveal is on the first dilemma
-      Then all players see that "Luis" added it
+      Then all players see that "Luis" chose it
 
     @ui @todo
     Scenario: A player reacts to the vote of a specific person
@@ -241,10 +241,10 @@ Feature: Reveal
       And no player sees anything about their distribution prediction
 
     @ui
-    Scenario: The reveal never shows who added a dilemma
-      Given "Luis" added the first dilemma in the lobby
+    Scenario: The reveal never shows who chose a dilemma
+      Given "Luis" chose the dilemma of the first round in the lobby
       When the reveal is on the first dilemma
-      Then no player sees who added it
+      Then no player sees who chose it
 
     @ui @todo
     Scenario: The last round leads to the ranking of who reads the group best
