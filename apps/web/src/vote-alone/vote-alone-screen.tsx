@@ -272,7 +272,7 @@ function WorldResultView({ publicId, dilemma, vote, back, withAccess }: WorldRes
         )}
         {result !== undefined && result !== 'failed' && !result.shown && (
           <div className={styles.few}>
-            <Icon name="timer" />
+            <Icon name="hourglass" />
             <span className={styles.fewText}>
               <span className={styles.fewTitle}>{t('voteAlone.fewTitle')}</span>
               <span>
@@ -331,6 +331,7 @@ function WorldResultView({ publicId, dilemma, vote, back, withAccess }: WorldRes
         {back && (
           <a className={styles.arguments} href={back}>
             {t('voteAlone.arguments')}
+            <Icon name="openInNew" size={20} />
           </a>
         )}
       </div>

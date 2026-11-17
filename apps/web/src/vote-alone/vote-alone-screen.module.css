@@ -302,6 +302,7 @@
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   color: var(--color-ink);
   font-size: 15px;
   font-weight: 600;

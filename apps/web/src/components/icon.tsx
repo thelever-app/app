@@ -6,6 +6,8 @@ import error from '@material-symbols/svg-500/rounded/error.svg?url';
 import expandMore from '@material-symbols/svg-500/rounded/keyboard_arrow_down-fill.svg?url';
 import refresh from '@material-symbols/svg-500/rounded/refresh-fill.svg?url';
 import timer from '@material-symbols/svg-500/rounded/timer-fill.svg?url';
+import hourglass from '@material-symbols/svg-500/rounded/hourglass_top-fill.svg?url';
+import openInNew from '@material-symbols/svg-500/rounded/open_in_new-fill.svg?url';
 import block from '@material-symbols/svg-500/rounded/block.svg?url';
 import lock from '@material-symbols/svg-500/rounded/lock-fill.svg?url';
 import arrowForward from '@material-symbols/svg-500/rounded/arrow_forward-fill.svg?url';
@@ -59,11 +61,13 @@ const ICONS = {
   familyRestroom,
   flag,
   groups,
+  hourglass,
   howToVote,
   iosShare,
   lock,
   logout,
   moreVert,
+  openInNew,
   personPin,
   pin,
   qrCode,
