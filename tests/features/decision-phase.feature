@@ -14,10 +14,11 @@ Feature: Decision phase
       Then every player gets the first dilemma of the game
       And the dilemmas follow the same order for all players
 
-    Scenario: A game by category reserves room for new dilemmas
-      Given a game of 8 dilemmas chosen by category with new dilemmas included
+    Scenario: Random rounds reserve room for new dilemmas
+      Given a game of 8 random rounds with new dilemmas included
       When the game is put together
-      Then it includes the number of new dilemmas set for games of 8 dilemmas
+      Then it includes the number of new dilemmas set for 8 random rounds
+      And each new dilemma is of the categories of its round
       And the rest come from the catalog
 
     @ui

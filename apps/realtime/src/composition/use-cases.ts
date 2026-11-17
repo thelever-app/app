@@ -6,10 +6,11 @@ import {
   SearchDilemmasUseCase as SearchCatalogUseCase,
 } from '@thelever-app/dilemmas';
 import {
-  AddDilemmaUseCase,
   AnswerDilemmaUseCase,
   ChangeAvatarUseCase,
   ChangeRoomSettingsUseCase,
+  ChooseRoundDilemmaUseCase,
+  ClearRoundDilemmaUseCase,
   ConnectPlayerUseCase,
   CreateRoomUseCase,
   type DilemmaCatalog,
@@ -30,10 +31,8 @@ import {
   SkipDilemmaUseCase,
   type Clock,
   type ExplorationSlots,
-  PickDilemmasUseCase,
   type PlayerNotifier,
   type Randomness,
-  RemoveAddedDilemmaUseCase,
   type RoomRepository,
   SearchDilemmasUseCase,
   StartGameUseCase,
@@ -100,13 +99,13 @@ export interface GameCommandsDependencies extends GameQueriesDependencies {
 }
 
 /**
- * How many dilemmas in exploration a game by categories keeps room for: 2 slots from 6 dilemmas and 3
- * from 11. The thresholds of exploration and moderation set them; they change here, not in
+ * How many dilemmas in exploration a game keeps room for: 2 slots from 6 random rounds and 3 from
+ * 11. The thresholds of exploration and moderation set them; they change here, not in
  * the rules of the game.
  */
 const EXPLORATION_SLOTS: ExplorationSlots = [
-  { fromDilemmaCount: 6, slots: 2 },
-  { fromDilemmaCount: 11, slots: 3 },
+  { fromRandomRounds: 6, slots: 2 },
+  { fromRandomRounds: 11, slots: 3 },
 ];
 
 /** The commands of Game: each one changes a room or a game and notifies its players. */
@@ -152,10 +151,9 @@ export function gameCommands({
     disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier, clock),
     disconnectConnections: new DisconnectConnectionsUseCase(roomRepository, notifier),
     changeAvatar: new ChangeAvatarUseCase(roomRepository, notifier),
-    changeSettings: new ChangeRoomSettingsUseCase(roomRepository, notifier),
-    pickDilemmas: new PickDilemmasUseCase(roomRepository, catalog, notifier),
-    addDilemma: new AddDilemmaUseCase(roomRepository, catalog, notifier),
-    removeAddedDilemma: new RemoveAddedDilemmaUseCase(roomRepository, notifier),
+    changeSettings: new ChangeRoomSettingsUseCase(roomRepository, catalog, notifier),
+    chooseRoundDilemma: new ChooseRoundDilemmaUseCase(roomRepository, catalog, notifier),
+    clearRoundDilemma: new ClearRoundDilemmaUseCase(roomRepository, notifier),
     expelPlayer: new ExpelPlayerUseCase(roomRepository, notifier),
     startGame: new StartGameUseCase(
       {

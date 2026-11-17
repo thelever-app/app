@@ -73,7 +73,7 @@ export async function lobbyOfThree(
     avatar: { face: 'face-03', color: 'brown' },
   });
   if (variant !== 'nominal') {
-    await new ChangeRoomSettingsUseCase(roomRepository, notifier).execute({
+    await new ChangeRoomSettingsUseCase(roomRepository, catalog, notifier).execute({
       roomId,
       playerId: anaId,
       changes: { variant },

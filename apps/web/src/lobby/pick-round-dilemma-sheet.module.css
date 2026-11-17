@@ -108,3 +108,21 @@
   color: var(--color-on-accent);
   box-shadow: none;
 }
+
+.dilemmas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A dilemma already in another round: on the surface, muted, and it cannot be chosen. */
+.dilemma[aria-disabled='true'] {
+  background: var(--color-surface);
+  box-shadow: none;
+  color: var(--color-ink-muted);
+  cursor: not-allowed;
+}
+
+.taken {
+  font-weight: 600;
+}

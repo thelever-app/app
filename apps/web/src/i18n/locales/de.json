@@ -133,7 +133,7 @@
   "reveal": {
     "region": "Auflösung",
     "position": "Dilemma {{position, number}} von {{total, number}} · Auflösung",
-    "addedBy": "Hinzugefügt von {{name}}",
+    "chosenBy": "Gewählt von {{name}}",
     "about": "Dieses Dilemma ging um {{name}}",
     "yourHitsRegion": "Deine Treffer",
     "hitsAll": "Du hast alle durchschaut!",
@@ -247,7 +247,9 @@
     "room-not-found": "Diesen Raum gibt es nicht mehr.",
     "unknown": "Das hat nicht geklappt. Versuch es noch einmal.",
     "dilemmas-missing": "Für diese Einstellungen gibt es keine Dilemmas. Probier andere Kategorien.",
-    "nickname-and-avatar-taken": "Jemand mit deinem Namen hat schon diesen Avatar. Wähle einen anderen."
+    "nickname-and-avatar-taken": "Jemand mit deinem Namen hat schon diesen Avatar. Wähle einen anderen.",
+    "round-taken": "Ein anderer Spieler hat gerade das Dilemma dieser Runde gewählt.",
+    "duplicate-dilemma": "Dieses Dilemma ist schon in einer anderen Runde."
   },
   "home": {
     "title": "Lust auf eine Runde?",
@@ -313,23 +315,33 @@
     "shareText": "Komm in meinen TheLever-Raum mit dem Code {{code}}",
     "copied": "Link kopiert",
     "showQr": "QR-Code zeigen",
-    "summary": "{{count}} Dilemmas · {{seconds}} s pro Dilemma · {{language}} · {{nature}}",
+    "summary": "{{seconds}} s pro Dilemma · {{language}}",
+    "roundCount_one": "{{count}} Runde",
+    "roundCount_other": "{{count}} Runden",
     "change": "Ändern",
     "adultsOnly": "Nur ab 18",
     "remote": "Ihr spielt auf Distanz: am besten per Videoanruf, um die Auflösung live zu besprechen.",
-    "added": {
-      "title": "Hinzugefügte Dilemmas · {{count}} von {{total}}",
-      "remove": "Dilemma entfernen",
-      "hint": "Du weißt nicht, wer sie hinzugefügt hat: Das zeigt sich bei der Auflösung. Der Rest kommt aus dem Katalog."
-    },
-    "add": {
-      "title": "Füg dem Spiel Dilemmas hinzu",
-      "count": "Du hast {{count}} von {{total}} hinzugefügt. Bis zur Auflösung weiß niemand, dass sie von dir sind.",
-      "action": "Dilemma hinzufügen",
-      "remove": "Dilemma entfernen"
-    },
-    "picked": {
-      "title": "Gewählte Dilemmas · {{count}}"
+    "rounds": {
+      "title": "Runden · {{count}}",
+      "hint": "Sie werden in dieser Reihenfolge gespielt.",
+      "secretHint": "Sie werden in dieser Reihenfolge gespielt. Bis zur Auflösung weiß niemand, welcher Spieler welches Dilemma gewählt hat.",
+      "allCategories": "Alle Kategorien",
+      "twoCategories": "{{first}} oder {{second}}",
+      "someCategories": "{{count}} Kategorien",
+      "randomAll": "Zufällig aus dem Katalog",
+      "randomOne": "Zufällig, aus dieser Kategorie",
+      "randomSome": "Zufällig, aus diesen Kategorien",
+      "randomGroupAll": "{{count}} zufällige Runden aus dem Katalog",
+      "randomGroupOne": "{{count}} zufällige Runden, aus dieser Kategorie",
+      "randomGroupSome": "{{count}} zufällige Runden, aus diesen Kategorien",
+      "chosenBy": "Gewählt von {{name}}",
+      "chosenByYou": "Du hast es gewählt",
+      "chosenByPlayer": "Von einem Spieler gewählt",
+      "playersEmpty": "Ein Spieler wählt es",
+      "playersEmptyMeta": "Wählt es niemand, ist es zufällig",
+      "choose": "Wählen",
+      "chooseLabel": "Dilemma für Runde {{number}} wählen",
+      "clearLabel": "Dein Dilemma aus Runde {{number}} entfernen"
     },
     "players": "Im Raum · {{count}}",
     "you": "{{name}} (du)",
@@ -340,16 +352,7 @@
     "start": "Spiel starten",
     "missing_one": "Es fehlt noch {{count}} Spieler zum Start",
     "missing_other": "Es fehlen noch {{count}} Spieler zum Start",
-    "guestWait": "{{host}} startet das Spiel, wenn alle da sind.",
-    "categories": {
-      "all": "Alle Kategorien",
-      "some_one": "{{count}} Kategorie",
-      "some_other": "{{count}} Kategorien",
-      "none": "Keine Kategorie"
-    },
-    "pickedCount_one": "{{count}} Dilemma gewählt",
-    "pickedCount_other": "{{count}} Dilemmas gewählt",
-    "summaryPicked": "{{seconds}} s pro Dilemma · {{language}} · {{nature}}"
+    "guestWait": "{{host}} startet das Spiel, wenn alle da sind."
   },
   "languages": {
     "es": "Español",
@@ -382,59 +385,60 @@
       "hint": "Erlaubt Dilemmas für Erwachsene. Beitreten können nur Volljährige."
     },
     "language": "Sprache der Dilemmas",
-    "howPicked": "Wie die Dilemmas gewählt werden",
-    "byCategories": "Nach Kategorien",
-    "byHand": "Von Hand",
-    "categories": "Kategorien",
-    "allCategories": "Alle",
-    "categoriesHint": "Das Spiel mischt Dilemmas aus den gewählten Kategorien.",
-    "dilemmaCount": "Dilemmas",
     "timePerDilemma": "Zeit pro Dilemma",
     "seconds": "{{count}} s",
     "timeHint": "Jedes Dilemma wird aufgedeckt, wenn alle geantwortet haben oder die Zeit abläuft.",
+    "rounds": {
+      "title": "Runden · {{count}}",
+      "range": "1 bis {{maximum}}",
+      "hint": "Sie werden in dieser Reihenfolge gespielt. Jede Runde hat ein zufälliges Dilemma aus dem Katalog, ein bestimmtes, das du wählst, oder das, das ein Spieler in der Lobby wählt.",
+      "origin": "Wer das Dilemma von Runde {{number}} wählt",
+      "origins": {
+        "random": "Zufällig",
+        "specific": "Bestimmt",
+        "players": "Spieler"
+      },
+      "remove": "Runde {{number}} entfernen",
+      "categoriesOf": "Kategorien von Runde {{number}}: {{summary}}",
+      "categories": "Kategorien von Runde {{number}}",
+      "allCategories": "Alle",
+      "fromAll": "Aus allen Kategorien",
+      "fromOne": "Aus {{category}}",
+      "fromTwo": "Aus {{first}} oder {{second}}",
+      "fromSome": "Aus {{count}} Kategorien",
+      "change": "Ändern",
+      "changeLabel": "Dilemma von Runde {{number}} ändern",
+      "choose": "Ein Dilemma wählen",
+      "chooseLabel": "Ein Dilemma wählen für Runde {{number}}",
+      "playersHint": "Ein Spieler wählt es in der Lobby. Wählt es niemand, kommt ein zufälliges.",
+      "playersChosen": "Ein Spieler hat es schon gewählt: „{{title}}“.",
+      "add": "Runde hinzufügen",
+      "full": "{{maximum}} Runden: das Maximum"
+    },
     "newDilemmas": {
       "label": "Neue Dilemmas zulassen",
-      "hint": "Ihr helft, Dilemmas zu bewerten, die neu im Katalog sind."
+      "hint": "In einer zufälligen Runde kann eins kommen, das neu im Katalog ist. Ihr helft, es zu bewerten."
     },
-    "dilemmasPerPlayer": {
-      "label": "Dilemmas pro Spieler",
-      "none": "Keine",
-      "hint": "Auch der Gastgeber. Sie zählen zur Zahl der Dilemmas, und bis zur Auflösung weiß niemand, von wem welches ist."
-    },
-    "pick": "Dilemmas einzeln wählen",
-    "picked_one": "{{count}} Dilemma gewählt",
-    "picked_other": "{{count}} Dilemmas gewählt",
-    "noPicked": "Kein Dilemma gewählt",
-    "changePicked": "Ändern",
-    "choosePicked": "Wählen",
-    "byHandHint": "Das Spiel nutzt diese und die von den Spielern hinzugefügten, ohne Kategorien oder neue Dilemmas. „Nach Kategorien“ entfernt sie mit einem Tippen.",
     "save": "Speichern"
   },
   "pickDilemmas": {
-    "title": "Dilemmas wählen",
-    "back": "Zurück zu den Einstellungen",
+    "title": "Dilemma von Runde {{number}}",
+    "back": "Zurück",
     "search": "Dilemmas suchen",
     "searchPlaceholder": "Suche nach Text oder Tag: Familie, Straßenbahn…",
     "all": "Alle",
-    "hint": "Hier stehen nur Dilemmas, die zu diesem Raum passen. Wählst du von Hand, kommen keine neuen Dilemmas dazu.",
-    "none": "Wähle mindestens eins",
-    "play_one": "Dieses spielen",
-    "play_other": "Diese {{count}} spielen",
+    "categories": "Kategorien",
+    "hint": "Hier stehen nur Dilemmas, die zu diesem Raum passen. Ein Dilemma, das schon in einer anderen Runde ist, kann nicht wiederholt werden.",
+    "list": "Dilemmas",
+    "taken": "Schon in Runde {{number}}",
+    "none": "Wähle ein Dilemma",
+    "put": "In Runde {{number}} nehmen",
     "empty": "Keine passenden Dilemmas für diese Suche.",
-    "tags": "#{{tags}}",
-    "byCategory": "Wieder nach Kategorie spielen",
     "options_one": "{{count}} Option",
     "options_other": "{{count, number}} Optionen",
     "someone": "jemand aus der Gruppe",
     "more": "Mehr anzeigen",
     "moreFailed": "Weitere Dilemmas konnten nicht geladen werden. Versuch es noch einmal."
-  },
-  "addDilemma": {
-    "title": "Dilemma hinzufügen",
-    "search": "Dilemmas suchen",
-    "close": "Schließen",
-    "empty": "Keine passenden Dilemmas für diese Suche.",
-    "searchPlaceholder": "Suche nach Text oder Tag"
   },
   "expel": {
     "title": "{{name}} entfernen?",
@@ -476,9 +480,7 @@
   "playDilemma": {
     "title": "Neuer Raum",
     "firstDilemma": "Ihr startet mit diesem Dilemma",
-    "about_one": "{{category}} · {{count}} Option",
-    "about_other": "{{category}} · {{count}} Optionen",
-    "rest": "Der Rest des Spiels kommt aus dem Katalog, je nach Raumeinstellungen.",
+    "about": "{{category}} · Die anderen 7 Runden sind zufällig. Du kannst sie in den Einstellungen ändern.",
     "loading": "Dilemma wird gesucht…",
     "notFound": "Dieses Dilemma gibt es auf TheLever nicht mehr. Du kannst einen Raum mit anderen aus dem Katalog erstellen.",
     "home": "Zur Startseite"

@@ -1,6 +1,6 @@
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
-import type { InvitationMethod } from '../support/driver.ts';
+import type { InvitationMethod, RoundView } from '../support/driver.ts';
 import { SOMEONE, type GameWorld } from '../support/world.ts';
 
 /** Test data: a valid code that no room of the scenario has, since the scenario creates none. */
@@ -343,12 +343,62 @@ Then('each one is distinguished by their avatar', async function (this: GameWorl
   assert.notEqual(namesakes[0]?.avatar, namesakes[1]?.avatar);
 });
 
-// Dilemmas added by the players
+// The rounds of the players
+
+/** That round of the room as `viewer` sees it. */
+async function roundSeenBy(world: GameWorld, viewer: string, round: number): Promise<RoundView> {
+  const seen = (await world.driver.roundsSeenBy(viewer))[round - 1];
+  assert.ok(seen, `${viewer} sees no round ${round}`);
+  return seen;
+}
+
+/** Everyone in the lobby sees that dilemma in that round of the players; null, the round empty. */
+async function everyoneSees(
+  world: GameWorld,
+  round: number,
+  dilemmaId: string | null,
+): Promise<void> {
+  for (const viewer of world.inRoom) {
+    assert.deepEqual(
+      await roundSeenBy(world, viewer, round),
+      { origin: 'players', dilemmaId },
+      viewer,
+    );
+  }
+}
+
+/** Round of the players and empty, as the host sets it if no step has. */
+async function roundOfThePlayers(world: GameWorld, round: number): Promise<void> {
+  const host = await world.host();
+  const seen = await roundSeenBy(world, host, round);
+  if (seen.origin !== 'players') {
+    assert.ok(await world.driver.tryToSetRound(host, round, { origin: 'players' }));
+  }
+}
+
+/** `player` chooses for that round of the players a dilemma that is in no round. */
+async function choose(world: GameWorld, player: string, round: number): Promise<void> {
+  await roundOfThePlayers(world, round);
+  await world.isInTheRoom(player);
+  world.dilemmaId = await world.unusedDilemma();
+  world.round = round;
+  world.player = player;
+  assert.ok(await world.driver.chooseRoundDilemma(player, round, world.dilemmaId));
+}
+
+Given(
+  /^round (\d+) is chosen by the players and (?:is empty|nobody has chosen its dilemma)$/,
+  async function (this: GameWorld, round: string) {
+    await roundOfThePlayers(this, Number(round));
+    await everyoneSees(this, Number(round), null);
+  },
+);
 
 When(
-  '{string} searches the catalog to add a dilemma',
-  async function (this: GameWorld, player: string) {
+  '{string} searches the catalog for the dilemma of round {int}',
+  async function (this: GameWorld, player: string, round: number) {
     await this.isInTheRoom(player);
+    assert.ok(await this.driver.canChooseRoundDilemma(player, round), `${player} cannot search`);
     this.dilemmas = await this.driver.searchDilemmas(player);
   },
 );
@@ -360,84 +410,101 @@ Then('only dilemmas suitable for players from 16 are offered', function (this: G
   }
 });
 
-/** The room lets each player add at least `count` dilemmas, without lowering what it allows. */
-async function allowAdding(world: GameWorld, count: number): Promise<void> {
-  const host = await world.host();
-  const { dilemmasPerPlayer } = await world.driver.settingsSeenBy(host);
-  if (dilemmasPerPlayer < count) {
-    await world.driver.changeSettings(host, { dilemmasPerPlayer: count });
-  }
-}
-
-Given(
-  'the host allows each player to add {int} dilemmas',
-  async function (this: GameWorld, count: number) {
-    await allowAdding(this, count);
-  },
-);
-
-Given(
-  /^"([^"]*)" has (?:already )?added a dilemma$/,
-  async function (this: GameWorld, player: string) {
-    await allowAdding(this, 1);
+When(
+  '{string} chooses {string} for round {int}',
+  async function (this: GameWorld, player: string, name: string, round: number) {
     await this.isInTheRoom(player);
-    await this.driver.addDilemma(player);
-    this.dilemmas = await this.driver.addedDilemmasSeenBy(player);
+    this.player = player;
+    this.dilemmaId = this.dilemmaCalled(name);
+    assert.ok(await this.driver.chooseRoundDilemma(player, round, this.dilemmaId));
+  },
+);
+
+Then(
+  'everyone in the lobby sees {string} in round {int}',
+  async function (this: GameWorld, name: string, round: number) {
+    await everyoneSees(this, round, this.dilemmaCalled(name));
+  },
+);
+
+Then(
+  'nobody else can choose the dilemma of round {int}',
+  async function (this: GameWorld, round: number) {
+    const others = [...this.inRoom].filter((player) => player !== this.player);
+    assert.ok(others.length > 0, 'nobody else is in the lobby');
+    for (const other of others) {
+      assert.equal(await this.driver.canChooseRoundDilemma(other, round), false, other);
+    }
   },
 );
 
 Given(
-  '{string} has already added {int} dilemmas',
-  async function (this: GameWorld, player: string, count: number) {
-    await allowAdding(this, count);
-    await this.isInTheRoom(player);
-    for (let added = 0; added < count; added += 1) await this.driver.addDilemma(player);
-    this.dilemmas = await this.driver.addedDilemmasSeenBy(player);
+  '{string} has chosen the dilemma of round {int}',
+  async function (this: GameWorld, player: string, round: number) {
+    await choose(this, player, round);
   },
 );
 
-When('{string} tries to add another one', async function (this: GameWorld, player: string) {
-  this.accepted = await this.driver.tryToAddAnotherDilemma(player);
-});
-
-Then('the third dilemma is not added', async function (this: GameWorld) {
-  assert.equal(this.accepted, false);
-  assert.equal((await this.driver.addedDilemmasSeenBy(await this.host())).length, 2);
-});
-
+// Before taking it out, the step notes who else in the lobby could have.
 When('{string} removes it', async function (this: GameWorld, player: string) {
-  await this.driver.removeAddedDilemma(player);
+  const { round } = this;
+  assert.ok(round, 'no step said which round');
+  const others = [...this.inRoom].filter((other) => other !== player);
+  this.couldClear = new Map(
+    await Promise.all(
+      others.map(
+        async (other) => [other, await this.driver.canClearRoundDilemma(other, round)] as const,
+      ),
+    ),
+  );
+  assert.ok(await this.driver.canClearRoundDilemma(player, round), `${player} cannot remove it`);
+  await this.driver.clearRoundDilemma(player, round);
 });
 
-Then('nobody in the lobby sees it', async function (this: GameWorld) {
-  const [dilemmaId] = this.dilemmas;
-  assert.ok(dilemmaId, 'no step added a dilemma');
-  for (const viewer of this.inRoom) {
-    assert.ok(!(await this.driver.addedDilemmasSeenBy(viewer)).includes(dilemmaId), viewer);
-  }
+Then('round {int} is empty again', async function (this: GameWorld, round: number) {
+  await everyoneSees(this, round, null);
 });
 
-When('the host adds a dilemma', async function (this: GameWorld) {
+// Whoever else was in the lobby: the scenario may name someone no step brought in.
+Then('the host had no option to remove it', async function (this: GameWorld) {
   const host = await this.host();
+  assert.equal(this.couldClear.get(host), false, `${host} could remove it`);
+});
+
+When('the host chooses a dilemma for round {int}', async function (this: GameWorld, round: number) {
   await this.isInTheRoom(SOMEONE.player);
-  await this.driver.addDilemma(host);
-  this.dilemmas = await this.driver.addedDilemmasSeenBy(host);
+  await choose(this, await this.host(), round);
 });
 
-Then('everyone in the lobby sees it among the added dilemmas', async function (this: GameWorld) {
-  const [dilemmaId] = this.dilemmas;
-  assert.ok(dilemmaId, 'no step added a dilemma');
+Then(
+  'everyone in the lobby sees it in round {int}',
+  async function (this: GameWorld, round: number) {
+    await everyoneSees(this, round, this.dilemmaId);
+  },
+);
+
+Then('no player in the lobby sees who chose it', async function (this: GameWorld) {
+  const { round } = this;
+  assert.ok(round, 'no step said which round');
+  const seen = await roundSeenBy(this, await this.host(), round);
+  assert.ok(seen.origin === 'players' && seen.dilemmaId, 'nobody chose it');
   for (const viewer of this.inRoom) {
-    assert.ok((await this.driver.addedDilemmasSeenBy(viewer)).includes(dilemmaId), viewer);
+    assert.deepEqual(await this.driver.choosersSeenBy(viewer), [], viewer);
   }
 });
 
-Then('no player in the lobby sees who added it', async function (this: GameWorld) {
-  assert.ok((await this.driver.addedDilemmasSeenBy(await this.host())).length > 0, 'none added');
-  for (const viewer of this.inRoom) {
-    assert.deepEqual(await this.driver.authorsOfAddedDilemmasSeenBy(viewer), [], viewer);
-  }
-});
+Then(
+  'round {int} plays a random dilemma from every category',
+  async function (this: GameWorld, round: number) {
+    const host = await this.host();
+    const rounds = await this.driver.roundsSeenBy(host);
+    const dilemmas = await this.driver.dilemmasOfTheGame();
+    assert.equal(dilemmas.length, rounds.length, 'the game does not play every round');
+    const dilemmaId = dilemmas[round - 1];
+    assert.ok(dilemmaId, `the game plays no round ${round}`);
+    assert.equal(this.driver.catalogEntryOf(dilemmaId).minimumAge, 16);
+  },
+);
 
 // Joining once the game has started
 
@@ -480,7 +547,10 @@ Given('a nominal game that has already started', async function (this: GameWorld
   assert.equal((await this.driver.settingsSeenBy('Ana')).variant, 'nominal');
   // With the gap in every dilemma, so the steps can look at who takes it.
   const found = await this.driver.searchDilemmas('Ana', 'about {gap}');
-  await this.driver.pickDilemmas('Ana', found);
+  await this.driver.setRounds(
+    'Ana',
+    found.map((dilemmaId) => ({ origin: 'specific', dilemmaId })),
+  );
   await this.game();
 });
 

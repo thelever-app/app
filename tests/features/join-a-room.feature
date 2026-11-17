@@ -44,66 +44,72 @@ Feature: Join a room
     And sees that room after pressing the button to enter
 
   @ui @todo
-  Scenario: A player adds a dilemma created on the spot
-    Given the host has allowed players to add dilemmas
+  Scenario: A player chooses a dilemma created on the spot
+    Given round 3 is chosen by the players and is empty
     And "Luis" has an account
-    When "Luis" creates a new dilemma from the lobby
+    When "Luis" creates a new dilemma for round 3 from the lobby
     And it passes the automatic filter
-    Then the dilemma is added to the game
+    Then it becomes the dilemma of round 3
     And it is saved as a private dilemma of "Luis"
 
   @ui @todo
-  Scenario: A dilemma that fails the filter is not added
-    Given the host has allowed players to add dilemmas
+  Scenario: A dilemma that fails the filter is not chosen
+    Given round 3 is chosen by the players and is empty
     And "Luis" has an account
-    When "Luis" creates a new dilemma from the lobby that fails the automatic filter
-    Then the dilemma is not added
+    When "Luis" creates a new dilemma for round 3 from the lobby that fails the automatic filter
+    Then round 3 does not get it
     And "Luis" sees the reason, the facts it is based on, the rule applied, that the decision was automatic and how to appeal
 
   @ui @todo
   Scenario: The player is offered the gap when naming a real person
-    Given the host has allowed players to add dilemmas
+    Given round 3 is chosen by the players and is empty
     And "Luis" has an account
-    When "Luis" writes a new dilemma in the lobby that mentions a person by name
+    When "Luis" writes a new dilemma for round 3 that mentions a person by name
     Then "Luis" is offered to use the gap "someone in the group" instead
 
   @ui
   Scenario: Only catalog dilemmas suitable for the room are offered
-    Given the host has allowed players to add dilemmas
+    Given round 3 is chosen by the players and is empty
     And a room not marked as adults only
-    When "Luis" searches the catalog to add a dilemma
+    When "Luis" searches the catalog for the dilemma of round 3
     Then only dilemmas suitable for players from 16 are offered
 
   @ui @todo
-  Scenario: Only dilemmas suitable for the room can be added
-    Given the host has allowed players to add dilemmas
+  Scenario: Only dilemmas suitable for the room can be chosen
+    Given round 3 is chosen by the players and is empty
     And a room not marked as adults only
-    When "Luis" tries to add one of his private dilemmas for adults
-    Then the dilemma is not added
+    When "Luis" tries to choose one of his private dilemmas for adults for round 3
+    Then round 3 does not get it
 
   @ui
-  Scenario: A player adds as many dilemmas as the host allows
-    Given the host allows each player to add 2 dilemmas
-    And "Luis" has already added 2 dilemmas
-    When "Luis" tries to add another one
-    Then the third dilemma is not added
+  Scenario: A player chooses the dilemma of an empty players round
+    Given round 3 is chosen by the players and is empty
+    When "Luis" chooses "La cartera" for round 3
+    Then everyone in the lobby sees "La cartera" in round 3
+    And nobody else can choose the dilemma of round 3
 
   @ui
-  Scenario: A player removes a dilemma they added
-    Given "Luis" has added a dilemma
+  Scenario: Only the player who chose it frees the round
+    Given "Luis" has chosen the dilemma of round 3
     When "Luis" removes it
-    Then nobody in the lobby sees it
+    Then round 3 is empty again
+    And the host had no option to remove it
 
   @ui
-  Scenario: The host adds a dilemma too
-    Given the host has allowed players to add dilemmas
-    When the host adds a dilemma
-    Then everyone in the lobby sees it among the added dilemmas
+  Scenario: The host chooses the dilemma of a players round too
+    Given round 3 is chosen by the players and is empty
+    When the host chooses a dilemma for round 3
+    Then everyone in the lobby sees it in round 3
 
   @ui
-  Scenario: Nobody knows who added a dilemma before the reveal
-    Given "Luis" has added a dilemma
-    Then no player in the lobby sees who added it
+  Scenario: Nobody knows who chose the dilemma of a players round before the reveal
+    Given "Luis" has chosen the dilemma of round 3
+    Then no player in the lobby sees who chose it
+
+  Scenario: An empty players round is random when the game starts
+    Given round 3 is chosen by the players and nobody has chosen its dilemma
+    When the game starts
+    Then round 3 plays a random dilemma from every category
 
   @ui @screen
   Scenario: The nickname is prefilled with the last one used

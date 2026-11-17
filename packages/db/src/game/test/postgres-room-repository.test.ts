@@ -194,8 +194,8 @@ describe('PostgresRoomRepository', () => {
             {
               dilemmaId: 'TestDilemma',
               version: 1,
-              origin: 'picked-by-the-system',
-              addedBy: null,
+              origin: 'random',
+              chosenBy: null,
               hasGap: false,
               optionIds: ['TestOptionA', 'TestOptionB'],
             },
@@ -266,8 +266,8 @@ describe('PostgresGameRepository', () => {
             {
               dilemmaId: dilemma.id,
               version: 1,
-              origin: 'picked-by-the-system',
-              addedBy: null,
+              origin: 'random',
+              chosenBy: null,
               hasGap: false,
               optionIds: dilemma.options.map(({ id }) => id),
             },

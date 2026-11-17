@@ -1,7 +1,7 @@
 import { Dilemma, type DilemmaRepository, type IdGenerator } from '@thelever-app/dilemmas';
 import { GAP_MARKER } from '@thelever-app/dilemmas/published';
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
-import type { CatalogEntry } from './driver.ts';
+import type { CatalogEntry, RoundSetting, RoundView } from './driver.ts';
 
 /** A dilemma of the test data, with what a scenario checks of it. */
 export interface TestDilemma extends CatalogEntry {
@@ -132,17 +132,54 @@ export const GAP_DILEMMA_IDS = TEST_DILEMMAS.filter(({ text }) => text.includes(
 );
 
 /**
- * Test data: how many dilemmas in exploration the room server keeps room for, by the size of the
- * game. The same values it is composed with.
+ * Test data: how many dilemmas in exploration the room server keeps room for, by the number of
+ * random rounds of the game. The same values it is composed with.
  */
 export const EXPLORATION_SLOTS = [
-  { fromDilemmaCount: 6, slots: 2 },
-  { fromDilemmaCount: 11, slots: 3 },
+  { fromRandomRounds: 6, slots: 2 },
+  { fromRandomRounds: 11, slots: 3 },
 ] as const;
 
-export function explorationSlotsFor(dilemmaCount: number): number {
-  const rows = EXPLORATION_SLOTS.filter(({ fromDilemmaCount }) => fromDilemmaCount <= dilemmaCount);
+export function explorationSlotsFor(randomRounds: number): number {
+  const rows = EXPLORATION_SLOTS.filter(({ fromRandomRounds }) => fromRandomRounds <= randomRounds);
   return rows.at(-1)?.slots ?? 0;
+}
+
+/** A round as the host would set it again, to keep it as it is. */
+export function roundSettingOf(round: RoundView): RoundSetting {
+  return round.origin === 'players' ? { origin: 'players' } : round;
+}
+
+/**
+ * The rounds of a game of `count` dilemmas the scenarios name the options of: the rounds a step set
+ * keep their setting, and the others, random from every category as a new room has them, get a
+ * specific dilemma of the test data with the two usual options that is in no round. None when
+ * nothing changes.
+ */
+export function roundsForAGameOf(
+  rounds: readonly RoundView[],
+  count: number,
+): RoundSetting[] | undefined {
+  const setByAStep = rounds.map((round) =>
+    round.origin === 'random' && round.categories === null ? undefined : round,
+  );
+  const length = Math.max(count, setByAStep.findLastIndex(Boolean) + 1);
+  const taken = new Set(
+    rounds.flatMap((round) =>
+      round.origin !== 'random' && round.dilemmaId ? [round.dilemmaId] : [],
+    ),
+  );
+  const free = TWO_OPTION_DILEMMA_IDS.filter((dilemmaId) => !taken.has(dilemmaId));
+  const settings = Array.from({ length }, (_, index): RoundSetting => {
+    const round = setByAStep[index];
+    if (round) return roundSettingOf(round);
+    const dilemmaId = free.shift();
+    if (!dilemmaId) throw new Error(`The test data has no ${length} dilemmas for a game`);
+    return { origin: 'specific', dilemmaId };
+  });
+  const unchanged =
+    length === rounds.length && setByAStep.slice(0, length).every((round) => round !== undefined);
+  return unchanged ? undefined : settings;
 }
 
 /**

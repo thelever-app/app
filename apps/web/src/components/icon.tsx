@@ -4,6 +4,7 @@ import checkCircle from '@material-symbols/svg-500/rounded/check_circle-fill.svg
 import close from '@material-symbols/svg-500/rounded/close-fill.svg?url';
 import error from '@material-symbols/svg-500/rounded/error.svg?url';
 import expandMore from '@material-symbols/svg-500/rounded/keyboard_arrow_down-fill.svg?url';
+import expandLess from '@material-symbols/svg-500/rounded/keyboard_arrow_up-fill.svg?url';
 import refresh from '@material-symbols/svg-500/rounded/refresh-fill.svg?url';
 import timer from '@material-symbols/svg-500/rounded/timer-fill.svg?url';
 import hourglass from '@material-symbols/svg-500/rounded/hourglass_top-fill.svg?url';
@@ -26,12 +27,17 @@ import diversity from '@material-symbols/svg-500/rounded/diversity_3-fill.svg?ur
 import flag from '@material-symbols/svg-500/rounded/flag.svg?url';
 import familyRestroom from '@material-symbols/svg-500/rounded/family_restroom-fill.svg?url';
 import groups from '@material-symbols/svg-500/rounded/groups-fill.svg?url';
+import groupsOutline from '@material-symbols/svg-500/rounded/groups.svg?url';
 import iosShare from '@material-symbols/svg-500/rounded/ios_share.svg?url';
 import logout from '@material-symbols/svg-500/rounded/logout.svg?url';
 import moreVert from '@material-symbols/svg-500/rounded/more_vert.svg?url';
 import pin from '@material-symbols/svg-500/rounded/pin.svg?url';
+import pushPin from '@material-symbols/svg-500/rounded/keep.svg?url';
 import qrCode from '@material-symbols/svg-500/rounded/qr_code_2.svg?url';
+import radioChecked from '@material-symbols/svg-500/rounded/radio_button_checked-fill.svg?url';
+import radioUnchecked from '@material-symbols/svg-500/rounded/radio_button_unchecked.svg?url';
 import search from '@material-symbols/svg-500/rounded/search.svg?url';
+import shuffle from '@material-symbols/svg-500/rounded/shuffle.svg?url';
 import sync from '@material-symbols/svg-500/rounded/sync.svg?url';
 import videocam from '@material-symbols/svg-500/rounded/videocam.svg?url';
 import visibility from '@material-symbols/svg-500/rounded/visibility-fill.svg?url';
@@ -57,10 +63,12 @@ const ICONS = {
   diversity,
   edit,
   error,
+  expandLess,
   expandMore,
   familyRestroom,
   flag,
   groups,
+  groupsOutline,
   hourglass,
   howToVote,
   iosShare,
@@ -70,9 +78,13 @@ const ICONS = {
   openInNew,
   personPin,
   pin,
+  pushPin,
   qrCode,
+  radioChecked,
+  radioUnchecked,
   refresh,
   search,
+  shuffle,
   sync,
   target,
   timer,

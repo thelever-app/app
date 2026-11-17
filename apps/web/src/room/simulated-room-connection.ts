@@ -10,10 +10,11 @@ import {
 } from '@thelever-app/dilemmas/in-memory';
 import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
 import {
-  AddDilemmaUseCase,
   AnswerDilemmaUseCase,
   ChangeAvatarUseCase,
   ChangeRoomSettingsUseCase,
+  ChooseRoundDilemmaUseCase,
+  ClearRoundDilemmaUseCase,
   ConnectionChangedEvent,
   ConnectPlayerUseCase,
   CreateRoomUseCase,
@@ -32,19 +33,18 @@ import {
   RunOutRoundUseCase,
   SkipDilemmaUseCase,
   type Clock,
-  PickDilemmasUseCase,
   ProgressUpdatedEvent,
   AnsweredCountChangedEvent,
   DilemmaRevealedEvent,
   RoundStartedEvent,
-  RemoveAddedDilemmaUseCase,
   SearchDilemmasUseCase,
   StartGameUseCase,
   type DomainEvent,
   type ExplorationSlots,
   type PlayerNotifier,
   type Randomness,
-  type RoomSettingsSnapshot,
+  type RoomSettingsChanges,
+  type RoundChange,
   AvatarVO,
 } from '@thelever-app/game';
 import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
@@ -97,8 +97,8 @@ const CLASSIFICATION = {
 
 /** The same as the room server, so a game of the simulation is composed like a real one. */
 const EXPLORATION_SLOTS: ExplorationSlots = [
-  { fromDilemmaCount: 6, slots: 2 },
-  { fromDilemmaCount: 11, slots: 3 },
+  { fromRandomRounds: 6, slots: 2 },
+  { fromRandomRounds: 11, slots: 3 },
 ];
 
 /** The events that reach the screen as the state it may see after them, as the room server sends them. */
@@ -142,11 +142,22 @@ function avatarNumber(index: number): { readonly face: string; readonly color: s
   return { face: avatar.face, color: avatar.color };
 }
 
-/** The parts of the configuration a message changes: those it carries, none left undefined. */
-function onlyGiven(changes: ChangeSettingsDto['changes']): Partial<RoomSettingsSnapshot> {
-  return Object.fromEntries(
+/**
+ * The parts of the configuration a message changes: those it carries, none left undefined, and a
+ * new round without an id, as the room server reads them.
+ */
+function onlyGiven(changes: ChangeSettingsDto['changes']): RoomSettingsChanges {
+  const { rounds, ...rest } = Object.fromEntries(
     Object.entries(changes).filter(([, value]) => value !== undefined),
-  ) as Partial<RoomSettingsSnapshot>;
+  ) as Omit<RoomSettingsChanges, 'rounds'> & Pick<ChangeSettingsDto['changes'], 'rounds'>;
+  return {
+    ...rest,
+    ...(rounds && {
+      rounds: rounds.map(({ id, ...round }): RoundChange =>
+        id === undefined ? round : { id, ...round },
+      ),
+    }),
+  };
 }
 
 /**
@@ -201,10 +212,9 @@ export class SimulatedRoomConnection implements RoomConnection {
       getGameState: new GetGameStateUseCase(rooms, games, catalog),
       searchDilemmas: new SearchDilemmasUseCase(rooms, catalog),
       changeAvatar: new ChangeAvatarUseCase(rooms, notifier),
-      changeSettings: new ChangeRoomSettingsUseCase(rooms, notifier),
-      pickDilemmas: new PickDilemmasUseCase(rooms, catalog, notifier),
-      addDilemma: new AddDilemmaUseCase(rooms, catalog, notifier),
-      removeAddedDilemma: new RemoveAddedDilemmaUseCase(rooms, notifier),
+      changeSettings: new ChangeRoomSettingsUseCase(rooms, catalog, notifier),
+      chooseRoundDilemma: new ChooseRoundDilemmaUseCase(rooms, catalog, notifier),
+      clearRoundDilemma: new ClearRoundDilemmaUseCase(rooms, notifier),
       expelPlayer: new ExpelPlayerUseCase(rooms, notifier),
       startGame: new StartGameUseCase(
         {
@@ -413,18 +423,16 @@ export class SimulatedRoomConnection implements RoomConnection {
           changes: onlyGiven(message.changes),
         });
         return;
-      case 'pick-dilemmas':
-        await useCases.pickDilemmas.execute({ roomId, playerId, dilemmaIds: message.dilemmaIds });
-        return;
-      case 'add-dilemma':
-        await useCases.addDilemma.execute({ roomId, playerId, dilemmaId: message.dilemmaId });
-        return;
-      case 'remove-added-dilemma':
-        await useCases.removeAddedDilemma.execute({
+      case 'choose-round-dilemma':
+        await useCases.chooseRoundDilemma.execute({
           roomId,
           playerId,
+          roundId: message.roundId,
           dilemmaId: message.dilemmaId,
         });
+        return;
+      case 'clear-round-dilemma':
+        await useCases.clearRoundDilemma.execute({ roomId, playerId, roundId: message.roundId });
         return;
       case 'expel-player':
         await useCases.expelPlayer.execute({

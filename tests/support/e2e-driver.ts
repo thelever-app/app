@@ -54,6 +54,8 @@ import type {
   RevealView,
   RoomChoices,
   RoomPreview,
+  RoundSetting,
+  RoundView,
   SettingsView,
   WorldResultView,
 } from './driver.ts';
@@ -61,9 +63,9 @@ import type { E2eStack } from './e2e-stack.ts';
 import {
   catalogEntryOf,
   explorationSlotsFor,
+  roundsForAGameOf,
   SPANISH_OPTION_TEXTS,
   TEST_DILEMMAS,
-  TWO_OPTION_DILEMMA_IDS,
 } from './test-catalog.ts';
 
 /** Who opens the public web, by the name the driver gives their screen. */
@@ -130,6 +132,21 @@ function textIn(language: string, key: string): string {
   return text;
 }
 
+/** The text of the Spanish catalog under the key, with the values in its placeholders. */
+function spanish(key: string, values: Readonly<Record<string, string | number>> = {}): string {
+  return textIn('es', key).replace(/\{\{(\w+)[^}]*\}\}/g, (_, name: string) => {
+    const value = values[name];
+    if (value === undefined) throw new Error(`The text "${key}" needs a value for ${name}`);
+    return String(value);
+  });
+}
+
+/** Any text of the Spanish catalog under the key, whatever its placeholders say. */
+function spanishPattern(key: string): RegExp {
+  const [before, ...rest] = textIn('es', key).split(/\{\{[^}]*\}\}/);
+  return new RegExp(`^${[before, ...rest].map((part) => escaped(part ?? '')).join('.+')}$`);
+}
+
 /**
  * The position of the dilemma on screen as each language writes it, with the position as its only
  * group: «Dilema 2 de 5», «Dilemma 2 of 5»…
@@ -180,8 +197,6 @@ const SCREEN = {
     newDilemmas: 'Incluir dilemas nuevos',
   },
   language: 'Idioma de los dilemas',
-  byCategories: 'Por categorías',
-  categories: 'Categorías',
   allCategories: 'Todas',
   categoryNames: {
     'life-and-death': 'Vida y muerte',
@@ -192,18 +207,9 @@ const SCREEN = {
     'work-and-money': 'Trabajo y dinero',
     'technology-and-the-future': 'Tecnología y futuro',
   } as Readonly<Record<string, string>>,
-  dilemmaCount: 'Dilemas',
   timePerDilemma: 'Tiempo por dilema',
-  dilemmasPerPlayer: 'Dilemas que añade cada jugador',
-  noDilemmas: 'Ninguno',
-  pick: 'Elegir dilemas uno a uno',
-  changePicked: 'Cambiar',
   search: 'Buscar dilemas',
   more: 'Ver más',
-  play: (count: number) => (count === 1 ? 'Jugar este' : `Jugar estos ${count}`),
-  add: 'Añadir un dilema',
-  remove: 'Quitar este dilema',
-  addedTitle: /^Dilemas añadidos/,
   toExpel: (nickname: string) => `${nickname}. Toca para expulsar`,
   expel: 'Expulsar',
   expelled: 'Te han sacado de la sala',
@@ -268,6 +274,45 @@ const SCREEN = {
   leave: 'Salir de la partida',
   reveal: 'Reveal',
 } as const;
+
+/**
+ * What the driver looks for on screen about the rounds, from the keys of es.json of the web, so it
+ * follows any change of their wording.
+ */
+const ROUNDS_ON_SCREEN = {
+  /** The settings sheet, round by round. */
+  origin: (round: number) => spanish('settings.rounds.origin', { number: round }),
+  origins: {
+    random: () => spanish('settings.rounds.origins.random'),
+    specific: () => spanish('settings.rounds.origins.specific'),
+    players: () => spanish('settings.rounds.origins.players'),
+  },
+  remove: (round: number) => spanish('settings.rounds.remove', { number: round }),
+  /** The button that shows the categories of a random round, which says them after a colon. */
+  categoriesOf: (round: number) =>
+    new RegExp(
+      `^${escaped(spanish('settings.rounds.categoriesOf', { number: round, summary: '' }))}`,
+    ),
+  everyCategoryOf: (round: number) =>
+    spanish('settings.rounds.categoriesOf', {
+      number: round,
+      summary: spanish('settings.rounds.fromAll'),
+    }),
+  categories: (round: number) => spanish('settings.rounds.categories', { number: round }),
+  allCategories: () => spanish('settings.rounds.allCategories'),
+  choose: (round: number) => spanish('settings.rounds.chooseLabel', { number: round }),
+  change: (round: number) => spanish('settings.rounds.changeLabel', { number: round }),
+  add: () => spanish('settings.rounds.add'),
+  /** The screen to choose the dilemma of a round, from the settings or the lobby. */
+  picker: (round: number) => spanish('pickDilemmas.title', { number: round }),
+  found: () => spanish('pickDilemmas.list'),
+  put: (round: number) => spanish('pickDilemmas.put', { number: round }),
+  /** The lobby. */
+  lobby: () => spanishPattern('lobby.rounds.title'),
+  chooseInTheLobby: (round: number) => spanish('lobby.rounds.chooseLabel', { number: round }),
+  clearInTheLobby: (round: number) => spanish('lobby.rounds.clearLabel', { number: round }),
+  /** The screen to create a room from the public page of a dilemma. */
+};
 
 /** Where the web keeps the last nickname on the device (identity/last-nickname.ts). */
 const LAST_NICKNAME_KEY = 'thelever.lastNickname';
@@ -374,6 +419,8 @@ export class E2eDriver implements GameDriver {
   readonly #publicNumbers = new Map<string, number>();
   #site: BuiltSite | undefined;
   #visitorRoomId: string | undefined;
+  /** What the card of the first round said on the screen to create the room of the visitor. */
+  #startingDilemmaShown: string | undefined;
 
   constructor(stack: E2eStack) {
     this.#stack = stack;
@@ -738,10 +785,7 @@ export class E2eDriver implements GameDriver {
   }
 
   async changeSettings(host: string, changes: Partial<SettingsView>): Promise<void> {
-    const { page } = screenOf(this.#playerCalled(host));
-    await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
-    const sheet = page.getByRole('dialog');
-
+    const sheet = await this.#openSettings(host);
     for (const [setting, value] of Object.entries(changes)) {
       if (setting === 'variant') {
         await chooseOption(sheet, SCREEN.variants[value as 'nominal']);
@@ -752,27 +796,6 @@ export class E2eDriver implements GameDriver {
           .setChecked(Boolean(value));
       } else if (setting === 'dilemmaLanguage') {
         await sheet.getByLabel(SCREEN.language).selectOption(String(value));
-      } else if (setting === 'categories') {
-        const chips = sheet.getByRole('group', { name: SCREEN.categories });
-        const chip = (category: string) => {
-          const name = SCREEN.categoryNames[category];
-          if (!name) throw new Error(`The driver does not know the category ${category}`);
-          return chips.getByRole('checkbox', { name, exact: true });
-        };
-        // «Todas» first: from there, marking one plays only that one, and unmarking it, none.
-        await chips.getByRole('checkbox', { name: SCREEN.allCategories, exact: true }).click();
-        const categories = value as readonly string[] | null;
-        if (categories?.length === 0) {
-          await chip('life-and-death').click();
-          await chip('life-and-death').click();
-        }
-        for (const category of categories ?? []) await chip(category).click();
-      } else if (setting === 'dilemmasPerPlayer') {
-        const group = sheet.getByRole('radiogroup', { name: SCREEN.dilemmasPerPlayer });
-        await chooseOption(group, value === 0 ? SCREEN.noDilemmas : String(value));
-      } else if (setting === 'dilemmaCount') {
-        const group = sheet.getByRole('group', { name: SCREEN.dilemmaCount, exact: true });
-        await chooseOption(group, String(value));
       } else if (setting === 'timePerDilemmaSeconds') {
         const group = sheet.getByRole('group', { name: SCREEN.timePerDilemma });
         await chooseOption(group, `${value} s`);
@@ -780,8 +803,7 @@ export class E2eDriver implements GameDriver {
         throw new Error(`The driver cannot change ${setting} on screen`);
       }
     }
-    await sheet.getByRole('button', { name: SCREEN.save }).click();
-    await sheet.waitFor({ state: 'hidden' });
+    await this.#saveSettings(sheet);
     await this.#untilEveryoneSees('the new configuration', (lobby) =>
       Object.entries(changes).every(([setting, value]) =>
         isDeepStrictEqual(lobby.settings[setting as keyof SettingsView], value),
@@ -795,111 +817,174 @@ export class E2eDriver implements GameDriver {
     return steady(async () => (await change.count()) > 0);
   }
 
-  /** The first dilemma the search of the screen offers that nobody added yet. */
-  async addDilemma(player: string): Promise<void> {
-    const adder = this.#playerCalled(player);
-    const { page } = screenOf(adder);
-    const added = new Set(await this.addedDilemmasSeenBy(player));
-    const answer = this.#nextSearchOn(page);
-    await page.getByRole('button', { name: SCREEN.add }).click();
-    const listed = await this.#listedUntil(page, await answer, (found) =>
-      found.some(({ dilemmaId }) => !added.has(dilemmaId)),
+  /** As the lobby on the device has them, from the last state of the lobby the room server sent. */
+  async roundsSeenBy(viewer: string): Promise<RoundView[]> {
+    const { screen } = this.#playerCalled(viewer);
+    const lobby = screen?.received.findLast(
+      (message): message is RoomStateDto => message.type === 'room-state',
     );
-    const first = listed.find(({ dilemmaId }) => !added.has(dilemmaId));
-    if (!first) throw new Error('The catalog has no other dilemma suitable for the room');
+    if (!lobby) throw new Error(`${viewer} never had the lobby open`);
+    return lobby.rounds.map(roundViewOf);
+  }
 
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: new RegExp(`^${escaped(listedText(first))}`) })
-      .click();
-    await waitUntil(
-      () => lastLobbyOf(adder)?.ownAddedDilemmaIds.includes(first.dilemmaId),
-      `${player} has added ${first.dilemmaId}`,
-    );
-    await this.#untilEveryoneSees(`${first.dilemmaId} is added`, (lobby) =>
-      lobby.addedDilemmas.some(({ dilemmaId }) => dilemmaId === first.dilemmaId),
+  /** Adding or removing rounds at the end, and then setting each one, as the sheet shows them. */
+  async setRounds(host: string, rounds: readonly RoundSetting[]): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const before = await this.roundsSeenBy(host);
+    const sheet = await this.#openSettings(host);
+    for (let count = before.length; count < rounds.length; count += 1) {
+      await sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.add(), exact: true }).click();
+    }
+    for (let count = before.length; count > rounds.length; count -= 1) {
+      await sheet
+        .getByRole('button', { name: ROUNDS_ON_SCREEN.remove(count), exact: true })
+        .click();
+    }
+    for (const [index, setting] of rounds.entries()) {
+      const round = index + 1;
+      if (!(await this.#setRoundOn(page, sheet, round, setting, before[index]))) {
+        throw new Error(`The settings do not let ${host} set round ${round}`);
+      }
+    }
+    await this.#saveSettings(sheet);
+    await this.#untilEveryoneSees('the new rounds', (lobby) =>
+      sameRounds(lobby.rounds.map(roundViewOf), rounds),
     );
   }
 
-  /** The screen offers no way to add more than the room allows. */
-  async tryToAddAnotherDilemma(player: string): Promise<boolean> {
-    const { page } = screenOf(this.#playerCalled(player));
-    const add = page.getByRole('button', { name: SCREEN.add });
-    if (!(await steady(async () => (await add.count()) > 0))) return false;
-    await this.addDilemma(player);
+  /** The screen does not offer what the room would not take: the sheet closes without saving. */
+  async tryToSetRound(host: string, round: number, setting: RoundSetting): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const before = await this.roundsSeenBy(host);
+    const sheet = await this.#openSettings(host);
+    if (!(await this.#setRoundOn(page, sheet, round, setting, before[round - 1]))) {
+      await this.#closeSettings(sheet);
+      return false;
+    }
+    await this.#saveSettings(sheet);
+    const rounds = before.map((other, index) => (index === round - 1 ? setting : other));
+    await this.#untilEveryoneSees(`round ${round} as set`, (lobby) =>
+      sameRounds(lobby.rounds.map(roundViewOf), rounds),
+    );
     return true;
   }
 
-  async addedDilemmasSeenBy(viewer: string): Promise<string[]> {
-    return this.#lobbyOf(viewer).addedDilemmas.map(({ dilemmaId }) => dilemmaId);
+  async tryToAddRound(host: string): Promise<boolean> {
+    const { length } = await this.roundsSeenBy(host);
+    const sheet = await this.#openSettings(host);
+    const add = sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.add(), exact: true });
+    return this.#changeTheNumberOfRounds(sheet, add, length + 1);
   }
 
-  /** From everything the device has of the added dilemmas: what the screen shows and what it got. */
-  async authorsOfAddedDilemmasSeenBy(viewer: string): Promise<string[]> {
+  async tryToRemoveRound(host: string, round: number): Promise<boolean> {
+    const { length } = await this.roundsSeenBy(host);
+    const sheet = await this.#openSettings(host);
+    const remove = sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.remove(round), exact: true });
+    return this.#changeTheNumberOfRounds(sheet, remove, length - 1);
+  }
+
+  async chooseRoundDilemma(player: string, round: number, dilemmaId: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const choose = page.getByRole('button', {
+      name: ROUNDS_ON_SCREEN.chooseInTheLobby(round),
+      exact: true,
+    });
+    if (!(await steady(async () => (await choose.count()) > 0))) return false;
+    if (!(await this.#pickIn(page, round, dilemmaId, () => choose.click()))) return false;
+    await this.#untilEveryoneSees(`round ${round} has ${dilemmaId}`, (lobby) => {
+      const seen = lobby.rounds[round - 1];
+      return seen?.origin === 'players' && seen.dilemma?.dilemmaId === dilemmaId;
+    });
+    return true;
+  }
+
+  async canChooseRoundDilemma(player: string, round: number): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const choose = page.getByRole('button', {
+      name: ROUNDS_ON_SCREEN.chooseInTheLobby(round),
+      exact: true,
+    });
+    return steady(async () => (await choose.count()) > 0);
+  }
+
+  async clearRoundDilemma(player: string, round: number): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(player));
+    await page
+      .getByRole('button', { name: ROUNDS_ON_SCREEN.clearInTheLobby(round), exact: true })
+      .click();
+    await this.#untilEveryoneSees(`round ${round} is empty`, (lobby) => {
+      const seen = lobby.rounds[round - 1];
+      return seen?.origin === 'players' && seen.dilemma === null;
+    });
+  }
+
+  async canClearRoundDilemma(player: string, round: number): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const clear = page.getByRole('button', {
+      name: ROUNDS_ON_SCREEN.clearInTheLobby(round),
+      exact: true,
+    });
+    return steady(async () => (await clear.count()) > 0);
+  }
+
+  /**
+   * From everything the device has of the rounds of the players: the rows of the lobby that show
+   * their dilemmas and what it got of them.
+   */
+  async choosersSeenBy(viewer: string): Promise<string[]> {
     const { page } = screenOf(this.#playerCalled(viewer));
     const lobby = this.#lobbyOf(viewer);
-    const section = page.getByRole('region', { name: SCREEN.addedTitle });
-    const shown = (await section.count()) > 0 ? await section.textContent() : '';
-    const seen = `${shown} ${JSON.stringify(lobby.addedDilemmas)}`;
+    const ofThePlayers = lobby.rounds.filter(({ origin }) => origin === 'players');
+    const section = page.getByRole('region', { name: ROUNDS_ON_SCREEN.lobby() });
+    const shown = await Promise.all(
+      ofThePlayers.flatMap((round) =>
+        round.origin === 'players' && round.dilemma
+          ? [
+              section
+                .getByRole('listitem')
+                .filter({ hasText: listedText(round.dilemma) })
+                .first()
+                .textContent(),
+            ]
+          : [],
+      ),
+    );
+    const seen = `${shown.join(' ')} ${JSON.stringify(ofThePlayers)}`;
     return lobby.players
       .filter(({ playerId, nickname }) => seen.includes(playerId) || seen.includes(nickname))
       .map(({ nickname }) => nickname);
   }
 
-  /** The host sees every added dilemma with a way to remove it; anyone else, only their own. */
-  async removeAddedDilemma(player: string): Promise<void> {
-    const { page } = screenOf(this.#playerCalled(player));
-    const before = this.#lobbyOf(player).addedDilemmas.length;
-    await page.getByRole('button', { name: SCREEN.remove }).first().click();
-    await this.#untilEveryoneSees(
-      'one dilemma less is added',
-      (lobby) => lobby.addedDilemmas.length === before - 1,
-    );
-  }
-
   /**
-   * The host searches where they pick the dilemmas of the game; any other player, where they add
-   * one. The ids are those of what the room server answered and the screen shows.
+   * The host searches where they choose the dilemma of a round in the settings; any other player,
+   * where they choose it for the first empty round of the players. The ids are those of what the
+   * room server answered and the screen shows.
    */
   async searchDilemmas(player: string, text?: string): Promise<string[]> {
     const { page } = screenOf(this.#playerCalled(player));
-    let answer = this.#nextSearchOn(page);
-    if (player === this.#hostName()) {
-      await this.#openPickSheet(player);
-    } else {
-      await page.getByRole('button', { name: SCREEN.add }).click();
-    }
-    let found = await answer;
+    const search = await this.#openSearch(player);
+    let found = search.found;
     if (text) {
       // The screen searches once the player stops typing; filling the field types it all at once.
-      answer = this.#nextSearchOn(page, 'q=');
-      await page.getByRole('searchbox', { name: SCREEN.search }).fill(text);
+      const answer = this.#nextSearchOn(page, 'q=');
+      await search.picker.getByRole('searchbox', { name: SCREEN.search }).fill(text);
       found = await answer;
     }
-    const sheet = page.getByRole('dialog');
     const [first] = found;
-    if (first) await sheet.getByText(listedText(first), { exact: true }).waitFor();
-    await page.keyboard.press('Escape');
-    if (player === this.#hostName()) await this.#leaveTheSettings(player);
-    await sheet.waitFor({ state: 'hidden' });
+    if (first) await search.picker.getByText(listedText(first), { exact: true }).waitFor();
+    await search.close();
     return found.map(({ dilemmaId }) => dilemmaId);
   }
 
   async searchDilemmaPages(player: string, pages: number): Promise<string[][]> {
     const { page } = screenOf(this.#playerCalled(player));
-    const answer = this.#nextSearchOn(page);
-    if (player === this.#hostName()) {
-      await this.#openPickSheet(player);
-    } else {
-      await page.getByRole('button', { name: SCREEN.add }).click();
-    }
-    const found = [await answer];
-    const sheet = page.getByRole('dialog');
-    const more = sheet.getByRole('button', { name: SCREEN.more });
+    const { picker, found: first, close } = await this.#openSearch(player);
+    const found = [first];
+    const more = picker.getByRole('button', { name: SCREEN.more });
     // Whether there are more shows once what it found is on screen, below what it had found.
     const shown = async () => {
       const last = found.at(-1)?.at(-1);
-      if (last) await sheet.getByText(listedText(last), { exact: true }).waitFor();
+      if (last) await picker.getByText(listedText(last), { exact: true }).waitFor();
     };
     await shown();
     while (found.length < pages && (await more.count()) > 0) {
@@ -908,63 +993,184 @@ export class E2eDriver implements GameDriver {
       found.push(await next);
       await shown();
     }
-    await page.keyboard.press('Escape');
-    if (player === this.#hostName()) await this.#leaveTheSettings(player);
-    await sheet.waitFor({ state: 'hidden' });
+    await close();
     return found.map((listed) => listed.map(({ dilemmaId }) => dilemmaId));
   }
 
-  async pickDilemmas(host: string, dilemmaIds: string[]): Promise<void> {
-    const { page } = screenOf(this.#playerCalled(host));
-    const answer = this.#nextSearchOn(page);
-    await this.#openPickSheet(host);
-    const found = await this.#listedUntil(page, await answer, (listed) =>
-      dilemmaIds.every((dilemmaId) => listed.some((dilemma) => dilemma.dilemmaId === dilemmaId)),
-    );
-
-    const sheet = page.getByRole('dialog');
-    for (const dilemmaId of dilemmaIds) {
-      const dilemma = found.find((candidate) => candidate.dilemmaId === dilemmaId);
-      if (!dilemma) throw new Error(`The search of the host does not offer ${dilemmaId}`);
-      await sheet
-        .getByRole('checkbox', { name: new RegExp(`^${escaped(listedText(dilemma))}`) })
-        .click();
-    }
-    await sheet.getByRole('button', { name: SCREEN.play(dilemmaIds.length) }).click();
-    await this.#leaveTheSettings(host);
-    await this.#untilEveryoneSees('the picked dilemmas', (lobby) =>
-      isDeepStrictEqual(
-        lobby.pickedDilemmas.map(({ dilemmaId }) => dilemmaId).toSorted(),
-        dilemmaIds.toSorted(),
-      ),
-    );
-  }
-
-  /** Leaving the screen to pick dilemmas goes back to the settings, which the host closes. */
-  async #leaveTheSettings(host: string): Promise<void> {
-    const { page } = screenOf(this.#playerCalled(host));
-    const settings = page.getByRole('dialog', { name: SCREEN.settingsTitle });
-    await settings.waitFor();
-    await page.keyboard.press('Escape');
-    await settings.waitFor({ state: 'hidden' });
-  }
-
-  /** «Por categorías» in the settings leaves the picked dilemmas in one tap. */
-  async playByCategories(host: string): Promise<void> {
+  /** «Cambiar» in the lobby opens the settings sheet. */
+  async #openSettings(host: string): Promise<Locator> {
     const { page } = screenOf(this.#playerCalled(host));
     await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
-    const sheet = page.getByRole('dialog');
-    await chooseOption(sheet, SCREEN.byCategories);
-    await sheet.getByRole('button', { name: SCREEN.save }).click();
-    await sheet.waitFor({ state: 'hidden' });
-    await this.#untilEveryoneSees(
-      'no picked dilemma',
-      (lobby) => lobby.pickedDilemmas.length === 0,
-    );
+    const sheet = page.getByRole('dialog', { name: SCREEN.settingsTitle });
+    await sheet.waitFor();
+    return sheet;
   }
 
-  async pickedDilemmasSeenBy(viewer: string): Promise<string[]> {
-    return this.#lobbyOf(viewer).pickedDilemmas.map(({ dilemmaId }) => dilemmaId);
+  async #saveSettings(sheet: Locator): Promise<void> {
+    await sheet.getByRole('button', { name: SCREEN.save }).click();
+    await sheet.waitFor({ state: 'hidden' });
+  }
+
+  /** Leaving the settings sheet without saving what changed on it. */
+  async #closeSettings(sheet: Locator): Promise<void> {
+    await sheet.page().keyboard.press('Escape');
+    await sheet.waitFor({ state: 'hidden' });
+  }
+
+  /** The button adds or removes a round, if the sheet lets the host; whether the room took it. */
+  async #changeTheNumberOfRounds(sheet: Locator, button: Locator, count: number): Promise<boolean> {
+    if ((await button.count()) === 0 || (await button.isDisabled())) {
+      await this.#closeSettings(sheet);
+      return false;
+    }
+    await button.click();
+    await this.#saveSettings(sheet);
+    await this.#untilEveryoneSees(`${count} rounds`, (lobby) => lobby.rounds.length === count);
+    return true;
+  }
+
+  /**
+   * Sets the round on the open settings sheet: who chooses its dilemma and, for a random one, its
+   * categories or, for a specific one, its dilemma, unless it already has it. False if the screen
+   * to choose it does not let the host take that dilemma.
+   */
+  async #setRoundOn(
+    page: Page,
+    sheet: Locator,
+    round: number,
+    setting: RoundSetting,
+    before: RoundView | undefined,
+  ): Promise<boolean> {
+    const origins = sheet.getByRole('radiogroup', {
+      name: ROUNDS_ON_SCREEN.origin(round),
+      exact: true,
+    });
+    const origin = origins.getByRole('radio', {
+      name: ROUNDS_ON_SCREEN.origins[setting.origin](),
+      exact: true,
+    });
+    if ((await origin.getAttribute('aria-checked')) !== 'true') await origin.click();
+
+    if (setting.origin === 'players') return true;
+    if (setting.origin === 'random') {
+      const fromAll = sheet.getByRole('button', {
+        name: ROUNDS_ON_SCREEN.everyCategoryOf(round),
+        exact: true,
+      });
+      if (setting.categories === null && (await fromAll.count()) > 0) return true;
+      const expander = sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.categoriesOf(round) });
+      if ((await expander.getAttribute('aria-expanded')) !== 'true') await expander.click();
+      const chips = sheet.getByRole('group', {
+        name: ROUNDS_ON_SCREEN.categories(round),
+        exact: true,
+      });
+      const chip = (name: string) => chips.getByRole('checkbox', { name, exact: true });
+      // «Todas» first: from there, marking one plays only that one.
+      const all = chip(ROUNDS_ON_SCREEN.allCategories());
+      if ((await all.getAttribute('aria-checked')) !== 'true') await all.click();
+      for (const category of setting.categories ?? []) {
+        const name = SCREEN.categoryNames[category];
+        if (!name) throw new Error(`The driver does not know the category ${category}`);
+        await chip(name).click();
+      }
+      return true;
+    }
+    if (before?.origin === 'specific' && before.dilemmaId === setting.dilemmaId) return true;
+    const choose = sheet
+      .getByRole('button', { name: ROUNDS_ON_SCREEN.choose(round), exact: true })
+      .or(sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.change(round), exact: true }));
+    return this.#pickIn(page, round, setting.dilemmaId, () => choose.click());
+  }
+
+  /**
+   * On the screen to choose the dilemma of the round that `open` opens: it searches the text of the
+   * dilemma and puts it in the round, unless the screen says it is in another one.
+   */
+  async #pickIn(
+    page: Page,
+    round: number,
+    dilemmaId: string,
+    open: () => Promise<void>,
+  ): Promise<boolean> {
+    const opened = this.#nextSearchOn(page);
+    await open();
+    const picker = page.getByRole('dialog', { name: ROUNDS_ON_SCREEN.picker(round), exact: true });
+    await picker.waitFor();
+    await opened;
+    const { text } = catalogEntryOf(dilemmaId);
+    const answer = this.#nextSearchOn(page, 'q=');
+    await picker.getByRole('searchbox', { name: SCREEN.search }).fill(text);
+    const found = await this.#listedUntil(page, picker, await answer, (listed) =>
+      listed.some((candidate) => candidate.dilemmaId === dilemmaId),
+    );
+    const dilemma = found.find((candidate) => candidate.dilemmaId === dilemmaId);
+    if (!dilemma) throw new Error(`The search for the round ${round} does not offer ${dilemmaId}`);
+
+    const option = picker
+      .getByRole('radiogroup', { name: ROUNDS_ON_SCREEN.found(), exact: true })
+      .getByRole('radio', { name: new RegExp(`^${escaped(listedText(dilemma))}(?!\\d)`) });
+    if ((await option.getAttribute('aria-disabled')) === 'true') {
+      await page.keyboard.press('Escape');
+      await picker.waitFor({ state: 'hidden' });
+      return false;
+    }
+    await option.click();
+    await picker.getByRole('button', { name: ROUNDS_ON_SCREEN.put(round), exact: true }).click();
+    await picker.waitFor({ state: 'hidden' });
+    return true;
+  }
+
+  /**
+   * Opens where `player` searches the dilemma of a round: the host, in the settings, round 1 as
+   * specific; anyone else, the first empty round of the players in the lobby. Closing it leaves
+   * everything as it was.
+   */
+  async #openSearch(player: string): Promise<{
+    readonly picker: Locator;
+    readonly found: readonly { readonly dilemmaId: string; readonly text: string }[];
+    readonly close: () => Promise<void>;
+  }> {
+    const { page } = screenOf(this.#playerCalled(player));
+    let open: () => Promise<void>;
+    let round = 1;
+    let sheet: Locator | undefined;
+    if (player === this.#hostName()) {
+      sheet = await this.#openSettings(player);
+      const specific = ROUNDS_ON_SCREEN.origins.specific();
+      const origin = sheet
+        .getByRole('radiogroup', { name: ROUNDS_ON_SCREEN.origin(round), exact: true })
+        .getByRole('radio', { name: specific, exact: true });
+      if ((await origin.getAttribute('aria-checked')) !== 'true') await origin.click();
+      const choose = sheet
+        .getByRole('button', { name: ROUNDS_ON_SCREEN.choose(round), exact: true })
+        .or(sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.change(round), exact: true }));
+      open = () => choose.click();
+    } else {
+      const empty = this.#lobbyOf(player).rounds.findIndex(
+        (seen) => seen.origin === 'players' && seen.dilemma === null,
+      );
+      if (empty === -1) throw new Error(`${player} has no round of the players to choose`);
+      round = empty + 1;
+      const choose = page.getByRole('button', {
+        name: ROUNDS_ON_SCREEN.chooseInTheLobby(round),
+        exact: true,
+      });
+      open = () => choose.click();
+    }
+    const answer = this.#nextSearchOn(page);
+    await open();
+    const picker = page.getByRole('dialog', { name: ROUNDS_ON_SCREEN.picker(round), exact: true });
+    await picker.waitFor();
+    const found = await answer;
+    return {
+      picker,
+      found,
+      close: async () => {
+        await page.keyboard.press('Escape');
+        await picker.waitFor({ state: 'hidden' });
+        if (sheet) await this.#closeSettings(sheet);
+      },
+    };
   }
 
   catalogEntryOf(dilemmaId: string): CatalogEntry {
@@ -1043,24 +1249,22 @@ export class E2eDriver implements GameDriver {
     }
   }
 
-  newDilemmasSetForGamesOf(dilemmaCount: number): number {
-    return explorationSlotsFor(dilemmaCount);
+  newDilemmasSetForRandomRounds(count: number): number {
+    return explorationSlotsFor(count);
   }
 
   // Rounds
 
   /**
-   * By categories, the game would also draw the dilemmas of the seed the database starts with,
-   * whose options are not those the scenarios name: unless a step picked them, the host picks as
-   * many of the test data as the game plays besides the added ones.
+   * A random round would also draw the dilemmas of the seed the database starts with, whose
+   * options are not those the scenarios name: without a number of dilemmas, the game has as many
+   * as the room has rounds, and the host makes specific the rounds no step set.
    */
   async startDecisionPhase(dilemmaCount?: number): Promise<void> {
     const host = this.#hostName();
-    const { pickedDilemmas, addedDilemmas, settings } = this.#lobbyOf(host);
-    const missing = (dilemmaCount ?? settings.dilemmaCount) - addedDilemmas.length;
-    if (pickedDilemmas.length === 0 && missing > 0) {
-      await this.pickDilemmas(host, TWO_OPTION_DILEMMA_IDS.slice(0, missing));
-    }
+    const before = await this.roundsSeenBy(host);
+    const rounds = roundsForAGameOf(before, dilemmaCount ?? before.length);
+    if (rounds) await this.setRounds(host, rounds);
     await this.startGame(host);
   }
 
@@ -1270,7 +1474,10 @@ export class E2eDriver implements GameDriver {
     const { page } = screenOf(await this.#withScreen(VISITOR));
     await page.goto(`${this.#stack.siteUrl}${this.#publicPathIn(name, language)}`);
     await page.getByRole('link', { name: SITE_LANGUAGES.get(language)!.dilemma.play }).click();
-    await page.getByTestId('first-dilemma').waitFor();
+    // By its test id: the card is in the language of the page, which need not be Spanish.
+    const starting = page.getByTestId('first-dilemma');
+    await starting.waitFor();
+    this.#startingDilemmaShown = (await starting.textContent()) ?? '';
   }
 
   async visitorWithoutAChosenLanguage(): Promise<void> {
@@ -1375,14 +1582,26 @@ export class E2eDriver implements GameDriver {
     this.#visitorRoomId = new URL(page.url()).pathname.split('/').at(-1);
   }
 
-  async firstDilemmaOfTheVisitorRoom(): Promise<string | undefined> {
+  /** The dilemma of the public web whose name the card of the first round showed. */
+  async startingDilemmaShownToTheVisitor(): Promise<string | undefined> {
+    const shown = this.#startingDilemmaShown;
+    return [...this.#publicNumbers.keys()].find((name) => shown?.includes(name));
+  }
+
+  /** As the room keeps it in the database. */
+  async firstRoundDilemmaOfTheVisitorRoom(): Promise<string | undefined> {
     const roomId = this.#visitorRoomId;
     if (!roomId) return undefined;
-    const room = await this.#withDatabase((db) =>
-      db.selectFrom('rooms').select('first_dilemma_id').where('id', '=', roomId).executeTakeFirst(),
+    const first = await this.#withDatabase((db) =>
+      db
+        .selectFrom('room_rounds')
+        .select(['origin', 'dilemma_id'])
+        .where('room_id', '=', roomId)
+        .orderBy('position')
+        .executeTakeFirst(),
     );
-    const first = room?.first_dilemma_id;
-    return [...this.#publicNumbers].find(([, number]) => `dlm-${number}` === first)?.[0];
+    if (first?.origin !== 'specific') return undefined;
+    return [...this.#publicNumbers].find(([, number]) => `dlm-${number}` === first.dilemma_id)?.[0];
   }
 
   /** Loads the curated catalog of the scenario into the database of the run, as the job does. */
@@ -1601,7 +1820,7 @@ export class E2eDriver implements GameDriver {
   }
 
   /** As the game keeps it in the database. */
-  async positionAddedBy(player: string): Promise<number> {
+  async positionChosenBy(player: string): Promise<number> {
     const playerId = this.#playerIdOf(this.#playerCalled(player));
     const { gameId, dilemmas } = this.#gameOf(this.#hostName());
     const row = await this.#withDatabase((db) =>
@@ -1609,11 +1828,11 @@ export class E2eDriver implements GameDriver {
         .selectFrom('game_dilemmas')
         .select('dilemma_id')
         .where('game_id', '=', gameId)
-        .where('added_by_player_id', '=', playerId)
+        .where('chosen_by_player_id', '=', playerId)
         .executeTakeFirst(),
     );
     const index = dilemmas.findIndex(({ dilemmaId }) => dilemmaId === row?.dilemma_id);
-    if (index === -1) throw new Error(`${player} added no dilemma of the game`);
+    if (index === -1) throw new Error(`${player} chose no dilemma of the game`);
     return index + 1;
   }
 
@@ -1839,7 +2058,7 @@ export class E2eDriver implements GameDriver {
         right,
       })),
       personInTheGap: reveal.personInTheGap && this.#nameOf(reveal.personInTheGap),
-      addedBy: reveal.addedBy && this.#nameOf(reveal.addedBy),
+      chosenBy: reveal.chosenBy && this.#nameOf(reveal.chosenBy),
       showsPoints: SCREEN.points.test((await page.locator('body').textContent()) ?? ''),
     };
   }
@@ -2539,25 +2758,14 @@ export class E2eDriver implements GameDriver {
     }
   }
 
-  /** The next answer of the room server to a search of the page, with what it found. */
-  /** From the settings: by categories, the link to pick; by hand, the row of the picked ones. */
-  async #openPickSheet(host: string): Promise<void> {
-    const { page } = screenOf(this.#playerCalled(host));
-    const byHand = this.#lobbyOf(host).pickedDilemmas.length > 0;
-    await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
-    const sheet = page.getByRole('dialog');
-    const open = byHand ? SCREEN.changePicked : SCREEN.pick;
-    await sheet.getByRole('button', { name: open, exact: true }).click();
-  }
-
-  /** What the open sheet lists, asking for more below until it lists what is `wanted` or has no more. */
+  /** What the open screen lists, asking for more below until it lists what is `wanted` or has no more. */
   async #listedUntil(
     page: Page,
+    sheet: Locator,
     first: readonly { readonly dilemmaId: string; readonly text: string }[],
     wanted: (listed: readonly { readonly dilemmaId: string }[]) => boolean,
   ): Promise<readonly { readonly dilemmaId: string; readonly text: string }[]> {
     const listed = [...first];
-    const sheet = page.getByRole('dialog');
     const more = sheet.getByRole('button', { name: SCREEN.more });
     // Whether there are more shows once what it found is on screen.
     const shown = async () => {
@@ -2574,6 +2782,7 @@ export class E2eDriver implements GameDriver {
     return listed;
   }
 
+  /** The next answer of the room server to a search of the page, with what it found. */
   async #nextSearchOn(
     page: Page,
     containing = '',
@@ -2716,6 +2925,39 @@ function lastLobbyOf({ screen }: E2ePlayer): RoomStateDto | undefined {
 function lastGameOf({ screen }: E2ePlayer): GameStateDto | undefined {
   return screen?.received.findLast(
     (message): message is GameStateDto => message.type === 'game-state',
+  );
+}
+
+function roundViewOf(round: RoomStateDto['rounds'][number]): RoundView {
+  switch (round.origin) {
+    case 'random':
+      return { origin: 'random', categories: round.categories };
+    case 'specific':
+      return { origin: 'specific', dilemmaId: round.dilemma.dilemmaId };
+    case 'players':
+      return { origin: 'players', dilemmaId: round.dilemma?.dilemmaId ?? null };
+  }
+}
+
+/** Whether the rounds are as the host set them, whatever the order of the categories of each. */
+function sameRounds(
+  seen: readonly RoundView[],
+  set: readonly (RoundSetting | RoundView)[],
+): boolean {
+  const sorted = (categories: readonly string[] | null) => categories && [...categories].sort();
+  return (
+    seen.length === set.length &&
+    seen.every((round, index) => {
+      const other = set[index]!;
+      if (round.origin !== other.origin) return false;
+      if (round.origin === 'random' && other.origin === 'random') {
+        return isDeepStrictEqual(sorted(round.categories), sorted(other.categories));
+      }
+      if (round.origin === 'specific' && other.origin === 'specific') {
+        return round.dilemmaId === other.dilemmaId;
+      }
+      return true;
+    })
   );
 }
 

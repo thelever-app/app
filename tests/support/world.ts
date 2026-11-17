@@ -1,14 +1,17 @@
 import { setWorldConstructor, World, type IWorldOptions } from '@cucumber/cucumber';
+import type { Category } from '@thelever-app/game';
 import { AcceptanceDriver } from './acceptance-driver.ts';
 import type {
   AnswerPlan,
   GameDriver,
   PublicPageView,
   RoomChoices,
+  RoundSetting,
   SettingsView,
 } from './driver.ts';
 import { E2eDriver } from './e2e-driver.ts';
 import { e2eStack } from './e2e-stack.ts';
+import { TWO_OPTION_DILEMMA_IDS } from './test-catalog.ts';
 
 /** The names the steps give to the people a scenario does not name. */
 export const SOMEONE = {
@@ -41,6 +44,21 @@ export class GameWorld extends World {
 
   /** The configuration a step changed, to compare with what a later step sees. */
   changes: Partial<SettingsView> = {};
+
+  /** The rounds a step set, to compare with what a later step sees. */
+  rounds: readonly RoundSetting[] = [];
+
+  /** The round (from 1) a step talks about as "it" or "the round". */
+  round: number | undefined;
+
+  /** The categories a step set for a round. */
+  categories: readonly Category[] = [];
+
+  /** Who, besides the player who took it out, could take out the dilemma of a round just before. */
+  couldClear: ReadonlyMap<string, boolean> = new Map();
+
+  /** Whether a step tried to start the game, so a later one says whether it started. */
+  triedToStartTheGame = false;
 
   /** The dilemmas a step found or picked, for a later step to look at. */
   dilemmas: readonly string[] = [];
@@ -80,7 +98,7 @@ export class GameWorld extends World {
   /** The vote predictions a step made. */
   predictions: readonly { readonly player: string; readonly vote: string }[] = [];
 
-  /** How many dilemmas the game plays when no step picks or adds them; the room decides if unset. */
+  /** How many rounds the game plays, besides those a step set; the room decides if unset. */
   dilemmaCount: number | undefined;
 
   /**
@@ -88,6 +106,9 @@ export class GameWorld extends World {
    * its reveal: their plan, or null for who does not vote. Who is not in it answers in full.
    */
   readonly plans = new Map<number, Map<string, AnswerPlan | null>>();
+
+  /** The dilemmas of the test data the scenario calls by a name, by that name. */
+  readonly #named = new Map<string, string>();
 
   #host: string | undefined;
   #choices: RoomChoices = {};
@@ -199,6 +220,34 @@ export class GameWorld extends World {
       await this.driver.answer(player, plan);
     }
     if (!(await this.driver.revealSeenBy(host))) await this.driver.revealEarly(host);
+  }
+
+  /**
+   * The dilemma of the test data the scenario calls by that name: one with the two usual options,
+   * the same for the same name, from the last ones so as not to be one the game takes for a round.
+   */
+  dilemmaCalled(name: string): string {
+    const named = this.#named.get(name);
+    if (named) return named;
+    const taken = new Set(this.#named.values());
+    const dilemmaId = TWO_OPTION_DILEMMA_IDS.findLast((candidate) => !taken.has(candidate));
+    if (!dilemmaId) throw new Error(`The test data has no dilemma left to call "${name}"`);
+    this.#named.set(name, dilemmaId);
+    return dilemmaId;
+  }
+
+  /** A dilemma of the test data with the two usual options that is in no round and has no name. */
+  async unusedDilemma(): Promise<string> {
+    const rounds = await this.driver.roundsSeenBy(await this.host());
+    const taken = new Set([
+      ...this.#named.values(),
+      ...rounds.flatMap((round) =>
+        round.origin !== 'random' && round.dilemmaId ? [round.dilemmaId] : [],
+      ),
+    ]);
+    const dilemmaId = TWO_OPTION_DILEMMA_IDS.find((candidate) => !taken.has(candidate));
+    if (!dilemmaId) throw new Error('The test data has no dilemma left that is in no round');
+    return dilemmaId;
   }
 
   /** A step that sets up the game, so it must come before anything starts it. */

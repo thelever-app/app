@@ -146,13 +146,13 @@ export class PostgresGameRepository implements GameRepository {
     await db
       .insertInto('game_dilemmas')
       .values(
-        dilemmas.map(({ dilemmaId, version, origin, addedBy, hasGap }, position) => ({
+        dilemmas.map(({ dilemmaId, version, origin, chosenBy, hasGap }, position) => ({
           game_id: id,
           position,
           dilemma_id: dilemmaId,
           dilemma_version: version,
           origin,
-          added_by_player_id: addedBy,
+          chosen_by_player_id: chosenBy,
           has_gap: hasGap,
           person_in_the_gap: people.get(dilemmaId) ?? null,
         })),
@@ -293,7 +293,7 @@ function readGame(db: Kysely<GameTables>, id: string) {
             'game_dilemmas.dilemma_id as dilemmaId',
             'game_dilemmas.dilemma_version as version',
             'game_dilemmas.origin',
-            'game_dilemmas.added_by_player_id as addedBy',
+            'game_dilemmas.chosen_by_player_id as chosenBy',
             'game_dilemmas.has_gap as hasGap',
             'game_dilemmas.person_in_the_gap as personInTheGap',
             'game_dilemma_options.option_id as optionId',
@@ -418,17 +418,25 @@ function dilemmasOf(
     {
       version: number;
       origin: GameRow['options'][number]['origin'];
-      addedBy: string | null;
+      chosenBy: string | null;
       hasGap: boolean;
       personInTheGap: string | null;
       optionIds: string[];
     }
   >();
-  for (const { dilemmaId, version, origin, addedBy, hasGap, personInTheGap, optionId } of options) {
+  for (const {
+    dilemmaId,
+    version,
+    origin,
+    chosenBy,
+    hasGap,
+    personInTheGap,
+    optionId,
+  } of options) {
     const dilemma = dilemmas.get(dilemmaId) ?? {
       version,
       origin,
-      addedBy,
+      chosenBy,
       hasGap,
       personInTheGap,
       optionIds: [],
@@ -437,14 +445,16 @@ function dilemmasOf(
     dilemmas.set(dilemmaId, dilemma);
   }
   return {
-    dilemmas: [...dilemmas].map(([dilemmaId, { version, origin, addedBy, hasGap, optionIds }]) => ({
-      dilemmaId,
-      version,
-      optionIds,
-      hasGap,
-      origin,
-      addedBy,
-    })),
+    dilemmas: [...dilemmas].map(
+      ([dilemmaId, { version, origin, chosenBy, hasGap, optionIds }]) => ({
+        dilemmaId,
+        version,
+        optionIds,
+        hasGap,
+        origin,
+        chosenBy,
+      }),
+    ),
     peopleInTheGap: [...dilemmas].flatMap(([dilemmaId, { personInTheGap }]) =>
       personInTheGap ? [{ dilemmaId, playerId: personInTheGap }] : [],
     ),

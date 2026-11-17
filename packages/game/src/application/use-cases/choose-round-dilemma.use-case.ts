@@ -5,15 +5,18 @@ import { findLobbyDilemmas } from './find-lobby-dilemmas.ts';
 import { findRoom } from './find-room.ts';
 import { notifyRoom } from './notify-room.ts';
 
-export interface PickDilemmasInput {
+export interface ChooseRoundDilemmaInput {
   readonly roomId: string;
   readonly playerId: string;
-  /** In the order the host picked them; none goes back to a game by categories. */
-  readonly dilemmaIds: readonly string[];
+  readonly roundId: number;
+  readonly dilemmaId: string;
 }
 
-/** The host picks the dilemmas of the game one by one, from the general catalog. */
-export class PickDilemmasUseCase {
+/**
+ * A player chooses a dilemma of the general catalog for a round of the players; everyone sees it, and
+ * nobody learns who chose it until the reveal.
+ */
+export class ChooseRoundDilemmaUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #dilemmaCatalog: DilemmaCatalog;
   readonly #notifier: PlayerNotifier;
@@ -28,15 +31,13 @@ export class PickDilemmasUseCase {
     this.#notifier = notifier;
   }
 
-  async execute({ roomId, playerId, dilemmaIds }: PickDilemmasInput): Promise<void> {
+  async execute({ roomId, playerId, roundId, dilemmaId }: ChooseRoundDilemmaInput): Promise<void> {
     const room = await findRoom(this.#roomRepository, roomId);
-    const dilemmas = await findLobbyDilemmas(
-      this.#dilemmaCatalog,
-      room.settings.dilemmaLanguage,
-      dilemmaIds,
-    );
+    const [dilemma] = await findLobbyDilemmas(this.#dilemmaCatalog, room.settings.dilemmaLanguage, [
+      dilemmaId,
+    ]);
 
-    room.pickDilemmas(playerId, dilemmas);
+    room.chooseRoundDilemma(playerId, roundId, dilemma!);
     const events = room.pullEvents();
     await this.#roomRepository.save(room);
     await notifyRoom(room, events, this.#notifier);

@@ -29,8 +29,7 @@ const GAME_DATA = [
   'room_players',
   'room_connections',
   'room_expelled_identities',
-  'room_added_dilemmas',
-  'room_picked_dilemmas',
+  'room_rounds',
   'games',
   'game_dilemmas',
   'game_dilemma_options',
@@ -109,18 +108,26 @@ async function playedRoom() {
   const ids = new GameIds();
   const room = roomOf('Ana', ['Luis', 'Marta'], ids);
   const [ana, luis, marta] = room.players as [Player, Player, Player];
-  room.changeSettings(ana.id, { dilemmasPerPlayer: 1 });
+  room.changeSettings(
+    ana.id,
+    {
+      rounds: [
+        { id: 1, origin: 'players' },
+        { id: 2, origin: 'specific', dilemmaId: second.id },
+      ],
+    },
+    [{ dilemmaId: second.id, minimumAge: 16, compromising: false }],
+  );
   room.expel(ana.id, marta.id);
-  room.addDilemma(luis.id, { dilemmaId: first.id, minimumAge: 16, compromising: false });
-  room.pickDilemmas(ana.id, [{ dilemmaId: second.id, minimumAge: 16, compromising: false }]);
+  room.chooseRoundDilemma(luis.id, 1, { dilemmaId: first.id, minimumAge: 16, compromising: false });
   const game = Game.create(
     {
       roomId: room.id,
       dilemmas: dilemmas.map((dilemma) => ({
         dilemmaId: dilemma.id,
         version: dilemma.version,
-        origin: 'picked-by-the-system',
-        addedBy: null,
+        origin: 'random',
+        chosenBy: null,
         optionIds: dilemma.options.map(({ id }) => id),
         hasGap: false,
       })),

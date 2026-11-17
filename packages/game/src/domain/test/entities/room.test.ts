@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { MAXIMUM_PLAYERS, Room, type RoomSnapshot } from '../../entities/room.ts';
-import { AddingDilemmasNotAllowedError } from '../../errors/adding-dilemmas-not-allowed.error.ts';
 import { DilemmaNotSuitableError } from '../../errors/dilemma-not-suitable.error.ts';
 import { DuplicateDilemmaError } from '../../errors/duplicate-dilemma.error.ts';
 import { GameInProgressError } from '../../errors/game-in-progress.error.ts';
@@ -12,11 +11,14 @@ import { InvalidRoomSettingError } from '../../errors/invalid-room-setting.error
 import { NicknameAndAvatarTakenError } from '../../errors/nickname-and-avatar-taken.error.ts';
 import { NicknameMissingError } from '../../errors/nickname-missing.error.ts';
 import { NotEnoughPlayersError } from '../../errors/not-enough-players.error.ts';
+import { NotChooserError } from '../../errors/not-chooser.error.ts';
 import { NotHostError } from '../../errors/not-host.error.ts';
 import { PlayerExpelledError } from '../../errors/player-expelled.error.ts';
 import { PlayerNotInRoomError } from '../../errors/player-not-in-room.error.ts';
 import { RoomFullError } from '../../errors/room-full.error.ts';
-import { TooManyAddedDilemmasError } from '../../errors/too-many-added-dilemmas.error.ts';
+import { RoundNotForPlayersError } from '../../errors/round-not-for-players.error.ts';
+import { RoundNotFoundError } from '../../errors/round-not-found.error.ts';
+import { RoundTakenError } from '../../errors/round-taken.error.ts';
 import { ConnectionChangedEvent } from '../../events/connection-changed.event.ts';
 import { LobbyChangedEvent } from '../../events/lobby-changed.event.ts';
 import { AvatarVO } from '../../vos/avatar.vo.ts';
@@ -77,9 +79,31 @@ const COMPROMISING = {
   minimumAge: 16,
   compromising: true,
 } as const;
+const ANOTHER = { dilemmaId: 'TestAnotherDilemma', minimumAge: 16, compromising: false } as const;
 
-/** Ana creates the room from the public page of a dilemma, which the game plays first. */
-function roomStartingWith(firstDilemma: {
+/**
+ * Ana's lobby of three with a random round 1, round 2 for the players and FOR_EVERYONE in round 3,
+ * and nothing that happened so far is pending.
+ */
+function lobbyWithAPlayersRound(): Room {
+  const room = lobbyOfThree();
+  room.changeSettings(
+    'TestHostId',
+    {
+      rounds: [
+        { id: 1, origin: 'random', categories: null },
+        { id: 2, origin: 'players' },
+        { id: 3, origin: 'specific', dilemmaId: FOR_EVERYONE.dilemmaId },
+      ],
+    },
+    [FOR_EVERYONE],
+  );
+  room.pullEvents();
+  return room;
+}
+
+/** Ana creates the room from the public page of a dilemma, which its first round plays. */
+function roomStartingWith(firstRoundDilemma: {
   readonly dilemmaId: string;
   readonly minimumAge: 16 | 18;
   readonly compromising: boolean;
@@ -94,7 +118,7 @@ function roomStartingWith(firstDilemma: {
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
       createdAt: NOW,
-      firstDilemma,
+      firstRoundDilemma,
     },
     new FixedIdGenerator('TestId', 'TestHostId'),
   );
@@ -184,28 +208,39 @@ describe('Room', () => {
         ),
       ).toThrow(IdMissingError);
     });
-    it('should keep the first dilemma it is created with', () => {
+    it('should put the dilemma it is created with in its first round, as specific', () => {
       // Act
       const room = roomStartingWith(FOR_EVERYONE);
 
       // Assert
-      expect(room.firstDilemma).toEqual(FOR_EVERYONE);
+      expect(room.settings.rounds).toHaveLength(8);
+      expect(room.settings.rounds[0]).toEqual({ id: 1, origin: 'specific', dilemma: FOR_EVERYONE });
+      expect(room.settings.rounds.slice(1).map(({ origin }) => origin)).toEqual(
+        Array(7).fill('random'),
+      );
     });
 
-    it('should have no first dilemma when it is created without one', () => {
+    it('should have 8 random rounds from every category when it is created without a dilemma', () => {
       // Act
       const room = roomHostedByAna();
 
       // Assert
-      expect(room.firstDilemma).toBeNull();
+      expect(room.settings.rounds).toEqual(
+        Array.from({ length: 8 }, (_, index) => ({
+          id: index + 1,
+          origin: 'random',
+          categories: null,
+        })),
+      );
+      expect(room.chosenDilemmas).toEqual([]);
     });
 
-    it('should throw an error if the first dilemma does not suit the room', () => {
+    it('should throw an error if the dilemma does not suit the room', () => {
       // Act & Assert
       expect(() => roomStartingWith(FOR_ADULTS)).toThrow(DilemmaNotSuitableError);
     });
 
-    it('should throw an error if the first dilemma is compromising', () => {
+    it('should throw an error if the dilemma is compromising', () => {
       // Act & Assert
       expect(() => roomStartingWith(COMPROMISING)).toThrow(DilemmaNotSuitableError);
     });
@@ -392,11 +427,12 @@ describe('Room', () => {
       const room = lobbyOfThree();
 
       // Act
-      room.changeSettings('TestHostId', { variant: 'anonymous', dilemmaCount: 12 });
+      room.changeSettings('TestHostId', { variant: 'anonymous', timePerDilemmaSeconds: 90 });
 
       // Assert
       expect(room.settings.variant).toBe('anonymous');
-      expect(room.settings.dilemmaCount).toBe(12);
+      expect(room.settings.timePerDilemmaSeconds).toBe(90);
+      expect(room.settings.rounds).toHaveLength(8);
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'settings-changed', 3)]);
     });
 
@@ -421,309 +457,316 @@ describe('Room', () => {
       );
     });
 
-    it('should drop the dilemmas for adults when the room stops being for adults only', () => {
-      // Arrange
-      const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { adultsOnly: true, dilemmasPerPlayer: 1 });
-      room.addDilemma('TestLuisId', FOR_ADULTS);
-      room.pickDilemmas('TestHostId', [FOR_EVERYONE, { ...FOR_ADULTS, dilemmaId: 'TestOther' }]);
-
-      // Act
-      room.changeSettings('TestHostId', { adultsOnly: false });
-
-      // Assert
-      expect(room.addedDilemmas).toEqual([]);
-      expect(room.pickedDilemmas).toEqual([FOR_EVERYONE]);
-    });
-
-    it('should keep only the first dilemmas each player added when the host allows fewer', () => {
-      // Arrange
-      const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { dilemmasPerPlayer: 3 });
-      room.addDilemma('TestLuisId', FOR_EVERYONE);
-      room.addDilemma('TestLuisId', {
-        dilemmaId: 'TestSecond',
-        minimumAge: 16,
-        compromising: false,
-      });
-      room.addDilemma('TestMartaId', {
-        dilemmaId: 'TestThird',
-        minimumAge: 16,
-        compromising: false,
-      });
-
-      // Act
-      room.changeSettings('TestHostId', { dilemmasPerPlayer: 1 });
-      const afterOne = room.addedDilemmas.map(({ dilemmaId }) => dilemmaId);
-      room.changeSettings('TestHostId', { dilemmasPerPlayer: 0 });
-
-      // Assert
-      expect(afterOne).toEqual(['TestDilemma', 'TestThird']);
-      expect(room.addedDilemmas).toEqual([]);
-    });
-  });
-
-  describe('changeSettings and the first dilemma', () => {
-    it('should drop the first dilemma if the room no longer suits it', () => {
-      // Arrange
-      const room = Room.restore({
-        ...roomStartingWith(FOR_EVERYONE).toSnapshot(),
-        settings: { ...roomHostedByAna().settings.toSnapshot(), adultsOnly: true },
-        firstDilemma: FOR_ADULTS,
-      });
-
-      // Act
-      room.changeSettings('TestHostId', { adultsOnly: false });
-
-      // Assert
-      expect(room.firstDilemma).toBeNull();
-    });
-
-    it('should keep the first dilemma if the room still suits it', () => {
-      // Arrange
-      const room = roomStartingWith(FOR_EVERYONE);
-
-      // Act
-      room.changeSettings('TestHostId', { adultsOnly: true });
-
-      // Assert
-      expect(room.firstDilemma).toEqual(FOR_EVERYONE);
-    });
-  });
-
-  describe('pickDilemmas', () => {
-    it('should keep the dilemmas the host picks, in order', () => {
+    it('should keep the rounds the host gives, in order, giving a new one the next id', () => {
       // Arrange
       const room = lobbyOfThree();
 
       // Act
-      room.pickDilemmas('TestHostId', [
-        FOR_EVERYONE,
-        { dilemmaId: 'TestSecond', minimumAge: 16, compromising: false },
+      room.changeSettings('TestHostId', {
+        rounds: [
+          { id: 3, origin: 'players' },
+          { origin: 'random', categories: ['honesty', 'loyalty'] },
+          { id: 1, origin: 'random', categories: null },
+        ],
+      });
+
+      // Assert
+      expect(room.settings.rounds).toEqual([
+        { id: 3, origin: 'players' },
+        { id: 9, origin: 'random', categories: ['honesty', 'loyalty'] },
+        { id: 1, origin: 'random', categories: null },
       ]);
-
-      // Assert
-      expect(room.pickedDilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual([
-        'TestDilemma',
-        'TestSecond',
-      ]);
-      expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'dilemmas-changed', 3)]);
     });
 
-    it('should throw an error for a dilemma for adults in a room that is not for adults only', () => {
+    it('should keep the dilemma of a specific round as the catalog has it', () => {
       // Arrange
       const room = lobbyOfThree();
-
-      // Act & Assert
-      expect(() => room.pickDilemmas('TestHostId', [FOR_ADULTS])).toThrow(DilemmaNotSuitableError);
-    });
-
-    it('should throw an error for a compromising dilemma, even in an anonymous room for adults', () => {
-      // Arrange
-      const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { variant: 'anonymous', adultsOnly: true });
-
-      // Act & Assert
-      expect(() => room.pickDilemmas('TestHostId', [COMPROMISING])).toThrow(
-        DilemmaNotSuitableError,
-      );
-    });
-
-    it('should throw an error for a dilemma picked twice', () => {
-      // Arrange
-      const room = lobbyOfThree();
-
-      // Act & Assert
-      expect(() => room.pickDilemmas('TestHostId', [FOR_EVERYONE, FOR_EVERYONE])).toThrow(
-        DuplicateDilemmaError,
-      );
-    });
-
-    it('should throw an error if the player is not the host', () => {
-      // Arrange
-      const room = lobbyOfThree();
-
-      // Act & Assert
-      expect(() => room.pickDilemmas('TestLuisId', [FOR_EVERYONE])).toThrow(NotHostError);
-    });
-  });
-
-  describe('addDilemma', () => {
-    function lobbyWhereAddingIsAllowed(dilemmasPerPlayer: 1 | 2 = 1): Room {
-      const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { dilemmasPerPlayer });
-      room.pullEvents();
-      return room;
-    }
-
-    it('should add the dilemma with who added it and record that the lobby changed', () => {
-      // Arrange
-      const room = lobbyWhereAddingIsAllowed();
 
       // Act
-      room.addDilemma('TestLuisId', FOR_EVERYONE);
+      room.changeSettings(
+        'TestHostId',
+        { rounds: [{ id: 1, origin: 'specific', dilemmaId: 'TestDilemma' }] },
+        [FOR_EVERYONE],
+      );
 
       // Assert
-      expect(room.addedDilemmas).toEqual([{ ...FOR_EVERYONE, playerId: 'TestLuisId' }]);
-      expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'dilemmas-changed', 4)]);
+      expect(room.settings.rounds).toEqual([{ id: 1, origin: 'specific', dilemma: FOR_EVERYONE }]);
+      expect(room.roundDilemmaIds).toEqual(['TestDilemma']);
     });
 
-    it('should throw an error if the host does not allow adding dilemmas', () => {
+    it.each([
+      { case: 'does not suit the room', dilemmas: [FOR_ADULTS] },
+      { case: 'is compromising', dilemmas: [COMPROMISING] },
+      { case: 'is not in the catalog', dilemmas: [] },
+    ])('should throw an error for a specific dilemma that $case', ({ dilemmas }) => {
       // Arrange
       const room = lobbyOfThree();
-
-      // Act & Assert
-      expect(() => room.addDilemma('TestLuisId', FOR_EVERYONE)).toThrow(
-        AddingDilemmasNotAllowedError,
-      );
-    });
-
-    it('should let each player add as many dilemmas as the host allows, and no more', () => {
-      // Arrange
-      const room = lobbyWhereAddingIsAllowed(2);
-      room.addDilemma('TestLuisId', FOR_EVERYONE);
-      room.addDilemma('TestLuisId', {
-        dilemmaId: 'TestSecond',
-        minimumAge: 16,
-        compromising: false,
-      });
+      const dilemmaId = dilemmas[0]?.dilemmaId ?? 'TestNoDilemma';
 
       // Act & Assert
       expect(() =>
-        room.addDilemma('TestLuisId', {
-          dilemmaId: 'TestThird',
-          minimumAge: 16,
-          compromising: false,
-        }),
-      ).toThrow(TooManyAddedDilemmasError);
-      expect(room.addedDilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual([
-        'TestDilemma',
-        'TestSecond',
+        room.changeSettings(
+          'TestHostId',
+          { rounds: [{ id: 1, origin: 'specific', dilemmaId }] },
+          dilemmas,
+        ),
+      ).toThrow(DilemmaNotSuitableError);
+      expect(room.settings.rounds).toHaveLength(8);
+    });
+
+    it('should throw an error for a specific dilemma a player already chose for a round', () => {
+      // Arrange
+      const room = lobbyWithAPlayersRound();
+      room.chooseRoundDilemma('TestLuisId', 2, ANOTHER);
+
+      // Act & Assert
+      expect(() =>
+        room.changeSettings(
+          'TestHostId',
+          {
+            rounds: [
+              { id: 1, origin: 'specific', dilemmaId: ANOTHER.dilemmaId },
+              { id: 2, origin: 'players' },
+            ],
+          },
+          [ANOTHER],
+        ),
+      ).toThrow(DuplicateDilemmaError);
+    });
+
+    it('should make random the specific round of a dilemma the room no longer suits', () => {
+      // Arrange
+      const room = lobbyOfThree();
+      room.changeSettings(
+        'TestHostId',
+        {
+          adultsOnly: true,
+          rounds: [
+            { id: 1, origin: 'random', categories: ['honesty'] },
+            { id: 2, origin: 'specific', dilemmaId: FOR_ADULTS.dilemmaId },
+          ],
+        },
+        [FOR_ADULTS],
+      );
+
+      // Act
+      room.changeSettings('TestHostId', { adultsOnly: false });
+
+      // Assert
+      expect(room.settings.rounds).toEqual([
+        { id: 1, origin: 'random', categories: ['honesty'] },
+        { id: 2, origin: 'random', categories: null },
       ]);
     });
 
-    it('should let the host add dilemmas too', () => {
+    it('should make random the round of a dilemma a player chose that the room no longer suits', () => {
       // Arrange
-      const room = lobbyWhereAddingIsAllowed();
+      const room = lobbyWithAPlayersRound();
+      room.changeSettings('TestHostId', { adultsOnly: true });
+      room.chooseRoundDilemma('TestLuisId', 2, FOR_ADULTS);
 
       // Act
-      room.addDilemma('TestHostId', FOR_EVERYONE);
+      room.changeSettings('TestHostId', { adultsOnly: false });
 
       // Assert
-      expect(room.addedDilemmas).toEqual([{ ...FOR_EVERYONE, playerId: 'TestHostId' }]);
+      expect(room.chosenDilemmas).toEqual([]);
+      expect(room.settings.rounds[1]).toEqual({ id: 2, origin: 'random', categories: null });
     });
 
-    it('should throw an error if another player has already added that dilemma', () => {
+    it('should keep the dilemmas of the rounds that are still in the new language', () => {
       // Arrange
-      const room = lobbyWhereAddingIsAllowed();
-      room.addDilemma('TestLuisId', FOR_EVERYONE);
+      const room = lobbyWithAPlayersRound();
+      room.chooseRoundDilemma('TestLuisId', 2, ANOTHER);
+      const inEnglish = { ...ANOTHER, minimumAge: 16 as const };
 
-      // Act & Assert
-      expect(() => room.addDilemma('TestMartaId', FOR_EVERYONE)).toThrow(DuplicateDilemmaError);
+      // Act
+      room.changeSettings('TestHostId', { dilemmaLanguage: 'en' }, [inEnglish]);
+
+      // Assert
+      expect(room.chosenDilemmas).toEqual([{ ...inEnglish, roundId: 2, playerId: 'TestLuisId' }]);
+      expect(room.settings.rounds[2]).toEqual({ id: 3, origin: 'random', categories: null });
     });
 
-    it('should throw an error for a dilemma that does not suit the room', () => {
+    it('should drop what a player chose when the round is no longer theirs, and keep the others', () => {
       // Arrange
-      const room = lobbyWhereAddingIsAllowed();
+      const room = lobbyWithAPlayersRound();
+      room.changeSettings('TestHostId', {
+        rounds: [
+          { id: 2, origin: 'players' },
+          { id: 4, origin: 'players' },
+        ],
+      });
+      room.chooseRoundDilemma('TestLuisId', 2, FOR_EVERYONE);
+      room.chooseRoundDilemma('TestMartaId', 4, ANOTHER);
 
-      // Act & Assert
-      expect(() => room.addDilemma('TestLuisId', FOR_ADULTS)).toThrow(DilemmaNotSuitableError);
+      // Act
+      room.changeSettings('TestHostId', {
+        rounds: [
+          { id: 2, origin: 'random', categories: null },
+          { id: 4, origin: 'players' },
+        ],
+      });
+
+      // Assert
+      expect(room.chosenDilemmas.map(({ roundId }) => roundId)).toEqual([4]);
+    });
+  });
+
+  describe('chooseRoundDilemma', () => {
+    it('should keep the dilemma with who chose it and record that the lobby changed', () => {
+      // Arrange
+      const room = lobbyWithAPlayersRound();
+
+      // Act
+      room.chooseRoundDilemma('TestLuisId', 2, ANOTHER);
+
+      // Assert
+      expect(room.chosenDilemmas).toEqual([{ ...ANOTHER, roundId: 2, playerId: 'TestLuisId' }]);
+      expect(room.roundDilemmaIds).toEqual(['TestDilemma', 'TestAnotherDilemma']);
+      expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'dilemmas-changed', 4)]);
     });
 
-    it('should throw an error for a compromising dilemma', () => {
+    it('should let the host choose too', () => {
       // Arrange
-      const room = lobbyWhereAddingIsAllowed();
+      const room = lobbyWithAPlayersRound();
+
+      // Act
+      room.chooseRoundDilemma('TestHostId', 2, ANOTHER);
+
+      // Assert
+      expect(room.chosenDilemmas).toEqual([{ ...ANOTHER, roundId: 2, playerId: 'TestHostId' }]);
+    });
+
+    it.each([
+      {
+        case: 'a round that is not in the room',
+        roundId: 7,
+        dilemma: ANOTHER,
+        error: RoundNotFoundError,
+      },
+      {
+        case: 'a round the players do not choose',
+        roundId: 1,
+        dilemma: ANOTHER,
+        error: RoundNotForPlayersError,
+      },
+      {
+        case: 'a dilemma already in another round',
+        roundId: 2,
+        dilemma: FOR_EVERYONE,
+        error: DuplicateDilemmaError,
+      },
+      {
+        case: 'a dilemma that does not suit the room',
+        roundId: 2,
+        dilemma: FOR_ADULTS,
+        error: DilemmaNotSuitableError,
+      },
+      {
+        case: 'a compromising dilemma',
+        roundId: 2,
+        dilemma: COMPROMISING,
+        error: DilemmaNotSuitableError,
+      },
+    ])('should throw an error for $case', ({ roundId, dilemma, error }) => {
+      // Arrange
+      const room = lobbyWithAPlayersRound();
 
       // Act & Assert
-      expect(() => room.addDilemma('TestLuisId', COMPROMISING)).toThrow(DilemmaNotSuitableError);
+      expect(() => room.chooseRoundDilemma('TestLuisId', roundId, dilemma)).toThrow(error);
+      expect(room.chosenDilemmas).toEqual([]);
+    });
+
+    it('should throw an error if another player has already chosen the dilemma of the round', () => {
+      // Arrange
+      const room = lobbyWithAPlayersRound();
+      room.chooseRoundDilemma('TestLuisId', 2, ANOTHER);
+
+      // Act & Assert
+      expect(() =>
+        room.chooseRoundDilemma('TestMartaId', 2, { ...ANOTHER, dilemmaId: 'TestThird' }),
+      ).toThrow(RoundTakenError);
     });
 
     it('should throw an error once the game has started', () => {
       // Arrange
-      const room = lobbyWhereAddingIsAllowed();
+      const room = lobbyWithAPlayersRound();
       room.startGame('TestHostId', 'TestGameId');
 
       // Act & Assert
-      expect(() => room.addDilemma('TestLuisId', FOR_EVERYONE)).toThrow(GameInProgressError);
+      expect(() => room.chooseRoundDilemma('TestLuisId', 2, ANOTHER)).toThrow(GameInProgressError);
     });
   });
 
-  describe('removeAddedDilemma', () => {
-    /** Luis added a dilemma, and nothing that happened so far is pending. */
-    function lobbyWhereLuisAdded(): Room {
-      const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { dilemmasPerPlayer: 1 });
-      room.addDilemma('TestLuisId', FOR_EVERYONE);
+  describe('clearRoundDilemma', () => {
+    /** Luis chose the dilemma of round 2, and nothing that happened so far is pending. */
+    function lobbyWhereLuisChose(): Room {
+      const room = lobbyWithAPlayersRound();
+      room.chooseRoundDilemma('TestLuisId', 2, ANOTHER);
       room.pullEvents();
       return room;
     }
 
-    it('should let the host remove a dilemma a player added', () => {
+    it('should let the player who chose it take it out, and the round is empty again', () => {
       // Arrange
-      const room = lobbyWhereLuisAdded();
+      const room = lobbyWhereLuisChose();
 
       // Act
-      room.removeAddedDilemma('TestHostId', 'TestDilemma');
+      room.clearRoundDilemma('TestLuisId', 2);
 
       // Assert
-      expect(room.addedDilemmas).toEqual([]);
+      expect(room.chosenDilemmas).toEqual([]);
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'dilemmas-changed', 5)]);
     });
 
-    it('should let a player remove a dilemma they added, and add another one', () => {
+    it.each(['TestHostId', 'TestMartaId'])(
+      'should throw an error if %s, who did not choose it, takes it out',
+      (playerId) => {
+        // Arrange
+        const room = lobbyWhereLuisChose();
+
+        // Act & Assert
+        expect(() => room.clearRoundDilemma(playerId, 2)).toThrow(NotChooserError);
+        expect(room.chosenDilemmas).toHaveLength(1);
+      },
+    );
+
+    it('should change nothing in a round without a dilemma', () => {
       // Arrange
-      const room = lobbyWhereLuisAdded();
+      const room = lobbyWithAPlayersRound();
 
       // Act
-      room.removeAddedDilemma('TestLuisId', 'TestDilemma');
-      room.addDilemma('TestLuisId', {
-        dilemmaId: 'TestSecond',
-        minimumAge: 16,
-        compromising: false,
-      });
+      room.clearRoundDilemma('TestLuisId', 2);
 
       // Assert
-      expect(room.addedDilemmas).toEqual([
-        { dilemmaId: 'TestSecond', minimumAge: 16, compromising: false, playerId: 'TestLuisId' },
-      ]);
-    });
-
-    it('should throw an error if a player who is not the host removes what another one added', () => {
-      // Arrange
-      const room = lobbyWhereLuisAdded();
-
-      // Act & Assert
-      expect(() => room.removeAddedDilemma('TestMartaId', 'TestDilemma')).toThrow(NotHostError);
-      expect(room.addedDilemmas).toHaveLength(1);
+      expect(room.pullEvents()).toEqual([]);
     });
 
     it('should throw an error once the game has started', () => {
       // Arrange
-      const room = lobbyWhereLuisAdded();
+      const room = lobbyWhereLuisChose();
       room.startGame('TestHostId', 'TestGameId');
 
       // Act & Assert
-      expect(() => room.removeAddedDilemma('TestLuisId', 'TestDilemma')).toThrow(
-        GameInProgressError,
-      );
+      expect(() => room.clearRoundDilemma('TestLuisId', 2)).toThrow(GameInProgressError);
     });
   });
 
   describe('expel', () => {
-    it('should take the player, their connections and their dilemma out of the room', () => {
+    it('should take the player and their connections out, and leave the dilemma they chose without them', () => {
       // Arrange
-      const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { dilemmasPerPlayer: 1 });
-      room.addDilemma('TestMartaId', FOR_EVERYONE);
+      const room = lobbyWithAPlayersRound();
+      room.chooseRoundDilemma('TestMartaId', 2, ANOTHER);
       room.connect('TestMartaId', 'TestConnectionId', NOW);
       room.pullEvents();
 
       // Act
       room.expel('TestHostId', 'TestMartaId');
 
-      // Assert
+      // Assert: the round stays filled, so nobody learns who had chosen it.
       expect(room.playerWith('TestMartaIdentity')).toBeUndefined();
-      expect(room.addedDilemmas).toEqual([]);
+      expect(room.chosenDilemmas).toEqual([{ ...ANOTHER, roundId: 2, playerId: null }]);
+      expect(() => room.clearRoundDilemma('TestHostId', 2)).toThrow(NotChooserError);
       expect(room.toSnapshot().connections).toEqual([]);
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'player-expelled', 6)]);
     });
@@ -806,16 +849,21 @@ describe('Room', () => {
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'game-started', 3)]);
     });
 
-    it('should leave the first dilemma to the game it starts, not to the next one', () => {
+    it('should leave the dilemmas of the rounds to the game it starts, not to the next one', () => {
       // Arrange
-      const room = roomStartingWith(FOR_EVERYONE);
-      join(room, 'TestLuisId', 'Luis');
+      const room = lobbyWithAPlayersRound();
+      room.chooseRoundDilemma('TestLuisId', 2, ANOTHER);
 
       // Act
       room.startGame('TestHostId', 'TestGameId');
 
       // Assert
-      expect(room.firstDilemma).toBeNull();
+      expect(room.settings.rounds).toEqual([
+        { id: 1, origin: 'random', categories: null },
+        { id: 2, origin: 'players' },
+        { id: 3, origin: 'random', categories: null },
+      ]);
+      expect(room.chosenDilemmas).toEqual([]);
     });
 
     it('should start a nominal room with two players', () => {
@@ -1086,9 +1134,7 @@ describe('Room', () => {
         version: 3,
         connections: [{ playerId: 'TestLuisId', connectionId: 'TestConnectionId' }],
         expelledIdentities: [],
-        addedDilemmas: [],
-        pickedDilemmas: [],
-        firstDilemma: null,
+        chosenDilemmas: [],
         currentGameId: null,
         absentHostId: null,
         leftPlayerIds: [],
@@ -1099,10 +1145,9 @@ describe('Room', () => {
 
     it('should rebuild the whole room from its snapshot, without recording any event', () => {
       // Arrange
-      const room = lobbyOfThree();
-      room.changeSettings('TestHostId', { dilemmasPerPlayer: 1, adultsOnly: true });
-      room.addDilemma('TestLuisId', FOR_ADULTS);
-      room.pickDilemmas('TestHostId', [FOR_EVERYONE]);
+      const room = lobbyWithAPlayersRound();
+      room.changeSettings('TestHostId', { adultsOnly: true });
+      room.chooseRoundDilemma('TestLuisId', 2, FOR_ADULTS);
       room.connect('TestHostId', 'TestFirstConnectionId', NOW);
       room.connect('TestHostId', 'TestSecondConnectionId', NOW);
       join(room, 'TestPabloId', 'Pablo');

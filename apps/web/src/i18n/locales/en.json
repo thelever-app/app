@@ -133,7 +133,7 @@
   "reveal": {
     "region": "Reveal",
     "position": "Dilemma {{position, number}} of {{total, number}} · Reveal",
-    "addedBy": "Added by {{name}}",
+    "chosenBy": "Chosen by {{name}}",
     "about": "This dilemma was about {{name}}",
     "yourHitsRegion": "Your guesses",
     "hitsAll": "You read them all!",
@@ -247,7 +247,9 @@
     "room-not-found": "That room no longer exists.",
     "unknown": "That didn't work. Try again.",
     "dilemmas-missing": "There are no dilemmas for these settings. Try other categories.",
-    "nickname-and-avatar-taken": "Someone with your name already has that avatar. Pick another one."
+    "nickname-and-avatar-taken": "Someone with your name already has that avatar. Pick another one.",
+    "round-taken": "Another player has just chosen the dilemma of that round.",
+    "duplicate-dilemma": "That dilemma is already in another round."
   },
   "home": {
     "title": "Shall we play?",
@@ -313,23 +315,33 @@
     "shareText": "Join my TheLever room with the code {{code}}",
     "copied": "Link copied",
     "showQr": "Show QR",
-    "summary": "{{count}} dilemmas · {{seconds}} s per dilemma · {{language}} · {{nature}}",
+    "summary": "{{seconds}} s per dilemma · {{language}}",
+    "roundCount_one": "{{count}} round",
+    "roundCount_other": "{{count}} rounds",
     "change": "Change",
     "adultsOnly": "Over-18s only",
     "remote": "You're playing remotely: a video call works best, so you can talk over the reveal live.",
-    "added": {
-      "title": "Added dilemmas · {{count}} of {{total}}",
-      "remove": "Remove this dilemma",
-      "hint": "You don't know who added them: you'll find out in the reveal. The rest will come from the catalog."
-    },
-    "add": {
-      "title": "Add dilemmas to the game",
-      "count": "You've added {{count}} of {{total}}. No one will know they're yours until the reveal.",
-      "action": "Add a dilemma",
-      "remove": "Remove this dilemma"
-    },
-    "picked": {
-      "title": "Chosen dilemmas · {{count}}"
+    "rounds": {
+      "title": "Rounds · {{count}}",
+      "hint": "They play in this order.",
+      "secretHint": "They play in this order. Nobody will know which player chose each dilemma until the reveal.",
+      "allCategories": "All categories",
+      "twoCategories": "{{first}} or {{second}}",
+      "someCategories": "{{count}} categories",
+      "randomAll": "Random from the catalog",
+      "randomOne": "Random, from this category",
+      "randomSome": "Random, from these categories",
+      "randomGroupAll": "{{count}} random rounds from the catalog",
+      "randomGroupOne": "{{count}} random rounds, from this category",
+      "randomGroupSome": "{{count}} random rounds, from these categories",
+      "chosenBy": "Chosen by {{name}}",
+      "chosenByYou": "You chose it",
+      "chosenByPlayer": "Chosen by a player",
+      "playersEmpty": "A player chooses it",
+      "playersEmptyMeta": "If nobody does, it will be random",
+      "choose": "Choose",
+      "chooseLabel": "Choose the dilemma of round {{number}}",
+      "clearLabel": "Remove your dilemma from round {{number}}"
     },
     "players": "In the room · {{count}}",
     "you": "{{name}} (you)",
@@ -340,16 +352,7 @@
     "start": "Start the game",
     "missing_one": "{{count}} more player needed to start",
     "missing_other": "{{count}} more players needed to start",
-    "guestWait": "{{host}} will start the game when you're all here.",
-    "categories": {
-      "all": "All categories",
-      "some_one": "{{count}} category",
-      "some_other": "{{count}} categories",
-      "none": "No categories"
-    },
-    "pickedCount_one": "{{count}} dilemma chosen",
-    "pickedCount_other": "{{count}} dilemmas chosen",
-    "summaryPicked": "{{seconds}} s per dilemma · {{language}} · {{nature}}"
+    "guestWait": "{{host}} will start the game when you're all here."
   },
   "languages": {
     "es": "Español",
@@ -382,59 +385,60 @@
       "hint": "Allows adult dilemmas. Only over-18s will be able to join."
     },
     "language": "Dilemma language",
-    "howPicked": "How dilemmas are picked",
-    "byCategories": "By category",
-    "byHand": "By hand",
-    "categories": "Categories",
-    "allCategories": "All",
-    "categoriesHint": "The game mixes dilemmas from the selected categories.",
-    "dilemmaCount": "Dilemmas",
     "timePerDilemma": "Time per dilemma",
     "seconds": "{{count}} s",
     "timeHint": "Each dilemma is revealed when everyone has answered or its time runs out.",
+    "rounds": {
+      "title": "Rounds · {{count}}",
+      "range": "From 1 to {{maximum}}",
+      "hint": "They play in this order. Each round has a random dilemma from the catalog, a specific one you choose, or the one a player chooses from the lobby.",
+      "origin": "Who chooses the dilemma of round {{number}}",
+      "origins": {
+        "random": "Random",
+        "specific": "Specific",
+        "players": "Players"
+      },
+      "remove": "Remove round {{number}}",
+      "categoriesOf": "Categories of round {{number}}: {{summary}}",
+      "categories": "Categories of round {{number}}",
+      "allCategories": "All",
+      "fromAll": "From every category",
+      "fromOne": "From {{category}}",
+      "fromTwo": "From {{first}} or {{second}}",
+      "fromSome": "From {{count}} categories",
+      "change": "Change",
+      "changeLabel": "Change the dilemma of round {{number}}",
+      "choose": "Choose a dilemma",
+      "chooseLabel": "Choose a dilemma for round {{number}}",
+      "playersHint": "A player chooses it from the lobby. If nobody does, a random one comes up.",
+      "playersChosen": "A player has already chosen it: “{{title}}”.",
+      "add": "Add round",
+      "full": "{{maximum}} rounds: the maximum"
+    },
     "newDilemmas": {
       "label": "Include new dilemmas",
-      "hint": "You help rate dilemmas that have just joined the catalog."
+      "hint": "A random round may bring one that has just joined the catalog. You help rate it."
     },
-    "dilemmasPerPlayer": {
-      "label": "Dilemmas each player adds",
-      "none": "None",
-      "hint": "The host too. They count towards the number of dilemmas, and no one will know whose each one is until the reveal."
-    },
-    "pick": "Pick dilemmas one by one",
-    "picked_one": "{{count}} dilemma chosen",
-    "picked_other": "{{count}} dilemmas chosen",
-    "noPicked": "No dilemmas chosen",
-    "changePicked": "Change",
-    "choosePicked": "Choose",
-    "byHandHint": "The game plays these and the ones players add, with no categories or new dilemmas. “By category” clears them in one tap.",
     "save": "Save"
   },
   "pickDilemmas": {
-    "title": "Pick dilemmas",
-    "back": "Back to settings",
+    "title": "Dilemma of round {{number}}",
+    "back": "Back",
     "search": "Search dilemmas",
     "searchPlaceholder": "Search by text or tag: family, trolley…",
     "all": "All",
-    "hint": "Only dilemmas suitable for this room appear. Picking them by hand adds no new dilemmas.",
-    "none": "Pick at least one",
-    "play_one": "Play this one",
-    "play_other": "Play these {{count}}",
+    "categories": "Categories",
+    "hint": "Only dilemmas suitable for this room appear. A dilemma already in another round can’t be repeated.",
+    "list": "Dilemmas",
+    "taken": "Already in round {{number}}",
+    "none": "Choose a dilemma",
+    "put": "Put it in round {{number}}",
     "empty": "No suitable dilemmas match that search.",
-    "tags": "#{{tags}}",
-    "byCategory": "Back to playing by category",
     "options_one": "{{count}} option",
     "options_other": "{{count, number}} options",
     "someone": "someone in your group",
     "more": "Show more",
     "moreFailed": "Couldn't load more dilemmas. Try again."
-  },
-  "addDilemma": {
-    "title": "Add a dilemma",
-    "search": "Search dilemmas",
-    "close": "Close",
-    "empty": "No suitable dilemmas match that search.",
-    "searchPlaceholder": "Search by text or tag"
   },
   "expel": {
     "title": "Remove {{name}}?",
@@ -475,10 +479,8 @@
   },
   "playDilemma": {
     "title": "New room",
-    "firstDilemma": "You'll start with this dilemma",
-    "about_one": "{{category}} · {{count}} option",
-    "about_other": "{{category}} · {{count}} options",
-    "rest": "The rest of the game is filled from the catalog, following the room settings.",
+    "firstDilemma": "You start with this dilemma",
+    "about": "{{category}} · The other 7 rounds will be random. You can change them in the settings.",
     "loading": "Finding the dilemma…",
     "notFound": "This dilemma is no longer on TheLever. You can create a room with others from the catalog.",
     "home": "Go home"

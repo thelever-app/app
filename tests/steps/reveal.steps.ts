@@ -135,7 +135,11 @@ Given(
   async function (this: GameWorld, person: string) {
     this.beforeTheGame();
     const host = await this.host();
-    await this.driver.pickDilemmas(host, await this.driver.searchDilemmas(host, 'about {gap}'));
+    const found = await this.driver.searchDilemmas(host, 'about {gap}');
+    await this.driver.setRounds(
+      host,
+      found.map((dilemmaId) => ({ origin: 'specific', dilemmaId })),
+    );
     await this.game();
     const about = [...(await this.driver.peopleInTheGap())].find(([, chosen]) => chosen === person);
     assert.ok(about, `no dilemma of the game is about ${person}`);
@@ -159,7 +163,7 @@ Given('the first dilemma comes from the catalog', function (this: GameWorld) {
 Then('no player sees who created it', async function (this: GameWorld) {
   for (const viewer of this.present()) {
     const reveal = await revealSeenBy(this, viewer);
-    assert.equal(reveal.addedBy, null);
+    assert.equal(reveal.chosenBy, null);
     assert.ok(!/creat|author/i.test(JSON.stringify(reveal)), `${viewer} sees who created it`);
   }
 });
@@ -240,26 +244,28 @@ Then('her vote is not counted in the distribution', async function (this: GameWo
 });
 
 Given(
-  '{string} added the first dilemma in the lobby',
+  '{string} chose the dilemma of the first round in the lobby',
   async function (this: GameWorld, player: string) {
     this.beforeTheGame();
     const host = await this.host();
-    await this.driver.changeSettings(host, { dilemmasPerPlayer: 1 });
-    await this.driver.addDilemma(player);
+    assert.ok(await this.driver.tryToSetRound(host, 1, { origin: 'players' }));
+    await this.isInTheRoom(player);
+    const dilemmaId = await this.unusedDilemma();
+    assert.ok(await this.driver.chooseRoundDilemma(player, 1, dilemmaId), `${player} cannot`);
     await this.game();
-    this.position = await this.driver.positionAddedBy(player);
+    this.position = await this.driver.positionChosenBy(player);
   },
 );
 
-Then('all players see that {string} added it', async function (this: GameWorld, player: string) {
+Then('all players see that {string} chose it', async function (this: GameWorld, player: string) {
   for (const viewer of this.present()) {
-    assert.equal((await revealSeenBy(this, viewer)).addedBy, player);
+    assert.equal((await revealSeenBy(this, viewer)).chosenBy, player);
   }
 });
 
-Then('no player sees who added it', async function (this: GameWorld) {
+Then('no player sees who chose it', async function (this: GameWorld) {
   for (const viewer of this.present()) {
-    assert.equal((await revealSeenBy(this, viewer)).addedBy, null);
+    assert.equal((await revealSeenBy(this, viewer)).chosenBy, null);
   }
 });
 

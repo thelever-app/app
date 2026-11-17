@@ -2,7 +2,14 @@ import { Game } from '../../domain/entities/game.ts';
 import type { Clock } from '../../domain/ports/clock.port.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import type { Randomness } from '../../domain/ports/randomness.port.ts';
-import { composeGame, type ExplorationSlots } from '../../domain/services/compose-game.ts';
+import {
+  categoriesKey,
+  categoriesToDraw,
+  composeGame,
+  type Candidates,
+  type ExplorationSlots,
+} from '../../domain/services/compose-game.ts';
+import type { Category } from '../../domain/vos/category.vo.ts';
 import type { DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
@@ -21,8 +28,9 @@ export interface StartGameOutput {
 }
 
 /**
- * The host starts the game the lobby got ready: it is put together from the settings of the room
- * and goes straight into the decision phase with everyone in the room, and its total time starts.
+ * The host starts the game the lobby got ready: it is put together from the rounds of the room and
+ * goes straight into the decision phase with everyone in the room, and the time of its first round
+ * starts.
  */
 export class StartGameUseCase {
   readonly #roomRepository: RoomRepository;
@@ -62,29 +70,39 @@ export class StartGameUseCase {
     room.ensureCanStartGame(playerId);
     const { settings } = room;
 
-    // Only their ids: the game draws from all of them and reads nothing else of them.
-    const candidates = async (status: 'in-catalog' | 'in-exploration') => [
+    // Only their ids, for each set of categories a round draws from: the game reads nothing else.
+    const idsOf = async (
+      categories: readonly Category[] | null,
+      status: 'in-catalog' | 'in-exploration',
+    ): Promise<string[]> => [
       ...(await this.#dilemmaCatalog.findCandidateIds({
         // Null plays every category: the search then looks at all of them.
-        ...(settings.categories && { categories: settings.categories }),
+        ...(categories && { categories }),
         maximumMinimumAge: settings.maximumMinimumAge,
         status,
         language: settings.dilemmaLanguage,
         includeCompromising: settings.includesCompromisingDilemmas,
       })),
     ];
-    // The dilemmas the host picked are the game: no candidates to look for.
-    const [inCatalog, inExploration] =
-      room.pickedDilemmas.length > 0
-        ? [[], []]
-        : await Promise.all([candidates('in-catalog'), candidates('in-exploration')]);
+    const candidates = new Map<string, Candidates>(
+      await Promise.all(
+        categoriesToDraw(settings.rounds, room.chosenDilemmas).map(
+          async (categories): Promise<[string, Candidates]> => [
+            categoriesKey(categories),
+            {
+              inCatalog: await idsOf(categories, 'in-catalog'),
+              inExploration: settings.newDilemmas ? await idsOf(categories, 'in-exploration') : [],
+            },
+          ],
+        ),
+      ),
+    );
     const composed = composeGame(
       {
-        settings,
-        firstDilemma: room.firstDilemma,
-        pickedDilemmas: room.pickedDilemmas,
-        addedDilemmas: room.addedDilemmas,
-        candidates: { inCatalog, inExploration },
+        rounds: settings.rounds,
+        chosenDilemmas: room.chosenDilemmas,
+        newDilemmas: settings.newDilemmas,
+        candidates,
         explorationSlots: this.#explorationSlots,
       },
       this.#randomness,
@@ -100,9 +118,7 @@ export class StartGameUseCase {
         dilemmas: structures.map((structure, index) => ({
           ...structure,
           origin: composed[index]!.origin,
-          addedBy:
-            room.addedDilemmas.find(({ dilemmaId }) => dilemmaId === structure.dilemmaId)
-              ?.playerId ?? null,
+          chosenBy: composed[index]!.chosenBy,
         })),
         settings: {
           variant: settings.variant,

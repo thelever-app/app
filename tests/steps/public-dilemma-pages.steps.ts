@@ -183,9 +183,16 @@ Then(
 );
 
 Then(
-  'a room is created whose first dilemma is {string}',
+  'before creating it, the visitor sees that the game starts with {string}',
   async function (this: GameWorld, name: string) {
-    assert.equal(await this.driver.firstDilemmaOfTheVisitorRoom(), name);
+    assert.equal(await this.driver.startingDilemmaShownToTheVisitor(), name);
+  },
+);
+
+Then(
+  'a room is created whose round 1 is the specific dilemma {string}',
+  async function (this: GameWorld, name: string) {
+    assert.equal(await this.driver.firstRoundDilemmaOfTheVisitorRoom(), name);
   },
 );
 

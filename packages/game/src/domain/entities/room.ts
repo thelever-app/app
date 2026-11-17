@@ -1,4 +1,3 @@
-import { AddingDilemmasNotAllowedError } from '../errors/adding-dilemmas-not-allowed.error.ts';
 import { DilemmaNotSuitableError } from '../errors/dilemma-not-suitable.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { GameInProgressError } from '../errors/game-in-progress.error.ts';
@@ -7,12 +6,15 @@ import { HostCannotBeExpelledError } from '../errors/host-cannot-be-expelled.err
 import { HostMissingError } from '../errors/host-missing.error.ts';
 import { NicknameAndAvatarTakenError } from '../errors/nickname-and-avatar-taken.error.ts';
 import { NotEnoughPlayersError } from '../errors/not-enough-players.error.ts';
+import { NotChooserError } from '../errors/not-chooser.error.ts';
 import { NotHostError } from '../errors/not-host.error.ts';
 import { PlayerExpelledError } from '../errors/player-expelled.error.ts';
 import { PlayerNotInRoomError } from '../errors/player-not-in-room.error.ts';
 import { RoomClosedError } from '../errors/room-closed.error.ts';
 import { RoomFullError } from '../errors/room-full.error.ts';
-import { TooManyAddedDilemmasError } from '../errors/too-many-added-dilemmas.error.ts';
+import { RoundNotForPlayersError } from '../errors/round-not-for-players.error.ts';
+import { RoundNotFoundError } from '../errors/round-not-found.error.ts';
+import { RoundTakenError } from '../errors/round-taken.error.ts';
 import { ConnectionChangedEvent } from '../events/connection-changed.event.ts';
 import type { DomainEvent } from '../events/domain-event.ts';
 import { HostChangedEvent } from '../events/host-changed.event.ts';
@@ -31,6 +33,8 @@ import {
   type RoomSettingsSnapshot,
   type RoomVariant,
 } from '../vos/room-settings.vo.ts';
+import type { Category } from '../vos/category.vo.ts';
+import { randomRound, type LobbyDilemma, type RoundSnapshot } from '../vos/round.vo.ts';
 import { Player, type PlayerSnapshot } from './player.ts';
 
 /**
@@ -43,17 +47,34 @@ export const MAXIMUM_PLAYERS = 50;
 /** How long a room stays open with no player connected (glossary, «Cerrar la sala»). */
 export const CLOSES_WITH_NOBODY_CONNECTED_AFTER_MS = 15 * 60 * 1000;
 
-/** A dilemma of the catalog, as the lobby needs it: to check that it suits the room. */
-export interface LobbyDilemma {
-  readonly dilemmaId: string;
-  readonly minimumAge: 16 | 18;
-  /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
-  readonly compromising: boolean;
+export type { LobbyDilemma } from '../vos/round.vo.ts';
+
+/**
+ * The dilemma a player chose in the lobby for a round of the players. Who chose it stays in the room
+ * until the reveal.
+ */
+export interface ChosenDilemma extends LobbyDilemma {
+  readonly roundId: number;
+  /**
+   * Null once the player who chose it was expelled: the dilemma stays in its round, so that nobody
+   * learns who chose it by seeing the round empty again.
+   */
+  readonly playerId: string | null;
 }
 
-/** A dilemma a player added in the lobby. Who added it stays in the room until the reveal. */
-export interface AddedDilemma extends LobbyDilemma {
-  readonly playerId: string;
+/** A round as the host sets it; one without an id is a new one, and a specific one names its dilemma. */
+export type RoundChange =
+  | {
+      readonly id?: number;
+      readonly origin: 'random';
+      readonly categories: readonly Category[] | null;
+    }
+  | { readonly id?: number; readonly origin: 'specific'; readonly dilemmaId: string }
+  | { readonly id?: number; readonly origin: 'players' };
+
+/** What the host changes in the settings: the rounds whole, the rest one by one. */
+export interface RoomSettingsChanges extends Partial<Omit<RoomSettingsSnapshot, 'rounds'>> {
+  readonly rounds?: readonly RoundChange[];
 }
 
 export interface RoomSnapshot {
@@ -69,11 +90,8 @@ export interface RoomSnapshot {
   readonly connections: readonly { readonly playerId: string; readonly connectionId: string }[];
   /** Who was expelled from the game the lobby is getting ready. */
   readonly expelledIdentities: readonly string[];
-  readonly addedDilemmas: readonly AddedDilemma[];
-  /** The dilemmas the host picked one by one; none, and the game is put together by categories. */
-  readonly pickedDilemmas: readonly LobbyDilemma[];
-  /** The dilemma the room was created with, which its first game plays first. */
-  readonly firstDilemma: LobbyDilemma | null;
+  /** The dilemmas the players chose for their rounds; the specific ones are in the settings. */
+  readonly chosenDilemmas: readonly ChosenDilemma[];
   readonly currentGameId: string | null;
   /** The host who lost the role while disconnected, and gets it back on connecting again. */
   readonly absentHostId: string | null;
@@ -97,8 +115,8 @@ export interface CreateRoomProps {
   readonly code: string;
   /** Which also counts as the last moment someone was connected: the host has not connected yet. */
   readonly createdAt: Date;
-  /** A dilemma of the general catalog the first game plays first, checked as an added one. */
-  readonly firstDilemma?: LobbyDilemma;
+  /** A dilemma of the general catalog for the first round, specific, if the room suits it. */
+  readonly firstRoundDilemma?: LobbyDilemma;
 }
 
 export class Room {
@@ -116,9 +134,7 @@ export class Room {
   /** The ids of the open connections of each player; a player without any is disconnected. */
   readonly #connections = new Map<string, Set<string>>();
   readonly #expelledIdentities = new Set<string>();
-  #addedDilemmas: AddedDilemma[] = [];
-  #pickedDilemmas: LobbyDilemma[] = [];
-  #firstDilemma: LobbyDilemma | null = null;
+  #chosenDilemmas: ChosenDilemma[] = [];
   #currentGameId: IdVO | null = null;
   readonly #leftPlayerIds = new Set<string>();
   #lastConnectedAt: Date;
@@ -149,7 +165,7 @@ export class Room {
 
   /**
    * The room is born with its host, who is its first player, and the default settings, and with
-   * the dilemma its first game plays first if it is given one that suits it.
+   * that dilemma in its first round if it is given one that suits it.
    */
   static create(props: CreateRoomProps, idGenerator: IdGenerator): Room {
     const id = idGenerator.generate();
@@ -163,10 +179,14 @@ export class Room {
     const room = new Room({ id, code, groupNature, place, settings, lastConnectedAt }, host, [
       host,
     ]);
-    if (props.firstDilemma) {
-      const { dilemmaId, minimumAge, compromising } = props.firstDilemma;
-      if (!room.#suits(props.firstDilemma)) throw new DilemmaNotSuitableError(dilemmaId);
-      room.#firstDilemma = { dilemmaId, minimumAge, compromising };
+    if (props.firstRoundDilemma) {
+      const { dilemmaId, minimumAge, compromising } = props.firstRoundDilemma;
+      if (!room.#suits(props.firstRoundDilemma)) throw new DilemmaNotSuitableError(dilemmaId);
+      const [first, ...rest] = room.#settings.rounds;
+      const dilemma = { dilemmaId, minimumAge, compromising };
+      room.#settings = room.#settings.with({
+        rounds: [{ id: first!.id, origin: 'specific', dilemma }, ...rest],
+      });
     }
     return room;
   }
@@ -203,16 +223,18 @@ export class Room {
     return this.#version;
   }
 
-  get addedDilemmas(): readonly AddedDilemma[] {
-    return [...this.#addedDilemmas];
+  get chosenDilemmas(): readonly ChosenDilemma[] {
+    return this.#chosenDilemmas.map((chosen) => ({ ...chosen }));
   }
 
-  get pickedDilemmas(): readonly LobbyDilemma[] {
-    return [...this.#pickedDilemmas];
-  }
-
-  get firstDilemma(): LobbyDilemma | null {
-    return this.#firstDilemma && { ...this.#firstDilemma };
+  /** The ids of the dilemmas in its rounds, specific or chosen by a player. */
+  get roundDilemmaIds(): readonly string[] {
+    return [
+      ...this.#settings.rounds.flatMap((round) =>
+        round.origin === 'specific' ? [round.dilemma.dilemmaId] : [],
+      ),
+      ...this.#chosenDilemmas.map(({ dilemmaId }) => dilemmaId),
+    ];
   }
 
   get currentGameId(): string | null {
@@ -295,74 +317,106 @@ export class Room {
   }
 
   /**
-   * Only the host, and only in the lobby. Dilemmas that no longer suit the room are dropped, and
-   * each player keeps only the first ones they added that the room still allows.
+   * Only the host, and only in the lobby. A new round takes the next id. The dilemmas the room does
+   * not know yet, and all of them if the language changes, come as the catalog has them in the
+   * language of the new settings: one that is not there, or no longer suits the room, leaves its
+   * round random from every category. A specific dilemma the host just set has to be there and suit
+   * the room, and cannot be in another round.
    */
-  changeSettings(playerId: string, changes: Partial<RoomSettingsSnapshot>): void {
+  changeSettings(
+    playerId: string,
+    changes: RoomSettingsChanges,
+    dilemmas: readonly LobbyDilemma[] = [],
+  ): void {
     this.#ensureHostInLobby(playerId);
+    const { rounds: roundChanges, ...rest } = changes;
+    const current = this.#settings.rounds;
+    const withoutRounds = this.#settings.with(rest);
+    const known =
+      withoutRounds.dilemmaLanguage === this.#settings.dilemmaLanguage
+        ? [
+            ...current.flatMap((round) => (round.origin === 'specific' ? [round.dilemma] : [])),
+            ...this.#chosenDilemmas,
+          ]
+        : [];
+    const found = (dilemmaId: string): LobbyDilemma | undefined => {
+      const dilemma = [...dilemmas, ...known].find(
+        (candidate) => candidate.dilemmaId === dilemmaId,
+      );
+      return dilemma && this.#suits(dilemma, withoutRounds) ? dilemma : undefined;
+    };
 
-    this.#settings = this.#settings.with(changes);
-    const suits = (dilemma: LobbyDilemma): boolean => this.#suits(dilemma);
-    const allowed = this.#settings.dilemmasPerPlayer;
-    this.#addedDilemmas = this.#addedDilemmas
-      .filter(suits)
-      .filter((added, index, all) => this.#addedBefore(added.playerId, all, index) < allowed);
-    this.#pickedDilemmas = this.#pickedDilemmas.filter(suits);
-    if (this.#firstDilemma && !suits(this.#firstDilemma)) this.#firstDilemma = null;
+    const given = roundChanges ?? current.map(toRoundChange);
+    let nextId = Math.max(0, ...current.map(({ id }) => id), ...given.map(({ id }) => id ?? 0));
+    const rounds = given.map((change): RoundSnapshot => {
+      const id = change.id ?? (nextId += 1);
+      if (change.origin === 'random') {
+        return { id, origin: 'random', categories: change.categories };
+      }
+      if (change.origin === 'players') return { id, origin: 'players' };
+      const dilemma = found(change.dilemmaId);
+      if (dilemma) return { id, origin: 'specific', dilemma: { ...dilemma } };
+      const before = current.find((round) => round.id === id);
+      const kept = before?.origin === 'specific' && before.dilemma.dilemmaId === change.dilemmaId;
+      if (kept) return randomRound(id);
+      throw new DilemmaNotSuitableError(change.dilemmaId);
+    });
+
+    // A dilemma a player chose stays while its round is still theirs and the room suits it.
+    const leftOut: number[] = [];
+    const chosen = this.#chosenDilemmas.filter((dilemma) => {
+      if (!rounds.some(({ id, origin }) => id === dilemma.roundId && origin === 'players')) {
+        return false;
+      }
+      if (found(dilemma.dilemmaId)) return true;
+      leftOut.push(dilemma.roundId);
+      return false;
+    });
+    const specificIds = rounds.flatMap((round) =>
+      round.origin === 'specific' ? [round.dilemma.dilemmaId] : [],
+    );
+    const repeated = chosen.find(({ dilemmaId }) => specificIds.includes(dilemmaId));
+    if (repeated) throw new DuplicateDilemmaError(repeated.dilemmaId);
+
+    this.#settings = withoutRounds.with({
+      rounds: rounds.map((round) => (leftOut.includes(round.id) ? randomRound(round.id) : round)),
+    });
+    this.#chosenDilemmas = chosen;
     this.#changeLobby('settings-changed');
   }
 
-  /** The host picks the dilemmas of the game one by one; picking none goes back to the category. */
-  pickDilemmas(playerId: string, dilemmas: readonly LobbyDilemma[]): void {
-    this.#ensureHostInLobby(playerId);
-    const ids = dilemmas.map(({ dilemmaId }) => dilemmaId);
-    const repeated = ids.find((dilemmaId, index) => ids.indexOf(dilemmaId) !== index);
-    if (repeated !== undefined) throw new DuplicateDilemmaError(repeated);
-    const unsuitable = dilemmas.find((dilemma) => !this.#suits(dilemma));
-    if (unsuitable) throw new DilemmaNotSuitableError(unsuitable.dilemmaId);
-
-    this.#pickedDilemmas = dilemmas.map(({ dilemmaId, minimumAge, compromising }) => ({
-      dilemmaId,
-      minimumAge,
-      compromising,
-    }));
-    this.#changeLobby('dilemmas-changed');
-  }
-
   /**
-   * When the host allows it, each player, the host too, adds dilemmas that suit the room, up to
-   * as many as the room allows each one.
+   * Any player, the host too, chooses the dilemma of an empty round of the players, one that suits
+   * the room and is not in another round.
    */
-  addDilemma(playerId: string, dilemma: LobbyDilemma): void {
+  chooseRoundDilemma(playerId: string, roundId: number, dilemma: LobbyDilemma): void {
     this.#player(playerId);
     if (!this.isInLobby) throw new GameInProgressError(this.id);
-    const allowed = this.#settings.dilemmasPerPlayer;
-    if (allowed === 0) throw new AddingDilemmasNotAllowedError(this.id);
-    const added = this.#addedBefore(playerId, this.#addedDilemmas, this.#addedDilemmas.length);
-    if (added >= allowed) throw new TooManyAddedDilemmasError(playerId, allowed);
-    if (this.#addedDilemmas.some((added) => added.dilemmaId === dilemma.dilemmaId)) {
+    const round = this.#settings.rounds.find(({ id }) => id === roundId);
+    if (!round) throw new RoundNotFoundError(roundId);
+    if (round.origin !== 'players') throw new RoundNotForPlayersError(roundId);
+    if (this.#chosenDilemmas.some((chosen) => chosen.roundId === roundId)) {
+      throw new RoundTakenError(roundId);
+    }
+    if (this.roundDilemmaIds.includes(dilemma.dilemmaId)) {
       throw new DuplicateDilemmaError(dilemma.dilemmaId);
     }
     if (!this.#suits(dilemma)) throw new DilemmaNotSuitableError(dilemma.dilemmaId);
 
-    this.#addedDilemmas.push({ ...dilemma, playerId });
+    const { dilemmaId, minimumAge, compromising } = dilemma;
+    this.#chosenDilemmas.push({ dilemmaId, minimumAge, compromising, roundId, playerId });
     this.#changeLobby('dilemmas-changed');
   }
 
-  /**
-   * The host removes any dilemma a player added, without knowing who added it; any other player,
-   * only one they added themselves.
-   */
-  removeAddedDilemma(playerId: string, dilemmaId: string): void {
+  /** Only the player who chose the dilemma of a round takes it out, and the round is empty again. */
+  clearRoundDilemma(playerId: string, roundId: number): void {
     this.#player(playerId);
     if (!this.isInLobby) throw new GameInProgressError(this.id);
-    const removed = this.#addedDilemmas.find((added) => added.dilemmaId === dilemmaId);
-    if (!removed) return;
-    if (playerId !== this.#hostId && removed.playerId !== playerId) {
-      throw new NotHostError(playerId);
-    }
+    const chosen = this.#chosenDilemmas.find((dilemma) => dilemma.roundId === roundId);
+    if (!chosen) return;
+    if (chosen.playerId !== playerId) throw new NotChooserError(playerId, roundId);
 
-    this.#addedDilemmas = this.#addedDilemmas.filter((added) => added !== removed);
+    this.#chosenDilemmas = this.#chosenDilemmas.filter((dilemma) => dilemma !== chosen);
     this.#changeLobby('dilemmas-changed');
   }
 
@@ -374,7 +428,9 @@ export class Room {
 
     this.#players.splice(this.#players.indexOf(player), 1);
     this.#connections.delete(playerId);
-    this.#addedDilemmas = this.#addedDilemmas.filter((added) => added.playerId !== playerId);
+    this.#chosenDilemmas = this.#chosenDilemmas.map((chosen) =>
+      chosen.playerId === playerId ? { ...chosen, playerId: null } : chosen,
+    );
     this.#expelledIdentities.add(player.identity);
     this.#changeLobby('player-expelled');
   }
@@ -395,14 +451,20 @@ export class Room {
   }
 
   /**
-   * The host starts the game the lobby got ready, with the players its variant needs. The first
-   * dilemma goes to this game only.
+   * The host starts the game the lobby got ready, with the players its variant needs. The dilemmas
+   * of its rounds go to this game only: for the next one, a specific round is random from every
+   * category and a round of the players is empty.
    */
   startGame(playerId: string, gameId: string): void {
     this.ensureCanStartGame(playerId);
 
     this.#currentGameId = new IdVO(gameId);
-    this.#firstDilemma = null;
+    this.#settings = this.#settings.with({
+      rounds: this.#settings.rounds.map((round) =>
+        round.origin === 'specific' ? randomRound(round.id) : round,
+      ),
+    });
+    this.#chosenDilemmas = [];
     this.#changeLobby('game-started');
   }
 
@@ -509,9 +571,7 @@ export class Room {
         [...open].map((connectionId) => ({ playerId, connectionId })),
       ),
       expelledIdentities: [...this.#expelledIdentities],
-      addedDilemmas: this.addedDilemmas,
-      pickedDilemmas: this.pickedDilemmas,
-      firstDilemma: this.firstDilemma,
+      chosenDilemmas: this.chosenDilemmas,
       currentGameId: this.currentGameId,
       absentHostId: this.#absentHostId,
       leftPlayerIds: [...this.#leftPlayerIds],
@@ -533,9 +593,7 @@ export class Room {
       room.#connections.set(playerId, open);
     }
     for (const identity of snapshot.expelledIdentities) room.#expelledIdentities.add(identity);
-    room.#addedDilemmas = [...snapshot.addedDilemmas];
-    room.#pickedDilemmas = [...snapshot.pickedDilemmas];
-    room.#firstDilemma = snapshot.firstDilemma && { ...snapshot.firstDilemma };
+    room.#chosenDilemmas = snapshot.chosenDilemmas.map((chosen) => ({ ...chosen }));
     room.#currentGameId = snapshot.currentGameId === null ? null : new IdVO(snapshot.currentGameId);
     room.#absentHostId = snapshot.absentHostId;
     for (const playerId of snapshot.leftPlayerIds) room.#leftPlayerIds.add(playerId);
@@ -555,11 +613,6 @@ export class Room {
     if (!this.isInLobby) throw new GameInProgressError(this.id);
   }
 
-  /** How many of the added dilemmas before that position the player added. */
-  #addedBefore(playerId: string, added: readonly AddedDilemma[], position: number): number {
-    return added.slice(0, position).filter((dilemma) => dilemma.playerId === playerId).length;
-  }
-
   #isWorn(avatar: AvatarVO): boolean {
     return this.#players.some((player) => player.avatar.equals(avatar));
   }
@@ -576,10 +629,10 @@ export class Room {
   }
 
   /** For the age of the room, and not compromising unless the room includes those. */
-  #suits(dilemma: LobbyDilemma): boolean {
+  #suits(dilemma: LobbyDilemma, settings: RoomSettingsVO = this.#settings): boolean {
     return (
-      dilemma.minimumAge <= this.#settings.maximumMinimumAge &&
-      (!dilemma.compromising || this.#settings.includesCompromisingDilemmas)
+      dilemma.minimumAge <= settings.maximumMinimumAge &&
+      (!dilemma.compromising || settings.includesCompromisingDilemmas)
     );
   }
 
@@ -638,4 +691,11 @@ export class Room {
     this.#version += 1;
     this.#events.push(new ConnectionChangedEvent(this.id, playerId, connected, this.#version));
   }
+}
+
+/** A round of the settings as the host would set it again, to keep it as it is. */
+function toRoundChange(round: RoundSnapshot): RoundChange {
+  return round.origin === 'specific'
+    ? { id: round.id, origin: 'specific', dilemmaId: round.dilemma.dilemmaId }
+    : round;
 }

@@ -1,11 +1,11 @@
 import type {
-  AddDilemmaUseCase,
   ChangeAvatarUseCase,
   ChangeRoomSettingsUseCase,
+  ChooseRoundDilemmaUseCase,
+  ClearRoundDilemmaUseCase,
   ExpelPlayerUseCase,
-  PickDilemmasUseCase,
-  RemoveAddedDilemmaUseCase,
-  RoomSettingsSnapshot,
+  RoomSettingsChanges,
+  RoundChange,
   StartGameUseCase,
 } from '@thelever-app/game';
 import type { ChangeSettingsDto } from '@thelever-app/protocol';
@@ -18,9 +18,8 @@ import type { SocketMessageHandler } from './socket-message-handler.ts';
 export interface LobbyUseCases {
   readonly changeAvatar: ChangeAvatarUseCase;
   readonly changeSettings: ChangeRoomSettingsUseCase;
-  readonly pickDilemmas: PickDilemmasUseCase;
-  readonly addDilemma: AddDilemmaUseCase;
-  readonly removeAddedDilemma: RemoveAddedDilemmaUseCase;
+  readonly chooseRoundDilemma: ChooseRoundDilemmaUseCase;
+  readonly clearRoundDilemma: ClearRoundDilemmaUseCase;
   readonly expelPlayer: ExpelPlayerUseCase;
   readonly startGame: StartGameUseCase;
 }
@@ -47,23 +46,16 @@ export function lobbyCommandHandlers(
       runCommand,
     ),
     new RoomCommandHandler(
-      'pick-dilemmas',
-      ({ dilemmaIds }, { roomId, playerId }) =>
-        useCases.pickDilemmas.execute({ roomId, playerId, dilemmaIds }),
+      'choose-round-dilemma',
+      ({ roundId, dilemmaId }, { roomId, playerId }) =>
+        useCases.chooseRoundDilemma.execute({ roomId, playerId, roundId, dilemmaId }),
       roomLock,
       runCommand,
     ),
     new RoomCommandHandler(
-      'add-dilemma',
-      ({ dilemmaId }, { roomId, playerId }) =>
-        useCases.addDilemma.execute({ roomId, playerId, dilemmaId }),
-      roomLock,
-      runCommand,
-    ),
-    new RoomCommandHandler(
-      'remove-added-dilemma',
-      ({ dilemmaId }, { roomId, playerId }) =>
-        useCases.removeAddedDilemma.execute({ roomId, playerId, dilemmaId }),
+      'clear-round-dilemma',
+      ({ roundId }, { roomId, playerId }) =>
+        useCases.clearRoundDilemma.execute({ roomId, playerId, roundId }),
       roomLock,
       runCommand,
     ),
@@ -85,9 +77,20 @@ export function lobbyCommandHandlers(
   ];
 }
 
-/** The parts of the configuration a message changes: those it carries, none left undefined. */
-function onlyGiven(changes: ChangeSettingsDto['changes']): Partial<RoomSettingsSnapshot> {
-  return Object.fromEntries(
+/**
+ * The parts of the configuration a message changes: those it carries, none left undefined, and a
+ * new round without an id.
+ */
+function onlyGiven(changes: ChangeSettingsDto['changes']): RoomSettingsChanges {
+  const { rounds, ...rest } = Object.fromEntries(
     Object.entries(changes).filter(([, value]) => value !== undefined),
-  ) as Partial<RoomSettingsSnapshot>;
+  ) as Omit<RoomSettingsChanges, 'rounds'> & Pick<ChangeSettingsDto['changes'], 'rounds'>;
+  return {
+    ...rest,
+    ...(rounds && {
+      rounds: rounds.map(({ id, ...round }): RoundChange =>
+        id === undefined ? round : { id, ...round },
+      ),
+    }),
+  };
 }

@@ -87,7 +87,8 @@ Feature: Public dilemma pages
   Scenario: The visitor plays it with the group
     When a visitor chooses to play "El tranvía" with the group
     And creates the room
-    Then a room is created whose first dilemma is "El tranvía"
+    Then before creating it, the visitor sees that the game starts with "El tranvía"
+    And a room is created whose round 1 is the specific dilemma "El tranvía"
 
   Scenario: A dilemma removed from the catalog loses its page
     Given "El tranvía" is removed from the catalog

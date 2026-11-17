@@ -144,7 +144,7 @@
   "reveal": {
     "region": "Révélation",
     "position": "Dilemme {{position, number}} sur {{total, number}} · Révélation",
-    "addedBy": "Ajouté par {{name}}",
+    "chosenBy": "Choisi par {{name}}",
     "about": "Ce dilemme parlait de {{name}}",
     "yourHitsRegion": "Tes bonnes prédictions",
     "hitsAll": "Tu as lu dans leurs pensées !",
@@ -264,7 +264,9 @@
     "room-not-found": "Cette salle n’existe plus.",
     "unknown": "Ça n’a pas marché. Réessaie.",
     "dilemmas-missing": "Aucun dilemme ne correspond à cette configuration. Essaie d’autres catégories.",
-    "nickname-and-avatar-taken": "Quelqu’un qui a le même pseudo que toi porte déjà cet avatar. Choisis-en un autre."
+    "nickname-and-avatar-taken": "Quelqu’un qui a le même pseudo que toi porte déjà cet avatar. Choisis-en un autre.",
+    "round-taken": "Un autre joueur vient de choisir le dilemme de cette manche.",
+    "duplicate-dilemma": "Ce dilemme est déjà dans une autre manche."
   },
   "home": {
     "title": "On joue ?",
@@ -331,23 +333,34 @@
     "shareText": "Rejoins ma salle TheLever avec le code {{code}}",
     "copied": "Lien copié",
     "showQr": "Afficher le QR code",
-    "summary": "{{count}} dilemmes · {{seconds}} s par dilemme · {{language}} · {{nature}}",
+    "summary": "{{seconds}} s par dilemme · {{language}}",
+    "roundCount_one": "{{count}} manche",
+    "roundCount_many": "{{count}} manches",
+    "roundCount_other": "{{count}} manches",
     "change": "Modifier",
     "adultsOnly": "Réservé aux plus de 18 ans",
     "remote": "Vous jouez à distance : mieux vaut être en visio, pour commenter la révélation en direct.",
-    "added": {
-      "title": "Dilemmes ajoutés · {{count}} sur {{total}}",
-      "remove": "Retirer ce dilemme",
-      "hint": "Tu ne sais pas qui les a ajoutés : tu le verras à la révélation. Les autres viendront du catalogue."
-    },
-    "add": {
-      "title": "Ajoute des dilemmes à la partie",
-      "count": "Tu en as ajouté {{count}} sur {{total}}. Personne ne saura qu’ils viennent de toi avant la révélation.",
-      "action": "Ajouter un dilemme",
-      "remove": "Retirer ce dilemme"
-    },
-    "picked": {
-      "title": "Dilemmes choisis · {{count}}"
+    "rounds": {
+      "title": "Manches · {{count}}",
+      "hint": "Elles se jouent dans cet ordre.",
+      "secretHint": "Elles se jouent dans cet ordre. Personne ne saura quel joueur a choisi chaque dilemme avant la révélation.",
+      "allCategories": "Toutes les catégories",
+      "twoCategories": "{{first}} ou {{second}}",
+      "someCategories": "{{count}} catégories",
+      "randomAll": "Au hasard dans le catalogue",
+      "randomOne": "Au hasard, dans cette catégorie",
+      "randomSome": "Au hasard, dans ces catégories",
+      "randomGroupAll": "{{count}} manches au hasard dans le catalogue",
+      "randomGroupOne": "{{count}} manches au hasard, dans cette catégorie",
+      "randomGroupSome": "{{count}} manches au hasard, dans ces catégories",
+      "chosenBy": "Choisi par {{name}}",
+      "chosenByYou": "Tu l’as choisi",
+      "chosenByPlayer": "Choisi par un joueur",
+      "playersEmpty": "Un joueur la choisit",
+      "playersEmptyMeta": "Si personne ne la choisit, elle sera au hasard",
+      "choose": "Choisir",
+      "chooseLabel": "Choisir le dilemme de la manche {{number}}",
+      "clearLabel": "Retirer ton dilemme de la manche {{number}}"
     },
     "players": "Dans la salle · {{count}}",
     "you": "{{name}} (toi)",
@@ -359,18 +372,7 @@
     "missing_one": "Il manque {{count}} joueur pour commencer",
     "missing_other": "Il manque {{count}} joueurs pour commencer",
     "guestWait": "{{host}} lancera la partie quand vous serez tous là.",
-    "missing_many": "Il manque {{count}} joueurs pour commencer",
-    "categories": {
-      "all": "Toutes les catégories",
-      "some_one": "{{count}} catégorie",
-      "some_other": "{{count}} catégories",
-      "some_many": "{{count}} catégories",
-      "none": "Aucune catégorie"
-    },
-    "pickedCount_one": "{{count}} dilemme choisi",
-    "pickedCount_other": "{{count}} dilemmes choisis",
-    "pickedCount_many": "{{count}} dilemmes choisis",
-    "summaryPicked": "{{seconds}} s par dilemme · {{language}} · {{nature}}"
+    "missing_many": "Il manque {{count}} joueurs pour commencer"
   },
   "languages": {
     "es": "Español",
@@ -403,62 +405,61 @@
       "hint": "Autorise les dilemmes pour adultes. Seuls les plus de 18 ans pourront entrer."
     },
     "language": "Langue des dilemmes",
-    "howPicked": "Choix des dilemmes",
-    "byCategories": "Par catégories",
-    "byHand": "À la main",
-    "categories": "Catégories",
-    "allCategories": "Toutes",
-    "categoriesHint": "La partie mélange des dilemmes des catégories cochées.",
-    "dilemmaCount": "Dilemmes",
     "timePerDilemma": "Temps par dilemme",
     "seconds": "{{count}} s",
     "timeHint": "Chaque dilemme est révélé quand tout le monde a répondu ou que le temps est écoulé.",
+    "rounds": {
+      "title": "Manches · {{count}}",
+      "range": "De 1 à {{maximum}}",
+      "hint": "Elles se jouent dans cet ordre. Chaque manche a un dilemme au hasard du catalogue, un dilemme précis que tu choisis ou celui qu’un joueur choisit depuis la salle d’attente.",
+      "origin": "Qui choisit le dilemme de la manche {{number}}",
+      "origins": {
+        "random": "Au hasard",
+        "specific": "Précis",
+        "players": "Joueurs"
+      },
+      "remove": "Retirer la manche {{number}}",
+      "categoriesOf": "Catégories de la manche {{number}} : {{summary}}",
+      "categories": "Catégories de la manche {{number}}",
+      "allCategories": "Toutes",
+      "fromAll": "Toutes les catégories",
+      "fromOne": "{{category}}",
+      "fromTwo": "{{first}} ou {{second}}",
+      "fromSome": "{{count}} catégories",
+      "change": "Modifier",
+      "changeLabel": "Modifier le dilemme de la manche {{number}}",
+      "choose": "Choisir un dilemme",
+      "chooseLabel": "Choisir un dilemme pour la manche {{number}}",
+      "playersHint": "Un joueur la choisit depuis la salle d’attente. Si personne ne la choisit, elle sera au hasard.",
+      "playersChosen": "Un joueur l’a déjà choisie : « {{title}} ».",
+      "add": "Ajouter une manche",
+      "full": "{{maximum}} manches : le maximum"
+    },
     "newDilemmas": {
       "label": "Inclure de nouveaux dilemmes",
-      "hint": "Vous aidez à évaluer des dilemmes tout juste arrivés dans le catalogue."
+      "hint": "Une manche au hasard peut tomber sur un dilemme tout juste arrivé dans le catalogue. Vous aidez à l’évaluer."
     },
-    "dilemmasPerPlayer": {
-      "label": "Dilemmes ajoutés par joueur",
-      "none": "Aucun",
-      "hint": "L’hôte aussi. Ils comptent dans le nombre de dilemmes, et personne ne saura qui a ajouté quoi avant la révélation."
-    },
-    "pick": "Choisir les dilemmes un par un",
-    "picked_one": "{{count}} dilemme choisi",
-    "picked_other": "{{count}} dilemmes choisis",
-    "picked_many": "{{count}} dilemmes choisis",
-    "noPicked": "Aucun dilemme choisi",
-    "changePicked": "Modifier",
-    "choosePicked": "Choisir",
-    "byHandHint": "La partie joue ceux-ci et ceux qu’ajoutent les joueurs, sans catégories ni nouveaux dilemmes. « Par catégories » les retire d’un geste.",
     "save": "Enregistrer"
   },
   "pickDilemmas": {
-    "title": "Choisir les dilemmes",
-    "back": "Retour aux réglages",
+    "title": "Dilemme de la manche {{number}}",
+    "back": "Retour",
     "search": "Rechercher des dilemmes",
     "searchPlaceholder": "Cherche par texte ou étiquette : famille, tramway…",
     "all": "Toutes",
-    "hint": "Seuls les dilemmes adaptés à cette salle apparaissent. En les choisissant à la main, aucun nouveau dilemme n’est ajouté.",
-    "none": "Choisis-en au moins un",
-    "play_one": "Jouer celui-ci",
-    "play_other": "Jouer ces {{count}}",
+    "categories": "Catégories",
+    "hint": "Seuls les dilemmes adaptés à cette salle apparaissent. Un dilemme déjà dans une autre manche ne peut pas être répété.",
+    "list": "Dilemmes",
+    "taken": "Déjà dans la manche {{number}}",
+    "none": "Choisis un dilemme",
+    "put": "Le mettre dans la manche {{number}}",
     "empty": "Aucun dilemme adapté pour cette recherche.",
-    "tags": "#{{tags}}",
-    "play_many": "Jouer ces {{count}}",
-    "byCategory": "Revenir au choix par catégorie",
     "options_one": "{{count}} option",
     "options_many": "{{count, number}} options",
     "options_other": "{{count, number}} options",
     "someone": "quelqu’un de ton groupe",
     "more": "Voir plus",
     "moreFailed": "Impossible de charger plus de dilemmes. Réessaie."
-  },
-  "addDilemma": {
-    "title": "Ajoute un dilemme",
-    "search": "Rechercher des dilemmes",
-    "close": "Fermer",
-    "empty": "Aucun dilemme adapté pour cette recherche.",
-    "searchPlaceholder": "Cherche par texte ou étiquette"
   },
   "expel": {
     "title": "Exclure {{name}} ?",
@@ -499,11 +500,8 @@
   },
   "playDilemma": {
     "title": "Nouvelle salle",
-    "firstDilemma": "Vous commencerez par ce dilemme",
-    "about_one": "{{category}} · {{count}} option",
-    "about_other": "{{category}} · {{count}} options",
-    "about_many": "{{category}} · {{count}} options",
-    "rest": "Le reste de la partie est complété avec le catalogue, selon les réglages de la salle.",
+    "firstDilemma": "Vous commencez par ce dilemme",
+    "about": "{{category}} · Les 7 autres manches seront au hasard. Tu pourras les modifier dans les réglages.",
     "loading": "Recherche du dilemme…",
     "notFound": "Ce dilemme n’est plus sur TheLever. Tu peux créer une salle avec d’autres dilemmes du catalogue.",
     "home": "Aller à l’accueil"

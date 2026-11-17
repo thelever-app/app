@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  AddDilemmaDto,
   ChangeAvatarDto,
   ChangeSettingsDto,
+  ChooseRoundDilemmaDto,
+  ClearRoundDilemmaDto,
   ClientMessageDto,
   ExpelPlayerDto,
-  PickDilemmasDto,
-  RemoveAddedDilemmaDto,
   StartGameDto,
 } from '../client-messages.ts';
 import { ExpelledDto, RoomStateDto, ServerMessageDto } from '../server-messages.ts';
@@ -15,12 +14,26 @@ const settings = {
   variant: 'nominal',
   adultsOnly: false,
   dilemmaLanguage: 'es',
-  categories: ['life-and-death', 'honesty'],
-  dilemmaCount: 8,
   timePerDilemmaSeconds: 60,
   newDilemmas: true,
-  dilemmasPerPlayer: 2,
 };
+
+const rounds = [
+  {
+    roundId: 1,
+    origin: 'specific',
+    dilemma: { dilemmaId: 'dilemma-1', text: 'Text of the first dilemma' },
+  },
+  { roundId: 2, origin: 'random', categories: ['life-and-death', 'honesty'] },
+  { roundId: 5, origin: 'random', categories: null },
+  {
+    roundId: 3,
+    origin: 'players',
+    dilemma: { dilemmaId: 'dilemma-2', text: 'Text of the second dilemma' },
+    chosenByYou: true,
+  },
+  { roundId: 4, origin: 'players', dilemma: null, chosenByYou: false },
+];
 
 const roomState = {
   type: 'room-state',
@@ -32,6 +45,7 @@ const roomState = {
   groupNature: 'friends',
   place: 'together',
   settings,
+  rounds,
   minimumPlayers: 2,
   players: [
     {
@@ -47,9 +61,6 @@ const roomState = {
       connected: true,
     },
   ],
-  addedDilemmas: [{ dilemmaId: 'dilemma-1', text: 'Text of the first dilemma' }],
-  ownAddedDilemmaIds: ['dilemma-1'],
-  pickedDilemmas: [],
   currentGameId: null,
 };
 
@@ -66,11 +77,11 @@ describe('RoomStateDto', () => {
     expect(result.data).toEqual(roomState);
   });
 
-  it('should reject who added a dilemma, as an extra key', () => {
+  it('should reject who chose the dilemma of a round, as an extra key', () => {
     // Arrange
     const withAuthor = {
       ...roomState,
-      addedDilemmas: [{ dilemmaId: 'dilemma-1', text: 'Text', playerId: 'player-2' }],
+      rounds: [{ ...rounds[3], playerId: 'player-2' }],
     };
 
     // Act & Assert
@@ -86,32 +97,33 @@ describe('RoomStateDto', () => {
     expect(RoomStateDto.safeParse(withIdentity).success).toBe(false);
   });
 
-  it('should reject an avatar or a configuration outside the closed lists', () => {
+  it('should reject an avatar, a configuration or a round outside the closed lists', () => {
     // Arrange
     const [ana, luis] = roomState.players;
     const badFace = {
       ...roomState,
       players: [{ ...ana, avatar: { face: 'face-13', color: 'khaki' } }, luis],
     };
-    const badCount = { ...roomState, settings: { ...settings, dilemmaCount: 7 } };
-    const tooManyPerPlayer = { ...roomState, settings: { ...settings, dilemmasPerPlayer: 4 } };
-    const blankCategory = { ...roomState, settings: { ...settings, categories: [''] } };
+    const badTime = { ...roomState, settings: { ...settings, timePerDilemmaSeconds: 5 } };
+    const blankCategory = {
+      ...roomState,
+      rounds: [{ roundId: 1, origin: 'random', categories: [''] }],
+    };
+    const noCategory = { ...roomState, rounds: [{ roundId: 1, origin: 'random', categories: [] }] };
+    const noRounds = { ...roomState, rounds: [] };
+    const tooManyRounds = {
+      ...roomState,
+      rounds: Array.from({ length: 13 }, (_, index) => ({
+        roundId: index + 1,
+        origin: 'random',
+        categories: null,
+      })),
+    };
 
     // Act & Assert
-    expect(RoomStateDto.safeParse(badFace).success).toBe(false);
-    expect(RoomStateDto.safeParse(badCount).success).toBe(false);
-    expect(RoomStateDto.safeParse(tooManyPerPlayer).success).toBe(false);
-    expect(RoomStateDto.safeParse(blankCategory).success).toBe(false);
-  });
-
-  it('should tell every category, as null, from none, as an empty list', () => {
-    // Arrange
-    const every = { ...roomState, settings: { ...settings, categories: null } };
-    const none = { ...roomState, settings: { ...settings, categories: [] } };
-
-    // Act & Assert
-    expect(RoomStateDto.parse(every).settings.categories).toBeNull();
-    expect(RoomStateDto.parse(none).settings.categories).toEqual([]);
+    for (const message of [badFace, badTime, blankCategory, noCategory, noRounds, tooManyRounds]) {
+      expect(RoomStateDto.safeParse(message).success).toBe(false);
+    }
   });
 
   it('should reject a code that is not 5 characters long', () => {
@@ -135,10 +147,19 @@ describe('the commands of the lobby', () => {
     // Arrange
     const commands = [
       { type: 'change-avatar', face: 'face-03', color: 'rust' },
-      { type: 'change-settings', changes: { variant: 'anonymous', dilemmaCount: 12 } },
-      { type: 'pick-dilemmas', dilemmaIds: ['dilemma-1', 'dilemma-2'] },
-      { type: 'add-dilemma', dilemmaId: 'dilemma-1' },
-      { type: 'remove-added-dilemma', dilemmaId: 'dilemma-1' },
+      {
+        type: 'change-settings',
+        changes: {
+          variant: 'anonymous',
+          rounds: [
+            { id: 1, origin: 'specific', dilemmaId: 'dilemma-1' },
+            { origin: 'random', categories: ['honesty'] },
+            { id: 3, origin: 'players' },
+          ],
+        },
+      },
+      { type: 'choose-round-dilemma', roundId: 3, dilemmaId: 'dilemma-1' },
+      { type: 'clear-round-dilemma', roundId: 3 },
       { type: 'expel-player', playerId: 'player-3' },
       { type: 'start-game' },
     ];
@@ -177,17 +198,29 @@ describe('the commands of the lobby', () => {
     ).toBe(false);
   });
 
-  it('should accept picking no dilemma, to go back to a game by category', () => {
+  it('should reject no rounds, more than 12, or a round without its dilemma', () => {
+    // Arrange
+    const withRounds = (rounds: unknown[]) => ({ type: 'change-settings', changes: { rounds } });
+    const random = { origin: 'random', categories: null };
+
     // Act & Assert
-    expect(PickDilemmasDto.safeParse({ type: 'pick-dilemmas', dilemmaIds: [] }).success).toBe(true);
+    expect(ChangeSettingsDto.safeParse(withRounds([])).success).toBe(false);
+    expect(ChangeSettingsDto.safeParse(withRounds(Array(13).fill(random))).success).toBe(false);
+    expect(ChangeSettingsDto.safeParse(withRounds([{ origin: 'specific' }])).success).toBe(false);
+    expect(ChangeSettingsDto.safeParse(withRounds([{ id: 0, ...random }])).success).toBe(false);
   });
 
-  it('should reject an empty dilemma or player', () => {
+  it('should reject an empty dilemma, round or player', () => {
     // Act & Assert
-    expect(AddDilemmaDto.safeParse({ type: 'add-dilemma', dilemmaId: '' }).success).toBe(false);
     expect(
-      RemoveAddedDilemmaDto.safeParse({ type: 'remove-added-dilemma', dilemmaId: '' }).success,
+      ChooseRoundDilemmaDto.safeParse({ type: 'choose-round-dilemma', roundId: 1, dilemmaId: '' })
+        .success,
     ).toBe(false);
+    expect(
+      ChooseRoundDilemmaDto.safeParse({ type: 'choose-round-dilemma', roundId: 0, dilemmaId: 'd' })
+        .success,
+    ).toBe(false);
+    expect(ClearRoundDilemmaDto.safeParse({ type: 'clear-round-dilemma' }).success).toBe(false);
     expect(ExpelPlayerDto.safeParse({ type: 'expel-player', playerId: '' }).success).toBe(false);
   });
 

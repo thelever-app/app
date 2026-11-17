@@ -129,7 +129,12 @@ export async function gameInDecisionPhase(server: {
   // Anonymous, so an answer is only the vote.
   ana.send({ type: 'change-settings', changes: { variant: 'anonymous' } });
   await ana.next('room-state');
-  ana.send({ type: 'pick-dilemmas', dilemmaIds: SEED_DILEMMAS.map(({ id }) => id) });
+  ana.send({
+    type: 'change-settings',
+    changes: {
+      rounds: SEED_DILEMMAS.map(({ id }) => ({ origin: 'specific' as const, dilemmaId: id })),
+    },
+  });
   await ana.next('room-state');
   ana.send({ type: 'start-game' });
   const { gameId, dilemmas } = await ana.next('game-state');

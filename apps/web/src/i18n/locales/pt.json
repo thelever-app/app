@@ -144,7 +144,7 @@
   "reveal": {
     "region": "Revelação",
     "position": "Dilema {{position, number}} de {{total, number}} · Revelação",
-    "addedBy": "Adicionado por {{name}}",
+    "chosenBy": "Escolhido por {{name}}",
     "about": "Este dilema era sobre {{name}}",
     "yourHitsRegion": "Os teus acertos",
     "hitsAll": "Leste-os a todos!",
@@ -264,7 +264,9 @@
     "room-not-found": "Essa sala já não existe.",
     "unknown": "Algo correu mal. Tenta outra vez.",
     "dilemmas-missing": "Não há dilemas para esta configuração. Experimenta outras categorias.",
-    "nickname-and-avatar-taken": "Alguém com o teu nome já usa esse avatar. Escolhe outro."
+    "nickname-and-avatar-taken": "Alguém com o teu nome já usa esse avatar. Escolhe outro.",
+    "round-taken": "Outro jogador acabou de escolher o dilema dessa ronda.",
+    "duplicate-dilemma": "Esse dilema já está noutra ronda."
   },
   "home": {
     "title": "Jogamos?",
@@ -331,23 +333,34 @@
     "shareText": "Junta-te à minha sala do TheLever com o código {{code}}",
     "copied": "Link copiado",
     "showQr": "Mostrar QR",
-    "summary": "{{count}} dilemas · {{seconds}} s por dilema · {{language}} · {{nature}}",
+    "summary": "{{seconds}} s por dilema · {{language}}",
+    "roundCount_one": "{{count}} ronda",
+    "roundCount_many": "{{count}} rondas",
+    "roundCount_other": "{{count}} rondas",
     "change": "Mudar",
     "adultsOnly": "Só para maiores de 18",
     "remote": "Jogam à distância: melhor por videochamada, para comentar a revelação em direto.",
-    "added": {
-      "title": "Dilemas adicionados · {{count}} de {{total}}",
-      "remove": "Retirar este dilema",
-      "hint": "Não sabes quem os adicionou: vê-se na revelação. Os restantes vêm do catálogo."
-    },
-    "add": {
-      "title": "Adiciona dilemas à partida",
-      "count": "Adicionaste {{count}} de {{total}}. Ninguém saberá que são teus até à revelação.",
-      "action": "Adicionar um dilema",
-      "remove": "Retirar este dilema"
-    },
-    "picked": {
-      "title": "Dilemas escolhidos · {{count}}"
+    "rounds": {
+      "title": "Rondas · {{count}}",
+      "hint": "Jogam-se por esta ordem.",
+      "secretHint": "Jogam-se por esta ordem. Ninguém vai saber que jogador escolheu cada dilema até à revelação.",
+      "allCategories": "Todas as categorias",
+      "twoCategories": "{{first}} ou {{second}}",
+      "someCategories": "{{count}} categorias",
+      "randomAll": "Aleatório do catálogo",
+      "randomOne": "Aleatório, desta categoria",
+      "randomSome": "Aleatório, destas categorias",
+      "randomGroupAll": "{{count}} rondas aleatórias do catálogo",
+      "randomGroupOne": "{{count}} rondas aleatórias, desta categoria",
+      "randomGroupSome": "{{count}} rondas aleatórias, destas categorias",
+      "chosenBy": "Escolhido por {{name}}",
+      "chosenByYou": "Escolheste-o tu",
+      "chosenByPlayer": "Escolhido por um jogador",
+      "playersEmpty": "Escolhe-o um jogador",
+      "playersEmptyMeta": "Se ninguém o escolher, será aleatório",
+      "choose": "Escolher",
+      "chooseLabel": "Escolher o dilema da ronda {{number}}",
+      "clearLabel": "Tirar o teu dilema da ronda {{number}}"
     },
     "players": "Na sala · {{count}}",
     "you": "{{name}} (tu)",
@@ -359,18 +372,7 @@
     "missing_one": "Falta {{count}} jogador para começar",
     "missing_other": "Faltam {{count}} jogadores para começar",
     "guestWait": "{{host}} vai começar a partida quando estiverem todos.",
-    "missing_many": "Faltam {{count}} jogadores para começar",
-    "categories": {
-      "all": "Todas as categorias",
-      "some_one": "{{count}} categoria",
-      "some_other": "{{count}} categorias",
-      "some_many": "{{count}} categorias",
-      "none": "Nenhuma categoria"
-    },
-    "pickedCount_one": "{{count}} dilema escolhido",
-    "pickedCount_other": "{{count}} dilemas escolhidos",
-    "pickedCount_many": "{{count}} dilemas escolhidos",
-    "summaryPicked": "{{seconds}} s por dilema · {{language}} · {{nature}}"
+    "missing_many": "Faltam {{count}} jogadores para começar"
   },
   "languages": {
     "es": "Español",
@@ -403,62 +405,61 @@
       "hint": "Permite dilemas para adultos. Só poderão entrar maiores de 18."
     },
     "language": "Idioma dos dilemas",
-    "howPicked": "Como se escolhem os dilemas",
-    "byCategories": "Por categorias",
-    "byHand": "À mão",
-    "categories": "Categorias",
-    "allCategories": "Todas",
-    "categoriesHint": "A partida mistura dilemas das categorias marcadas.",
-    "dilemmaCount": "Dilemas",
     "timePerDilemma": "Tempo por dilema",
     "seconds": "{{count}} s",
     "timeHint": "Cada dilema é revelado quando todos respondem ou o tempo acaba.",
+    "rounds": {
+      "title": "Rondas · {{count}}",
+      "range": "De 1 a {{maximum}}",
+      "hint": "Jogam-se por esta ordem. Cada ronda tem um dilema aleatório do catálogo, um concreto que escolhes tu ou o que um jogador escolher na sala de espera.",
+      "origin": "Quem escolhe o dilema da ronda {{number}}",
+      "origins": {
+        "random": "Aleatório",
+        "specific": "Concreto",
+        "players": "Jogadores"
+      },
+      "remove": "Tirar a ronda {{number}}",
+      "categoriesOf": "Categorias da ronda {{number}}: {{summary}}",
+      "categories": "Categorias da ronda {{number}}",
+      "allCategories": "Todas",
+      "fromAll": "De todas as categorias",
+      "fromOne": "De {{category}}",
+      "fromTwo": "De {{first}} ou {{second}}",
+      "fromSome": "De {{count}} categorias",
+      "change": "Mudar",
+      "changeLabel": "Mudar o dilema da ronda {{number}}",
+      "choose": "Escolher um dilema",
+      "chooseLabel": "Escolher um dilema para a ronda {{number}}",
+      "playersHint": "Escolhe-o um jogador na sala de espera. Se ninguém o escolher, sai um aleatório.",
+      "playersChosen": "Um jogador já o escolheu: «{{title}}».",
+      "add": "Adicionar ronda",
+      "full": "{{maximum}} rondas: o máximo"
+    },
     "newDilemmas": {
       "label": "Incluir dilemas novos",
-      "hint": "Ajudam a avaliar dilemas acabados de chegar ao catálogo."
+      "hint": "Nas rondas aleatórias pode sair algum acabado de chegar ao catálogo. Ajudam a avaliá-lo."
     },
-    "dilemmasPerPlayer": {
-      "label": "Dilemas que cada jogador adiciona",
-      "none": "Nenhum",
-      "hint": "O anfitrião também. Contam para o número de dilemas, e ninguém saberá de quem é cada um até à revelação."
-    },
-    "pick": "Escolher dilemas um a um",
-    "picked_one": "{{count}} dilema escolhido",
-    "picked_other": "{{count}} dilemas escolhidos",
-    "picked_many": "{{count}} dilemas escolhidos",
-    "noPicked": "Nenhum dilema escolhido",
-    "changePicked": "Mudar",
-    "choosePicked": "Escolher",
-    "byHandHint": "A partida joga estes e os que os jogadores adicionarem, sem categorias nem dilemas novos. «Por categorias» retira-os com um toque.",
     "save": "Guardar"
   },
   "pickDilemmas": {
-    "title": "Escolher dilemas",
-    "back": "Voltar às definições",
+    "title": "Dilema da ronda {{number}}",
+    "back": "Voltar",
     "search": "Pesquisar dilemas",
     "searchPlaceholder": "Pesquisa por texto ou etiqueta: família, elétrico…",
     "all": "Todas",
-    "hint": "Só aparecem dilemas adequados a esta sala. Ao escolhê-los à mão, não se adicionam dilemas novos.",
-    "none": "Escolhe pelo menos um",
-    "play_one": "Jogar este",
-    "play_other": "Jogar estes {{count}}",
+    "categories": "Categorias",
+    "hint": "Só aparecem dilemas adequados a esta sala. Um dilema que já está noutra ronda não se pode repetir.",
+    "list": "Dilemas",
+    "taken": "Já está na ronda {{number}}",
+    "none": "Escolhe um dilema",
+    "put": "Pô-lo na ronda {{number}}",
     "empty": "Não há dilemas adequados com essa pesquisa.",
-    "tags": "#{{tags}}",
-    "play_many": "Jogar estes {{count}}",
-    "byCategory": "Voltar a jogar por categoria",
     "options_one": "{{count}} opção",
     "options_many": "{{count, number}} opções",
     "options_other": "{{count, number}} opções",
     "someone": "alguém do grupo",
     "more": "Ver mais",
     "moreFailed": "Não foi possível carregar mais dilemas. Tenta outra vez."
-  },
-  "addDilemma": {
-    "title": "Adiciona um dilema",
-    "search": "Pesquisar dilemas",
-    "close": "Fechar",
-    "empty": "Não há dilemas adequados com essa pesquisa.",
-    "searchPlaceholder": "Pesquisa por texto ou etiqueta"
   },
   "expel": {
     "title": "Expulsar {{name}}?",
@@ -499,11 +500,8 @@
   },
   "playDilemma": {
     "title": "Nova sala",
-    "firstDilemma": "Vão começar por este dilema",
-    "about_one": "{{category}} · {{count}} opção",
-    "about_other": "{{category}} · {{count}} opções",
-    "about_many": "{{category}} · {{count}} opções",
-    "rest": "O resto da partida é completado com o catálogo, segundo as definições da sala.",
+    "firstDilemma": "Começam por este dilema",
+    "about": "{{category}} · As outras 7 rondas vão ser aleatórias. Podes mudá-las nas definições.",
     "loading": "À procura do dilema…",
     "notFound": "Este dilema já não está no TheLever. Podes criar uma sala com outros do catálogo.",
     "home": "Ir para o início"

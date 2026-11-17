@@ -14,8 +14,16 @@ export {
   CLOSES_WITH_NOBODY_CONNECTED_AFTER_MS,
   type RoomSnapshot,
   type LobbyDilemma,
-  type AddedDilemma,
+  type ChosenDilemma,
+  type RoundChange,
+  type RoomSettingsChanges,
 } from './domain/entities/room.ts';
+export {
+  DILEMMA_ORIGINS,
+  randomRound,
+  type DilemmaOrigin,
+  type RoundSnapshot,
+} from './domain/vos/round.vo.ts';
 export {
   Game,
   type GameDilemma,
@@ -42,21 +50,23 @@ export { RoomCodeVO } from './domain/vos/room-code.vo.ts';
 export {
   RoomSettingsVO,
   DILEMMA_LANGUAGES,
-  DILEMMA_COUNTS,
   TIMES_PER_DILEMMA_IN_SECONDS,
-  DILEMMAS_PER_PLAYER,
+  MINIMUM_ROUNDS,
+  MAXIMUM_ROUNDS,
+  DEFAULT_ROUNDS,
   type RoomSettingsSnapshot,
   type RoomVariant,
   type DilemmaLanguage,
-  type DilemmaCount,
   type TimePerDilemmaSeconds,
-  type DilemmasPerPlayer,
 } from './domain/vos/room-settings.vo.ts';
 export { CATEGORIES, isCategory, type Category } from './domain/vos/category.vo.ts';
 export { GROUP_NATURES, PLACES, type GroupNature, type Place } from './domain/vos/group.vo.ts';
 export {
   composeGame,
-  type DilemmaOrigin,
+  categoriesKey,
+  categoriesToDraw,
+  type Candidates,
+  type ComposedDilemma,
   type ExplorationSlots,
 } from './domain/services/compose-game.ts';
 export type { Seal, VotePrediction, AnswerProps } from './domain/vos/answer.vo.ts';
@@ -104,8 +114,10 @@ export { RoomClosedError } from './domain/errors/room-closed.error.ts';
 export { PlayerExpelledError } from './domain/errors/player-expelled.error.ts';
 export { NicknameAndAvatarTakenError } from './domain/errors/nickname-and-avatar-taken.error.ts';
 export { NotEnoughPlayersError } from './domain/errors/not-enough-players.error.ts';
-export { AddingDilemmasNotAllowedError } from './domain/errors/adding-dilemmas-not-allowed.error.ts';
-export { TooManyAddedDilemmasError } from './domain/errors/too-many-added-dilemmas.error.ts';
+export { RoundNotFoundError } from './domain/errors/round-not-found.error.ts';
+export { RoundNotForPlayersError } from './domain/errors/round-not-for-players.error.ts';
+export { RoundTakenError } from './domain/errors/round-taken.error.ts';
+export { NotChooserError } from './domain/errors/not-chooser.error.ts';
 export { DilemmaNotSuitableError } from './domain/errors/dilemma-not-suitable.error.ts';
 export { HostCannotBeExpelledError } from './domain/errors/host-cannot-be-expelled.error.ts';
 export { DecisionPhaseOverError } from './domain/errors/decision-phase-over.error.ts';
@@ -166,6 +178,8 @@ export {
   GetRoomStateUseCase,
   type GetRoomStateInput,
   type GetRoomStateOutput,
+  type LobbyRound,
+  type LobbyRoundDilemma,
 } from './application/use-cases/get-room-state.use-case.ts';
 export {
   ChangeAvatarUseCase,
@@ -176,17 +190,13 @@ export {
   type ChangeRoomSettingsInput,
 } from './application/use-cases/change-room-settings.use-case.ts';
 export {
-  PickDilemmasUseCase,
-  type PickDilemmasInput,
-} from './application/use-cases/pick-dilemmas.use-case.ts';
+  ChooseRoundDilemmaUseCase,
+  type ChooseRoundDilemmaInput,
+} from './application/use-cases/choose-round-dilemma.use-case.ts';
 export {
-  AddDilemmaUseCase,
-  type AddDilemmaInput,
-} from './application/use-cases/add-dilemma.use-case.ts';
-export {
-  RemoveAddedDilemmaUseCase,
-  type RemoveAddedDilemmaInput,
-} from './application/use-cases/remove-added-dilemma.use-case.ts';
+  ClearRoundDilemmaUseCase,
+  type ClearRoundDilemmaInput,
+} from './application/use-cases/clear-round-dilemma.use-case.ts';
 export {
   ExpelPlayerUseCase,
   type ExpelPlayerInput,

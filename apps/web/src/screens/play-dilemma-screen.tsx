@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { Icon } from '../components/icon.tsx';
+import { DilemmaText } from '../game/dilemma-text.tsx';
 import { RoomApiError } from '../room/room-api.ts';
 import { useRoomApi } from '../room/room-api-context.tsx';
 import { CreateRoomForm } from './create-room-form.tsx';
@@ -19,8 +20,8 @@ type Preview =
 
 /**
  * /new/:publicId, where «Play it with my group» of a public page leads: the dilemma the room starts
- * with, from the public id of the link, and the form to create the room, which plays it first and
- * takes its language for the dilemmas.
+ * with, from the public id of the link, and the form to create the room, which puts it in its first
+ * round and takes its language for the dilemmas; the other rounds are random.
  */
 export function PlayDilemmaScreen() {
   const { t } = useTranslation();
@@ -66,17 +67,29 @@ export function PlayDilemmaScreen() {
         {preview.status === 'failed' && <p role="alert">{t('roomErrors.unknown')}</p>}
         {preview.status === 'found' && (
           <>
-            <section className={styles.first} data-testid="first-dilemma">
-              <span className={styles.kicker}>{t('playDilemma.firstDilemma')}</span>
-              {preview.dilemma.name && <p className={styles.name}>{preview.dilemma.name}</p>}
-              <p className={styles.about}>
-                {t('playDilemma.about', {
-                  category: t(`categories.${preview.dilemma.category}`),
-                  count: preview.dilemma.optionCount,
-                })}
-              </p>
+            <section
+              className={styles.first}
+              aria-label={t('pickDilemmas.title', { number: 1 })}
+              data-testid="first-dilemma"
+            >
+              <Icon name="pushPin" size={22} />
+              <span className={styles.firstText}>
+                <span className={styles.kicker}>{t('playDilemma.firstDilemma')}</span>
+                <span className={styles.name}>
+                  {preview.dilemma.name ?? (
+                    <DilemmaText
+                      text={preview.dilemma.text}
+                      personInTheGap={t('pickDilemmas.someone')}
+                    />
+                  )}
+                </span>
+                <span className={styles.about}>
+                  {t('playDilemma.about', {
+                    category: t(`categories.${preview.dilemma.category}`),
+                  })}
+                </span>
+              </span>
             </section>
-            <p className={styles.rest}>{t('playDilemma.rest')}</p>
             <CreateRoomForm
               firstDilemma={{
                 dilemmaId: preview.dilemma.dilemmaId,

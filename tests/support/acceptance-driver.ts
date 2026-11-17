@@ -1,8 +1,9 @@
 import {
-  AddDilemmaUseCase,
   AnswerDilemmaUseCase,
   ChangeAvatarUseCase,
   ChangeRoomSettingsUseCase,
+  ChooseRoundDilemmaUseCase,
+  ClearRoundDilemmaUseCase,
   ConnectionChangedEvent,
   ConnectPlayerUseCase,
   CreateRoomUseCase,
@@ -27,13 +28,11 @@ import {
   JoinRoomUseCase,
   LobbyChangedEvent,
   NicknameAndAvatarTakenError,
-  PickDilemmasUseCase,
   GameInProgressError,
   NotEnoughPlayersError,
   NotHostError,
   PlayerExpelledError,
   ProgressUpdatedEvent,
-  RemoveAddedDilemmaUseCase,
   RoomCodeNotFoundError,
   RoomClosedError,
   RoomFullError,
@@ -41,7 +40,13 @@ import {
   StartGameUseCase,
   AvatarVO,
   type GetRoomStateOutput,
-  TooManyAddedDilemmasError,
+  type LobbyRound,
+  type RoundChange,
+  DilemmaNotSuitableError,
+  DuplicateDilemmaError,
+  InvalidRoomSettingError,
+  RoundNotForPlayersError,
+  RoundTakenError,
 } from '@thelever-app/game';
 import {
   InMemoryDilemmaCatalog,
@@ -104,6 +109,8 @@ import type {
   RevealView,
   RoomChoices,
   RoomPreview,
+  RoundSetting,
+  RoundView,
   SettingsView,
   WorldResultView,
 } from './driver.ts';
@@ -111,9 +118,9 @@ import {
   catalogEntryOf,
   EXPLORATION_SLOTS,
   explorationSlotsFor,
+  roundsForAGameOf,
   SPANISH_OPTION_TEXTS,
   TEST_DILEMMAS,
-  TWO_OPTION_DILEMMA_IDS,
 } from './test-catalog.ts';
 
 /** Test data: the vote the driver casts when a step does not say which one; the first option. */
@@ -199,6 +206,29 @@ function optionTextOf(dilemmaId: string, optionId: string): string {
   return option.text;
 }
 
+function roundViewOf(round: LobbyRound): RoundView {
+  switch (round.origin) {
+    case 'random':
+      return { origin: 'random', categories: round.categories };
+    case 'specific':
+      return { origin: 'specific', dilemmaId: round.dilemma.dilemmaId };
+    case 'players':
+      return { origin: 'players', dilemmaId: round.dilemma?.dilemmaId ?? null };
+  }
+}
+
+/** A round of the room as the host would set it again, with its id so it stays the same round. */
+function roundChangeOf(round: LobbyRound): RoundChange {
+  switch (round.origin) {
+    case 'random':
+      return { id: round.roundId, origin: 'random', categories: round.categories };
+    case 'specific':
+      return { id: round.roundId, origin: 'specific', dilemmaId: round.dilemma.dilemmaId };
+    case 'players':
+      return { id: round.roundId, origin: 'players' };
+  }
+}
+
 /** One player of the scenario, as the driver knows them. */
 interface AcceptancePlayer {
   readonly identity: string;
@@ -280,10 +310,9 @@ export class AcceptanceDriver implements GameDriver {
   readonly #getRoomState: GetRoomStateUseCase;
   readonly #changeAvatar: ChangeAvatarUseCase;
   readonly #changeRoomSettings: ChangeRoomSettingsUseCase;
-  readonly #addDilemma: AddDilemmaUseCase;
-  readonly #removeAddedDilemma: RemoveAddedDilemmaUseCase;
+  readonly #chooseRoundDilemma: ChooseRoundDilemmaUseCase;
+  readonly #clearRoundDilemma: ClearRoundDilemmaUseCase;
   readonly #searchDilemmas: SearchDilemmasUseCase;
-  readonly #pickDilemmas: PickDilemmasUseCase;
   readonly #expelPlayer: ExpelPlayerUseCase;
   readonly #startGame: StartGameUseCase;
   readonly #answerDilemma: AnswerDilemmaUseCase;
@@ -338,11 +367,10 @@ export class AcceptanceDriver implements GameDriver {
     });
     this.#getRoomState = new GetRoomStateUseCase(rooms, catalog);
     this.#changeAvatar = new ChangeAvatarUseCase(rooms, notifier);
-    this.#changeRoomSettings = new ChangeRoomSettingsUseCase(rooms, notifier);
-    this.#addDilemma = new AddDilemmaUseCase(rooms, catalog, notifier);
-    this.#removeAddedDilemma = new RemoveAddedDilemmaUseCase(rooms, notifier);
+    this.#changeRoomSettings = new ChangeRoomSettingsUseCase(rooms, catalog, notifier);
+    this.#chooseRoundDilemma = new ChooseRoundDilemmaUseCase(rooms, catalog, notifier);
+    this.#clearRoundDilemma = new ClearRoundDilemmaUseCase(rooms, notifier);
     this.#searchDilemmas = new SearchDilemmasUseCase(rooms, catalog);
-    this.#pickDilemmas = new PickDilemmasUseCase(rooms, catalog, notifier);
     this.#expelPlayer = new ExpelPlayerUseCase(rooms, notifier);
     this.#startGame = new StartGameUseCase(
       {
@@ -649,44 +677,99 @@ export class AcceptanceDriver implements GameDriver {
     );
   }
 
-  async addDilemma(player: string): Promise<void> {
-    await this.#add(player, await this.#notYetAdded(player));
+  async roundsSeenBy(viewer: string): Promise<RoundView[]> {
+    return (await this.#screenOf(viewer)).rounds.map(roundViewOf);
   }
 
-  async tryToAddAnotherDilemma(player: string): Promise<boolean> {
-    const another = await this.#notYetAdded(player);
-    return this.#accepts(() => this.#add(player, another), TooManyAddedDilemmasError);
+  /** As the screen does: each round keeps its id in its position, and those beyond are new. */
+  async setRounds(host: string, rounds: readonly RoundSetting[]): Promise<void> {
+    const current = (await this.#roomStateOf(host)).rounds;
+    await this.#changeRounds(
+      host,
+      rounds.map((round, index) => {
+        const id = current[index]?.roundId;
+        return id === undefined ? round : { ...round, id };
+      }),
+    );
   }
 
-  async addedDilemmasSeenBy(viewer: string): Promise<string[]> {
-    const { addedDilemmas } = await this.#roomStateOf(viewer);
-    return addedDilemmas.map(({ dilemmaId }) => dilemmaId);
+  async tryToSetRound(host: string, round: number, setting: RoundSetting): Promise<boolean> {
+    const rounds = (await this.#roomStateOf(host)).rounds;
+    const id = this.#roundAt(rounds, round).roundId;
+    const changes = rounds.map((other) =>
+      other.roundId === id ? { ...setting, id } : roundChangeOf(other),
+    );
+    return this.#accepts(
+      () => this.#changeRounds(host, changes),
+      DuplicateDilemmaError,
+      DilemmaNotSuitableError,
+      InvalidRoomSettingError,
+    );
   }
 
-  async authorsOfAddedDilemmasSeenBy(viewer: string): Promise<string[]> {
-    const { addedDilemmas, players } = await this.#roomStateOf(viewer);
-    const seen = JSON.stringify(addedDilemmas);
+  async tryToAddRound(host: string): Promise<boolean> {
+    const rounds = (await this.#roomStateOf(host)).rounds.map(roundChangeOf);
+    return this.#accepts(
+      () => this.#changeRounds(host, [...rounds, { origin: 'random', categories: null }]),
+      InvalidRoomSettingError,
+    );
+  }
+
+  async tryToRemoveRound(host: string, round: number): Promise<boolean> {
+    const rounds = (await this.#roomStateOf(host)).rounds;
+    const { roundId } = this.#roundAt(rounds, round);
+    const changes = rounds.filter((other) => other.roundId !== roundId).map(roundChangeOf);
+    return this.#accepts(() => this.#changeRounds(host, changes), InvalidRoomSettingError);
+  }
+
+  async chooseRoundDilemma(player: string, round: number, dilemmaId: string): Promise<boolean> {
+    const { roundId } = this.#roundAt((await this.#roomStateOf(player)).rounds, round);
+    return this.#accepts(
+      () =>
+        this.#chooseRoundDilemma.execute({
+          roomId: this.#currentRoomId(),
+          playerId: this.#playerIdOf(player),
+          roundId,
+          dilemmaId,
+        }),
+      RoundTakenError,
+      RoundNotForPlayersError,
+      DuplicateDilemmaError,
+      DilemmaNotSuitableError,
+    );
+  }
+
+  /** The screen offers to choose the dilemma of a round the state shows as the players' and empty. */
+  async canChooseRoundDilemma(player: string, round: number): Promise<boolean> {
+    const seen = this.#roundAt((await this.#screenOf(player)).rounds, round);
+    return seen.origin === 'players' && seen.dilemma === null;
+  }
+
+  async clearRoundDilemma(player: string, round: number): Promise<void> {
+    const { roundId } = this.#roundAt((await this.#roomStateOf(player)).rounds, round);
+    await this.#clearRoundDilemma.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+      roundId,
+    });
+  }
+
+  /** The screen offers to take out the dilemma of a round to whoever the state says chose it. */
+  async canClearRoundDilemma(player: string, round: number): Promise<boolean> {
+    const seen = this.#roundAt((await this.#screenOf(player)).rounds, round);
+    return seen.origin === 'players' && seen.dilemma !== null && seen.chosenByYou;
+  }
+
+  /**
+   * Anyone whose id or nickname is in what the viewer has of the rounds. That a dilemma is theirs
+   * only tells the one who chose it what they already know.
+   */
+  async choosersSeenBy(viewer: string): Promise<string[]> {
+    const { rounds, players } = await this.#screenOf(viewer);
+    const seen = JSON.stringify(rounds);
     return players
       .filter(({ playerId, nickname }) => seen.includes(playerId) || seen.includes(nickname))
       .map(({ nickname }) => nickname);
-  }
-
-  /** What the screen offers to remove: every added dilemma to the host, their own to the rest. */
-  async removeAddedDilemma(player: string): Promise<void> {
-    const state = await this.#roomStateOf(player);
-    const removable =
-      state.hostId === state.playerId
-        ? state.addedDilemmas.map(({ dilemmaId }) => dilemmaId)
-        : state.ownAddedDilemmaIds;
-    const [dilemmaId] = removable;
-    if (!dilemmaId) {
-      throw new Error(`The scenario has ${player} remove a dilemma, but none is theirs`);
-    }
-    await this.#removeAddedDilemma.execute({
-      roomId: this.#currentRoomId(),
-      playerId: this.#playerIdOf(player),
-      dilemmaId,
-    });
   }
 
   async searchDilemmas(player: string, text?: string): Promise<string[]> {
@@ -712,24 +795,6 @@ export class AcceptanceDriver implements GameDriver {
       after = next;
     }
     return found;
-  }
-
-  async pickDilemmas(host: string, dilemmaIds: string[]): Promise<void> {
-    await this.#pickDilemmas.execute({
-      roomId: this.#currentRoomId(),
-      playerId: this.#playerIdOf(host),
-      dilemmaIds,
-    });
-  }
-
-  /** Picking none is how the screen goes back to a game by categories. */
-  async playByCategories(host: string): Promise<void> {
-    await this.pickDilemmas(host, []);
-  }
-
-  async pickedDilemmasSeenBy(viewer: string): Promise<string[]> {
-    const { pickedDilemmas } = await this.#roomStateOf(viewer);
-    return pickedDilemmas.map(({ dilemmaId }) => dilemmaId);
   }
 
   catalogEntryOf(dilemmaId: string): CatalogEntry {
@@ -774,18 +839,19 @@ export class AcceptanceDriver implements GameDriver {
     return game.settings;
   }
 
-  newDilemmasSetForGamesOf(dilemmaCount: number): number {
-    return explorationSlotsFor(dilemmaCount);
+  newDilemmasSetForRandomRounds(count: number): number {
+    return explorationSlotsFor(count);
   }
 
   // Rounds
 
   async startDecisionPhase(dilemmaCount?: number): Promise<void> {
     const host = this.#hostName();
-    const { pickedDilemmas, addedDilemmas } = await this.#roomStateOf(host);
-    if (dilemmaCount !== undefined && pickedDilemmas.length === 0 && addedDilemmas.length === 0) {
-      await this.pickDilemmas(host, TWO_OPTION_DILEMMA_IDS.slice(0, dilemmaCount));
-    }
+    const rounds =
+      dilemmaCount === undefined
+        ? undefined
+        : roundsForAGameOf(await this.roundsSeenBy(host), dilemmaCount);
+    if (rounds) await this.setRounds(host, rounds);
     await this.startGame(host);
 
     // Every player has the game open, as their device would after the game starts.
@@ -1153,16 +1219,22 @@ export class AcceptanceDriver implements GameDriver {
       groupNature: DEFAULT_CHOICES.groupNature,
       place: DEFAULT_CHOICES.place,
       dilemmaLanguage: preview.language,
-      firstDilemmaId: preview.dilemmaId,
+      firstRoundDilemmaId: preview.dilemmaId,
     });
     this.#visitorRoomId = roomId;
   }
 
-  async firstDilemmaOfTheVisitorRoom(): Promise<string | undefined> {
+  /** What the screen gets of the dilemma the visitor came from, before the room exists. */
+  async startingDilemmaShownToTheVisitor(): Promise<string | undefined> {
+    return this.#dilemmaToPlay?.name;
+  }
+
+  async firstRoundDilemmaOfTheVisitorRoom(): Promise<string | undefined> {
     const room = this.#visitorRoomId && (await this.#roomRepository.findById(this.#visitorRoomId));
-    const first = room ? room.firstDilemma?.dilemmaId : undefined;
-    const curated = this.#curatedCatalog.approved.find(({ number }) => `dlm-${number}` === first);
-    return curated?.name;
+    const [first] = room ? room.settings.rounds : [];
+    if (first?.origin !== 'specific') return undefined;
+    const { dilemmaId } = first.dilemma;
+    return this.#curatedCatalog.approved.find(({ number }) => `dlm-${number}` === dilemmaId)?.name;
   }
 
   /** The page of the dilemma of the public web in that language, as the job generated it. */
@@ -1329,12 +1401,12 @@ export class AcceptanceDriver implements GameDriver {
     );
   }
 
-  async positionAddedBy(player: string): Promise<number> {
+  async positionChosenBy(player: string): Promise<number> {
     const playerId = this.#playerIdOf(player);
     const index = (await this.#currentGame()).dilemmas.findIndex(
-      ({ addedBy }) => addedBy === playerId,
+      ({ chosenBy }) => chosenBy === playerId,
     );
-    if (index === -1) throw new Error(`${player} added no dilemma of the game`);
+    if (index === -1) throw new Error(`${player} chose no dilemma of the game`);
     return index + 1;
   }
 
@@ -1466,7 +1538,7 @@ export class AcceptanceDriver implements GameDriver {
         right,
       })),
       personInTheGap: reveal.personInTheGap && this.#nameOf(reveal.personInTheGap),
-      addedBy: reveal.addedBy && this.#nameOf(reveal.addedBy),
+      chosenBy: reveal.chosenBy && this.#nameOf(reveal.chosenBy),
       showsPoints: /points/i.test(JSON.stringify(reveal)),
     };
   }
@@ -1644,20 +1716,19 @@ export class AcceptanceDriver implements GameDriver {
     return option.optionId;
   }
 
-  /** A dilemma of the catalog suitable for the room that nobody added yet. */
-  async #notYetAdded(player: string): Promise<string> {
-    const added = new Set(await this.addedDilemmasSeenBy(player));
-    const dilemmaId = (await this.searchDilemmas(player)).find((id) => !added.has(id));
-    if (!dilemmaId) throw new Error('The catalog has no other dilemma suitable for the room');
-    return dilemmaId;
-  }
-
-  async #add(player: string, dilemmaId: string): Promise<void> {
-    await this.#addDilemma.execute({
+  async #changeRounds(player: string, rounds: readonly RoundChange[]): Promise<void> {
+    await this.#changeRoomSettings.execute({
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(player),
-      dilemmaId,
+      changes: { rounds },
     });
+  }
+
+  /** The scenario counts rounds from 1, as people do. */
+  #roundAt(rounds: readonly LobbyRound[], round: number): LobbyRound {
+    const found = rounds[round - 1];
+    if (!found) throw new Error(`The room has no round ${round}`);
+    return found;
   }
 
   async #expel(host: string, player: string): Promise<void> {

@@ -1,5 +1,12 @@
 import type { RoomStateDto } from '@thelever-app/protocol';
 
+/** The rounds of a new room: 8 random ones from every category. */
+export const DEFAULT_ROUNDS: RoomStateDto['rounds'] = Array.from({ length: 8 }, (_, index) => ({
+  roundId: index + 1,
+  origin: 'random',
+  categories: null,
+}));
+
 /** Ana hosts a lobby with Luis and Marta, with the default configuration. */
 export function aRoom(overrides: Partial<RoomStateDto> = {}): RoomStateDto {
   return {
@@ -15,12 +22,10 @@ export function aRoom(overrides: Partial<RoomStateDto> = {}): RoomStateDto {
       variant: 'nominal',
       adultsOnly: false,
       dilemmaLanguage: 'es',
-      categories: null,
-      dilemmaCount: 8,
       timePerDilemmaSeconds: 60,
       newDilemmas: true,
-      dilemmasPerPlayer: 0,
     },
+    rounds: DEFAULT_ROUNDS,
     minimumPlayers: 2,
     players: [
       {
@@ -42,9 +47,6 @@ export function aRoom(overrides: Partial<RoomStateDto> = {}): RoomStateDto {
         connected: true,
       },
     ],
-    addedDilemmas: [],
-    ownAddedDilemmaIds: [],
-    pickedDilemmas: [],
     currentGameId: null,
     ...overrides,
   };

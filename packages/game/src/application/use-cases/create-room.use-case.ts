@@ -22,8 +22,8 @@ export interface CreateRoomInput {
   readonly place: string;
   /** The language of the device of the host or, with a first dilemma, the language of that dilemma. */
   readonly dilemmaLanguage: string;
-  /** A dilemma of the general catalog in that language, which the first game plays first. */
-  readonly firstDilemmaId?: string;
+  /** A dilemma of the general catalog in that language, for the first round, specific. */
+  readonly firstRoundDilemmaId?: string;
 }
 
 export interface CreateRoomOutput {
@@ -34,7 +34,7 @@ export interface CreateRoomOutput {
 
 /**
  * A player creates a room, with a code no other room has, and becomes its host; from the public page
- * of a dilemma, a room whose first game starts with it.
+ * of a dilemma, a room whose first round is that dilemma.
  */
 export class CreateRoomUseCase {
   readonly #roomRepository: RoomRepository;
@@ -57,17 +57,19 @@ export class CreateRoomUseCase {
     this.#clock = clock;
   }
 
-  async execute({ firstDilemmaId, ...input }: CreateRoomInput): Promise<CreateRoomOutput> {
-    const [firstDilemma] =
-      firstDilemmaId === undefined
+  async execute({ firstRoundDilemmaId, ...input }: CreateRoomInput): Promise<CreateRoomOutput> {
+    const [firstRoundDilemma] =
+      firstRoundDilemmaId === undefined
         ? []
-        : await findLobbyDilemmas(this.#dilemmaCatalog, input.dilemmaLanguage, [firstDilemmaId]);
+        : await findLobbyDilemmas(this.#dilemmaCatalog, input.dilemmaLanguage, [
+            firstRoundDilemmaId,
+          ]);
     const code = await this.#freeCode();
     const { face, color } = input.hostAvatar;
     const hostAvatar = new AvatarVO(face, color);
     const createdAt = this.#clock.now();
     const room = Room.create(
-      { ...input, hostAvatar, code, createdAt, ...(firstDilemma && { firstDilemma }) },
+      { ...input, hostAvatar, code, createdAt, ...(firstRoundDilemma && { firstRoundDilemma }) },
       this.#idGenerator,
     );
 

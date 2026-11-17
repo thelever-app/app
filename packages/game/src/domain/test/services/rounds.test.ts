@@ -54,8 +54,8 @@ function roomAndGame(): { room: Room; game: Game } {
         version: 1,
         optionIds: ['TestPull', 'TestWait'],
         hasGap: false,
-        origin: 'picked-by-the-system' as const,
-        addedBy: null,
+        origin: 'random' as const,
+        chosenBy: null,
       })),
       settings: {
         variant: 'anonymous',

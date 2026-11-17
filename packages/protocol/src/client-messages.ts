@@ -8,7 +8,7 @@ import { z } from 'zod';
  * before entering: an avatar is refused only to someone with the same nickname. 7 since joining
  * a game in progress: a dilemma already revealed when the player joined is "did not vote" too.
  */
-export const CONTRACT_VERSION = 7;
+export const CONTRACT_VERSION = 8;
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a
@@ -67,20 +67,43 @@ export const GroupNatureDto = z.enum(['family', 'friends', 'work', 'mixed']);
 /** Whether the group plays in the same place or remotely. */
 export const PlaceDto = z.enum(['together', 'remote']);
 
-/** The configuration of a room, which the game copies when it starts. */
+/** The configuration of a room apart from its rounds, which the game copies when it starts. */
 export const RoomSettingsDto = z.strictObject({
   variant: z.enum(['nominal', 'anonymous']),
   adultsOnly: z.boolean(),
   dilemmaLanguage: LanguageDto,
-  /** Null plays every category, and an empty list none, so only the dilemmas the players add. */
-  categories: z.array(CategoryDto).max(CategoryDto.options.length).nullable(),
-  dilemmaCount: z.union([z.literal(6), z.literal(8), z.literal(10), z.literal(12)]),
   timePerDilemmaSeconds: z.union([z.literal(30), z.literal(45), z.literal(60), z.literal(90)]),
-  /** Whether a game by categories keeps room for dilemmas in exploration. */
+  /** Whether the random rounds keep room for dilemmas in exploration. */
   newDilemmas: z.boolean(),
-  /** How many dilemmas each player, the host too, may add in the lobby; none, and nobody adds any. */
-  dilemmasPerPlayer: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
 });
+
+/** The id of a round in its room, which it keeps when the host adds or removes others. */
+export const RoundIdDto = z.number().int().positive().max(32_767);
+
+/** A game plays from 1 to 12 rounds. */
+export const MAXIMUM_ROUNDS = 12;
+
+/** The categories of a random round: one, several or all; null, every one. */
+export const RoundCategoriesDto = z
+  .array(CategoryDto)
+  .min(1)
+  .max(CategoryDto.options.length)
+  .nullable();
+
+/** A round as the host sets it, with where its dilemma comes from; one without an id is a new one. */
+export const RoundSettingsDto = z.discriminatedUnion('origin', [
+  z.strictObject({
+    id: RoundIdDto.optional(),
+    origin: z.literal('random'),
+    categories: RoundCategoriesDto,
+  }),
+  z.strictObject({
+    id: RoundIdDto.optional(),
+    origin: z.literal('specific'),
+    dilemmaId: z.string().min(1).max(200),
+  }),
+  z.strictObject({ id: RoundIdDto.optional(), origin: z.literal('players') }),
+]);
 
 /**
  * The W3C trace context of a command, so its trace starts on the device that sent it. Only ids
@@ -174,29 +197,25 @@ export const ChangeAvatarDto = z.strictObject({
 /** The host changes some of the configuration of the room, before the game starts. */
 export const ChangeSettingsDto = z.strictObject({
   type: z.literal('change-settings'),
-  /** Only what changes; at least one part. */
-  changes: RoomSettingsDto.partial().refine((changes) => Object.keys(changes).length > 0),
+  /** Only what changes, the rounds whole; at least one part. */
+  changes: RoomSettingsDto.partial()
+    .extend({ rounds: z.array(RoundSettingsDto).min(1).max(MAXIMUM_ROUNDS).optional() })
+    .refine((changes) => Object.keys(changes).length > 0),
   traceparent: TraceparentDto.optional(),
 });
 
-/** The host picks the dilemmas of the game one by one; none, and the game goes by categories. */
-export const PickDilemmasDto = z.strictObject({
-  type: z.literal('pick-dilemmas'),
-  dilemmaIds: z.array(z.string().min(1)).max(50),
+/** A player, the host too, chooses a dilemma of the catalog for an empty round of the players. */
+export const ChooseRoundDilemmaDto = z.strictObject({
+  type: z.literal('choose-round-dilemma'),
+  roundId: RoundIdDto,
+  dilemmaId: z.string().min(1).max(200),
   traceparent: TraceparentDto.optional(),
 });
 
-/** A player adds a dilemma of the catalog, up to as many as the host allows each one. */
-export const AddDilemmaDto = z.strictObject({
-  type: z.literal('add-dilemma'),
-  dilemmaId: z.string().min(1),
-  traceparent: TraceparentDto.optional(),
-});
-
-/** The host removes a dilemma a player added, without knowing who; a player, one they added. */
-export const RemoveAddedDilemmaDto = z.strictObject({
-  type: z.literal('remove-added-dilemma'),
-  dilemmaId: z.string().min(1),
+/** The player who chose the dilemma of a round of the players takes it out. */
+export const ClearRoundDilemmaDto = z.strictObject({
+  type: z.literal('clear-round-dilemma'),
+  roundId: RoundIdDto,
   traceparent: TraceparentDto.optional(),
 });
 
@@ -219,9 +238,8 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   AnswerDilemmaDto,
   ChangeAvatarDto,
   ChangeSettingsDto,
-  PickDilemmasDto,
-  AddDilemmaDto,
-  RemoveAddedDilemmaDto,
+  ChooseRoundDilemmaDto,
+  ClearRoundDilemmaDto,
   ExpelPlayerDto,
   StartGameDto,
   RevealEarlyDto,
@@ -237,9 +255,8 @@ export const ClientMessageTypeDto = z.enum([
   'answer-dilemma',
   'change-avatar',
   'change-settings',
-  'pick-dilemmas',
-  'add-dilemma',
-  'remove-added-dilemma',
+  'choose-round-dilemma',
+  'clear-round-dilemma',
   'expel-player',
   'start-game',
   'reveal-early',
@@ -259,9 +276,10 @@ export type PlaceDto = z.infer<typeof PlaceDto>;
 export type RoomSettingsDto = z.infer<typeof RoomSettingsDto>;
 export type ChangeAvatarDto = z.infer<typeof ChangeAvatarDto>;
 export type ChangeSettingsDto = z.infer<typeof ChangeSettingsDto>;
-export type PickDilemmasDto = z.infer<typeof PickDilemmasDto>;
-export type AddDilemmaDto = z.infer<typeof AddDilemmaDto>;
-export type RemoveAddedDilemmaDto = z.infer<typeof RemoveAddedDilemmaDto>;
+export type RoundSettingsDto = z.infer<typeof RoundSettingsDto>;
+export type RoundCategoriesDto = z.infer<typeof RoundCategoriesDto>;
+export type ChooseRoundDilemmaDto = z.infer<typeof ChooseRoundDilemmaDto>;
+export type ClearRoundDilemmaDto = z.infer<typeof ClearRoundDilemmaDto>;
 export type ExpelPlayerDto = z.infer<typeof ExpelPlayerDto>;
 export type StartGameDto = z.infer<typeof StartGameDto>;
 export type ConnectDto = z.infer<typeof ConnectDto>;

@@ -112,6 +112,65 @@ describe('SimulatedRoomConnection', () => {
       expect(lastLobby(opened.received).settings.variant).toBe('anonymous');
     });
 
+    it('should change the rounds the host sets, new ones with an id of their own', async () => {
+      // Arrange
+      const opened = await openAndSubscribe();
+      connection = opened.connection;
+      const [first] = (await connection.searchDilemmas({})).dilemmas;
+
+      // Act
+      connection.send({
+        type: 'change-settings',
+        changes: {
+          rounds: [
+            { id: 1, origin: 'specific', dilemmaId: first!.dilemmaId },
+            { origin: 'players' },
+          ],
+        },
+      });
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Assert
+      expect(lastLobby(opened.received).rounds).toEqual([
+        {
+          roundId: 1,
+          origin: 'specific',
+          dilemma: { dilemmaId: first!.dilemmaId, text: first!.text },
+        },
+        { roundId: 9, origin: 'players', dilemma: null, chosenByYou: false },
+      ]);
+    });
+
+    it('should let the player choose the dilemma of a round of the players, and take it out', async () => {
+      // Arrange
+      const opened = await openAndSubscribe();
+      connection = opened.connection;
+      const [first] = (await connection.searchDilemmas({})).dilemmas;
+      connection.send({
+        type: 'change-settings',
+        changes: { rounds: [{ id: 1, origin: 'players' }] },
+      });
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Act
+      connection.send({ type: 'choose-round-dilemma', roundId: 1, dilemmaId: first!.dilemmaId });
+      await vi.advanceTimersByTimeAsync(0);
+      const [chosen] = lastLobby(opened.received).rounds;
+      connection.send({ type: 'clear-round-dilemma', roundId: 1 });
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Assert
+      expect(chosen).toEqual({
+        roundId: 1,
+        origin: 'players',
+        dilemma: { dilemmaId: first!.dilemmaId, text: first!.text },
+        chosenByYou: true,
+      });
+      expect(lastLobby(opened.received).rounds).toEqual([
+        { roundId: 1, origin: 'players', dilemma: null, chosenByYou: false },
+      ]);
+    });
+
     it('should find the dilemmas of its catalog', async () => {
       // Arrange
       const opened = await openAndSubscribe();

@@ -8,20 +8,26 @@ import { namesakesOf } from '../avatar/namesakes.ts';
 import { Icon } from '../components/icon.tsx';
 import { useLobby } from '../room/room-provider.tsx';
 import { useMuted } from '../sound/sound-context.tsx';
+import { DilemmaText } from '../game/dilemma-text.tsx';
 import { useLeavingPlayers } from './leaving-players.ts';
-import { AddDilemmaSheet } from './add-dilemma-sheet.tsx';
 import { AvatarPickerSheet } from './avatar-picker-sheet.tsx';
+import type { Category } from './categories.ts';
 import { ExpelSheet } from './expel-sheet.tsx';
 import { shareInvitation, spelled } from './invitation.ts';
-import { PickDilemmasSheet } from './pick-dilemmas-sheet.tsx';
+import { PickRoundDilemmaSheet } from './pick-round-dilemma-sheet.tsx';
 import { QrScreen } from './qr-screen.tsx';
 import { RoomSettingsSheet } from './room-settings-sheet.tsx';
+import { dilemmaOf, type RoundRow, roundNumbersByDilemma, roundRows } from './rounds.ts';
 import styles from './lobby-screen.module.css';
 import { HOME_PATH } from '../home-path.ts';
 
 type Open =
-  | { readonly sheet: 'none' | 'settings' | 'pick' | 'add' | 'avatar' | 'qr' }
-  | { readonly sheet: 'expel'; readonly playerId: string };
+  | { readonly sheet: 'none' | 'settings' | 'avatar' | 'qr' }
+  | { readonly sheet: 'expel'; readonly playerId: string }
+  | { readonly sheet: 'choose'; readonly roundId: number };
+
+/** The commands whose rejection the lobby explains above its action. */
+const EXPLAINED = ['start-game', 'change-avatar', 'choose-round-dilemma', 'clear-round-dilemma'];
 
 /**
  * The lobby: the code to invite with, the configuration, who is in the room and, for the host,
@@ -51,6 +57,14 @@ export function LobbyScreen() {
 
   const expelled =
     open.sheet === 'expel' && lobby.players.find((p) => p.playerId === open.playerId);
+  // Only while the round is still empty and of the players: once someone fills it, it closes.
+  const choosing =
+    open.sheet === 'choose'
+      ? lobby.rounds.find(
+          (round) =>
+            round.roundId === open.roundId && round.origin === 'players' && round.dilemma === null,
+        )
+      : undefined;
 
   return (
     <div className={styles.screen}>
@@ -108,12 +122,10 @@ export function LobbyScreen() {
           <div className={styles.summaryRow}>
             <span className={styles.summaryText}>
               <span className={styles.summaryDilemmas} data-testid="room-dilemmas">
-                {lobby.pickedDilemmas.length > 0
-                  ? t('lobby.pickedCount', { count: lobby.pickedDilemmas.length })
-                  : categoriesOf(settings, t)}
+                {t('lobby.roundCount', { count: lobby.rounds.length })}
               </span>
               <span className={styles.muted} data-testid="room-settings">
-                {summaryOf(settings, lobby.groupNature, lobby.pickedDilemmas.length > 0, t)}
+                {summaryOf(settings, t)}
                 {settings.adultsOnly && ` · ${t('lobby.adultsOnly')}`}
               </span>
             </span>
@@ -136,54 +148,28 @@ export function LobbyScreen() {
           </div>
         )}
 
-        {lobby.pickedDilemmas.length > 0 && (
-          <section className={styles.dilemmas} aria-labelledby="picked-dilemmas">
-            <h2 id="picked-dilemmas" className={styles.signage}>
-              {t('lobby.picked.title', { count: lobby.pickedDilemmas.length })}
-            </h2>
-            {lobby.pickedDilemmas.map(({ dilemmaId, text }) => (
-              <div key={dilemmaId} className={styles.dilemma}>
-                <span className={styles.dilemmaText}>{text}</span>
-              </div>
+        <section className={styles.rounds} aria-labelledby="lobby-rounds">
+          <h2 id="lobby-rounds" className={styles.signage}>
+            {t('lobby.rounds.title', { count: lobby.rounds.length })}
+          </h2>
+          <ol className={styles.roundList}>
+            {roundRows(lobby.rounds).map((row) => (
+              <RoundRowItem
+                key={row.round.roundId}
+                row={row}
+                hostName={host?.nickname ?? ''}
+                isHost={isHost}
+                onChoose={() => setOpen({ sheet: 'choose', roundId: row.round.roundId })}
+                onClear={() => send({ type: 'clear-round-dilemma', roundId: row.round.roundId })}
+              />
             ))}
-          </section>
-        )}
-
-        {isHost && lobby.addedDilemmas.length > 0 && (
-          <section className={styles.dilemmas} aria-labelledby="added-dilemmas">
-            <h2 id="added-dilemmas" className={styles.signage}>
-              {t('lobby.added.title', {
-                count: lobby.addedDilemmas.length,
-                total: settings.dilemmaCount,
-              })}
-            </h2>
-            {lobby.addedDilemmas.map(({ dilemmaId, text }) => (
-              <div key={dilemmaId} className={styles.dilemma}>
-                <span className={styles.dilemmaText}>{text}</span>
-                <button
-                  type="button"
-                  className={styles.iconButton}
-                  aria-label={t('lobby.added.remove')}
-                  onClick={() => send({ type: 'remove-added-dilemma', dilemmaId })}
-                >
-                  <Icon name="close" size={20} />
-                </button>
-              </div>
-            ))}
-            <span className={styles.caption}>{t('lobby.added.hint')}</span>
-          </section>
-        )}
-
-        {settings.dilemmasPerPlayer > 0 && (
-          <AddCard
-            own={lobby.addedDilemmas.filter(({ dilemmaId }) =>
-              lobby.ownAddedDilemmaIds.includes(dilemmaId),
-            )}
-            allowed={settings.dilemmasPerPlayer}
-            onAdd={() => setOpen({ sheet: 'add' })}
-            onRemove={(dilemmaId) => send({ type: 'remove-added-dilemma', dilemmaId })}
-          />
-        )}
+          </ol>
+          <span className={styles.caption}>
+            {lobby.rounds.some(({ origin }) => origin === 'players')
+              ? t('lobby.rounds.secretHint')
+              : t('lobby.rounds.hint')}
+          </span>
+        </section>
 
         <section className={styles.players} aria-labelledby="players-in-room">
           <h2 id="players-in-room" className={styles.signage}>
@@ -265,7 +251,7 @@ export function LobbyScreen() {
       </main>
 
       <footer className={styles.footer}>
-        {(rejection?.command === 'start-game' || rejection?.command === 'change-avatar') && (
+        {rejection?.command && EXPLAINED.includes(rejection.command) && (
           <p role="alert" className={styles.rejection}>
             {t(`roomErrors.${rejection.code}`, { defaultValue: t('roomErrors.unknown') })}
           </p>
@@ -284,29 +270,23 @@ export function LobbyScreen() {
         )}
       </footer>
 
-      {/* Picking dilemmas opens over the settings, which keep what the host changed meanwhile. */}
-      {(open.sheet === 'settings' || open.sheet === 'pick') && (
+      {open.sheet === 'settings' && (
         <RoomSettingsSheet
+          roomId={lobby.roomId}
           settings={settings}
-          pickedCount={lobby.pickedDilemmas.length}
+          rounds={lobby.rounds}
           onSave={(changes) => send({ type: 'change-settings', changes })}
-          onPlayByCategories={() => send({ type: 'pick-dilemmas', dilemmaIds: [] })}
-          onPickDilemmas={() => setOpen({ sheet: 'pick' })}
           onClose={close}
         />
       )}
-      {open.sheet === 'pick' && (
-        <PickDilemmasSheet
+      {choosing && (
+        <PickRoundDilemmaSheet
           roomId={lobby.roomId}
-          picked={lobby.pickedDilemmas.map(({ dilemmaId }) => dilemmaId)}
-          onPick={(dilemmaIds) => send({ type: 'pick-dilemmas', dilemmaIds: [...dilemmaIds] })}
-          onClose={() => setOpen({ sheet: 'settings' })}
-        />
-      )}
-      {open.sheet === 'add' && (
-        <AddDilemmaSheet
-          roomId={lobby.roomId}
-          onAdd={(dilemmaId) => send({ type: 'add-dilemma', dilemmaId })}
+          roundNumber={lobby.rounds.indexOf(choosing) + 1}
+          taken={roundNumbersByDilemma(lobby.rounds.map((round) => dilemmaOf(round)?.dilemmaId))}
+          onPick={({ dilemmaId }) =>
+            send({ type: 'choose-round-dilemma', roundId: choosing.roundId, dilemmaId })
+          }
           onClose={close}
         />
       )}
@@ -335,68 +315,110 @@ export function LobbyScreen() {
 
 type Translate = ReturnType<typeof useTranslation>['t'];
 
-/** «Todas las categorías», «Ninguna categoría», «Honestidad» or «3 categorías». */
-function categoriesOf({ categories }: RoomSettingsDto, t: Translate): string {
-  if (categories === null) return t('lobby.categories.all');
-  const [only] = categories;
-  if (only === undefined) return t('lobby.categories.none');
-  if (categories.length === 1 && only) return t(`categories.${only}`);
-  return t('lobby.categories.some', { count: categories.length });
-}
-
-/** «8 dilemas · 60 s por dilema · Español · Amigos»; with dilemmas picked, they say how many there are. */
-function summaryOf(
-  settings: RoomSettingsDto,
-  groupNature: string,
-  picked: boolean,
-  t: Translate,
-): string {
-  const values = {
-    count: settings.dilemmaCount,
+/** «60 s por dilema · Español». */
+function summaryOf(settings: RoomSettingsDto, t: Translate): string {
+  return t('lobby.summary', {
     seconds: settings.timePerDilemmaSeconds,
     language: t(`languages.${settings.dilemmaLanguage}`),
-    nature: t(`createRoom.groupNature.${groupNature as 'friends'}`),
-  };
-  return picked ? t('lobby.summaryPicked', values) : t('lobby.summary', values);
+  });
 }
 
-interface AddCardProps {
-  /** The dilemmas the player using the screen added. */
-  readonly own: readonly { readonly dilemmaId: string; readonly text: string }[];
-  /** How many each player may add. */
-  readonly allowed: number;
-  readonly onAdd: () => void;
-  readonly onRemove: (dilemmaId: string) => void;
+/** «Todas las categorías», «Honestidad», «Honestidad o Lealtad» or «3 categorías». */
+function categoriesOf(categories: readonly Category[] | null, t: Translate): string {
+  if (categories === null) return t('lobby.rounds.allCategories');
+  const [first, second] = categories.map((category) => t(`categories.${category}`));
+  if (categories.length === 1) return first ?? '';
+  if (categories.length === 2) return t('lobby.rounds.twoCategories', { first, second });
+  return t('lobby.rounds.someCategories', { count: categories.length });
 }
 
-/** Each player, the host too, adds dilemmas up to what the room allows, and removes their own. */
-function AddCard({ own, allowed, onAdd, onRemove }: AddCardProps) {
+/** How many of them, and from which categories: all, this one or these. */
+function randomMeta(categories: readonly Category[] | null, count: number, t: Translate): string {
+  const from = categories === null ? 'All' : categories.length === 1 ? 'One' : 'Some';
+  return count > 1
+    ? t(`lobby.rounds.randomGroup${from}`, { count })
+    : t(`lobby.rounds.random${from}`);
+}
+
+interface RoundRowItemProps {
+  readonly row: RoundRow;
+  /** The host, who chose the dilemma of each specific round. */
+  readonly hostName: string;
+  readonly isHost: boolean;
+  readonly onChoose: () => void;
+  readonly onClear: () => void;
+}
+
+/**
+ * A round of the lobby, or several random ones of the same categories in a row. Everyone sees the
+ * dilemma of a round once it has one, never who of the players chose it: only that player can take
+ * it out.
+ */
+function RoundRowItem({ row, hostName, isHost, onChoose, onClear }: RoundRowItemProps) {
   const { t } = useTranslation();
+  const { from, to, round } = row;
+  const someone = t('pickDilemmas.someone');
+  const number = from === to ? `${from}` : `${from}–${to}`;
+  const icon =
+    round.origin === 'random'
+      ? 'shuffle'
+      : round.origin === 'specific'
+        ? 'pushPin'
+        : 'groupsOutline';
+  const dilemma = dilemmaOf(round);
+
+  const title = dilemma ? (
+    <span className={styles.roundDilemma}>
+      <DilemmaText text={dilemma.text} personInTheGap={someone} />
+    </span>
+  ) : (
+    <span className={styles.roundTitle}>
+      {round.origin === 'random'
+        ? categoriesOf(round.categories, t)
+        : t('lobby.rounds.playersEmpty')}
+    </span>
+  );
+  const meta =
+    round.origin === 'random'
+      ? randomMeta(round.categories, to - from + 1, t)
+      : round.origin === 'specific'
+        ? isHost
+          ? t('lobby.rounds.chosenByYou')
+          : t('lobby.rounds.chosenBy', { name: hostName })
+        : round.dilemma === null
+          ? t('lobby.rounds.playersEmptyMeta')
+          : round.chosenByYou
+            ? t('lobby.rounds.chosenByYou')
+            : t('lobby.rounds.chosenByPlayer');
+
   return (
-    <section className={styles.addCard} aria-labelledby="add-dilemma">
-      <h2 id="add-dilemma" className={styles.addTitle}>
-        {t('lobby.add.title')}
-      </h2>
-      <span>{t('lobby.add.count', { count: own.length, total: allowed })}</span>
-      {own.map(({ dilemmaId, text }) => (
-        <div key={dilemmaId} className={styles.ownDilemma}>
-          <span className={styles.ownDilemmaText}>{text}</span>
-          <button
-            type="button"
-            className={styles.ownRemove}
-            aria-label={t('lobby.add.remove')}
-            onClick={() => onRemove(dilemmaId)}
-          >
-            <Icon name="close" size={20} />
-          </button>
-        </div>
-      ))}
-      {own.length < allowed && (
-        <button type="button" className={styles.addButton} onClick={onAdd}>
-          <Icon name="add" size={20} />
-          {t('lobby.add.action')}
+    <li className={styles.round}>
+      <span className={styles.roundNumber}>{number}</span>
+      <Icon name={icon} size={20} />
+      <span className={styles.roundText}>
+        {title}
+        <span className={styles.caption}>{meta}</span>
+      </span>
+      {round.origin === 'players' && round.dilemma === null && (
+        <button
+          type="button"
+          className={styles.chooseRound}
+          aria-label={t('lobby.rounds.chooseLabel', { number: from })}
+          onClick={onChoose}
+        >
+          {t('lobby.rounds.choose')}
         </button>
       )}
-    </section>
+      {round.origin === 'players' && round.chosenByYou && round.dilemma !== null && (
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label={t('lobby.rounds.clearLabel', { number: from })}
+          onClick={onClear}
+        >
+          <Icon name="close" size={20} />
+        </button>
+      )}
+    </li>
   );
 }

@@ -160,7 +160,7 @@ describe('the menu of the game', () => {
             votes: [],
             votePredictions: [],
             personInTheGap: null,
-            addedBy: null,
+            chosenBy: null,
           },
         }),
       ),
