@@ -251,6 +251,10 @@ describe('PostgresGameRepository', () => {
           category: 'honesty',
           tags: [],
           minimumAge: 16,
+          type: 'standard',
+          compromising: false,
+          scale: 'everyday',
+          fixedOrder: false,
         },
         idGenerator,
       );

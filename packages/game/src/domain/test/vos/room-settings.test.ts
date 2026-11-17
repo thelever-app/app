@@ -95,4 +95,15 @@ describe('RoomSettingsVO', () => {
       expect(RoomSettingsVO.defaults('es').with({ adultsOnly: true }).maximumMinimumAge).toBe(18);
     });
   });
+
+  describe('includesCompromisingDilemmas', () => {
+    it('should leave out the compromising dilemmas, in any room', () => {
+      // Act & Assert
+      expect(RoomSettingsVO.defaults('es').includesCompromisingDilemmas).toBe(false);
+      expect(
+        RoomSettingsVO.defaults('es').with({ variant: 'anonymous', adultsOnly: true })
+          .includesCompromisingDilemmas,
+      ).toBe(false);
+    });
+  });
 });

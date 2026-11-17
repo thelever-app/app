@@ -24,6 +24,11 @@ Feature: Public dilemma pages
       | Nuevo     | a dilemma in exploration |
       | La fiesta | a dilemma for adults     |
 
+  Scenario: A compromising dilemma has no public page
+    Given the dilemma "Los mensajes" is a compromising dilemma
+    When the public pages are generated
+    Then "Los mensajes" has no public page
+
   @ui
   Scenario: The page shows the dilemma and its arguments
     When a visitor opens the public page of "El tranvía"

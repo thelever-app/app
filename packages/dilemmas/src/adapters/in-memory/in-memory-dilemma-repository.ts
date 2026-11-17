@@ -132,6 +132,7 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
         dilemma.visibility === 'public' &&
         dilemma.status === criteria.status &&
         dilemma.minimumAge <= criteria.maximumMinimumAge &&
+        (criteria.includeCompromising || !dilemma.compromising) &&
         (criteria.language === undefined || dilemma.language === criteria.language) &&
         (!criteria.dilemmaIds || criteria.dilemmaIds.includes(dilemma.id)) &&
         (!criteria.categories || criteria.categories.includes(dilemma.category)),
@@ -198,8 +199,17 @@ function pageEndOf(after: string): PageEnd {
 }
 
 function summaryOf(dilemma: Dilemma): DilemmaSummary {
-  const { id, version, text, minimumAge, category, tags, options } = dilemma;
-  return { id, version, text, minimumAge, category, tags, optionCount: options.length };
+  const { id, version, text, minimumAge, category, tags, options, compromising } = dilemma;
+  return {
+    id,
+    version,
+    text,
+    minimumAge,
+    category,
+    tags,
+    optionCount: options.length,
+    compromising,
+  };
 }
 
 /** Whether its current version has a page of its own: in the catalog, and publishable. */
@@ -207,9 +217,12 @@ function hasPage(dilemma: Dilemma): boolean {
   return dilemma.status === 'in-catalog' && isPublishable(dilemma);
 }
 
-/** Whether its current version could be on the web: for everyone, named and argued. */
+/** Whether its current version could be on the web: for everyone, not compromising, named and argued. */
 function isPublishable(dilemma: Dilemma): boolean {
   return (
-    dilemma.isSuitableForMinors() && dilemma.name !== undefined && dilemma.arguments !== undefined
+    dilemma.isSuitableForMinors() &&
+    !dilemma.compromising &&
+    dilemma.name !== undefined &&
+    dilemma.arguments !== undefined
   );
 }

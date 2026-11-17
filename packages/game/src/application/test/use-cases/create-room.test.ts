@@ -119,7 +119,11 @@ describe('CreateRoomUseCase', () => {
 
       // Assert
       const room = await roomRepository.findById(roomId);
-      expect(room?.firstDilemma).toEqual({ dilemmaId: 'TestCatalog5', minimumAge: 16 });
+      expect(room?.firstDilemma).toEqual({
+        dilemmaId: 'TestCatalog5',
+        minimumAge: 16,
+        compromising: false,
+      });
     });
 
     it.each([
@@ -156,6 +160,22 @@ describe('CreateRoomUseCase', () => {
       // Act & Assert
       await expect(
         createRoom.execute({ ...ANA, dilemmaLanguage: 'es', firstDilemmaId: 'TestCatalog1' }),
+      ).rejects.toThrow(DilemmaNotSuitableError);
+    });
+
+    it('should create no room with a compromising first dilemma', async () => {
+      // Arrange
+      const createRoom = new CreateRoomUseCase(
+        new InMemoryRoomRepository(),
+        lobbyCatalog(),
+        new SequentialIdGenerator(),
+        new SequentialRandomness(),
+        new ManualClock(),
+      );
+
+      // Act & Assert
+      await expect(
+        createRoom.execute({ ...ANA, dilemmaLanguage: 'es', firstDilemmaId: 'TestCompromising1' }),
       ).rejects.toThrow(DilemmaNotSuitableError);
     });
 

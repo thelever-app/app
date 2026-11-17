@@ -85,7 +85,18 @@ async function playedRoom() {
   const dilemmaIds = new SequentialIdGenerator('dilemma');
   const dilemmas = CONTRACT_DILEMMAS.map(({ text, options }) =>
     Dilemma.create(
-      { text, options, language: 'es', category: 'honesty', tags: ['test'], minimumAge: 16 },
+      {
+        text,
+        options,
+        language: 'es',
+        category: 'honesty',
+        tags: ['test'],
+        minimumAge: 16,
+        type: 'standard',
+        compromising: false,
+        scale: 'everyday',
+        fixedOrder: false,
+      },
       dilemmaIds,
     ),
   );
@@ -97,8 +108,8 @@ async function playedRoom() {
   const [ana, luis, marta] = room.players as [Player, Player, Player];
   room.changeSettings(ana.id, { dilemmasPerPlayer: 1 });
   room.expel(ana.id, marta.id);
-  room.addDilemma(luis.id, { dilemmaId: first.id, minimumAge: 16 });
-  room.pickDilemmas(ana.id, [{ dilemmaId: second.id, minimumAge: 16 }]);
+  room.addDilemma(luis.id, { dilemmaId: first.id, minimumAge: 16, compromising: false });
+  room.pickDilemmas(ana.id, [{ dilemmaId: second.id, minimumAge: 16, compromising: false }]);
   const game = Game.create(
     {
       roomId: room.id,

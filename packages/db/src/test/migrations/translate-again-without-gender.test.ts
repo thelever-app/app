@@ -31,9 +31,16 @@ async function databaseAt(migration: string): Promise<Kysely<Database>> {
     await onServer((quote) => `DROP DATABASE IF EXISTS ${quote(name)} WITH (FORCE)`);
   });
   await migrateTo(db, migration);
-  // The repository saves the dilemmas as they are today, with the public id a later migration
-  // adds; this one neither reads nor changes it.
+  // The repository saves the dilemmas as they are today, with the public id and the classification
+  // later migrations add; this one neither reads nor changes them.
   await sql`alter table dilemmas add column public_id text`.execute(db);
+  await sql`
+    alter table dilemma_versions
+      add column type text,
+      add column compromising boolean,
+      add column scale text,
+      add column fixed_order boolean
+  `.execute(db);
   return db;
 }
 
@@ -58,6 +65,10 @@ async function catalogBefore(db: Kysely<Database>) {
       category: 'honesty',
       tags: ['secreto'],
       minimumAge: 16,
+      type: 'standard',
+      compromising: false,
+      scale: 'everyday',
+      fixedOrder: false,
     },
     ids,
   );

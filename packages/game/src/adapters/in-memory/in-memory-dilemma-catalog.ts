@@ -34,6 +34,7 @@ export interface InMemoryDilemma extends Omit<DilemmaContent, 'language'> {
   readonly category?: Category;
   readonly tags?: readonly string[];
   readonly status?: 'in-catalog' | 'in-exploration';
+  readonly compromising?: boolean;
 }
 
 /** A fixed set of dilemmas, at their first version and with their translations, for unit and acceptance tests. */
@@ -51,6 +52,7 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
           category: 'life-and-death',
           tags: [],
           status: 'in-catalog',
+          compromising: false,
           ...dilemma,
         },
       ]),
@@ -125,15 +127,17 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
           [dilemma.text, ...dilemma.tags].some((field) => field.toLowerCase().includes(text)) &&
           dilemma.minimumAge <= criteria.maximumMinimumAge &&
           dilemma.language === criteria.language &&
-          dilemma.status === criteria.status,
+          dilemma.status === criteria.status &&
+          (criteria.includeCompromising || !dilemma.compromising),
       )
-      .map(({ dilemmaId, text, minimumAge, category, tags, options }) => ({
+      .map(({ dilemmaId, text, minimumAge, category, tags, options, compromising }) => ({
         dilemmaId,
         text,
         minimumAge,
         category,
         tags,
         optionCount: options.length,
+        compromising,
       }));
   }
 

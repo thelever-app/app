@@ -170,12 +170,13 @@ export class PostgresRoomRepository implements RoomRepository {
       await db
         .insertInto('room_added_dilemmas')
         .values(
-          addedDilemmas.map(({ dilemmaId, minimumAge, playerId }, position) => ({
+          addedDilemmas.map(({ dilemmaId, minimumAge, compromising, playerId }, position) => ({
             room_id: id,
             player_id: playerId,
             position,
             dilemma_id: dilemmaId,
             minimum_age: minimumAge,
+            compromising,
           })),
         )
         .execute();
@@ -184,11 +185,12 @@ export class PostgresRoomRepository implements RoomRepository {
       await db
         .insertInto('room_picked_dilemmas')
         .values(
-          pickedDilemmas.map(({ dilemmaId, minimumAge }, position) => ({
+          pickedDilemmas.map(({ dilemmaId, minimumAge, compromising }, position) => ({
             room_id: id,
             position,
             dilemma_id: dilemmaId,
             minimum_age: minimumAge,
+            compromising,
           })),
         )
         .execute();
@@ -219,6 +221,7 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     closed_at: snapshot.closedAt,
     first_dilemma_id: snapshot.firstDilemma?.dilemmaId ?? null,
     first_dilemma_minimum_age: snapshot.firstDilemma?.minimumAge ?? null,
+    first_dilemma_compromising: snapshot.firstDilemma?.compromising ?? null,
   };
 }
 
@@ -263,6 +266,7 @@ function readRoom(db: Kysely<GameTables>, id: string) {
           .select([
             'room_added_dilemmas.dilemma_id as dilemmaId',
             'room_added_dilemmas.minimum_age as minimumAge',
+            'room_added_dilemmas.compromising',
             'room_added_dilemmas.player_id as playerId',
           ])
           .whereRef('room_added_dilemmas.room_id', '=', 'rooms.id')
@@ -274,6 +278,7 @@ function readRoom(db: Kysely<GameTables>, id: string) {
           .select([
             'room_picked_dilemmas.dilemma_id as dilemmaId',
             'room_picked_dilemmas.minimum_age as minimumAge',
+            'room_picked_dilemmas.compromising',
           ])
           .whereRef('room_picked_dilemmas.room_id', '=', 'rooms.id')
           .orderBy('room_picked_dilemmas.position'),
@@ -321,9 +326,15 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
     addedDilemmas: row.added,
     pickedDilemmas: row.picked,
     firstDilemma:
-      row.first_dilemma_id === null || row.first_dilemma_minimum_age === null
+      row.first_dilemma_id === null ||
+      row.first_dilemma_minimum_age === null ||
+      row.first_dilemma_compromising === null
         ? null
-        : { dilemmaId: row.first_dilemma_id, minimumAge: row.first_dilemma_minimum_age },
+        : {
+            dilemmaId: row.first_dilemma_id,
+            minimumAge: row.first_dilemma_minimum_age,
+            compromising: row.first_dilemma_compromising,
+          },
     currentGameId: row.current_game_id,
     absentHostId: row.absent_host_player_id,
     leftPlayerIds: row.players.filter(({ has_left }) => has_left).map(({ id }) => id),

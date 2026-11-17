@@ -127,6 +127,7 @@ export class PostgresDilemmaQueries implements DilemmaQueries {
         'dilemma_versions.text',
         'dilemma_versions.minimum_age',
         'dilemma_versions.category',
+        'dilemma_versions.compromising',
         sql<string[]>`array(
           select tag from dilemma_version_tags as tags
           where tags.dilemma_id = dilemma_versions.dilemma_id
@@ -161,6 +162,9 @@ export class PostgresDilemmaQueries implements DilemmaQueries {
         )
         .where('dilemma_versions.status', '=', criteria.status)
         .where('dilemma_versions.minimum_age', '<=', criteria.maximumMinimumAge)
+        .$if(!criteria.includeCompromising, (query) =>
+          query.where('dilemma_versions.compromising', '=', false),
+        )
         .$if(criteria.language !== undefined, (query) =>
           query.where('dilemmas.language', '=', criteria.language ?? ''),
         )
@@ -190,6 +194,7 @@ interface SummaryRow {
   readonly category: Category;
   readonly tags: string[];
   readonly option_count: number;
+  readonly compromising: boolean;
   readonly whole_tag?: boolean;
   readonly similarity?: number;
 }
@@ -203,6 +208,7 @@ function summaryOf(row: SummaryRow): DilemmaSummary {
     category: row.category,
     tags: row.tags,
     optionCount: row.option_count,
+    compromising: row.compromising,
   };
 }
 

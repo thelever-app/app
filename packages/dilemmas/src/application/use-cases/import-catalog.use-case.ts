@@ -152,9 +152,15 @@ export class ImportCatalogUseCase {
       category: curated.category,
       tags: curated.tags,
       minimumAge: curated.minimumAge,
+      type: curated.type,
+      compromising: curated.compromising,
+      scale: curated.scale,
+      fixedOrder: curated.fixedOrder,
     };
 
     let original = await this.#dilemmaRepository.findById(id);
+    // A new version leaves the original without arguments: they changed only if the catalog changed them.
+    const argumentsBefore = original?.arguments;
     let versioned: boolean;
     if (!original) {
       original = Dilemma.create(
@@ -189,23 +195,26 @@ export class ImportCatalogUseCase {
 
     const renamed = original.name !== curated.name;
     const args = curated.arguments && argumentsOn(original, curated.arguments);
-    const argued = !sameArguments(original.arguments, args);
+    const argued = !sameArguments(argumentsBefore, args);
     const translations = await this.#translate(original, curated, { renamed, argued });
 
+    // Its new version, if any, has to be given them again even when the catalog left them as they were.
+    const reargued = !sameArguments(original.arguments, args);
     if (renamed) original.rename(curated.name);
-    if (argued) {
+    if (reargued) {
       if (args) original.argue(args);
       else original.dropArguments();
     }
-    if (renamed || argued) await this.#dilemmaRepository.save(original);
-    return { changed: versioned || renamed || argued, translations };
+    if (renamed || reargued) await this.#dilemmaRepository.save(original);
+    return { changed: versioned || renamed || reargued, translations };
   }
 
   /**
    * Brings each translation in step with the original: a new translation when it has none of its
    * version, a new name or new arguments when those of the original changed, no arguments when the
-   * original has none, and back in the catalog when the original came back. The translator is asked
-   * once, only for the languages that need a text.
+   * original has none, and back in the catalog when the original came back. A new version of the
+   * original that reads as the one a translation translates is only followed, not translated. The
+   * translator is asked once, only for the languages that need a text.
    */
   async #translate(
     original: Dilemma,
@@ -216,13 +225,17 @@ export class ImportCatalogUseCase {
       readonly language: string;
       readonly translation: Dilemma | undefined;
       readonly whole: boolean;
+      readonly followed: boolean;
       readonly name: boolean;
       readonly args: boolean;
     }[] = [];
     for (const language of this.#languages) {
       if (language === curated.language) continue;
       const translation = await this.#dilemmaRepository.findById(idOf(curated.number, language));
-      const whole = translation?.translationOf?.version !== original.version;
+      const outdated = translation?.translationOf?.version !== original.version;
+      const followed =
+        outdated && translation !== undefined && (await this.#readsAsIt(original, translation));
+      const whole = outdated && !followed;
       const name = !whole && renamed;
       const args =
         !whole &&
@@ -230,8 +243,8 @@ export class ImportCatalogUseCase {
         (argued || translation?.arguments === undefined);
       const dropped = curated.arguments === undefined && translation?.arguments !== undefined;
       const reinstated = translation?.status === 'withdrawn';
-      if (whole || name || args || dropped || reinstated) {
-        pending.push({ language, translation, whole, name, args });
+      if (whole || followed || name || args || dropped || reinstated) {
+        pending.push({ language, translation, whole, followed, name, args });
       }
     }
 
@@ -247,7 +260,7 @@ export class ImportCatalogUseCase {
           )
         : new Map<string, TranslatableContent>();
 
-    for (const { language, translation, whole, name, args } of pending) {
+    for (const { language, translation, whole, followed, name, args } of pending) {
       const id = idOf(curated.number, language);
       const content = translated.get(language);
       if ((whole || name || args) && !content) {
@@ -273,6 +286,8 @@ export class ImportCatalogUseCase {
             content!,
             new IdsInOrder(optionIds(id, saved.options.length, content!.options.length)),
           );
+        } else if (followed) {
+          saved.follow(original);
         }
         if ((whole || name) && saved.name !== content!.name) saved.rename(content!.name);
         saved.reinstate();
@@ -287,6 +302,13 @@ export class ImportCatalogUseCase {
       await this.#dilemmaRepository.save(saved);
     }
     return pending.length;
+  }
+
+  /** Whether the current version of the original reads as the version the translation translates. */
+  async #readsAsIt(original: Dilemma, translation: Dilemma): Promise<boolean> {
+    const of = translation.translationOf;
+    const translated = of && (await this.#dilemmaRepository.findVersion(of.dilemmaId, of.version));
+    return translated !== undefined && original.hasTheWordingOf(translated);
   }
 
   #translatable(curated: CuratedDilemma): TranslatableContent {

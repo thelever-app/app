@@ -25,6 +25,8 @@ export interface CatalogDilemma {
   readonly tags: readonly string[];
   /** How many options it has, which the lobby says next to it. */
   readonly optionCount: number;
+  /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
+  readonly compromising: boolean;
 }
 
 /** Which dilemmas to look for; every criterion given must hold. */
@@ -40,6 +42,8 @@ export interface DilemmaSearch {
   readonly status: 'in-catalog' | 'in-exploration';
   /** Only the dilemmas written or translated in it: the language of the dilemmas of the room. */
   readonly language: string;
+  /** Whether the compromising dilemmas are found too: only for a room that includes them. */
+  readonly includeCompromising: boolean;
 }
 
 /** The criteria a game is put together with: no text, no ids. */

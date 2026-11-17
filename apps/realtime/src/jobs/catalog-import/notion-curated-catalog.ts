@@ -3,7 +3,9 @@ import {
   type CuratedCatalog,
   type CuratedCatalogContent,
   type CuratedDilemma,
+  DILEMMA_TYPES,
   MINIMUM_AGES,
+  SCALES,
   type UnreadableDilemma,
 } from '@thelever-app/dilemmas';
 import { GAP_MARKER } from '@thelever-app/dilemmas/published';
@@ -51,6 +53,10 @@ const Row = z.object({
     Etiquetas: z.object({ multi_select: z.array(z.object({ name: z.string() })) }),
     Argumentos: richText,
     'Argumentos revisados': z.object({ checkbox: z.boolean() }),
+    Tipo: z.object({ select: z.object({ name: z.enum(DILEMMA_TYPES) }) }),
+    Comprometido: z.object({ checkbox: z.boolean() }),
+    Escala: z.object({ select: z.object({ name: z.enum(SCALES) }) }),
+    'Orden fijo': z.object({ checkbox: z.boolean() }),
   }),
 });
 
@@ -90,6 +96,10 @@ function dilemmaOf(row: z.infer<typeof Row>): CuratedDilemma {
     category: p.Categoría.select.name,
     minimumAge: Number(p['Edad mínima'].select.name) as CuratedDilemma['minimumAge'],
     tags: p.Etiquetas.multi_select.map(({ name }) => name),
+    type: p.Tipo.select.name,
+    compromising: p.Comprometido.checkbox,
+    scale: p.Escala.select.name,
+    fixedOrder: p['Orden fijo'].checkbox,
     ...(reviewed && { arguments: parseArguments(withGap(p.Argumentos.rich_text), options) }),
   };
 }

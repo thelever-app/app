@@ -40,7 +40,10 @@ describeDilemmaCatalogContract('PublishedDilemmasCatalog on PostgreSQL', async (
   const idGenerator = new SequentialIdGenerator('dilemma');
   const stored = [];
   for (const { status, translations, ...content } of CONTRACT_DILEMMAS) {
-    const created = Dilemma.create({ ...content, language: 'es' }, idGenerator).toSnapshot();
+    const created = Dilemma.create(
+      { ...content, language: 'es', type: 'standard', scale: 'everyday', fixedOrder: false },
+      idGenerator,
+    ).toSnapshot();
     const original = Dilemma.restore({ ...created, version: { ...created.version, status } });
     await repository.save(original);
     for (const { language, text, options } of translations) {
@@ -76,6 +79,10 @@ describe('dilemma_versions', () => {
           category: 'honesty',
           tags: ['testtag'],
           minimumAge: 16,
+          type: 'standard',
+          compromising: false,
+          scale: 'everyday',
+          fixedOrder: false,
         },
         new SequentialIdGenerator('dilemma'),
       ),

@@ -21,6 +21,8 @@ export {
 } from './domain/entities/dilemma.ts';
 export { CATEGORIES, type Category } from './domain/vos/category.vo.ts';
 export { MINIMUM_AGES, type MinimumAge } from './domain/vos/minimum-age.vo.ts';
+export { DILEMMA_TYPES, type DilemmaType } from './domain/vos/dilemma-type.vo.ts';
+export { SCALES, type Scale } from './domain/vos/scale.vo.ts';
 export type { IdGenerator } from './domain/ports/id-generator.port.ts';
 export { MissingArgumentError } from './domain/errors/missing-argument.error.ts';
 export { IdMissingError } from './domain/errors/id-missing.error.ts';
@@ -30,6 +32,8 @@ export { OptionCountError } from './domain/errors/option-count.error.ts';
 export { DuplicateOptionError } from './domain/errors/duplicate-option.error.ts';
 export { UnknownOptionError } from './domain/errors/unknown-option.error.ts';
 export { UnknownCategoryError } from './domain/errors/unknown-category.error.ts';
+export { UnknownDilemmaTypeError } from './domain/errors/unknown-dilemma-type.error.ts';
+export { UnknownScaleError } from './domain/errors/unknown-scale.error.ts';
 export { TagMissingError } from './domain/errors/tag-missing.error.ts';
 export { TagTooLongError } from './domain/errors/tag-too-long.error.ts';
 export { TagCountError } from './domain/errors/tag-count.error.ts';

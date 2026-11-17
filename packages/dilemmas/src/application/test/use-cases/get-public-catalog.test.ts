@@ -17,6 +17,10 @@ function curated(number: number, minimumAge: MinimumAge = 16): Dilemma {
       category: 'honesty',
       tags: ['testtag'],
       minimumAge,
+      type: 'standard',
+      compromising: false,
+      scale: 'everyday',
+      fixedOrder: false,
     },
     new FixedIdGenerator(id, `${id}-option-1`, `${id}-option-2`, `${id}-public`),
   );

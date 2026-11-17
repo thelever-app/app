@@ -16,14 +16,14 @@ export interface DilemmaRepository {
   findTranslation(original: TranslationOf, language: string): Promise<Dilemma | undefined>;
   /**
    * The dilemmas of the curated catalog with a public page, originals and translations, at their
-   * current version, which is in the general catalog: public, named, suitable from 16 and with
-   * reviewed arguments; a translation, also of the current version of its original, public and in
-   * the catalog. The rest of the catalog never leaves the database for the web.
+   * current version, which is in the general catalog: public, named, suitable from 16, not
+   * compromising and with reviewed arguments; a translation, also of the current version of its
+   * original, public and in the catalog. The rest of the catalog never leaves the database for the web.
    */
   findWithPublicPage(): Promise<Dilemma[]>;
   /**
    * The public originals of the curated catalog whose current version was withdrawn from it and
-   * could have had a page: suitable from 16, named and with reviewed arguments. The rest never
+   * could have had a page: suitable from 16, not compromising, named and with reviewed arguments. The rest never
    * were on the web, and the web does not say they existed.
    */
   findWithdrawnFromCatalog(): Promise<Dilemma[]>;

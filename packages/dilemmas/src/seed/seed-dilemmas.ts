@@ -2,7 +2,9 @@ import type { DilemmaRepository } from '../application/ports/dilemma-repository.
 import { Dilemma, type OptionSnapshot } from '../domain/entities/dilemma.ts';
 import type { IdGenerator } from '../domain/ports/id-generator.port.ts';
 import type { Category } from '../domain/vos/category.vo.ts';
+import type { DilemmaType } from '../domain/vos/dilemma-type.vo.ts';
 import type { MinimumAge } from '../domain/vos/minimum-age.vo.ts';
+import type { Scale } from '../domain/vos/scale.vo.ts';
 
 /** A dilemma of the seed, as the curation team writes it, with the ids it always has. */
 export interface SeedDilemma {
@@ -13,6 +15,10 @@ export interface SeedDilemma {
   readonly category: Category;
   readonly tags: readonly string[];
   readonly minimumAge: MinimumAge;
+  readonly type: DilemmaType;
+  readonly compromising: boolean;
+  readonly scale: Scale;
+  readonly fixedOrder: boolean;
 }
 
 /** The ids of an option: the id of its dilemma and its position, from 1. */
@@ -49,6 +55,10 @@ export const SEED_DILEMMAS: readonly SeedDilemma[] = [
     category: 'life-and-death',
     tags: ['tranvía', 'sacrificio'],
     minimumAge: 16,
+    type: 'standard',
+    compromising: false,
+    scale: 'extreme',
+    fixedOrder: false,
   },
   {
     id: 'seed-wallet',
@@ -62,6 +72,10 @@ export const SEED_DILEMMAS: readonly SeedDilemma[] = [
     category: 'honesty',
     tags: ['dinero', 'desconocidos'],
     minimumAge: 16,
+    type: 'standard',
+    compromising: false,
+    scale: 'everyday',
+    fixedOrder: false,
   },
   {
     id: 'seed-alibi',
@@ -71,6 +85,10 @@ export const SEED_DILEMMAS: readonly SeedDilemma[] = [
     category: 'loyalty',
     tags: ['amistad', 'mentira'],
     minimumAge: 16,
+    type: 'standard',
+    compromising: false,
+    scale: 'everyday',
+    fixedOrder: false,
   },
   {
     id: 'seed-ventilator',
@@ -85,6 +103,10 @@ export const SEED_DILEMMAS: readonly SeedDilemma[] = [
     category: 'life-and-death',
     tags: ['medicina', 'triaje'],
     minimumAge: 16,
+    type: 'standard',
+    compromising: false,
+    scale: 'extreme',
+    fixedOrder: false,
   },
   {
     id: 'seed-cheating',
@@ -98,6 +120,10 @@ export const SEED_DILEMMAS: readonly SeedDilemma[] = [
     category: 'honesty',
     tags: ['estudios', 'trampas'],
     minimumAge: 16,
+    type: 'standard',
+    compromising: false,
+    scale: 'everyday',
+    fixedOrder: false,
   },
   {
     id: 'seed-death-date',
@@ -107,6 +133,10 @@ export const SEED_DILEMMAS: readonly SeedDilemma[] = [
     category: 'life-and-death',
     tags: ['muerte', 'futuro'],
     minimumAge: 16,
+    type: 'standard',
+    compromising: false,
+    scale: 'extreme',
+    fixedOrder: false,
   },
 ];
 

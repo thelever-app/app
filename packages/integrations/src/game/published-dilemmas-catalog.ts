@@ -78,14 +78,17 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
       });
       // Game keeps the version a game plays when it starts, not when it is found.
       return {
-        dilemmas: dilemmas.map(({ dilemmaId, text, minimumAge, category, tags, optionCount }) => ({
-          dilemmaId,
-          text,
-          minimumAge,
-          category,
-          tags,
-          optionCount,
-        })),
+        dilemmas: dilemmas.map(
+          ({ dilemmaId, text, minimumAge, category, tags, optionCount, compromising }) => ({
+            dilemmaId,
+            text,
+            minimumAge,
+            category,
+            tags,
+            optionCount,
+            compromising,
+          }),
+        ),
         ...(next !== undefined && { next }),
       };
     } catch (error) {

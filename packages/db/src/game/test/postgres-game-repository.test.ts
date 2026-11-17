@@ -47,7 +47,18 @@ describeGameRepositoryContract('PostgresGameRepository', async () => {
   const idGenerator = new SequentialIdGenerator('dilemma');
   const dilemmas = CONTRACT_DILEMMAS.map(({ text, options }) =>
     Dilemma.create(
-      { text, options, language: 'es', category: 'honesty', tags: [], minimumAge: 16 },
+      {
+        text,
+        options,
+        language: 'es',
+        category: 'honesty',
+        tags: [],
+        minimumAge: 16,
+        type: 'standard',
+        compromising: false,
+        scale: 'everyday',
+        fixedOrder: false,
+      },
       idGenerator,
     ),
   );
@@ -77,7 +88,18 @@ describe('PostgresGameRepository inside a command', () => {
     const idGenerator = new SequentialIdGenerator('dilemma');
     const dilemmas = CONTRACT_DILEMMAS.map(({ text, options }) =>
       Dilemma.create(
-        { text, options, language: 'es', category: 'honesty', tags: [], minimumAge: 16 },
+        {
+          text,
+          options,
+          language: 'es',
+          category: 'honesty',
+          tags: [],
+          minimumAge: 16,
+          type: 'standard',
+          compromising: false,
+          scale: 'everyday',
+          fixedOrder: false,
+        },
         idGenerator,
       ),
     );

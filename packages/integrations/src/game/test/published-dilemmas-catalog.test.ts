@@ -9,7 +9,15 @@ import { CONTRACT_DILEMMAS, describeDilemmaCatalogContract } from '@thelever-app
 import { PublishedDilemmasCatalog } from '../published-dilemmas-catalog.ts';
 import { saveContractDilemmas } from './support/contract-dilemma.ts';
 
-const CLASSIFICATION = { category: 'honesty', tags: [], minimumAge: 16 };
+const CLASSIFICATION = {
+  category: 'honesty',
+  tags: [],
+  minimumAge: 16,
+  type: 'standard',
+  compromising: false,
+  scale: 'everyday',
+  fixedOrder: false,
+};
 
 async function catalogWithContractDilemmas() {
   const repository = new InMemoryDilemmaRepository();

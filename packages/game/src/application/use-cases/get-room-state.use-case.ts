@@ -88,7 +88,14 @@ export class GetRoomStateUseCase {
   async #textsOf(dilemmaIds: readonly string[], language: string): Promise<Map<string, string>> {
     if (dilemmaIds.length === 0) return new Map();
     const { dilemmas: found } = await this.#dilemmaCatalog.search(
-      { dilemmaIds, maximumMinimumAge: 18, status: 'in-catalog', language },
+      // Whatever the room keeps, for adults and compromising ones too, which it already checked.
+      {
+        dilemmaIds,
+        maximumMinimumAge: 18,
+        status: 'in-catalog',
+        language,
+        includeCompromising: true,
+      },
       // One page with all of them: no more than were asked for.
       { size: dilemmaIds.length },
     );

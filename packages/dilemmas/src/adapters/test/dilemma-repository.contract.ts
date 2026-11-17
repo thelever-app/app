@@ -13,6 +13,10 @@ function dilemma(): Dilemma {
       category: 'honesty',
       tags: ['testtag1', 'testtag2'],
       minimumAge: 16,
+      type: 'standard',
+      compromising: false,
+      scale: 'everyday',
+      fixedOrder: false,
     },
     new FixedIdGenerator(
       'TestDilemmaId',
@@ -38,6 +42,10 @@ function revised(): Dilemma {
       category: 'loyalty',
       tags: ['testtag3'],
       minimumAge: 18,
+      type: 'standard',
+      compromising: false,
+      scale: 'everyday',
+      fixedOrder: false,
     },
     new FixedIdGenerator('TestOptionId4'),
   );
@@ -87,6 +95,10 @@ function curated(number: number, minimumAge: MinimumAge = 16, named = true): Dil
       category: 'honesty',
       tags: ['testtag'],
       minimumAge,
+      type: 'standard',
+      compromising: false,
+      scale: 'everyday',
+      fixedOrder: false,
     },
     new FixedIdGenerator(id, `${id}-option-1`, `${id}-option-2`, `${id}-public`),
   );
@@ -111,6 +123,12 @@ function inEnglish(original: Dilemma): Dilemma {
       `${id}-public`,
     ),
   );
+}
+
+/** The dilemma, compromising. */
+function compromising(dilemma: Dilemma): Dilemma {
+  const snapshot = dilemma.toSnapshot();
+  return Dilemma.restore({ ...snapshot, version: { ...snapshot.version, compromising: true } });
 }
 
 /** The dilemma with its arguments reviewed. */
@@ -468,6 +486,20 @@ export function describeDilemmaRepositoryContract(
         expect(found).toEqual([]);
       });
 
+      it('should leave out the compromising dilemmas and their translations', async () => {
+        // Arrange
+        const repository = await create();
+        const original = argued(compromising(curated(1)));
+        await repository.save(original);
+        await repository.save(argued(inEnglish(original)));
+
+        // Act
+        const found = await repository.findWithPublicPage();
+
+        // Assert
+        expect(found).toEqual([]);
+      });
+
       it('should leave out the dilemmas that are not from the curated catalog', async () => {
         // Arrange
         const repository = await create();
@@ -495,6 +527,10 @@ export function describeDilemmaRepositoryContract(
             category: 'honesty',
             tags: [],
             minimumAge: 16,
+            type: 'standard',
+            compromising: false,
+            scale: 'everyday',
+            fixedOrder: false,
           },
           new FixedIdGenerator(),
         );
@@ -534,13 +570,14 @@ export function describeDilemmaRepositoryContract(
         expect(found.map((dilemma) => dilemma.toSnapshot())).toEqual([withdrawn.toSnapshot()]);
       });
 
-      it('should leave out the withdrawn ones that never could have had a page: without a name or arguments, or for adults', async () => {
+      it('should leave out the withdrawn ones that never could have had a page: without a name or arguments, for adults or compromising', async () => {
         // Arrange
         const repository = await create();
         const unnamed = argued(curated(1, 16, false));
         const withoutArguments = curated(2);
         const forAdults = argued(curated(3, 18));
-        for (const never of [unnamed, withoutArguments, forAdults]) {
+        const compromisingOne = argued(compromising(curated(4)));
+        for (const never of [unnamed, withoutArguments, forAdults, compromisingOne]) {
           never.withdraw();
           await repository.save(never);
         }

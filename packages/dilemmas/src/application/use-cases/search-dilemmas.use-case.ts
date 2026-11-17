@@ -15,6 +15,8 @@ export interface SearchDilemmasInput {
   readonly status: DilemmaStatus;
   /** Only the dilemmas written or translated in it. */
   readonly language: string;
+  /** Whether the compromising dilemmas are found too. */
+  readonly includeCompromising: boolean;
   /** How many dilemmas the page has at most. */
   readonly size: number;
   /** The `next` of the page before; none for the first page. */
@@ -30,6 +32,8 @@ export interface SearchDilemmasOutput {
     readonly category: Category;
     readonly tags: readonly string[];
     readonly optionCount: number;
+    /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
+    readonly compromising: boolean;
   }[];
   /** Where the next page starts; none when this one is the last. */
   readonly next?: string;

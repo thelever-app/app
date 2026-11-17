@@ -59,6 +59,10 @@ function dilemmaOf(row: Row): Dilemma {
       category: row.category,
       tags: row.tags.map(({ tag }) => tag),
       minimumAge: row.minimum_age,
+      type: row.type,
+      compromising: row.compromising,
+      scale: row.scale,
+      fixedOrder: row.fixed_order,
       status: row.status,
       ...(row.translation_of === null ||
       row.translation_of_version === null ||
@@ -220,11 +224,12 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
 
   /**
    * The public dilemmas of the curated catalog whose current version could be on the web: suitable
-   * from 16, as the web asks no age, named and with reviewed arguments; by id.
+   * from 16, as the web asks no age, not compromising, named and with reviewed arguments; by id.
    */
   #publishableOfTheCatalog() {
     return this.#currentOfTheCatalog()
       .where('dilemma_versions.minimum_age', '=', 16)
+      .where('dilemma_versions.compromising', '=', false)
       .where('dilemmas.name', 'is not', null)
       .where(({ exists, selectFrom }) =>
         exists(
@@ -308,6 +313,10 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
         text: version.text,
         category: version.category,
         minimum_age: version.minimumAge,
+        type: version.type,
+        compromising: version.compromising,
+        scale: version.scale,
+        fixed_order: version.fixedOrder,
         status: version.status,
         translation_of_version: version.translationOf?.version ?? null,
         translation: version.translation ?? null,

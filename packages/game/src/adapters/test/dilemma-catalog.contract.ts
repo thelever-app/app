@@ -12,7 +12,7 @@ import {
 /**
  * The public dilemmas every implementation stores before each test, in Spanish: their ids are its
  * own. The first one is for everyone, with a translation into English; the second one for adults,
- * with the gap; and the third one is in exploration.
+ * with the gap; the third one is in exploration; and the fourth one is compromising.
  */
 export const CONTRACT_DILEMMAS = [
   {
@@ -21,6 +21,7 @@ export const CONTRACT_DILEMMAS = [
     category: 'honesty',
     tags: ['testfamily'],
     minimumAge: 16,
+    compromising: false,
     status: 'in-catalog',
     translations: [
       {
@@ -36,6 +37,7 @@ export const CONTRACT_DILEMMAS = [
     category: 'loyalty',
     tags: [],
     minimumAge: 18,
+    compromising: false,
     status: 'in-catalog',
     translations: [],
   },
@@ -45,17 +47,28 @@ export const CONTRACT_DILEMMAS = [
     category: 'honesty',
     tags: [],
     minimumAge: 16,
+    compromising: false,
     status: 'in-exploration',
+    translations: [],
+  },
+  {
+    text: 'TestText4',
+    options: ['TestOptionH', 'TestOptionI'],
+    category: 'love-and-relationships',
+    tags: [],
+    minimumAge: 16,
+    compromising: true,
+    status: 'in-catalog',
     translations: [],
   },
 ] as const;
 
 /** What a search finds of the contract dilemma at that position (from 0), with its id as stored. */
-function foundAt(stored: readonly DilemmaContent[], position: 0 | 1 | 2): CatalogDilemma {
-  const { text, category, tags, minimumAge, options } = CONTRACT_DILEMMAS[position];
+function foundAt(stored: readonly DilemmaContent[], position: 0 | 1 | 2 | 3): CatalogDilemma {
+  const { text, category, tags, minimumAge, options, compromising } = CONTRACT_DILEMMAS[position];
   const dilemmaId = stored[position]?.dilemmaId;
   if (!dilemmaId) throw new Error(`The catalog stored no dilemma at position ${position}`);
-  return { dilemmaId, text, category, tags, minimumAge, optionCount: options.length };
+  return { dilemmaId, text, category, tags, minimumAge, optionCount: options.length, compromising };
 }
 
 /** Big enough for every search of the contract to fit in one page. */
@@ -65,6 +78,7 @@ const FOR_EVERYONE: DilemmaSearch = {
   maximumMinimumAge: 16,
   status: 'in-catalog',
   language: 'es',
+  includeCompromising: false,
 };
 
 /** The order of what a search returns is not part of the contract. */
@@ -241,6 +255,18 @@ export function describeDilemmaCatalogContract(
         expect(byText(found)).toEqual([foundAt(stored, 0), foundAt(stored, 1)]);
       });
 
+      it('should find the compromising dilemmas only when they are included', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+
+        // Act
+        const found = (await catalog.search({ ...FOR_EVERYONE, includeCompromising: true }, ALL))
+          .dilemmas;
+
+        // Assert
+        expect(byText(found)).toEqual([foundAt(stored, 0), foundAt(stored, 3)]);
+      });
+
       it('should find the dilemmas in exploration when asked for them', async () => {
         // Arrange
         const { catalog, stored } = await create();
@@ -377,10 +403,15 @@ export function describeDilemmaCatalogContract(
           categories: ['loyalty'],
         });
         const inFrench = await catalog.findCandidateIds({ ...FOR_EVERYONE, language: 'fr' });
+        const withCompromising = await catalog.findCandidateIds({
+          ...FOR_EVERYONE,
+          includeCompromising: true,
+        });
 
         // Assert
-        const [first, second, third] = stored.map(({ dilemmaId }) => dilemmaId);
+        const [first, second, third, fourth] = stored.map(({ dilemmaId }) => dilemmaId);
         expect(forEveryone).toEqual([first]);
+        expect([...withCompromising].sort()).toEqual([first, fourth].sort());
         expect([...forAdults].sort()).toEqual([first, second].sort());
         expect(inExploration).toEqual([third]);
         expect(ofLoyalty).toEqual([second]);

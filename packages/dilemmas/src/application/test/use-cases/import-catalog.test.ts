@@ -21,6 +21,10 @@ const CURATED: CuratedDilemma = {
   category: 'honesty',
   minimumAge: 16,
   tags: ['testtag'],
+  type: 'standard',
+  compromising: false,
+  scale: 'everyday',
+  fixedOrder: false,
 };
 
 const ARGUMENTS = {
@@ -138,9 +142,37 @@ describe('ImportCatalogUseCase', () => {
           category: 'honesty',
           tags: ['testtag'],
           minimumAge: 16,
+          type: 'standard',
+          compromising: false,
+          scale: 'everyday',
+          fixedOrder: false,
           status: 'in-catalog',
         },
       });
+    });
+
+    it('should give the dilemma and its translations the type, whether it is compromising, the scale and the fixed order of the catalog', async () => {
+      // Arrange
+      const { repository, importCatalog } = arrange({
+        ...CURATED,
+        type: 'game-theory',
+        compromising: true,
+        scale: 'extreme',
+        fixedOrder: true,
+      });
+
+      // Act
+      await importCatalog.execute();
+
+      // Assert
+      for (const id of ['dlm-183', 'dlm-183-en']) {
+        expect((await repository.findById(id))?.toSnapshot().version).toMatchObject({
+          type: 'game-theory',
+          compromising: true,
+          scale: 'extreme',
+          fixedOrder: true,
+        });
+      }
     });
 
     it('should translate it into every other language, each a dilemma of its own', async () => {
@@ -220,6 +252,92 @@ describe('ImportCatalogUseCase', () => {
         'dlm-183-en-option-2',
         'dlm-183-en-option-3',
       ]);
+    });
+
+    it('should make new versions without asking the translator when only the classification changed', async () => {
+      // Arrange
+      const { catalog, translator, repository, importCatalog } = arrange(CURATED);
+      await importCatalog.execute();
+      catalog.dilemmas = [
+        {
+          ...CURATED,
+          category: 'loyalty',
+          minimumAge: 18,
+          type: 'would-you-rather',
+          compromising: true,
+          scale: 'medium',
+          fixedOrder: true,
+        },
+      ];
+
+      // Act
+      const output = await importCatalog.execute();
+
+      // Assert
+      expect(translator.asked).toHaveLength(1);
+      const english = await repository.findTranslation({ dilemmaId: 'dlm-183', version: 2 }, 'en');
+      expect(english?.version).toBe(2);
+      expect(english?.text).toBe('en:TestText');
+      expect(english?.tags).toEqual(['en:testtag']);
+      expect(english?.toSnapshot().version).toMatchObject({
+        category: 'loyalty',
+        minimumAge: 18,
+        type: 'would-you-rather',
+        compromising: true,
+        scale: 'medium',
+        fixedOrder: true,
+      });
+      expect(output).toEqual({ approved: 1, dilemmas: 1, translations: 2, withdrawn: 0 });
+    });
+
+    it('should leave the translations without tags, without asking the translator, when the dilemma is left without them', async () => {
+      // Arrange
+      const { catalog, translator, repository, importCatalog } = arrange(CURATED);
+      await importCatalog.execute();
+      catalog.dilemmas = [{ ...CURATED, tags: [] }];
+
+      // Act
+      await importCatalog.execute();
+
+      // Assert
+      expect(translator.asked).toHaveLength(1);
+      const english = await repository.findById('dlm-183-en');
+      expect(english?.version).toBe(2);
+      expect(english?.tags).toEqual([]);
+    });
+
+    it('should translate again a dilemma whose tags changed', async () => {
+      // Arrange
+      const { catalog, translator, repository, importCatalog } = arrange(CURATED);
+      await importCatalog.execute();
+      catalog.dilemmas = [{ ...CURATED, tags: ['testothertag'] }];
+
+      // Act
+      await importCatalog.execute();
+
+      // Assert
+      expect(translator.asked).toHaveLength(2);
+      expect((await repository.findById('dlm-183-en'))?.tags).toEqual(['en:testothertag']);
+    });
+
+    it('should keep the arguments of the dilemma and its translations, without asking the translator, when only the classification changed', async () => {
+      // Arrange
+      const { catalog, translator, repository, importCatalog } = arrange({
+        ...CURATED,
+        arguments: ARGUMENTS,
+      });
+      await importCatalog.execute();
+      catalog.dilemmas = [{ ...CURATED, arguments: ARGUMENTS, scale: 'extreme' }];
+
+      // Act
+      await importCatalog.execute();
+
+      // Assert
+      expect(translator.asked).toHaveLength(1);
+      expect((await repository.findById('dlm-183'))?.arguments?.context).toBe('TestContext');
+      const english = await repository.findById('dlm-183-en');
+      expect(english?.version).toBe(2);
+      expect(english?.arguments?.context).toBe('en:TestContext');
     });
 
     it('should rename a dilemma without a new version', async () => {

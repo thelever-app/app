@@ -6,6 +6,8 @@ import { TranslationOptionCountError } from '../errors/translation-option-count.
 import { UnknownOptionError } from '../errors/unknown-option.error.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Category } from '../vos/category.vo.ts';
+import type { DilemmaType } from '../vos/dilemma-type.vo.ts';
+import type { Scale } from '../vos/scale.vo.ts';
 import { type ArgumentsSnapshot, ArgumentsVO } from '../vos/arguments.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { LanguageVO } from '../vos/language.vo.ts';
@@ -54,6 +56,12 @@ export interface VersionSnapshot {
   readonly category: Category;
   readonly tags: readonly string[];
   readonly minimumAge: MinimumAge;
+  readonly type: DilemmaType;
+  /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
+  readonly compromising: boolean;
+  readonly scale: Scale;
+  /** Whether every player sees its options in their order instead of shuffled. */
+  readonly fixedOrder: boolean;
   readonly status: DilemmaStatus;
   /** Only in a translation. */
   readonly translationOf?: TranslationOf;
@@ -85,6 +93,17 @@ export interface TranslatedContent {
   /** In the order of the options of the original: option n translates option n. */
   readonly options: readonly string[];
   readonly tags: readonly string[];
+}
+
+/** How a version is classified, with its tags: a translation takes all of it from its original but the tags, which it translates. */
+interface Classification {
+  readonly category: string;
+  readonly tags: readonly string[];
+  readonly minimumAge: number;
+  readonly type: string;
+  readonly compromising: boolean;
+  readonly scale: string;
+  readonly fixedOrder: boolean;
 }
 
 /** Whatever its creator, a version in one of these is out of the reach of players. */
@@ -135,27 +154,20 @@ export class Dilemma {
       language,
       name,
       options,
-      category,
-      tags,
-      minimumAge,
+      ...classification
     }: {
       readonly text: string;
       readonly language: string;
       readonly name?: string;
       readonly options: readonly string[];
-      readonly category: string;
-      readonly tags: readonly string[];
-      readonly minimumAge: number;
-    },
+    } & Classification,
     idGenerator: IdGenerator,
   ): Dilemma {
     const id = idGenerator.generate();
     const version = new VersionVO(1, {
       text,
       options: options.map((option) => ({ id: idGenerator.generate(), text: option })),
-      category,
-      tags,
-      minimumAge,
+      ...classification,
     });
     return new Dilemma({
       id,
@@ -170,8 +182,8 @@ export class Dilemma {
 
   /**
    * A dilemma of its own that translates the current version of an original, automatically:
-   * with the category, the minimum age, the creator and the visibility of the original, and
-   * its option n translating option n of the original.
+   * with the classification, the creator and the visibility of the original, and its option n
+   * translating option n of the original.
    */
   static translate(
     original: Dilemma,
@@ -188,9 +200,8 @@ export class Dilemma {
     const version = new VersionVO(1, {
       text: content.text,
       options: content.options.map((option) => ({ id: idGenerator.generate(), text: option })),
-      category: original.category,
+      ...original.#classification(),
       tags: content.tags,
-      minimumAge: original.minimumAge,
     });
     return new Dilemma({
       id,
@@ -276,6 +287,24 @@ export class Dilemma {
     return this.#version.minimumAge;
   }
 
+  get type(): DilemmaType {
+    return this.#version.type;
+  }
+
+  /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
+  get compromising(): boolean {
+    return this.#version.compromising;
+  }
+
+  get scale(): Scale {
+    return this.#version.scale;
+  }
+
+  /** Whether every player sees its options in their order instead of shuffled. */
+  get fixedOrder(): boolean {
+    return this.#version.fixedOrder;
+  }
+
   /** Whether a player under 18 may get the dilemma, at its current version. */
   isSuitableForMinors(): boolean {
     return this.#version.isSuitableForMinors();
@@ -290,16 +319,11 @@ export class Dilemma {
     {
       text,
       options,
-      category,
-      tags,
-      minimumAge,
+      ...classification
     }: {
       readonly text: string;
       readonly options: readonly { readonly id?: string; readonly text: string }[];
-      readonly category: string;
-      readonly tags: readonly string[];
-      readonly minimumAge: number;
-    },
+    } & Classification,
     idGenerator: IdGenerator,
   ): void {
     const unknown = options.find(({ id }) => id !== undefined && !this.#version.hasOption(id));
@@ -311,9 +335,7 @@ export class Dilemma {
         id: option.id ?? idGenerator.generate(),
         text: option.text,
       })),
-      category,
-      tags,
-      minimumAge,
+      ...classification,
     });
     if (next.hasSameContentAs(this.#version)) return;
 
@@ -324,8 +346,8 @@ export class Dilemma {
 
   /**
    * Translates the new version of its original with a new version of its own: option n keeps the
-   * id of option n, a new position gets a new id, and the category and the minimum age follow the
-   * original. Nothing changes if it already translates the current version of its original.
+   * id of option n, a new position gets a new id, and the classification follows the original.
+   * Nothing changes if it already translates the current version of its original.
    */
   retranslate(
     original: Dilemma,
@@ -345,14 +367,41 @@ export class Dilemma {
         id: current[index]?.id ?? idGenerator.generate(),
         text,
       })),
-      category: original.category,
+      ...original.#classification(),
       tags: content.tags,
-      minimumAge: original.minimumAge,
     });
-    this.#status = Dilemma.#statusOfANewVersion(this.#creator);
-    this.#translationOf = { dilemmaId: original.id, version: original.version };
-    this.#translation = 'automatic';
+    this.#followVersionOf(original);
     this.#arguments = undefined;
+  }
+
+  /**
+   * Follows a new version of its original that reads as the one it translates (see
+   * `hasTheWordingOf`) with a new version of its own: the same text, options and arguments, the
+   * classification of the original, and no tags if the original has none. Nothing to translate.
+   * Nothing changes if it already translates the current version of its original.
+   */
+  follow(original: Dilemma): void {
+    if (this.#translationOf?.dilemmaId !== original.id) {
+      throw new NotItsOriginalError(this.id, original.id);
+    }
+    if (this.#translationOf.version === original.version) return;
+    Dilemma.#checkOptionCount(original, this.#version.options);
+
+    this.#version = new VersionVO(this.#version.number + 1, {
+      text: this.#version.text,
+      options: this.#version.options,
+      ...original.#classification(),
+      tags: original.tags.length === 0 ? [] : this.#version.tags,
+    });
+    this.#followVersionOf(original);
+  }
+
+  /**
+   * Whether its current version reads as that version of it: the same text and options, and the
+   * same tags or none. A translation of that version then only has to follow it, not translate it.
+   */
+  hasTheWordingOf(other: Dilemma): boolean {
+    return this.#version.hasTheWordingOf(other.#version);
   }
 
   /** Out of new games, at the version it has. */
@@ -420,7 +469,27 @@ export class Dilemma {
     return creator.type === 'curation-team' ? 'in-catalog' : 'in-review';
   }
 
-  static #checkOptionCount(original: Dilemma, options: readonly string[]): void {
+  /** Its classification and its tags, for a translation to take the classification. */
+  #classification(): Classification {
+    return {
+      category: this.category,
+      tags: this.tags,
+      minimumAge: this.minimumAge,
+      type: this.type,
+      compromising: this.compromising,
+      scale: this.scale,
+      fixedOrder: this.fixedOrder,
+    };
+  }
+
+  /** A new version of a translation, of the current version of its original and automatic. */
+  #followVersionOf(original: Dilemma): void {
+    this.#status = Dilemma.#statusOfANewVersion(this.#creator);
+    this.#translationOf = { dilemmaId: original.id, version: original.version };
+    this.#translation = 'automatic';
+  }
+
+  static #checkOptionCount(original: Dilemma, options: readonly unknown[]): void {
     if (options.length !== original.options.length) {
       throw new TranslationOptionCountError(original.options.length, options.length);
     }
@@ -434,6 +503,10 @@ export class Dilemma {
       category: version.category,
       tags: version.tags,
       minimumAge: version.minimumAge,
+      type: version.type,
+      compromising: version.compromising,
+      scale: version.scale,
+      fixedOrder: version.fixedOrder,
     };
   }
 }

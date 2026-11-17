@@ -188,7 +188,18 @@ export async function loadTestDilemmas(repository: DilemmaRepository): Promise<v
       `${dilemmaId}-public`,
     ]);
     const created = Dilemma.create(
-      { text, language, options, category, tags, minimumAge },
+      {
+        text,
+        language,
+        options,
+        category,
+        tags,
+        minimumAge,
+        type: 'standard',
+        compromising: false,
+        scale: 'everyday',
+        fixedOrder: false,
+      },
       ids,
     ).toSnapshot();
     const original = Dilemma.restore({ ...created, version: { ...created.version, status } });

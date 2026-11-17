@@ -111,6 +111,14 @@ export class RoomSettingsVO {
     return this.#settings.adultsOnly ? 18 : 16;
   }
 
+  /**
+   * Whether the dilemmas of the room may be compromising: never, until a room can include them
+   * (anonymous, and only if the host turns them on).
+   */
+  get includesCompromisingDilemmas(): boolean {
+    return false;
+  }
+
   /** New settings with the changes; what is not changed stays. */
   with(changes: Partial<RoomSettingsSnapshot>): RoomSettingsVO {
     return new RoomSettingsVO({ ...this.#settings, ...changes });
