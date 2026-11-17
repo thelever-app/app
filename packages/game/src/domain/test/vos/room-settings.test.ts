@@ -102,6 +102,7 @@ describe('RoomSettingsVO', () => {
     it.each([
       { case: 'a repeated id', round: { id: 1, origin: 'players' } },
       { case: 'an id that is not a positive whole number', round: { id: 0, origin: 'players' } },
+      { case: 'an id higher than the protocol keeps', round: { id: 32_768, origin: 'players' } },
       { case: 'an unknown origin', round: { id: 2, origin: 'TestNoOrigin' } },
       {
         case: 'a category not in the closed list',

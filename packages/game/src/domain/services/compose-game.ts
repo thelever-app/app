@@ -64,7 +64,8 @@ export function categoriesToDraw(
  * its dilemma, and a round of the players the one a player chose. For the others the system draws
  * from their categories at random: if the room includes new dilemmas, the exploration slots go to
  * random rounds at random, then the rest come from the catalog and, when it runs short, from
- * exploration. A dilemma is never in two rounds, and a round nothing is left for is not played.
+ * exploration, the rounds with fewest candidates first. A dilemma is never in two rounds, and a
+ * round nothing is left for is not played.
  */
 export function composeGame(input: ComposeGameInput, randomness: Randomness): ComposedDilemma[] {
   const composed: (ComposedDilemma | null)[] = input.rounds.map((round) => {
@@ -92,9 +93,12 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
     }
     return pool;
   };
-  const draw = (position: number, from: 'inCatalog' | 'inExploration'): void => {
+  const poolAt = (position: number): { inCatalog: string[]; inExploration: string[] } => {
     const [categories] = drawFrom(input.rounds[position]!, input.chosenDilemmas);
-    const dilemmaId = poolOf(categoriesKey(categories ?? null))[from].find((id) => !used.has(id));
+    return poolOf(categoriesKey(categories ?? null));
+  };
+  const draw = (position: number, from: 'inCatalog' | 'inExploration'): void => {
+    const dilemmaId = poolAt(position)[from].find((id) => !used.has(id));
     if (dilemmaId === undefined) return;
     used.add(dilemmaId);
     composed[position] = { dilemmaId, origin: 'random', chosenBy: null };
@@ -107,9 +111,17 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
       draw(position, 'inExploration');
     }
   }
-  for (const position of toDraw) if (!composed[position]) draw(position, 'inCatalog');
+  // The rounds with fewest candidates first, so a round of a narrow category is not left without
+  // the only dilemma it could play because a wider round took it.
+  const fewestFirst = (from: 'inCatalog' | 'inExploration'): number[] =>
+    [...toDraw].sort((one, other) => poolAt(one)[from].length - poolAt(other)[from].length);
+  for (const position of fewestFirst('inCatalog')) {
+    if (!composed[position]) draw(position, 'inCatalog');
+  }
   if (input.newDilemmas) {
-    for (const position of toDraw) if (!composed[position]) draw(position, 'inExploration');
+    for (const position of fewestFirst('inExploration')) {
+      if (!composed[position]) draw(position, 'inExploration');
+    }
   }
   return composed.filter((dilemma): dilemma is ComposedDilemma => dilemma !== null);
 }

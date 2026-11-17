@@ -9,6 +9,8 @@ export const DILEMMA_LANGUAGES = ['es', 'en', 'fr', 'de', 'it', 'pt', 'ca'] as c
 export const TIMES_PER_DILEMMA_IN_SECONDS = [30, 45, 60, 90] as const;
 /** A game plays from 1 to 12 rounds; a new room has 8 random ones from every category. */
 export const MINIMUM_ROUNDS = 1;
+/** The highest id a round may have: what the protocol and the database keep. */
+export const MAXIMUM_ROUND_ID = 32_767;
 export const MAXIMUM_ROUNDS = 12;
 export const DEFAULT_ROUNDS = 8;
 
@@ -117,7 +119,12 @@ function checkedRounds(rounds: readonly RoundSnapshot[]): RoundSnapshot[] {
   const ids = new Set<number>();
   const dilemmaIds = new Set<string>();
   return rounds.map((round) => {
-    if (!Number.isInteger(round.id) || round.id < 1 || ids.has(round.id)) {
+    if (
+      !Number.isInteger(round.id) ||
+      round.id < 1 ||
+      round.id > MAXIMUM_ROUND_ID ||
+      ids.has(round.id)
+    ) {
       throw new InvalidRoomSettingError('round id', round.id);
     }
     ids.add(round.id);

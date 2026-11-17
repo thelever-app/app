@@ -172,6 +172,27 @@ describe('composeGame', () => {
     expect([...ids(composed)].sort()).toEqual(['TestHonesty1', 'TestHonestyNew1']);
   });
 
+  it.each([[new FixedRandomness()], [new FixedRandomness(1)]])(
+    'should not leave a round of a narrow category without the only dilemma it could play',
+    (randomness) => {
+      // Arrange: every category has TestHonesty1 and TestLoyalty1, and honesty only TestHonesty1.
+      const rounds: RoundSnapshot[] = [
+        { id: 1, origin: 'random', categories: null },
+        { id: 2, origin: 'random', categories: ['honesty'] },
+      ];
+      const candidates = new Map([
+        ['*', { inCatalog: ['TestHonesty1', 'TestLoyalty1'], inExploration: [] }],
+        ['honesty', { inCatalog: ['TestHonesty1'], inExploration: [] }],
+      ]);
+
+      // Act
+      const composed = composeGame(input({ rounds, candidates, newDilemmas: false }), randomness);
+
+      // Assert
+      expect(ids(composed)).toEqual(['TestLoyalty1', 'TestHonesty1']);
+    },
+  );
+
   it('should take no dilemma in exploration when the host turns off new dilemmas', () => {
     // Act
     const composed = composeGame(input({ newDilemmas: false }), new FixedRandomness());

@@ -246,6 +246,36 @@ export function describeRoomRepositoryContract(
         expect(comparable(found?.toSnapshot())).toEqual(comparable(saved.toSnapshot()));
       });
 
+      it('should keep the dilemma a player chose, without them, once they are expelled', async () => {
+        // Arrange: Luis chose the dilemma of round 1 and the room was saved with it.
+        const repository = await create();
+        const saved = room();
+        join(saved, 'Luis');
+        saved.changeSettings('TestAnaId', { rounds: [{ id: 1, origin: 'players' }] });
+        saved.chooseRoundDilemma('TestLuisId', 1, {
+          dilemmaId: 'TestChosenDilemma',
+          minimumAge: 16,
+          compromising: false,
+        });
+        await repository.save(saved);
+
+        // Act
+        saved.expel('TestAnaId', 'TestLuisId');
+        await repository.save(saved);
+
+        // Assert
+        const found = await repository.findById('TestRoomId');
+        expect(found?.chosenDilemmas).toEqual([
+          {
+            dilemmaId: 'TestChosenDilemma',
+            minimumAge: 16,
+            compromising: false,
+            roundId: 1,
+            playerId: null,
+          },
+        ]);
+      });
+
       it('should keep whether each dilemma of the rounds is compromising', async () => {
         // Arrange
         const repository = await create();

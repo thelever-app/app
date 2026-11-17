@@ -98,6 +98,29 @@ describe('the migration that gives each room its rounds', () => {
     );
   });
 
+  it('should keep in each game who chose each dilemma, with the origins of the rounds', async () => {
+    // Arrange
+    const db = await databaseAt(BEFORE);
+
+    // Act
+    await migrateTo(db, THIS);
+
+    // Assert
+    const { rows: columns } = await sql<{ column_name: string }>`
+      select column_name from information_schema.columns
+      where table_name = 'game_dilemmas' and column_name like '%_by_player_id'
+    `.execute(db);
+    const { rows: checks } = await sql<{ definition: string }>`
+      select pg_get_constraintdef(oid) as definition from pg_constraint
+      where conname = 'game_dilemmas_origin'
+    `.execute(db);
+    expect(columns.map(({ column_name }) => column_name)).toEqual(['chosen_by_player_id']);
+    expect(checks[0]?.definition).toContain("'random'");
+    expect(checks[0]?.definition).toContain("'specific'");
+    expect(checks[0]?.definition).toContain("'players'");
+    expect(checks[0]?.definition).not.toContain('picked-by-the-system');
+  });
+
   it('should keep a dilemma in one round of a room only', async () => {
     // Arrange
     const db = await databaseAt(BEFORE);

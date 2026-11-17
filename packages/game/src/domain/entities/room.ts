@@ -55,7 +55,11 @@ export type { LobbyDilemma } from '../vos/round.vo.ts';
  */
 export interface ChosenDilemma extends LobbyDilemma {
   readonly roundId: number;
-  readonly playerId: string;
+  /**
+   * Null once the player who chose it was expelled: the dilemma stays in its round, so that nobody
+   * learns who chose it by seeing the round empty again.
+   */
+  readonly playerId: string | null;
 }
 
 /** A round as the host sets it; one without an id is a new one, and a specific one names its dilemma. */
@@ -424,7 +428,9 @@ export class Room {
 
     this.#players.splice(this.#players.indexOf(player), 1);
     this.#connections.delete(playerId);
-    this.#chosenDilemmas = this.#chosenDilemmas.filter((chosen) => chosen.playerId !== playerId);
+    this.#chosenDilemmas = this.#chosenDilemmas.map((chosen) =>
+      chosen.playerId === playerId ? { ...chosen, playerId: null } : chosen,
+    );
     this.#expelledIdentities.add(player.identity);
     this.#changeLobby('player-expelled');
   }

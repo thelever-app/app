@@ -300,8 +300,8 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
     connections: row.connections,
     expelledIdentities: row.expelled.map(({ identity }) => identity),
     chosenDilemmas: row.rounds.flatMap(
-      ({ roundId, dilemmaId, minimumAge, compromising, chosenBy }) =>
-        chosenBy === null || dilemmaId === null || minimumAge === null || compromising === null
+      ({ roundId, origin, dilemmaId, minimumAge, compromising, chosenBy }) =>
+        origin !== 'players' || dilemmaId === null || minimumAge === null || compromising === null
           ? []
           : [{ roundId, playerId: chosenBy, dilemmaId, minimumAge, compromising }],
     ),

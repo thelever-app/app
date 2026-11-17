@@ -2,7 +2,8 @@ import { type Kysely, sql } from 'kysely';
 
 // The room keeps its rounds in order, each with where its dilemma comes from: random, from its
 // categories (null, every one); specific, the dilemma the host chose; or the players, with the
-// dilemma one of them chose and who, once chosen. A dilemma is in one round only. The rounds replace
+// dilemma one of them chose and who, once chosen; if the host expels who chose it, the dilemma stays
+// without them, so nobody learns who chose it. A dilemma is in one round only. The rounds replace
 // the number of dilemmas, the categories, the dilemmas picked and added, how many each player adds
 // and the first dilemma: a room in a lobby now gets as many random rounds as it had dilemmas, from its
 // categories, and loses what was picked or added; those rooms close within the day. Each game keeps
@@ -25,7 +26,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       unique (room_id, round_id),
       unique (room_id, dilemma_id),
       foreign key (room_id, chosen_by_player_id) references room_players (room_id, id)
-        on delete cascade,
+        on delete set null (chosen_by_player_id),
       check (
         (dilemma_id is null) = (minimum_age is null)
         and (dilemma_id is null) = (compromising is null)
@@ -34,7 +35,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       check (categories is null or cardinality(categories) > 0),
       check (origin <> 'random' or dilemma_id is null),
       check (origin <> 'specific' or (dilemma_id is not null and chosen_by_player_id is null)),
-      check (origin <> 'players' or (dilemma_id is null) = (chosen_by_player_id is null))
+      check (dilemma_id is not null or chosen_by_player_id is null)
     )
   `.execute(db);
   await sql`

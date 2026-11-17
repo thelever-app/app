@@ -753,7 +753,7 @@ describe('Room', () => {
   });
 
   describe('expel', () => {
-    it('should take the player, their connections and their dilemma out of the room', () => {
+    it('should take the player and their connections out, and leave the dilemma they chose without them', () => {
       // Arrange
       const room = lobbyWithAPlayersRound();
       room.chooseRoundDilemma('TestMartaId', 2, ANOTHER);
@@ -763,9 +763,10 @@ describe('Room', () => {
       // Act
       room.expel('TestHostId', 'TestMartaId');
 
-      // Assert
+      // Assert: the round stays filled, so nobody learns who had chosen it.
       expect(room.playerWith('TestMartaIdentity')).toBeUndefined();
-      expect(room.chosenDilemmas).toEqual([]);
+      expect(room.chosenDilemmas).toEqual([{ ...ANOTHER, roundId: 2, playerId: null }]);
+      expect(() => room.clearRoundDilemma('TestHostId', 2)).toThrow(NotChooserError);
       expect(room.toSnapshot().connections).toEqual([]);
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'player-expelled', 6)]);
     });
