@@ -2,6 +2,7 @@ import type { PublicDilemma } from '@thelever-app/dilemmas';
 import { pagePath } from '../addresses.ts';
 import { type Html, html } from '../html.ts';
 import type { SiteTexts } from '../texts/site-texts.ts';
+import { assetPath } from '../serve/assets.ts';
 import { icon } from './icons.ts';
 
 /** Where the site is and what it links to, by environment. */
@@ -65,13 +66,18 @@ export function document(page: Page, languages: Languages, config: SiteConfig): 
         )}
         ${home ? html`<link rel="alternate" hreflang="x-default" href="${config.origin}/" />` : ''}
         ${config.adsenseClient ? html`<meta name="google-adsense-account" content="${config.adsenseClient}" />` : ''}
-        <link rel="icon" href="/_site/mascot-waving.svg" type="image/svg+xml" />
-        <link rel="stylesheet" href="/_site/site.css" />
+        <link rel="icon" href="${assetPath('mascot-waving.svg')}" type="image/svg+xml" />
+        <link rel="stylesheet" href="${assetPath('site.css')}" />
       </head>
       <body>
         <header class="header${home ? ' at-home' : ''}">
           <a class="logo" href="/${page.language}/"
-            ><img src="/_site/mascot-waving.svg" alt="" width="32" height="32" />TheLever.app</a
+            ><img
+              src="${assetPath('mascot-waving.svg')}"
+              alt=""
+              width="32"
+              height="32"
+            />TheLever.app</a
           >
           ${languageMenu(page, languages)}
           <a class="button primary header-play" href="${config.appBase}/app">${texts.home.play}</a>
@@ -111,7 +117,6 @@ function languageMenu(page: Page, languages: Languages): Html {
           </li>`;
         })}
       </ul>
-      <p class="languages-note">${texts.languageMenuNote}</p>
     </div>
   </details>`;
 }

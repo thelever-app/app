@@ -5,8 +5,6 @@ const UPDATED = '16. November 2026';
 export const de: SiteTexts = {
   languageName: 'Deutsch',
   languageMenu: 'Sprache',
-  languageMenuNote:
-    'Bringt dich zu derselben Seite in der gewählten Sprache. Öffnest du die App von hier, öffnet sie sich in dieser Sprache.',
   homeLink: 'Startseite',
   someoneInYourGroup: 'jemand aus deiner Gruppe',
   categories: {

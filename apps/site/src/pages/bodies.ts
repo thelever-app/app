@@ -3,6 +3,7 @@ import { GAP_MARKER } from '@thelever-app/dilemmas/published';
 import { categoryPath, homePath } from '../addresses.ts';
 import { type Html, html } from '../html.ts';
 import type { OwnPage, SiteTexts } from '../texts/site-texts.ts';
+import { assetPath } from '../serve/assets.ts';
 import { icon } from './icons.ts';
 import type { Owner } from './page.ts';
 
@@ -29,7 +30,7 @@ export function homeBody(language: string, texts: SiteTexts, appBase: string): H
       </div>
       <img
         class="hero-scene"
-        src="/_site/waving-at-junction.svg"
+        src="${assetPath('waving-at-junction.svg')}"
         alt="${texts.home.scene}"
         width="480"
         height="227"
@@ -125,7 +126,7 @@ export function dilemmaBody({ dilemma }: ShownDilemma, texts: SiteTexts, appBase
 
 export function goneBody(language: string, category: Category, texts: SiteTexts): Html {
   const { name } = texts.categories[category];
-  return html`<img class="scene" src="/_site/doubting-at-track-end.svg" alt="" />
+  return html`<img class="scene" src="${assetPath('doubting-at-track-end.svg')}" alt="" />
     <h1>${texts.gone.heading}</h1>
     <p class="intro">${texts.gone.body}</p>
     <a class="button primary" href="${categoryPath(language, name)}">${texts.gone.moreOf(name)}</a>
@@ -133,7 +134,7 @@ export function goneBody(language: string, category: Category, texts: SiteTexts)
 }
 
 export function notFoundBody(language: string, texts: SiteTexts): Html {
-  return html`<img class="scene" src="/_site/doubting-at-track-end.svg" alt="" />
+  return html`<img class="scene" src="${assetPath('doubting-at-track-end.svg')}" alt="" />
     <h1>${texts.notFound.heading}</h1>
     <p class="intro">${texts.notFound.body}</p>
     <a class="button primary" href="${homePath(language)}">${texts.homeLink}</a>`;

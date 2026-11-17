@@ -5,8 +5,6 @@ const UPDATED = '16 de noviembre de 2026';
 export const es: SiteTexts = {
   languageName: 'Español',
   languageMenu: 'Idioma',
-  languageMenuNote:
-    'Te lleva a esta misma página en el idioma que elijas. Si abres la app desde aquí, se abrirá en ese idioma.',
   homeLink: 'Inicio',
   someoneInYourGroup: 'alguien de tu grupo',
   categories: {
