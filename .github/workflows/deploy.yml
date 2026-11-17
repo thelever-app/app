@@ -99,3 +99,6 @@ jobs:
       environment: dev
       commit: ${{ github.sha }}
       run-id: ${{ github.run_id }}
+    # A reusable workflow gets no secret its caller does not pass on, not even those of the
+    # environment its job runs in: the legal notice needs those of the environment.
+    secrets: inherit
