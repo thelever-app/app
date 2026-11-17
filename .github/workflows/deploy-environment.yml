@@ -160,6 +160,10 @@ jobs:
           ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
           # Who is behind TheLever, as the legal notice names them: secrets of the environment, so
           # they are neither in the public repository nor in the public logs of its runs.
+          # The ad units of AdSense for the pages of the dilemmas; none until AdSense approves the site.
+          ADSENSE_SLOT_PHONE: ${{ vars.ADSENSE_SLOT_PHONE }}
+          ADSENSE_SLOT_TOP: ${{ vars.ADSENSE_SLOT_TOP }}
+          ADSENSE_SLOT_SIDE: ${{ vars.ADSENSE_SLOT_SIDE }}
           LEGAL_OWNER_NAME: ${{ secrets.LEGAL_OWNER_NAME }}
           LEGAL_OWNER_TAX_ID: ${{ secrets.LEGAL_OWNER_TAX_ID }}
           LEGAL_OWNER_ADDRESS: ${{ secrets.LEGAL_OWNER_ADDRESS }}
@@ -168,7 +172,7 @@ jobs:
             --image "$(cat site-image.txt)" \
             --service-account "public-site@$PROJECT.iam.gserviceaccount.com" \
             --command node --args apps/site/src/jobs/generate-site.ts \
-            --set-env-vars "^|^CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever|DB_USER=public-site@$PROJECT.iam|SITE_BUCKET=$PROJECT-site|SITE_ORIGIN=https://$WEB_DOMAIN|ADSENSE_CLIENT=$ADSENSE_CLIENT|LEGAL_OWNER_NAME=$LEGAL_OWNER_NAME|LEGAL_OWNER_TAX_ID=$LEGAL_OWNER_TAX_ID|LEGAL_OWNER_ADDRESS=$LEGAL_OWNER_ADDRESS" \
+            --set-env-vars "^|^CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever|DB_USER=public-site@$PROJECT.iam|SITE_BUCKET=$PROJECT-site|SITE_ORIGIN=https://$WEB_DOMAIN|ADSENSE_CLIENT=$ADSENSE_CLIENT|ADSENSE_SLOT_PHONE=$ADSENSE_SLOT_PHONE|ADSENSE_SLOT_TOP=$ADSENSE_SLOT_TOP|ADSENSE_SLOT_SIDE=$ADSENSE_SLOT_SIDE|LEGAL_OWNER_NAME=$LEGAL_OWNER_NAME|LEGAL_OWNER_TAX_ID=$LEGAL_OWNER_TAX_ID|LEGAL_OWNER_ADDRESS=$LEGAL_OWNER_ADDRESS" \
             --max-retries 1 --task-timeout 30m \
             --quiet
           gcloud run jobs execute generate-site --project "$PROJECT" --region europe-southwest1 \

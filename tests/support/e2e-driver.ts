@@ -272,6 +272,31 @@ const LOCALES: Readonly<Record<string, string>> = { es: 'es-ES', en: 'en-US', fr
 /** The language of the browsers when a scenario does not name one. */
 const SPANISH = 'es-ES';
 
+/** The publisher and the ad units the public web of the run shows ads with. */
+const TEST_ADS = {
+  client: 'ca-pub-0000000000000000',
+  slots: { phone: '1000000001', top: '1000000002', side: '1000000003' },
+} as const;
+
+/** Where the pages load AdSense from, which the browsers of the run answer with TEST_ADSENSE. */
+const ADSENSE_SCRIPT = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+
+/**
+ * What the browsers of the run load instead of AdSense: like it, it fills an ad unit for each
+ * request the page queued before it loaded or makes after, and marks it as filled.
+ */
+const TEST_ADSENSE = `(() => {
+  const fill = () => {
+    const unit = document.querySelector('ins.adsbygoogle:not([data-ad-status])');
+    if (!unit) return;
+    unit.setAttribute('data-ad-status', 'filled');
+    unit.style.background = '#d9d4c7';
+  };
+  const queued = Array.isArray(window.adsbygoogle) ? window.adsbygoogle.length : 0;
+  window.adsbygoogle = { push: fill };
+  for (let request = 0; request < queued; request += 1) fill();
+})();`;
+
 /** The narrowest phone the web supports: every scenario plays on it. */
 const PHONE = { width: 320, height: 640 };
 const WAIT_TIMEOUT_MS = 10_000;
@@ -1198,6 +1223,8 @@ export class E2eDriver implements GameDriver {
         origin: this.#stack.siteUrl,
         appBase: this.#stack.webUrl,
         owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
+        adsenseClient: TEST_ADS.client,
+        adSlots: TEST_ADS.slots,
       });
       await publishSite(this.#site, this.#stack.siteFiles);
     });
@@ -1246,6 +1273,17 @@ export class E2eDriver implements GameDriver {
   async languageOfTheApp(): Promise<string | undefined> {
     const { page } = screenOf(this.#playerCalled(VISITOR));
     return page.evaluate('document.documentElement.lang');
+  }
+
+  async bannerAdBelowTheArguments(): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    const ad = page.locator('.ad ins[data-ad-status="filled"]');
+    await ad.waitFor();
+    const [shown, args] = await Promise.all([
+      ad.boundingBox(),
+      page.locator('.dilemma-arguments').boundingBox(),
+    ]);
+    return shown !== null && args !== null && shown.y >= args.y + args.height;
   }
 
   async createTheRoomOfTheDilemma(): Promise<void> {
@@ -2254,6 +2292,10 @@ export class E2eDriver implements GameDriver {
    */
   async #newContext(options: BrowserContextOptions): Promise<BrowserContext> {
     const context = await this.#stack.browser.newContext({ viewport: PHONE, ...options });
+    // The script of AdSense never leaves the run: a script of test fills the ad units instead.
+    await context.route(`${ADSENSE_SCRIPT}*`, (route) =>
+      route.fulfill({ contentType: 'text/javascript', body: TEST_ADSENSE }),
+    );
     await context.addInitScript(
       ([key, value]) => {
         localStorage.setItem(key, value);

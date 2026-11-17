@@ -1020,6 +1020,10 @@ export class AcceptanceDriver implements GameDriver {
     return this.#appLanguage;
   }
 
+  async bannerAdBelowTheArguments(): Promise<boolean> {
+    throw new Error('Only the screen shows the ads: the scenario must be @screen');
+  }
+
   async createTheRoomOfTheDilemma(): Promise<void> {
     const preview = this.#dilemmaToPlay;
     if (!preview) throw new Error('The visitor chose no dilemma to play with the group');

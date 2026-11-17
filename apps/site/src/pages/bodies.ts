@@ -5,7 +5,7 @@ import { type Html, html } from '../html.ts';
 import type { OwnPage, SiteTexts } from '../texts/site-texts.ts';
 import { assetPath } from '../serve/assets.ts';
 import { icon } from './icons.ts';
-import type { Owner } from './page.ts';
+import type { AdSlots, Owner } from './page.ts';
 
 /** A dilemma as its page and the page of its category show it. */
 export interface ShownDilemma {
@@ -82,11 +82,35 @@ export function categoryBody(
     </ul>`;
 }
 
-export function dilemmaBody({ dilemma }: ShownDilemma, texts: SiteTexts, appBase: string): Html {
+/** A space for an ad of AdSense, labelled as one: shown on phones or on wide screens only. */
+function adUnit(where: keyof AdSlots, ads: Ads, texts: SiteTexts): Html {
+  return html`<aside class="ad ad-${where}" aria-label="${texts.dilemma.ad}">
+    <span class="ad-label" aria-hidden="true">${texts.dilemma.ad}</span>
+    <ins
+      class="adsbygoogle"
+      data-ad-client="${ads.client}"
+      data-ad-slot="${ads.slots[where]}"
+    ></ins>
+  </aside>`;
+}
+
+/** The publisher and the ad units the page shows ads with. */
+export interface Ads {
+  readonly client: string;
+  readonly slots: AdSlots;
+}
+
+export function dilemmaBody(
+  { dilemma }: ShownDilemma,
+  texts: SiteTexts,
+  appBase: string,
+  ads?: Ads,
+): Html {
   const { name } = texts.categories[dilemma.category];
   const args = dilemma.arguments;
   const argued = (optionId: string) => args.options.find((option) => option.optionId === optionId);
-  return html`<nav class="crumbs" aria-label="breadcrumb">
+  return html`${ads ? adUnit('top', ads, texts) : ''}
+    <nav class="crumbs" aria-label="breadcrumb">
       <a href="${homePath(dilemma.language)}">${texts.homeLink}</a> ›
       <a href="${categoryPath(dilemma.language, name)}">${name}</a>
     </nav>
@@ -119,8 +143,10 @@ export function dilemmaBody({ dilemma }: ShownDilemma, texts: SiteTexts, appBase
         <p class="credit">
           ${texts.dilemma.byTheTeam}${args.context ? html` ${readable(args.context, texts)}` : ''}
         </p>
+        ${ads ? adUnit('side', ads, texts) : ''}
       </section>`}
     </div>
+    ${ads ? adUnit('phone', ads, texts) : ''}
     <a class="more" href="${categoryPath(dilemma.language, name)}"
       >${texts.dilemma.moreOf(name)}</a
     >`;
@@ -150,23 +176,64 @@ function withOwner(text: string, owner: Owner): string {
     .replaceAll('{address}', owner.address);
 }
 
+/**
+ * The paragraphs of a section in their order, with each run of those that start with "- " together,
+ * as the items of one list.
+ */
+function blocksOf(paragraphs: readonly string[]): (string | string[])[] {
+  const blocks: (string | string[])[] = [];
+  for (const paragraph of paragraphs) {
+    const last = blocks.at(-1);
+    if (!paragraph.startsWith('- ')) blocks.push(paragraph);
+    else if (Array.isArray(last)) last.push(paragraph);
+    else blocks.push([paragraph]);
+  }
+  return blocks;
+}
+
 /** A page of its own: its sections, with the paragraphs that start with "- " as a list. */
 export function ownPageBody(page: OwnPage, owner: Owner): Html {
   return html`<article class="own-page">
     <h1>${page.title}</h1>
-    ${page.sections.map(({ heading, paragraphs }) => {
-      const items = paragraphs.filter((paragraph) => paragraph.startsWith('- '));
-      const rest = paragraphs.filter((paragraph) => !paragraph.startsWith('- '));
-      return html`<h2>${heading}</h2>
-        ${rest.map((paragraph) => html`<p>${withOwner(paragraph, owner)}</p>`)}
-        ${
-          items.length > 0
-            ? html`<ul>
-                ${items.map((item) => html`<li>${withOwner(item.slice(2), owner)}</li>`)}
-              </ul>`
-            : ''
-        }`;
-    })}
+    ${page.sections.map(
+      ({ heading, paragraphs, table }) =>
+        html`<h2>${heading}</h2>
+          ${blocksOf(paragraphs).map((block) =>
+            Array.isArray(block)
+              ? html`<ul>
+                  ${block.map((item) => html`<li>${withOwner(item.slice(2), owner)}</li>`)}
+                </ul>`
+              : html`<p>${withOwner(block, owner)}</p>`,
+          )}
+          ${table ? tableOf(heading, table) : ''}`,
+    )}
     <p class="updated">${page.updated}</p>
   </article>`;
+}
+
+/**
+ * A table of a page of its own, which scrolls sideways inside its box on a narrow screen instead of
+ * the page; the box takes the focus, so it can be scrolled with the keyboard too.
+ */
+function tableOf(
+  heading: string,
+  { headers, rows }: NonNullable<OwnPage['sections'][number]['table']>,
+): Html {
+  return html`<div class="table" role="region" aria-label="${heading}" tabindex="0">
+    <table>
+      <thead>
+        <tr>
+          ${headers.map((header) => html`<th scope="col">${header}</th>`)}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(
+          (row) =>
+            html`<tr>
+              ${row.map((cell) => html`<td>${cell}</td>`)}
+            </tr>`,
+        )}
+      </tbody>
+    </table>
+  </div>`;
 }

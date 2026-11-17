@@ -9,6 +9,11 @@ export interface Section {
   readonly heading: string;
   /** Each one a paragraph; one that starts with "- " is an item of a list. */
   readonly paragraphs: readonly string[];
+  /** A table after the paragraphs, such as the cookies the web uses, with a header per column. */
+  readonly table?: {
+    readonly headers: readonly string[];
+    readonly rows: readonly (readonly string[])[];
+  };
 }
 
 /** A page of its own, such as the privacy policy. */
@@ -60,6 +65,8 @@ export interface SiteTexts {
     readonly for: string;
     readonly against: string;
     readonly byTheTeam: string;
+    /** The label of a space for an ad, which says it is one. */
+    readonly ad: string;
     readonly moreOf: (categoryName: string) => string;
   };
   readonly gone: {
@@ -69,7 +76,12 @@ export interface SiteTexts {
     readonly moreOf: (categoryName: string) => string;
   };
   readonly notFound: { readonly title: string; readonly heading: string; readonly body: string };
-  readonly footer: { readonly label: string };
+  readonly footer: {
+    readonly label: string;
+    /** What opens again the cookie manager of Google, on the pages that load it. */
+    readonly manageCookies: string;
+  };
   readonly privacy: OwnPage;
+  readonly cookies: OwnPage;
   readonly legalNotice: OwnPage;
 }

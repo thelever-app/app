@@ -11,7 +11,7 @@ import {
   readable,
   type ShownDilemma,
 } from './pages/bodies.ts';
-import { document, type Languages, type Page, type SiteConfig } from './pages/page.ts';
+import { adsOf, document, type Languages, type Page, type SiteConfig } from './pages/page.ts';
 
 export interface SiteFile {
   readonly body: string;
@@ -108,8 +108,8 @@ export function buildSite(
         ),
       });
     }
-    for (const own of [texts.privacy, texts.legalNotice]) {
-      const which = own === texts.privacy ? 'privacy' : 'legalNotice';
+    for (const which of ['privacy', 'cookies', 'legalNotice'] as const) {
+      const own = texts[which];
       pages.push({
         path: pagePath(language, own.title),
         language,
@@ -136,7 +136,7 @@ export function buildSite(
         versions.map(({ dilemma: other, path }) => [other.language, path]),
       ),
       indexable: true,
-      main: dilemmaBody(one, texts, config.appBase),
+      main: dilemmaBody(one, texts, config.appBase, adsOf(config)),
       dilemma,
     });
   }

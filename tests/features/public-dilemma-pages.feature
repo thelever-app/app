@@ -108,7 +108,7 @@ Feature: Public dilemma pages
     Then the public page of "La herencia" shows its arguments and can be indexed
     And the sitemap includes it
 
-  @ui @screen @todo
+  @ui @screen
   Scenario: The page shows a banner ad below the content
     When a visitor opens the public page of "El tranvía"
     Then a banner ad appears below the arguments

@@ -424,6 +424,8 @@ export interface GameDriver {
   visitorWithoutAChosenLanguage(): Promise<void>;
   /** The language the app the visitor opened from the public web is in. */
   languageOfTheApp(): Promise<string | undefined>;
+  /** Whether the public page the visitor has open shows an ad in the space below the arguments. */
+  bannerAdBelowTheArguments(): Promise<boolean>;
   /** The visitor creates the room the screen offers to play the dilemma with the group. */
   createTheRoomOfTheDilemma(): Promise<void>;
   /** The name of the dilemma the room the visitor created plays first. */

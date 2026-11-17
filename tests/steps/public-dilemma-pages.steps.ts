@@ -209,3 +209,7 @@ Then('the sitemap does not include it', async function (this: GameWorld) {
 Then('the sitemap includes it', async function (this: GameWorld) {
   assert.equal(await this.driver.sitemapIncludes(this.dilemmaName), true);
 });
+
+Then('a banner ad appears below the arguments', async function (this: GameWorld) {
+  assert.ok(await this.driver.bannerAdBelowTheArguments(), 'no ad appears below the arguments');
+});

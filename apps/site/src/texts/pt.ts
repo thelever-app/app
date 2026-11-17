@@ -1,6 +1,6 @@
 import type { SiteTexts } from './site-texts.ts';
 
-const UPDATED = '16 de novembro de 2026';
+const UPDATED = '17 de novembro de 2026';
 
 export const pt: SiteTexts = {
   languageName: 'Português',
@@ -77,6 +77,7 @@ export const pt: SiteTexts = {
     for: 'A favor:',
     against: 'Contra:',
     byTheTeam: 'Texto da equipa do TheLever.',
+    ad: 'Publicidade',
     moreOf: (name) => `Mais dilemas: ${name.toLowerCase()}`,
   },
   gone: {
@@ -90,7 +91,7 @@ export const pt: SiteTexts = {
     heading: 'Esta página não existe',
     body: 'Talvez o endereço esteja mal escrito. A partir do início chegas a todos os dilemas.',
   },
-  footer: { label: 'Informação legal' },
+  footer: { label: 'Informação legal', manageCookies: 'Gerir cookies' },
   privacy: {
     title: 'Privacidade',
     description:
@@ -119,14 +120,15 @@ export const pt: SiteTexts = {
       {
         heading: 'Anúncios e cookies',
         paragraphs: [
-          'Por agora, este site não mostra anúncios nem usa cookies. Quando os mostrar, serão anúncios do Google AdSense: a Google e os seus parceiros só usarão cookies para os mostrar ou personalizar se o aceitares no gestor de cookies, que aparecerá antes de qualquer anúncio; se não aceitares, só verás anúncios limitados, sem cookies. Nenhum anúncio receberá o que votas na app.',
-          'A Google é responsável por conta própria pelo que faz com esses cookies. Sabe mais em policies.google.com/technologies/ads.',
+          'As páginas dos dilemas mostram anúncios do Google AdSense. Antes de usar cookies, o gestor de cookies da Google pergunta-te o que aceitas, e a Google só os usa com o teu consentimento (art. 6.º, n.º 1, al. a), do RGPD e art. 22.º, n.º 2, da LSSI). Se não aceitares, só vês anúncios limitados, sem cookies.',
+          'Os anúncios só são personalizados se o aceitares: neste site, que não pergunta a tua idade, depende apenas disso. Se o teu navegador enviar o sinal Global Privacy Control, os anúncios não são personalizados mesmo que o aceites. Nenhum anúncio recebe o que votas na app.',
+          'Ao carregar os anúncios, mesmo que não aceites nada, a Google recebe o teu endereço IP, os dados do teu navegador e a página que visitas. A Google e os seus parceiros são responsáveis por conta própria pelo que fazem com esses dados e com os seus cookies, conforme o que aceitares. Que cookies são e como alterar o que aceitas está na política de cookies; a Google explica-o em policies.google.com/technologies/ads.',
         ],
       },
       {
         heading: 'Com quem partilhamos os teus dados',
         paragraphs: [
-          'Não vendemos os teus dados. A Google Cloud trata-os por nossa conta, com contrato, só para alojar o site. Também podemos ter de os dar às autoridades quando a lei o exigir.',
+          'Não vendemos os teus dados. A Google Cloud trata-os por nossa conta, com contrato, só para alojar o site. O Google AdSense e os seus parceiros recebem-nos como responsáveis por conta própria, como explica a secção sobre anúncios. Também podemos ter de os dar às autoridades quando a lei o exigir.',
         ],
       },
       {
@@ -138,7 +140,7 @@ export const pt: SiteTexts = {
       {
         heading: 'Durante quanto tempo os guardamos',
         paragraphs: [
-          'O TheLever não guarda nada da tua visita. A Google conserva os seus registos técnicos o tempo de que precisa para a segurança do serviço.',
+          'O TheLever não guarda nada da tua visita. A Google conserva os seus registos técnicos o tempo de que precisa para a segurança do serviço, e cada cookie dura o tempo indicado na política de cookies.',
         ],
       },
       {
@@ -152,6 +154,108 @@ export const pt: SiteTexts = {
         heading: 'Alterações a esta política',
         paragraphs: [
           'Se a alterarmos de forma importante, diremos nesta página antes de te afetar.',
+        ],
+      },
+    ],
+  },
+  cookies: {
+    title: 'Cookies',
+    description:
+      'Que cookies são usados no site público do TheLever, para quê e como alterar o que aceitas.',
+    updated: UPDATED,
+    sections: [
+      {
+        heading: 'O que são',
+        paragraphs: [
+          'Os cookies são pequenos ficheiros que um site guarda no teu navegador e volta a ler depois. Esta política chama também «cookies» às tecnologias semelhantes, como o armazenamento local do navegador.',
+        ],
+      },
+      {
+        heading: 'Os que este site usa',
+        paragraphs: [
+          'O TheLever não coloca cookies próprios em nenhuma página deste site. Colocam-nos o Google AdSense, que mostra os anúncios, e o gestor de cookies da Google, que te pergunta o que aceitas. Todos são da Google, como terceiro, e só são carregados nas páginas dos dilemas: o início, as categorias e as páginas legais não têm anúncios nem cookies.',
+        ],
+      },
+      {
+        heading: 'Os que não precisam do teu consentimento',
+        paragraphs: [
+          'Só os que guardam a tua escolha, para a respeitar sem ta voltar a perguntar em cada página: o que respondes no gestor de cookies (FCCDCF) e, se não aceitares anúncios com cookies, que não os aceitas (__gpi_optout).',
+        ],
+      },
+      {
+        heading: 'Os que precisam do teu consentimento',
+        paragraphs: [
+          'Todos os outros, e a Google só os usa se o aceitares no gestor de cookies:',
+          '- Para mostrar e medir os anúncios: guardar e ler informações no teu dispositivo, limitar quantas vezes vês um anúncio, medir como funciona e prevenir a fraude. Se não o aceitares, só vês anúncios limitados, sem cookies.',
+          '- Para personalizar os anúncios de acordo com os teus interesses. Neste site, que não pergunta a tua idade, depende apenas de o aceitares. Se o teu navegador enviar o sinal Global Privacy Control, os anúncios não são personalizados mesmo que o aceites. Nunca são escolhidos a partir do que votas na app.',
+          'A Google também pode guardar informações semelhantes no armazenamento local do navegador, para os mesmos fins e com o mesmo consentimento.',
+        ],
+      },
+      {
+        heading: 'Tabela de cookies',
+        paragraphs: [
+          'Os nomes, as finalidades e as durações são os que a Google publica em business.safety.google/adscookies, onde está a sua lista completa.',
+        ],
+        table: {
+          headers: ['Cookie', 'De quem', 'Para quê', 'Duração'],
+          rows: [
+            [
+              'FCCDCF',
+              'Gestor de cookies da Google',
+              'Guardar o que respondes no gestor',
+              '13 meses',
+            ],
+            ['FCNEC', 'Gestor de cookies da Google', 'Estatísticas do gestor', '365 dias'],
+            ['__gads', 'Google AdSense', 'Anúncios e segurança', '13 meses'],
+            ['__gpi', 'Google AdSense', 'Anúncios e segurança', '13 meses'],
+            [
+              '__gpi_optout',
+              'Google AdSense',
+              'Lembrar que não aceitas anúncios com cookies',
+              '13 meses',
+            ],
+            ['__eoi', 'Google AdSense', 'Segurança', '6 meses'],
+            [
+              'TESTCOOKIESENABLED',
+              'Google AdSense',
+              'Verificar se o teu navegador aceita cookies',
+              '60 segundos',
+            ],
+            ['IDE', 'Google (doubleclick.net)', 'Anúncios e segurança', '13 meses'],
+            ['id', 'Google (doubleclick.net)', 'Anúncios, segurança e funcionamento', '13 meses'],
+            [
+              'DSID',
+              'Google (doubleclick.net)',
+              'Anúncios, segurança e funcionamento',
+              '2 semanas',
+            ],
+            [
+              'test_cookie',
+              'Google (doubleclick.net)',
+              'Verificar se o teu navegador aceita cookies',
+              '15 minutos',
+            ],
+          ],
+        },
+      },
+      {
+        heading: 'Como alterar o que aceitas',
+        paragraphs: [
+          'Em qualquer página de um dilema, com «Gerir cookies» no rodapé: volta a abrir o gestor de cookies da Google, onde podes retirar ou alterar o teu consentimento tão facilmente como o deste.',
+          'Também podes apagar ou bloquear os cookies nas definições do teu navegador.',
+        ],
+      },
+      {
+        heading: 'Terceiros e transferências',
+        paragraphs: [
+          'A Google e os parceiros publicitários que aceitares usam os seus cookies como responsáveis por conta própria. O gestor de cookies segue o Transparency and Consent Framework da IAB Europe e mostra-te quem são esses parceiros e para que usa cada um os teus dados.',
+          'A Google pode tratar dados fora do Espaço Económico Europeu, ao abrigo do Quadro de Privacidade de Dados UE-EUA e das cláusulas contratuais-tipo da Comissão Europeia. Explica-o em policies.google.com/technologies/ads.',
+        ],
+      },
+      {
+        heading: 'Mais informações',
+        paragraphs: [
+          'Como tratamos os teus dados está na política de privacidade. Para qualquer dúvida, escreve para privacidad@thelever.app.',
         ],
       },
     ],
@@ -175,7 +279,7 @@ export const pt: SiteTexts = {
       {
         heading: 'Privacidade',
         paragraphs: [
-          'Como tratamos os dados neste site está na política de privacidade. A app explica a sua antes de jogar, e o seu uso rege-se pelas suas condições de utilização, que se aceitam ao entrar.',
+          'Como tratamos os dados neste site está na política de privacidade, e que cookies usa, na política de cookies. A app explica a sua antes de jogar, e o seu uso rege-se pelas suas condições de utilização, que se aceitam ao entrar.',
         ],
       },
       {
