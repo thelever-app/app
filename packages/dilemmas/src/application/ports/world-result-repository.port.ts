@@ -15,8 +15,13 @@ export interface Ballot {
 export interface WorldResultRepository {
   /** Counts the vote, unless that identity already voted that version: then nothing changes and it answers false. */
   countVote(identity: string, ballot: Ballot): Promise<boolean>;
-  /** Makes the counts of now the published world result of every dilemma. */
-  publish(): Promise<void>;
+  /**
+   * Makes the counts of now the published world result of each version that has at least that many
+   * new answers since it was last published; the rest keep the result they had.
+   */
+  publish(minimumNewAnswers: number): Promise<void>;
+  /** Forgets who voted each version that is no longer the current one of its dilemma; its answers stay. */
+  forgetReceiptsOfFormerVersions(): Promise<void>;
   /** The published answers to each option of that version, by position; an option nobody voted has none. */
   publishedCountsOf(dilemmaId: string, version: number): Promise<ReadonlyMap<number, number>>;
 }

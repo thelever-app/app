@@ -22,6 +22,7 @@ describe('GET /dilemmas/:publicId', () => {
         { optionId: expect.any(String), text: expect.any(String) },
         { optionId: expect.any(String), text: expect.any(String) },
       ],
+      version: 1,
     });
   });
 

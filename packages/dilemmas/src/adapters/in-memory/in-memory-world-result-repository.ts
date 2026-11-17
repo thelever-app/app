@@ -16,10 +16,19 @@ export interface WorldResultRecords {
   readonly counts: ReadonlyMap<string, number>;
 }
 
+/** The current version of a dilemma, as the dilemmas the adapter goes with know it. */
+type CurrentVersionOf = (dilemmaId: string) => Promise<number | undefined>;
+
 export class InMemoryWorldResultRepository implements WorldResultRepository {
   readonly #receipts = new Set<string>();
   readonly #counts = new Map<string, number>();
-  #published = new Map<string, number>();
+  readonly #published = new Map<string, number>();
+  readonly #currentVersionOf: CurrentVersionOf;
+
+  /** With the current version of each dilemma, which the database reads from its own tables. */
+  constructor(currentVersionOf: CurrentVersionOf = async () => undefined) {
+    this.#currentVersionOf = currentVersionOf;
+  }
 
   async countVote(identity: string, { dilemmaId, version, position }: Ballot): Promise<boolean> {
     const receipt = JSON.stringify([identity, keyOf(dilemmaId, version)]);
@@ -30,8 +39,34 @@ export class InMemoryWorldResultRepository implements WorldResultRepository {
     return true;
   }
 
-  async publish(): Promise<void> {
-    this.#published = new Map(this.#counts);
+  async publish(minimumNewAnswers: number): Promise<void> {
+    const versionOf = (key: string) => JSON.stringify((JSON.parse(key) as unknown[]).slice(0, 2));
+    const totals = (counts: ReadonlyMap<string, number>) => {
+      const byVersion = new Map<string, number>();
+      for (const [key, count] of counts) {
+        byVersion.set(versionOf(key), (byVersion.get(versionOf(key)) ?? 0) + count);
+      }
+      return byVersion;
+    };
+    const published = totals(this.#published);
+    for (const [version, answers] of totals(this.#counts)) {
+      if (answers - (published.get(version) ?? 0) < minimumNewAnswers) continue;
+      for (const key of [...this.#published.keys()]) {
+        if (versionOf(key) === version) this.#published.delete(key);
+      }
+      for (const [key, count] of this.#counts) {
+        if (versionOf(key) === version) this.#published.set(key, count);
+      }
+    }
+  }
+
+  async forgetReceiptsOfFormerVersions(): Promise<void> {
+    for (const receipt of [...this.#receipts]) {
+      const [, version] = JSON.parse(receipt) as [string, string];
+      const [dilemmaId, number] = JSON.parse(version) as [string, number];
+      const current = await this.#currentVersionOf(dilemmaId);
+      if (current !== undefined && number < current) this.#receipts.delete(receipt);
+    }
   }
 
   async publishedCountsOf(

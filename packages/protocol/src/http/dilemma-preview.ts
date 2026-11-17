@@ -20,6 +20,8 @@ export const DilemmaPreviewResponseDto = z.strictObject({
     .array(z.strictObject({ optionId: z.string().min(1), text: z.string().min(1) }))
     .min(2)
     .max(4),
+  /** The version of the original its votes alone count for, which a new version starts again. */
+  version: z.number().int().min(1),
 });
 
 export type DilemmaPreviewResponseDto = z.infer<typeof DilemmaPreviewResponseDto>;

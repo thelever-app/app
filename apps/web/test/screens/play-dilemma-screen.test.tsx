@@ -21,6 +21,7 @@ const PREVIEW: DilemmaPreviewResponseDto = {
     { optionId: 'TestOptionA', text: 'TestOptionA' },
     { optionId: 'TestOptionB', text: 'TestOptionB' },
   ],
+  version: 1,
 };
 
 async function renderPlay(

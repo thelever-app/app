@@ -1,5 +1,5 @@
 import type { Ballot, WorldResultRepository } from '@thelever-app/dilemmas';
-import type { Kysely, Transaction } from 'kysely';
+import { type Kysely, sql, type Transaction } from 'kysely';
 import type { DilemmasTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
 
@@ -41,20 +41,42 @@ export class PostgresWorldResultRepository implements WorldResultRepository {
     return true;
   }
 
-  async publish(): Promise<void> {
+  async publish(minimumNewAnswers: number): Promise<void> {
     const publish = async (db: Transaction<DilemmasTables>) => {
-      await db.deleteFrom('world_results').execute();
-      await db
-        .insertInto('world_results')
-        .columns(['dilemma_id', 'version', 'position', 'answers'])
-        .expression((eb) =>
-          eb.selectFrom('world_counts').select(['dilemma_id', 'version', 'position', 'answers']),
-        )
-        .execute();
+      // The versions with that many new answers since they were last published, and only those.
+      await sql`
+        create temporary table due on commit drop as
+        select counts.dilemma_id, counts.version
+        from world_counts counts
+        group by counts.dilemma_id, counts.version
+        having sum(counts.answers) - coalesce((
+          select sum(results.answers) from world_results results
+          where results.dilemma_id = counts.dilemma_id and results.version = counts.version
+        ), 0) >= ${minimumNewAnswers}
+      `.execute(db);
+      await sql`
+        delete from world_results results using due
+        where results.dilemma_id = due.dilemma_id and results.version = due.version
+      `.execute(db);
+      await sql`
+        insert into world_results (dilemma_id, version, position, answers)
+        select counts.dilemma_id, counts.version, counts.position, counts.answers
+        from world_counts counts join due using (dilemma_id, version)
+      `.execute(db);
     };
     const transaction = currentTransaction<DilemmasTables>();
     if (transaction) return publish(transaction);
     await this.#db.transaction().execute(publish);
+  }
+
+  async forgetReceiptsOfFormerVersions(): Promise<void> {
+    await sql`
+      delete from world_vote_receipts receipts
+      where exists (
+        select 1 from dilemma_versions later
+        where later.dilemma_id = receipts.dilemma_id and later.number > receipts.version
+      )
+    `.execute(currentTransaction<DilemmasTables>() ?? this.#db);
   }
 
   async publishedCountsOf(

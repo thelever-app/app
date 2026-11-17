@@ -64,7 +64,9 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
     return {
       dilemmaRepository,
       dilemmaQueries: dilemmaRepository,
-      worldResults: new InMemoryWorldResultRepository(),
+      worldResults: new InMemoryWorldResultRepository(
+        async (id) => (await dilemmaRepository.findById(id))?.version,
+      ),
       roomRepository: new InMemoryRoomRepository(),
       gameRepository: new InMemoryGameRepository(),
       notifierFor: (sockets) => sockets,

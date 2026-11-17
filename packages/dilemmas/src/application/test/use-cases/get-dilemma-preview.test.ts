@@ -32,6 +32,17 @@ async function previewOf(dilemma: Dilemma): Promise<GetDilemmaPreviewUseCase> {
 
 describe('GetDilemmaPreviewUseCase', () => {
   describe('execute', () => {
+    it('should tell the version of the original its votes alone count for, also from a translation', async () => {
+      // Arrange
+      const getDilemmaPreview = await previewOf(trolley());
+
+      // Act
+      const { version } = await getDilemmaPreview.execute({ publicId: 'TestPublicId' });
+
+      // Assert
+      expect(version).toBe(trolley().translationOf?.version ?? trolley().version);
+    });
+
     it('should give the text and the options in the language of the link, to vote it alone', async () => {
       // Arrange
       const getDilemmaPreview = await previewOf(trolley());

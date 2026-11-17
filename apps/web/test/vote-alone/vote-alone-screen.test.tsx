@@ -17,8 +17,9 @@ const PREVIEW: DilemmaPreviewResponseDto = {
   text: `¿Bajas la palanca aunque arrolle a ${GAP_MARKER}?`,
   options: [
     { optionId: 'TestOptionA', text: 'La bajo' },
-    { optionId: 'TestOptionB', text: 'No la toco' },
+    { optionId: 'TestOptionB', text: `Salvo a ${GAP_MARKER}` },
   ],
+  version: 2,
 };
 
 const FEW: WorldResultResponseDto = { shown: false, answers: 12, needed: 20 };
@@ -79,7 +80,7 @@ describe('VoteAloneScreen', () => {
 
     // Assert
     expect(await screen.findByRole('heading', { name: 'La palanca' })).toBeDefined();
-    expect(screen.getByText(new RegExp(t('voteAlone.someoneInYourGroup')))).toBeDefined();
+    expect(screen.getAllByText(new RegExp(t('voteAlone.someoneInYourGroup'))).length).toBe(2);
     expect(screen.getByRole('button', { name: 'La bajo' })).toBeDefined();
     expect(screen.getByRole('slider', { name: t('voteAlone.prediction') })).toBeDefined();
     expect(screen.getByRole('button', { name: t('voteAlone.see') }).hasAttribute('disabled')).toBe(
@@ -99,7 +100,11 @@ describe('VoteAloneScreen', () => {
     expect(await screen.findByText(t('voteAlone.fewTitle'))).toBeDefined();
     expect(api.voteAlone).toHaveBeenCalledWith('TestPublicId', 'TestOptionA');
     expect(api.worldResult).toHaveBeenCalledWith('TestPublicId', 'TestOptionA', 70);
-    expect(votes.voteOf('TestPublicId')).toEqual({ optionId: 'TestOptionA', prediction: 70 });
+    expect(votes.voteOf('TestPublicId')).toEqual({
+      optionId: 'TestOptionA',
+      prediction: 70,
+      version: 2,
+    });
   });
 
   it('should say how many answers there are and how many it needs while there are too few, with no figures', async () => {
@@ -126,12 +131,14 @@ describe('VoteAloneScreen', () => {
     );
     expect(within(result).getByText(t('voteAlone.yours', { option: 'La bajo' }))).toBeDefined();
     expect(result.textContent).toContain('19 %');
+    expect(result.textContent).toContain(`Salvo a ${t('voteAlone.someoneInYourGroup')}`);
+    expect(result.textContent).not.toContain(GAP_MARKER);
   });
 
   it('should show the world result straight away to a device that already voted the dilemma', async () => {
     // Arrange
     const votes = deviceVotes();
-    votes.save('TestPublicId', { optionId: 'TestOptionB', prediction: 30 });
+    votes.save('TestPublicId', { optionId: 'TestOptionB', prediction: 30, version: 2 });
 
     // Act
     const { t, api } = await renderVote({ votes });
@@ -140,6 +147,33 @@ describe('VoteAloneScreen', () => {
     expect(await screen.findByText(t('voteAlone.fewTitle'))).toBeDefined();
     expect(screen.queryByRole('button', { name: t('voteAlone.see') })).toBeNull();
     expect(api.worldResult).toHaveBeenCalledWith('TestPublicId', 'TestOptionB', 30);
+  });
+
+  it('should offer to vote again a dilemma that changed since the device voted it', async () => {
+    // Arrange: the device voted the version 1, and the dilemma is now at its version 2.
+    const votes = deviceVotes();
+    votes.save('TestPublicId', { optionId: 'TestOptionB', prediction: 30, version: 1 });
+
+    // Act
+    const { t, api } = await renderVote({ votes });
+
+    // Assert
+    expect(await screen.findByRole('button', { name: t('voteAlone.see') })).toBeDefined();
+    expect(api.worldResult).not.toHaveBeenCalled();
+  });
+
+  it('should announce the world result and say the prediction as a percentage', async () => {
+    // Act
+    const { t } = await renderVote();
+    fireEvent.change(await screen.findByRole('slider'), { target: { value: '70' } });
+
+    // Assert
+    expect(screen.getByRole('slider').getAttribute('aria-valuetext')).toBe(
+      t('voteAlone.percent', { value: 70 }),
+    );
+    await voteTheFirstOption(t('voteAlone.see'));
+    const result = await screen.findByTestId('world-result');
+    expect(within(result).getByRole('status').textContent).toContain(t('voteAlone.fewTitle'));
   });
 
   it('should show the world result when the server had already counted a vote of the visitor', async () => {
@@ -153,7 +187,11 @@ describe('VoteAloneScreen', () => {
 
     // Assert
     expect(await screen.findByText(t('voteAlone.fewTitle'))).toBeDefined();
-    expect(votes.voteOf('TestPublicId')).toEqual({ optionId: 'TestOptionA', prediction: 50 });
+    expect(votes.voteOf('TestPublicId')).toEqual({
+      optionId: 'TestOptionA',
+      prediction: 50,
+      version: 2,
+    });
   });
 
   it('should lead back to the arguments on the public page the link came from', async () => {

@@ -12,6 +12,8 @@ export interface WorldVote {
   readonly optionId: string;
   /** The share of the world it predicted voted the same, in whole percentage points. */
   readonly prediction: number;
+  /** The version of the original it voted: a new version is voted again. */
+  readonly version: number;
 }
 
 export interface WorldVotes {
@@ -50,9 +52,13 @@ export function worldVotes(storage: DeviceStorage = () => localStorage): WorldVo
 function read(storage: DeviceStorage, publicId: string): WorldVote | undefined {
   try {
     const kept: unknown = JSON.parse(storage().getItem(keyOf(publicId)) ?? 'null');
-    const { optionId, prediction } = (kept ?? {}) as Partial<Record<keyof WorldVote, unknown>>;
-    return typeof optionId === 'string' && typeof prediction === 'number'
-      ? { optionId, prediction }
+    const { optionId, prediction, version } = (kept ?? {}) as Partial<
+      Record<keyof WorldVote, unknown>
+    >;
+    return typeof optionId === 'string' &&
+      typeof prediction === 'number' &&
+      typeof version === 'number'
+      ? { optionId, prediction, version }
       : undefined;
   } catch {
     return undefined;

@@ -266,7 +266,9 @@ export class AcceptanceDriver implements GameDriver {
   /** The language the link from the public web opens the app in. */
   #appLanguage: string | undefined;
   /** The world results, and what the visitor chose to vote alone, voted and saw of it. */
-  readonly #worldResults = new InMemoryWorldResultRepository();
+  readonly #worldResults = new InMemoryWorldResultRepository(
+    async (id) => (await this.#dilemmaRepository.findById(id))?.version,
+  );
   #dilemmaToVote: GetDilemmaPreviewOutput | undefined;
   #visitorVote: string | undefined;
   #worldResultSeen: GetWorldResultOutput | undefined;
@@ -1073,16 +1075,12 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async worldAnswersOf(name: string): Promise<number> {
-    await new PublishWorldResultsUseCase(this.#worldResults).execute();
-    const publicId = await this.#publicIdOf(name);
-    const { options } = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
-      publicId,
-    });
-    const result = await new GetWorldResultUseCase(
-      this.#dilemmaRepository,
-      this.#worldResults,
-    ).execute({ publicId, optionId: options[0]!.optionId, prediction: 0 });
-    return result.answers;
+    // The answers counted so far, which the daily publication shows once there are enough new
+    // ones: a single vote is counted at once, and published with the next ones.
+    const number = this.#publicNumbers.get(name);
+    return [...this.#worldResults.records().counts]
+      .filter(([key]) => (JSON.parse(key) as [string])[0] === `dlm-${number}`)
+      .reduce((total, [, count]) => total + count, 0);
   }
 
   async voteOfTheVisitorIsKept(): Promise<boolean> {

@@ -3,5 +3,6 @@ import { describeWorldResultRepositoryContract } from '../../test/world-result-r
 
 describeWorldResultRepositoryContract(
   'InMemoryWorldResultRepository',
-  async () => new InMemoryWorldResultRepository(),
+  // TestDilemmaId is at its version 2, as the contract says.
+  async () => new InMemoryWorldResultRepository(async () => 2),
 );

@@ -50,7 +50,9 @@ function inEnglish(original: Dilemma): Dilemma {
 async function worldWith(...dilemmas: Dilemma[]) {
   const dilemmaRepository = new InMemoryDilemmaRepository();
   for (const dilemma of dilemmas) await dilemmaRepository.save(dilemma);
-  const results = new InMemoryWorldResultRepository();
+  const results = new InMemoryWorldResultRepository(
+    async (id) => (await dilemmaRepository.findById(id))?.version,
+  );
   return {
     results,
     voteAlone: new VoteAloneUseCase(dilemmaRepository, results),
@@ -64,7 +66,7 @@ describe('VoteAloneUseCase', () => {
     it('should count a vote cast on a translation for the version of the original, by the position of its option', async () => {
       // Arrange
       const original = trolley();
-      const { voteAlone, publish, results } = await worldWith(original, inEnglish(original));
+      const { voteAlone, results } = await worldWith(original, inEnglish(original));
 
       // Act
       await voteAlone.execute({
@@ -72,10 +74,9 @@ describe('VoteAloneUseCase', () => {
         publicId: 'TestEnglishPublicId',
         optionId: 'dlm-1-en-b',
       });
-      await publish.execute();
 
       // Assert
-      expect(await results.publishedCountsOf('dlm-1', 1)).toEqual(new Map([[1, 1]]));
+      expect([...results.records().counts]).toEqual([[JSON.stringify(['dlm-1', 1, 1]), 1]]);
     });
 
     it('should not count a second vote of the same identity for the same version', async () => {

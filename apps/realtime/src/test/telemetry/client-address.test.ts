@@ -47,6 +47,22 @@ describe('the HTTP instrumentation of the room server', () => {
     expect(span?.attributes).not.toHaveProperty('network.peer.address');
   });
 
+  it('should keep the query of an address out of its spans, such as a vote and a prediction', async () => {
+    // Arrange
+    exporter.reset();
+
+    // Act
+    await fetch(`${url}/dilemmas/TestPublicId/world-result?option=TestSecretOption&prediction=37`);
+
+    // Assert
+    const [span] = exporter.getFinishedSpans();
+    expect(span).toBeDefined();
+    const attributes = JSON.stringify(span?.attributes);
+    expect(attributes).not.toContain('TestSecretOption');
+    expect(attributes).not.toContain('prediction');
+    expect(attributes).toContain('/dilemmas/TestPublicId/world-result');
+  });
+
   it('should not trace the health check of Cloud Run', async () => {
     // Arrange
     exporter.reset();

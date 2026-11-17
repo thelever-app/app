@@ -8,6 +8,12 @@ export function assertPrediction(prediction: number): void {
   }
 }
 
+/**
+ * The new answers a version needs since its last publication to be published again: with fewer,
+ * comparing two days could tell what one person voted.
+ */
+export const MINIMUM_NEW_ANSWERS = 5;
+
 /** The answers from which the world result shows its figures: fewer would let anyone guess votes. */
 export const MINIMUM_WORLD_ANSWERS = 20;
 

@@ -1,5 +1,6 @@
 import {
   type DilemmaPreviewResponseDto,
+  GAP_MARKER,
   LanguageDto,
   type WorldResultResponseDto,
 } from '@thelever-app/protocol';
@@ -57,7 +58,7 @@ export function VoteAloneScreen({ votes = DEVICE_VOTES }: VoteAloneScreenProps) 
   const [search] = useSearchParams();
   const back = webPathOf(search.get('back'));
   const api = useRoomApi();
-  const vote = useSyncExternalStore(votes.subscribe, () => votes.voteOf(publicId));
+  const kept = useSyncExternalStore(votes.subscribe, () => votes.voteOf(publicId));
   // The answer keeps the public id it answers: while it answers another one, the screen is loading.
   const [answer, setAnswer] = useState<{ readonly publicId: string; readonly preview: Preview }>();
   // Back to the page of the web it came from, outside the app, or to the start of the app.
@@ -83,6 +84,9 @@ export function VoteAloneScreen({ votes = DEVICE_VOTES }: VoteAloneScreenProps) 
     };
   }, [api, publicId, withAccess]);
   const preview: Preview = answer?.publicId === publicId ? answer.preview : { status: 'loading' };
+  // A vote of an earlier version of the dilemma does not count for this one: it is voted again.
+  const vote =
+    preview.status === 'found' && kept?.version === preview.dilemma.version ? kept : undefined;
 
   return (
     <div className={screen.screen}>
@@ -155,7 +159,7 @@ function VoteForm({ publicId, dilemma, votes, withAccess }: VoteFormProps) {
       // A vote the server already counted, from this device or another one, is a vote all the same.
       if (!(error instanceof RoomApiError && error.code === 'already-voted')) return true;
     }
-    votes.save(publicId, { optionId, prediction });
+    votes.save(publicId, { optionId, prediction, version: dilemma.version });
     return false;
   }, false);
   const someone = t('voteAlone.someoneInYourGroup');
@@ -196,6 +200,7 @@ function VoteForm({ publicId, dilemma, votes, withAccess }: VoteFormProps) {
               step={5}
               value={prediction}
               onChange={(event) => setPrediction(Number(event.target.value))}
+              aria-valuetext={t('voteAlone.percent', { value: prediction })}
             />
             <output htmlFor="world-prediction" className={styles.value}>
               {t('voteAlone.percent', { value: prediction })}
@@ -247,68 +252,77 @@ function WorldResultView({ publicId, dilemma, vote, back, withAccess }: WorldRes
     };
   }, [api, publicId, vote, withAccess]);
 
+  // In the bars, the gap "someone in the group" in words, as everywhere a group is not playing.
   const textOf = (optionId: string) =>
-    dilemma.options.find((option) => option.optionId === optionId)?.text ?? '';
+    (dilemma.options.find((option) => option.optionId === optionId)?.text ?? '').replaceAll(
+      GAP_MARKER,
+      t('voteAlone.someoneInYourGroup'),
+    );
 
   return (
     <main className={styles.main} data-testid="world-result">
       {dilemma.name && <h1 className={styles.resultName}>{dilemma.name}</h1>}
-      {result === undefined && <p className={styles.note}>{t('voteAlone.loadingResult')}</p>}
-      {result === 'failed' && (
-        <p className={styles.note} role="alert">
-          {t('roomErrors.unknown')}
-        </p>
-      )}
-      {result !== undefined && result !== 'failed' && !result.shown && (
-        <div className={styles.few}>
-          <Icon name="timer" />
-          <span className={styles.fewText}>
-            <span className={styles.fewTitle}>{t('voteAlone.fewTitle')}</span>
-            <span>{t('voteAlone.fewBody', { count: result.answers, needed: result.needed })}</span>
-          </span>
-        </div>
-      )}
-      {result !== undefined && result !== 'failed' && result.shown && (
-        <>
-          <div className={styles.headline}>
-            <span className={styles.share}>
-              {t('voteAlone.sameAsYou', { percentage: result.yours.percentage })}
-            </span>
-            <span>
-              {t('voteAlone.thoughtLikeYou')}{' '}
-              {result.yours.predictionOff === 0
-                ? t('voteAlone.predictionRight', { prediction: vote.prediction })
-                : t('voteAlone.predictionOff', {
-                    prediction: vote.prediction,
-                    count: result.yours.predictionOff,
-                  })}
+      {/* Read out as it comes, since the form the visitor sent is gone. */}
+      <div role="status" className={styles.status}>
+        {result === undefined && <p className={styles.note}>{t('voteAlone.loadingResult')}</p>}
+        {result === 'failed' && (
+          <p className={styles.note} role="alert">
+            {t('roomErrors.unknown')}
+          </p>
+        )}
+        {result !== undefined && result !== 'failed' && !result.shown && (
+          <div className={styles.few}>
+            <Icon name="timer" />
+            <span className={styles.fewText}>
+              <span className={styles.fewTitle}>{t('voteAlone.fewTitle')}</span>
+              <span>
+                {t('voteAlone.fewBody', { count: result.answers, needed: result.needed })}
+              </span>
             </span>
           </div>
-          <ul className={styles.bars}>
-            {result.options.map(({ optionId, percentage }) => {
-              const yours = optionId === vote.optionId;
-              return (
-                <li key={optionId} className={styles.bar} data-yours={yours}>
-                  <span className={styles.barLabel}>
-                    <span className={styles.barOption}>
-                      {yours
-                        ? t('voteAlone.yours', { option: textOf(optionId) })
-                        : textOf(optionId)}
+        )}
+        {result !== undefined && result !== 'failed' && result.shown && (
+          <>
+            <div className={styles.headline}>
+              <span className={styles.share}>
+                {t('voteAlone.sameAsYou', { percentage: result.yours.percentage })}
+              </span>
+              <span>
+                {t('voteAlone.thoughtLikeYou')}{' '}
+                {result.yours.predictionOff === 0
+                  ? t('voteAlone.predictionRight', { prediction: vote.prediction })
+                  : t('voteAlone.predictionOff', {
+                      prediction: vote.prediction,
+                      count: result.yours.predictionOff,
+                    })}
+              </span>
+            </div>
+            <ul className={styles.bars}>
+              {result.options.map(({ optionId, percentage }) => {
+                const yours = optionId === vote.optionId;
+                return (
+                  <li key={optionId} className={styles.bar} data-yours={yours}>
+                    <span className={styles.barLabel}>
+                      <span className={styles.barOption}>
+                        {yours
+                          ? t('voteAlone.yours', { option: textOf(optionId) })
+                          : textOf(optionId)}
+                      </span>
+                      <span className={styles.barValue}>
+                        {t('voteAlone.percent', { value: percentage })}
+                      </span>
                     </span>
-                    <span className={styles.barValue}>
-                      {t('voteAlone.percent', { value: percentage })}
+                    <span className={styles.track} aria-hidden="true">
+                      <span className={styles.fill} style={{ width: `${percentage}%` }} />
                     </span>
-                  </span>
-                  <span className={styles.track} aria-hidden="true">
-                    <span className={styles.fill} style={{ width: `${percentage}%` }} />
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          <p className={styles.answers}>{t('voteAlone.answers', { count: result.answers })}</p>
-        </>
-      )}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className={styles.answers}>{t('voteAlone.answers', { count: result.answers })}</p>
+          </>
+        )}
+      </div>
       <div className={styles.actions}>
         <Link className={styles.play} to={`/new/${publicId}`}>
           <Icon name="groups" size={20} />

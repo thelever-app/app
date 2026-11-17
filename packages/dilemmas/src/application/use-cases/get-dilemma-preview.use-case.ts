@@ -16,6 +16,8 @@ export interface GetDilemmaPreviewOutput {
   /** As it reads, to vote it alone; with the gap "someone in the group" as Dilemmas keeps it. */
   readonly text: string;
   readonly options: readonly { readonly optionId: string; readonly text: string }[];
+  /** The version of the original its votes alone count for, which a new version starts again. */
+  readonly version: number;
   readonly minimumAge: MinimumAge;
   /** The language it is written or translated in, which the room plays its dilemmas in. */
   readonly language: string;
@@ -47,6 +49,7 @@ export class GetDilemmaPreviewUseCase implements GetDilemmaPreview {
       optionCount: dilemma.options.length,
       text: dilemma.text,
       options: dilemma.options.map(({ id, text }) => ({ optionId: id, text })),
+      version: dilemma.translationOf?.version ?? dilemma.version,
       minimumAge: dilemma.minimumAge,
       language: dilemma.language,
     };
