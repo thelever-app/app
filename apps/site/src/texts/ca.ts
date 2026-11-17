@@ -121,8 +121,8 @@ export const ca: SiteTexts = {
         heading: 'Anuncis i galetes',
         paragraphs: [
           'Les pàgines dels dilemes mostren anuncis de Google AdSense. Abans de fer servir galetes, el gestor de galetes de Google et pregunta què acceptes, i Google només les fa servir amb el teu consentiment (art. 6.1.a RGPD i art. 22.2 LSSI). Si no ho acceptes, només veus anuncis limitats, sense galetes.',
-          'Els anuncis només es personalitzen si ho acceptes: en aquesta web, que no et pregunta l’edat, depèn només d’això. Si el teu navegador envia el senyal Global Privacy Control, els anuncis no es personalitzen encara que ho acceptis. Cap anunci rep el que votes a l’app.',
-          'En carregar els anuncis, encara que no acceptis res, Google rep la teva adreça IP, les dades del teu navegador i la pàgina que visites. Google i els seus socis són responsables pel seu compte del que fan amb aquestes dades i amb les seves galetes, segons el que acceptis. Quines galetes són i com canviar el que acceptes és a la política de galetes; Google ho explica a policies.google.com/technologies/ads.',
+          'Els anuncis només es personalitzen si ho acceptes: en aquesta web, que no et pregunta l’edat, depèn només d’això. Si el teu navegador envia el senyal Global Privacy Control, els anuncis no es personalitzen encara que ho acceptis. TheLever no dona a Google ni als seus socis el que votes a l’app.',
+          'En carregar els anuncis, encara que no acceptis res, Google rep la teva adreça IP, les dades del teu navegador i la pàgina que visites. Ho permetem pel nostre interès legítim a finançar amb publicitat un joc gratuït (art. 6.1.f RGPD), i d’aquesta recollida en responem juntament amb Google. El que Google i els seus socis fan després amb aquestes dades i amb les seves galetes és responsabilitat seva, segons el que acceptis i les condicions de protecció de dades de Google Ads (business.safety.google/adscontrollerterms). Quines galetes són i com canviar el que acceptes és a la política de galetes; Google ho explica a policies.google.com/technologies/ads.',
         ],
       },
       {

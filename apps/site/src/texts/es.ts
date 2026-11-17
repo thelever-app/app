@@ -119,8 +119,8 @@ export const es: SiteTexts = {
         heading: 'Anuncios y cookies',
         paragraphs: [
           'Las páginas de los dilemas muestran anuncios de Google AdSense. Antes de usar cookies, el gestor de cookies de Google te pregunta qué aceptas, y Google solo las usa con tu consentimiento (art. 6.1.a RGPD y art. 22.2 LSSI). Si no aceptas, solo ves anuncios limitados, sin cookies.',
-          'Los anuncios solo se personalizan si lo aceptas: en esta web, que no pregunta tu edad, depende solo de eso. Si tu navegador envía la señal Global Privacy Control, los anuncios no se personalizan aunque lo aceptes. Ningún anuncio recibe lo que votas en la app.',
-          'Al cargar los anuncios, aunque no aceptes nada, Google recibe tu dirección IP, los datos de tu navegador y la página que visitas. Google y sus socios son responsables por su cuenta de lo que hacen con esos datos y con sus cookies, según lo que aceptes. Qué cookies son y cómo cambiar lo que aceptas está en la política de cookies; Google lo explica en policies.google.com/technologies/ads.',
+          'Los anuncios solo se personalizan si lo aceptas: en esta web, que no pregunta tu edad, depende solo de eso. Si tu navegador envía la señal Global Privacy Control, los anuncios no se personalizan aunque lo aceptes. TheLever no da a Google ni a sus socios lo que votas en la app.',
+          'Al cargar los anuncios, aunque no aceptes nada, Google recibe tu dirección IP, los datos de tu navegador y la página que visitas. Lo permitimos por nuestro interés legítimo en financiar con publicidad un juego gratuito (art. 6.1.f RGPD), y de esa recogida respondemos junto con Google. Lo que Google y sus socios hacen después con esos datos y con sus cookies es responsabilidad suya, según lo que aceptes y las condiciones de protección de datos de Google Ads (business.safety.google/adscontrollerterms). Qué cookies son y cómo cambiar lo que aceptas está en la política de cookies; Google lo explica en policies.google.com/technologies/ads.',
         ],
       },
       {

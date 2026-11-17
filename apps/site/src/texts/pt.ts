@@ -121,8 +121,8 @@ export const pt: SiteTexts = {
         heading: 'Anúncios e cookies',
         paragraphs: [
           'As páginas dos dilemas mostram anúncios do Google AdSense. Antes de usar cookies, o gestor de cookies da Google pergunta-te o que aceitas, e a Google só os usa com o teu consentimento (art. 6.º, n.º 1, al. a), do RGPD e art. 22.º, n.º 2, da LSSI). Se não aceitares, só vês anúncios limitados, sem cookies.',
-          'Os anúncios só são personalizados se o aceitares: neste site, que não pergunta a tua idade, depende apenas disso. Se o teu navegador enviar o sinal Global Privacy Control, os anúncios não são personalizados mesmo que o aceites. Nenhum anúncio recebe o que votas na app.',
-          'Ao carregar os anúncios, mesmo que não aceites nada, a Google recebe o teu endereço IP, os dados do teu navegador e a página que visitas. A Google e os seus parceiros são responsáveis por conta própria pelo que fazem com esses dados e com os seus cookies, conforme o que aceitares. Que cookies são e como alterar o que aceitas está na política de cookies; a Google explica-o em policies.google.com/technologies/ads.',
+          'Os anúncios só são personalizados se o aceitares: neste site, que não pergunta a tua idade, depende apenas disso. Se o teu navegador enviar o sinal Global Privacy Control, os anúncios não são personalizados mesmo que o aceites. O TheLever não dá à Google nem aos seus parceiros o que votas na app.',
+          'Ao carregar os anúncios, mesmo que não aceites nada, a Google recebe o teu endereço IP, os dados do teu navegador e a página que visitas. Permitimo-lo com base no nosso interesse legítimo em financiar com publicidade um jogo gratuito (art. 6.º, n.º 1, al. f), do RGPD), e por essa recolha respondemos juntamente com a Google. O que a Google e os seus parceiros fazem depois com esses dados e com os seus cookies é da responsabilidade deles, conforme o que aceitares e os termos de proteção de dados da Google Ads (business.safety.google/adscontrollerterms). Que cookies são e como alterar o que aceitas está na política de cookies; a Google explica-o em policies.google.com/technologies/ads.',
         ],
       },
       {
