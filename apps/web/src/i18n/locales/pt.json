@@ -507,5 +507,33 @@
     "loading": "À procura do dilema…",
     "notFound": "Este dilema já não está no TheLever. Podes criar uma sala com outros do catálogo.",
     "home": "Ir para o início"
+  },
+  "voteAlone": {
+    "loading": "A procurar o dilema…",
+    "notFound": "Este dilema já não está no TheLever.",
+    "someoneInYourGroup": "alguém do teu grupo",
+    "yourVote": "O teu voto, em privado",
+    "prediction": "Que percentagem do mundo votou o mesmo que tu?",
+    "percent": "{{value}}%",
+    "private": "O teu voto conta para o resultado mundial deste dilema. Ninguém saberá o que votaste.",
+    "see": "Ver como votou o mundo",
+    "sending": "A enviar o teu voto…",
+    "loadingResult": "A procurar como votou o mundo…",
+    "sameAsYou": "{{percentage}}%",
+    "thoughtLikeYou": "pensou como tu.",
+    "predictionOff_one": "Disseste {{prediction}}%: ficaste a {{count}} ponto.",
+    "predictionOff_many": "Disseste {{prediction}}%: ficaste a {{count, number}} pontos.",
+    "predictionOff_other": "Disseste {{prediction}}%: ficaste a {{count, number}} pontos.",
+    "predictionRight": "Disseste {{prediction}}%: acertaste em cheio.",
+    "yours": "{{option}} · o teu voto",
+    "answers_one": "{{count, number}} resposta em todo o mundo. Atualiza-se uma vez por dia.",
+    "answers_many": "{{count, number}} respostas em todo o mundo. Atualiza-se uma vez por dia.",
+    "answers_other": "{{count, number}} respostas em todo o mundo. Atualiza-se uma vez por dia.",
+    "fewTitle": "Ainda há poucas respostas",
+    "fewBody_one": "Temos {{count, number}} das {{needed}} necessárias. Volta mais tarde para veres como votou o mundo e se acertaste.",
+    "fewBody_many": "Temos {{count, number}} das {{needed}} necessárias. Volta mais tarde para veres como votou o mundo e se acertaste.",
+    "fewBody_other": "Temos {{count, number}} das {{needed}} necessárias. Volta mais tarde para veres como votou o mundo e se acertaste.",
+    "play": "Jogá-lo com o meu grupo",
+    "arguments": "Ler os argumentos de cada opção"
   }
 }

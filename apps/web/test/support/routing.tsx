@@ -15,6 +15,8 @@ export function fakeRoomApi(overrides: Partial<RoomApi> = {}): RoomApi {
     createRoom: unexpected('createRoom'),
     previewRoom: unexpected('previewRoom'),
     previewDilemma: unexpected('previewDilemma'),
+    voteAlone: unexpected('voteAlone'),
+    worldResult: unexpected('worldResult'),
     joinRoom: unexpected('joinRoom'),
     searchDilemmas: unexpected('searchDilemmas'),
     enterAccessCode: vi.fn(),

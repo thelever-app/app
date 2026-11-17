@@ -360,6 +360,18 @@ h2 {
   gap: 8px;
 }
 
+.actions .button {
+  gap: 8px;
+}
+
+/* Why the page shows no world result: it is seen after voting, so it does not sway the vote. */
+.world-later {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--muted);
+}
+
 .argument {
   display: flex;
   flex-direction: column;

@@ -213,3 +213,48 @@ Then('the sitemap includes it', async function (this: GameWorld) {
 Then('a banner ad appears below the arguments', async function (this: GameWorld) {
   assert.ok(await this.driver.bannerAdBelowTheArguments(), 'no ad appears below the arguments');
 });
+
+When(
+  'a visitor chooses to vote on the public page of {string}',
+  async function (this: GameWorld, name: string) {
+    await this.driver.generatePublicPages();
+    await this.driver.voteFromThePublicPage(name);
+  },
+);
+
+Then(
+  'the app opens on {string} ready to vote alone',
+  async function (this: GameWorld, name: string) {
+    assert.equal(await this.driver.dilemmaReadyToVoteAlone(), name);
+  },
+);
+
+When('a visitor votes {string} alone in the app', async function (this: GameWorld, name: string) {
+  await this.driver.voteAlone(name);
+});
+
+Then(
+  'the vote counts for the world result of {string}',
+  async function (this: GameWorld, name: string) {
+    assert.equal(await this.driver.worldAnswersOf(name), 1);
+  },
+);
+
+Then('nobody can see what the visitor voted', async function (this: GameWorld) {
+  assert.equal(await this.driver.voteOfTheVisitorIsKept(), false);
+});
+
+Given(
+  '{string} has {int} answers',
+  async function (this: GameWorld, name: string, answers: number) {
+    await this.driver.dilemmaWithWorldAnswers(name, answers);
+  },
+);
+
+Then('the visitor sees that there are still too few answers', async function (this: GameWorld) {
+  assert.equal((await this.driver.worldResultSeen()).tooFewAnswers, true);
+});
+
+Then('sees no figures of the world result', async function (this: GameWorld) {
+  assert.deepEqual((await this.driver.worldResultSeen()).figures, []);
+});

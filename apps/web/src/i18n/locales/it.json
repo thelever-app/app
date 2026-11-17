@@ -507,5 +507,33 @@
     "loading": "Cerco il dilemma…",
     "notFound": "Questo dilemma non è più su TheLever. Puoi creare una stanza con altri del catalogo.",
     "home": "Vai all’inizio"
+  },
+  "voteAlone": {
+    "loading": "Ricerca del dilemma…",
+    "notFound": "Questo dilemma non è più su TheLever.",
+    "someoneInYourGroup": "qualcuno del tuo gruppo",
+    "yourVote": "Il tuo voto, in privato",
+    "prediction": "Che percentuale del mondo ha votato come te?",
+    "percent": "{{value}}%",
+    "private": "Il tuo voto conta per il risultato mondiale di questo dilemma. Nessuno saprà cosa hai votato.",
+    "see": "Vedi come ha votato il mondo",
+    "sending": "Invio del tuo voto…",
+    "loadingResult": "Ricerca del voto del mondo…",
+    "sameAsYou": "{{percentage}}%",
+    "thoughtLikeYou": "la pensa come te.",
+    "predictionOff_one": "Hai detto {{prediction}}%: scarto di {{count}} punto.",
+    "predictionOff_many": "Hai detto {{prediction}}%: scarto di {{count, number}} punti.",
+    "predictionOff_other": "Hai detto {{prediction}}%: scarto di {{count, number}} punti.",
+    "predictionRight": "Hai detto {{prediction}}%: centro pieno.",
+    "yours": "{{option}} · il tuo voto",
+    "answers_one": "{{count, number}} risposta in tutto il mondo. Si aggiorna una volta al giorno.",
+    "answers_many": "{{count, number}} risposte in tutto il mondo. Si aggiorna una volta al giorno.",
+    "answers_other": "{{count, number}} risposte in tutto il mondo. Si aggiorna una volta al giorno.",
+    "fewTitle": "Ci sono ancora poche risposte",
+    "fewBody_one": "Ne abbiamo {{count, number}} delle {{needed}} necessarie. Torna più tardi per vedere come ha votato il mondo e se ci hai preso.",
+    "fewBody_many": "Ne abbiamo {{count, number}} delle {{needed}} necessarie. Torna più tardi per vedere come ha votato il mondo e se ci hai preso.",
+    "fewBody_other": "Ne abbiamo {{count, number}} delle {{needed}} necessarie. Torna più tardi per vedere come ha votato il mondo e se ci hai preso.",
+    "play": "Giocalo con il mio gruppo",
+    "arguments": "Leggi gli argomenti di ogni opzione"
   }
 }

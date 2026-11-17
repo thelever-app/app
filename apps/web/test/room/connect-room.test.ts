@@ -14,6 +14,8 @@ function unusedApi(): RoomApi {
     createRoom: vi.fn(),
     previewRoom: vi.fn(),
     previewDilemma: vi.fn(),
+    voteAlone: vi.fn(),
+    worldResult: vi.fn(),
     joinRoom: vi.fn(),
     searchDilemmas: vi.fn(),
     enterAccessCode: vi.fn(),

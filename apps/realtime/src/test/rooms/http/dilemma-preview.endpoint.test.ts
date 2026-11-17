@@ -17,6 +17,11 @@ describe('GET /dilemmas/:publicId', () => {
       optionCount: 2,
       minimumAge: 16,
       language: 'es',
+      text: expect.any(String),
+      options: [
+        { optionId: expect.any(String), text: expect.any(String) },
+        { optionId: expect.any(String), text: expect.any(String) },
+      ],
     });
   });
 

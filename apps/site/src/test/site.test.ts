@@ -458,6 +458,23 @@ describe('the public web', () => {
     expect(none.headers.Location).toBe('/es/');
   });
 
+  it('should offer to vote the dilemma alone in the app, in the language of the page and with the way back to it', async () => {
+    // Act
+    const page = String(
+      (await answer('/es/vida-y-muerte/el-tranvia-7', { dilemmas: [trolley()], withdrawn: [] }))
+        .body,
+    );
+
+    // Assert
+    expect(page).toMatch(
+      new RegExp(
+        `<a\\s+class="button primary"\\s+href="/vote/TestPublicId\\?lang=es&back=%2Fes%2Fvida-y-muerte%2Fel-tranvia-7"\\s*>[\\s\\S]*?${es.dilemma.vote}`,
+      ),
+    );
+    expect(page).toContain(es.dilemma.worldResultLater);
+    expect(page.indexOf(es.dilemma.vote)).toBeLessThan(page.indexOf(es.dilemma.play));
+  });
+
   it('should open the app in the language of the page, from the dilemma, the home and the header', async () => {
     // Act
     const catalog = { dilemmas: [trolley(), IN_ENGLISH], withdrawn: [] };

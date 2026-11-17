@@ -51,6 +51,9 @@ const KEPT = [
   'dilemma_version_tags',
   'dilemma_version_arguments',
   'dilemma_version_option_arguments',
+  'world_counts',
+  'world_results',
+  'world_vote_receipts',
   'instances',
 ];
 

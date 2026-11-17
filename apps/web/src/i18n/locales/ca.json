@@ -507,5 +507,33 @@
     "loading": "Buscant el dilema…",
     "notFound": "Aquest dilema ja no és a TheLever. Pots crear una sala amb d’altres del catàleg.",
     "home": "Anar a l’inici"
+  },
+  "voteAlone": {
+    "loading": "Cercant el dilema…",
+    "notFound": "Aquest dilema ja no és a TheLever.",
+    "someoneInYourGroup": "algú del teu grup",
+    "yourVote": "El teu vot, en privat",
+    "prediction": "Quin percentatge del món ha votat el mateix que tu?",
+    "percent": "{{value}} %",
+    "private": "El teu vot compta per al resultat mundial d’aquest dilema. Ningú no sabrà què has votat.",
+    "see": "Veure com ha votat el món",
+    "sending": "Enviant el teu vot…",
+    "loadingResult": "Cercant com ha votat el món…",
+    "sameAsYou": "{{percentage}} %",
+    "thoughtLikeYou": "ha pensat com tu.",
+    "predictionOff_one": "Has dit {{prediction}} %: t’has quedat a {{count}} punt.",
+    "predictionOff_many": "Has dit {{prediction}} %: t’has quedat a {{count, number}} punts.",
+    "predictionOff_other": "Has dit {{prediction}} %: t’has quedat a {{count, number}} punts.",
+    "predictionRight": "Has dit {{prediction}} %: l’has encertat de ple.",
+    "yours": "{{option}} · el teu vot",
+    "answers_one": "{{count, number}} resposta a tot el món. S’actualitza un cop al dia.",
+    "answers_many": "{{count, number}} respostes a tot el món. S’actualitza un cop al dia.",
+    "answers_other": "{{count, number}} respostes a tot el món. S’actualitza un cop al dia.",
+    "fewTitle": "Encara hi ha poques respostes",
+    "fewBody_one": "En portem {{count, number}} de les {{needed}} que calen. Torna més tard per veure com ha votat el món i si l’has encertat.",
+    "fewBody_many": "En portem {{count, number}} de les {{needed}} que calen. Torna més tard per veure com ha votat el món i si l’has encertat.",
+    "fewBody_other": "En portem {{count, number}} de les {{needed}} que calen. Torna més tard per veure com ha votat el món i si l’has encertat.",
+    "play": "Jugar-lo amb el meu grup",
+    "arguments": "Llegir els arguments de cada opció"
   }
 }

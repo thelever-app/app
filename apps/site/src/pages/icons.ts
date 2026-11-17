@@ -6,6 +6,8 @@ import { Html } from '../html.ts';
 const SOURCES = {
   'add-circle': '@material-symbols/svg-500/rounded/add_circle-fill.svg',
   translate: '@material-symbols/svg-500/rounded/translate-fill.svg',
+  'how-to-vote': '@material-symbols/svg-500/rounded/how_to_vote-fill.svg',
+  groups: '@material-symbols/svg-500/rounded/groups-fill.svg',
 } as const;
 
 export type IconName = keyof typeof SOURCES;

@@ -482,5 +482,30 @@
     "loading": "Finding the dilemma…",
     "notFound": "This dilemma is no longer on TheLever. You can create a room with others from the catalog.",
     "home": "Go home"
+  },
+  "voteAlone": {
+    "loading": "Finding the dilemma…",
+    "notFound": "This dilemma is no longer on TheLever.",
+    "someoneInYourGroup": "someone in your group",
+    "yourVote": "Your vote, in private",
+    "prediction": "What share of the world voted the same as you?",
+    "percent": "{{value}}%",
+    "private": "Your vote counts towards the world result of this dilemma. Nobody will know what you voted.",
+    "see": "See how the world voted",
+    "sending": "Sending your vote…",
+    "loadingResult": "Finding how the world voted…",
+    "sameAsYou": "{{percentage}}%",
+    "thoughtLikeYou": "thought like you.",
+    "predictionOff_one": "You said {{prediction}}%: you were {{count}} point off.",
+    "predictionOff_other": "You said {{prediction}}%: you were {{count, number}} points off.",
+    "predictionRight": "You said {{prediction}}%: spot on.",
+    "yours": "{{option}} · your vote",
+    "answers_one": "{{count, number}} answer around the world. Updated once a day.",
+    "answers_other": "{{count, number}} answers around the world. Updated once a day.",
+    "fewTitle": "There are still few answers",
+    "fewBody_one": "We have {{count, number}} of the {{needed}} needed. Come back later to see how the world voted and whether you got it right.",
+    "fewBody_other": "We have {{count, number}} of the {{needed}} needed. Come back later to see how the world voted and whether you got it right.",
+    "play": "Play it with my group",
+    "arguments": "Read the arguments for each option"
   }
 }

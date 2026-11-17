@@ -271,6 +271,53 @@ describe('httpRoomApi', () => {
     });
   });
 
+  describe('voteAlone', () => {
+    it('should vote the option of the dilemma alone, as the player who signed in', async () => {
+      // Arrange: the server answers with no body.
+      const calls: { url: string; init: RequestInit }[] = [];
+      const fetch = (async (url: RequestInfo | URL, init: RequestInit = {}) => {
+        calls.push({ url: String(url), init });
+        return new Response(null, { status: 204 });
+      }) as typeof globalThis.fetch;
+
+      // Act
+      await apiWith(fetch).voteAlone('TestPublicId', 'TestOption');
+
+      // Assert
+      expect(calls).toHaveLength(1);
+      expect(calls[0]!.url).toBe('https://realtime.example/dilemmas/TestPublicId/vote');
+      expect(calls[0]!.init.method).toBe('POST');
+      expect(calls[0]!.init.body).toBe(JSON.stringify({ optionId: 'TestOption' }));
+    });
+
+    it('should fail with already-voted when the server already counted a vote of the player', async () => {
+      // Arrange
+      const { fetch } = answering(409, { code: 'already-voted' });
+
+      // Act & Assert
+      await expect(apiWith(fetch).voteAlone('TestPublicId', 'TestOption')).rejects.toMatchObject({
+        code: 'already-voted',
+      });
+    });
+  });
+
+  describe('worldResult', () => {
+    it('should ask for the world result with the vote and the prediction the device keeps', async () => {
+      // Arrange
+      const result = { shown: false, answers: 12, needed: 20 };
+      const { fetch, calls } = answering(200, result);
+
+      // Act
+      const answer = await apiWith(fetch).worldResult('TestPublicId', 'TestOption', 70);
+
+      // Assert
+      expect(answer).toEqual(result);
+      expect(calls[0]!.url).toBe(
+        'https://realtime.example/dilemmas/TestPublicId/world-result?option=TestOption&prediction=70',
+      );
+    });
+  });
+
   it('should fail with no code when the server answers something outside the contract', async () => {
     // Arrange
     const { fetch } = answering(500, 'Internal Server Error');

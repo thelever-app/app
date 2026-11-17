@@ -482,5 +482,30 @@
     "loading": "Dilemma wird gesucht…",
     "notFound": "Dieses Dilemma gibt es auf TheLever nicht mehr. Du kannst einen Raum mit anderen aus dem Katalog erstellen.",
     "home": "Zur Startseite"
+  },
+  "voteAlone": {
+    "loading": "Dilemma wird gesucht…",
+    "notFound": "Dieses Dilemma gibt es auf TheLever nicht mehr.",
+    "someoneInYourGroup": "jemand aus deiner Gruppe",
+    "yourVote": "Deine Stimme, geheim",
+    "prediction": "Wie viel Prozent der Welt haben wie du abgestimmt?",
+    "percent": "{{value}} %",
+    "private": "Deine Stimme zählt für das Weltergebnis dieses Dilemmas. Niemand erfährt, wie du abgestimmt hast.",
+    "see": "Sehen, wie die Welt abgestimmt hat",
+    "sending": "Deine Stimme wird gesendet…",
+    "loadingResult": "Das Weltergebnis wird geladen…",
+    "sameAsYou": "{{percentage}} %",
+    "thoughtLikeYou": "haben wie du gedacht.",
+    "predictionOff_one": "Du hast {{prediction}} % gesagt: {{count}} Punkt daneben.",
+    "predictionOff_other": "Du hast {{prediction}} % gesagt: {{count, number}} Punkte daneben.",
+    "predictionRight": "Du hast {{prediction}} % gesagt: genau getroffen.",
+    "yours": "{{option}} · deine Stimme",
+    "answers_one": "{{count, number}} Antwort weltweit. Wird einmal am Tag aktualisiert.",
+    "answers_other": "{{count, number}} Antworten weltweit. Wird einmal am Tag aktualisiert.",
+    "fewTitle": "Noch gibt es wenige Antworten",
+    "fewBody_one": "Wir haben {{count, number}} der nötigen {{needed}}. Schau später wieder vorbei, um zu sehen, wie die Welt abgestimmt hat und ob du richtig lagst.",
+    "fewBody_other": "Wir haben {{count, number}} der nötigen {{needed}}. Schau später wieder vorbei, um zu sehen, wie die Welt abgestimmt hat und ob du richtig lagst.",
+    "play": "Mit meiner Gruppe spielen",
+    "arguments": "Die Argumente zu jeder Option lesen"
   }
 }

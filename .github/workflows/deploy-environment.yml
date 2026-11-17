@@ -73,7 +73,8 @@ jobs:
       # The rooms live in PostgreSQL, so several instances share them. After a deploy the previous
       # revision keeps its sockets for up to an hour, so two revisions may run side by side: at most
       # 2 instances each, with a pool of 3 and the LISTEN connection, are 16 connections; with 1 of
-      # the migrate job, 1 of the close-rooms job and 1 of the catalog-import job, 19, the 19 the
+      # the migrate job, 1 of the close-rooms job (which publish-world-results takes too, never at
+      # the same time) and 1 of the catalog-import job, 19, the 19 the
       # micro instance leaves to the app users (25, minus 3 for superusers and 3 Cloud SQL uses).
       # The generate-site job takes the one of catalog-import: a deploy and a load of the catalog never
       # run at the same time (the concurrency of this job), and its schedule runs it at night.
@@ -219,6 +220,33 @@ jobs:
             gcloud scheduler jobs update http close-rooms "${schedule[@]}"
           else
             gcloud scheduler jobs create http close-rooms "${schedule[@]}"
+          fi
+
+      # Once a day, Cloud Scheduler runs the job that publishes the world result of every dilemma,
+      # which the app shows until the next day. Same image, service account and database user as
+      # close-rooms, and its connection in the budget above: at half past three it never runs with
+      # close-rooms, which runs on the hour. The scheduler account may only run the jobs it is given.
+      - name: Deploy the job that publishes the world results, and its schedule
+        run: |
+          gcloud run jobs deploy publish-world-results --project "$PROJECT" --region europe-southwest1 \
+            --image "$(cat image.txt)" \
+            --service-account "realtime@$PROJECT.iam.gserviceaccount.com" \
+            --command node --args apps/realtime/src/jobs/publish-world-results.ts \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=realtime@$PROJECT.iam" \
+            --max-retries 1 --task-timeout 10m \
+            --quiet
+          schedule=(
+            --project "$PROJECT" --location europe-west1
+            --schedule "30 3 * * *" --time-zone Etc/UTC
+            --uri "https://run.googleapis.com/v2/projects/$PROJECT/locations/europe-southwest1/jobs/publish-world-results:run"
+            --http-method POST
+            --oauth-service-account-email "scheduler@$PROJECT.iam.gserviceaccount.com"
+            --quiet
+          )
+          if gcloud scheduler jobs describe publish-world-results --project "$PROJECT" --location europe-west1 >/dev/null 2>&1; then
+            gcloud scheduler jobs update http publish-world-results "${schedule[@]}"
+          else
+            gcloud scheduler jobs create http publish-world-results "${schedule[@]}"
           fi
 
       # The job that loads the Catalog of dilemmas of Notion, with its translations, which the

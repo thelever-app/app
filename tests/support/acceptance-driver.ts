@@ -62,8 +62,12 @@ import {
   type GetDilemmaPreviewOutput,
   GetDilemmasUseCase,
   GetPublicCatalogUseCase,
+  GetWorldResultUseCase,
+  type GetWorldResultOutput,
   ImportCatalogUseCase,
+  PublishWorldResultsUseCase,
   SearchDilemmasUseCase as SearchCatalogUseCase,
+  VoteAloneUseCase,
 } from '@thelever-app/dilemmas';
 import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
 import {
@@ -81,6 +85,7 @@ import {
 import {
   InMemoryCuratedCatalog,
   InMemoryDilemmaRepository,
+  InMemoryWorldResultRepository,
   LanguageTagTranslator,
   SequentialIdGenerator as SequentialDilemmaIds,
 } from '@thelever-app/dilemmas/in-memory';
@@ -100,6 +105,7 @@ import type {
   RoomChoices,
   RoomPreview,
   SettingsView,
+  WorldResultView,
 } from './driver.ts';
 import {
   catalogEntryOf,
@@ -225,6 +231,9 @@ interface AcceptancePlayer {
  * What a player sees on screen comes from what the application gives them: the code of the room
  * stands for the link and the QR built from it, and the state of the room for the lobby.
  */
+/** Who the visitor of the public web is when they vote alone. */
+const VISITOR_IDENTITY = 'TestVisitorIdentity';
+
 export class AcceptanceDriver implements GameDriver {
   readonly #catalog = new InMemoryDilemmaCatalog(DILEMMAS);
   readonly #roomRepository = new InMemoryRoomRepository();
@@ -256,6 +265,11 @@ export class AcceptanceDriver implements GameDriver {
   #dilemmaToPlay: GetDilemmaPreviewOutput | undefined;
   /** The language the link from the public web opens the app in. */
   #appLanguage: string | undefined;
+  /** The world results, and what the visitor chose to vote alone, voted and saw of it. */
+  readonly #worldResults = new InMemoryWorldResultRepository();
+  #dilemmaToVote: GetDilemmaPreviewOutput | undefined;
+  #visitorVote: string | undefined;
+  #worldResultSeen: GetWorldResultOutput | undefined;
   #visitorRoomId: string | undefined;
 
   readonly #createRoom: CreateRoomUseCase;
@@ -1022,6 +1036,102 @@ export class AcceptanceDriver implements GameDriver {
 
   async bannerAdBelowTheArguments(): Promise<boolean> {
     throw new Error('Only the screen shows the ads: the scenario must be @screen');
+  }
+
+  async voteFromThePublicPage(name: string): Promise<void> {
+    // The visitor follows the link of the page, as it is written, to the dilemma to vote alone.
+    const page = this.#publicPageIn(name, 'es');
+    const href = page?.main.value.match(/href="([^"]*\/vote\/[^"]*)"/)?.[1];
+    if (!href) throw new Error(`The public page of "${name}" offers no vote`);
+    const link = new URL(href.replaceAll('&amp;', '&'), SITE_ORIGIN);
+    this.#dilemmaToVote = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
+      publicId: link.pathname.split('/').at(-1)!,
+    });
+  }
+
+  async dilemmaReadyToVoteAlone(): Promise<string | undefined> {
+    const preview = this.#dilemmaToVote;
+    return preview && preview.options.length > 1 ? preview.name : undefined;
+  }
+
+  async voteAlone(name: string): Promise<void> {
+    const publicId = await this.#publicIdOf(name);
+    const { options } = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
+      publicId,
+    });
+    const optionId = options[0]!.optionId;
+    await new VoteAloneUseCase(this.#dilemmaRepository, this.#worldResults).execute({
+      identity: VISITOR_IDENTITY,
+      publicId,
+      optionId,
+    });
+    this.#visitorVote = optionId;
+    this.#worldResultSeen = await new GetWorldResultUseCase(
+      this.#dilemmaRepository,
+      this.#worldResults,
+    ).execute({ publicId, optionId, prediction: 50 });
+  }
+
+  async worldAnswersOf(name: string): Promise<number> {
+    await new PublishWorldResultsUseCase(this.#worldResults).execute();
+    const publicId = await this.#publicIdOf(name);
+    const { options } = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
+      publicId,
+    });
+    const result = await new GetWorldResultUseCase(
+      this.#dilemmaRepository,
+      this.#worldResults,
+    ).execute({ publicId, optionId: options[0]!.optionId, prediction: 0 });
+    return result.answers;
+  }
+
+  async voteOfTheVisitorIsKept(): Promise<boolean> {
+    // Nothing kept ties the identity of the visitor to the option they voted: the receipt has no
+    // option, and the counts have no identity.
+    const vote = this.#visitorVote;
+    if (!vote) throw new Error('The visitor voted nothing alone');
+    const { receipts, counts } = this.#worldResults.records();
+    const receiptsOfTheVisitor = receipts.filter(({ identity }) => identity === VISITOR_IDENTITY);
+    if (receiptsOfTheVisitor.length === 0) {
+      throw new Error('The vote of the visitor was not counted');
+    }
+    return (
+      JSON.stringify(receiptsOfTheVisitor).includes(vote) ||
+      [...counts.keys()].some((key) => key.includes(VISITOR_IDENTITY))
+    );
+  }
+
+  async dilemmaWithWorldAnswers(name: string, answers: number): Promise<void> {
+    await this.catalogDilemmaNamed(name);
+    const publicId = await this.#publicIdOf(name);
+    const { options } = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
+      publicId,
+    });
+    const voteAlone = new VoteAloneUseCase(this.#dilemmaRepository, this.#worldResults);
+    for (let voter = 0; voter < answers; voter += 1) {
+      await voteAlone.execute({
+        identity: `world-voter-${voter}`,
+        publicId,
+        optionId: options[voter % options.length]!.optionId,
+      });
+    }
+    await new PublishWorldResultsUseCase(this.#worldResults).execute();
+  }
+
+  async worldResultSeen(): Promise<WorldResultView> {
+    const result = this.#worldResultSeen;
+    if (!result) throw new Error('The visitor saw no world result');
+    return result.shown
+      ? { tooFewAnswers: false, figures: result.options.map(({ percentage }) => `${percentage} %`) }
+      : { tooFewAnswers: true, figures: [] };
+  }
+
+  /** The public id of the dilemma of the curated catalog with that name, in Spanish. */
+  async #publicIdOf(name: string): Promise<string> {
+    const number = this.#publicNumbers.get(name);
+    const dilemma = number && (await this.#dilemmaRepository.findById(`dlm-${number}`));
+    if (!dilemma) throw new Error(`"${name}" is not a dilemma of the curated catalog`);
+    return dilemma.publicId;
   }
 
   async createTheRoomOfTheDilemma(): Promise<void> {

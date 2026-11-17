@@ -49,5 +49,10 @@ export { CreateRoomRequestDto, CreateRoomResponseDto } from './http/create-room.
 export { JoinRoomRequestDto, JoinRoomResponseDto } from './http/join-room.ts';
 export { RoomPreviewResponseDto } from './http/room-preview.ts';
 export { DilemmaPreviewResponseDto } from './http/dilemma-preview.ts';
+export {
+  VoteAloneRequestDto,
+  WorldResultQueryDto,
+  WorldResultResponseDto,
+} from './http/world-result.ts';
 export { SearchDilemmasQueryDto, SearchDilemmasResponseDto } from './http/search-dilemmas.ts';
 export { HttpErrorDto } from './http/http-error.ts';

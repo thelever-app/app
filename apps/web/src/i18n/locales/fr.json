@@ -507,5 +507,33 @@
     "loading": "Recherche du dilemme…",
     "notFound": "Ce dilemme n’est plus sur TheLever. Tu peux créer une salle avec d’autres dilemmes du catalogue.",
     "home": "Aller à l’accueil"
+  },
+  "voteAlone": {
+    "loading": "Recherche du dilemme…",
+    "notFound": "Ce dilemme n’est plus sur TheLever.",
+    "someoneInYourGroup": "quelqu’un de ton groupe",
+    "yourVote": "Ton vote, en privé",
+    "prediction": "Quelle part du monde a voté comme toi ?",
+    "percent": "{{value}} %",
+    "private": "Ton vote compte pour le résultat mondial de ce dilemme. Personne ne saura ce que tu as voté.",
+    "see": "Voir comment le monde a voté",
+    "sending": "Envoi de ton vote…",
+    "loadingResult": "Recherche du vote du monde…",
+    "sameAsYou": "{{percentage}} %",
+    "thoughtLikeYou": "ont pensé comme toi.",
+    "predictionOff_one": "Tu as dit {{prediction}} % : tu étais à {{count}} point.",
+    "predictionOff_many": "Tu as dit {{prediction}} % : tu étais à {{count, number}} points.",
+    "predictionOff_other": "Tu as dit {{prediction}} % : tu étais à {{count, number}} points.",
+    "predictionRight": "Tu as dit {{prediction}} % : en plein dans le mille.",
+    "yours": "{{option}} · ton vote",
+    "answers_one": "{{count, number}} réponse dans le monde entier. Mis à jour une fois par jour.",
+    "answers_many": "{{count, number}} réponses dans le monde entier. Mis à jour une fois par jour.",
+    "answers_other": "{{count, number}} réponses dans le monde entier. Mis à jour une fois par jour.",
+    "fewTitle": "Il y a encore peu de réponses",
+    "fewBody_one": "Nous en avons {{count, number}} sur les {{needed}} nécessaires. Reviens plus tard pour voir comment le monde a voté et si tu avais vu juste.",
+    "fewBody_many": "Nous en avons {{count, number}} sur les {{needed}} nécessaires. Reviens plus tard pour voir comment le monde a voté et si tu avais vu juste.",
+    "fewBody_other": "Nous en avons {{count, number}} sur les {{needed}} nécessaires. Reviens plus tard pour voir comment le monde a voté et si tu avais vu juste.",
+    "play": "Le jouer avec mon groupe",
+    "arguments": "Lire les arguments de chaque option"
   }
 }

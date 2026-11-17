@@ -101,7 +101,7 @@ export interface Ads {
 }
 
 export function dilemmaBody(
-  { dilemma }: ShownDilemma,
+  { dilemma, path }: ShownDilemma,
   texts: SiteTexts,
   appBase: string,
   ads?: Ads,
@@ -122,10 +122,16 @@ export function dilemmaBody(
           ${dilemma.options.map((option) => html`<li>${readable(option.text, texts)}</li>`)}
         </ul>
         <div class="actions">
+          <a
+            class="button primary"
+            href="${appBase}/vote/${dilemma.publicId}?lang=${dilemma.language}&back=${encodeURIComponent(path)}"
+            >${icon('how-to-vote')}${texts.dilemma.vote}</a
+          >
           <a class="button" href="${appBase}/new/${dilemma.publicId}?lang=${dilemma.language}"
-            >${texts.dilemma.play}</a
+            >${icon('groups')}${texts.dilemma.play}</a
           >
         </div>
+        <p class="world-later">${texts.dilemma.worldResultLater}</p>
       </section>
       ${html`<section class="dilemma-arguments">
         <h2>${texts.dilemma.arguments}</h2>

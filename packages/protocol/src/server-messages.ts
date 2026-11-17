@@ -257,6 +257,7 @@ export const ErrorCodeDto = z.enum([
   'dilemma-skipped',
   'dilemma-already-reported',
   'dilemma-not-reported-as-offensive',
+  'already-voted',
 ]);
 
 /** The answer to a rejected message, on the same connection. */

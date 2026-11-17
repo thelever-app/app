@@ -6,8 +6,14 @@ import {
   ConsoleLogger,
   openDatabase,
   PostgresDilemmaRepository,
+  PostgresWorldResultRepository,
 } from '@thelever-app/db';
-import { GetPublicCatalogUseCase, ImportCatalogUseCase } from '@thelever-app/dilemmas';
+import {
+  GetPublicCatalogUseCase,
+  ImportCatalogUseCase,
+  PublishWorldResultsUseCase,
+  VoteAloneUseCase,
+} from '@thelever-app/dilemmas';
 import { InMemoryCuratedCatalog, LanguageTagTranslator } from '@thelever-app/dilemmas/in-memory';
 import {
   buildSite,
@@ -49,6 +55,7 @@ import type {
   RoomChoices,
   RoomPreview,
   SettingsView,
+  WorldResultView,
 } from './driver.ts';
 import type { E2eStack } from './e2e-stack.ts';
 import {
@@ -1273,6 +1280,76 @@ export class E2eDriver implements GameDriver {
   async languageOfTheApp(): Promise<string | undefined> {
     const { page } = screenOf(this.#playerCalled(VISITOR));
     return page.evaluate('document.documentElement.lang');
+  }
+
+  async voteFromThePublicPage(name: string): Promise<void> {
+    const { page } = screenOf(await this.#withScreen(VISITOR));
+    await page.goto(`${this.#stack.siteUrl}${this.#publicPathIn(name, 'es')}`);
+    await page.getByRole('link', { name: SITE_LANGUAGES.get('es')!.dilemma.vote }).click();
+    await page.getByTestId('vote-alone').waitFor();
+  }
+
+  async dilemmaReadyToVoteAlone(): Promise<string | undefined> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    const form = page.getByTestId('vote-alone');
+    const ready =
+      (await form.getByRole('slider').isVisible()) &&
+      (await form.getByRole('button', { name: textIn('es', 'voteAlone.see') }).isVisible());
+    return ready ? ((await form.getByRole('heading').textContent()) ?? undefined) : undefined;
+  }
+
+  async voteAlone(name: string): Promise<void> {
+    const { page } = screenOf(await this.#withScreen(VISITOR));
+    await page.goto(`${this.#stack.webUrl}/vote/${await this.#publicIdOf(name)}?lang=es`);
+    const form = page.getByTestId('vote-alone');
+    await form.locator('button[aria-pressed]').first().click();
+    await form.getByRole('button', { name: textIn('es', 'voteAlone.see') }).click();
+    await page.getByTestId('world-result').waitFor();
+    // The result has come once the screen no longer says it is looking for it.
+    await page.getByText(textIn('es', 'voteAlone.loadingResult')).waitFor({ state: 'detached' });
+  }
+
+  async worldAnswersOf(): Promise<number> {
+    throw new Error('Only the application counts the world result: the scenario must not be @ui');
+  }
+
+  async voteOfTheVisitorIsKept(): Promise<boolean> {
+    throw new Error('Only the application keeps the votes: the scenario must not be @ui');
+  }
+
+  async dilemmaWithWorldAnswers(name: string, answers: number): Promise<void> {
+    await this.catalogDilemmaNamed(name);
+    const publicId = await this.#publicIdOf(name);
+    await this.#withDatabase(async (db) => {
+      const dilemmas = new PostgresDilemmaRepository(db);
+      const results = new PostgresWorldResultRepository(db);
+      const optionId = (await dilemmas.findByPublicId(publicId))!.options[0]!.id;
+      const voteAlone = new VoteAloneUseCase(dilemmas, results);
+      for (let voter = 0; voter < answers; voter += 1) {
+        await voteAlone.execute({ identity: `world-voter-${voter}`, publicId, optionId });
+      }
+      await new PublishWorldResultsUseCase(results).execute();
+    });
+  }
+
+  async worldResultSeen(): Promise<WorldResultView> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    const text = (await page.getByTestId('world-result').textContent()) ?? '';
+    return {
+      tooFewAnswers: text.includes(textIn('es', 'voteAlone.fewTitle')),
+      figures: text.match(/\d+\s?%/g) ?? [],
+    };
+  }
+
+  /** The public id of the dilemma of the curated catalog with that name, in Spanish. */
+  async #publicIdOf(name: string): Promise<string> {
+    const number = this.#publicNumbers.get(name);
+    if (number === undefined) throw new Error(`"${name}" is not a dilemma of the curated catalog`);
+    const dilemma = await this.#withDatabase((db) =>
+      new PostgresDilemmaRepository(db).findById(`dlm-${number}`),
+    );
+    if (!dilemma) throw new Error(`"${name}" is not in the database of the run`);
+    return dilemma.publicId;
   }
 
   async bannerAdBelowTheArguments(): Promise<boolean> {
