@@ -16,6 +16,7 @@ import check from '@material-symbols/svg-500/rounded/check-fill.svg?url';
 import edit from '@material-symbols/svg-500/rounded/edit-fill.svg?url';
 import howToVote from '@material-symbols/svg-500/rounded/how_to_vote-fill.svg?url';
 import personPin from '@material-symbols/svg-500/rounded/person_pin-fill.svg?url';
+import psychology from '@material-symbols/svg-500/rounded/psychology-fill.svg?url';
 import target from '@material-symbols/svg-500/rounded/target.svg?url';
 import visibilityOutline from '@material-symbols/svg-500/rounded/visibility.svg?url';
 import addCircle from '@material-symbols/svg-500/rounded/add_circle-fill.svg?url';
@@ -78,6 +79,7 @@ const ICONS = {
   openInNew,
   personPin,
   pin,
+  psychology,
   pushPin,
   qrCode,
   radioChecked,

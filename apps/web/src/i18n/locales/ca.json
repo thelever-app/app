@@ -30,6 +30,7 @@
     "more": "+{{count, number}}",
     "showAll": "Veure’ls tots",
     "predicting": "Dilema {{position, number}} de {{total, number}} · Prediu",
+    "predictingDistribution": "Dilema {{position, number}} de {{total, number}} · Prediu el repartiment",
     "anonymousGroup": "Quants han respost",
     "anonymousCount_one": "Ha respost {{count}} · en falten {{pending, number}}",
     "anonymousCount_many": "Han respost {{count, number}} · en falten {{pending, number}}",
@@ -54,8 +55,7 @@
     "privacy": "Ningú del grup no veurà el teu vot fins a la revelació. Mentrestant, el pots canviar.",
     "choose": "Tria una opció",
     "continue": "Continuar",
-    "privacyAnonymous": "Ningú del grup no veurà el teu vot, ni tan sols a la revelació. El pots canviar fins que es reveli el dilema.",
-    "done": "Fet"
+    "privacyAnonymous": "Ningú del grup no veurà el teu vot, ni tan sols a la revelació. El pots canviar fins que es reveli el dilema."
   },
   "waiting": {
     "position": "Dilema {{position, number}} de {{total, number}} · Has respost",
@@ -82,6 +82,14 @@
     "missing_many": "Falten {{count, number}} respostes",
     "missing_other": "Falten {{count, number}} respostes",
     "next": "Fet"
+  },
+  "distribution": {
+    "question": "Com es repartirà el grup?",
+    "hint": "Comptant-te a tu. Mou una barra i les altres s’ajusten soles: sempre sumen el 100 %.",
+    "hintTwo": "Comptant-te a tu. Mou la barra i les dues opcions s’ajusten soles: sempre sumen el 100 %.",
+    "yourVote": "el teu vot",
+    "shareOf": "Percentatge que predius per a {{option}}",
+    "percent": "{{value, number}} %"
   },
   "gameMenu": {
     "open": "Més opcions",
@@ -159,14 +167,19 @@
     "voterRight": "{{name}}, has encertat",
     "voterMissed": "{{name}}, has fallat: has dit {{letter}}",
     "optionCount": "{{count, number}} · {{percent}}",
+    "optionCountPredicted": "{{count, number}} · {{percent}} · tu, {{predicted}}",
     "didNotVote_one": "No ha votat · {{names}}",
     "didNotVote_many": "No han votat · {{names}}",
     "didNotVote_other": "No han votat · {{names}}",
     "next": "Dilema següent",
+    "toResults": "Veure els resultats",
     "anonymousDidNotVote_one": "{{count}} persona no ha votat.",
     "anonymousDidNotVote_many": "{{count, number}} persones no han votat.",
     "anonymousDidNotVote_other": "{{count, number}} persones no han votat.",
     "anonymousNote": "En aquesta sala ningú no veu qui ha votat què.",
+    "yourPrediction": "La teva predicció del repartiment",
+    "yourPredictionHint": "La marca negra de cada barra és el que vas predir.",
+    "points": "+{{points, number}}",
     "fewVotesTitle": "Massa pocs vots per mostrar el repartiment",
     "fewVotesVoted_one": "Només ha votat {{count}} persona",
     "fewVotesVoted_many": "Només han votat {{count, number}} persones",
@@ -175,7 +188,7 @@
     "fewVotesDidNot_one": "i {{count}} no ha votat",
     "fewVotesDidNot_many": "i {{count, number}} no han votat",
     "fewVotesDidNot_other": "i {{count, number}} no han votat",
-    "fewVotesWhy": "Amb menys de 3 vots, el repartiment deixaria endevinar qui ha votat què.",
+    "fewVotesWhy": "Amb menys de 3 vots, el repartiment deixaria endevinar qui ha votat què, així que aquest dilema no puntua.",
     "introPosition": "Dilema {{position, number}} de {{total, number}} · Fi de la decisió",
     "introTitle": "Es revela el dilema",
     "introMascot": "La Palanca, celebrant-ho",
@@ -184,6 +197,34 @@
     "introAnswered_other": "Heu respost {{count, number}} de {{total, number}}.",
     "introNominal": "Ara sí: veureu què ha votat cadascú.",
     "introAnonymous": "Ara sí: veureu quants han triat cada opció."
+  },
+  "ranking": {
+    "label": "Resultats",
+    "anonymous": "Sala anònima",
+    "title": "Qui llegeix millor el grup",
+    "text": "Punts per acostar-se al repartiment real de cada dilema. Ningú ha vist el vot de ningú.",
+    "position": "{{position, number}}.",
+    "mentalist": "El Mentalista",
+    "points": "{{points, number}}",
+    "note": "Qui queda primer és El Mentalista de la partida. Els dilemes amb menys de 3 vots no puntuen. Els empats comparteixen lloc i títol.",
+    "next": "Continuar"
+  },
+  "end": {
+    "label": "Partida acabada · {{total, number}} de {{total, number}}",
+    "title": "Final de trajecte",
+    "mascot": "La Palanca, celebrant-ho",
+    "place_one": "Has quedat {{position, number}}. de {{players, number}} llegint el grup, amb {{count}} punt.",
+    "place_many": "Has quedat {{position, number}}. de {{players, number}} llegint el grup, amb {{count, number}} punts.",
+    "place_other": "Has quedat {{position, number}}. de {{players, number}} llegint el grup, amb {{count, number}} punts.",
+    "placeMentalist_one": "Ningú ha llegit millor el grup: has quedat 1. de {{players, number}}, amb {{count}} punt.",
+    "placeMentalist_many": "Ningú ha llegit millor el grup: has quedat 1. de {{players, number}}, amb {{count, number}} punts.",
+    "placeMentalist_other": "Ningú ha llegit millor el grup: has quedat 1. de {{players, number}}, amb {{count, number}} punts.",
+    "inRoom": "Encara a la sala · {{count, number}}",
+    "gone_one": "{{names}} se n’ha anat.",
+    "gone_many": "{{names}} se n’han anat.",
+    "gone_other": "{{names}} se n’han anat.",
+    "closes": "La sala es tanca 15 minuts després que no quedi ningú connectat.",
+    "leave": "Sortir"
   },
   "notices": {
     "reconnecting": "Tornant a connectar… les teves respostes estan desades",

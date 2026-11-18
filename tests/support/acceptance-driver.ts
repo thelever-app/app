@@ -1,5 +1,7 @@
 import {
   AnswerDilemmaUseCase,
+  DistributionPredictionVO,
+  type PredictedShare,
   ChangeAvatarUseCase,
   ChangeRoomSettingsUseCase,
   ChooseRoundDilemmaUseCase,
@@ -333,6 +335,8 @@ export class AcceptanceDriver implements GameDriver {
       readonly dilemmaId: string;
       vote: string;
       votePredictions: VotePrediction[];
+      distributionPrediction?: PredictedShare[];
+      ready?: boolean;
     }
   >();
 
@@ -875,6 +879,7 @@ export class AcceptanceDriver implements GameDriver {
   async answer(player: string, plan: AnswerPlan = {}): Promise<void> {
     const dilemma = await this.#roundDilemmaOf(player);
     const { playersToPredict } = await this.#gameStateOf(player);
+    const anonymous = (await this.#currentGame()).settings.variant === 'anonymous';
     const draft = {
       dilemmaId: dilemma.dilemmaId,
       vote: plan.vote ? optionIdOf(dilemma.dilemmaId, plan.vote) : VOTE,
@@ -882,9 +887,120 @@ export class AcceptanceDriver implements GameDriver {
         plan.votePredictions === false
           ? []
           : playersToPredict.map((playerId) => ({ playerId, vote: VOTE })),
+      // The screen of an anonymous room starts at the even split and finishes with Ready.
+      ...(anonymous && {
+        ...(plan.distribution && {
+          distributionPrediction: plan.distribution.map(({ option, share }) => ({
+            optionId: optionIdOf(dilemma.dilemmaId, option),
+            share,
+          })),
+        }),
+        ready: plan.ready ?? true,
+      }),
     };
     this.#drafts.set(player, draft);
     await this.#send(player, draft);
+  }
+
+  async predictDistribution(
+    player: string,
+    shares: readonly { readonly option: string; readonly share: number }[],
+  ): Promise<void> {
+    if (!(await this.#savedAnswerOf(player))) await this.vote(player);
+    const draft = this.#draftOf(player);
+    draft.distributionPrediction = shares.map(({ option, share }) => ({
+      optionId: optionIdOf(draft.dilemmaId, option),
+      share,
+    }));
+    await this.#send(player, draft);
+  }
+
+  /** The screen moves the bars with the prediction of the domain, and sends it when the player lets go. */
+  async moveDistributionShare(player: string, option: number, share: number): Promise<void> {
+    const saved = await this.#savedAnswerOf(player);
+    if (!saved?.distributionPrediction) throw new Error(`${player} has no distribution prediction`);
+    const { options } = await this.#roundDilemmaOf(player);
+    const draft = this.#draftOf(player);
+    draft.distributionPrediction = [
+      ...new DistributionPredictionVO(saved.distributionPrediction).withShare(
+        options[option]!.optionId,
+        share,
+      ).shares,
+    ];
+    await this.#send(player, draft);
+  }
+
+  async pressReady(player: string): Promise<void> {
+    const draft = this.#draftOf(player);
+    draft.ready = true;
+    await this.#send(player, draft);
+  }
+
+  /** The application turns down a prediction without a vote: the screen offers none. */
+  async canPredictDistribution(player: string): Promise<boolean> {
+    const { dilemmaId, options } = await this.#roundDilemmaOf(player);
+    return this.#accepts(
+      () =>
+        this.#answerDilemma.execute({
+          roomId: this.#currentRoomId(),
+          playerId: this.#playerIdOf(player),
+          dilemmaId,
+          vote: '',
+          distributionPrediction: [
+            ...DistributionPredictionVO.even(options.map(({ optionId }) => optionId)).shares,
+          ],
+        }),
+      VoteMissingError,
+    );
+  }
+
+  async distributionPredictionSeenBy(player: string) {
+    const saved = await this.#savedAnswerOf(player);
+    if (!saved?.distributionPrediction) return undefined;
+    const { options } = await this.#roundDilemmaOf(player);
+    const prediction = new DistributionPredictionVO(saved.distributionPrediction);
+    return {
+      shares: options.map(({ optionId }) => prediction.shareOf(optionId)),
+      vote: options.findIndex(({ optionId }) => optionId === saved.vote),
+    };
+  }
+
+  async distributionSlidersSeenBy(): Promise<number> {
+    throw new Error('The scenario checks the screen: it must be @screen');
+  }
+
+  async rankingSeenBy(viewer: string) {
+    const { ranking } = await this.#gameStateOf(viewer);
+    return ranking?.map(({ playerId, position, points, mentalist }) => ({
+      player: this.#nameOf(playerId),
+      position,
+      points,
+      mentalist,
+    }));
+  }
+
+  /** The game state has no titles of the game nor who knows each player best. */
+  async titlesSeenBy(viewer: string): Promise<boolean> {
+    const state = await this.#gameStateOf(viewer);
+    return 'titles' in state || 'whoKnowsBest' in state;
+  }
+
+  async endOfTheGameSeenBy(viewer: string) {
+    const { stage, players } = await this.#gameStateOf(viewer);
+    if (stage.kind !== 'ended') return undefined;
+    return {
+      stillInTheRoom: players
+        .filter(({ left }) => !left)
+        .map(({ playerId }) => this.#nameOf(playerId)),
+      gone: players.filter(({ left }) => left).map(({ playerId }) => this.#nameOf(playerId)),
+    };
+  }
+
+  /** The answer the room has of the player to the dilemma of the round, if any. */
+  async #savedAnswerOf(player: string) {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    const { answers } = await this.#gameStateOf(player);
+    return answers.find((answer) => answer.dilemmaId === dilemmaId);
   }
 
   async vote(player: string, option?: string): Promise<void> {
@@ -1436,6 +1552,11 @@ export class AcceptanceDriver implements GameDriver {
       optionOrder: answer.optionOrder.map((optionId) => optionTextOf(dilemmaId, optionId)),
       responseTimeSeconds: answer.responseTimeMs === null ? null : answer.responseTimeMs / 1000,
       voterInTheGap: answer.voterInTheGap,
+      distributionPrediction:
+        answer.distributionPrediction?.map(({ optionId, share }) => ({
+          option: optionTextOf(dilemmaId, optionId),
+          share,
+        })) ?? null,
       researchConsent: answer.seal.researchConsentVersion !== null,
       commercialLicenceConsent: answer.seal.commercialLicenceConsentVersion !== null,
       underEighteen: answer.seal.underEighteen,
@@ -1516,7 +1637,7 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async revealSeenBy(viewer: string): Promise<RevealView | undefined> {
-    const { reveal } = await this.#gameStateOf(viewer);
+    const { reveal, ranking } = await this.#gameStateOf(viewer);
     if (!reveal) return undefined;
     const { dilemmaId } = reveal;
     return {
@@ -1539,16 +1660,23 @@ export class AcceptanceDriver implements GameDriver {
       })),
       personInTheGap: reveal.personInTheGap && this.#nameOf(reveal.personInTheGap),
       chosenBy: reveal.chosenBy && this.#nameOf(reveal.chosenBy),
-      showsPoints: /points/i.test(JSON.stringify(reveal)),
+      showsPoints: ranking !== null,
+      ownDistributionPrediction:
+        reveal.yourDistributionPrediction?.map(({ optionId, share }) => ({
+          option: optionTextOf(dilemmaId, optionId),
+          share,
+        })) ?? null,
+      ownPoints: reveal.yourPoints,
     };
   }
 
+  /** From a round, or from the game results, which come after the last one. */
   async moveOn(player: string): Promise<void> {
-    const { round } = await this.#gameStateOf(player);
+    const { round, stage, dilemmas } = await this.#gameStateOf(player);
     await this.#moveOn.execute({
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(player),
-      fromPosition: round.position,
+      fromPosition: stage.kind === 'results' ? dilemmas.length : round.position,
     });
   }
 
@@ -1690,6 +1818,8 @@ export class AcceptanceDriver implements GameDriver {
       readonly dilemmaId: string;
       readonly vote: string;
       readonly votePredictions: readonly VotePrediction[];
+      readonly distributionPrediction?: readonly PredictedShare[];
+      readonly ready?: boolean;
     },
   ): Promise<void> {
     const playerId = this.#playerIdOf(player);

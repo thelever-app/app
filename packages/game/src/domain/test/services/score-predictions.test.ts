@@ -13,6 +13,8 @@ function answer(vote: string, votePredictions: VotePrediction[] = []): AnswerVO 
   return new AnswerVO({
     vote,
     votePredictions,
+    distributionPrediction: null,
+    ready: false,
     optionOrder: [],
     responseTimeMs: null,
     seal: SEAL,

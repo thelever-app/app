@@ -21,6 +21,8 @@ import type {
   RevealedBy,
   RoundPhase,
   VotePrediction,
+  GameStage,
+  PredictedShare,
 } from '@thelever-app/game';
 import type { ColumnType, Generated, Kysely } from 'kysely';
 
@@ -162,6 +164,10 @@ export interface Database {
     round_ends_at: Date | null;
     round_revealed_by: RevealedBy | null;
     round_moved_on_by: string | null;
+    /** The rounds, the game results of an anonymous room, or the end of the game. */
+    stage: GameStage;
+    /** Who moved everyone to the results or to the end; null in the rounds. */
+    stage_moved_on_by: string | null;
     version: number;
     variant: RoomVariant;
     group_nature: GroupNature;
@@ -224,6 +230,10 @@ export interface Database {
     voter_in_the_gap: boolean;
     /** Written as JSON text: the driver would turn an array into a PostgreSQL array. */
     vote_predictions: ColumnType<VotePrediction[], string, string>;
+    /** In an anonymous room; written as JSON text, like the vote predictions. */
+    distribution_prediction: ColumnType<PredictedShare[] | null, string | null, string | null>;
+    /** In an anonymous room, whether the player pressed Ready. */
+    ready: boolean;
     option_order: string[];
     response_time_ms: number | null;
   };

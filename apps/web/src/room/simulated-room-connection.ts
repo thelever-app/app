@@ -37,6 +37,7 @@ import {
   AnsweredCountChangedEvent,
   DilemmaRevealedEvent,
   RoundStartedEvent,
+  GameStageChangedEvent,
   SearchDilemmasUseCase,
   StartGameUseCase,
   type DomainEvent,
@@ -106,6 +107,7 @@ const SENT_AS_STATE = [
   LobbyChangedEvent,
   DilemmaRevealedEvent,
   RoundStartedEvent,
+  GameStageChangedEvent,
   HostChangedEvent,
   PlayerLeftEvent,
   PlayerJoinedLateEvent,
@@ -369,13 +371,15 @@ export class SimulatedRoomConnection implements RoomConnection {
       case 'connect':
         return;
       case 'answer-dilemma': {
-        const { dilemmaId, vote, votePredictions } = message;
+        const { dilemmaId, vote, votePredictions, distributionPrediction, ready } = message;
         await useCases.answerDilemma.execute({
           roomId,
           playerId,
           dilemmaId,
           vote,
           ...(votePredictions && { votePredictions }),
+          ...(distributionPrediction && { distributionPrediction }),
+          ...(ready !== undefined && { ready }),
         });
         // The use case only tells the others: the player learns their own answer from a fresh state.
         this.#enqueue(() => this.#sendState());
@@ -471,6 +475,8 @@ export class SimulatedRoomConnection implements RoomConnection {
             playerId: predicted,
             vote,
           })),
+          // In an anonymous room, the even split the room starts it at, and done.
+          ready: true,
         });
       });
     });

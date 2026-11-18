@@ -1,0 +1,121 @@
+.screen {
+  composes: screen from '../reveal/reveal-screen.module.css';
+}
+
+.header {
+  composes: header from '../reveal/reveal-screen.module.css';
+}
+
+.label {
+  composes: position from '../reveal/reveal-screen.module.css';
+}
+
+.main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px var(--space-4) var(--space-4);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.title {
+  composes: display from '../styles/typography.module.css';
+  margin: 0;
+}
+
+/* El Mentalista: the inverted sign. */
+.mentalist {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.place {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--color-ink-muted);
+}
+
+.room {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.roomTitle {
+  composes: signage from '../styles/typography.module.css';
+  margin: 0;
+  color: var(--color-ink-muted);
+}
+
+.avatars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hidden {
+  composes: hidden from '../game/sheet.module.css';
+}
+
+.gone {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-ink-muted);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.closes {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-ink-muted);
+}
+
+.leave {
+  min-height: 44px;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}

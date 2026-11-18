@@ -64,6 +64,12 @@ export interface CatalogEntry {
   readonly status: 'in-catalog' | 'in-exploration';
 }
 
+/** The share of an option in a distribution prediction, by the text of the option. */
+export interface PredictedShareView {
+  readonly option: string;
+  readonly share: number;
+}
+
 /** What the game keeps of the answer of a player to a dilemma. */
 export interface RecordedAnswer {
   /** The text of the option voted, as the test data writes it. */
@@ -74,6 +80,8 @@ export interface RecordedAnswer {
   readonly optionOrder: readonly string[];
   readonly responseTimeSeconds: number | null;
   readonly voterInTheGap: boolean;
+  /** In an anonymous room, the share of each option, in the order the voter saw them; null in a nominal one. */
+  readonly distributionPrediction: readonly PredictedShareView[] | null;
   readonly researchConsent: boolean;
   readonly commercialLicenceConsent: boolean;
   readonly underEighteen: boolean;
@@ -102,9 +110,38 @@ export type JoinRefusal = 'room-does-not-exist' | 'room-full' | 'expelled';
  */
 /** How a step wants a player to answer the dilemma of the round; the driver fills in the rest. */
 export interface AnswerPlan {
+  /** The text of the option; the first one of the dilemma unless it says. */
   readonly vote?: string;
   /** False makes no vote prediction, which leaves the answer incomplete in a nominal room. */
   readonly votePredictions?: boolean;
+  /** In an anonymous room, the share of each option; the even split unless it says. */
+  readonly distribution?: readonly PredictedShareView[];
+  /** In an anonymous room, false leaves the prediction without Ready. */
+  readonly ready?: boolean;
+}
+
+/** What a player sees of their distribution prediction on the dilemma of the round. */
+export interface DistributionPredictionView {
+  /** The share of each option, in the order the player sees the options. */
+  readonly shares: readonly number[];
+  /** The position (from 0), in that order, of the option marked as their vote. */
+  readonly vote: number;
+}
+
+/** A player in the ranking of who reads the group best, by the name the scenario gives them. */
+export interface RankedView {
+  readonly player: string;
+  /** From 1, shared on a tie. */
+  readonly position: number;
+  readonly points: number;
+  readonly mentalist: boolean;
+}
+
+/** What a player sees at the end of the game. */
+export interface EndOfTheGameView {
+  /** By their nicknames. */
+  readonly stillInTheRoom: readonly string[];
+  readonly gone: readonly string[];
 }
 
 /** What a player sees of the reveal of a dilemma, by the names the scenario gives the players. */
@@ -125,8 +162,12 @@ export interface RevealView {
   }[];
   readonly personInTheGap: string | null;
   readonly chosenBy: string | null;
-  /** Whether it shows anything about the points of anyone. */
+  /** Whether it shows a total of points of anyone. */
   readonly showsPoints: boolean;
+  /** In an anonymous room, the share the player predicted of each option. */
+  readonly ownDistributionPrediction: readonly PredictedShareView[] | null;
+  /** The points the player scored in the dilemma, which only they see. */
+  readonly ownPoints: number | null;
 }
 
 export interface GameDriver {
@@ -369,6 +410,26 @@ export interface GameDriver {
   ): Promise<void>;
   /** The players whose vote `player` predicts in each dilemma, by name, as the room tells them. */
   playersToPredictBy(player: string): Promise<string[]>;
+
+  // The distribution prediction, in an anonymous room
+
+  /** Votes, if they had not, and leaves the prediction at those shares, without Ready. */
+  predictDistribution(player: string, shares: readonly PredictedShareView[]): Promise<void>;
+  /** Moves the option in that position (from 0), in the order the player sees them, to that share. */
+  moveDistributionShare(player: string, option: number, share: number): Promise<void>;
+  pressReady(player: string): Promise<void>;
+  canPredictDistribution(player: string): Promise<boolean>;
+  distributionPredictionSeenBy(player: string): Promise<DistributionPredictionView | undefined>;
+  /** How many sliders the player moves to predict the distribution (@screen). */
+  distributionSlidersSeenBy(player: string): Promise<number>;
+
+  // The game results and the end
+
+  /** The ranking of who reads the group best, as the player sees it, once the rounds are over. */
+  rankingSeenBy(viewer: string): Promise<readonly RankedView[] | undefined>;
+  /** Whether the player sees the titles of the game or who knows them best. */
+  titlesSeenBy(viewer: string): Promise<boolean>;
+  endOfTheGameSeenBy(viewer: string): Promise<EndOfTheGameView | undefined>;
   /** What the vote predictions of `player` scored in each dilemma revealed so far; null for none made. */
   pointsOf(
     player: string,

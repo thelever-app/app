@@ -107,7 +107,7 @@ export class PostgresGameRepository implements GameRepository {
   /** What the game copied of its room when it started never changes either. */
   async #saveGame(
     db: Transaction<GameTables>,
-    { id, roomId, version, settings, round }: GameSnapshot,
+    { id, roomId, version, settings, round, stage }: GameSnapshot,
   ): Promise<void> {
     const changing = {
       version,
@@ -117,6 +117,8 @@ export class PostgresGameRepository implements GameRepository {
       round_ends_at: round?.endsAt ?? null,
       round_revealed_by: round?.revealedBy ?? null,
       round_moved_on_by: round?.movedOnBy ?? null,
+      stage: stage.kind,
+      stage_moved_on_by: stage.movedOnBy,
     };
     await db
       .insertInto('games')
@@ -246,6 +248,8 @@ export class PostgresGameRepository implements GameRepository {
           dilemma_version: eb.ref('excluded.dilemma_version'),
           vote: eb.ref('excluded.vote'),
           vote_predictions: eb.ref('excluded.vote_predictions'),
+          distribution_prediction: eb.ref('excluded.distribution_prediction'),
+          ready: eb.ref('excluded.ready'),
           option_order: eb.ref('excluded.option_order'),
           response_time_ms: eb.ref('excluded.response_time_ms'),
           game_consent_version: eb.ref('excluded.game_consent_version'),
@@ -367,6 +371,7 @@ function snapshotOf(row: GameRow): GameSnapshot {
             movedOnBy: row.round_moved_on_by,
           }
         : null,
+    stage: { kind: row.stage, movedOnBy: row.stage_moved_on_by },
     dilemmas,
     peopleInTheGap,
     players: row.players.map(({ player_id, has_left, joined_late }) => {
@@ -385,6 +390,8 @@ function snapshotOf(row: GameRow): GameSnapshot {
             dilemmaId: answer.dilemma_id,
             vote: answer.vote,
             votePredictions: answer.vote_predictions,
+            distributionPrediction: answer.distribution_prediction,
+            ready: answer.ready,
             optionOrder: answer.option_order,
             responseTimeMs: answer.response_time_ms,
             seal: {
@@ -519,6 +526,11 @@ function answerRowsOf({ id, dilemmas, players }: GameSnapshot): AnswerRow[] {
       dilemma_version: versions.get(answer.dilemmaId) ?? 0,
       vote: answer.vote,
       vote_predictions: JSON.stringify(answer.votePredictions),
+      distribution_prediction:
+        answer.distributionPrediction === null
+          ? null
+          : JSON.stringify(answer.distributionPrediction),
+      ready: answer.ready,
       option_order: [...answer.optionOrder],
       response_time_ms: answer.responseTimeMs,
       game_consent_version: answer.seal.gameConsentVersion,

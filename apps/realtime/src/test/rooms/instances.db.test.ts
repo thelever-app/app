@@ -123,6 +123,7 @@ describe('the room server on several instances', () => {
       type: 'answer-dilemma',
       dilemmaId: first!.dilemmaId,
       vote: first!.options[0]!.optionId,
+      ready: true,
     });
 
     // Assert

@@ -1,6 +1,7 @@
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
-import type { RevealView } from '../support/driver.ts';
+import type { RankedView, RevealView } from '../support/driver.ts';
+import { OPTION_TEXTS } from '../support/test-catalog.ts';
 import type { GameWorld } from '../support/world.ts';
 
 const POSITIONS: Record<string, number> = { first: 1, second: 2, third: 3 };
@@ -45,6 +46,7 @@ Given(
   async function (this: GameWorld, first: string, second: string, third: string, count: number) {
     await roomWith(this, [first, second, third], count);
     assert.equal((await this.driver.settingsSeenBy(first)).variant, 'nominal');
+    this.variant = 'nominal';
   },
 );
 
@@ -53,13 +55,23 @@ Given(
   async function (this: GameWorld, first: string, second: string, third: string, count: number) {
     await roomWith(this, [first, second, third], count);
     await this.driver.changeSettings(first, { variant: 'anonymous' });
+    this.variant = 'anonymous';
   },
 );
 
 // Moving through the rounds
 
 Given('the reveal is on the {word} dilemma', async function (this: GameWorld, ordinal: string) {
+  if (ordinal === 'last') {
+    await this.game();
+    await this.toRevealOf((await this.driver.dilemmasOfTheGame()).length);
+    return;
+  }
   await this.toRevealOf(positionOf(this, ordinal));
+});
+
+When('a player moves on', async function (this: GameWorld) {
+  await this.driver.moveOn(await this.host());
 });
 
 When('{string} moves to the next round', async function (this: GameWorld, player: string) {
@@ -313,4 +325,304 @@ Then('all players see that there were too few votes to show it', async function 
   for (const viewer of this.present()) {
     assert.equal((await revealSeenBy(this, viewer)).tooFewVotes, true);
   }
+});
+
+// The points and the ranking of an anonymous room
+
+/** Test data: the rounds a room of these scenarios plays, enough for a ranking and quick to play. */
+const ROUNDS = 3;
+
+/** Test data: the names of an anonymous room of ten, its host first. */
+const TEN = ['Ana', 'Luis', 'Marta', 'Sara', 'Nico', 'Pablo', 'Lucía', 'Inés', 'Diego', 'Nora'];
+
+const [PULL, NOTHING] = OPTION_TEXTS;
+
+/** The distribution prediction of the two usual options with that share for the first one. */
+function predicting(share: number) {
+  return [
+    { option: PULL, share },
+    { option: NOTHING, share: 100 - share },
+  ];
+}
+
+/**
+ * Every player votes the first option of every round, so the group goes all one way, and predicts
+ * that share for it: 100 reads the group right, 50 the even split, unless the step says.
+ */
+function readEveryRound(world: GameWorld, shares: Readonly<Record<string, number>>): void {
+  for (let position = 1; position <= (world.dilemmaCount ?? ROUNDS); position += 1) {
+    for (const player of world.inRoom) {
+      world.plan(position, player, { vote: PULL, distribution: predicting(shares[player] ?? 50) });
+    }
+  }
+}
+
+/** The game is on the ranking of who reads the group best: every round is played as planned. */
+async function toTheRanking(world: GameWorld): Promise<void> {
+  await world.game();
+  const host = await world.host();
+  if (await world.driver.rankingSeenBy(host)) return;
+  await world.toRevealOf((await world.driver.dilemmasOfTheGame()).length);
+  await world.driver.moveOn(host);
+}
+
+async function rankingSeenBy(world: GameWorld, viewer: string): Promise<readonly RankedView[]> {
+  const ranking = await world.driver.rankingSeenBy(viewer);
+  assert.ok(ranking, `${viewer} sees no ranking`);
+  return ranking;
+}
+
+async function rankedIn(world: GameWorld, player: string): Promise<RankedView> {
+  const ranked = (await rankingSeenBy(world, await world.host())).find(
+    (row) => row.player === player,
+  );
+  assert.ok(ranked, `${player} is not in the ranking`);
+  return ranked;
+}
+
+async function pointsIn(world: GameWorld, player: string, position: number) {
+  return (await world.driver.pointsOf(player)).find((scored) => scored.position === position)
+    ?.points;
+}
+
+// Ten players enter one by one: more than a step usually takes.
+Given(
+  'an anonymous room with {int} players',
+  { timeout: 90_000 },
+  async function (this: GameWorld, count: number) {
+    await roomWith(this, TEN.slice(0, count), ROUNDS);
+    await this.driver.changeSettings(TEN[0]!, { variant: 'anonymous' });
+    this.variant = 'anonymous';
+  },
+);
+
+Then('no player scores points for the first dilemma', async function (this: GameWorld) {
+  for (const player of this.inRoom) {
+    assert.equal(await pointsIn(this, player, 1), undefined, `${player} scored`);
+  }
+});
+
+Then(
+  'no player sees anything about their distribution prediction',
+  async function (this: GameWorld) {
+    for (const viewer of this.present()) {
+      const { ownDistributionPrediction, ownPoints } = await revealSeenBy(this, viewer);
+      assert.equal(ownDistributionPrediction, null);
+      assert.equal(ownPoints, null);
+    }
+  },
+);
+
+Then('all players see the ranking of who reads the group best', async function (this: GameWorld) {
+  for (const viewer of this.present()) await rankingSeenBy(this, viewer);
+});
+
+Then('nobody sees the titles of the game or who knows them best', async function (this: GameWorld) {
+  for (const viewer of this.present()) {
+    assert.equal(await this.driver.titlesSeenBy(viewer), false);
+  }
+});
+
+Given(
+  '{string} has the most points for the distribution predictions',
+  function (this: GameWorld, player: string) {
+    readEveryRound(this, { [player]: 100 });
+  },
+);
+
+Given(
+  '{string} and {string} share the most points for the distribution predictions',
+  function (this: GameWorld, first: string, second: string) {
+    readEveryRound(this, { [first]: 100, [second]: 100 });
+  },
+);
+
+Given(
+  '{string} and {string} share the highest total of points and {string} has the next one',
+  function (this: GameWorld, first: string, second: string, next: string) {
+    readEveryRound(this, { [first]: 100, [second]: 100, [next]: 80 });
+  },
+);
+
+Given('no dilemma had enough votes to score', function (this: GameWorld) {
+  // With only two votes in each round, none is scored.
+  const [skipping] = this.inRoom;
+  readEveryRound(this, {});
+  for (let position = 1; position <= (this.dilemmaCount ?? ROUNDS); position += 1) {
+    this.plan(position, skipping!, null);
+  }
+});
+
+Given('{string} left the game', async function (this: GameWorld, player: string) {
+  await this.game();
+  await this.driver.leave(player);
+  this.away.add(player);
+});
+
+When('the ranking of who reads the group best is shown', async function (this: GameWorld) {
+  await toTheRanking(this);
+});
+
+Then(
+  '{string} is marked as El Mentalista of the game',
+  async function (this: GameWorld, player: string) {
+    assert.equal((await rankedIn(this, player)).mentalist, true);
+  },
+);
+
+Then(
+  '{string} and {string} are both marked as El Mentalista of the game',
+  async function (this: GameWorld, first: string, second: string) {
+    for (const player of [first, second]) {
+      assert.equal((await rankedIn(this, player)).mentalist, true, `${player} is not`);
+    }
+  },
+);
+
+Then('nobody is marked as El Mentalista of the game', async function (this: GameWorld) {
+  for (const viewer of this.present()) {
+    const ranking = await rankingSeenBy(this, viewer);
+    assert.deepEqual(
+      ranking.filter(({ mentalist }) => mentalist),
+      [],
+    );
+  }
+});
+
+Then(
+  'the ranking has {string} and {string}',
+  async function (this: GameWorld, first: string, second: string) {
+    for (const viewer of this.present()) {
+      const players = (await rankingSeenBy(this, viewer)).map(({ player }) => player);
+      assert.deepEqual([...players].sort(), [first, second].sort());
+    }
+  },
+);
+
+Then('the game ends', async function (this: GameWorld) {
+  for (const viewer of this.present()) {
+    assert.ok(await this.driver.endOfTheGameSeenBy(viewer), `${viewer} does not see its end`);
+  }
+});
+
+Given(
+  /^the first dilemma has 2 options and the group voted (\d+) % and (?:\d+) %$/,
+  function (this: GameWorld, first: string) {
+    const pulling = (Number(first) * this.inRoom.size) / 100;
+    [...this.inRoom].forEach((player, index) =>
+      this.plan(1, player, { vote: index < pulling ? PULL : NOTHING }),
+    );
+  },
+);
+
+Given(
+  /^(\d+) of the players voted the first dilemma, (\d+) for the first option and (?:\d+) for the second$/,
+  function (this: GameWorld, voters: string, pulling: string) {
+    [...this.inRoom].forEach((player, index) => {
+      if (index >= Number(voters)) this.plan(1, player, null);
+      else this.plan(1, player, { vote: index < Number(pulling) ? PULL : NOTHING });
+    });
+  },
+);
+
+Given(
+  /^"([^"]+)" predicted (\d+) % and (?:\d+) %(?: on the first dilemma)?$/,
+  function (this: GameWorld, player: string, first: string) {
+    const plan = this.plans.get(1)?.get(player) ?? { vote: PULL };
+    this.plan(1, player, { ...plan, distribution: predicting(Number(first)) });
+  },
+);
+
+Then(
+  '{string} scores {int} points for the first dilemma',
+  async function (this: GameWorld, player: string, points: number) {
+    assert.equal(await pointsIn(this, player, 1), points);
+  },
+);
+
+Then(
+  '{string} scores no points for the first dilemma',
+  async function (this: GameWorld, player: string) {
+    assert.equal(await pointsIn(this, player, 1), undefined);
+  },
+);
+
+Then(
+  '{string} sees a mark on each bar at the share she predicted',
+  async function (this: GameWorld, player: string) {
+    const predicted = this.plans.get(1)?.get(player)?.distribution;
+    const seen = (await revealSeenBy(this, player)).ownDistributionPrediction;
+    assert.deepEqual(
+      [...(seen ?? [])].sort((a, b) => a.option.localeCompare(b.option)),
+      [...(predicted ?? [])].sort((a, b) => a.option.localeCompare(b.option)),
+    );
+  },
+);
+
+Then(
+  '{string} sees the points she scored for the first dilemma',
+  async function (this: GameWorld, player: string) {
+    const { ownPoints } = await revealSeenBy(this, player);
+    assert.ok(ownPoints !== null, `${player} sees no points`);
+    assert.equal(ownPoints, await pointsIn(this, player, 1));
+  },
+);
+
+Then(
+  'no other player receives the prediction or the points of {string}',
+  async function (this: GameWorld, player: string) {
+    for (const viewer of this.present().filter((other) => other !== player)) {
+      // Whoever has no screen open sees nothing, and receives nothing.
+      const reveal = await this.driver.revealSeenBy(viewer);
+      if (!reveal) continue;
+      const { ownDistributionPrediction, ownPoints } = reveal;
+      const own = await this.driver.answerRecordedFor(viewer, 1);
+      assert.deepEqual(ownDistributionPrediction, own?.distributionPrediction ?? null);
+      assert.equal(ownPoints, (await pointsIn(this, viewer, 1)) ?? null);
+    }
+  },
+);
+
+Given(
+  '{string} joined the game in the {word} round',
+  async function (this: GameWorld, player: string, ordinal: string) {
+    await this.toRound(positionOf(this, ordinal));
+    await this.isInTheRoom(player);
+  },
+);
+
+Given(
+  '{string} voted the {word} dilemma and predicted its distribution',
+  function (this: GameWorld, player: string, ordinal: string) {
+    this.plan(positionOf(this, ordinal), player, { vote: PULL, distribution: predicting(70) });
+  },
+);
+
+Then(
+  '{string} scores points for the {word} dilemma',
+  async function (this: GameWorld, player: string, ordinal: string) {
+    const points = await pointsIn(this, player, positionOf(this, ordinal));
+    assert.ok(typeof points === 'number', `${player} scored nothing`);
+  },
+);
+
+Then(
+  '{string} is in the ranking of who reads the group best',
+  async function (this: GameWorld, player: string) {
+    await toTheRanking(this);
+    await rankedIn(this, player);
+  },
+);
+
+Then(
+  '{string} and {string} share the first position',
+  async function (this: GameWorld, first: string, second: string) {
+    for (const player of [first, second]) {
+      assert.equal((await rankedIn(this, player)).position, 1, `${player} is not first`);
+    }
+  },
+);
+
+Then('{string} is third', async function (this: GameWorld, player: string) {
+  assert.equal((await rankedIn(this, player)).position, 3);
 });

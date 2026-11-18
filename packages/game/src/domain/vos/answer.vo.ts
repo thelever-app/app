@@ -1,3 +1,4 @@
+import { DistributionPredictionVO, type PredictedShare } from './distribution-prediction.vo.ts';
 import { VoteVO } from './vote.vo.ts';
 
 /**
@@ -21,6 +22,10 @@ export interface AnswerProps {
   readonly vote: string;
   /** Only the ones the voter made, in a nominal room. */
   readonly votePredictions: readonly VotePrediction[];
+  /** In an anonymous room, the share of the group the voter believes chose each option; null in a nominal one. */
+  readonly distributionPrediction: readonly PredictedShare[] | null;
+  /** In an anonymous room, whether the voter pressed Ready on their distribution prediction. */
+  readonly ready: boolean;
   /** The options of the dilemma in the order the voter saw them. */
   readonly optionOrder: readonly string[];
   /** From when the voter got the dilemma to when they first completed the answer; null until then. */
@@ -36,10 +41,15 @@ export interface AnswerProps {
  */
 export class AnswerVO {
   readonly #vote: VoteVO;
+  readonly #distributionPrediction: DistributionPredictionVO | null;
   readonly #props: AnswerProps;
 
   constructor(props: AnswerProps) {
     this.#vote = new VoteVO(props.vote);
+    this.#distributionPrediction =
+      props.distributionPrediction === null
+        ? null
+        : new DistributionPredictionVO(props.distributionPrediction);
     this.#props = {
       ...props,
       vote: this.#vote.value,
@@ -47,6 +57,7 @@ export class AnswerVO {
         playerId,
         vote: new VoteVO(vote).value,
       })),
+      distributionPrediction: this.#distributionPrediction?.shares ?? null,
       optionOrder: [...props.optionOrder],
       seal: { ...props.seal },
     };
@@ -58,6 +69,14 @@ export class AnswerVO {
 
   get votePredictions(): readonly VotePrediction[] {
     return this.#props.votePredictions.map((prediction) => ({ ...prediction }));
+  }
+
+  get distributionPrediction(): DistributionPredictionVO | null {
+    return this.#distributionPrediction;
+  }
+
+  get ready(): boolean {
+    return this.#props.ready;
   }
 
   get optionOrder(): readonly string[] {
@@ -85,6 +104,7 @@ export class AnswerVO {
     return {
       ...this.#props,
       votePredictions: this.votePredictions,
+      distributionPrediction: this.#distributionPrediction?.shares ?? null,
       optionOrder: this.optionOrder,
       seal: this.seal,
     };

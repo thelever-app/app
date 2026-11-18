@@ -7,6 +7,7 @@ import {
   PlaceDto,
   RoomSettingsDto,
   RoundCategoriesDto,
+  DistributionPredictionDto,
   RoundIdDto,
 } from './client-messages.ts';
 
@@ -45,6 +46,28 @@ export const GameStateDto = z.strictObject({
     /** Who moved everyone on to this round from the reveal of the previous one; null for the first. */
     movedOnBy: z.string().min(1).nullable(),
   }),
+  /**
+   * The rounds, one after another; then, in an anonymous room, the game results; then the end of
+   * the game. Who moved everyone to the results or to the end; null in the rounds.
+   */
+  stage: z.strictObject({
+    kind: z.enum(['rounds', 'results', 'ended']),
+    movedOnBy: z.string().min(1).nullable(),
+  }),
+  /**
+   * In an anonymous room, once the rounds are over, who reads the group best: every player still
+   * in the game, the most points first, sharing a position on a tie; null otherwise.
+   */
+  ranking: z
+    .array(
+      z.strictObject({
+        playerId: z.string().min(1),
+        points: z.number().int().nonnegative(),
+        position: z.number().int().positive(),
+        mentalist: z.boolean(),
+      }),
+    )
+    .nullable(),
   /** Who may reveal the dilemma of the round early now. */
   hostId: z.string().min(1),
   /** The time of the server when it sent this state, so the screen can correct its own clock. */
@@ -82,6 +105,10 @@ export const GameStateDto = z.strictObject({
       personInTheGap: z.string().min(1).nullable(),
       /** Who added it in the lobby, only in a nominal room. */
       chosenBy: z.string().min(1).nullable(),
+      /** The distribution prediction of the player who receives it; null without one or with too few votes. */
+      yourDistributionPrediction: DistributionPredictionDto.nullable(),
+      /** What the predictions of the player who receives it scored in this dilemma; null for nothing scored. */
+      yourPoints: z.number().int().nonnegative().nullable(),
     })
     .nullable(),
   /** In the order every player gets them, in the language of the player. */
@@ -128,6 +155,10 @@ export const GameStateDto = z.strictObject({
       votePredictions: z.array(
         z.strictObject({ playerId: z.string().min(1), vote: z.string().min(1) }),
       ),
+      /** In an anonymous room, the distribution prediction so far; null in a nominal one. */
+      distributionPrediction: DistributionPredictionDto.nullable(),
+      /** In an anonymous room, whether the player pressed Ready. */
+      ready: z.boolean(),
     }),
   ),
   /** The dilemmas the player who receives the message reported; as offensive, they may skip it. */
@@ -270,6 +301,8 @@ export const ErrorCodeDto = z.enum([
   'decision-phase-over',
   'vote-missing',
   'predictions-not-allowed',
+  'distribution-prediction-not-allowed',
+  'invalid-distribution-prediction',
   'player-not-predictable',
   'duplicate-vote-prediction',
   'answer-incomplete',

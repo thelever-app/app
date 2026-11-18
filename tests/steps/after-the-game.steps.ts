@@ -19,10 +19,46 @@ Given('{string} is the host', async function (this: GameWorld, player: string) {
   await this.hostIs(player);
 });
 
-// The end of the game does not exist yet: the game goes as far as there is, the reveal of its last round.
-Given('the game has ended', async function (this: GameWorld) {
+/**
+ * Only an anonymous room has its results and its end yet: a room the scenario does not say the
+ * variant of plays as one; a nominal room goes as far as there is, the reveal of its last round.
+ */
+// A game of a few rounds, played through to its end: more than a step usually takes.
+Given('the game has ended', { timeout: 90_000 }, async function (this: GameWorld) {
+  this.dilemmaCount ??= 3;
+  if (this.variant === undefined) {
+    await this.driver.changeSettings(await this.host(), { variant: 'anonymous' });
+    this.variant = 'anonymous';
+  }
   await this.game();
   await this.toRevealOf((await this.driver.dilemmasOfTheGame()).length);
+  if (this.variant !== 'anonymous') return;
+  const host = await this.host();
+  await this.driver.moveOn(host);
+  await this.driver.moveOn(host);
+});
+
+Then(
+  '{string} and {string} see at the end of the game that they are still in the room',
+  async function (this: GameWorld, first: string, second: string) {
+    this.viewers = [first, second];
+    for (const viewer of this.viewers) {
+      const end = await this.driver.endOfTheGameSeenBy(viewer);
+      assert.ok(end, `${viewer} does not see the end of the game`);
+      for (const player of [first, second]) {
+        assert.ok(end.stillInTheRoom.includes(player), `${viewer} does not see ${player}`);
+      }
+    }
+  },
+);
+
+Then('that {string} has left', async function (this: GameWorld, player: string) {
+  for (const viewer of this.viewers) {
+    const end = await this.driver.endOfTheGameSeenBy(viewer);
+    assert.ok(end, `${viewer} does not see the end of the game`);
+    assert.ok(end.gone.includes(player), `${viewer} does not see that ${player} has left`);
+    assert.ok(!end.stillInTheRoom.includes(player), `${viewer} still sees ${player}`);
+  }
 });
 
 // Closing the room

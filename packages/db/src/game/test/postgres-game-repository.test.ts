@@ -28,12 +28,12 @@ import { PostgresRoomRepository } from '../postgres-room-repository.ts';
 import { inTransaction } from '../../transaction.ts';
 
 const database = useTestDatabase<Database>();
-/** Where an answer is only the vote. */
+/** Where an answer is the vote with Ready. */
 const ANONYMOUS = { ...TEST_GAME_SETTINGS, variant: 'anonymous' } as const;
 const STARTED_AT = new Date('2026-11-09T10:00:00Z');
 
 function answer(game: Game, playerId: string, dilemmaId: string, vote: string): void {
-  game.answer(playerId, dilemmaId, { vote }, SEAL_BEFORE_FIRST_ACCESS, STARTED_AT);
+  game.answer(playerId, dilemmaId, { vote, ready: true }, SEAL_BEFORE_FIRST_ACCESS, STARTED_AT);
 }
 
 describeGameRepositoryContract('PostgresGameRepository', async () => {

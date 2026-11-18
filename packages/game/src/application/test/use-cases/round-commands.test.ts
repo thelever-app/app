@@ -101,6 +101,7 @@ async function vote(
       playerId,
       dilemmaId: dilemmaIds[position]!,
       vote: 'TestOption',
+      ready: true,
     });
   }
 }
@@ -135,6 +136,7 @@ describe('Round commands', () => {
         playerId: luisId,
         dilemmaId: dilemmaIds[0]!,
         vote: 'TestOption',
+        ready: true,
       });
 
       // Assert

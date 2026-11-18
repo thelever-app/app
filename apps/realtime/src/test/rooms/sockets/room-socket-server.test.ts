@@ -1,4 +1,5 @@
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
+import { DistributionPredictionVO } from '@thelever-app/game';
 import { CONTRACT_VERSION, type GameStateDto } from '@thelever-app/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TokenVerifier } from '../../../identity/token-verifier.ts';
@@ -199,15 +200,20 @@ describe('RoomSocketServer', () => {
       await ana.next('connection-changed');
 
       // Act
-      luis.send({ type: 'answer-dilemma', ...firstVoteOf(first) });
+      luis.send({ type: 'answer-dilemma', ...firstVoteOf(first), ready: true });
 
       // Assert
       const state = await luis.next('game-state');
+      const evenSplit = DistributionPredictionVO.even(
+        state.dilemmas[0]!.options.map(({ optionId }) => optionId),
+      ).shares;
       expect(state.answers).toEqual(
         [firstVoteOf(first)].map(({ dilemmaId, vote }) => ({
           dilemmaId,
           vote,
           votePredictions: [],
+          distributionPrediction: evenSplit,
+          ready: true,
         })),
       );
       const count = await ana.next('answered-count');

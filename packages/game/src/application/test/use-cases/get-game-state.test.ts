@@ -6,6 +6,7 @@ import { GameNotFoundError } from '../../errors/game-not-found.error.ts';
 import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
 import { PlayerNotInGameError } from '../../../domain/errors/player-not-in-game.error.ts';
 import { Game } from '../../../domain/entities/game.ts';
+import { DistributionPredictionVO } from '../../../domain/vos/distribution-prediction.vo.ts';
 import type { RoomVariant } from '../../../domain/vos/room-settings.vo.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
@@ -95,6 +96,7 @@ describe('GetGameStateUseCase', () => {
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
+        ready: true,
       });
 
       // Act
@@ -169,6 +171,7 @@ describe('GetGameStateUseCase', () => {
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
+        ready: true,
       });
       await new ConnectPlayerUseCase(
         roomRepository,
@@ -194,17 +197,23 @@ describe('GetGameStateUseCase', () => {
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
+        ready: true,
       });
 
       // Act
       const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
 
       // Assert
+      const evenSplit = DistributionPredictionVO.even(
+        state.dilemmas[0]!.options.map(({ optionId }) => optionId),
+      ).shares;
       expect(state.answers).toEqual([
         {
           dilemmaId: 'TestDilemma1',
           vote: 'TestOption',
           votePredictions: [],
+          distributionPrediction: evenSplit,
+          ready: true,
         },
       ]);
     });
@@ -218,6 +227,7 @@ describe('GetGameStateUseCase', () => {
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestSecretOption',
+        ready: true,
       });
 
       // Act

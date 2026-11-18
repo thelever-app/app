@@ -37,7 +37,14 @@ export {
   MINIMUM_VOTES_TO_SHOW,
   type DidNotVoteReason,
   type AnswerDraft,
+  type GameStage,
 } from './domain/entities/game.ts';
+export {
+  DistributionPredictionVO,
+  SHARE_STEP,
+  type PredictedShare,
+} from './domain/vos/distribution-prediction.vo.ts';
+export type { RankedPlayer } from './domain/services/rank-by-points.ts';
 export {
   AvatarVO,
   AVATAR_FACES,
@@ -81,6 +88,7 @@ export { AnsweredCountChangedEvent } from './domain/events/answered-count-change
 export { HostChangedEvent } from './domain/events/host-changed.event.ts';
 export { PlayerLeftEvent } from './domain/events/player-left.event.ts';
 export { PlayerJoinedLateEvent } from './domain/events/player-joined-late.event.ts';
+export { GameStageChangedEvent } from './domain/events/game-stage-changed.event.ts';
 export type { IdGenerator } from './domain/ports/id-generator.port.ts';
 export type { Randomness } from './domain/ports/randomness.port.ts';
 export type { Clock } from './domain/ports/clock.port.ts';
@@ -122,6 +130,8 @@ export { DilemmaNotSuitableError } from './domain/errors/dilemma-not-suitable.er
 export { HostCannotBeExpelledError } from './domain/errors/host-cannot-be-expelled.error.ts';
 export { DecisionPhaseOverError } from './domain/errors/decision-phase-over.error.ts';
 export { PredictionsNotAllowedError } from './domain/errors/predictions-not-allowed.error.ts';
+export { DistributionPredictionNotAllowedError } from './domain/errors/distribution-prediction-not-allowed.error.ts';
+export { InvalidDistributionPredictionError } from './domain/errors/invalid-distribution-prediction.error.ts';
 export { PlayerNotPredictableError } from './domain/errors/player-not-predictable.error.ts';
 export { DuplicateVotePredictionError } from './domain/errors/duplicate-vote-prediction.error.ts';
 export { AnswerIncompleteError } from './domain/errors/answer-incomplete.error.ts';

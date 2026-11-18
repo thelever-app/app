@@ -22,6 +22,8 @@ const gameState = {
     revealedBy: 'everyone',
     movedOnBy: null,
   },
+  stage: { kind: 'rounds', movedOnBy: null },
+  ranking: null,
   hostId: 'player-1',
   serverTime: '2026-11-09T10:01:12.345Z',
   answeredCount: 2,
@@ -42,6 +44,8 @@ const gameState = {
     votePredictions: [{ playerId: 'player-2', aboutId: 'player-1', vote: 'option-2', right: true }],
     personInTheGap: null,
     chosenBy: null,
+    yourDistributionPrediction: null,
+    yourPoints: 50,
   },
   dilemmas: [
     {
@@ -88,6 +92,8 @@ const gameState = {
       dilemmaId: 'dilemma-1',
       vote: 'option-1',
       votePredictions: [{ playerId: 'player-1', vote: 'option-2' }],
+      distributionPrediction: null,
+      ready: false,
     },
   ],
   reports: [],
@@ -131,6 +137,54 @@ describe('GameStateDto', () => {
     // Assert
     expect(result.success).toBe(true);
     expect(result.data).toEqual(gameState);
+  });
+
+  it('should accept the ranking of an anonymous room at its end, with the prediction of the player', () => {
+    // Arrange
+    const ended = {
+      ...gameState,
+      stage: { kind: 'ended', movedOnBy: 'player-1' },
+      ranking: [
+        { playerId: 'player-2', points: 180, position: 1, mentalist: true },
+        { playerId: 'player-1', points: 120, position: 2, mentalist: false },
+      ],
+      reveal: {
+        ...gameState.reveal,
+        yourDistributionPrediction: [
+          { optionId: 'option-1', share: 65 },
+          { optionId: 'option-2', share: 35 },
+        ],
+      },
+      answers: [
+        {
+          dilemmaId: 'dilemma-1',
+          vote: 'option-1',
+          votePredictions: [],
+          distributionPrediction: [
+            { optionId: 'option-1', share: 65 },
+            { optionId: 'option-2', share: 35 },
+          ],
+          ready: true,
+        },
+      ],
+    };
+
+    // Act
+    const result = GameStateDto.safeParse(ended);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
+  it('should refuse a stage it does not know', () => {
+    // Act
+    const result = GameStateDto.safeParse({
+      ...gameState,
+      stage: { kind: 'titles', movedOnBy: null },
+    });
+
+    // Assert
+    expect(result.success).toBe(false);
   });
 
   it('should accept a player who has not answered anything yet', () => {

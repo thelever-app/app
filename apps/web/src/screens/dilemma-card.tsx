@@ -12,7 +12,7 @@ interface DilemmaCardProps {
   readonly personInTheGap?: string | undefined;
   /** The vote the room has recorded for this dilemma, if any. */
   readonly savedVote: string | undefined;
-  /** An anonymous room never shows the vote, not even in the reveal; its vote is the whole answer. */
+  /** An anonymous room never shows the vote, not even in the reveal. */
   readonly anonymous: boolean;
   /** The answer is on its way to the room: the player cannot send it again meanwhile. */
   readonly isSending: boolean;
@@ -20,9 +20,9 @@ interface DilemmaCardProps {
 }
 
 /**
- * The dilemma of the round: its text, its options and the way on, to the predictions in a nominal
- * room and «Listo» in an anonymous one. Its choice starts from the saved vote; there is no going
- * back to a past round.
+ * The dilemma of the round: its text, its options and the way on to the predictions, of each vote
+ * in a nominal room and of the distribution in an anonymous one. Its choice starts from the saved
+ * vote; there is no going back to a past round.
  */
 export function DilemmaCard({
   dilemma,
@@ -75,11 +75,7 @@ export function DilemmaCard({
             if (chosen !== undefined) onContinue(chosen);
           }}
         >
-          {chosen === undefined
-            ? t('dilemma.choose')
-            : anonymous
-              ? t('dilemma.done')
-              : t('dilemma.continue')}
+          {chosen === undefined ? t('dilemma.choose') : t('dilemma.continue')}
         </button>
       </footer>
     </>

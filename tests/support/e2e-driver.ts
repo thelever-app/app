@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import {
@@ -32,6 +33,7 @@ import {
   type RoomStateDto,
 } from '@thelever-app/protocol';
 import { isDeepStrictEqual } from 'node:util';
+import { DistributionPredictionVO, type PredictedShare } from '@thelever-app/game';
 import type {
   BrowserContext,
   BrowserContextOptions,
@@ -43,6 +45,10 @@ import type {
 import type {
   AnswerPlan,
   CatalogEntry,
+  DistributionPredictionView,
+  EndOfTheGameView,
+  PredictedShareView,
+  RankedView,
   GameDriver,
   GameSettingsView,
   InvitationMethod,
@@ -273,6 +279,14 @@ const SCREEN = {
   skip: 'Saltar dilema',
   leave: 'Salir de la partida',
   reveal: 'Reveal',
+  toResults: spanish('reveal.toResults'),
+  yourVote: spanish('distribution.yourVote'),
+  rankingTitle: spanish('ranking.title'),
+  rankingNext: spanish('ranking.next'),
+  endTitle: spanish('end.title'),
+  endLeave: spanish('end.leave'),
+  titles:
+    /Almas gemelas|Verso suelto|La voz del grupo|Imán de reacciones|Enigma|Libro abierto|te conoce mejor/,
 } as const;
 
 /**
@@ -1285,11 +1299,23 @@ export class E2eDriver implements GameDriver {
   /** On screen: the vote and, in a nominal room, the predictions of the plan, confirmed with «Listo». */
   async answer(player: string, plan: AnswerPlan = {}): Promise<void> {
     const answerer = this.#playerCalled(player);
+    // Brought in without a browser, the player never connects: as for one who disconnected, the
+    // round does not wait for them, and they do not vote.
+    if (!answerer.screen) return;
     const dilemma = await this.#roundDilemmaOn(answerer);
     const option = plan.vote ? optionCalled(dilemma, plan.vote) : firstOptionOf(dilemma);
     const wasAnswered = await this.hasAnswered(player);
     const heard = this.#answeredCountsHeardByOthers(answerer);
     await this.#chooseAndContinue(answerer, dilemma, option.optionId);
+    if (isAnonymous(answerer)) {
+      if (plan.distribution) {
+        await this.#setDistribution(answerer, dilemma, sharesOn(dilemma, plan.distribution));
+      }
+      if (plan.ready === false) return;
+      await this.#pressReadyOn(answerer, dilemma);
+      if (!wasAnswered) await this.#untilOthersHearAnswer(answerer, heard);
+      return;
+    }
     const { playersToPredict } = this.#gameOf(player);
     if (playersToPredict.length === 0) {
       if (!wasAnswered) await this.#untilOthersHearAnswer(answerer, heard);
@@ -1312,16 +1338,12 @@ export class E2eDriver implements GameDriver {
     if (complete && !wasAnswered) await this.#untilOthersHearAnswer(answerer, heard);
   }
 
-  /** On screen: the option and «Continuar», or «Listo» in an anonymous room. */
+  /** On screen: the option and «Continuar», on to the predictions. */
   async vote(player: string, option?: string): Promise<void> {
     const voter = this.#playerCalled(player);
     const dilemma = await this.#roundDilemmaOn(voter);
     const chosen = option ? optionCalled(dilemma, option) : firstOptionOf(dilemma);
-    const wasAnswered = await this.hasAnswered(player);
-    const heard = this.#answeredCountsHeardByOthers(voter);
     await this.#chooseAndContinue(voter, dilemma, chosen.optionId);
-    const anonymous = this.#gameOf(player).playersToPredict.length === 0;
-    if (anonymous && !wasAnswered) await this.#untilOthersHearAnswer(voter, heard);
   }
 
   /**
@@ -1346,8 +1368,123 @@ export class E2eDriver implements GameDriver {
     if ((await change.count()) > 0) await change.click();
     else if ((await back.count()) > 0) await back.click();
     await this.#chooseAndContinue(voter, dilemma, chosen.optionId);
+    // An anonymous room keeps the prediction and Ready: «Listo» takes the player back to waiting.
+    if (isAnonymous(voter)) {
+      if (previous.ready) await this.#pressReadyOn(voter, dilemma);
+      return;
+    }
     if (this.#gameOf(player).playersToPredict.length === 0) return;
     await this.#leavePredictions(voter);
+  }
+
+  // The distribution prediction, on its step of the dilemma
+
+  async predictDistribution(player: string, shares: readonly PredictedShareView[]): Promise<void> {
+    const predictor = this.#playerCalled(player);
+    const dilemma = await this.#roundDilemmaOn(predictor);
+    if (!this.#savedAnswerOf(predictor, dilemma.dilemmaId)) await this.vote(player);
+    await this.#setDistribution(predictor, dilemma, sharesOn(dilemma, shares));
+  }
+
+  async moveDistributionShare(player: string, option: number, share: number): Promise<void> {
+    const predictor = this.#playerCalled(player);
+    const dilemma = await this.#roundDilemmaOn(predictor);
+    const optionId = dilemma.options[option]!.optionId;
+    await this.#moveSlider(predictor, dilemma, optionId, share);
+    await this.#untilRoomKeeps(
+      predictor,
+      dilemma.dilemmaId,
+      (answer) =>
+        answer.distributionPrediction?.some(
+          (kept) => kept.optionId === optionId && kept.share === share,
+        ) ?? false,
+    );
+  }
+
+  async pressReady(player: string): Promise<void> {
+    const predictor = this.#playerCalled(player);
+    const heard = this.#answeredCountsHeardByOthers(predictor);
+    await this.#pressReadyOn(predictor, await this.#roundDilemmaOn(predictor));
+    await this.#untilOthersHearAnswer(predictor, heard);
+  }
+
+  /** Before a vote the dilemma shows only its options: there is no bar to move. */
+  async canPredictDistribution(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    return steady(async () => (await page.getByRole('slider').count()) > 0);
+  }
+
+  /** The bars on screen, in the order the player sees the options, and the one marked as their vote. */
+  async distributionPredictionSeenBy(
+    player: string,
+  ): Promise<DistributionPredictionView | undefined> {
+    const predictor = this.#playerCalled(player);
+    const { page } = screenOf(predictor);
+    const sliders = page.getByRole('slider');
+    if (!(await steady(async () => (await sliders.count()) > 0))) return undefined;
+    const values = await sliders.evaluateAll((inputs) =>
+      inputs.map((input) => Number((input as unknown as { value: string }).value)),
+    );
+    const shares = values.length === 1 ? [values[0]!, 100 - values[0]!] : values;
+    const dilemma = await this.#roundDilemmaOn(predictor);
+    const marked = await page
+      .getByText(SCREEN.yourVote, { exact: true })
+      .evaluate((tag) => tag.parentElement?.textContent ?? '');
+    const game = lastGameOf(predictor);
+    const vote = dilemma.options.findIndex((option) =>
+      marked.includes(textOnScreen(option, game, dilemma)),
+    );
+    return { shares, vote };
+  }
+
+  async distributionSlidersSeenBy(player: string): Promise<number> {
+    const { page } = screenOf(this.#playerCalled(player));
+    await page.getByRole('slider').first().waitFor();
+    return page.getByRole('slider').count();
+  }
+
+  // The game results and the end
+
+  /** On screen once the rounds are over, as the room server sent it. */
+  async rankingSeenBy(viewer: string): Promise<readonly RankedView[] | undefined> {
+    const watcher = this.#playerCalled(viewer);
+    const game = lastGameOf(watcher);
+    if (game?.stage.kind !== 'results' || !game.ranking) return undefined;
+    const list = screenOf(watcher).page.getByRole('list', { name: SCREEN.rankingTitle });
+    await list.waitFor();
+    await waitUntil(
+      async () => (await list.getByRole('listitem').count()) === game.ranking!.length || undefined,
+      `${viewer} sees every player in the ranking`,
+    );
+    return game.ranking.map(({ playerId, position, points, mentalist }) => ({
+      player: this.#nameOf(playerId),
+      position,
+      points,
+      mentalist,
+    }));
+  }
+
+  async titlesSeenBy(viewer: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    return steady(
+      async () => (await page.getByRole('heading', { name: SCREEN.titles }).count()) > 0,
+    );
+  }
+
+  async endOfTheGameSeenBy(viewer: string): Promise<EndOfTheGameView | undefined> {
+    const watcher = this.#playerCalled(viewer);
+    const game = lastGameOf(watcher);
+    if (game?.stage.kind !== 'ended') return undefined;
+    const { page } = screenOf(watcher);
+    await page.getByRole('heading', { name: SCREEN.endTitle }).waitFor();
+    const staying = game.players.filter(({ left }) => !left);
+    await page
+      .getByRole('heading', { name: spanish('end.inRoom', { count: staying.length }) })
+      .waitFor();
+    return {
+      stillInTheRoom: staying.map(({ playerId }) => this.#nameOf(playerId)),
+      gone: game.players.filter(({ left }) => left).map(({ playerId }) => this.#nameOf(playerId)),
+    };
   }
 
   async votesCastFor(player: string, position: number): Promise<string[]> {
@@ -1680,7 +1817,7 @@ export class E2eDriver implements GameDriver {
     const self = game.players.find(({ playerId }) => playerId === answerer.playerId);
     if (self?.answered !== null && self?.answered !== undefined) return self.answered;
     const { dilemmaId } = game.dilemmas[game.round.position]!;
-    return game.answers.some((answer) => answer.dilemmaId === dilemmaId);
+    return game.answers.some((answer) => answer.dilemmaId === dilemmaId && answer.ready);
   }
 
   /** In the list of the group of `viewer`: under «Han respondido», or not; null if it says no names. */
@@ -1867,6 +2004,11 @@ export class E2eDriver implements GameDriver {
       optionOrder: row.option_order.map(textOf),
       responseTimeSeconds: row.response_time_ms === null ? null : row.response_time_ms / 1000,
       voterInTheGap: row.voter_in_the_gap,
+      distributionPrediction:
+        row.distribution_prediction?.map(({ optionId, share }) => ({
+          option: textOf(optionId),
+          share,
+        })) ?? null,
       researchConsent: row.research_consent_version !== null,
       commercialLicenceConsent: row.commercial_licence_consent_version !== null,
       underEighteen: row.under_eighteen,
@@ -2028,6 +2170,8 @@ export class E2eDriver implements GameDriver {
 
   async revealSeenBy(viewer: string): Promise<RevealView | undefined> {
     const watcher = this.#playerCalled(viewer);
+    // Brought in without a browser, the player sees no reveal.
+    if (!watcher.screen) return undefined;
     const { page } = screenOf(watcher);
     const region = page.getByRole('main', { name: SCREEN.reveal });
     const shown = await steady(async () =>
@@ -2060,15 +2204,60 @@ export class E2eDriver implements GameDriver {
       personInTheGap: reveal.personInTheGap && this.#nameOf(reveal.personInTheGap),
       chosenBy: reveal.chosenBy && this.#nameOf(reveal.chosenBy),
       showsPoints: SCREEN.points.test((await page.locator('body').textContent()) ?? ''),
+      ownDistributionPrediction:
+        reveal.yourDistributionPrediction?.map(({ optionId, share }) => ({
+          option: textOf(optionId),
+          share,
+        })) ?? null,
+      ownPoints: await this.#pointsOnScreen(page, reveal.yourPoints, isAnonymous(watcher)),
     };
   }
 
-  /** «Siguiente dilema» on the reveal, and every screen gets the next round. */
+  /** The points of the player in the reveal, which the screen must show them; none, none shown. */
+  async #pointsOnScreen(
+    page: Page,
+    points: number | null,
+    anonymous: boolean,
+  ): Promise<number | null> {
+    // The reveal of a nominal room does not show the points of the player yet.
+    if (!anonymous) return points;
+    const shown = page.getByText(spanish('reveal.yourPrediction'));
+    if (points === null) {
+      assert.equal(await shown.count(), 0, 'the reveal shows a prediction it should not');
+      return null;
+    }
+    await page.getByText(spanish('reveal.points', { points }), { exact: true }).waitFor();
+    return points;
+  }
+
+  /**
+   * «Siguiente dilema» on the reveal, and every screen gets the next round; from the last one of an
+   * anonymous room, «Ver resultados», to the ranking; and from it, «Continuar», to the end.
+   */
   async moveOn(player: string): Promise<void> {
     const { page } = screenOf(this.#playerCalled(player));
-    const from = this.#gameOf(player).round.position;
+    const game = this.#gameOf(player);
+    if (game.stage.kind === 'results') {
+      await page.getByRole('button', { name: SCREEN.rankingNext }).click();
+      await this.#untilEveryoneIsAt('ended');
+      return;
+    }
+    const from = game.round.position;
+    if (from === game.dilemmas.length - 1) {
+      await page.getByRole('button', { name: SCREEN.toResults }).click();
+      await this.#untilEveryoneIsAt('results');
+      return;
+    }
     await page.getByRole('button', { name: SCREEN.next }).click();
     await this.#untilEveryoneIsOnRound(from + 1);
+  }
+
+  async #untilEveryoneIsAt(stage: 'results' | 'ended'): Promise<void> {
+    const online = this.#withScreens().filter(({ screen }) => screen?.link);
+    await waitUntil(
+      () => online.every((player) => lastGameOf(player)?.stage.kind === stage) || undefined,
+      `everyone gets to the ${stage === 'results' ? 'game results' : 'end of the game'}`,
+    );
   }
 
   /** Both tap «Siguiente dilema» at once. */
@@ -2170,8 +2359,25 @@ export class E2eDriver implements GameDriver {
     return this.#gameOf(player).playersToPredict.map((playerId) => this.#nameOf(playerId));
   }
 
-  async pointsOf(): Promise<{ readonly position: number; readonly points: number | null }[]> {
-    throw new Error('The scenario reads the points of the application: it must not be @ui');
+  /** As the game keeps them in the database: the dilemmas it scored for the player. */
+  async pointsOf(
+    player: string,
+  ): Promise<{ readonly position: number; readonly points: number | null }[]> {
+    const playerId = this.#playerIdOf(this.#playerCalled(player));
+    const { gameId, dilemmas } = this.#gameOf(this.#hostName());
+    const rows = await this.#withDatabase((db) =>
+      db
+        .selectFrom('game_player_dilemmas')
+        .select(['dilemma_id', 'points'])
+        .where('game_id', '=', gameId)
+        .where('player_id', '=', playerId)
+        .where('scored', '=', true)
+        .execute(),
+    );
+    const order = dilemmas.map(({ dilemmaId }) => dilemmaId);
+    return rows
+      .map(({ dilemma_id, points }) => ({ position: order.indexOf(dilemma_id) + 1, points }))
+      .toSorted((a, b) => a.position - b.position);
   }
 
   async report(player: string, reason: ReportReason): Promise<void> {
@@ -2304,8 +2510,12 @@ export class E2eDriver implements GameDriver {
     const leaver = this.#playerCalled(player);
     const { page } = screenOf(leaver);
     const playerId = this.#playerIdOf(leaver);
-    await page.getByRole('button', { name: SCREEN.moreOptions }).click();
-    await page.getByRole('button', { name: SCREEN.leave }).click();
+    if (lastGameOf(leaver)?.stage.kind === 'ended') {
+      await page.getByRole('button', { name: SCREEN.endLeave }).click();
+    } else {
+      await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+      await page.getByRole('button', { name: SCREEN.leave }).click();
+    }
     await page.getByRole('button', { name: SCREEN.create }).waitFor();
     await waitUntil(
       () =>
@@ -2349,8 +2559,7 @@ export class E2eDriver implements GameDriver {
     await page
       .getByRole('radio', { name: textOnScreen(option, game, dilemma), exact: true })
       .click();
-    const anonymous = (game?.playersToPredict.length ?? 0) === 0;
-    await page.getByRole('button', { name: anonymous ? SCREEN.done : SCREEN.continue }).click();
+    await page.getByRole('button', { name: SCREEN.continue }).click();
     this.#votes.set(player.name, [
       ...(this.#votes.get(player.name) ?? []),
       { dilemmaId: dilemma.dilemmaId, vote },
@@ -2500,6 +2709,59 @@ export class E2eDriver implements GameDriver {
     await sheet.getByRole('button', { name: SCREEN.close, exact: true }).click();
     await sheet.waitFor({ state: 'hidden' });
     return result;
+  }
+
+  /** The answer the room last told the player it keeps for that dilemma, if any. */
+  #savedAnswerOf(player: E2ePlayer, dilemmaId: string) {
+    return lastGameOf(player)?.answers.find((answer) => answer.dilemmaId === dilemmaId);
+  }
+
+  /** «Listo» on the step of the prediction, and the room keeps it done. */
+  async #pressReadyOn(player: E2ePlayer, dilemma: GameStateDto['dilemmas'][number]): Promise<void> {
+    await screenOf(player).page.getByRole('button', { name: SCREEN.done }).click();
+    await this.#untilRoomKeeps(player, dilemma.dilemmaId, (answer) => answer.ready);
+  }
+
+  /**
+   * Moves the bars as a player would, the fewest moves that reach the shares: each move adjusts the
+   * other options, so the driver works them out with the same prediction the screen uses.
+   */
+  async #setDistribution(
+    player: E2ePlayer,
+    dilemma: GameStateDto['dilemmas'][number],
+    target: readonly PredictedShare[],
+  ): Promise<void> {
+    const saved = this.#savedAnswerOf(player, dilemma.dilemmaId)?.distributionPrediction;
+    const ids = dilemma.options.map(({ optionId }) => optionId);
+    const start = saved ? new DistributionPredictionVO(saved) : DistributionPredictionVO.even(ids);
+    const goal = new DistributionPredictionVO(target);
+    for (const [optionId, share] of movesBetween(start, goal, ids)) {
+      await this.#moveSlider(player, dilemma, optionId, share);
+    }
+    await this.#untilRoomKeeps(player, dilemma.dilemmaId, (answer) =>
+      ids.every(
+        (optionId) =>
+          answer.distributionPrediction?.find((kept) => kept.optionId === optionId)?.share ===
+          goal.shareOf(optionId),
+      ),
+    );
+  }
+
+  /** The bar of the option to that share, and the player lets go; with two options, the one bar. */
+  async #moveSlider(
+    player: E2ePlayer,
+    dilemma: GameStateDto['dilemmas'][number],
+    optionId: string,
+    share: number,
+  ): Promise<void> {
+    const { page } = screenOf(player);
+    const index = dilemma.options.findIndex((option) => option.optionId === optionId);
+    const [slider, value] =
+      dilemma.options.length === 2
+        ? [page.getByRole('slider'), index === 0 ? share : 100 - share]
+        : [page.getByRole('slider').nth(index), share];
+    await slider.fill(String(value));
+    await slider.dispatchEvent('pointerup');
   }
 
   async #untilRoomKeeps(
@@ -3037,6 +3299,55 @@ function firstOptionOf(
   const [first] = dilemma.options.toSorted((a, b) => a.optionId.localeCompare(b.optionId));
   if (!first) throw new Error(`The dilemma ${dilemma.dilemmaId} has no options`);
   return first;
+}
+
+/** Whether the game the player has open is of an anonymous room, which never tells who answered. */
+function isAnonymous(player: E2ePlayer): boolean {
+  return lastGameOf(player)?.players.some(({ answered }) => answered === null) ?? false;
+}
+
+/** The shares a scenario gives by the texts of the options, by their ids. */
+function sharesOn(
+  dilemma: GameStateDto['dilemmas'][number],
+  shares: readonly PredictedShareView[],
+): PredictedShare[] {
+  return shares.map(({ option, share }) => ({
+    optionId: optionCalled(dilemma, option).optionId,
+    share,
+  }));
+}
+
+/**
+ * The fewest moves of one bar each that take the prediction to the goal, found by trying every
+ * move: there are few predictions, and any one is at most three moves away.
+ */
+function movesBetween(
+  start: DistributionPredictionVO,
+  goal: DistributionPredictionVO,
+  optionIds: readonly string[],
+): [string, number][] {
+  const keyOf = (prediction: DistributionPredictionVO) =>
+    optionIds.map((optionId) => prediction.shareOf(optionId)).join();
+  const target = keyOf(goal);
+  const seen = new Map<string, [string, number][]>([[keyOf(start), []]]);
+  let frontier = [start];
+  while (frontier.length > 0) {
+    const next: DistributionPredictionVO[] = [];
+    for (const prediction of frontier) {
+      const moves = seen.get(keyOf(prediction))!;
+      if (keyOf(prediction) === target) return moves;
+      for (const optionId of optionIds) {
+        for (let share = 0; share <= 100; share += 5) {
+          const moved = prediction.withShare(optionId, share);
+          if (seen.has(keyOf(moved))) continue;
+          seen.set(keyOf(moved), [...moves, [optionId, share]]);
+          next.push(moved);
+        }
+      }
+    }
+    frontier = next;
+  }
+  throw new Error(`No moves of the bars reach ${target}`);
 }
 
 interface Box {

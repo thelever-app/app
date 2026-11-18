@@ -189,18 +189,28 @@ export default defineConfig([
       'no-restricted-imports': [
         'error',
         {
+          // The package of Game by its name: a negated pattern cannot let in a path under a
+          // package that a pattern shuts out whole.
+          paths: [
+            {
+              name: '@thelever-app/game',
+              message:
+                'Only the simulated room may use the domain contexts. Use RoomConnection and @thelever-app/protocol.',
+            },
+          ],
           patterns: [
             {
               group: [
-                '@thelever-app/game',
                 '@thelever-app/game/*',
+                // The screen moves the bars of the distribution prediction as the room checks it.
+                '!@thelever-app/game/distribution-prediction',
                 '@thelever-app/dilemmas',
                 '@thelever-app/dilemmas/*',
                 '@thelever-app/integrations',
                 '@thelever-app/integrations/*',
               ],
               message:
-                'Only the simulated room may use the domain contexts. Use RoomConnection and @thelever-app/protocol.',
+                'Only the simulated room may use the domain contexts, and the screen the distribution prediction. Use RoomConnection and @thelever-app/protocol.',
             },
             intoAnotherPackage,
           ],

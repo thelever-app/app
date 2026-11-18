@@ -1,3 +1,7 @@
+import {
+  DistributionPredictionVO,
+  type PredictedShare,
+} from '@thelever-app/game/distribution-prediction';
 import type { GameStateDto, ReportReasonDto } from '@thelever-app/protocol';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -5,6 +9,7 @@ import { GroupProgressSheet } from '../components/group-progress-sheet.tsx';
 import { isAnonymous } from '../components/players.ts';
 import { ProgressStrip } from '../components/progress-strip.tsx';
 import { personInTheGapOf } from '../game/dilemma-text.tsx';
+import { DistributionPredictCard } from '../game/distribution-predict-card.tsx';
 import { GameMenu } from '../game/game-menu.tsx';
 import { Icon } from '../components/icon.tsx';
 import { GameToast } from '../game/game-toast.tsx';
@@ -40,10 +45,12 @@ function samePredictions(a: Predictions, b: Predictions): boolean {
 }
 
 /**
- * The dilemma of the round: the vote and, in a nominal room, the predictions on a step of their
- * own. The vote goes to the room on «Continuar», so it counts even if the time runs out while
- * predicting; the predictions go when the player leaves their step, with «Listo» or back to the
- * vote, never with each tap. «Listo» also confirms the vote of an anonymous room.
+ * The dilemma of the round: the vote and, on a step of their own, the predictions: of each vote in
+ * a nominal room, of the distribution in an anonymous one. The vote goes to the room on
+ * «Continuar», so it counts even if the time runs out while predicting. The vote predictions go
+ * when the player leaves their step, with «Listo» or back to the vote, never with each tap; the
+ * distribution prediction, each time the player lets go of a bar, so the one on the screen counts
+ * if the time runs out; «Listo» says it is done.
  */
 export function DilemmaScreen({
   game,
@@ -67,6 +74,12 @@ export function DilemmaScreen({
   const [step, setStep] = useState<'vote' | 'predict'>('vote');
   const [vote, setVote] = useState(saved?.vote);
   const [predictions, setPredictions] = useState<Predictions>(saved ?? NO_PREDICTIONS);
+  // Where the room starts it too: the even split, in the order the player sees the options.
+  const [distribution, setDistribution] = useState<readonly PredictedShare[]>(
+    () =>
+      saved?.distributionPrediction ??
+      DistributionPredictionVO.even(dilemma.options.map(({ optionId }) => optionId)).shares,
+  );
   const [isSending, setIsSending] = useState(false);
   const [isGroupOpen, setIsGroupOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -99,10 +112,14 @@ export function DilemmaScreen({
     <div className={`${styles.screen} ${styles.fixed}`}>
       <ProgressStrip
         game={game}
-        label={t(step === 'vote' ? 'progressStrip.position' : 'progressStrip.predicting', {
-          position: position + 1,
-          total,
-        })}
+        label={t(
+          step === 'vote'
+            ? 'progressStrip.position'
+            : anonymous
+              ? 'progressStrip.predictingDistribution'
+              : 'progressStrip.predicting',
+          { position: position + 1, total },
+        )}
         menu={step === 'vote' ? menu : undefined}
         showGroup={step === 'vote'}
       />
@@ -112,11 +129,12 @@ export function DilemmaScreen({
           personInTheGap={person}
           savedVote={vote}
           anonymous={anonymous}
-          isSending={anonymous && isSending}
+          isSending={false}
           onContinue={(chosen) => {
             setVote(chosen);
             if (anonymous) {
-              confirm({ dilemmaId, vote: chosen });
+              if (chosen !== saved?.vote) onAnswer({ dilemmaId, vote: chosen });
+              setStep('predict');
               return;
             }
             if (chosen !== saved?.vote) {
@@ -128,6 +146,28 @@ export function DilemmaScreen({
             }
             setStep('predict');
           }}
+        />
+      ) : anonymous ? (
+        <DistributionPredictCard
+          dilemma={dilemma}
+          vote={vote ?? ''}
+          prediction={distribution}
+          personInTheGap={person}
+          isSending={isSending}
+          onChange={setDistribution}
+          onRelease={(released) => {
+            setDistribution(released);
+            onAnswer({ dilemmaId, vote: vote ?? '', distributionPrediction: [...released] });
+          }}
+          onBack={() => setStep('vote')}
+          onReady={() =>
+            confirm({
+              dilemmaId,
+              vote: vote ?? '',
+              distributionPrediction: [...distribution],
+              ready: true,
+            })
+          }
         />
       ) : (
         <PredictCard

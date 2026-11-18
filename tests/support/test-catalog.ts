@@ -24,6 +24,14 @@ export interface TestTranslation {
 /** The two options almost every dilemma of the test data has. */
 export const OPTION_TEXTS = ['Pull the lever', 'Do nothing'] as const;
 
+/** The four options of the dilemma of the test data that has four. */
+export const FOUR_OPTION_TEXTS = [
+  'Save the child',
+  'Save the doctor',
+  'Save the athlete',
+  'Save the old man',
+] as const;
+
 /** The three options of the dilemmas of the test data that have three. */
 export const THREE_OPTION_TEXTS = [
   'Save the child',
@@ -68,7 +76,7 @@ export const SPANISH_OPTION_TEXTS = ['Tirar de la palanca', 'No hacer nada'] as 
  *   some; and new dilemmas for each age;
  * - in honesty, 8 dilemmas and 2 new ones, to choose categories;
  * - in loyalty, 3 dilemmas with the gap "someone in the group" and one with three options, for the
- *   host to pick;
+ *   host to pick; in work and money, one with four;
  * - all of them in Spanish but 6 of honesty in French, for a room that changes its language;
  * - in justice, one with its texts in Spanish and a translation into English, and one only in
  *   Spanish, for the language each player reads in.
@@ -82,6 +90,7 @@ export const TEST_DILEMMAS: readonly TestDilemma[] = [
   ...dilemmas('new-honesty', 2, { category: 'honesty', status: 'in-exploration' }),
   ...dilemmas('gap', 3, { category: 'loyalty', gap: true }),
   ...dilemmas('three-options', 1, { category: 'loyalty', options: THREE_OPTION_TEXTS }),
+  ...dilemmas('four-choices', 1, { category: 'work-and-money', options: FOUR_OPTION_TEXTS }),
   ...dilemmas('honesty-in-french', 6, { category: 'honesty', language: 'fr' }),
   ...dilemmas('english-version', 1, {
     category: 'justice',

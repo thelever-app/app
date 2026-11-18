@@ -1,4 +1,5 @@
 import type { VotePrediction } from '../../domain/vos/answer.vo.ts';
+import type { PredictedShare } from '../../domain/vos/distribution-prediction.vo.ts';
 import { PlayerNotInRoomError } from '../../domain/errors/player-not-in-room.error.ts';
 import type { Clock } from '../../domain/ports/clock.port.ts';
 import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
@@ -19,6 +20,10 @@ export interface AnswerDilemmaInput {
   readonly vote: string;
   /** In a nominal room, the vote predictions made so far. */
   readonly votePredictions?: readonly VotePrediction[];
+  /** In an anonymous room, the distribution prediction so far; without it, the one the player had. */
+  readonly distributionPrediction?: readonly PredictedShare[];
+  /** In an anonymous room, the player pressed Ready. */
+  readonly ready?: boolean;
 }
 
 /**
