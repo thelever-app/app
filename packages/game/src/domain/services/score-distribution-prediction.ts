@@ -1,5 +1,6 @@
 import type { DistributionPredictionVO } from '../vos/distribution-prediction.vo.ts';
-import { MAXIMUM_POINTS } from './score-predictions.ts';
+/** The most points a distribution prediction gives in a dilemma. */
+export const MAXIMUM_POINTS = 100;
 
 /**
  * The points of a distribution prediction against how many chose each option: 100 × (1 − ½ Σ

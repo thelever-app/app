@@ -42,7 +42,7 @@ export class SearchDilemmasUseCase {
     const room = await findRoom(this.#roomRepository, roomId);
     if (!room.playerWith(identity)) throw new IdentityNotInRoomError(roomId);
 
-    return this.#dilemmaCatalog.search(
+    const page = await this.#dilemmaCatalog.search(
       {
         ...(category && { categories: [category] }),
         ...(text && { text }),
@@ -53,5 +53,8 @@ export class SearchDilemmasUseCase {
       },
       { size: SEARCH_PAGE_SIZE, ...(after !== undefined && { after }) },
     );
+    // What the room already played cannot be chosen again.
+    const played = new Set(room.playedDilemmaIds);
+    return { ...page, dilemmas: page.dilemmas.filter(({ dilemmaId }) => !played.has(dilemmaId)) };
   }
 }

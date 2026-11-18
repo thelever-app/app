@@ -1,4 +1,6 @@
+import type { Room } from '../../domain/entities/room.ts';
 import { PlayerNotInRoomError } from '../../domain/errors/player-not-in-room.error.ts';
+import { categoriesKey } from '../../domain/services/compose-game.ts';
 import type { GroupNature, Place } from '../../domain/vos/group.vo.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
 import type { RoomSettingsSnapshot } from '../../domain/vos/room-settings.vo.ts';
@@ -27,6 +29,11 @@ export type LobbyRound =
       readonly roundId: number;
       readonly origin: 'random';
       readonly categories: readonly Category[] | null;
+      /**
+       * In the lobby of a rematch, whether its categories have nothing left the room has not
+       * played: if the game starts like that, the round plays from every category.
+       */
+      readonly withoutNewDilemmas: boolean;
     }
   | { readonly roundId: number; readonly origin: 'specific'; readonly dilemma: LobbyRoundDilemma }
   | {
@@ -83,6 +90,7 @@ export class GetRoomStateUseCase {
       hasGap,
     });
     const { rounds, ...settings } = room.settings.toSnapshot();
+    const exhausted = await this.#exhaustedCategories(room);
 
     return {
       roomId: room.id,
@@ -95,7 +103,12 @@ export class GetRoomStateUseCase {
       settings,
       rounds: rounds.map((round): LobbyRound => {
         if (round.origin === 'random') {
-          return { roundId: round.id, origin: 'random', categories: round.categories };
+          return {
+            roundId: round.id,
+            origin: 'random',
+            categories: round.categories,
+            withoutNewDilemmas: exhausted.has(categoriesKey(round.categories)),
+          };
         }
         if (round.origin === 'specific') {
           return {
@@ -122,6 +135,47 @@ export class GetRoomStateUseCase {
       })),
       currentGameId: room.currentGameId,
     };
+  }
+
+  /**
+   * In the lobby of a rematch, the categories of its random rounds where the catalog has no
+   * dilemma left that the room has not played nor plays in another round, by their key.
+   */
+  async #exhaustedCategories(room: Room): Promise<Set<string>> {
+    if (!room.isInLobby || room.playedDilemmaIds.length === 0) return new Set();
+    const { settings } = room;
+    const categorySets = new Map(
+      settings.rounds.flatMap((round) =>
+        round.origin === 'random'
+          ? [[categoriesKey(round.categories), round.categories] as const]
+          : [],
+      ),
+    );
+    const statuses = settings.newDilemmas
+      ? (['in-catalog', 'in-exploration'] as const)
+      : (['in-catalog'] as const);
+    const exhausted = await Promise.all(
+      [...categorySets].map(async ([key, categories]) => {
+        const found = await Promise.all(
+          statuses.map((status) =>
+            this.#dilemmaCatalog.findCandidates({
+              ...(categories && { categories }),
+              maximumMinimumAge: settings.maximumMinimumAge,
+              status,
+              language: settings.dilemmaLanguage,
+              includeCompromising: settings.includesCompromisingDilemmas,
+              count: 1,
+              includeGap: room.playsTheGap,
+              excludedIds: [...room.playedDilemmaIds, ...room.roundDilemmaIds],
+              onlyForAdults: false,
+              playedBy: [],
+            }),
+          ),
+        );
+        return found.every((candidates) => candidates.length === 0) ? [key] : [];
+      }),
+    );
+    return new Set(exhausted.flat());
   }
 
   async #textsOf(dilemmaIds: readonly string[], language: string): Promise<Map<string, string>> {

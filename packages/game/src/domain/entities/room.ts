@@ -1,3 +1,4 @@
+import { DilemmaAlreadyPlayedError } from '../errors/dilemma-already-played.error.ts';
 import { DilemmaNotSuitableError } from '../errors/dilemma-not-suitable.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { GameInProgressError } from '../errors/game-in-progress.error.ts';
@@ -107,6 +108,8 @@ export interface RoomSnapshot {
   readonly absentHostId: string | null;
   /** Who left the game in progress on purpose. */
   readonly leftPlayerIds: readonly string[];
+  /** The dilemmas of every game the room played before the one in progress or getting ready. */
+  readonly playedDilemmaIds: readonly string[];
   /** When the latest of its connections closed; until any closes, when it was created. */
   readonly lastConnectedAt: Date;
   /** When every player had left; the room closes too after a while with nobody connected. */
@@ -149,6 +152,7 @@ export class Room {
   #chosenDilemmas: ChosenDilemma[] = [];
   #currentGameId: IdVO | null = null;
   readonly #leftPlayerIds = new Set<string>();
+  readonly #playedDilemmaIds = new Set<string>();
   #lastConnectedAt: Date;
   #closedAt: Date | null = null;
   #events: DomainEvent[] = [];
@@ -255,6 +259,11 @@ export class Room {
 
   get currentGameId(): string | null {
     return this.#currentGameId?.value ?? null;
+  }
+
+  /** The dilemmas of the games the room played before, which no other game of the room repeats. */
+  get playedDilemmaIds(): readonly string[] {
+    return [...this.#playedDilemmaIds];
   }
 
   /**
@@ -378,6 +387,9 @@ export class Room {
         return { id, origin: 'random', categories: change.categories };
       }
       if (change.origin === 'players') return { id, origin: 'players' };
+      if (this.#playedDilemmaIds.has(change.dilemmaId)) {
+        throw new DilemmaAlreadyPlayedError(change.dilemmaId);
+      }
       const dilemma = found(change.dilemmaId);
       if (dilemma) return { id, origin: 'specific', dilemma: lobbyDilemmaOf(dilemma) };
       const before = current.find((round) => round.id === id);
@@ -424,6 +436,9 @@ export class Room {
     }
     if (this.roundDilemmaIds.includes(dilemma.dilemmaId)) {
       throw new DuplicateDilemmaError(dilemma.dilemmaId);
+    }
+    if (this.#playedDilemmaIds.has(dilemma.dilemmaId)) {
+      throw new DilemmaAlreadyPlayedError(dilemma.dilemmaId);
     }
     if (!this.#suits(dilemma)) throw new DilemmaNotSuitableError(dilemma.dilemmaId);
 
@@ -510,6 +525,30 @@ export class Room {
     });
     this.#chosenDilemmas = [];
     this.#changeLobby('game-started');
+  }
+
+  /**
+   * Once the game has ended, the host takes who is still in the room to the lobby of a new game,
+   * with the same settings, which they may change there. Who left does not go on to it, who was
+   * expelled from the lobby before may join it, and no game of the room plays the dilemmas of the
+   * games it played again. Whether the game has ended is up to the caller, which knows it.
+   */
+  startRematch(playerId: string, playedDilemmaIds: readonly string[]): void {
+    this.#player(playerId);
+    if (playerId !== this.#hostId) throw new NotHostError(playerId);
+    if (this.isInLobby) throw new GameNotInProgressError(this.id);
+
+    for (const dilemmaId of playedDilemmaIds) this.#playedDilemmaIds.add(dilemmaId);
+    for (const playerId of this.#leftPlayerIds) {
+      this.#players.splice(
+        this.#players.findIndex(({ id }) => id === playerId),
+        1,
+      );
+    }
+    this.#leftPlayerIds.clear();
+    this.#expelledIdentities.clear();
+    this.#currentGameId = null;
+    this.#changeLobby('rematch-started');
   }
 
   /**
@@ -619,6 +658,7 @@ export class Room {
       currentGameId: this.currentGameId,
       absentHostId: this.#absentHostId,
       leftPlayerIds: [...this.#leftPlayerIds],
+      playedDilemmaIds: this.playedDilemmaIds,
       lastConnectedAt: new Date(this.#lastConnectedAt),
       closedAt: this.#closedAt && new Date(this.#closedAt),
     };
@@ -641,6 +681,7 @@ export class Room {
     room.#currentGameId = snapshot.currentGameId === null ? null : new IdVO(snapshot.currentGameId);
     room.#absentHostId = snapshot.absentHostId;
     for (const playerId of snapshot.leftPlayerIds) room.#leftPlayerIds.add(playerId);
+    for (const dilemmaId of snapshot.playedDilemmaIds) room.#playedDilemmaIds.add(dilemmaId);
     room.#closedAt = snapshot.closedAt && new Date(snapshot.closedAt);
     return room;
   }

@@ -197,7 +197,7 @@ describe('Game, with the person in the gap', () => {
         SEAL,
         AT,
       );
-      game.revealIfEveryoneAnswered(EVERYONE);
+      game.revealIfEveryoneAnswered(EVERYONE, AT);
 
       // Act
       const reveal = game.revealOf(0);
@@ -263,7 +263,7 @@ describe('Game, with the person in the gap', () => {
       expect(game.revealOf(0).personInTheGapHits).toEqual({ right: 1, of: 2 });
     });
 
-    it('should share 100 among the players each one predicts', () => {
+    it('should score each right prediction of the voters and of the person in the gap, all of them for the option everyone chose', () => {
       // Arrange
       const { game, person } = gameOfFour();
       const others = EVERYONE.filter((playerId) => playerId !== person);
@@ -285,13 +285,13 @@ describe('Game, with the person in the gap', () => {
       );
 
       // Act
-      game.revealIfEveryoneAnswered(EVERYONE);
+      game.revealIfEveryoneAnswered(EVERYONE, AT);
 
       // Assert
       for (const voter of others) {
-        expect(game.pointsOf(voter)).toEqual([{ dilemmaId: GAP_DILEMMA, points: 100 }]);
+        expect(game.pointsOf(voter)).toEqual([{ dilemmaId: GAP_DILEMMA, points: 20 }]);
       }
-      expect(game.pointsOf(person)).toEqual([{ dilemmaId: GAP_DILEMMA, points: 100 }]);
+      expect(game.pointsOf(person)).toEqual([{ dilemmaId: GAP_DILEMMA, points: 30 }]);
     });
   });
 
@@ -342,7 +342,7 @@ describe('Game, with the person in the gap', () => {
       );
 
       // Act
-      game.revealIfEveryoneAnswered(EVERYONE);
+      game.revealIfEveryoneAnswered(EVERYONE, AT);
 
       // Assert
       const reveal = game.revealOf(0);
@@ -366,7 +366,7 @@ describe('Game, with the person in the gap', () => {
       game.answer(person, GAP_DILEMMA, { vote: null, ready: true }, SEAL, AT);
 
       // Act
-      game.reveal('time');
+      game.reveal('time', AT);
 
       // Assert
       expect(game.revealOf(0).tooFewVotes).toBe(true);

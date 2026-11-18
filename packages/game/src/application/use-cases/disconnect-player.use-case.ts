@@ -45,7 +45,9 @@ export class DisconnectPlayerUseCase {
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
     if (game?.playerIds.includes(playerId) && game.isInDecisionPhase) {
       // The round does not wait for who disconnects; past its time, it is revealed by time.
-      if (!game.runOutRound(this.#clock.now())) revealIfEveryoneAnswered(room, game);
+      if (!game.runOutRound(this.#clock.now())) {
+        revealIfEveryoneAnswered(room, game, this.#clock.now());
+      }
     }
     if (game) handOverHostIfAway(room, game);
     const roomEvents = room.pullEvents();

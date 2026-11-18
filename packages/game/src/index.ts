@@ -39,6 +39,9 @@ export {
   type DidNotVoteReason,
   type AnswerDraft,
   type GameStage,
+  type GameStageState,
+  type Reaction,
+  type ReactionTarget,
 } from './domain/entities/game.ts';
 export {
   DistributionPredictionVO,
@@ -46,6 +49,15 @@ export {
   type PredictedShare,
 } from './domain/vos/distribution-prediction.vo.ts';
 export type { RankedPlayer } from './domain/services/rank-by-points.ts';
+export {
+  TITLES,
+  MINIMUM_VOTED_FOR_A_TITLE,
+  type Title,
+  type TitleHolder,
+  type GameTitle,
+  type KnownBest,
+  type GameResults,
+} from './domain/services/game-results.ts';
 export {
   AvatarVO,
   AVATAR_FACES,
@@ -87,7 +99,7 @@ export {
   type ExplorationSlots,
 } from './domain/services/compose-game.ts';
 export type { Seal, VotePrediction, AnswerProps } from './domain/vos/answer.vo.ts';
-export { MAXIMUM_POINTS } from './domain/services/score-predictions.ts';
+export { MAXIMUM_POINTS } from './domain/services/score-distribution-prediction.ts';
 export type { DomainEvent } from './domain/events/domain-event.ts';
 export { ProgressUpdatedEvent } from './domain/events/progress-updated.event.ts';
 export { ConnectionChangedEvent } from './domain/events/connection-changed.event.ts';
@@ -99,6 +111,8 @@ export { HostChangedEvent } from './domain/events/host-changed.event.ts';
 export { PlayerLeftEvent } from './domain/events/player-left.event.ts';
 export { PlayerJoinedLateEvent } from './domain/events/player-joined-late.event.ts';
 export { GameStageChangedEvent } from './domain/events/game-stage-changed.event.ts';
+export { ReactionsChangedEvent } from './domain/events/reactions-changed.event.ts';
+export { DilemmaLikedEvent } from './domain/events/dilemma-liked.event.ts';
 export type { IdGenerator } from './domain/ports/id-generator.port.ts';
 export type { Randomness } from './domain/ports/randomness.port.ts';
 export type { Clock } from './domain/ports/clock.port.ts';
@@ -120,7 +134,6 @@ export { InvalidDilemmaVersionError } from './domain/errors/invalid-dilemma-vers
 export { OptionNotInDilemmaError } from './domain/errors/option-not-in-dilemma.error.ts';
 export { DilemmaNotInRoundError } from './domain/errors/dilemma-not-in-round.error.ts';
 export { DilemmaNotRevealedError } from './domain/errors/dilemma-not-revealed.error.ts';
-export { NoNextRoundError } from './domain/errors/no-next-round.error.ts';
 export { PlayerLeftGameError } from './domain/errors/player-left-game.error.ts';
 export { InvalidAvatarError } from './domain/errors/invalid-avatar.error.ts';
 export { InvalidRoomCodeError } from './domain/errors/invalid-room-code.error.ts';
@@ -150,12 +163,21 @@ export { DilemmaSkippedError } from './domain/errors/dilemma-skipped.error.ts';
 export { DilemmaAlreadyReportedError } from './domain/errors/dilemma-already-reported.error.ts';
 export { DilemmaNotReportedAsOffensiveError } from './domain/errors/dilemma-not-reported-as-offensive.error.ts';
 export { GameNotInProgressError } from './domain/errors/game-not-in-progress.error.ts';
+export { GameNotEndedError } from './domain/errors/game-not-ended.error.ts';
+export { InvalidEmojiError } from './domain/errors/invalid-emoji.error.ts';
+export { NoVoteToReactToError } from './domain/errors/no-vote-to-react-to.error.ts';
+export { DilemmaAlreadyPlayedError } from './domain/errors/dilemma-already-played.error.ts';
 
 // Application
 export type { RoomRepository } from './application/ports/room-repository.port.ts';
 export type { GameRepository } from './application/ports/game-repository.port.ts';
 export type { PlayerNotifier } from './application/ports/player-notifier.port.ts';
 export type { SealProvider } from './application/ports/seal-provider.port.ts';
+export {
+  GAME_LIKE_WEIGHT,
+  type DilemmaLike,
+  type DilemmaLikes,
+} from './application/ports/dilemma-likes.port.ts';
 export {
   GAP_MARKER,
   type DilemmaCatalog,
@@ -235,6 +257,15 @@ export {
   AnswerDilemmaUseCase,
   type AnswerDilemmaInput,
 } from './application/use-cases/answer-dilemma.use-case.ts';
+export { ReactUseCase, type ReactInput } from './application/use-cases/react.use-case.ts';
+export {
+  LikeDilemmaUseCase,
+  type LikeDilemmaInput,
+} from './application/use-cases/like-dilemma.use-case.ts';
+export {
+  StartRematchUseCase,
+  type StartRematchInput,
+} from './application/use-cases/start-rematch.use-case.ts';
 export {
   ConnectPlayerUseCase,
   type ConnectPlayerInput,

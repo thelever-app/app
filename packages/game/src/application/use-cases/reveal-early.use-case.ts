@@ -45,7 +45,7 @@ export class RevealEarlyUseCase {
     if (room.host.id !== playerId) throw new NotHostError(playerId);
 
     game.runOutRound(this.#clock.now());
-    if (game.isInDecisionPhase) game.reveal('host');
+    if (game.isInDecisionPhase) game.reveal('host', this.#clock.now());
     const gameEvents = game.pullEvents();
     if (gameEvents.length === 0) return;
     await this.#gameRepository.save(game);

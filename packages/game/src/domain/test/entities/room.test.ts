@@ -1235,6 +1235,7 @@ describe('Room', () => {
         currentGameId: null,
         absentHostId: null,
         leftPlayerIds: [],
+        playedDilemmaIds: [],
         lastConnectedAt: NOW,
         closedAt: null,
       });

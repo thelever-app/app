@@ -6,7 +6,8 @@ export type LobbyChange =
   | 'avatar-changed'
   | 'settings-changed'
   | 'dilemmas-changed'
-  | 'game-started';
+  | 'game-started'
+  | 'rematch-started';
 
 /** Sent to everyone in the room when something they see in the lobby changes. */
 export class LobbyChangedEvent implements DomainEvent {

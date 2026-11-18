@@ -527,7 +527,7 @@ describe('GetRoomStateUseCase', () => {
       currentGameId: null,
     });
     expect(forAna.rounds).toEqual([
-      { roundId: 1, origin: 'random', categories: ['honesty'] },
+      { roundId: 1, origin: 'random', categories: ['honesty'], withoutNewDilemmas: false },
       {
         roundId: 2,
         origin: 'specific',

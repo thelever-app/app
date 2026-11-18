@@ -3,7 +3,6 @@ import { Game, type GameSettings, type PlayedDilemma } from '../../entities/game
 import { Player } from '../../entities/player.ts';
 import { DistributionPredictionNotAllowedError } from '../../errors/distribution-prediction-not-allowed.error.ts';
 import { InvalidDistributionPredictionError } from '../../errors/invalid-distribution-prediction.error.ts';
-import { NoNextRoundError } from '../../errors/no-next-round.error.ts';
 import { AnsweredCountChangedEvent } from '../../events/answered-count-changed.event.ts';
 import { GameStageChangedEvent } from '../../events/game-stage-changed.event.ts';
 import { AvatarVO } from '../../vos/avatar.vo.ts';
@@ -77,7 +76,7 @@ function everyoneAnswers(
       AT,
     );
   }
-  game.reveal('everyone');
+  game.reveal('everyone', AT);
 }
 
 const SAME = { vote: 'TestPull', prediction: predicted(50, 50) };
@@ -281,7 +280,7 @@ describe('Game, in an anonymous room', () => {
       );
 
       // Act
-      restored.reveal('everyone');
+      restored.reveal('everyone', AT);
 
       // Assert
       expect(restored.revealOf(0).voteCount).toBe(4);
@@ -320,7 +319,7 @@ describe('Game, in an anonymous room', () => {
       // Assert
       expect(moved).toBe(true);
       expect(again).toBe(false);
-      expect(game.stage).toEqual({ kind: 'results', movedOnBy: 'Luis' });
+      expect(game.stage).toEqual({ kind: 'results', movedOnBy: 'Luis', step: 0 });
       expect(game.pullEvents()).toEqual([
         new GameStageChangedEvent('TestGameId', 'results', 'Luis', game.version),
       ]);
@@ -339,7 +338,7 @@ describe('Game, in an anonymous room', () => {
       // Assert
       expect(ended).toBe(true);
       expect(again).toBe(false);
-      expect(game.stage).toEqual({ kind: 'ended', movedOnBy: 'Sara' });
+      expect(game.stage).toEqual({ kind: 'ended', movedOnBy: 'Sara', step: null });
       expect(game.pullEvents()).toEqual([
         new GameStageChangedEvent('TestGameId', 'ended', 'Sara', game.version),
       ]);
@@ -358,18 +357,20 @@ describe('Game, in an anonymous room', () => {
       expect(game.stage.kind).toBe('results');
     });
 
-    it('should keep the last round of a nominal room, whose results come later', () => {
+    it('should take a nominal room to its results too, with its titles', () => {
       // Arrange
       const game = gameOfFour(NOMINAL);
-      game.reveal('host');
+      game.reveal('host', AT);
       game.moveOn('Ana', 0, AT);
-      game.reveal('host');
+      game.reveal('host', AT);
 
       // Act
-      const moveOn = () => game.moveOn('Ana', 1, AT);
+      const moved = game.moveOn('Ana', 1, AT);
 
       // Assert
-      expect(moveOn).toThrow(NoNextRoundError);
+      expect(moved).toBe(true);
+      expect(game.stage).toEqual({ kind: 'results', movedOnBy: 'Ana', step: 0 });
+      expect(game.results()).not.toBeNull();
     });
   });
 
@@ -431,7 +432,7 @@ describe('Game, in an anonymous room', () => {
       const restored = Game.restore(game.toSnapshot());
 
       // Assert
-      expect(restored.stage).toEqual({ kind: 'results', movedOnBy: 'Luis' });
+      expect(restored.stage).toEqual({ kind: 'results', movedOnBy: 'Luis', step: 0 });
       expect(restored.answersOf('Ana')[0]?.distributionPrediction).toEqual(predicted(50, 50));
       expect(restored.ranking()).toEqual(game.ranking());
     });
