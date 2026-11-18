@@ -12,6 +12,8 @@ export interface TestDilemma extends CatalogEntry {
   readonly translations: readonly TestTranslation[];
   readonly tags: readonly string[];
   readonly options: readonly string[];
+  /** Whether every player sees its options in this order. */
+  readonly fixedOrder: boolean;
 }
 
 /** A dilemma of the test data in another language. */
@@ -51,7 +53,10 @@ function dilemmas(
     language = 'es',
     translations = [],
     gap = false,
-  }: Partial<Omit<TestDilemma, 'dilemmaId' | 'text'>> & { readonly gap?: boolean },
+    type = 'standard',
+    scale = 'everyday',
+    fixedOrder = false,
+  }: Partial<Omit<TestDilemma, 'dilemmaId' | 'text' | 'hasGap'>> & { readonly gap?: boolean },
 ): TestDilemma[] {
   return Array.from({ length: count }, (_, index) => ({
     dilemmaId: `${prefix}-${index + 1}`,
@@ -63,8 +68,15 @@ function dilemmas(
     options,
     language,
     translations,
+    type,
+    scale,
+    fixedOrder,
+    hasGap: gap,
   }));
 }
+
+/** The options of the dilemma of the test data with a fixed order, in that order. */
+export const FIXED_ORDER_TEXTS = ['Half', 'A third', 'A tenth'] as const;
 
 /** The options of the dilemma of the test data written in Spanish, and translated into English. */
 export const SPANISH_OPTION_TEXTS = ['Tirar de la palanca', 'No hacer nada'] as const;
@@ -75,8 +87,11 @@ export const SPANISH_OPTION_TEXTS = ['Tirar de la palanca', 'No hacer nada'] as 
  *   a game of 8; 30 for adults, so an adults-only room of every category almost surely plays
  *   some; and new dilemmas for each age;
  * - in honesty, 8 dilemmas and 2 new ones, to choose categories;
- * - in loyalty, 3 dilemmas with the gap "someone in the group" and one with three options, for the
- *   host to pick; in work and money, one with four;
+ * - in loyalty, 10 dilemmas with the gap "someone in the group", as many as the biggest room of
+ *   the scenarios has players, and one with three options, for the host to pick; in work and
+ *   money, one with four and one with three in a fixed order;
+ * - in technology and the future, 12 game theory dilemmas, 12 would-you-rather ones and 12 extreme
+ *   ones, so a game of every category would play two of a kind in a row unless it spaces them;
  * - all of them in Spanish but 6 of honesty in French, for a room that changes its language;
  * - in justice, one with its texts in Spanish and a translation into English, and one only in
  *   Spanish, for the language each player reads in.
@@ -88,9 +103,20 @@ export const TEST_DILEMMAS: readonly TestDilemma[] = [
   ...dilemmas('new-life-and-death-for-adults', 1, { minimumAge: 18, status: 'in-exploration' }),
   ...dilemmas('honesty', 8, { category: 'honesty' }),
   ...dilemmas('new-honesty', 2, { category: 'honesty', status: 'in-exploration' }),
-  ...dilemmas('gap', 3, { category: 'loyalty', gap: true }),
+  ...dilemmas('gap', 10, { category: 'loyalty', gap: true }),
   ...dilemmas('three-options', 1, { category: 'loyalty', options: THREE_OPTION_TEXTS }),
   ...dilemmas('four-choices', 1, { category: 'work-and-money', options: FOUR_OPTION_TEXTS }),
+  ...dilemmas('fixed-order', 1, {
+    category: 'work-and-money',
+    options: FIXED_ORDER_TEXTS,
+    fixedOrder: true,
+  }),
+  ...dilemmas('game-theory', 12, { category: 'technology-and-the-future', type: 'game-theory' }),
+  ...dilemmas('would-you-rather', 12, {
+    category: 'technology-and-the-future',
+    type: 'would-you-rather',
+  }),
+  ...dilemmas('extreme', 12, { category: 'technology-and-the-future', scale: 'extreme' }),
   ...dilemmas('honesty-in-french', 6, { category: 'honesty', language: 'fr' }),
   ...dilemmas('english-version', 1, {
     category: 'justice',
@@ -149,6 +175,9 @@ export const EXPLORATION_SLOTS = [
   { fromRandomRounds: 11, slots: 3 },
 ] as const;
 
+/** How many candidates each round draws from, as the room server does. */
+export const CANDIDATES_PER_ROUND = 3;
+
 export function explorationSlotsFor(randomRounds: number): number {
   const rows = EXPLORATION_SLOTS.filter(({ fromRandomRounds }) => fromRandomRounds <= randomRounds);
   return rows.at(-1)?.slots ?? 0;
@@ -198,13 +227,16 @@ export function roundsForAGameOf(
 export function catalogEntryOf(dilemmaId: string): CatalogEntry {
   const test = TEST_DILEMMAS.find((dilemma) => dilemma.dilemmaId === dilemmaId);
   if (test) {
-    const { text, minimumAge, category, status } = test;
-    return { text, minimumAge, category, status };
+    const { text, minimumAge, category, status, type, scale, hasGap } = test;
+    return { text, minimumAge, category, status, type, scale, hasGap };
   }
   const seed = SEED_DILEMMAS.find(({ id }) => id === dilemmaId);
   if (seed) {
-    const { text, minimumAge, category } = seed;
-    return { text, minimumAge, category, status: 'in-catalog' };
+    const { text, minimumAge, category, type, scale, options } = seed;
+    const hasGap = [text, ...options.map((option) => option.text)].some((written) =>
+      written.includes(GAP_MARKER),
+    );
+    return { text, minimumAge, category, status: 'in-catalog', type, scale, hasGap };
   }
   throw new Error(`The test data has no dilemma ${dilemmaId}`);
 }
@@ -228,6 +260,7 @@ class FixedIds implements IdGenerator {
 export async function loadTestDilemmas(repository: DilemmaRepository): Promise<void> {
   for (const test of TEST_DILEMMAS) {
     const { dilemmaId, text, minimumAge, category, tags, status, options, language } = test;
+    const { type, scale, fixedOrder } = test;
     const ids = new FixedIds([
       dilemmaId,
       ...options.map((_, n) => `${dilemmaId}-option-${n + 1}`),
@@ -241,10 +274,10 @@ export async function loadTestDilemmas(repository: DilemmaRepository): Promise<v
         category,
         tags,
         minimumAge,
-        type: 'standard',
+        type,
         compromising: false,
-        scale: 'everyday',
-        fixedOrder: false,
+        scale,
+        fixedOrder,
       },
       ids,
     ).toSnapshot();

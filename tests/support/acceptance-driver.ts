@@ -20,6 +20,7 @@ import {
   RunOutRoundUseCase,
   SkipDilemmaUseCase,
   DecisionPhaseOverError,
+  PersonInTheGapVotesError,
   DilemmaSkippedError,
   VoteMissingError,
   type Seal,
@@ -64,7 +65,7 @@ import {
 } from '@thelever-app/game/in-memory';
 import {
   Dilemma,
-  FindDilemmaIdsUseCase,
+  FindCandidatesUseCase,
   GetDilemmaPreviewUseCase,
   type GetDilemmaPreviewOutput,
   GetDilemmasUseCase,
@@ -117,6 +118,7 @@ import type {
   WorldResultView,
 } from './driver.ts';
 import {
+  CANDIDATES_PER_ROUND,
   catalogEntryOf,
   EXPLORATION_SLOTS,
   explorationSlotsFor,
@@ -158,7 +160,20 @@ function publicPageViewOf(page: Page): PublicPageView {
 
 /** The test data, as the catalog of Game keeps it: every dilemma with the same two options. */
 const DILEMMAS: readonly InMemoryDilemma[] = TEST_DILEMMAS.map(
-  ({ dilemmaId, text, minimumAge, category, tags, status, options, language, translations }) => ({
+  ({
+    dilemmaId,
+    text,
+    minimumAge,
+    category,
+    tags,
+    status,
+    options,
+    language,
+    translations,
+    type,
+    scale,
+    fixedOrder,
+  }) => ({
     dilemmaId,
     language,
     translations,
@@ -168,6 +183,9 @@ const DILEMMAS: readonly InMemoryDilemma[] = TEST_DILEMMAS.map(
     category,
     tags,
     status,
+    type,
+    scale,
+    fixedOrder,
   }),
 );
 
@@ -251,6 +269,8 @@ interface AcceptancePlayer {
   connectionId: string | undefined;
   /** The state of the room on the device, and how many changes of the lobby it had been told of. */
   screen: { readonly state: GetRoomStateOutput; readonly notices: number } | undefined;
+  /** The dilemmas the device keeps as played, which it sends on entering a room. */
+  played: readonly string[];
 }
 
 /**
@@ -333,7 +353,7 @@ export class AcceptanceDriver implements GameDriver {
     string,
     {
       readonly dilemmaId: string;
-      vote: string;
+      vote: string | null;
       votePredictions: VotePrediction[];
       distributionPrediction?: PredictedShare[];
       ready?: boolean;
@@ -387,6 +407,7 @@ export class AcceptanceDriver implements GameDriver {
         clock,
       },
       EXPLORATION_SLOTS,
+      CANDIDATES_PER_ROUND,
     );
     this.#answerDilemma = new AnswerDilemmaUseCase({
       roomRepository: rooms,
@@ -445,6 +466,7 @@ export class AcceptanceDriver implements GameDriver {
       groupNature,
       place,
       dilemmaLanguage: deviceLanguage,
+      hostPlayedDilemmaIds: player.played,
     });
     this.#roomId = roomId;
     this.#host = host;
@@ -563,6 +585,7 @@ export class AcceptanceDriver implements GameDriver {
         nickname,
         identity: joiner.identity,
         avatar: this.#avatarOnScreen(player),
+        playedDilemmaIds: joiner.played,
       });
       joiner.playerId = playerId;
       joiner.refusal = undefined;
@@ -776,6 +799,20 @@ export class AcceptanceDriver implements GameDriver {
       .map(({ nickname }) => nickname);
   }
 
+  async gapWarningSeenBy(viewer: string): Promise<number | undefined> {
+    const { rounds, players, minimumPlayersForTheGap } = await this.#screenOf(viewer);
+    const withTheGap = rounds.some((round) => round.origin !== 'random' && round.dilemma?.hasGap);
+    return withTheGap && players.length < minimumPlayersForTheGap
+      ? minimumPlayersForTheGap
+      : undefined;
+  }
+
+  async playedOnTheirDevice(player: string, dilemmaIds: readonly string[]): Promise<void> {
+    const known = this.#introduce(player);
+    known.played = [...dilemmaIds];
+    if (known.playerId) await this.joinRoom(player);
+  }
+
   async searchDilemmas(player: string, text?: string): Promise<string[]> {
     const { dilemmas } = await this.#searchDilemmas.execute({
       roomId: this.#currentRoomId(),
@@ -876,17 +913,25 @@ export class AcceptanceDriver implements GameDriver {
     return (this.#votes.get(player) ?? []).map(({ vote }) => vote);
   }
 
+  /** The person in the gap answers on the only screen they have: without a vote. */
   async answer(player: string, plan: AnswerPlan = {}): Promise<void> {
     const dilemma = await this.#roundDilemmaOf(player);
     const { playersToPredict } = await this.#gameStateOf(player);
     const anonymous = (await this.#currentGame()).settings.variant === 'anonymous';
+    const predicted = (playerId: string): string => {
+      const vote = plan.predictions?.find(
+        (prediction) => this.#playerIdOf(prediction.player) === playerId,
+      )?.vote;
+      return vote ? optionIdOf(dilemma.dilemmaId, vote) : VOTE;
+    };
+    const aboutThem = await this.aboutThemSeenBy(player);
     const draft = {
       dilemmaId: dilemma.dilemmaId,
-      vote: plan.vote ? optionIdOf(dilemma.dilemmaId, plan.vote) : VOTE,
+      vote: aboutThem ? null : plan.vote ? optionIdOf(dilemma.dilemmaId, plan.vote) : VOTE,
       votePredictions:
         plan.votePredictions === false
           ? []
-          : playersToPredict.map((playerId) => ({ playerId, vote: VOTE })),
+          : playersToPredict.map((playerId) => ({ playerId, vote: predicted(playerId) })),
       // The screen of an anonymous room starts at the even split and finishes with Ready.
       ...(anonymous && {
         ...(plan.distribution && {
@@ -906,8 +951,10 @@ export class AcceptanceDriver implements GameDriver {
     player: string,
     shares: readonly { readonly option: string; readonly share: number }[],
   ): Promise<void> {
-    if (!(await this.#savedAnswerOf(player))) await this.vote(player);
-    const draft = this.#draftOf(player);
+    if (!(await this.#savedAnswerOf(player)) && !(await this.aboutThemSeenBy(player))) {
+      await this.vote(player);
+    }
+    const draft = await this.#draftOrPersonInTheGap(player);
     draft.distributionPrediction = shares.map(({ option, share }) => ({
       optionId: optionIdOf(draft.dilemmaId, option),
       share,
@@ -1009,6 +1056,28 @@ export class AcceptanceDriver implements GameDriver {
     return answers.find((answer) => answer.dilemmaId === dilemmaId);
   }
 
+  async aboutThemSeenBy(player: string): Promise<boolean> {
+    const { personInTheGap } = await this.#roundDilemmaOf(player);
+    return personInTheGap === this.#playerIdOf(player);
+  }
+
+  /** Whether the application takes a vote of the player for the dilemma of the round. */
+  async canVote(player: string): Promise<boolean> {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    return this.#accepts(
+      () =>
+        this.#answerDilemma.execute({
+          roomId: this.#currentRoomId(),
+          playerId: this.#playerIdOf(player),
+          dilemmaId,
+          vote: VOTE,
+        }),
+      PersonInTheGapVotesError,
+      DecisionPhaseOverError,
+      DilemmaSkippedError,
+    );
+  }
+
   async vote(player: string, option?: string): Promise<void> {
     const { dilemmaId } = await this.#roundDilemmaOf(player);
     const draft = {
@@ -1025,7 +1094,7 @@ export class AcceptanceDriver implements GameDriver {
     const { dilemmaId } = await this.#roundDilemmaOf(player);
     const { answers } = await this.#gameStateOf(player);
     const previous = answers.find((answer) => answer.dilemmaId === dilemmaId);
-    if (!previous) throw new Error(`The scenario changes a vote ${player} never cast`);
+    if (!previous?.vote) throw new Error(`The scenario changes a vote ${player} never cast`);
     const draft = {
       dilemmaId,
       vote: option ? optionIdOf(dilemmaId, option) : previous.vote === VOTE ? OTHER_VOTE : VOTE,
@@ -1326,7 +1395,7 @@ export class AcceptanceDriver implements GameDriver {
     const catalog = new PublishedDilemmasCatalog(
       new GetDilemmasUseCase(this.#dilemmaRepository),
       new SearchCatalogUseCase(this.#dilemmaRepository),
-      new FindDilemmaIdsUseCase(this.#dilemmaRepository),
+      new FindCandidatesUseCase(this.#dilemmaRepository),
     );
     const { roomId } = await new CreateRoomUseCase(
       this.#roomRepository,
@@ -1395,7 +1464,7 @@ export class AcceptanceDriver implements GameDriver {
   async voteRecordedFor(player: string, position: number): Promise<string | undefined> {
     const { answers } = await this.#gameStateOf(player);
     const dilemmaId = await this.#dilemmaIdAt(position);
-    return answers.find((answer) => answer.dilemmaId === dilemmaId)?.vote;
+    return answers.find((answer) => answer.dilemmaId === dilemmaId)?.vote ?? undefined;
   }
 
   /** Whether the application takes an answer of the player for the dilemma of the round. */
@@ -1550,14 +1619,13 @@ export class AcceptanceDriver implements GameDriver {
       .find((recorded) => recorded.dilemmaId === dilemmaId);
     if (!answer) return undefined;
     return {
-      vote: optionTextOf(dilemmaId, answer.vote),
+      vote: answer.vote && optionTextOf(dilemmaId, answer.vote),
       votePredictions: answer.votePredictions.map((prediction) => ({
         player: this.#nameOf(prediction.playerId),
         vote: optionTextOf(dilemmaId, prediction.vote),
       })),
       optionOrder: answer.optionOrder.map((optionId) => optionTextOf(dilemmaId, optionId)),
       responseTimeSeconds: answer.responseTimeMs === null ? null : answer.responseTimeMs / 1000,
-      voterInTheGap: answer.voterInTheGap,
       distributionPrediction:
         answer.distributionPrediction?.map(({ optionId, share }) => ({
           option: optionTextOf(dilemmaId, optionId),
@@ -1665,6 +1733,7 @@ export class AcceptanceDriver implements GameDriver {
         right,
       })),
       personInTheGap: reveal.personInTheGap && this.#nameOf(reveal.personInTheGap),
+      personInTheGapHits: reveal.personInTheGapHits,
       chosenBy: reveal.chosenBy && this.#nameOf(reveal.chosenBy),
       showsPoints: ranking !== null,
       ownDistributionPrediction:
@@ -1738,7 +1807,7 @@ export class AcceptanceDriver implements GameDriver {
     player: string,
     predictions: readonly { readonly player: string; readonly vote: string }[],
   ): Promise<void> {
-    const draft = this.#draftOf(player);
+    const draft = await this.#draftOrPersonInTheGap(player);
     draft.votePredictions = predictions.map((prediction) => ({
       playerId: this.#playerIdOf(prediction.player),
       vote: optionIdOf(draft.dilemmaId, prediction.vote),
@@ -1805,6 +1874,17 @@ export class AcceptanceDriver implements GameDriver {
     return draft;
   }
 
+  /** The person in the gap predicts on a screen without a vote: their draft starts with the predictions. */
+  async #draftOrPersonInTheGap(player: string) {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    const draft = this.#drafts.get(player);
+    if (draft?.dilemmaId === dilemmaId || !(await this.aboutThemSeenBy(player))) {
+      return this.#draftOf(player);
+    }
+    this.#drafts.set(player, { dilemmaId, vote: null, votePredictions: [] });
+    return this.#draftOf(player);
+  }
+
   async #currentGame() {
     const game = await this.#gameRepository.findById(this.#currentGameId());
     if (!game) throw new Error('The game of the room is not saved');
@@ -1822,7 +1902,7 @@ export class AcceptanceDriver implements GameDriver {
     player: string,
     draft: {
       readonly dilemmaId: string;
-      readonly vote: string;
+      readonly vote: string | null;
       readonly votePredictions: readonly VotePrediction[];
       readonly distributionPrediction?: readonly PredictedShare[];
       readonly ready?: boolean;
@@ -1831,6 +1911,7 @@ export class AcceptanceDriver implements GameDriver {
     const playerId = this.#playerIdOf(player);
     await this.#answerDilemma.execute({ roomId: this.#currentRoomId(), playerId, ...draft });
     const { dilemmaId, vote } = draft;
+    if (vote === null) return;
     this.#votes.set(player, [...(this.#votes.get(player) ?? []), { dilemmaId, vote }]);
   }
 
@@ -1969,6 +2050,7 @@ export class AcceptanceDriver implements GameDriver {
       refusal: undefined,
       connectionId: undefined,
       screen: undefined,
+      played: [],
     };
     this.#players.set(player, introduced);
     return introduced;
