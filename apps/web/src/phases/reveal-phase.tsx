@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { hasReaction } from '../reveal/optimistic.ts';
 import { useGame } from '../room/room-provider.tsx';
 import { REVEAL_INTRO_MS, RevealIntro } from '../reveal/reveal-intro.tsx';
 import { RevealScreen } from '../reveal/reveal-screen.tsx';
@@ -44,8 +45,21 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
         send({ type: 'leave-room' });
         void navigate(HOME_PATH);
       }}
-      onLike={() => request({ type: 'like-dilemma', position })}
-      onReact={(target, emoji) => request({ type: 'react', position, target, emoji })}
+      // Each one waits for the state with the like or the reaction of the player, or another round.
+      onLike={() =>
+        request(
+          { type: 'like-dilemma', position },
+          (next) => next.reveal?.position !== position || next.reveal.youLiked,
+        )
+      }
+      onReact={(target, emoji) =>
+        request(
+          { type: 'react', position, target, emoji },
+          (next) =>
+            next.reveal?.position !== position ||
+            hasReaction(next.reveal.yourReactions, target, emoji),
+        )
+      }
     />
   );
 }

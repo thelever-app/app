@@ -6,7 +6,7 @@ import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
 import { isAnonymous, usePlayerName } from '../components/players.ts';
 import { playedIn, rememberPlayed } from '../game/played-dilemmas.ts';
-import { groupCardOf, personalCardOf } from './card-content.ts';
+import { groupCardOf, personalCardOf, type CardContent } from './card-content.ts';
 import { ShareCardSheet } from './share-card-sheet.tsx';
 import cardStyles from './share-card-sheet.module.css';
 import { soulmatesOf } from './titles.ts';
@@ -52,11 +52,12 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
     if (played !== '') rememberPlayed(played.split(','));
   }, [gameId, played]);
 
-  // The card changes only with the game or the switch of the nicknames: then it is drawn again.
-  const card = useMemo(
-    () => (anonymous ? groupCardOf(game, t) : personalCardOf(game, t, showNames)),
-    [anonymous, game, t, showNames],
+  // Each state of the game is a new object, also when nothing on the card changes, as someone
+  // connects: the card stays the same object until what it says changes, so it is drawn only then.
+  const said = JSON.stringify(
+    anonymous ? groupCardOf(game, t) : personalCardOf(game, t, showNames),
   );
+  const card = useMemo(() => JSON.parse(said) as CardContent, [said]);
   const others = [
     ...knowers.map(({ nickname }) => nickname),
     ...soulmatesOf(game.results, game.playerId).flatMap((playerId) =>

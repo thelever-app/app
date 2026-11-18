@@ -12,8 +12,8 @@ import styles from './ranking-screen.module.css';
 
 interface RankingScreenProps {
   readonly game: GameStateDto;
-  /** Any player takes everyone from the ranking to the end of the game. */
-  readonly onMoveOn: () => void;
+  /** Any player takes everyone from the ranking to the end of the game; who only watches, nobody. */
+  readonly onMoveOn: (() => void) | undefined;
   readonly onLeave: () => void;
   readonly onShowQr: () => void;
   /** Where the ranking is among the screens of the results, for the label of a nominal room. */
@@ -103,9 +103,11 @@ export function RankingScreen({ game, onMoveOn, onLeave, onShowQr, label }: Rank
         <p className={styles.note}>{nominal ? t('ranking.nominalNote') : t('ranking.note')}</p>
       </main>
       <footer className={styles.footer}>
-        <button type="button" className={styles.next} onClick={onMoveOn}>
-          {t('ranking.next')}
-        </button>
+        {onMoveOn && (
+          <button type="button" className={styles.next} onClick={onMoveOn}>
+            {t('ranking.next')}
+          </button>
+        )}
       </footer>
       <GroupProgressSheet game={game} open={isGroupOpen} onOpenChange={setIsGroupOpen} />
     </div>

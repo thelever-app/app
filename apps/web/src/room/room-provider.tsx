@@ -38,13 +38,23 @@ interface Room {
   readonly rejection: ErrorDto | undefined;
   readonly send: (command: RoomCommandDto) => void;
   /**
-   * Sends the command and resolves once the server answers with the next state, or rejects it: what
-   * an optimistic screen waits for before showing what the server says.
+   * Sends the command and resolves once a state of the game shows it `done`, the server rejects it
+   * or the player is out of the game: what an optimistic screen waits for before showing what the
+   * server says. A state that another player brought about first does not answer it.
    */
-  readonly request: (command: RoomCommandDto) => Promise<void>;
+  readonly request: (
+    command: RoomCommandDto,
+    done: (game: GameStateDto) => boolean,
+  ) => Promise<void>;
   /** The answer to a dilemma as it stands: the vote and, in a nominal room, the predictions made. */
   readonly answerDilemma: (answer: AnswerDraft) => void;
   readonly dismissRejection: () => void;
+}
+
+/** A command sent, waiting for the state that shows it done. */
+interface Waiting {
+  readonly done: (game: GameStateDto) => boolean;
+  readonly resolve: () => void;
 }
 
 interface RoomProviderProps {
@@ -65,16 +75,23 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
     INITIAL_ROOM_STATE,
   );
 
-  // Who waits for the answer of the server to a command they sent.
-  const waiting = useRef<(() => void)[]>([]);
+  // Who waits for the answer of the server to a command they sent, and the state that answers it.
+  const waiting = useRef<Waiting[]>([]);
   useEffect(
     () =>
       connection.subscribe((message) => {
         if (message.type === 'game-state') noteServerTime(message.serverTime);
         dispatch(message);
-        if (['game-state', 'room-state', 'error', 'expelled'].includes(message.type)) {
-          for (const done of waiting.current.splice(0)) done();
-        }
+        const answers =
+          message.type === 'game-state'
+            ? ({ done }: Waiting) => done(message)
+            : ['room-state', 'error', 'expelled'].includes(message.type)
+              ? () => true
+              : undefined;
+        if (!answers) return;
+        const answered = waiting.current.filter(answers);
+        waiting.current = waiting.current.filter((waiter) => !answered.includes(waiter));
+        for (const { resolve } of answered) resolve();
       }),
     [connection],
   );
@@ -95,9 +112,9 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
   );
 
   const request = useCallback(
-    (command: RoomCommandDto) =>
+    (command: RoomCommandDto, done: (game: GameStateDto) => boolean) =>
       new Promise<void>((resolve) => {
-        waiting.current.push(resolve);
+        waiting.current.push({ done, resolve });
         connection.send(command);
       }),
     [connection],

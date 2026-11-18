@@ -36,8 +36,11 @@ export function ResultsPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   const anonymous = isAnonymous(game);
   const total = resultsScreens(game, anonymous);
   const step = game.stage.step ?? 0;
-  // The screens of the results come after the last round, at the positions that follow it.
-  const moveOn = () => send({ type: 'move-on', fromPosition: game.dilemmas.length + step });
+  // The screens of the results come after the last round, at the positions that follow it. Who
+  // joined once the rounds were over only watches them.
+  const moveOn = game.inGame
+    ? () => send({ type: 'move-on', fromPosition: game.dilemmas.length + step })
+    : undefined;
   const label = t('results.label', { step: step + 1, total });
   if (anonymous) {
     return <RankingScreen game={game} onMoveOn={moveOn} onLeave={leave} onShowQr={onShowQr} />;
@@ -84,7 +87,7 @@ function ResultsStep({
 }: {
   readonly header: ReactNode;
   readonly next: string;
-  readonly onMoveOn: () => void;
+  readonly onMoveOn: (() => void) | undefined;
   readonly children: ReactNode;
 }) {
   return (
@@ -94,9 +97,11 @@ function ResultsStep({
         {children}
       </main>
       <footer className={styles.footer}>
-        <button type="button" className={styles.next} onClick={onMoveOn}>
-          {next}
-        </button>
+        {onMoveOn && (
+          <button type="button" className={styles.next} onClick={onMoveOn}>
+            {next}
+          </button>
+        )}
       </footer>
     </div>
   );

@@ -110,6 +110,16 @@ describe('ResultsPhase, in a nominal room', () => {
     expect(connection.send).toHaveBeenCalledWith({ type: 'move-on', fromPosition: 4 });
   });
 
+  it('should let who only watches the results, out of the game, see them without moving anyone on', async () => {
+    // Act
+    const { t } = await renderPhase(atStep(1, { inGame: false }));
+    const onRanking = await renderPhase(atStep(4, { inGame: false }));
+
+    // Assert
+    expect(screen.queryByRole('button', { name: t('results.next') })).toBeNull();
+    expect(screen.queryByRole('button', { name: onRanking.t('ranking.next') })).toBeNull();
+  });
+
   it('should tell the player alone who knows them best, after the titles', async () => {
     // Act
     const { t } = await renderPhase(atStep(3));

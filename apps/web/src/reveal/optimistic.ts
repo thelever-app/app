@@ -54,6 +54,13 @@ export function useOptimisticReactions(
   return [shown, give];
 }
 
+/** Whether the reactions of the player have that emoji on that target, as the server keeps them. */
+export function hasReaction(yours: YourReactions, target: ReactionTarget, emoji: string): boolean {
+  return target.kind === 'dilemma'
+    ? yours.dilemma === emoji
+    : yours.votes.some((vote) => vote.aboutId === target.playerId && vote.emoji === emoji);
+}
+
 /**
  * The reactions to the dilemma as the screen shows them, with the one of the player as they see it
  * now: out of the emoji it had, into the one they chose.
