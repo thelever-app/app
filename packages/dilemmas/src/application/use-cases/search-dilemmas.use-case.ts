@@ -1,6 +1,8 @@
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import type { DilemmaStatus } from '../../domain/entities/dilemma.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
+import type { DilemmaType } from '../../domain/vos/dilemma-type.vo.ts';
+import type { Scale } from '../../domain/vos/scale.vo.ts';
 import { LanguageVO } from '../../domain/vos/language.vo.ts';
 import type { DilemmaQueries } from '../ports/dilemma-queries.port.ts';
 
@@ -34,6 +36,10 @@ export interface SearchDilemmasOutput {
     readonly optionCount: number;
     /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
     readonly compromising: boolean;
+    readonly type: DilemmaType;
+    readonly scale: Scale;
+    /** Whether a player of the room takes the place of "someone in the group" in it. */
+    readonly hasGap: boolean;
   }[];
   /** Where the next page starts; none when this one is the last. */
   readonly next?: string;

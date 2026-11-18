@@ -1,6 +1,7 @@
 import { InvalidPageError } from '../../application/errors/invalid-page.error.ts';
 import type {
   CandidateCriteria,
+  DilemmaCandidate,
   DilemmaCriteria,
   DilemmaPage,
   DilemmaQueries,
@@ -10,6 +11,7 @@ import type {
 import type { DilemmaRepository } from '../../application/ports/dilemma-repository.port.ts';
 import { numberOf } from '../../application/catalog-number.ts';
 import { rankOf } from './text-match.ts';
+import { hasGap } from '../../domain/vos/gap.ts';
 import {
   Dilemma,
   type DilemmaSnapshot,
@@ -23,6 +25,7 @@ import {
  * stores, as the database does.
  */
 export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQueries {
+  readonly #draws = new SeededDraws();
   readonly #dilemmas = new Map<
     string,
     {
@@ -99,8 +102,23 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
     );
   }
 
-  async idsOf(criteria: CandidateCriteria): Promise<string[]> {
-    return (await this.#matching(criteria)).map(({ dilemma }) => dilemma.id);
+  async candidatesOf(criteria: CandidateCriteria): Promise<DilemmaCandidate[]> {
+    const drawable = (await this.#matching(criteria))
+      .map(({ dilemma }) => ({
+        id: dilemma.id,
+        type: dilemma.type,
+        scale: dilemma.scale,
+        minimumAge: dilemma.minimumAge,
+        hasGap: hasGapIn(dilemma),
+      }))
+      .filter(
+        ({ id, hasGap }) => (criteria.includeGap || !hasGap) && !criteria.excludedIds.includes(id),
+      );
+    const played = (id: string) => (criteria.playedIds.includes(id) ? 1 : 0);
+    return this.#draws
+      .shuffle(drawable)
+      .sort((one, other) => played(one.id) - played(other.id))
+      .slice(0, criteria.count);
   }
 
   async search(criteria: DilemmaCriteria, { after, size }: PageRequest): Promise<DilemmaPage> {
@@ -212,7 +230,8 @@ function pageEndOf(after: string): PageEnd {
 }
 
 function summaryOf(dilemma: Dilemma): DilemmaSummary {
-  const { id, version, text, minimumAge, category, tags, options, compromising } = dilemma;
+  const { id, version, text, minimumAge, category, tags, options, compromising, type, scale } =
+    dilemma;
   return {
     id,
     version,
@@ -222,7 +241,41 @@ function summaryOf(dilemma: Dilemma): DilemmaSummary {
     tags,
     optionCount: options.length,
     compromising,
+    type,
+    scale,
+    hasGap: hasGapIn(dilemma),
   };
+}
+
+/**
+ * Draws as the database does, with numbers that look random from a fixed seed (mulberry32): each
+ * draw differs from the one before, and a test repeats itself.
+ */
+class SeededDraws {
+  #state = 0;
+
+  /** A copy in random order (Fisher–Yates). */
+  shuffle<T>(items: readonly T[]): T[] {
+    const shuffled = [...items];
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const other = Math.floor(this.#next() * (index + 1));
+      [shuffled[index], shuffled[other]] = [shuffled[other] as T, shuffled[index] as T];
+    }
+    return shuffled;
+  }
+
+  /** From 0 to 1, 1 not included. */
+  #next(): number {
+    this.#state = (this.#state + 0x6d2b79f5) | 0;
+    let mixed = Math.imul(this.#state ^ (this.#state >>> 15), 1 | this.#state);
+    mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
+    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
+  }
+}
+
+/** Whether the text of the dilemma or any of its options has the gap. */
+function hasGapIn({ text, options }: Dilemma): boolean {
+  return hasGap([text, ...options.map((option) => option.text)]);
 }
 
 /** Whether its current version has a page of its own: in the catalog, and publishable. */

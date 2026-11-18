@@ -23,6 +23,7 @@ export { CATEGORIES, type Category } from './domain/vos/category.vo.ts';
 export { MINIMUM_AGES, type MinimumAge } from './domain/vos/minimum-age.vo.ts';
 export { DILEMMA_TYPES, type DilemmaType } from './domain/vos/dilemma-type.vo.ts';
 export { SCALES, type Scale } from './domain/vos/scale.vo.ts';
+export { GAP_MARKER, hasGap } from './domain/vos/gap.ts';
 export type { IdGenerator } from './domain/ports/id-generator.port.ts';
 export { MissingArgumentError } from './domain/errors/missing-argument.error.ts';
 export { IdMissingError } from './domain/errors/id-missing.error.ts';
@@ -53,6 +54,7 @@ export type { DilemmaRepository } from './application/ports/dilemma-repository.p
 export { CATALOG_ID_PATTERN } from './application/catalog-number.ts';
 export {
   type CandidateCriteria,
+  type DilemmaCandidate,
   type DilemmaCriteria,
   type DilemmaPage,
   type DilemmaQueries,
@@ -111,7 +113,7 @@ export {
   type PublicDilemma,
 } from './application/use-cases/get-public-catalog.use-case.ts';
 export {
-  FindDilemmaIdsUseCase,
-  type FindDilemmaIdsInput,
-  type FindDilemmaIdsOutput,
-} from './application/use-cases/find-dilemma-ids.use-case.ts';
+  FindCandidatesUseCase,
+  type FindCandidatesInput,
+  type FindCandidatesOutput,
+} from './application/use-cases/find-candidates.use-case.ts';
