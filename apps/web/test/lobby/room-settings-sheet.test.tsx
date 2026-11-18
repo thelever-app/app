@@ -215,6 +215,30 @@ describe('RoomSettingsSheet', () => {
     expect(expander(1).getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('should let the host scroll the dilemmas of the picker over the settings', async () => {
+    // Arrange: the list of the picker has more dilemmas than fit.
+    const searchDilemmas = vi.fn(async () => ({ dilemmas: [...FOUND] }));
+    const { t } = await openSettings(aRoom(), fakeRoomApi({ searchDilemmas }));
+    fireEvent.click(originOf(t, 2, 'specific'));
+    fireEvent.click(
+      screen.getByRole('button', { name: t('settings.rounds.chooseLabel', { number: 2 }) }),
+    );
+    const picker = screen.getByRole('dialog', { name: t('pickDilemmas.title', { number: 2 }) });
+    const dilemma = await within(picker).findByRole('radio', { name: /TestText1/ });
+    const list = within(picker).getByRole('radiogroup', {
+      name: t('pickDilemmas.list'),
+    }).parentElement!;
+    list.style.overflowY = 'auto';
+    Object.defineProperty(list, 'scrollHeight', { value: 1000 });
+    Object.defineProperty(list, 'clientHeight', { value: 100 });
+
+    // Act
+    const scrolled = fireEvent.wheel(dilemma, { deltaY: 100 });
+
+    // Assert
+    expect(scrolled).toBe(true);
+  });
+
   it('should not save a specific round until the host chooses its dilemma, away from those in other rounds', async () => {
     // Arrange: round 3 has a dilemma a player chose.
     const searchDilemmas = vi.fn(async () => ({ dilemmas: [...FOUND] }));
