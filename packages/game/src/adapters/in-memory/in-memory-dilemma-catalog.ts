@@ -104,22 +104,31 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
     });
   }
 
-  /** Not at random: those nobody played and then the others, each in the order they were given. */
+  /** Not at random: those played by fewer players first, each in the order they were given. */
   async findCandidates(criteria: CandidateSearch): Promise<readonly CandidateDilemma[]> {
-    const drawable = this.#matching(criteria).filter(
-      ({ dilemmaId, hasGap }) =>
-        (criteria.includeGap || !hasGap) && !criteria.excludedIds.includes(dilemmaId),
+    const playedBy = new Map(
+      criteria.playedBy.map(({ dilemmaId, players }) => [dilemmaId, players]),
     );
-    const played = ({ dilemmaId }: CatalogDilemma) => criteria.playedIds.includes(dilemmaId);
-    return [...drawable.filter((dilemma) => !played(dilemma)), ...drawable.filter(played)]
-      .slice(0, criteria.count)
-      .map(({ dilemmaId, type, scale, minimumAge, hasGap }) => ({
-        dilemmaId,
-        type,
-        scale,
-        minimumAge,
-        hasGap,
-      }));
+    const players = ({ dilemmaId }: CatalogDilemma) => playedBy.get(dilemmaId) ?? 0;
+    return (
+      this.#matching(criteria)
+        .filter(
+          ({ dilemmaId, hasGap, minimumAge }) =>
+            (criteria.includeGap || !hasGap) &&
+            (!criteria.onlyForAdults || minimumAge === 18) &&
+            !criteria.excludedIds.includes(dilemmaId),
+        )
+        // A stable sort: the same players keep the order they were given.
+        .sort((one, other) => players(one) - players(other))
+        .slice(0, criteria.count)
+        .map(({ dilemmaId, type, scale, minimumAge, hasGap }) => ({
+          dilemmaId,
+          type,
+          scale,
+          minimumAge,
+          hasGap,
+        }))
+    );
   }
 
   async search(criteria: DilemmaSearch, { size, after }: SearchPage): Promise<CatalogPage> {

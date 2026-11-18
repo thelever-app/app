@@ -457,8 +457,9 @@ export class SimulatedRoomConnection implements RoomConnection {
 
   /**
    * The round that just started: each fake player answers it when their time comes, each one with a
-   * different option so votes vary and with every prediction a nominal room asks for; and, as the
-   * timer of the room server, the room runs it out when its time ends.
+   * different option so votes vary, the person in the gap with no vote, and with every prediction a
+   * nominal room asks for; and, as the timer of the room server, the room runs it out when its time
+   * ends.
    */
   async #playRound(): Promise<void> {
     const { game } = await this.#gameOf(this.#playerId);
@@ -474,7 +475,8 @@ export class SimulatedRoomConnection implements RoomConnection {
           roomId: this.#roomId,
           playerId,
           dilemmaId: dilemma.dilemmaId,
-          vote,
+          // The person in the gap does not vote: they only predict.
+          vote: dilemma.personInTheGap === playerId ? null : vote,
           votePredictions: seen.playersToPredict.map((predicted) => ({
             playerId: predicted,
             vote,

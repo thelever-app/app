@@ -35,7 +35,7 @@ async function findInCatalog() {
 }
 
 /** A draw that leaves nothing out of the test data. */
-const A_GAME = { count: 10, includeGap: true, excludedIds: [], playedIds: [] };
+const A_GAME = { count: 10, includeGap: true, excludedIds: [], onlyForAdults: false, playedBy: [] };
 
 describe('FindCandidatesUseCase', () => {
   describe('execute', () => {

@@ -47,7 +47,7 @@ export interface ComposeGameInput {
 }
 
 /** The rounds within which at most one extreme dilemma is played, and an adults-only room plays one for adults. */
-const SPACING_ROUNDS = 5;
+export const SPACING_ROUNDS = 5;
 
 /** The same key for the same categories in any order; every category, for null. */
 export function categoriesKey(categories: readonly Category[] | null): string {

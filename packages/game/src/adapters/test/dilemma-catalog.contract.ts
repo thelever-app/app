@@ -107,7 +107,13 @@ const FOR_EVERYONE: DilemmaSearch = {
 };
 
 /** A draw that leaves nothing out: more than the contract stores, none played or excluded. */
-const A_GAME = { count: 100, includeGap: true, excludedIds: [], playedIds: [] } as const;
+const A_GAME = {
+  count: 100,
+  includeGap: true,
+  excludedIds: [],
+  onlyForAdults: false,
+  playedBy: [],
+} as const;
 
 /** The order of what a search returns is not part of the contract. */
 function byText(found: readonly CatalogDilemma[]): CatalogDilemma[] {
@@ -483,7 +489,7 @@ export function describeDilemmaCatalogContract(
         ]);
       });
 
-      it('should draw no more than asked for, those nobody played first', async () => {
+      it('should draw no more than asked for, those played by fewer players first', async () => {
         // Arrange
         const { catalog, stored } = await create();
         const [first, second] = stored.map(({ dilemmaId }) => dilemmaId);
@@ -491,15 +497,35 @@ export function describeDilemmaCatalogContract(
 
         // Act
         const one = await catalog.findCandidates({ ...forAdults, count: 1 });
-        const notPlayed = await catalog.findCandidates({
+        const fewest = await catalog.findCandidates({
           ...forAdults,
           count: 1,
-          playedIds: [first!],
+          playedBy: [
+            { dilemmaId: first!, players: 2 },
+            { dilemmaId: second!, players: 1 },
+          ],
         });
 
         // Assert
         expect(one).toHaveLength(1);
-        expect(notPlayed.map(({ dilemmaId }) => dilemmaId)).toEqual([second]);
+        expect(fewest.map(({ dilemmaId }) => dilemmaId)).toEqual([second]);
+      });
+
+      it('should draw only the dilemmas for adults when asked for those', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+        const second = stored[1]?.dilemmaId;
+
+        // Act
+        const found = await catalog.findCandidates({
+          ...FOR_EVERYONE,
+          ...A_GAME,
+          maximumMinimumAge: 18,
+          onlyForAdults: true,
+        });
+
+        // Assert
+        expect(found.map(({ dilemmaId }) => dilemmaId)).toEqual([second]);
       });
 
       it('should leave out the dilemmas excluded, and those with the gap unless they are included', async () => {

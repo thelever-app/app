@@ -38,8 +38,15 @@ export class PostgresDilemmaQueries implements DilemmaQueries {
 
   async candidatesOf(criteria: CandidateCriteria): Promise<DilemmaCandidate[]> {
     if (criteria.categories?.length === 0 || criteria.count === 0) return [];
+    const playedIds = criteria.playedBy.map(({ dilemmaId }) => dilemmaId);
+    const players = criteria.playedBy.map(({ players: count }) => count);
+    const played = sql<{ id: string; players: number }>`(
+      select * from unnest(${playedIds}::text[], ${players}::integer[]) as played (id, players)
+    )`.as('played');
     const rows = await this.#matching(this.#connection(), criteria)
+      .leftJoin(played, (join) => join.onRef('played.id', '=', 'dilemmas.id'))
       .$if(!criteria.includeGap, (query) => query.where('dilemma_versions.has_gap', '=', false))
+      .$if(criteria.onlyForAdults, (query) => query.where('dilemma_versions.minimum_age', '=', 18))
       .$if(criteria.excludedIds.length > 0, (query) =>
         query.where(sql<boolean>`dilemmas.id <> all(${[...criteria.excludedIds]}::text[])`),
       )
@@ -50,8 +57,9 @@ export class PostgresDilemmaQueries implements DilemmaQueries {
         'dilemma_versions.minimum_age',
         'dilemma_versions.has_gap',
       ])
-      // Those nobody played first, and at random within each: only `count` leave the database.
-      .orderBy(sql`dilemmas.id = any(${[...criteria.playedIds]}::text[])`)
+      // Those played by fewer players first, and at random within each: only `count` leave the
+      // database.
+      .orderBy(sql`coalesce(played.players, 0)`)
       .orderBy(sql`random()`)
       .limit(criteria.count)
       .execute();

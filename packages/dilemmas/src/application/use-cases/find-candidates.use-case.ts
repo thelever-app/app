@@ -4,7 +4,7 @@ import type { DilemmaType } from '../../domain/vos/dilemma-type.vo.ts';
 import { LanguageVO } from '../../domain/vos/language.vo.ts';
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import type { Scale } from '../../domain/vos/scale.vo.ts';
-import type { DilemmaQueries } from '../ports/dilemma-queries.port.ts';
+import type { DilemmaQueries, PlayedBy } from '../ports/dilemma-queries.port.ts';
 
 export interface FindCandidatesInput {
   /** Any of them; an empty list finds nothing, and without it every category is searched. */
@@ -22,8 +22,10 @@ export interface FindCandidatesInput {
   readonly includeGap: boolean;
   /** Never drawn: the dilemmas the game already plays. */
   readonly excludedIds: readonly string[];
-  /** Drawn only after every other: the dilemmas someone in the room played. */
-  readonly playedIds: readonly string[];
+  /** Only the dilemmas for adults. */
+  readonly onlyForAdults: boolean;
+  /** How many players of the room played each dilemma: those played by fewer are drawn first. */
+  readonly playedBy: readonly PlayedBy[];
 }
 
 export interface FindCandidatesOutput {
@@ -39,7 +41,7 @@ export interface FindCandidatesOutput {
 
 /**
  * What Dilemmas publishes to the other contexts to put a game together: at most as many public
- * dilemmas that match as asked for, drawn at random and those nobody played first, each with its id
+ * dilemmas that match as asked for, drawn at random and those played by fewer players first, each with its id
  * and its classification, and nothing else of it.
  */
 export interface FindCandidates {

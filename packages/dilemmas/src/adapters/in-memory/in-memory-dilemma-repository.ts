@@ -112,12 +112,18 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
         hasGap: hasGapIn(dilemma),
       }))
       .filter(
-        ({ id, hasGap }) => (criteria.includeGap || !hasGap) && !criteria.excludedIds.includes(id),
+        ({ id, hasGap, minimumAge }) =>
+          (criteria.includeGap || !hasGap) &&
+          (!criteria.onlyForAdults || minimumAge === 18) &&
+          !criteria.excludedIds.includes(id),
       );
-    const played = (id: string) => (criteria.playedIds.includes(id) ? 1 : 0);
+    const playedBy = new Map(
+      criteria.playedBy.map(({ dilemmaId, players }) => [dilemmaId, players]),
+    );
+    const players = (id: string) => playedBy.get(id) ?? 0;
     return this.#draws
       .shuffle(drawable)
-      .sort((one, other) => played(one.id) - played(other.id))
+      .sort((one, other) => players(one.id) - players(other.id))
       .slice(0, criteria.count);
   }
 

@@ -32,8 +32,9 @@ async function databaseAt(migration: string): Promise<Kysely<Database>> {
 }
 
 /**
- * A room in its lobby with a specific round, and a game in progress of a dilemma with the gap where
- * Ana, the person in the gap, and Luis have voted: as dev and prod have them.
+ * A room in its lobby with a specific round of a dilemma with the gap, and two games of that
+ * dilemma where Ana, the person in the gap, and Luis have voted and predicted each other, one still
+ * deciding it and the other with it revealed: as dev and prod have them.
  */
 async function before(db: Kysely<Database>): Promise<void> {
   // Written as they were: the repository of today writes whether each version has the gap.
@@ -93,38 +94,50 @@ async function before(db: Kysely<Database>): Promise<void> {
       insert into room_rounds (room_id, position, round_id, origin) values
         ('TestLobbyRoom', 1, 2, 'random')
     `.execute(trx);
-    await sql`
-      insert into games (id, room_id, version, variant, group_nature, place, dilemma_language,
-        time_per_dilemma_seconds)
-      values ('TestGame', 'TestGameRoom', 1, 'nominal', 'friends', 'together', 'es', 60)
-    `.execute(trx);
-    await sql`
-      insert into game_dilemmas (game_id, position, dilemma_id, dilemma_version, origin, has_gap,
-        person_in_the_gap)
-      values ('TestGame', 0, ${dilemma.id}, ${dilemma.version}, 'random', true, 'TestAna')
-    `.execute(trx);
-    for (const [position, id] of ['TestGapInTextOption1', 'TestGapInTextOption2'].entries()) {
+    // The same round, being decided in one game and revealed in the other.
+    for (const [game, phase] of [
+      ['TestGame', 'decision'],
+      ['TestRevealedGame', 'reveal'],
+    ] as const) {
       await sql`
-        insert into game_dilemma_options (game_id, dilemma_id, option_id, position)
-        values ('TestGame', ${dilemma.id}, ${id}, ${position})
-      `.execute(trx);
-    }
-    for (const [position, player] of ['TestAna', 'TestLuis'].entries()) {
-      await sql`
-        insert into game_players (game_id, player_id, position) values ('TestGame', ${player}, ${position})
+        insert into games (id, room_id, version, variant, group_nature, place, dilemma_language,
+          time_per_dilemma_seconds, round_position, round_phase, round_started_at, round_ends_at,
+          round_revealed_by)
+        values (${game}, 'TestGameRoom', 1, 'nominal', 'friends', 'together', 'es', 60, 0, ${phase},
+          now(), now() + interval '1 minute', ${phase === 'reveal' ? 'everyone' : null})
       `.execute(trx);
       await sql`
-        insert into answers (game_id, player_id, dilemma_id, dilemma_version, vote,
-          game_consent_version, under_eighteen, voter_in_the_gap, vote_predictions, option_order)
-        values ('TestGame', ${player}, ${dilemma.id}, ${dilemma.version}, ${vote}, 'TestConsent',
-          false, ${player === 'TestAna'}, '[]'::jsonb, ${[vote]})
+        insert into game_dilemmas (game_id, position, dilemma_id, dilemma_version, origin, has_gap,
+          person_in_the_gap)
+        values (${game}, 0, ${dilemma.id}, ${dilemma.version}, 'random', true, 'TestAna')
       `.execute(trx);
+      for (const [position, id] of ['TestGapInTextOption1', 'TestGapInTextOption2'].entries()) {
+        await sql`
+          insert into game_dilemma_options (game_id, dilemma_id, option_id, position)
+          values (${game}, ${dilemma.id}, ${id}, ${position})
+        `.execute(trx);
+      }
+      for (const [position, player, other] of [
+        [0, 'TestAna', 'TestLuis'],
+        [1, 'TestLuis', 'TestAna'],
+      ] as const) {
+        await sql`
+          insert into game_players (game_id, player_id, position) values (${game}, ${player}, ${position})
+        `.execute(trx);
+        await sql`
+          insert into answers (game_id, player_id, dilemma_id, dilemma_version, vote,
+            game_consent_version, under_eighteen, voter_in_the_gap, vote_predictions, option_order)
+          values (${game}, ${player}, ${dilemma.id}, ${dilemma.version}, ${vote}, 'TestConsent',
+            false, ${player === 'TestAna'}, ${JSON.stringify([{ playerId: other, vote }])}::jsonb,
+            ${[vote]})
+        `.execute(trx);
+      }
     }
   });
 }
 
 describe('the migration that lets the person in the gap predict without voting', () => {
-  it('should leave without a vote a person in the gap who voted a game in progress', async () => {
+  it('should leave without a vote, and with nobody predicting them, the person in the gap of a round being decided', async () => {
     // Arrange
     const db = await databaseAt(BEFORE);
     await before(db);
@@ -135,16 +148,21 @@ describe('the migration that lets the person in the gap predict without voting',
     // Assert
     const answers = await db
       .selectFrom('answers')
-      .select(['player_id', 'vote'])
+      .select(['player_id', 'vote', 'vote_predictions'])
+      .where('game_id', '=', 'TestGame')
       .orderBy('player_id')
       .execute();
     expect(answers).toEqual([
-      { player_id: 'TestAna', vote: null },
-      { player_id: 'TestLuis', vote: expect.any(String) },
+      {
+        player_id: 'TestAna',
+        vote: null,
+        vote_predictions: [{ playerId: 'TestLuis', vote: 'TestGapInTextOption1' }],
+      },
+      { player_id: 'TestLuis', vote: 'TestGapInTextOption1', vote_predictions: [] },
     ]);
   });
 
-  it('should keep the dilemmas of the games and of the lobbies with what the rules now need', async () => {
+  it('should keep the answers of a round already revealed as they were revealed', async () => {
     // Arrange
     const db = await databaseAt(BEFORE);
     await before(db);
@@ -153,9 +171,38 @@ describe('the migration that lets the person in the gap predict without voting',
     await migrateTo(db, THIS);
 
     // Assert
-    expect(await db.selectFrom('game_dilemmas').select('fixed_order').execute()).toEqual([
-      { fixed_order: false },
+    const answers = await db
+      .selectFrom('answers')
+      .select(['player_id', 'vote', 'vote_predictions'])
+      .where('game_id', '=', 'TestRevealedGame')
+      .orderBy('player_id')
+      .execute();
+    expect(answers).toEqual([
+      {
+        player_id: 'TestAna',
+        vote: 'TestGapInTextOption1',
+        vote_predictions: [{ playerId: 'TestLuis', vote: 'TestGapInTextOption1' }],
+      },
+      {
+        player_id: 'TestLuis',
+        vote: 'TestGapInTextOption1',
+        vote_predictions: [{ playerId: 'TestAna', vote: 'TestGapInTextOption1' }],
+      },
     ]);
+  });
+
+  it('should keep the dilemmas of the games and of the lobbies with what the rules now need, as their current version is', async () => {
+    // Arrange
+    const db = await databaseAt(BEFORE);
+    await before(db);
+
+    // Act
+    await migrateTo(db, THIS);
+
+    // Assert
+    expect(await db.selectFrom('game_dilemmas').select('fixed_order').distinct().execute()).toEqual(
+      [{ fixed_order: false }],
+    );
     expect(
       await db.selectFrom('room_players').select('played_dilemma_ids').distinct().execute(),
     ).toEqual([{ played_dilemma_ids: [] }]);
@@ -166,7 +213,7 @@ describe('the migration that lets the person in the gap predict without voting',
         .orderBy('round_id')
         .execute(),
     ).toEqual([
-      { round_id: 1, type: 'standard', scale: 'everyday', has_gap: false },
+      { round_id: 1, type: 'standard', scale: 'everyday', has_gap: true },
       { round_id: 2, type: null, scale: null, has_gap: null },
     ]);
   });
@@ -191,5 +238,18 @@ describe('the migration that lets the person in the gap predict without voting',
       { dilemma_id: 'TestGapInText', has_gap: true },
       { dilemma_id: 'TestWithoutGap', has_gap: false },
     ]);
+  });
+
+  it('should never let a version change whether it has the gap', async () => {
+    // Arrange
+    const db = await databaseAt(BEFORE);
+    await before(db);
+    await migrateTo(db, THIS);
+
+    // Act
+    const change = sql`update dilemma_versions set has_gap = not has_gap`.execute(db);
+
+    // Assert
+    await expect(change).rejects.toThrow('the content of a version of a dilemma never changes');
   });
 });

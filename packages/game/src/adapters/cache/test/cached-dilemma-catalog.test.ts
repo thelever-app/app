@@ -216,7 +216,14 @@ describe('CachedDilemmaCatalog', () => {
       // Act
       await catalog.search(criteria, { size: 20 });
       await catalog.search(criteria, { size: 20 });
-      const draw = { ...criteria, count: 3, includeGap: true, excludedIds: [], playedIds: [] };
+      const draw = {
+        ...criteria,
+        count: 3,
+        includeGap: true,
+        excludedIds: [],
+        onlyForAdults: false,
+        playedBy: [],
+      };
       await catalog.findCandidates(draw);
       await catalog.findCandidates(draw);
 

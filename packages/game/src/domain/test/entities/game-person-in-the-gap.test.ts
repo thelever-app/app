@@ -225,7 +225,42 @@ describe('Game, with the person in the gap', () => {
       // Assert
       expect(game.didNotVoteOf(person)).toEqual([]);
       expect(game.revealOf(0).didNotVoteCount).toBe(3);
-      expect(game.revealOf(0).personInTheGapHits).toEqual({ right: 0, of: 3 });
+      expect(game.revealOf(0).personInTheGapHits).toBeNull();
+    });
+
+    it('should count the hits of the person in the gap only of the votes there were', () => {
+      // Arrange: the first votes the lever and the second waits; the third does not vote.
+      const { game, person } = gameOfFour();
+      const [first, second] = EVERYONE.filter((playerId) => playerId !== person) as [
+        string,
+        string,
+      ];
+      for (const [voter, vote] of [
+        [first, 'TestPull'],
+        [second, 'TestWait'],
+      ] as const) {
+        game.answer(
+          voter,
+          GAP_DILEMMA,
+          { vote, votePredictions: predictions(game, voter) },
+          SEAL,
+          AT,
+        );
+      }
+      // Pull for everyone: right about the first, wrong about the second.
+      game.answer(
+        person,
+        GAP_DILEMMA,
+        { vote: null, votePredictions: predictions(game, person) },
+        SEAL,
+        AT,
+      );
+
+      // Act
+      game.runOutRound(new Date(AT.getTime() + 60_000));
+
+      // Assert
+      expect(game.revealOf(0).personInTheGapHits).toEqual({ right: 1, of: 2 });
     });
 
     it('should share 100 among the players each one predicts', () => {

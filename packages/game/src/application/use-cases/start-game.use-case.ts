@@ -7,6 +7,7 @@ import {
   categoriesToDraw,
   composeGame,
   fixedDilemmaIds,
+  SPACING_ROUNDS,
   type Candidates,
   type ExplorationSlots,
 } from '../../domain/services/compose-game.ts';
@@ -83,25 +84,37 @@ export class StartGameUseCase {
     // of categories a round draws from: the game reads nothing else, and never the whole catalog.
     const { playsTheGap } = room;
     const excludedIds = fixedDilemmaIds(settings.rounds, room.chosenDilemmas, playsTheGap);
-    const playedIds = [...room.playedBy.keys()];
+    const playedBy = [...room.playedBy].map(([dilemmaId, players]) => ({ dilemmaId, players }));
     const candidatesOf = async (
       categories: readonly Category[] | null,
       rounds: number,
       status: 'in-catalog' | 'in-exploration',
-    ): Promise<CandidateDilemma[]> => [
-      ...(await this.#dilemmaCatalog.findCandidates({
-        // Null plays every category: the search then looks at all of them.
-        ...(categories && { categories }),
-        maximumMinimumAge: settings.maximumMinimumAge,
-        status,
-        language: settings.dilemmaLanguage,
-        includeCompromising: settings.includesCompromisingDilemmas,
-        count: rounds * this.#candidatesPerRound,
-        includeGap: playsTheGap,
-        excludedIds,
-        playedIds,
-      })),
-    ];
+    ): Promise<CandidateDilemma[]> => {
+      const draw = (count: number, onlyForAdults: boolean) =>
+        this.#dilemmaCatalog.findCandidates({
+          // Null plays every category: the search then looks at all of them.
+          ...(categories && { categories }),
+          maximumMinimumAge: settings.maximumMinimumAge,
+          status,
+          language: settings.dilemmaLanguage,
+          includeCompromising: settings.includesCompromisingDilemmas,
+          count,
+          includeGap: playsTheGap,
+          excludedIds,
+          onlyForAdults,
+          playedBy,
+        });
+      const drawn = await draw(rounds * this.#candidatesPerRound, false);
+      if (!settings.adultsOnly) return [...drawn];
+      // An adults-only room plays one for adults in every few rounds: those are drawn apart too, so
+      // a draw at random does not leave them out.
+      const forAdults = await draw(
+        Math.ceil(rounds / SPACING_ROUNDS) * this.#candidatesPerRound,
+        true,
+      );
+      const ids = new Set(drawn.map(({ dilemmaId }) => dilemmaId));
+      return [...drawn, ...forAdults.filter(({ dilemmaId }) => !ids.has(dilemmaId))];
+    };
     const candidates = new Map<string, Candidates>(
       await Promise.all(
         categoriesToDraw(settings.rounds, room.chosenDilemmas, playsTheGap).map(

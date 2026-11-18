@@ -51,7 +51,13 @@ function catalogDilemma(
 }
 
 /** A draw that leaves nothing out: more than any test saves, none played or excluded. */
-const A_GAME = { count: 100, includeGap: true, excludedIds: [], playedIds: [] } as const;
+const A_GAME = {
+  count: 100,
+  includeGap: true,
+  excludedIds: [],
+  onlyForAdults: false,
+  playedBy: [],
+} as const;
 
 /** The ids of the candidates the queries draw, sorted: they come in no order. */
 async function idsOf(
@@ -623,17 +629,42 @@ export function describeDilemmaQueriesContract(
         expect(found).toHaveLength(3);
       });
 
-      it('should draw those nobody played before any played', async () => {
-        // Arrange
+      it('should draw those played by fewer players first, and those nobody played before any', async () => {
+        // Arrange: two players played the first seven, one the eighth, and nobody the last two.
         const queries = await saved(...tenDilemmas());
-        const playedIds = TEN_IDS.slice(0, 7);
+        const playedBy = TEN_IDS.slice(0, 8).map((dilemmaId, index) => ({
+          dilemmaId,
+          players: index < 7 ? 2 : 1,
+        }));
 
         // Act
-        const found = await idsOf(queries, { ...EVERYONE, count: 4, playedIds });
+        const unplayed = await idsOf(queries, { ...EVERYONE, count: 2, playedBy });
+        const fewest = await idsOf(queries, { ...EVERYONE, count: 3, playedBy });
+        const more = await idsOf(queries, { ...EVERYONE, count: 4, playedBy });
 
         // Assert
-        expect(found).toHaveLength(4);
-        expect(found).toEqual(expect.arrayContaining(TEN_IDS.slice(7)));
+        expect(unplayed).toEqual(TEN_IDS.slice(8));
+        expect(fewest).toEqual(TEN_IDS.slice(7));
+        expect(more).toHaveLength(4);
+        expect(more).toEqual(expect.arrayContaining(TEN_IDS.slice(7)));
+      });
+
+      it('should draw only the dilemmas for adults when asked for those', async () => {
+        // Arrange
+        const queries = await saved(
+          catalogDilemma('TestDilemma'),
+          catalogDilemma('TestAdultDilemma', { minimumAge: 18 }),
+        );
+
+        // Act
+        const found = await idsOf(queries, {
+          ...EVERYONE,
+          maximumMinimumAge: 18,
+          onlyForAdults: true,
+        });
+
+        // Assert
+        expect(found).toEqual(['TestAdultDilemma']);
       });
 
       it('should never draw a dilemma excluded', async () => {

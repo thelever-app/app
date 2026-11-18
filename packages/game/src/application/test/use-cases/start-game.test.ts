@@ -362,9 +362,36 @@ describe('StartGameUseCase', () => {
           categories: ['life-and-death'],
           count: 2 * CANDIDATES_PER_ROUND,
           excludedIds: ['TestCatalog3'],
-          playedIds: [],
+          playedBy: [],
           includeGap: true,
+          onlyForAdults: false,
         }),
+      );
+    });
+
+    it('should draw a few dilemmas for adults apart in an adults-only room', async () => {
+      // Arrange: life-and-death has two dilemmas for adults among ten.
+      const { startGame, changeSettings, catalog, roomId, anaId } = await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: {
+          adultsOnly: true,
+          rounds: randomRounds(6, ['life-and-death']),
+          newDilemmas: false,
+        },
+      });
+      const findCandidates = vi.spyOn(catalog, 'findCandidates');
+
+      // Act
+      await startGame.execute({ roomId, playerId: anaId });
+
+      // Assert: one for adults in every five rounds, and their candidates.
+      expect(findCandidates).toHaveBeenCalledWith(
+        expect.objectContaining({ count: 6 * CANDIDATES_PER_ROUND, onlyForAdults: false }),
+      );
+      expect(findCandidates).toHaveBeenCalledWith(
+        expect.objectContaining({ count: 2 * CANDIDATES_PER_ROUND, onlyForAdults: true }),
       );
     });
 

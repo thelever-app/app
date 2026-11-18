@@ -35,8 +35,19 @@ export interface CandidateCriteria extends Omit<DilemmaCriteria, 'text' | 'dilem
   readonly includeGap: boolean;
   /** Never drawn: the dilemmas the game already plays. */
   readonly excludedIds: readonly string[];
-  /** Drawn only after every other: the dilemmas someone in the room played. */
-  readonly playedIds: readonly string[];
+  /** Only the dilemmas for adults: for an adults-only room to have some to space. */
+  readonly onlyForAdults: boolean;
+  /**
+   * How many players of the room played each dilemma: those played by fewer are drawn first, and
+   * one nobody played before any.
+   */
+  readonly playedBy: readonly PlayedBy[];
+}
+
+/** How many players of a room played a dilemma. */
+export interface PlayedBy {
+  readonly dilemmaId: string;
+  readonly players: number;
 }
 
 /** What a list of dilemmas shows of each one, at its current version: never its options or its arguments. */
@@ -84,8 +95,8 @@ export interface DilemmaPage {
  */
 export interface DilemmaQueries {
   /**
-   * At most `count` of the public dilemmas that match, drawn at random, those nobody played before
-   * the others: a game draws from them.
+   * At most `count` of the public dilemmas that match, drawn at random, those played by fewer
+   * players of the room before the others: a game draws from them.
    */
   candidatesOf(criteria: CandidateCriteria): Promise<DilemmaCandidate[]>;
   /**

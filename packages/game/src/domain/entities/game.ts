@@ -702,12 +702,15 @@ export class Game {
       votes: nominal ? asked.map((playerId) => ({ playerId, vote: voteOf(playerId) })) : [],
       votePredictions: nominal ? votePredictions : [],
       personInTheGap: person,
+      // Of the votes there were, as anyone's own hits: none if they did not answer, or nobody voted.
       personInTheGapHits:
-        nominal && person !== null
+        nominal && person !== null && answerOf(person) !== undefined && voters.length > 0
           ? {
-              right: votePredictions.filter(({ playerId, right }) => playerId === person && right)
-                .length,
-              of: this.playersToPredictBy(person, dilemmaId).length,
+              right: votePredictions.filter(
+                ({ playerId, aboutId, right }) =>
+                  playerId === person && right && voters.includes(aboutId),
+              ).length,
+              of: voters.length,
             }
           : null,
       chosenBy: nominal ? (this.#origins.get(dilemmaId)?.chosenBy ?? null) : null,

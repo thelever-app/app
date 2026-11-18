@@ -60,6 +60,7 @@ export {
   type DilemmaQueries,
   type DilemmaSummary,
   type PageRequest,
+  type PlayedBy,
   WORD_SIMILARITY,
 } from './application/ports/dilemma-queries.port.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';

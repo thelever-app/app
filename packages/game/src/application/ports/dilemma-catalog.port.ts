@@ -59,8 +59,13 @@ export interface CandidateSearch extends Omit<DilemmaSearch, 'text' | 'dilemmaId
   readonly includeGap: boolean;
   /** Never drawn: the dilemmas the game already plays. */
   readonly excludedIds: readonly string[];
-  /** Drawn only after every other: the dilemmas someone in the room played. */
-  readonly playedIds: readonly string[];
+  /** Only the dilemmas for adults: for an adults-only room to have some to space. */
+  readonly onlyForAdults: boolean;
+  /**
+   * How many players of the room played each dilemma: those played by fewer are drawn first, and
+   * one nobody played before any.
+   */
+  readonly playedBy: readonly { readonly dilemmaId: string; readonly players: number }[];
 }
 
 /** Which page of a search: the first one, or the one after the `next` of the page before. */
@@ -96,7 +101,7 @@ export interface DilemmaCatalog {
   ): Promise<readonly DilemmaContent[]>;
   /**
    * At most `count` of the public dilemmas that match, at their current version, drawn at random
-   * and those nobody played before the others, for a game to draw from: each with its id, what
+   * and those played by fewer players of the room before the others, for a game to draw from: each with its id, what
    * spacing it needs and whether it has the gap.
    */
   findCandidates(criteria: CandidateSearch): Promise<readonly CandidateDilemma[]>;
