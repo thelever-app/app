@@ -94,6 +94,7 @@ describe('CreateRoomForm', () => {
       groupNature: 'friends',
       place: 'remote',
       dilemmaLanguage: 'es',
+      playedDilemmaIds: [],
     });
     expect(lastNickname()).toBe('Ana');
   });

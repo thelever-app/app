@@ -135,7 +135,7 @@ describe('SimulatedRoomConnection', () => {
         {
           roundId: 1,
           origin: 'specific',
-          dilemma: { dilemmaId: first!.dilemmaId, text: first!.text },
+          dilemma: { dilemmaId: first!.dilemmaId, text: first!.text, hasGap: false },
         },
         { roundId: 9, origin: 'players', dilemma: null, chosenByYou: false },
       ]);
@@ -163,7 +163,7 @@ describe('SimulatedRoomConnection', () => {
       expect(chosen).toEqual({
         roundId: 1,
         origin: 'players',
-        dilemma: { dilemmaId: first!.dilemmaId, text: first!.text },
+        dilemma: { dilemmaId: first!.dilemmaId, text: first!.text, hasGap: false },
         chosenByYou: true,
       });
       expect(lastLobby(opened.received).rounds).toEqual([

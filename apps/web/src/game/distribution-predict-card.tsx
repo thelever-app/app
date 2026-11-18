@@ -6,6 +6,7 @@ import { GAP_MARKER, type GameStateDto } from '@thelever-app/protocol';
 import { type CSSProperties, type KeyboardEvent, type SyntheticEvent, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
+import { AboutYou } from './about-you.tsx';
 import { DilemmaText } from './dilemma-text.tsx';
 import styles from './distribution-predict-card.module.css';
 
@@ -13,7 +14,8 @@ type Dilemma = GameStateDto['dilemmas'][number];
 
 interface DistributionPredictCardProps {
   readonly dilemma: Dilemma;
-  readonly vote: string;
+  /** None for the person in the gap, who predicts the others without voting, on this screen alone. */
+  readonly vote: string | null;
   readonly prediction: readonly PredictedShare[];
   readonly personInTheGap: string | undefined;
   readonly isSending: boolean;
@@ -21,7 +23,8 @@ interface DistributionPredictCardProps {
   readonly onChange: (prediction: readonly PredictedShare[]) => void;
   /** The player let go of a bar: the prediction so far goes to the room. */
   readonly onRelease: (prediction: readonly PredictedShare[]) => void;
-  readonly onBack: () => void;
+  /** Back to the vote; none for the person in the gap, who has none. */
+  readonly onBack: (() => void) | undefined;
   readonly onReady: () => void;
 }
 
@@ -45,7 +48,8 @@ function optionColor(count: number, index: number): string {
 /**
  * «¿Cómo se repartirá el grupo?»: the share of the group, the player included, that will choose
  * each option, in steps of 5 % that always add up to 100. Moving a bar adjusts the others in
- * proportion; with two options, one slider sets both.
+ * proportion; with two options, one slider sets both. The person in the gap predicts the others,
+ * with the dilemma about them, since they have no vote to come from.
  */
 export function DistributionPredictCard({
   dilemma,
@@ -90,26 +94,40 @@ export function DistributionPredictCard({
   return (
     <>
       <main className={styles.main} tabIndex={0}>
-        {voted && (
-          <p
-            className={styles.voted}
-            style={{ '--option': optionColor(count, votedIndex) } as CSSProperties}
-          >
-            <Icon name="checkCircle" size={18} />
-            <span>
-              {t('predict.voted')}
-              <DilemmaText text={voted.text} personInTheGap={personInTheGap} />
-              {t('predict.votedEnd')}
-            </span>
-          </p>
+        {vote === null ? (
+          <AboutYou
+            dilemma={dilemma}
+            personInTheGap={personInTheGap}
+            text={t('aboutYou.anonymous')}
+          />
+        ) : (
+          voted && (
+            <p
+              className={styles.voted}
+              style={{ '--option': optionColor(count, votedIndex) } as CSSProperties}
+            >
+              <Icon name="checkCircle" size={18} />
+              <span>
+                {t('predict.voted')}
+                <DilemmaText text={voted.text} personInTheGap={personInTheGap} />
+                {t('predict.votedEnd')}
+              </span>
+            </p>
+          )
         )}
         <section className={styles.section} aria-labelledby={headingId}>
           <div className={styles.ask}>
             <h1 id={headingId} className={styles.heading}>
-              {t('distribution.question')}
+              {vote === null ? t('distribution.aboutYouQuestion') : t('distribution.question')}
             </h1>
             <p className={styles.hint}>
-              {count === 2 ? t('distribution.hintTwo') : t('distribution.hint')}
+              {vote === null
+                ? count === 2
+                  ? t('distribution.aboutYouHintTwo')
+                  : t('distribution.aboutYouHint')
+                : count === 2
+                  ? t('distribution.hintTwo')
+                  : t('distribution.hint')}
             </p>
           </div>
           {count === 2 ? (
@@ -183,14 +201,16 @@ export function DistributionPredictCard({
         </section>
       </main>
       <footer className={styles.footer}>
-        <button
-          type="button"
-          className={styles.back}
-          aria-label={t('predict.back')}
-          onClick={onBack}
-        >
-          <Icon name="arrowBack" size={22} />
-        </button>
+        {onBack && (
+          <button
+            type="button"
+            className={styles.back}
+            aria-label={t('predict.back')}
+            onClick={onBack}
+          >
+            <Icon name="arrowBack" size={22} />
+          </button>
+        )}
         <button type="button" className={styles.next} disabled={isSending} onClick={onReady}>
           {t('predict.next')}
         </button>

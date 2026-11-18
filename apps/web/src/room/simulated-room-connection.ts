@@ -1,6 +1,6 @@
 import {
   Dilemma,
-  FindDilemmaIdsUseCase,
+  FindCandidatesUseCase,
   GetDilemmasUseCase,
   SearchDilemmasUseCase as SearchCatalogUseCase,
 } from '@thelever-app/dilemmas';
@@ -102,6 +102,9 @@ const EXPLORATION_SLOTS: ExplorationSlots = [
   { fromRandomRounds: 11, slots: 3 },
 ];
 
+/** The same as the room server: how many candidates each round draws from. */
+const CANDIDATES_PER_ROUND = 3;
+
 /** The events that reach the screen as the state it may see after them, as the room server sends them. */
 const SENT_AS_STATE = [
   LobbyChangedEvent,
@@ -182,7 +185,7 @@ export class SimulatedRoomConnection implements RoomConnection {
   readonly #catalog = new PublishedDilemmasCatalog(
     new GetDilemmasUseCase(this.#repositories.dilemmas),
     new SearchCatalogUseCase(this.#repositories.dilemmas),
-    new FindDilemmaIdsUseCase(this.#repositories.dilemmas),
+    new FindCandidatesUseCase(this.#repositories.dilemmas),
   );
   readonly #useCases;
   #roomId = '';
@@ -229,6 +232,7 @@ export class SimulatedRoomConnection implements RoomConnection {
           clock,
         },
         EXPLORATION_SLOTS,
+        CANDIDATES_PER_ROUND,
       ),
       answerDilemma: new AnswerDilemmaUseCase({
         roomRepository: rooms,

@@ -93,7 +93,7 @@ describe('JoinRoomForm', () => {
 
     // Assert
     await waitFor(() => expect(location()).toBe('/rooms/test-room-id'));
-    expect(api.joinRoom).toHaveBeenCalledWith('test-room-id', 'Luis', SUGGESTED);
+    expect(api.joinRoom).toHaveBeenCalledWith('test-room-id', 'Luis', SUGGESTED, []);
     expect(lastNickname()).toBe('Luis');
   });
 
@@ -129,7 +129,7 @@ describe('JoinRoomForm', () => {
 
     // Assert
     await waitFor(() =>
-      expect(api.joinRoom).toHaveBeenCalledWith('test-room-id', 'Luis', ANA_AVATAR),
+      expect(api.joinRoom).toHaveBeenCalledWith('test-room-id', 'Luis', ANA_AVATAR, []),
     );
   });
 

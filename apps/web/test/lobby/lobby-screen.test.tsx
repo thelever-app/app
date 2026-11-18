@@ -8,7 +8,11 @@ import { fakeRoomApi } from '../support/routing.tsx';
 
 /** Ana chose La palanca for round 1, round 2 is random, and round 3 is for the players. */
 const MIXED_ROUNDS: LobbyRoundDto[] = [
-  { roundId: 1, origin: 'specific', dilemma: { dilemmaId: 'test-dilemma-9', text: 'La palanca' } },
+  {
+    roundId: 1,
+    origin: 'specific',
+    dilemma: { dilemmaId: 'test-dilemma-9', text: 'La palanca', hasGap: false },
+  },
   { roundId: 2, origin: 'random', categories: null },
   { roundId: 3, origin: 'players', dilemma: null, chosenByYou: false },
 ];
@@ -159,7 +163,7 @@ describe('LobbyScreen', () => {
         {
           roundId: 1,
           origin: 'specific',
-          dilemma: { dilemmaId: 'test-dilemma-9', text: 'La palanca' },
+          dilemma: { dilemmaId: 'test-dilemma-9', text: 'La palanca', hasGap: false },
         },
         ...DEFAULT_ROUNDS.slice(1),
       ];
@@ -189,7 +193,7 @@ describe('LobbyScreen', () => {
         {
           roundId: 3,
           origin: 'players',
-          dilemma: { dilemmaId: 'test-dilemma-1', text: 'TestText1' },
+          dilemma: { dilemmaId: 'test-dilemma-1', text: 'TestText1', hasGap: false },
           chosenByYou: false,
         },
       ];
@@ -210,13 +214,64 @@ describe('LobbyScreen', () => {
       ).toBeNull();
     });
 
+    it.each([
+      ['anonymous', 3, 4, 'lobby.gapWarningAnonymous'],
+      ['nominal', 2, 3, 'lobby.gapWarningNominal'],
+    ] as const)(
+      'should warn a %s room of %i that a dilemma about someone in the group needs %i players',
+      async (variant, players, minimum, key) => {
+        // Arrange
+        const room = aRoom();
+        const rounds: LobbyRoundDto[] = [
+          {
+            roundId: 1,
+            origin: 'players',
+            dilemma: { dilemmaId: 'test-dilemma-9', text: 'Le mientes a {gap}', hasGap: true },
+            chosenByYou: false,
+          },
+        ];
+
+        // Act
+        const { t } = await renderLobby(
+          aRoom({
+            rounds,
+            settings: { ...room.settings, variant },
+            players: room.players.slice(0, players),
+            minimumPlayersForTheGap: minimum,
+          }),
+        );
+
+        // Assert
+        const warning = screen.getByRole('status', { name: '' });
+        expect(warning.textContent).toContain(t('lobby.gapWarningTitle'));
+        expect(warning.textContent).toContain(t(key, { minimum }));
+      },
+    );
+
+    it('should not warn of a dilemma about someone in the group with enough players', async () => {
+      // Arrange
+      const rounds: LobbyRoundDto[] = [
+        {
+          roundId: 1,
+          origin: 'specific',
+          dilemma: { dilemmaId: 'test-dilemma-9', text: 'Le mientes a {gap}', hasGap: true },
+        },
+      ];
+
+      // Act
+      const { t } = await renderLobby(aRoom({ rounds }));
+
+      // Assert
+      expect(screen.queryByText(t('lobby.gapWarningTitle'))).toBeNull();
+    });
+
     it('should show the gap of a dilemma of a round as someone in the group', async () => {
       // Arrange
       const rounds: LobbyRoundDto[] = [
         {
           roundId: 1,
           origin: 'specific',
-          dilemma: { dilemmaId: 'test-dilemma-9', text: 'Le mientes a {gap}' },
+          dilemma: { dilemmaId: 'test-dilemma-9', text: 'Le mientes a {gap}', hasGap: true },
         },
       ];
 
@@ -234,7 +289,7 @@ describe('LobbyScreen', () => {
         {
           roundId: 3,
           origin: 'players',
-          dilemma: { dilemmaId: 'test-dilemma-1', text: 'TestText1' },
+          dilemma: { dilemmaId: 'test-dilemma-1', text: 'TestText1', hasGap: false },
           chosenByYou: true,
         },
       ];
@@ -418,7 +473,7 @@ describe('LobbyScreen', () => {
               {
                 roundId: 3,
                 origin: 'players',
-                dilemma: { dilemmaId: 'test-dilemma-1', text: 'TestText1' },
+                dilemma: { dilemmaId: 'test-dilemma-1', text: 'TestText1', hasGap: false },
                 chosenByYou: false,
               },
             ],

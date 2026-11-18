@@ -45,6 +45,7 @@ const NOMINAL_REVEAL: Reveal = {
     { playerId: 'test-luis-id', aboutId: 'test-ana-id', vote: 'test-option-1a', right: true },
   ],
   personInTheGap: null,
+  personInTheGapHits: null,
   chosenBy: 'test-luis-id',
   yourDistributionPrediction: null,
   yourPoints: null,
@@ -276,7 +277,53 @@ describe('RevealPhase', () => {
 
       // Assert
       expect(screen.getByText(t('reveal.chosenBy', { name: 'Luis' }))).toBeDefined();
-      expect(screen.getByText(t('reveal.about', { name: 'Marta' }))).toBeDefined();
+      expect(screen.getByText(t('reveal.aboutTitle', { name: 'Marta' }))).toBeDefined();
+    });
+  });
+
+  describe('the person in the gap', () => {
+    /** Ana was the person in the gap: she did not vote, she predicted Luis and Marta, right about Luis. */
+    const ABOUT_ANA: Reveal = {
+      ...NOMINAL_REVEAL,
+      votes: NOMINAL_REVEAL.votes.filter(({ playerId }) => playerId !== 'test-ana-id'),
+      personInTheGap: 'test-ana-id',
+      personInTheGapHits: { right: 1, of: 2 },
+    };
+
+    it('should show everyone who it was about and how many votes they guessed', async () => {
+      // Act
+      const { t } = await renderReveal(revealed({ ...ABOUT_ANA }, { playerId: 'test-luis-id' }));
+
+      // Assert
+      const card = screen.getByRole('region', { name: t('reveal.aboutTitle', { name: 'Ana' }) });
+      expect(within(card).getByText(t('reveal.aboutNominal'))).toBeDefined();
+      expect(within(card).getByText(t('reveal.aboutHits', { right: 1, of: 2 }))).toBeDefined();
+    });
+
+    it('should tell the person in the gap it was about them, with their hits on that card alone', async () => {
+      // Act
+      const { t } = await renderReveal(revealed(ABOUT_ANA));
+
+      // Assert
+      const card = screen.getByRole('region', { name: t('reveal.aboutYouTitle') });
+      expect(within(card).getByText(t('reveal.aboutYouNominal'))).toBeDefined();
+      expect(within(card).getByText(t('reveal.aboutYouHitsLabel'))).toBeDefined();
+      expect(screen.queryByRole('region', { name: t('reveal.yourHitsRegion') })).toBeNull();
+    });
+
+    it('should keep private in an anonymous room what the person in the gap predicted', async () => {
+      // Act
+      const { t } = await renderReveal(
+        revealed(
+          { ...ANONYMOUS_REVEAL, personInTheGap: 'test-ana-id' },
+          { players: ANONYMOUS_PLAYERS, playerId: 'test-luis-id' },
+        ),
+      );
+
+      // Assert
+      const card = screen.getByRole('region', { name: t('reveal.aboutTitle', { name: 'Ana' }) });
+      expect(within(card).getByText(t('reveal.aboutAnonymous'))).toBeDefined();
+      expect(within(card).queryByText(t('reveal.aboutHitsLabel'))).toBeNull();
     });
   });
 

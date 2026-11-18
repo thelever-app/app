@@ -7,6 +7,7 @@ import { randomAvatar } from '../avatar/random-avatar.ts';
 import { Icon, type IconName } from '../components/icon.tsx';
 import { AvatarPickerSheet } from '../lobby/avatar-picker-sheet.tsx';
 import { SubmitButton } from '../components/submit-button.tsx';
+import { playedDilemmas } from '../game/played-dilemmas.ts';
 import { lastNickname, rememberNickname } from '../identity/last-nickname.ts';
 import { deviceLanguage } from '../i18n/i18n.ts';
 import { useRoomApi } from '../room/room-api-context.tsx';
@@ -83,6 +84,7 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
           place,
           dilemmaLanguage: firstDilemma?.language ?? deviceLanguage(i18n),
           ...(firstDilemma && { firstRoundDilemmaId: firstDilemma.dilemmaId }),
+          playedDilemmaIds: playedDilemmas(),
         }),
       );
       // Back from the access code: the form stays as the player left it.

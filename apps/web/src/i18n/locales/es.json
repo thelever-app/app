@@ -39,7 +39,8 @@
     "playerPending": "{{name}} · aún no ha respondido",
     "playerDisconnected": "{{name}} (desconectado)",
     "movedOn": "{{name}} pasó al siguiente",
-    "playerMovedOn": "{{label}} · pasó al siguiente"
+    "playerMovedOn": "{{label}} · pasó al siguiente",
+    "aboutYou": "Dilema {{position, number}} de {{total, number}} · Va sobre ti"
   },
   "groupSheet": {
     "title": "El grupo",
@@ -72,6 +73,11 @@
   "game": {
     "timeLeft": "Quedan {{time}}"
   },
+  "aboutYou": {
+    "title": "Va sobre ti: ¿qué harán contigo?",
+    "nominal": "Este dilema no lo votas. Adivina qué elegirá cada uno: en el reveal todos verán cuántos acertaste.",
+    "anonymous": "Este dilema no lo votas. Adivina cómo se repartirán los demás; nadie verá tu predicción."
+  },
   "predict": {
     "voted": "Votaste «",
     "votedEnd": "»",
@@ -81,7 +87,8 @@
     "missing_one": "Falta {{count}} respuesta",
     "missing_many": "Faltan {{count, number}} respuestas",
     "missing_other": "Faltan {{count, number}} respuestas",
-    "next": "Listo"
+    "next": "Listo",
+    "aboutYouQuestion": "¿Qué elegirá cada uno?"
   },
   "distribution": {
     "question": "¿Cómo se repartirá el grupo?",
@@ -89,7 +96,10 @@
     "hintTwo": "Contándote a ti. Mueve la barra y las dos opciones se ajustan solas: siempre suman el 100 %.",
     "yourVote": "tu voto",
     "shareOf": "Porcentaje que predices para {{option}}",
-    "percent": "{{value, number}}%"
+    "percent": "{{value, number}}%",
+    "aboutYouQuestion": "¿Cómo se repartirán los demás?",
+    "aboutYouHint": "Sin contarte a ti. Mueve una barra y las demás se ajustan solas: siempre suman el 100 %.",
+    "aboutYouHintTwo": "Sin contarte a ti. Mueve la barra y las dos opciones se ajustan solas: siempre suman el 100 %."
   },
   "gameMenu": {
     "open": "Más opciones",
@@ -153,7 +163,6 @@
     "region": "Reveal",
     "position": "Dilema {{position, number}} de {{total, number}} · Reveal",
     "chosenBy": "Lo eligió {{name}}",
-    "about": "Este dilema era sobre {{name}}",
     "yourHitsRegion": "Tus aciertos",
     "hitsAll": "¡Los leíste a todos!",
     "hitsCount": "Acertaste {{right, number}} de {{count, number}}",
@@ -196,7 +205,16 @@
     "introAnswered_many": "Habéis respondido {{count, number}} de {{total, number}}.",
     "introAnswered_other": "Habéis respondido {{count, number}} de {{total, number}}.",
     "introNominal": "Ahora sí: vais a ver qué ha votado cada uno.",
-    "introAnonymous": "Ahora sí: vais a ver cuántos eligieron cada opción."
+    "introAnonymous": "Ahora sí: vais a ver cuántos eligieron cada opción.",
+    "aboutTitle": "Iba sobre {{name}}",
+    "aboutYouTitle": "Iba sobre ti",
+    "aboutNominal": "No votó: adivinó qué haría cada uno",
+    "aboutYouNominal": "No votaste: adivinaste qué haría cada uno. Todos ven cuántos acertaste.",
+    "aboutAnonymous": "No votó: predijo cómo os repartiríais. Su predicción y sus puntos son privados.",
+    "aboutYouAnonymous": "No votaste: predijiste cómo se repartirían los demás. Tu predicción y tus puntos solo los ves tú.",
+    "aboutHits": "{{right, number}} de {{of, number}}",
+    "aboutHitsLabel": "acertó",
+    "aboutYouHitsLabel": "acertaste"
   },
   "ranking": {
     "label": "Resultados",
@@ -414,7 +432,10 @@
     "missing_one": "Falta {{count}} jugador para empezar",
     "missing_other": "Faltan {{count}} jugadores para empezar",
     "guestWait": "{{host}} empezará la partida cuando estéis todos.",
-    "missing_many": "Faltan {{count}} jugadores para empezar"
+    "missing_many": "Faltan {{count}} jugadores para empezar",
+    "gapWarningTitle": "Un dilema va sobre alguien del grupo.",
+    "gapWarningNominal": "En sala nominal necesita al menos {{minimum, number}} jugadores: si empezáis con menos, su ronda pasa a ser aleatoria.",
+    "gapWarningAnonymous": "En sala anónima necesita al menos {{minimum, number}} jugadores: si empezáis con menos, su ronda pasa a ser aleatoria."
   },
   "languages": {
     "es": "Español",

@@ -154,12 +154,16 @@ describe('httpRoomApi', () => {
       const avatar = { face: 'face-02', color: 'khaki' } as const;
 
       // Act
-      const joined = await apiWith(fetch).joinRoom('room-1', 'Luis', avatar);
+      const joined = await apiWith(fetch).joinRoom('room-1', 'Luis', avatar, ['dilemma-1']);
 
       // Assert
       expect(joined).toEqual({ playerId: 'player-2', joinedLate: true });
       expect(calls[0]?.url).toBe('https://realtime.example/rooms/room-1/players');
-      expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ nickname: 'Luis', avatar });
+      expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
+        nickname: 'Luis',
+        avatar,
+        playedDilemmaIds: ['dilemma-1'],
+      });
     });
   });
 

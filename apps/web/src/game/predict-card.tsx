@@ -4,6 +4,7 @@ import { type CSSProperties, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
+import { AboutYou } from './about-you.tsx';
 import { DilemmaText } from './dilemma-text.tsx';
 import styles from './predict-card.module.css';
 
@@ -17,7 +18,8 @@ export interface Predictions {
 
 interface PredictCardProps {
   readonly dilemma: Dilemma;
-  readonly vote: string;
+  /** None for the person in the gap, who predicts without voting, on this screen alone. */
+  readonly vote: string | null;
   readonly predictions: Predictions;
   /** The ones whose vote the player predicts, as the room says. */
   readonly playersToPredict: readonly string[];
@@ -26,7 +28,8 @@ interface PredictCardProps {
   readonly personInTheGap: string | undefined;
   readonly isSending: boolean;
   readonly onChange: (predictions: Predictions) => void;
-  readonly onBack: () => void;
+  /** Back to the vote; none for the person in the gap, who has none. */
+  readonly onBack: (() => void) | undefined;
   readonly onNext: () => void;
 }
 
@@ -39,7 +42,10 @@ export function missingPredictions(
   return playersToPredict.filter((playerId) => !predicted.has(playerId)).length;
 }
 
-/** «¿Qué votó cada uno?»: the vote of each of the other players. */
+/**
+ * «¿Qué votó cada uno?»: the vote of each of the other players; for the person in the gap, «¿Qué
+ * elegirá cada uno?», with the dilemma about them, since they have no vote to come from.
+ */
 export function PredictCard({
   dilemma,
   vote,
@@ -55,7 +61,7 @@ export function PredictCard({
   const { t } = useTranslation();
   const headingId = useId();
   const voted = dilemma.options.find(({ optionId }) => optionId === vote);
-  const votedColor = optionColor(dilemma.options.length, dilemma.options.indexOf(voted!));
+  const votedColor = voted && optionColor(dilemma.options.length, dilemma.options.indexOf(voted));
   const missing = missingPredictions(playersToPredict, predictions);
   const toPredict = playersToPredict.flatMap((playerId) => {
     const player = players.find((candidate) => candidate.playerId === playerId);
@@ -74,17 +80,25 @@ export function PredictCard({
   return (
     <>
       <main className={styles.main} tabIndex={0}>
-        <p className={styles.voted} style={{ '--option': votedColor } as CSSProperties}>
-          <Icon name="checkCircle" size={18} />
-          <span>
-            {t('predict.voted')}
-            <DilemmaText text={voted?.text ?? ''} personInTheGap={personInTheGap} />
-            {t('predict.votedEnd')}
-          </span>
-        </p>
+        {voted ? (
+          <p className={styles.voted} style={{ '--option': votedColor } as CSSProperties}>
+            <Icon name="checkCircle" size={18} />
+            <span>
+              {t('predict.voted')}
+              <DilemmaText text={voted.text} personInTheGap={personInTheGap} />
+              {t('predict.votedEnd')}
+            </span>
+          </p>
+        ) : (
+          <AboutYou
+            dilemma={dilemma}
+            personInTheGap={personInTheGap}
+            text={t('aboutYou.nominal')}
+          />
+        )}
         <section className={styles.section} aria-labelledby={headingId}>
           <h1 id={headingId} className={styles.heading}>
-            {t('predict.voteQuestion')}
+            {voted ? t('predict.voteQuestion') : t('predict.aboutYouQuestion')}
           </h1>
           <ul className={styles.players}>
             {toPredict.map((player) => (
@@ -104,14 +118,16 @@ export function PredictCard({
         </section>
       </main>
       <footer className={styles.footer}>
-        <button
-          type="button"
-          className={styles.back}
-          aria-label={t('predict.back')}
-          onClick={onBack}
-        >
-          <Icon name="arrowBack" size={22} />
-        </button>
+        {onBack && (
+          <button
+            type="button"
+            className={styles.back}
+            aria-label={t('predict.back')}
+            onClick={onBack}
+          >
+            <Icon name="arrowBack" size={22} />
+          </button>
+        )}
         <button
           type="button"
           className={styles.next}

@@ -215,6 +215,24 @@
   gap: var(--space-2);
 }
 
+/* A dilemma about someone in the group in a room without the players it needs. */
+.gapWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1.5px var(--color-ink);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.gapWarningTitle {
+  font-weight: 600;
+}
+
 /* The rounds in order, on one card, a line between each row. */
 .roundList {
   margin: 0;

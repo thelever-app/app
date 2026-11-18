@@ -1,0 +1,41 @@
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The person in the gap is told it is about them, before the dilemma, in the dark of the ink. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 14px var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-primary);
+}
+
+.title {
+  composes: titleSmall from '../styles/typography.module.css';
+  margin: 0;
+}
+
+.text {
+  margin: 0;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 400;
+  color: color-mix(in srgb, var(--color-bg) 88%, var(--color-ink));
+}
+
+.dilemma {
+  composes: dilemmaReveal from '../styles/typography.module.css';
+  margin: 0;
+}

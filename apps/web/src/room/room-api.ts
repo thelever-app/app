@@ -40,7 +40,13 @@ export interface RoomApi {
     optionId: string,
     prediction: number,
   ): Promise<WorldResultResponseDto>;
-  joinRoom(roomId: string, nickname: string, avatar: AvatarDto): Promise<JoinRoomResponseDto>;
+  /** With the dilemmas the device says its player played, which the room puts its games together with. */
+  joinRoom(
+    roomId: string,
+    nickname: string,
+    avatar: AvatarDto,
+    playedDilemmaIds: readonly string[],
+  ): Promise<JoinRoomResponseDto>;
   /** A page of the search: the first one, or the one after the `next` of the page before. */
   searchDilemmas(
     roomId: string,
@@ -132,10 +138,11 @@ export function httpRoomApi({
         WorldResultResponseDto,
       );
     },
-    joinRoom: (roomId, nickname, avatar) =>
+    joinRoom: (roomId, nickname, avatar, playedDilemmaIds) =>
       call('POST', `/rooms/${encodeURIComponent(roomId)}/players`, JoinRoomResponseDto, {
         nickname,
         avatar,
+        playedDilemmaIds,
       }),
     searchDilemmas: async (roomId, { category, q, after }) => {
       const query = new URLSearchParams();

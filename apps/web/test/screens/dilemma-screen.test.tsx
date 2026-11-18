@@ -180,4 +180,100 @@ describe('DilemmaScreen', () => {
     // Assert
     expect(option('Opción 1C').parentElement?.getAttribute('data-layout')).toBe('list');
   });
+
+  describe('for the person in the gap', () => {
+    /** The first dilemma is about Ana, who uses the screen; she predicts Luis and Marta. */
+    function aboutAna(game: GameStateDto = aGame()): GameStateDto {
+      const [first, ...rest] = game.dilemmas;
+      return {
+        ...game,
+        dilemmas: [
+          { ...first!, text: 'Le mientes a {gap}', personInTheGap: 'test-ana-id' },
+          ...rest,
+        ],
+        playersToPredict: ['test-luis-id', 'test-marta-id'],
+        players: [
+          ...game.players,
+          {
+            playerId: 'test-marta-id',
+            nickname: 'Marta',
+            avatar: { face: 'face-03', color: 'olive' },
+            answered: game.players[0]!.answered,
+            connected: true,
+            left: false,
+          },
+        ],
+      };
+    }
+
+    it('should tell them it is about them, without a vote, with the menu and who has answered', async () => {
+      // Act
+      const { t } = await renderScreen(aboutAna());
+
+      // Assert
+      expect(screen.getByText(t('aboutYou.title'))).toBeDefined();
+      expect(screen.getByText(t('aboutYou.nominal'))).toBeDefined();
+      expect(screen.getByRole('heading', { name: t('predict.aboutYouQuestion') })).toBeDefined();
+      expect(screen.queryByRole('button', { name: t('dilemma.continue') })).toBeNull();
+      expect(screen.queryByRole('button', { name: t('predict.back') })).toBeNull();
+      expect(screen.getByRole('button', { name: t('gameMenu.open') })).toBeDefined();
+      expect(screen.getByRole('button', { name: t('progressStrip.showAll') })).toBeDefined();
+      expect(
+        screen.getByText(t('progressStrip.aboutYou', { position: 1, total: 3 })),
+      ).toBeDefined();
+    });
+
+    it('should answer with every prediction and no vote', async () => {
+      // Arrange
+      const { onAnswer, onDone, t } = await renderScreen(aboutAna());
+      fireEvent.click(
+        screen
+          .getByRole('radiogroup', { name: t('predict.voteOf', { name: 'Luis' }) })
+          .querySelector('[role="radio"]')!,
+      );
+      fireEvent.click(
+        screen
+          .getByRole('radiogroup', { name: t('predict.voteOf', { name: 'Marta' }) })
+          .querySelector('[role="radio"]')!,
+      );
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('predict.next') }));
+
+      // Assert
+      expect(onAnswer).toHaveBeenCalledWith({
+        dilemmaId: 'test-dilemma-1',
+        vote: null,
+        votePredictions: [
+          { playerId: 'test-luis-id', vote: 'test-option-1a' },
+          { playerId: 'test-marta-id', vote: 'test-option-1a' },
+        ],
+      });
+      expect(onDone).toHaveBeenCalledOnce();
+    });
+
+    it('should predict the distribution of the others without a vote in an anonymous room', async () => {
+      // Arrange
+      const { onAnswer, t } = await renderScreen({ ...aboutAna(ANONYMOUS), playersToPredict: [] });
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('predict.next') }));
+
+      // Assert
+      expect(screen.getByText(t('aboutYou.anonymous'))).toBeDefined();
+      expect(
+        screen.getByRole('heading', { name: t('distribution.aboutYouQuestion') }),
+      ).toBeDefined();
+      expect(screen.queryByText(t('distribution.yourVote'))).toBeNull();
+      expect(onAnswer).toHaveBeenCalledWith({
+        dilemmaId: 'test-dilemma-1',
+        vote: null,
+        distributionPrediction: [
+          { optionId: 'test-option-1a', share: 50 },
+          { optionId: 'test-option-1b', share: 50 },
+        ],
+        ready: true,
+      });
+    });
+  });
 });

@@ -50,7 +50,8 @@ function samePredictions(a: Predictions, b: Predictions): boolean {
  * «Continuar», so it counts even if the time runs out while predicting. The vote predictions go
  * when the player leaves their step, with «Listo» or back to the vote, never with each tap; the
  * distribution prediction, each time the player lets go of a bar, so the one on the screen counts
- * if the time runs out; «Listo» says it is done.
+ * if the time runs out; «Listo» says it is done. The person in the gap does not vote: they only
+ * have the step of the predictions, with the menu and who has answered, as the vote has them.
  */
 export function DilemmaScreen({
   game,
@@ -69,10 +70,15 @@ export function DilemmaScreen({
   const saved = game.answers.find((answer) => answer.dilemmaId === dilemmaId);
   const anonymous = isAnonymous(game);
   const person = personInTheGapOf(game, dilemma);
+  const aboutYou = dilemma.personInTheGap === game.playerId;
   const total = game.dilemmas.length;
 
-  const [step, setStep] = useState<'vote' | 'predict'>('vote');
-  const [vote, setVote] = useState(saved?.vote);
+  const [step, setStep] = useState<'vote' | 'predict'>(aboutYou ? 'predict' : 'vote');
+  const [vote, setVote] = useState(saved?.vote ?? undefined);
+  // What the predictions go with: the vote, or none for the person in the gap.
+  const answerVote = aboutYou ? null : (vote ?? '');
+  const backToTheVote = aboutYou ? undefined : () => setStep('vote');
+  const withTheGroup = step === 'vote' || aboutYou;
   const [predictions, setPredictions] = useState<Predictions>(saved ?? NO_PREDICTIONS);
   // Where the room starts it too: the even split, in the order the player sees the options.
   const [distribution, setDistribution] = useState<readonly PredictedShare[]>(
@@ -113,15 +119,17 @@ export function DilemmaScreen({
       <ProgressStrip
         game={game}
         label={t(
-          step === 'vote'
-            ? 'progressStrip.position'
-            : anonymous
-              ? 'progressStrip.predictingDistribution'
-              : 'progressStrip.predicting',
+          aboutYou
+            ? 'progressStrip.aboutYou'
+            : step === 'vote'
+              ? 'progressStrip.position'
+              : anonymous
+                ? 'progressStrip.predictingDistribution'
+                : 'progressStrip.predicting',
           { position: position + 1, total },
         )}
-        menu={step === 'vote' ? menu : undefined}
-        showGroup={step === 'vote'}
+        menu={withTheGroup ? menu : undefined}
+        showGroup={withTheGroup}
       />
       {step === 'vote' ? (
         <DilemmaCard
@@ -149,20 +157,20 @@ export function DilemmaScreen({
       ) : anonymous ? (
         <DistributionPredictCard
           dilemma={dilemma}
-          vote={vote ?? ''}
+          vote={answerVote}
           prediction={distribution}
           personInTheGap={person}
           isSending={isSending}
           onChange={setDistribution}
           onRelease={(released) => {
             setDistribution(released);
-            onAnswer({ dilemmaId, vote: vote ?? '', distributionPrediction: [...released] });
+            onAnswer({ dilemmaId, vote: answerVote, distributionPrediction: [...released] });
           }}
-          onBack={() => setStep('vote')}
+          onBack={backToTheVote}
           onReady={() =>
             confirm({
               dilemmaId,
-              vote: vote ?? '',
+              vote: answerVote,
               distributionPrediction: [...distribution],
               ready: true,
             })
@@ -171,27 +179,30 @@ export function DilemmaScreen({
       ) : (
         <PredictCard
           dilemma={dilemma}
-          vote={vote ?? ''}
+          vote={answerVote}
           predictions={predictions}
           playersToPredict={game.playersToPredict}
           players={game.players}
           personInTheGap={person}
           isSending={isSending}
           onChange={setPredictions}
-          onBack={() => {
-            if (!samePredictions(predictions, saved ?? NO_PREDICTIONS)) {
-              onAnswer({
-                dilemmaId,
-                vote: vote ?? '',
-                votePredictions: [...predictions.votePredictions],
-              });
-            }
-            setStep('vote');
-          }}
+          onBack={
+            backToTheVote &&
+            (() => {
+              if (!samePredictions(predictions, saved ?? NO_PREDICTIONS)) {
+                onAnswer({
+                  dilemmaId,
+                  vote: answerVote,
+                  votePredictions: [...predictions.votePredictions],
+                });
+              }
+              backToTheVote();
+            })
+          }
           onNext={() =>
             confirm({
               dilemmaId,
-              vote: vote ?? '',
+              vote: answerVote,
               votePredictions: [...predictions.votePredictions],
             })
           }

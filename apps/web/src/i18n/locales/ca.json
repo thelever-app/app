@@ -39,7 +39,8 @@
     "playerPending": "{{name}} · encara no ha respost",
     "playerDisconnected": "{{name}} (desconnectat)",
     "movedOn": "{{name}} ha passat al següent",
-    "playerMovedOn": "{{label}} · ha passat al següent"
+    "playerMovedOn": "{{label}} · ha passat al següent",
+    "aboutYou": "Dilema {{position, number}} de {{total, number}} · Va sobre tu"
   },
   "groupSheet": {
     "title": "El grup",
@@ -72,6 +73,11 @@
   "game": {
     "timeLeft": "Queden {{time}}"
   },
+  "aboutYou": {
+    "title": "Va sobre tu: què faran amb tu?",
+    "nominal": "Aquest dilema no el votes. Endevina què triarà cadascú: al reveal tothom veurà quants n’has encertat.",
+    "anonymous": "Aquest dilema no el votes. Endevina com es repartiran els altres; ningú no veurà la teva predicció."
+  },
   "predict": {
     "voted": "Has votat «",
     "votedEnd": "»",
@@ -81,7 +87,8 @@
     "missing_one": "Falta {{count}} resposta",
     "missing_many": "Falten {{count, number}} respostes",
     "missing_other": "Falten {{count, number}} respostes",
-    "next": "Fet"
+    "next": "Fet",
+    "aboutYouQuestion": "Què triarà cadascú?"
   },
   "distribution": {
     "question": "Com es repartirà el grup?",
@@ -89,7 +96,10 @@
     "hintTwo": "Comptant-te a tu. Mou la barra i les dues opcions s’ajusten soles: sempre sumen el 100 %.",
     "yourVote": "el teu vot",
     "shareOf": "Percentatge que predius per a {{option}}",
-    "percent": "{{value, number}} %"
+    "percent": "{{value, number}} %",
+    "aboutYouQuestion": "Com es repartiran els altres?",
+    "aboutYouHint": "Sense comptar-te a tu. Mou una barra i les altres s’ajusten soles: sempre sumen el 100 %.",
+    "aboutYouHintTwo": "Sense comptar-te a tu. Mou la barra i les dues opcions s’ajusten soles: sempre sumen el 100 %."
   },
   "gameMenu": {
     "open": "Més opcions",
@@ -153,7 +163,6 @@
     "region": "Revelació",
     "position": "Dilema {{position, number}} de {{total, number}} · Revelació",
     "chosenBy": "L’ha triat {{name}}",
-    "about": "Aquest dilema era sobre {{name}}",
     "yourHitsRegion": "Els teus encerts",
     "hitsAll": "Els has calat a tots!",
     "hitsCount": "N’has encertat {{right, number}} de {{count, number}}",
@@ -196,7 +205,16 @@
     "introAnswered_many": "Heu respost {{count, number}} de {{total, number}}.",
     "introAnswered_other": "Heu respost {{count, number}} de {{total, number}}.",
     "introNominal": "Ara sí: veureu què ha votat cadascú.",
-    "introAnonymous": "Ara sí: veureu quants han triat cada opció."
+    "introAnonymous": "Ara sí: veureu quants han triat cada opció.",
+    "aboutTitle": "Anava sobre {{name}}",
+    "aboutYouTitle": "Anava sobre tu",
+    "aboutNominal": "No ha votat: ha endevinat què faria cadascú",
+    "aboutYouNominal": "No has votat: has endevinat què faria cadascú. Tothom veu quants n’has encertat.",
+    "aboutAnonymous": "No ha votat: ha predit com us repartiríeu. La seva predicció i els seus punts són privats.",
+    "aboutYouAnonymous": "No has votat: has predit com es repartirien els altres. La teva predicció i els teus punts només els veus tu.",
+    "aboutHits": "{{right, number}} de {{of, number}}",
+    "aboutHitsLabel": "encerts",
+    "aboutYouHitsLabel": "encerts"
   },
   "ranking": {
     "label": "Resultats",
@@ -414,7 +432,10 @@
     "missing_one": "Falta {{count}} jugador per començar",
     "missing_other": "Falten {{count}} jugadors per començar",
     "guestWait": "{{host}} començarà la partida quan hi sigueu tots.",
-    "missing_many": "Falten {{count}} jugadors per començar"
+    "missing_many": "Falten {{count}} jugadors per començar",
+    "gapWarningTitle": "Un dilema va sobre algú del grup.",
+    "gapWarningNominal": "En sala nominal necessita com a mínim {{minimum, number}} jugadors: si comenceu amb menys, la seva ronda passa a ser aleatòria.",
+    "gapWarningAnonymous": "En sala anònima necessita com a mínim {{minimum, number}} jugadors: si comenceu amb menys, la seva ronda passa a ser aleatòria."
   },
   "languages": {
     "es": "Español",

@@ -247,7 +247,7 @@ describe('RoomSettingsSheet', () => {
       {
         roundId: 3,
         origin: 'players',
-        dilemma: { dilemmaId: 'test-dilemma-1', text: 'TestText1' },
+        dilemma: { dilemmaId: 'test-dilemma-1', text: 'TestText1', hasGap: false },
         chosenByYou: false,
       },
     ];
@@ -321,7 +321,7 @@ describe('RoomSettingsSheet', () => {
       {
         roundId: 1,
         origin: 'specific',
-        dilemma: { dilemmaId: 'test-dilemma-1', text: 'TestText1' },
+        dilemma: { dilemmaId: 'test-dilemma-1', text: 'TestText1', hasGap: false },
       },
       ...DEFAULT_ROUNDS.slice(1, 2),
     ];
@@ -350,7 +350,7 @@ describe('RoomSettingsSheet', () => {
       {
         roundId: 2,
         origin: 'players',
-        dilemma: { dilemmaId: 'test-dilemma-1', text: 'La cartera encontrada' },
+        dilemma: { dilemmaId: 'test-dilemma-1', text: 'La cartera encontrada', hasGap: false },
         chosenByYou: false,
       },
       ...DEFAULT_ROUNDS.slice(2, 3),

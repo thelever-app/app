@@ -33,7 +33,8 @@
     "playerPending": "{{name}} · hasn't answered yet",
     "playerDisconnected": "{{name}} (disconnected)",
     "movedOn": "{{name}} moved on",
-    "playerMovedOn": "{{label}} · moved on"
+    "playerMovedOn": "{{label}} · moved on",
+    "aboutYou": "Dilemma {{position, number}} of {{total, number}} · About you"
   },
   "groupSheet": {
     "title": "The group",
@@ -63,6 +64,11 @@
   "game": {
     "timeLeft": "{{time}} left"
   },
+  "aboutYou": {
+    "title": "It’s about you: what will they do with you?",
+    "nominal": "You don’t vote this dilemma. Guess what each person will choose: in the reveal everyone will see how many you got right.",
+    "anonymous": "You don’t vote this dilemma. Guess how the others will split; nobody will see your prediction."
+  },
   "predict": {
     "voted": "You voted “",
     "votedEnd": "”",
@@ -71,7 +77,8 @@
     "back": "Back to your vote",
     "missing_one": "{{count}} answer to go",
     "missing_other": "{{count, number}} answers to go",
-    "next": "Done"
+    "next": "Done",
+    "aboutYouQuestion": "What will each person choose?"
   },
   "distribution": {
     "question": "How will the group split?",
@@ -79,7 +86,10 @@
     "hintTwo": "Counting you. Move the bar and both options adjust by themselves: they always add up to 100%.",
     "yourVote": "your vote",
     "shareOf": "Share you predict for {{option}}",
-    "percent": "{{value, number}}%"
+    "percent": "{{value, number}}%",
+    "aboutYouQuestion": "How will the others split?",
+    "aboutYouHint": "Not counting you. Move a bar and the others adjust by themselves: they always add up to 100%.",
+    "aboutYouHintTwo": "Not counting you. Move the bar and both options adjust by themselves: they always add up to 100%."
   },
   "gameMenu": {
     "open": "More options",
@@ -142,7 +152,6 @@
     "region": "Reveal",
     "position": "Dilemma {{position, number}} of {{total, number}} · Reveal",
     "chosenBy": "Chosen by {{name}}",
-    "about": "This dilemma was about {{name}}",
     "yourHitsRegion": "Your guesses",
     "hitsAll": "You read them all!",
     "hitsCount": "You got {{right, number}} of {{count, number}} right",
@@ -180,7 +189,16 @@
     "introAnswered_one": "{{count}} of {{total, number}} answered.",
     "introAnswered_other": "{{count, number}} of {{total, number}} of you answered.",
     "introNominal": "Here it comes: you're about to see what each person voted.",
-    "introAnonymous": "Here it comes: you're about to see how many picked each option."
+    "introAnonymous": "Here it comes: you're about to see how many picked each option.",
+    "aboutTitle": "It was about {{name}}",
+    "aboutYouTitle": "It was about you",
+    "aboutNominal": "Didn’t vote: guessed what each person would do",
+    "aboutYouNominal": "You didn’t vote: you guessed what each person would do. Everyone sees how many you got right.",
+    "aboutAnonymous": "Didn’t vote: predicted how you would split. Their prediction and points are private.",
+    "aboutYouAnonymous": "You didn’t vote: you predicted how the others would split. Only you see your prediction and your points.",
+    "aboutHits": "{{right, number}} of {{of, number}}",
+    "aboutHitsLabel": "right",
+    "aboutYouHitsLabel": "right"
   },
   "ranking": {
     "label": "Results",
@@ -391,7 +409,10 @@
     "start": "Start the game",
     "missing_one": "{{count}} more player needed to start",
     "missing_other": "{{count}} more players needed to start",
-    "guestWait": "{{host}} will start the game when you're all here."
+    "guestWait": "{{host}} will start the game when you're all here.",
+    "gapWarningTitle": "A dilemma is about someone in the group.",
+    "gapWarningNominal": "In a nominal room it needs at least {{minimum, number}} players: if you start with fewer, its round becomes random.",
+    "gapWarningAnonymous": "In an anonymous room it needs at least {{minimum, number}} players: if you start with fewer, its round becomes random."
   },
   "languages": {
     "es": "Español",
