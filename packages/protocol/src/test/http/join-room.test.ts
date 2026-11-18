@@ -9,6 +9,21 @@ describe('JoinRoomRequestDto', () => {
     expect(JoinRoomRequestDto.parse(request)).toEqual(request);
   });
 
+  it('should accept the dilemmas the device says the player played, up to the most it takes', () => {
+    // Arrange
+    const played = Array.from({ length: 2000 }, (_, index) => `dilemma-${index}`);
+
+    // Act & Assert
+    expect(JoinRoomRequestDto.parse({ ...request, playedDilemmaIds: played })).toEqual({
+      ...request,
+      playedDilemmaIds: played,
+    });
+    const tooMany = [...played, 'dilemma-2000'];
+    expect(JoinRoomRequestDto.safeParse({ ...request, playedDilemmaIds: tooMany }).success).toBe(
+      false,
+    );
+  });
+
   it('should reject an empty nickname, a missing avatar or one outside the closed list', () => {
     // Act & Assert
     expect(JoinRoomRequestDto.safeParse({ ...request, nickname: '' }).success).toBe(false);

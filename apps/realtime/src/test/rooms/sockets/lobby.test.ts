@@ -185,7 +185,7 @@ describe('the lobby over the room sockets', () => {
     expect(seenByAna.rounds[1]).toEqual({
       roundId: 2,
       origin: 'players',
-      dilemma: { dilemmaId: 'seed-trolley', text: expect.any(String) },
+      dilemma: { dilemmaId: 'seed-trolley', text: expect.any(String), hasGap: false },
       chosenByYou: false,
     });
     expect(seenByLuis.rounds[1]).toMatchObject({ chosenByYou: true });

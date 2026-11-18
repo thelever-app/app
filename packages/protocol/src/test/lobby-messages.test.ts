@@ -22,14 +22,14 @@ const rounds = [
   {
     roundId: 1,
     origin: 'specific',
-    dilemma: { dilemmaId: 'dilemma-1', text: 'Text of the first dilemma' },
+    dilemma: { dilemmaId: 'dilemma-1', text: 'Text of the first dilemma', hasGap: false },
   },
   { roundId: 2, origin: 'random', categories: ['life-and-death', 'honesty'] },
   { roundId: 5, origin: 'random', categories: null },
   {
     roundId: 3,
     origin: 'players',
-    dilemma: { dilemmaId: 'dilemma-2', text: 'Text of the second dilemma' },
+    dilemma: { dilemmaId: 'dilemma-2', text: 'Text of the second dilemma', hasGap: true },
     chosenByYou: true,
   },
   { roundId: 4, origin: 'players', dilemma: null, chosenByYou: false },
@@ -47,6 +47,7 @@ const roomState = {
   settings,
   rounds,
   minimumPlayers: 2,
+  minimumPlayersForTheGap: 3,
   players: [
     {
       playerId: 'player-1',

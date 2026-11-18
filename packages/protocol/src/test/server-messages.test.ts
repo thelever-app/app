@@ -43,6 +43,7 @@ const gameState = {
     ],
     votePredictions: [{ playerId: 'player-2', aboutId: 'player-1', vote: 'option-2', right: true }],
     personInTheGap: null,
+    personInTheGapHits: null,
     chosenBy: null,
     yourDistributionPrediction: null,
     yourPoints: 50,

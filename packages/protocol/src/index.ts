@@ -48,6 +48,8 @@ export {
   ReportDilemmaDto,
   SkipDilemmaDto,
   GAP_MARKER,
+  MAXIMUM_PLAYED_DILEMMAS,
+  PlayedDilemmaIdsDto,
   TraceparentDto,
 } from './client-messages.ts';
 export { CreateRoomRequestDto, CreateRoomResponseDto } from './http/create-room.ts';
