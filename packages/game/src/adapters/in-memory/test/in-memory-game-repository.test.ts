@@ -7,10 +7,11 @@ import { describeGameRepositoryContract } from '../../test/game-repository.contr
 describeGameRepositoryContract('InMemoryGameRepository', async () => ({
   games: new InMemoryGameRepository(),
   rooms: new InMemoryRoomRepository(),
-  dilemmas: CONTRACT_DILEMMAS.map(({ text, options }, index) => ({
+  dilemmas: CONTRACT_DILEMMAS.map(({ text, options, fixedOrder }, index) => ({
     dilemmaId: `TestDilemma${index + 1}`,
     version: 1,
     optionIds: options.map((_, optionIndex) => `TestDilemma${index + 1}Option${optionIndex + 1}`),
     hasGap: text.includes(GAP_MARKER),
+    fixedOrder,
   })),
 }));

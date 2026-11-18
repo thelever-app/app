@@ -30,6 +30,7 @@ const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId
   version: index + 1,
   optionIds: OPTION_IDS,
   hasGap: false,
+  fixedOrder: false,
   origin: 'random' as const,
   chosenBy: null,
 }));
@@ -145,6 +146,7 @@ describe('Game', () => {
         version: 1,
         optionIds: OPTION_IDS,
         hasGap: false,
+        fixedOrder: false,
         origin: 'specific',
         chosenBy: null,
       });
@@ -339,7 +341,7 @@ describe('Game', () => {
       expect(game.progressOf(luis.id)).toBe(1);
     });
 
-    it('should keep the seal of the answer, and that the voter was not the person in the gap', () => {
+    it('should keep the seal of the answer', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
 
@@ -348,7 +350,7 @@ describe('Game', () => {
 
       // Assert
       expect(game.toSnapshot().players[1]?.answers).toMatchObject([
-        { dilemmaId: 'TestDilemma1', vote: 'TestOption', seal: SEAL, voterInTheGap: false },
+        { dilemmaId: 'TestDilemma1', vote: 'TestOption', seal: SEAL },
       ]);
     });
 
@@ -598,7 +600,6 @@ describe('Game', () => {
                 optionOrder: OPTION_IDS,
                 responseTimeMs: 40_000,
                 seal: SEAL,
-                voterInTheGap: false,
               },
             ],
             didNotVote: [],
@@ -680,6 +681,7 @@ describe('Game', () => {
                 version: 1,
                 optionIds: [],
                 hasGap: false,
+                fixedOrder: false,
                 origin: 'specific',
                 chosenBy: null,
               },
@@ -704,6 +706,7 @@ describe('Game', () => {
                   version,
                   optionIds: OPTION_IDS,
                   hasGap: false,
+                  fixedOrder: false,
                   origin: 'specific',
                   chosenBy: null,
                 },
@@ -727,6 +730,7 @@ describe('Game', () => {
               version: 1,
               optionIds: OPTION_IDS,
               hasGap: false,
+              fixedOrder: false,
               origin: 'specific' as const,
               chosenBy: null,
             })),

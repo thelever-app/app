@@ -41,9 +41,12 @@ export async function findRoundDilemmas(
     // One page with all of them: no more than were asked for.
     { size: dilemmaIds.length },
   );
-  return found.map(({ dilemmaId, minimumAge, compromising }) => ({
+  return found.map(({ dilemmaId, type, scale, minimumAge, hasGap, compromising }) => ({
     dilemmaId,
+    type,
+    scale,
     minimumAge,
+    hasGap,
     compromising,
   }));
 }

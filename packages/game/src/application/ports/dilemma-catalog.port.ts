@@ -1,5 +1,6 @@
 import type { GameDilemma } from '../../domain/entities/game.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
+import type { CandidateDilemma, DilemmaType, Scale } from '../../domain/vos/classification.vo.ts';
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a dilemma
@@ -27,6 +28,10 @@ export interface CatalogDilemma {
   readonly optionCount: number;
   /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
   readonly compromising: boolean;
+  readonly type: DilemmaType;
+  readonly scale: Scale;
+  /** Whether a player of the room takes the place of "someone in the group" in it. */
+  readonly hasGap: boolean;
 }
 
 /** Which dilemmas to look for; every criterion given must hold. */
@@ -46,8 +51,17 @@ export interface DilemmaSearch {
   readonly includeCompromising: boolean;
 }
 
-/** The criteria a game is put together with: no text, no ids. */
-export type CandidateSearch = Omit<DilemmaSearch, 'text' | 'dilemmaIds'>;
+/** The criteria a game is put together with: no text, no ids, and how many it draws. */
+export interface CandidateSearch extends Omit<DilemmaSearch, 'text' | 'dilemmaIds'> {
+  /** At most how many are drawn. */
+  readonly count: number;
+  /** Whether those with the gap are drawn too: only for a room with the players it needs. */
+  readonly includeGap: boolean;
+  /** Never drawn: the dilemmas the game already plays. */
+  readonly excludedIds: readonly string[];
+  /** Drawn only after every other: the dilemmas someone in the room played. */
+  readonly playedIds: readonly string[];
+}
 
 /** Which page of a search: the first one, or the one after the `next` of the page before. */
 export interface SearchPage {
@@ -68,7 +82,7 @@ export interface CatalogPage {
 export interface DilemmaCatalog {
   /**
    * The structure the rules of the game need: the current version of each dilemma, the ids of its
-   * options and whether its text or an option has the gap.
+   * options, whether its text or an option has the gap and whether its options keep their order.
    */
   findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]>;
   /**
@@ -80,8 +94,12 @@ export interface DilemmaCatalog {
     dilemmas: readonly { readonly dilemmaId: string; readonly version: number }[],
     language: string,
   ): Promise<readonly DilemmaContent[]>;
-  /** The ids of every public dilemma that matches, at its current version, for a game to draw from. */
-  findCandidateIds(criteria: CandidateSearch): Promise<readonly string[]>;
+  /**
+   * At most `count` of the public dilemmas that match, at their current version, drawn at random
+   * and those nobody played before the others, for a game to draw from: each with its id, what
+   * spacing it needs and whether it has the gap.
+   */
+  findCandidates(criteria: CandidateSearch): Promise<readonly CandidateDilemma[]>;
   /**
    * A page of the public dilemmas that match, at their current version, the best matches of a
    * text first. A `next` that does not come from that search throws InvalidPageError.

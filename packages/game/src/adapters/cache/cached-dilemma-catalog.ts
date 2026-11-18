@@ -7,6 +7,7 @@ import type {
   SearchPage,
 } from '../../application/ports/dilemma-catalog.port.ts';
 import type { GameDilemma } from '../../domain/entities/game.ts';
+import type { CandidateDilemma } from '../../domain/vos/classification.vo.ts';
 
 /** How many contents an instance keeps by default. */
 const MAX_CONTENTS = 5000;
@@ -33,8 +34,8 @@ export class CachedDilemmaCatalog implements DilemmaCatalog {
   }
 
   /** A search looks at the current versions, which change: it always asks the catalog. */
-  findCandidateIds(criteria: CandidateSearch): Promise<readonly string[]> {
-    return this.#catalog.findCandidateIds(criteria);
+  findCandidates(criteria: CandidateSearch): Promise<readonly CandidateDilemma[]> {
+    return this.#catalog.findCandidates(criteria);
   }
 
   search(criteria: DilemmaSearch, page: SearchPage): Promise<CatalogPage> {

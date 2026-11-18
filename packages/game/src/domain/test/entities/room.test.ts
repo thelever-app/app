@@ -72,14 +72,38 @@ function lobbyOfThree(): Room {
   return room;
 }
 
-const FOR_EVERYONE = { dilemmaId: 'TestDilemma', minimumAge: 16, compromising: false } as const;
-const FOR_ADULTS = { dilemmaId: 'TestAdultDilemma', minimumAge: 18, compromising: false } as const;
+const FOR_EVERYONE = {
+  dilemmaId: 'TestDilemma',
+  type: 'standard',
+  scale: 'everyday',
+  minimumAge: 16,
+  hasGap: false,
+  compromising: false,
+} as const;
+const FOR_ADULTS = {
+  dilemmaId: 'TestAdultDilemma',
+  type: 'standard',
+  scale: 'everyday',
+  minimumAge: 18,
+  hasGap: false,
+  compromising: false,
+} as const;
 const COMPROMISING = {
   dilemmaId: 'TestCompromisingDilemma',
+  type: 'standard',
+  scale: 'everyday',
+  hasGap: false,
   minimumAge: 16,
   compromising: true,
 } as const;
-const ANOTHER = { dilemmaId: 'TestAnotherDilemma', minimumAge: 16, compromising: false } as const;
+const ANOTHER = {
+  dilemmaId: 'TestAnotherDilemma',
+  type: 'standard',
+  scale: 'everyday',
+  minimumAge: 16,
+  hasGap: false,
+  compromising: false,
+} as const;
 
 /**
  * Ana's lobby of three with a random round 1, round 2 for the players and FOR_EVERYONE in round 3,
@@ -105,7 +129,10 @@ function lobbyWithAPlayersRound(): Room {
 /** Ana creates the room from the public page of a dilemma, which its first round plays. */
 function roomStartingWith(firstRoundDilemma: {
   readonly dilemmaId: string;
+  readonly type: 'standard';
+  readonly scale: 'everyday';
   readonly minimumAge: 16 | 18;
+  readonly hasGap: false;
   readonly compromising: boolean;
 }): Room {
   return Room.create(
@@ -817,6 +844,76 @@ describe('Room', () => {
       // Assert
       expect(nominal).toBe(2);
       expect(room.minimumPlayers).toBe(3);
+    });
+  });
+
+  describe('playsTheGap', () => {
+    it.each([
+      ['nominal', 2, false],
+      ['nominal', 3, true],
+      ['anonymous', 3, false],
+      ['anonymous', 4, true],
+    ] as const)(
+      'should tell whether a %s room of %i players plays the dilemmas with the gap: %s',
+      (variant, players, plays) => {
+        // Arrange
+        const room = roomHostedByAna();
+        room.changeSettings('TestHostId', { variant });
+        for (const [index, nickname] of ['Luis', 'Marta', 'Sara'].slice(0, players - 1).entries()) {
+          join(room, `Test${nickname}${index}Id`, nickname);
+        }
+
+        // Act & Assert
+        expect(room.minimumPlayersForTheGap).toBe(variant === 'nominal' ? 3 : 4);
+        expect(room.playsTheGap).toBe(plays);
+      },
+    );
+  });
+
+  describe('playedBy', () => {
+    it('should count how many players of the room played each dilemma, with what each device said last', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.join(
+        {
+          nickname: 'Luis',
+          identity: 'TestLuisIdentity',
+          avatar: new AvatarVO('face-02', 'khaki'),
+          playedDilemmaIds: ['TestDilemma1', 'TestDilemma1', 'TestDilemma2'],
+        },
+        new FixedIdGenerator('TestLuisId'),
+        NOW,
+      );
+      room.join(
+        {
+          nickname: 'Marta',
+          identity: 'TestMartaIdentity',
+          avatar: new AvatarVO('face-03', 'khaki'),
+          playedDilemmaIds: ['TestDilemma1'],
+        },
+        new FixedIdGenerator('TestMartaId'),
+        NOW,
+      );
+
+      // Act
+      room.join(
+        {
+          nickname: 'Luis',
+          identity: 'TestLuisIdentity',
+          avatar: new AvatarVO('face-02', 'khaki'),
+          playedDilemmaIds: ['TestDilemma1', 'TestDilemma3'],
+        },
+        new FixedIdGenerator('TestUnusedId'),
+        NOW,
+      );
+
+      // Assert
+      expect(room.playedBy).toEqual(
+        new Map([
+          ['TestDilemma1', 2],
+          ['TestDilemma3', 1],
+        ]),
+      );
     });
   });
 

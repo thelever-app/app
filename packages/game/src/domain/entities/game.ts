@@ -17,9 +17,11 @@ import { NoNextRoundError } from '../errors/no-next-round.error.ts';
 import { OptionNotInDilemmaError } from '../errors/option-not-in-dilemma.error.ts';
 import { PlayerLeftGameError } from '../errors/player-left-game.error.ts';
 import { PlayerNotInGameError } from '../errors/player-not-in-game.error.ts';
+import { PersonInTheGapVotesError } from '../errors/person-in-the-gap-votes.error.ts';
 import { PlayerNotPredictableError } from '../errors/player-not-predictable.error.ts';
 import { PlayersMissingError } from '../errors/players-missing.error.ts';
 import { PredictionsNotAllowedError } from '../errors/predictions-not-allowed.error.ts';
+import { VoteMissingError } from '../errors/vote-missing.error.ts';
 import { AnsweredCountChangedEvent } from '../events/answered-count-changed.event.ts';
 import { DilemmaRevealedEvent } from '../events/dilemma-revealed.event.ts';
 import { GameStageChangedEvent } from '../events/game-stage-changed.event.ts';
@@ -51,12 +53,16 @@ import type {
 } from '../vos/room-settings.vo.ts';
 import type { Player } from './player.ts';
 
-/** A dilemma of the game: its id, the version played, the ids of its options and whether it has the gap. */
+/**
+ * A dilemma of the game: its id, the version played, the ids of its options, whether it has the gap
+ * and whether its options keep the order of the catalog.
+ */
 export interface GameDilemma {
   readonly dilemmaId: string;
   readonly version: number;
   readonly optionIds: readonly string[];
   readonly hasGap: boolean;
+  readonly fixedOrder: boolean;
 }
 
 /** A dilemma as the game plays it: what the catalog gives, where its round took it from and who chose it. */
@@ -108,9 +114,12 @@ export interface Round {
  */
 export type DidNotVoteReason = 'not-answered' | 'reported' | 'joined-late';
 
-/** What a player answers of a dilemma, complete or not yet: the vote and the predictions made so far. */
+/**
+ * What a player answers of a dilemma, complete or not yet: the vote and the predictions made so far.
+ * The person in the gap has no vote.
+ */
 export interface AnswerDraft {
-  readonly vote: string;
+  readonly vote: string | null;
   readonly votePredictions?: readonly VotePrediction[];
   /** In an anonymous room, the distribution prediction so far; without it, the one the player had or the even split. */
   readonly distributionPrediction?: readonly PredictedShare[];
@@ -135,9 +144,9 @@ export interface DilemmaReveal {
   readonly voteCount: number;
   /** How many of those asked did not vote it; who joined once it was revealed was not asked. */
   readonly didNotVoteCount: number;
-  /** What each player voted, null for who did not vote. */
+  /** What each player voted, null for who did not vote; never the person in the gap. */
   readonly votes: readonly { readonly playerId: string; readonly vote: string | null }[];
-  /** Each vote prediction made, and whether it was right. */
+  /** Each vote prediction made, the person in the gap's too, and whether it was right. */
   readonly votePredictions: readonly {
     readonly playerId: string;
     readonly aboutId: string;
@@ -145,6 +154,11 @@ export interface DilemmaReveal {
     readonly right: boolean;
   }[];
   readonly personInTheGap: string | null;
+  /**
+   * In a nominal room, how many of the votes they predict the person in the gap got right; null
+   * without a gap and in an anonymous room, where their points are theirs alone.
+   */
+  readonly personInTheGapHits: { readonly right: number; readonly of: number } | null;
   readonly chosenBy: string | null;
 }
 
@@ -235,8 +249,8 @@ export class Game {
     this.#id = new IdVO(id);
     this.#roomId = new IdVO(roomId);
     this.#dilemmas = dilemmas.map(
-      ({ dilemmaId, version, optionIds, hasGap }) =>
-        new DilemmaVO(dilemmaId, version, optionIds, hasGap),
+      ({ dilemmaId, version, optionIds, hasGap, fixedOrder }) =>
+        new DilemmaVO(dilemmaId, version, optionIds, hasGap, fixedOrder),
     );
     this.#origins = new Map(
       dilemmas.map(({ dilemmaId, origin, chosenBy }) => [dilemmaId, { origin, chosenBy }]),
@@ -269,12 +283,12 @@ export class Game {
 
   /** In the order every player gets them. */
   get dilemmas(): readonly PlayedDilemma[] {
-    return this.#dilemmas.map(({ dilemmaId, version, optionIds, hasGap }) => {
+    return this.#dilemmas.map(({ dilemmaId, version, optionIds, hasGap, fixedOrder }) => {
       const { origin, chosenBy } = this.#origins.get(dilemmaId) as {
         origin: DilemmaOrigin;
         chosenBy: string | null;
       };
-      return { dilemmaId, version, optionIds, hasGap, origin, chosenBy };
+      return { dilemmaId, version, optionIds, hasGap, fixedOrder, origin, chosenBy };
     });
   }
 
@@ -317,8 +331,8 @@ export class Game {
 
   /**
    * The game starts with its first round. Everyone gets the dilemmas in the same order; each player
-   * gets the options of each dilemma in an order of their own; each dilemma with the gap gets its
-   * person.
+   * gets the options of each dilemma in an order of their own, but for those with a fixed order;
+   * each dilemma with the gap gets its person.
    */
   start(players: readonly Player[], at: Date, randomness: Randomness): void {
     if (this.#round !== null) throw new DecisionPhaseAlreadyStartedError();
@@ -340,20 +354,24 @@ export class Game {
   /**
    * The player answers the dilemma of the round, or changes their answer, until it is revealed. A
    * complete answer is the vote with the distribution prediction and Ready in an anonymous room,
-   * and the vote with every prediction in a nominal one; once complete, the player has answered the
-   * round. The seal is the one in force now, also when the player changes an answer.
+   * and the vote with every prediction in a nominal one; the person in the gap does not vote, and
+   * answers with the predictions alone. Once complete, the player has answered the round. The seal
+   * is the one in force now, also when the player changes an answer.
    */
   answer(playerId: string, dilemmaId: string, draft: AnswerDraft, seal: Seal, at: Date): void {
     const dilemma = this.#decisionDilemma(dilemmaId);
     const state = this.#activeStateOf(playerId);
-    const vote = new VoteVO(draft.vote).value;
+    const vote = this.#voteOf(playerId, dilemma, draft.vote);
     if (state.didNotVote.has(dilemmaId)) throw new DilemmaSkippedError(dilemmaId);
-    if (!dilemma.hasOption(vote)) throw new OptionNotInDilemmaError(vote, dilemmaId);
     const votePredictions = draft.votePredictions ?? [];
-    this.#ensurePredictionsFit(dilemma, this.playersToPredictBy(playerId), votePredictions);
+    this.#ensurePredictionsFit(
+      dilemma,
+      this.playersToPredictBy(playerId, dilemmaId),
+      votePredictions,
+    );
 
     const previous = state.answers.get(dilemmaId);
-    const wasComplete = previous !== undefined && this.#isComplete(playerId, previous);
+    const wasComplete = previous !== undefined && this.#isComplete(playerId, dilemmaId, previous);
     const anonymous = this.#settings.variant === 'anonymous';
     let answer = new AnswerVO({
       vote,
@@ -368,9 +386,8 @@ export class Game {
       optionOrder: this.optionOrderOf(playerId, dilemmaId),
       responseTimeMs: previous?.responseTimeMs ?? null,
       seal,
-      voterInTheGap: this.#peopleInTheGap.get(dilemmaId) === playerId,
     });
-    const isComplete = this.#isComplete(playerId, answer);
+    const isComplete = this.#isComplete(playerId, dilemmaId, answer);
     if (wasComplete && !isComplete) throw new AnswerIncompleteError(dilemmaId);
 
     if (isComplete && !wasComplete) {
@@ -452,12 +469,14 @@ export class Game {
 
   /**
    * The decision phase of the round ends: whoever has no vote for its dilemma is recorded as "did
-   * not vote", nobody can answer it any more and the predictions made are scored. Who may ask for it
-   * is up to the room.
+   * not vote", but for the person in the gap, who has none to give; nobody can answer it any more
+   * and the predictions made are scored. Who may ask for it is up to the room.
    */
   reveal(by: RevealedBy): void {
     const { dilemmaId } = this.#decisionDilemma(this.#roundDilemma().dilemmaId);
-    for (const state of this.#players.values()) {
+    const person = this.#peopleInTheGap.get(dilemmaId);
+    for (const [playerId, state] of this.#players) {
+      if (playerId === person) continue;
       if (!state.answers.has(dilemmaId) && !state.didNotVote.has(dilemmaId)) {
         state.didNotVote.set(dilemmaId, 'not-answered');
       }
@@ -570,13 +589,16 @@ export class Game {
   }
 
   /**
-   * The players whose vote the player predicts in each dilemma: in a nominal room, all the others
-   * who started the game; none in an anonymous one, nor for who joined late.
+   * The players whose vote the player predicts in the dilemma: in a nominal room, all the others
+   * who started the game but the person in the gap, whom nobody predicts; none in an anonymous
+   * one, nor for who joined late.
    */
-  playersToPredictBy(playerId: string): readonly string[] {
+  playersToPredictBy(playerId: string, dilemmaId: string): readonly string[] {
+    this.#dilemmaOf(dilemmaId);
     const { joinedLate } = this.#stateOf(playerId);
     if (this.#settings.variant === 'anonymous' || joinedLate) return [];
-    return this.#startingPlayerIds().filter((other) => other !== playerId);
+    const person = this.#peopleInTheGap.get(dilemmaId);
+    return this.#startingPlayerIds().filter((other) => other !== playerId && other !== person);
   }
 
   /** The player whose nickname takes the gap of the dilemma, the same for everyone; null without a gap. */
@@ -644,14 +666,26 @@ export class Game {
 
     const { dilemmaId } = dilemma;
     const nominal = this.#settings.variant === 'nominal';
+    const person = this.#peopleInTheGap.get(dilemmaId) ?? null;
     const answerOf = (playerId: string) => this.#stateOf(playerId).answers.get(dilemmaId);
     const voteOf = (playerId: string) => answerOf(playerId)?.vote ?? null;
-    // Who joined once it was revealed was never asked it: the reveal stays as the group saw it.
+    // Who joined once it was revealed was never asked it: the reveal stays as the group saw it. The
+    // person in the gap was asked for predictions, not for a vote.
     const asked = this.playerIds.filter(
-      (playerId) => this.#stateOf(playerId).didNotVote.get(dilemmaId) !== 'joined-late',
+      (playerId) =>
+        playerId !== person && this.#stateOf(playerId).didNotVote.get(dilemmaId) !== 'joined-late',
     );
     const voters = asked.filter((playerId) => voteOf(playerId) !== null);
     const tooFewVotes = !nominal && voters.length < MINIMUM_VOTES_TO_SHOW;
+    const predictors = person === null ? voters : [...voters, person];
+    const votePredictions = predictors.flatMap((playerId) =>
+      (answerOf(playerId)?.votePredictions ?? []).map(({ playerId: aboutId, vote }) => ({
+        playerId,
+        aboutId,
+        vote,
+        right: voteOf(aboutId) === vote,
+      })),
+    );
 
     return {
       position,
@@ -666,17 +700,16 @@ export class Game {
       voteCount: voters.length,
       didNotVoteCount: asked.length - voters.length,
       votes: nominal ? asked.map((playerId) => ({ playerId, vote: voteOf(playerId) })) : [],
-      votePredictions: nominal
-        ? voters.flatMap((playerId) =>
-            (answerOf(playerId)?.votePredictions ?? []).map(({ playerId: aboutId, vote }) => ({
-              playerId,
-              aboutId,
-              vote,
-              right: voteOf(aboutId) === vote,
-            })),
-          )
-        : [],
-      personInTheGap: this.#peopleInTheGap.get(dilemmaId) ?? null,
+      votePredictions: nominal ? votePredictions : [],
+      personInTheGap: person,
+      personInTheGapHits:
+        nominal && person !== null
+          ? {
+              right: votePredictions.filter(({ playerId, right }) => playerId === person && right)
+                .length,
+              of: this.playersToPredictBy(person, dilemmaId).length,
+            }
+          : null,
       chosenBy: nominal ? (this.#origins.get(dilemmaId)?.chosenBy ?? null) : null,
     };
   }
@@ -752,13 +785,13 @@ export class Game {
     return game;
   }
 
-  /** Each player gets the options of each dilemma in an order of their own. */
+  /** Each player gets the options of each dilemma in an order of their own, but for a fixed order. */
   #newPlayerState(randomness: Randomness, joinedLate: boolean): PlayerState {
     return {
       optionOrders: new Map(
         this.#dilemmas.map((dilemma) => [
           dilemma.dilemmaId,
-          shuffle(dilemma.optionIds, randomness),
+          dilemma.fixedOrder ? dilemma.optionIds : shuffle(dilemma.optionIds, randomness),
         ]),
       ),
       answers: new Map(),
@@ -816,14 +849,26 @@ export class Game {
 
   #isCompleted(playerId: string, dilemmaId: string): boolean {
     const answer = this.#stateOf(playerId).answers.get(dilemmaId);
-    return answer !== undefined && this.#isComplete(playerId, answer);
+    return answer !== undefined && this.#isComplete(playerId, dilemmaId, answer);
   }
 
-  /** The vote with Ready in an anonymous room; the vote with every prediction in a nominal one. */
-  #isComplete(playerId: string, answer: AnswerVO): boolean {
+  /** Ready in an anonymous room; every prediction in a nominal one. The vote is checked on answering. */
+  #isComplete(playerId: string, dilemmaId: string, answer: AnswerVO): boolean {
     if (this.#settings.variant === 'anonymous') return answer.ready;
     const predicted = new Set(answer.votePredictions.map((prediction) => prediction.playerId));
-    return this.playersToPredictBy(playerId).every((other) => predicted.has(other));
+    return this.playersToPredictBy(playerId, dilemmaId).every((other) => predicted.has(other));
+  }
+
+  /** The vote of the answer, an option of the dilemma; none for the person in the gap, who must not vote. */
+  #voteOf(playerId: string, dilemma: DilemmaVO, vote: string | null): string | null {
+    if (this.#peopleInTheGap.get(dilemma.dilemmaId) === playerId) {
+      if (vote !== null) throw new PersonInTheGapVotesError(dilemma.dilemmaId);
+      return null;
+    }
+    if (vote === null) throw new VoteMissingError();
+    const value = new VoteVO(vote).value;
+    if (!dilemma.hasOption(value)) throw new OptionNotInDilemmaError(value, dilemma.dilemmaId);
+    return value;
   }
 
   /**
@@ -905,21 +950,23 @@ export class Game {
   }
 
   /**
-   * In an anonymous room, the distribution prediction of each voter against how many chose each
-   * option; with too few votes nobody scores, because the points would tell the distribution.
+   * In an anonymous room, the distribution prediction of each voter, and of the person in the gap,
+   * against how many chose each option; with too few votes nobody scores, because the points would
+   * tell the distribution.
    */
   #scoreDistribution(dilemma: DilemmaVO): void {
     const { dilemmaId } = dilemma;
-    const voters = [...this.#players.values()].flatMap((state) => {
+    const answered = [...this.#players.values()].flatMap((state) => {
       const answer = state.answers.get(dilemmaId);
       return answer ? [{ state, answer }] : [];
     });
+    const voters = answered.filter(({ answer }) => answer.vote !== null);
     if (voters.length < MINIMUM_VOTES_TO_SHOW) return;
     const distribution = dilemma.optionIds.map((optionId) => ({
       optionId,
       count: voters.filter(({ answer }) => answer.vote === optionId).length,
     }));
-    for (const { state, answer } of voters) {
+    for (const { state, answer } of answered) {
       // An answer kept from before the prediction existed counts as a vote, with nothing to score.
       const prediction = answer.distributionPrediction;
       if (!prediction) continue;
@@ -931,6 +978,7 @@ export class Game {
     const points = scorePredictions({
       playerIds: this.#startingPlayerIds(),
       answerOf: (playerId) => this.#stateOf(playerId).answers.get(dilemmaId),
+      predictedBy: (playerId) => this.playersToPredictBy(playerId, dilemmaId),
     });
     for (const [playerId, scored] of points) {
       this.#stateOf(playerId).points.set(dilemmaId, scored);

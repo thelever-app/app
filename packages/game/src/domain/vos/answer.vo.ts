@@ -19,7 +19,8 @@ export interface VotePrediction {
 }
 
 export interface AnswerProps {
-  readonly vote: string;
+  /** Null only for the person in the gap, who does not vote the dilemma about them. */
+  readonly vote: string | null;
   /** Only the ones the voter made, in a nominal room. */
   readonly votePredictions: readonly VotePrediction[];
   /** In an anonymous room, the share of the group the voter believes chose each option; null in a nominal one. */
@@ -31,28 +32,27 @@ export interface AnswerProps {
   /** From when the voter got the dilemma to when they first completed the answer; null until then. */
   readonly responseTimeMs: number | null;
   readonly seal: Seal;
-  /** Whether the dilemma was about the voter, through the gap "someone in the group". */
-  readonly voterInTheGap: boolean;
 }
 
 /**
- * The vote plus the predictions the room variant requires, with what is recorded alongside it.
+ * The vote plus the predictions the room variant requires, with what is recorded alongside it; the
+ * person in the gap answers with the predictions alone.
  * Whether it is complete depends on the variant and the players of the game, which the game knows.
  */
 export class AnswerVO {
-  readonly #vote: VoteVO;
+  readonly #vote: VoteVO | null;
   readonly #distributionPrediction: DistributionPredictionVO | null;
   readonly #props: AnswerProps;
 
   constructor(props: AnswerProps) {
-    this.#vote = new VoteVO(props.vote);
+    this.#vote = props.vote === null ? null : new VoteVO(props.vote);
     this.#distributionPrediction =
       props.distributionPrediction === null
         ? null
         : new DistributionPredictionVO(props.distributionPrediction);
     this.#props = {
       ...props,
-      vote: this.#vote.value,
+      vote: this.#vote?.value ?? null,
       votePredictions: props.votePredictions.map(({ playerId, vote }) => ({
         playerId,
         vote: new VoteVO(vote).value,
@@ -63,8 +63,8 @@ export class AnswerVO {
     };
   }
 
-  get vote(): string {
-    return this.#vote.value;
+  get vote(): string | null {
+    return this.#vote?.value ?? null;
   }
 
   get votePredictions(): readonly VotePrediction[] {
@@ -89,10 +89,6 @@ export class AnswerVO {
 
   get seal(): Seal {
     return { ...this.#props.seal };
-  }
-
-  get voterInTheGap(): boolean {
-    return this.#props.voterInTheGap;
   }
 
   /** The same answer, now with the time it took to complete it. */

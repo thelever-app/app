@@ -8,6 +8,8 @@ export interface PlayerSnapshot {
   readonly nickname: string;
   readonly identity: string;
   readonly avatar: { readonly face: string; readonly color: string };
+  /** The dilemmas the device of the player says they played, which the room only puts games together with. */
+  readonly playedDilemmaIds: readonly string[];
 }
 
 export class Player {
@@ -16,12 +18,20 @@ export class Player {
   /** Who uses the app behind this player. It never travels to the other players. */
   readonly #identity: IdVO;
   #avatar: AvatarVO;
+  #playedDilemmaIds: readonly string[];
 
-  private constructor(id: string, nickname: string, identity: string, avatar: AvatarVO) {
+  private constructor(
+    id: string,
+    nickname: string,
+    identity: string,
+    avatar: AvatarVO,
+    playedDilemmaIds: readonly string[],
+  ) {
     this.#id = new IdVO(id);
     this.#nickname = new NicknameVO(nickname);
     this.#identity = new IdVO(identity);
     this.#avatar = avatar;
+    this.#playedDilemmaIds = [...new Set(playedDilemmaIds)];
   }
 
   static create(
@@ -29,10 +39,16 @@ export class Player {
       nickname,
       identity,
       avatar,
-    }: { readonly nickname: string; readonly identity: string; readonly avatar: AvatarVO },
+      playedDilemmaIds = [],
+    }: {
+      readonly nickname: string;
+      readonly identity: string;
+      readonly avatar: AvatarVO;
+      readonly playedDilemmaIds?: readonly string[];
+    },
     idGenerator: IdGenerator,
   ): Player {
-    return new Player(idGenerator.generate(), nickname, identity, avatar);
+    return new Player(idGenerator.generate(), nickname, identity, avatar, playedDilemmaIds);
   }
 
   get id(): string {
@@ -51,9 +67,19 @@ export class Player {
     return this.#avatar;
   }
 
+  /** The dilemmas the device of the player says they played, each once. */
+  get playedDilemmaIds(): readonly string[] {
+    return [...this.#playedDilemmaIds];
+  }
+
   /** The room checks that nobody else has it. */
   wear(avatar: AvatarVO): void {
     this.#avatar = avatar;
+  }
+
+  /** What the device says the player played when they enter the room again. */
+  havePlayed(dilemmaIds: readonly string[]): void {
+    this.#playedDilemmaIds = [...new Set(dilemmaIds)];
   }
 
   toSnapshot(): PlayerSnapshot {
@@ -62,6 +88,7 @@ export class Player {
       nickname: this.nickname,
       identity: this.identity,
       avatar: { face: this.#avatar.face, color: this.#avatar.color },
+      playedDilemmaIds: this.playedDilemmaIds,
     };
   }
 
@@ -71,6 +98,7 @@ export class Player {
       snapshot.nickname,
       snapshot.identity,
       new AvatarVO(snapshot.avatar.face, snapshot.avatar.color),
+      snapshot.playedDilemmaIds,
     );
   }
 }

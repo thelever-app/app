@@ -5,7 +5,14 @@ import type { RoundSnapshot } from '../../vos/round.vo.ts';
 import { DuplicateDilemmaError } from '../../errors/duplicate-dilemma.error.ts';
 import { InvalidRoomSettingError } from '../../errors/invalid-room-setting.error.ts';
 
-const FOR_EVERYONE = { dilemmaId: 'TestDilemma', minimumAge: 16, compromising: false } as const;
+const FOR_EVERYONE = {
+  dilemmaId: 'TestDilemma',
+  type: 'standard',
+  scale: 'everyday',
+  minimumAge: 16,
+  hasGap: false,
+  compromising: false,
+} as const;
 
 function randomRounds(count: number): RoundSnapshot[] {
   return Array.from({ length: count }, (_, index) => ({

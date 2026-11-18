@@ -2,6 +2,7 @@ import { PlayerNotInRoomError } from '../../domain/errors/player-not-in-room.err
 import type { GroupNature, Place } from '../../domain/vos/group.vo.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
 import type { RoomSettingsSnapshot } from '../../domain/vos/room-settings.vo.ts';
+import type { LobbyDilemma } from '../../domain/vos/round.vo.ts';
 import type { DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findRoom } from './find-room.ts';
@@ -16,6 +17,8 @@ export interface GetRoomStateInput {
 export interface LobbyRoundDilemma {
   readonly dilemmaId: string;
   readonly text: string;
+  /** Whether it is about someone in the group, which needs more players than the game. */
+  readonly hasGap: boolean;
 }
 
 /** A round as every player of the room sees it: never who chose the dilemma of a round of the players. */
@@ -48,6 +51,8 @@ export interface GetRoomStateOutput {
   readonly rounds: readonly LobbyRound[];
   /** The fewest players a game of the room starts with, by its variant: the screen counts what is missing. */
   readonly minimumPlayers: number;
+  /** The fewest players a game of the room plays the dilemmas with the gap with, by its variant. */
+  readonly minimumPlayersForTheGap: number;
   readonly players: readonly {
     readonly playerId: string;
     readonly nickname: string;
@@ -72,9 +77,10 @@ export class GetRoomStateUseCase {
     if (!room.hasPlayer(playerId)) throw new PlayerNotInRoomError(playerId);
 
     const texts = await this.#textsOf(room.roundDilemmaIds, room.settings.dilemmaLanguage);
-    const withText = (dilemmaId: string): LobbyRoundDilemma => ({
+    const withText = ({ dilemmaId, hasGap }: LobbyDilemma): LobbyRoundDilemma => ({
       dilemmaId,
       text: texts.get(dilemmaId) ?? '',
+      hasGap,
     });
     const { rounds, ...settings } = room.settings.toSnapshot();
 
@@ -95,18 +101,19 @@ export class GetRoomStateUseCase {
           return {
             roundId: round.id,
             origin: 'specific',
-            dilemma: withText(round.dilemma.dilemmaId),
+            dilemma: withText(round.dilemma),
           };
         }
         const chosen = room.chosenDilemmas.find(({ roundId }) => roundId === round.id);
         return {
           roundId: round.id,
           origin: 'players',
-          dilemma: chosen ? withText(chosen.dilemmaId) : null,
+          dilemma: chosen ? withText(chosen) : null,
           chosenByYou: chosen?.playerId === playerId,
         };
       }),
       minimumPlayers: room.minimumPlayers,
+      minimumPlayersForTheGap: room.minimumPlayersForTheGap,
       players: room.players.map((player) => ({
         playerId: player.id,
         nickname: player.nickname,

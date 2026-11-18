@@ -209,7 +209,14 @@ describe('ChangeRoomSettingsUseCase', () => {
       {
         id: 10,
         origin: 'specific',
-        dilemma: { dilemmaId: 'TestCatalog4', minimumAge: 16, compromising: false },
+        dilemma: {
+          dilemmaId: 'TestCatalog4',
+          type: 'standard',
+          scale: 'everyday',
+          minimumAge: 16,
+          hasGap: false,
+          compromising: false,
+        },
       },
     ]);
     expect(notifier.receivedBy(luisId)).toEqual([
@@ -311,6 +318,9 @@ describe('ChooseRoundDilemmaUseCase and ClearRoundDilemmaUseCase', () => {
     expect(chosen).toEqual([
       {
         dilemmaId: 'TestCatalog5',
+        type: 'standard',
+        scale: 'everyday',
+        hasGap: false,
         minimumAge: 16,
         compromising: false,
         roundId: 2,
@@ -513,6 +523,7 @@ describe('GetRoomStateUseCase', () => {
       place: 'together',
       settings,
       minimumPlayers: 2,
+      minimumPlayersForTheGap: 3,
       currentGameId: null,
     });
     expect(forAna.rounds).toEqual([
@@ -520,12 +531,12 @@ describe('GetRoomStateUseCase', () => {
       {
         roundId: 2,
         origin: 'specific',
-        dilemma: { dilemmaId: 'TestCatalog4', text: 'TextOfTestCatalog4' },
+        dilemma: { dilemmaId: 'TestCatalog4', text: 'TextOfTestCatalog4', hasGap: false },
       },
       {
         roundId: 3,
         origin: 'players',
-        dilemma: { dilemmaId: 'TestCatalog5', text: 'TextOfTestCatalog5' },
+        dilemma: { dilemmaId: 'TestCatalog5', text: 'TextOfTestCatalog5', hasGap: false },
         chosenByYou: false,
       },
       { roundId: 4, origin: 'players', dilemma: null, chosenByYou: false },

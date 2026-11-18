@@ -12,7 +12,8 @@ import {
 /**
  * The public dilemmas every implementation stores before each test, in Spanish: their ids are its
  * own. The first one is for everyone, with a translation into English; the second one for adults,
- * with the gap; the third one is in exploration; and the fourth one is compromising.
+ * with the gap, a game theory one, extreme and with a fixed order; the third one is in
+ * exploration, a would-you-rather one; and the fourth one is compromising.
  */
 export const CONTRACT_DILEMMAS = [
   {
@@ -22,6 +23,9 @@ export const CONTRACT_DILEMMAS = [
     tags: ['testfamily'],
     minimumAge: 16,
     compromising: false,
+    type: 'standard',
+    scale: 'everyday',
+    fixedOrder: false,
     status: 'in-catalog',
     translations: [
       {
@@ -38,6 +42,9 @@ export const CONTRACT_DILEMMAS = [
     tags: [],
     minimumAge: 18,
     compromising: false,
+    type: 'game-theory',
+    scale: 'extreme',
+    fixedOrder: true,
     status: 'in-catalog',
     translations: [],
   },
@@ -48,6 +55,9 @@ export const CONTRACT_DILEMMAS = [
     tags: [],
     minimumAge: 16,
     compromising: false,
+    type: 'would-you-rather',
+    scale: 'medium',
+    fixedOrder: false,
     status: 'in-exploration',
     translations: [],
   },
@@ -58,6 +68,9 @@ export const CONTRACT_DILEMMAS = [
     tags: [],
     minimumAge: 16,
     compromising: true,
+    type: 'standard',
+    scale: 'everyday',
+    fixedOrder: false,
     status: 'in-catalog',
     translations: [],
   },
@@ -65,10 +78,22 @@ export const CONTRACT_DILEMMAS = [
 
 /** What a search finds of the contract dilemma at that position (from 0), with its id as stored. */
 function foundAt(stored: readonly DilemmaContent[], position: 0 | 1 | 2 | 3): CatalogDilemma {
-  const { text, category, tags, minimumAge, options, compromising } = CONTRACT_DILEMMAS[position];
+  const { text, category, tags, minimumAge, options, compromising, type, scale } =
+    CONTRACT_DILEMMAS[position];
   const dilemmaId = stored[position]?.dilemmaId;
   if (!dilemmaId) throw new Error(`The catalog stored no dilemma at position ${position}`);
-  return { dilemmaId, text, category, tags, minimumAge, optionCount: options.length, compromising };
+  return {
+    dilemmaId,
+    text,
+    category,
+    tags,
+    minimumAge,
+    optionCount: options.length,
+    compromising,
+    type,
+    scale,
+    hasGap: text.includes(GAP_MARKER),
+  };
 }
 
 /** Big enough for every search of the contract to fit in one page. */
@@ -80,6 +105,9 @@ const FOR_EVERYONE: DilemmaSearch = {
   language: 'es',
   includeCompromising: false,
 };
+
+/** A draw that leaves nothing out: more than the contract stores, none played or excluded. */
+const A_GAME = { count: 100, includeGap: true, excludedIds: [], playedIds: [] } as const;
 
 /** The order of what a search returns is not part of the contract. */
 function byText(found: readonly CatalogDilemma[]): CatalogDilemma[] {
@@ -96,7 +124,7 @@ export function describeDilemmaCatalogContract(
 ): void {
   describe(`${name} (DilemmaCatalog contract)`, () => {
     describe('findOptionIds', () => {
-      it('should return the current version, the ids of the options and whether it has the gap of each dilemma, in the order asked for', async () => {
+      it('should return the current version, the ids of the options, whether it has the gap and whether its order is fixed, of each dilemma in the order asked for', async () => {
         // Arrange
         const { catalog, stored } = await create();
         const [first, second] = stored as [DilemmaContent, DilemmaContent];
@@ -111,12 +139,14 @@ export function describeDilemmaCatalogContract(
             version: 1,
             optionIds: second.options.map(({ optionId }) => optionId),
             hasGap: true,
+            fixedOrder: true,
           },
           {
             dilemmaId: first.dilemmaId,
             version: 1,
             optionIds: first.options.map(({ optionId }) => optionId),
             hasGap: false,
+            fixedOrder: false,
           },
         ]);
       });
@@ -382,28 +412,33 @@ export function describeDilemmaCatalogContract(
       });
     });
 
-    describe('findCandidateIds', () => {
-      it('should give the ids of every dilemma that matches, and nothing else', async () => {
+    describe('findCandidates', () => {
+      it('should give every dilemma that matches', async () => {
         // Arrange
         const { catalog, stored } = await create();
 
+        const idsOf = async (criteria: DilemmaSearch) =>
+          (await catalog.findCandidates({ ...A_GAME, ...criteria })).map(
+            ({ dilemmaId }) => dilemmaId,
+          );
+
         // Act
-        const forEveryone = await catalog.findCandidateIds(FOR_EVERYONE);
-        const forAdults = await catalog.findCandidateIds({
+        const forEveryone = await idsOf(FOR_EVERYONE);
+        const forAdults = await idsOf({
           ...FOR_EVERYONE,
           maximumMinimumAge: 18,
         });
-        const inExploration = await catalog.findCandidateIds({
+        const inExploration = await idsOf({
           ...FOR_EVERYONE,
           status: 'in-exploration',
         });
-        const ofLoyalty = await catalog.findCandidateIds({
+        const ofLoyalty = await idsOf({
           ...FOR_EVERYONE,
           maximumMinimumAge: 18,
           categories: ['loyalty'],
         });
-        const inFrench = await catalog.findCandidateIds({ ...FOR_EVERYONE, language: 'fr' });
-        const withCompromising = await catalog.findCandidateIds({
+        const inFrench = await idsOf({ ...FOR_EVERYONE, language: 'fr' });
+        const withCompromising = await idsOf({
           ...FOR_EVERYONE,
           includeCompromising: true,
         });
@@ -416,6 +451,70 @@ export function describeDilemmaCatalogContract(
         expect(inExploration).toEqual([third]);
         expect(ofLoyalty).toEqual([second]);
         expect(inFrench).toEqual([]);
+      });
+
+      it('should classify each dilemma it gives', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+
+        // Act
+        const found = await catalog.findCandidates({
+          ...FOR_EVERYONE,
+          ...A_GAME,
+          maximumMinimumAge: 18,
+        });
+
+        // Assert
+        expect([...found].sort((one, other) => one.minimumAge - other.minimumAge)).toEqual([
+          {
+            dilemmaId: stored[0]?.dilemmaId,
+            type: 'standard',
+            scale: 'everyday',
+            minimumAge: 16,
+            hasGap: false,
+          },
+          {
+            dilemmaId: stored[1]?.dilemmaId,
+            type: 'game-theory',
+            scale: 'extreme',
+            minimumAge: 18,
+            hasGap: true,
+          },
+        ]);
+      });
+
+      it('should draw no more than asked for, those nobody played first', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+        const [first, second] = stored.map(({ dilemmaId }) => dilemmaId);
+        const forAdults = { ...FOR_EVERYONE, ...A_GAME, maximumMinimumAge: 18 } as const;
+
+        // Act
+        const one = await catalog.findCandidates({ ...forAdults, count: 1 });
+        const notPlayed = await catalog.findCandidates({
+          ...forAdults,
+          count: 1,
+          playedIds: [first!],
+        });
+
+        // Assert
+        expect(one).toHaveLength(1);
+        expect(notPlayed.map(({ dilemmaId }) => dilemmaId)).toEqual([second]);
+      });
+
+      it('should leave out the dilemmas excluded, and those with the gap unless they are included', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+        const [first, second] = stored.map(({ dilemmaId }) => dilemmaId);
+        const forAdults = { ...FOR_EVERYONE, ...A_GAME, maximumMinimumAge: 18 } as const;
+
+        // Act
+        const notExcluded = await catalog.findCandidates({ ...forAdults, excludedIds: [first!] });
+        const withoutGap = await catalog.findCandidates({ ...forAdults, includeGap: false });
+
+        // Assert
+        expect(notExcluded.map(({ dilemmaId }) => dilemmaId)).toEqual([second]);
+        expect(withoutGap.map(({ dilemmaId }) => dilemmaId)).toEqual([first]);
       });
     });
   });

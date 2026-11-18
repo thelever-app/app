@@ -11,6 +11,7 @@ export { Player, type PlayerSnapshot } from './domain/entities/player.ts';
 export {
   Room,
   MAXIMUM_PLAYERS,
+  MINIMUM_PLAYERS_FOR_THE_GAP,
   CLOSES_WITH_NOBODY_CONNECTED_AFTER_MS,
   type RoomSnapshot,
   type LobbyDilemma,
@@ -67,11 +68,20 @@ export {
   type TimePerDilemmaSeconds,
 } from './domain/vos/room-settings.vo.ts';
 export { CATEGORIES, isCategory, type Category } from './domain/vos/category.vo.ts';
+export {
+  DILEMMA_TYPES,
+  SCALES,
+  type DilemmaType,
+  type Scale,
+  type CandidateDilemma,
+} from './domain/vos/classification.vo.ts';
 export { GROUP_NATURES, PLACES, type GroupNature, type Place } from './domain/vos/group.vo.ts';
 export {
   composeGame,
   categoriesKey,
   categoriesToDraw,
+  fixedDilemmaIds,
+  type CategoriesDraw,
   type Candidates,
   type ComposedDilemma,
   type ExplorationSlots,
@@ -133,6 +143,7 @@ export { PredictionsNotAllowedError } from './domain/errors/predictions-not-allo
 export { DistributionPredictionNotAllowedError } from './domain/errors/distribution-prediction-not-allowed.error.ts';
 export { InvalidDistributionPredictionError } from './domain/errors/invalid-distribution-prediction.error.ts';
 export { PlayerNotPredictableError } from './domain/errors/player-not-predictable.error.ts';
+export { PersonInTheGapVotesError } from './domain/errors/person-in-the-gap-votes.error.ts';
 export { DuplicateVotePredictionError } from './domain/errors/duplicate-vote-prediction.error.ts';
 export { AnswerIncompleteError } from './domain/errors/answer-incomplete.error.ts';
 export { DilemmaSkippedError } from './domain/errors/dilemma-skipped.error.ts';

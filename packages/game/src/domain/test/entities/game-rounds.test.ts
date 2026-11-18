@@ -64,6 +64,7 @@ function gameOfThree(settings: GameSettings = NOMINAL, randomness = new KeepOrde
       version: 1,
       optionIds: OPTIONS,
       hasGap: index === 1,
+      fixedOrder: false,
       origin: index === 2 ? 'players' : 'random',
       chosenBy: index === 2 ? 'Luis' : null,
     }),
@@ -77,13 +78,17 @@ function gameOfThree(settings: GameSettings = NOMINAL, randomness = new KeepOrde
   return game;
 }
 
-/** The complete answer of a player: the vote with every prediction, or with Ready in an anonymous room. */
+/**
+ * The complete answer of a player: the vote with every prediction, or with Ready in an anonymous
+ * room; without a vote for the person in the gap.
+ */
 function complete(game: Game, playerId: string, vote = 'TestPull') {
+  const dilemmaId = game.round?.dilemmaId as string;
   return {
-    vote,
+    vote: game.personInTheGap(dilemmaId) === playerId ? null : vote,
     ready: true,
     votePredictions: game
-      .playersToPredictBy(playerId)
+      .playersToPredictBy(playerId, dilemmaId)
       .map((other) => ({ playerId: other, vote: 'TestPull' })),
   };
 }
@@ -127,12 +132,52 @@ describe('Game, by rounds', () => {
       expect(new Set(orders.map((order) => order.join())).size).toBeGreaterThan(1);
     });
 
+    it('should give every player the options of a dilemma with a fixed order in the order of the catalog', () => {
+      // Arrange
+      const players = EVERYONE.map((nickname) =>
+        Player.create(
+          {
+            nickname,
+            identity: `Test${nickname}Identity`,
+            avatar: new AvatarVO('face-01', 'khaki'),
+          },
+          new FixedIdGenerator(nickname),
+        ),
+      );
+      const game = Game.create(
+        {
+          roomId: 'TestRoomId',
+          dilemmas: [
+            {
+              dilemmaId: 'TestFixedDilemma',
+              version: 1,
+              optionIds: OPTIONS,
+              hasGap: false,
+              fixedOrder: true,
+              origin: 'random',
+              chosenBy: null,
+            },
+          ],
+          settings: NOMINAL,
+        },
+        new FixedIdGenerator('TestGameId'),
+      );
+
+      // Act
+      game.start(players, AT, new FixedRandomness(1, 0, 2, 1, 0, 0));
+
+      // Assert
+      for (const playerId of EVERYONE) {
+        expect(game.optionOrderOf(playerId, 'TestFixedDilemma')).toEqual(OPTIONS);
+      }
+    });
+
     it('should give every player all the others to predict in a nominal room', () => {
       // Act
       const game = gameOfThree();
 
       // Assert
-      expect(game.playersToPredictBy('Ana')).toEqual(['Luis', 'Marta']);
+      expect(game.playersToPredictBy('Ana', 'TestDilemma1')).toEqual(['Luis', 'Marta']);
     });
 
     it('should give nobody to predict in an anonymous room', () => {
@@ -140,7 +185,7 @@ describe('Game, by rounds', () => {
       const game = gameOfThree(ANONYMOUS);
 
       // Assert
-      expect(game.playersToPredictBy('Ana')).toEqual([]);
+      expect(game.playersToPredictBy('Ana', 'TestDilemma1')).toEqual([]);
     });
 
     it('should choose the same person in the gap for everyone, only for the dilemmas with it', () => {
@@ -266,26 +311,21 @@ describe('Game, by rounds', () => {
       ).toThrow(DuplicateVotePredictionError);
     });
 
-    it('should record the order of the options the player saw and whether they were in the gap', () => {
+    it('should record the order of the options the player saw', () => {
       // Arrange
       const game = gameOfThree();
       everyoneAnswers(game);
       game.moveOn('Ana', 0, after(SECOND));
-      const personInTheGap = game.personInTheGap('TestDilemma2') as string;
+      const voter = EVERYONE.find(
+        (playerId) => playerId !== game.personInTheGap('TestDilemma2'),
+      ) as string;
 
       // Act
-      game.answer(
-        personInTheGap,
-        'TestDilemma2',
-        complete(game, personInTheGap),
-        SEAL,
-        after(2 * SECOND),
-      );
+      game.answer(voter, 'TestDilemma2', complete(game, voter), SEAL, after(2 * SECOND));
 
       // Assert
-      const [, answer] = game.answersOf(personInTheGap);
-      expect(answer?.optionOrder).toEqual(game.optionOrderOf(personInTheGap, 'TestDilemma2'));
-      expect(answer?.voterInTheGap).toBe(true);
+      const [, answer] = game.answersOf(voter);
+      expect(answer?.optionOrder).toEqual(game.optionOrderOf(voter, 'TestDilemma2'));
     });
   });
 
@@ -671,8 +711,8 @@ describe('Game, by rounds', () => {
       game.joinLate('Pedro', new KeepOrderRandomness());
 
       // Assert
-      expect(game.playersToPredictBy('Pedro')).toEqual([]);
-      expect(game.playersToPredictBy('Luis')).toEqual(['Ana', 'Marta']);
+      expect(game.playersToPredictBy('Pedro', 'TestDilemma1')).toEqual([]);
+      expect(game.playersToPredictBy('Luis', 'TestDilemma1')).toEqual(['Ana', 'Marta']);
       expect(game.hasAnswered('Ana')).toBe(true);
       expect(() =>
         game.answer(
@@ -725,6 +765,7 @@ describe('Game, by rounds', () => {
               version: 1,
               optionIds: OPTIONS,
               hasGap: false,
+              fixedOrder: false,
               origin: 'random',
               chosenBy: null,
             },

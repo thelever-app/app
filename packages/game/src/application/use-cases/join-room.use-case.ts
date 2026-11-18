@@ -17,6 +17,8 @@ export interface JoinRoomInput {
   readonly identity: string;
   /** The avatar the player chose before entering. */
   readonly avatar: { readonly face: string; readonly color: string };
+  /** The dilemmas the device of the player says they played, for the room to put games together with. */
+  readonly playedDilemmaIds?: readonly string[];
 }
 
 export interface JoinRoomOutput {
@@ -55,19 +57,27 @@ export class JoinRoomUseCase {
     this.#clock = ports.clock;
   }
 
-  async execute({ roomId, nickname, identity, avatar }: JoinRoomInput): Promise<JoinRoomOutput> {
+  async execute({
+    roomId,
+    nickname,
+    identity,
+    avatar,
+    playedDilemmaIds = [],
+  }: JoinRoomInput): Promise<JoinRoomOutput> {
     const room = await findRoom(this.#roomRepository, roomId);
 
     const chosen = new AvatarVO(avatar.face, avatar.color);
+    const playedBefore = room.playerWith(identity)?.playedDilemmaIds;
     const player = room.join(
-      { nickname, identity, avatar: chosen },
+      { nickname, identity, avatar: chosen, playedDilemmaIds },
       this.#idGenerator,
       this.#clock.now(),
     );
     const events = room.pullEvents();
     const returned = events.some((event) => event instanceof PlayerLeftEvent && !event.left);
+    const playedChanged = playedBefore?.join() !== player.playedDilemmaIds.join();
     // The room first: a player of the game must be a player of the room.
-    if (events.length > 0) await this.#roomRepository.save(room);
+    if (events.length > 0 || playedChanged) await this.#roomRepository.save(room);
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
     const joinedLate = game !== undefined && !game.playerIds.includes(player.id);

@@ -9,7 +9,7 @@ const SEAL = {
   underEighteen: false,
 };
 
-function answer(vote: string, votePredictions: VotePrediction[] = []): AnswerVO {
+function answer(vote: string | null, votePredictions: VotePrediction[] = []): AnswerVO {
   return new AnswerVO({
     vote,
     votePredictions,
@@ -18,14 +18,19 @@ function answer(vote: string, votePredictions: VotePrediction[] = []): AnswerVO 
     optionOrder: [],
     responseTimeMs: null,
     seal: SEAL,
-    voterInTheGap: false,
   });
 }
 
-function score(answers: Record<string, AnswerVO | undefined>) {
+const PLAYERS = ['Ana', 'Luis', 'Marta'];
+
+function score(
+  answers: Record<string, AnswerVO | undefined>,
+  predictedBy = (playerId: string) => PLAYERS.filter((other) => other !== playerId),
+) {
   return scorePredictions({
-    playerIds: ['Ana', 'Luis', 'Marta'],
+    playerIds: PLAYERS,
     answerOf: (playerId) => answers[playerId],
+    predictedBy,
   });
 }
 
@@ -43,6 +48,28 @@ describe('scorePredictions', () => {
 
     // Assert
     expect(points.get('Ana')).toBe(50);
+  });
+
+  it('should share 100 among the players each one predicts, without the person in the gap', () => {
+    // Act
+    // Marta is the person in the gap: nobody predicts her, and she predicts Ana and Luis.
+    const points = score(
+      {
+        Ana: answer('pull', [{ playerId: 'Luis', vote: 'pull' }]),
+        Luis: answer('pull', [{ playerId: 'Ana', vote: 'wait' }]),
+        Marta: answer(null, [
+          { playerId: 'Ana', vote: 'pull' },
+          { playerId: 'Luis', vote: 'wait' },
+        ]),
+      },
+      (playerId) =>
+        playerId === 'Marta' ? ['Ana', 'Luis'] : playerId === 'Ana' ? ['Luis'] : ['Ana'],
+    );
+
+    // Assert
+    expect(points.get('Ana')).toBe(100);
+    expect(points.get('Luis')).toBe(0);
+    expect(points.get('Marta')).toBe(50);
   });
 
   it('should only score the predictions made', () => {

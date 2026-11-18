@@ -7,6 +7,7 @@ import type {
   DilemmaSearch,
 } from '../../../application/ports/dilemma-catalog.port.ts';
 import type { GameDilemma } from '../../../domain/entities/game.ts';
+import type { CandidateDilemma } from '../../../domain/vos/classification.vo.ts';
 import { InMemoryDilemmaCatalog } from '../../in-memory/in-memory-dilemma-catalog.ts';
 import {
   CONTRACT_DILEMMAS,
@@ -41,7 +42,13 @@ class CountingCatalog implements DilemmaCatalog {
 
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
     this.asked.push(['options', ...dilemmaIds]);
-    return dilemmaIds.map((dilemmaId) => ({ dilemmaId, version: 1, optionIds: [], hasGap: false }));
+    return dilemmaIds.map((dilemmaId) => ({
+      dilemmaId,
+      version: 1,
+      optionIds: [],
+      hasGap: false,
+      fixedOrder: false,
+    }));
   }
 
   async findContents(
@@ -59,7 +66,7 @@ class CountingCatalog implements DilemmaCatalog {
     }));
   }
 
-  async findCandidateIds(criteria: CandidateSearch): Promise<readonly string[]> {
+  async findCandidates(criteria: CandidateSearch): Promise<readonly CandidateDilemma[]> {
     this.asked.push(['candidates', criteria.status]);
     return [];
   }
@@ -194,7 +201,7 @@ describe('CachedDilemmaCatalog', () => {
     expect(inner.asked).toEqual([['TestA@1:es'], ['TestB@1:es'], ['TestC@1:es']]);
   });
 
-  describe('search and findCandidateIds', () => {
+  describe('search and findCandidates', () => {
     it('should always ask the catalog, since current versions change', async () => {
       // Arrange
       const counting = new CountingCatalog();
@@ -209,8 +216,9 @@ describe('CachedDilemmaCatalog', () => {
       // Act
       await catalog.search(criteria, { size: 20 });
       await catalog.search(criteria, { size: 20 });
-      await catalog.findCandidateIds(criteria);
-      await catalog.findCandidateIds(criteria);
+      const draw = { ...criteria, count: 3, includeGap: true, excludedIds: [], playedIds: [] };
+      await catalog.findCandidates(draw);
+      await catalog.findCandidates(draw);
 
       // Assert
       expect(counting.asked).toEqual([

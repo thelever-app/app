@@ -1,9 +1,11 @@
 import type { Category } from './category.vo.ts';
+import type { CandidateDilemma } from './classification.vo.ts';
 
-/** A dilemma of the catalog, as the lobby needs it: to check that it suits the room. */
-export interface LobbyDilemma {
-  readonly dilemmaId: string;
-  readonly minimumAge: 16 | 18;
+/**
+ * A dilemma of the catalog, as the lobby needs it: to check that it suits the room, to warn when it
+ * needs more players and to space the dilemmas the game draws around it.
+ */
+export interface LobbyDilemma extends CandidateDilemma {
   /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
   readonly compromising: boolean;
 }

@@ -1,4 +1,5 @@
 import type { Category } from '../../domain/vos/category.vo.ts';
+import type { CandidateDilemma, DilemmaType, Scale } from '../../domain/vos/classification.vo.ts';
 import { DilemmaNotFoundError } from '../../application/errors/dilemma-not-found.error.ts';
 import { InvalidPageError } from '../../application/errors/invalid-page.error.ts';
 import {
@@ -25,7 +26,8 @@ export interface InMemoryTranslation {
 
 /**
  * A dilemma of the in-memory catalog: its content and, unless given, one in Spanish, without
- * translations, in the general catalog for everyone.
+ * translations, in the general catalog for everyone, standard, everyday and with its options in any
+ * order.
  */
 export interface InMemoryDilemma extends Omit<DilemmaContent, 'language'> {
   readonly language?: string;
@@ -35,6 +37,9 @@ export interface InMemoryDilemma extends Omit<DilemmaContent, 'language'> {
   readonly tags?: readonly string[];
   readonly status?: 'in-catalog' | 'in-exploration';
   readonly compromising?: boolean;
+  readonly type?: DilemmaType;
+  readonly scale?: Scale;
+  readonly fixedOrder?: boolean;
 }
 
 /** A fixed set of dilemmas, at their first version and with their translations, for unit and acceptance tests. */
@@ -53,6 +58,9 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
           tags: [],
           status: 'in-catalog',
           compromising: false,
+          type: 'standard',
+          scale: 'everyday',
+          fixedOrder: false,
           ...dilemma,
         },
       ]),
@@ -61,14 +69,13 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
 
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
     return dilemmaIds.map((dilemmaId) => {
-      const { text, options } = this.#dilemmaOf(dilemmaId);
+      const dilemma = this.#dilemmaOf(dilemmaId);
       return {
         dilemmaId,
         version: VERSION,
-        optionIds: options.map(({ optionId }) => optionId),
-        hasGap: [text, ...options.map((option) => option.text)].some((field) =>
-          field.includes(GAP_MARKER),
-        ),
+        optionIds: dilemma.options.map(({ optionId }) => optionId),
+        hasGap: hasGap(dilemma),
+        fixedOrder: dilemma.fixedOrder,
       };
     });
   }
@@ -97,8 +104,22 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
     });
   }
 
-  async findCandidateIds(criteria: CandidateSearch): Promise<readonly string[]> {
-    return this.#matching(criteria).map(({ dilemmaId }) => dilemmaId);
+  /** Not at random: those nobody played and then the others, each in the order they were given. */
+  async findCandidates(criteria: CandidateSearch): Promise<readonly CandidateDilemma[]> {
+    const drawable = this.#matching(criteria).filter(
+      ({ dilemmaId, hasGap }) =>
+        (criteria.includeGap || !hasGap) && !criteria.excludedIds.includes(dilemmaId),
+    );
+    const played = ({ dilemmaId }: CatalogDilemma) => criteria.playedIds.includes(dilemmaId);
+    return [...drawable.filter((dilemma) => !played(dilemma)), ...drawable.filter(played)]
+      .slice(0, criteria.count)
+      .map(({ dilemmaId, type, scale, minimumAge, hasGap }) => ({
+        dilemmaId,
+        type,
+        scale,
+        minimumAge,
+        hasGap,
+      }));
   }
 
   async search(criteria: DilemmaSearch, { size, after }: SearchPage): Promise<CatalogPage> {
@@ -130,14 +151,17 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
           dilemma.status === criteria.status &&
           (criteria.includeCompromising || !dilemma.compromising),
       )
-      .map(({ dilemmaId, text, minimumAge, category, tags, options, compromising }) => ({
-        dilemmaId,
-        text,
-        minimumAge,
-        category,
-        tags,
-        optionCount: options.length,
-        compromising,
+      .map((dilemma) => ({
+        dilemmaId: dilemma.dilemmaId,
+        text: dilemma.text,
+        minimumAge: dilemma.minimumAge,
+        category: dilemma.category,
+        tags: dilemma.tags,
+        optionCount: dilemma.options.length,
+        compromising: dilemma.compromising,
+        type: dilemma.type,
+        scale: dilemma.scale,
+        hasGap: hasGap(dilemma),
       }));
   }
 
@@ -146,4 +170,11 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
     if (!dilemma) throw new DilemmaNotFoundError(dilemmaId);
     return dilemma;
   }
+}
+
+/** Whether the text of the dilemma or of any of its options has the gap. */
+function hasGap({ text, options }: InMemoryDilemma): boolean {
+  return [text, ...options.map((option) => option.text)].some((field) =>
+    field.includes(GAP_MARKER),
+  );
 }
