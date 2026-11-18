@@ -24,6 +24,7 @@ import { PlayerNotInRoomError } from '../../../domain/errors/player-not-in-room.
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
 import { FixedRandomness } from '../../../domain/test/support/fixed-randomness.ts';
 import { AvatarVO } from '../../../domain/vos/avatar.vo.ts';
+import { Room } from '../../../domain/entities/room.ts';
 import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
 import { lobbyCatalog } from '../support/test-catalog.ts';
 import { InMemoryDilemmaCatalog } from '../../../adapters/in-memory/in-memory-dilemma-catalog.ts';
@@ -470,6 +471,45 @@ describe('SearchDilemmasUseCase', () => {
     expect(second.next).toBeUndefined();
   });
 
+  it('should go on to the next page when every dilemma of one was played in the room', async () => {
+    // Arrange
+    const twentyFive = new InMemoryDilemmaCatalog(
+      Array.from({ length: 25 }, (_, index) => ({
+        dilemmaId: `TestDilemma${String(index + 1).padStart(2, '0')}`,
+        text: `TextOf${index + 1}`,
+        options: [
+          { optionId: 'TestOption', text: 'TestOptionText' },
+          { optionId: 'TestOtherOption', text: 'TestOtherOptionText' },
+        ],
+      })),
+    );
+    const { roomRepository, roomId } = await lobbyOfThree(new InMemoryPlayerNotifier(), twentyFive);
+    const room = (await roomRepository.findById(roomId))!;
+    await roomRepository.save(
+      Room.restore({
+        ...room.toSnapshot(),
+        playedDilemmaIds: Array.from(
+          { length: 20 },
+          (_, index) => `TestDilemma${String(index + 1).padStart(2, '0')}`,
+        ),
+      }),
+    );
+    const searchDilemmas = new SearchDilemmasUseCase(roomRepository, twentyFive);
+
+    // Act
+    const found = await searchDilemmas.execute({ roomId, identity: 'TestAnaIdentity' });
+
+    // Assert
+    expect(found.dilemmas.map(({ dilemmaId }) => dilemmaId)).toEqual([
+      'TestDilemma21',
+      'TestDilemma22',
+      'TestDilemma23',
+      'TestDilemma24',
+      'TestDilemma25',
+    ]);
+    expect(found.next).toBeUndefined();
+  });
+
   it('should throw an error if whoever searches is not in the room', async () => {
     // Arrange
     const { searchDilemmas, roomId } = await arrange();
@@ -482,6 +522,35 @@ describe('SearchDilemmasUseCase', () => {
 });
 
 describe('GetRoomStateUseCase', () => {
+  it('should mark in the lobby of a rematch the rounds beyond the dilemmas their categories have left', async () => {
+    // Arrange: honesty has two dilemmas, and the room played one of them in its game before.
+    const { getRoomState, changeSettings, roomRepository, roomId, anaId } = await arrange();
+    await changeSettings.execute({
+      roomId,
+      playerId: anaId,
+      changes: {
+        rounds: [
+          { origin: 'random', categories: ['honesty'] },
+          { origin: 'random', categories: ['honesty'] },
+        ],
+        newDilemmas: false,
+      },
+    });
+    const room = (await roomRepository.findById(roomId))!;
+    await roomRepository.save(
+      Room.restore({ ...room.toSnapshot(), playedDilemmaIds: ['TestHonesty1'] }),
+    );
+
+    // Act
+    const { rounds } = await getRoomState.execute({ roomId, playerId: anaId });
+
+    // Assert
+    expect(rounds.map((round) => round.origin === 'random' && round.withoutNewDilemmas)).toEqual([
+      false,
+      true,
+    ]);
+  });
+
   it('should give everything the lobby shows, without who chose the dilemma of each round', async () => {
     // Arrange
     const lobby = await arrange();
@@ -527,7 +596,7 @@ describe('GetRoomStateUseCase', () => {
       currentGameId: null,
     });
     expect(forAna.rounds).toEqual([
-      { roundId: 1, origin: 'random', categories: ['honesty'] },
+      { roundId: 1, origin: 'random', categories: ['honesty'], withoutNewDilemmas: false },
       {
         roundId: 2,
         origin: 'specific',

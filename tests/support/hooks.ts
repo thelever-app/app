@@ -1,4 +1,12 @@
-import { After, AfterAll, Before, BeforeAll, setDefaultTimeout, Status } from '@cucumber/cucumber';
+import {
+  After,
+  AfterAll,
+  Before,
+  BeforeAll,
+  BeforeStep,
+  setDefaultTimeout,
+  Status,
+} from '@cucumber/cucumber';
 import { E2eDriver } from './e2e-driver.ts';
 import { startE2eStack, stopE2eStack } from './e2e-stack.ts';
 import { problemsOn } from './screen-checks.ts';
@@ -21,6 +29,12 @@ Before(async function (this: GameWorld) {
 
 After(async function (this: GameWorld) {
   await this.driver.stop();
+});
+
+// A scenario whose game has ended plays it through once its Givens have set it up: at its first
+// When or Then. Playing every round and every screen of the results takes a while.
+BeforeStep({ timeout: 180_000 }, async function (this: GameWorld, { pickleStep }) {
+  if (pickleStep.type !== 'Context') await this.endIfRequested();
 });
 
 // Cucumber runs After hooks in the reverse order they are defined: this one runs before the

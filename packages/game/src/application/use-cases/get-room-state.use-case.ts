@@ -1,4 +1,6 @@
+import type { Room } from '../../domain/entities/room.ts';
 import { PlayerNotInRoomError } from '../../domain/errors/player-not-in-room.error.ts';
+import { categoriesKey } from '../../domain/services/compose-game.ts';
 import type { GroupNature, Place } from '../../domain/vos/group.vo.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
 import type { RoomSettingsSnapshot } from '../../domain/vos/room-settings.vo.ts';
@@ -27,6 +29,11 @@ export type LobbyRound =
       readonly roundId: number;
       readonly origin: 'random';
       readonly categories: readonly Category[] | null;
+      /**
+       * In the lobby of a rematch, whether its categories have nothing left the room has not
+       * played: if the game starts like that, the round plays from every category.
+       */
+      readonly withoutNewDilemmas: boolean;
     }
   | { readonly roundId: number; readonly origin: 'specific'; readonly dilemma: LobbyRoundDilemma }
   | {
@@ -83,6 +90,17 @@ export class GetRoomStateUseCase {
       hasGap,
     });
     const { rounds, ...settings } = room.settings.toSnapshot();
+    const left = await this.#dilemmasLeft(room);
+    // The rounds of the same categories take what is left in turn: the ones beyond it have none.
+    const taken = new Map<string, number>();
+    const withoutNewDilemmas = (categories: readonly Category[] | null): boolean => {
+      const key = categoriesKey(categories);
+      const available = left.get(key);
+      if (available === undefined) return false;
+      const before = taken.get(key) ?? 0;
+      taken.set(key, before + 1);
+      return before >= available;
+    };
 
     return {
       roomId: room.id,
@@ -95,7 +113,12 @@ export class GetRoomStateUseCase {
       settings,
       rounds: rounds.map((round): LobbyRound => {
         if (round.origin === 'random') {
-          return { roundId: round.id, origin: 'random', categories: round.categories };
+          return {
+            roundId: round.id,
+            origin: 'random',
+            categories: round.categories,
+            withoutNewDilemmas: withoutNewDilemmas(round.categories),
+          };
         }
         if (round.origin === 'specific') {
           return {
@@ -122,6 +145,51 @@ export class GetRoomStateUseCase {
       })),
       currentGameId: room.currentGameId,
     };
+  }
+
+  /**
+   * In the lobby of a rematch, how many dilemmas the catalog has left for the categories of its
+   * random rounds that the room has not played nor plays in another round, by their key, up to
+   * as many as the rounds of those categories need.
+   */
+  async #dilemmasLeft(room: Room): Promise<Map<string, number>> {
+    if (!room.isInLobby || room.playedDilemmaIds.length === 0) return new Map();
+    const { settings } = room;
+    const categorySets = new Map<
+      string,
+      { categories: readonly Category[] | null; rounds: number }
+    >();
+    for (const round of settings.rounds) {
+      if (round.origin !== 'random') continue;
+      const key = categoriesKey(round.categories);
+      const rounds = (categorySets.get(key)?.rounds ?? 0) + 1;
+      categorySets.set(key, { categories: round.categories, rounds });
+    }
+    const statuses = settings.newDilemmas
+      ? (['in-catalog', 'in-exploration'] as const)
+      : (['in-catalog'] as const);
+    const counted = await Promise.all(
+      [...categorySets].map(async ([key, { categories, rounds }]): Promise<[string, number]> => {
+        const found = await Promise.all(
+          statuses.map((status) =>
+            this.#dilemmaCatalog.findCandidates({
+              ...(categories && { categories }),
+              maximumMinimumAge: settings.maximumMinimumAge,
+              status,
+              language: settings.dilemmaLanguage,
+              includeCompromising: settings.includesCompromisingDilemmas,
+              count: rounds,
+              includeGap: room.playsTheGap,
+              excludedIds: [...room.playedDilemmaIds, ...room.roundDilemmaIds],
+              onlyForAdults: false,
+              playedBy: [],
+            }),
+          ),
+        );
+        return [key, new Set(found.flat().map(({ dilemmaId }) => dilemmaId)).size];
+      }),
+    );
+    return new Map(counted);
   }
 
   async #textsOf(dilemmaIds: readonly string[], language: string): Promise<Map<string, string>> {

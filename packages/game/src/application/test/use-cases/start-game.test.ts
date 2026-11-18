@@ -1,3 +1,4 @@
+import { Room } from '../../../domain/entities/room.ts';
 import { describe, expect, it, vi } from 'vitest';
 import { ChangeRoomSettingsUseCase } from '../../use-cases/change-room-settings.use-case.ts';
 import { ChooseRoundDilemmaUseCase } from '../../use-cases/choose-round-dilemma.use-case.ts';
@@ -335,6 +336,32 @@ describe('StartGameUseCase', () => {
         'TestCatalog8',
         'TestCatalog9',
       ]);
+    });
+
+    it('should play from every category the rounds of a rematch beyond what their categories have left', async () => {
+      // Arrange: honesty has two dilemmas, and the room played one of them in its game before.
+      const { startGame, changeSettings, gameRepository, roomRepository, roomId, anaId } =
+        await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { rounds: randomRounds(2, ['honesty']), newDilemmas: false },
+      });
+      const room = (await roomRepository.findById(roomId))!;
+      await roomRepository.save(
+        Room.restore({ ...room.toSnapshot(), playedDilemmaIds: ['TestHonesty1'] }),
+      );
+
+      // Act
+      const { gameId } = await startGame.execute({ roomId, playerId: anaId });
+
+      // Assert
+      const ids = (await gameRepository.findById(gameId))?.dilemmas.map(
+        ({ dilemmaId }) => dilemmaId,
+      );
+      expect(ids).toHaveLength(2);
+      expect(ids).toContain('TestHonesty2');
+      expect(ids).not.toContain('TestHonesty1');
     });
 
     it('should draw a few candidates for each round, never the dilemmas the rounds already play', async () => {

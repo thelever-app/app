@@ -13,6 +13,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
@@ -36,9 +37,24 @@ interface Room {
   /** The last message the server rejected, until the next state or until the player dismisses it. */
   readonly rejection: ErrorDto | undefined;
   readonly send: (command: RoomCommandDto) => void;
+  /**
+   * Sends the command and resolves once a state of the game shows it `done`, the server rejects it
+   * or the player is out of the game: what an optimistic screen waits for before showing what the
+   * server says. A state that another player brought about first does not answer it.
+   */
+  readonly request: (
+    command: RoomCommandDto,
+    done: (game: GameStateDto) => boolean,
+  ) => Promise<void>;
   /** The answer to a dilemma as it stands: the vote and, in a nominal room, the predictions made. */
   readonly answerDilemma: (answer: AnswerDraft) => void;
   readonly dismissRejection: () => void;
+}
+
+/** A command sent, waiting for the state that shows it done. */
+interface Waiting {
+  readonly done: (game: GameStateDto) => boolean;
+  readonly resolve: () => void;
 }
 
 interface RoomProviderProps {
@@ -59,11 +75,23 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
     INITIAL_ROOM_STATE,
   );
 
+  // Who waits for the answer of the server to a command they sent, and the state that answers it.
+  const waiting = useRef<Waiting[]>([]);
   useEffect(
     () =>
       connection.subscribe((message) => {
         if (message.type === 'game-state') noteServerTime(message.serverTime);
         dispatch(message);
+        const answers =
+          message.type === 'game-state'
+            ? ({ done }: Waiting) => done(message)
+            : ['room-state', 'error', 'expelled'].includes(message.type)
+              ? () => true
+              : undefined;
+        if (!answers) return;
+        const answered = waiting.current.filter(answers);
+        waiting.current = waiting.current.filter((waiter) => !answered.includes(waiter));
+        for (const { resolve } of answered) resolve();
       }),
     [connection],
   );
@@ -83,6 +111,15 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
     [connection],
   );
 
+  const request = useCallback(
+    (command: RoomCommandDto, done: (game: GameStateDto) => boolean) =>
+      new Promise<void>((resolve) => {
+        waiting.current.push({ done, resolve });
+        connection.send(command);
+      }),
+    [connection],
+  );
+
   const answerDilemma = useCallback(
     (answer: AnswerDraft) => {
       send({ type: 'answer-dilemma', ...answer });
@@ -95,14 +132,22 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
   }, []);
 
   const room = useMemo(
-    () =>
-      (lobby ?? game) && { lobby, game, status, rejection, send, answerDilemma, dismissRejection },
-    [lobby, game, status, rejection, send, answerDilemma, dismissRejection],
+    () => ({
+      lobby,
+      game,
+      status,
+      rejection,
+      send,
+      request,
+      answerDilemma,
+      dismissRejection,
+    }),
+    [lobby, game, status, rejection, send, request, answerDilemma, dismissRejection],
   );
 
   // The connection hands over why before it gives up, so the reason is already here.
   if (status === 'rejected') return rejected(expelled ? 'player-expelled' : rejection?.code);
-  if (!room) return fallback;
+  if (!lobby && !game) return fallback;
   return <RoomContext value={room}>{children}</RoomContext>;
 }
 

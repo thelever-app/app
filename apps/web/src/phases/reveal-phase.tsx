@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { isAnonymous } from '../components/players.ts';
+import { hasReaction } from '../reveal/optimistic.ts';
 import { useGame } from '../room/room-provider.tsx';
 import { REVEAL_INTRO_MS, RevealIntro } from '../reveal/reveal-intro.tsx';
 import { RevealScreen } from '../reveal/reveal-screen.tsx';
@@ -8,11 +8,11 @@ import { HOME_PATH } from '../home-path.ts';
 
 /**
  * The reveal of a round, after a brief passage from its decision: any player takes everyone on to
- * the next one and, from the last one of an anonymous room, to the game results.
+ * the next one and, from the last one, to the game results.
  */
 export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   const navigate = useNavigate();
-  const { game, send } = useGame();
+  const { game, send, request } = useGame();
   const { reveal } = game;
   const { position } = game.round;
 
@@ -32,8 +32,6 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   if (!reveal) return null;
   if (introFor === position) return <RevealIntro game={game} reveal={reveal} />;
   const isLast = position === game.dilemmas.length - 1;
-  // The results of a nominal room, with their titles, are still to come.
-  const canMoveOn = !isLast || isAnonymous(game);
   return (
     <RevealScreen
       // A new screen for each reveal, so nothing of the previous one stays.
@@ -41,12 +39,27 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
       game={game}
       reveal={reveal}
       onShowQr={onShowQr}
-      onMoveOn={canMoveOn ? () => send({ type: 'move-on', fromPosition: position }) : undefined}
+      onMoveOn={() => send({ type: 'move-on', fromPosition: position })}
       isLast={isLast}
       onLeave={() => {
         send({ type: 'leave-room' });
         void navigate(HOME_PATH);
       }}
+      // Each one waits for the state with the like or the reaction of the player, or another round.
+      onLike={() =>
+        request(
+          { type: 'like-dilemma', position },
+          (next) => next.reveal?.position !== position || next.reveal.youLiked,
+        )
+      }
+      onReact={(target, emoji) =>
+        request(
+          { type: 'react', position, target, emoji },
+          (next) =>
+            next.reveal?.position !== position ||
+            hasReaction(next.reveal.yourReactions, target, emoji),
+        )
+      }
     />
   );
 }

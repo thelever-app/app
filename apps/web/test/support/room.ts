@@ -5,6 +5,7 @@ export const DEFAULT_ROUNDS: RoomStateDto['rounds'] = Array.from({ length: 8 }, 
   roundId: index + 1,
   origin: 'random',
   categories: null,
+  withoutNewDilemmas: false,
 }));
 
 /** Ana hosts a lobby with Luis and Marta, with the default configuration. */

@@ -8,6 +8,7 @@ import { PlayerNotInGameError } from '../../../domain/errors/player-not-in-game.
 import { Game } from '../../../domain/entities/game.ts';
 import { DistributionPredictionVO } from '../../../domain/vos/distribution-prediction.vo.ts';
 import type { RoomVariant } from '../../../domain/vos/room-settings.vo.ts';
+import { InMemoryDilemmaLikes } from '../../../adapters/in-memory/in-memory-dilemma-likes.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { FixedIdGenerator } from '../../../domain/test/support/fixed-id-generator.ts';
@@ -31,7 +32,12 @@ async function gameInDecisionPhase(variant: RoomVariant = 'anonymous') {
       sealProvider: new InMemorySealProvider(),
       clock: game.clock,
     }),
-    getGameState: new GetGameStateUseCase(game.roomRepository, game.gameRepository, game.catalog),
+    getGameState: new GetGameStateUseCase(
+      game.roomRepository,
+      game.gameRepository,
+      game.catalog,
+      new InMemoryDilemmaLikes(),
+    ),
   };
 }
 

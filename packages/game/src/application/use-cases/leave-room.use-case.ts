@@ -46,7 +46,9 @@ export class LeaveRoomUseCase {
     if (game.playerIds.includes(playerId)) {
       game.leave(playerId);
       // The round does not wait for who leaves; past its time, it is revealed by time.
-      if (!game.runOutRound(this.#clock.now())) revealIfEveryoneAnswered(room, game);
+      if (!game.runOutRound(this.#clock.now())) {
+        revealIfEveryoneAnswered(room, game, this.#clock.now());
+      }
     }
     handOverHostIfAway(room, game);
     const roomEvents = room.pullEvents();

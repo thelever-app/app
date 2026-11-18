@@ -149,7 +149,8 @@
   "newHost": {
     "title": "Tu es maintenant l’hôte",
     "disconnected": "{{host}} est toujours hors ligne. Dès la prochaine manche, tu peux révéler avant la fin du temps depuis le menu ⋮. En cas de retour, le rôle lui revient.",
-    "left": "{{host}} a quitté la partie. Tes options sont dans le menu ⋮."
+    "left": "{{host}} a quitté la partie. Tes options sont dans le menu ⋮.",
+    "ended": "{{host}} est toujours hors ligne. Tu peux maintenant lancer la revanche. En cas de retour, le rôle lui revient."
   },
   "lateJoin": {
     "illustration": "La Palanca, à côté d’un aiguillage",
@@ -214,7 +215,20 @@
     "aboutYouAnonymous": "Tu n’as pas voté : tu as prédit comment les autres se répartiraient. Ta prédiction et tes points, toi seul les vois.",
     "aboutHits": "{{right, number}} sur {{of, number}}",
     "aboutHitsLabel": "trouvés",
-    "aboutYouHitsLabel": "trouvés"
+    "aboutYouHitsLabel": "trouvés",
+    "like": "Bon dilemme",
+    "dilemmaReactions": "Réactions au dilemme",
+    "reactionBy": "{{emoji}} : {{names}}",
+    "reactionCount_one": "{{emoji}} : {{count}} réaction",
+    "reactionCount_many": "{{emoji}} : {{count, number}} réactions",
+    "reactionCount_other": "{{emoji}} : {{count, number}} réactions",
+    "reactToDilemma": "Réagir au dilemme",
+    "reactToVoteOf": "Réagir au vote de {{name}}",
+    "reactionsToVote": "Réactions au vote de {{name}}",
+    "reactToVoteHint": "Touche quelqu’un pour réagir à son vote.",
+    "dilemmaPoints_one": "{{count}} point pour toi",
+    "dilemmaPoints_many": "{{count, number}} points pour toi",
+    "dilemmaPoints_other": "{{count, number}} points pour toi"
   },
   "ranking": {
     "label": "Résultats",
@@ -226,7 +240,10 @@
     "points": "{{points, number}}",
     "pointsUnit": "points",
     "note": "Qui arrive premier est El Mentalista de la partie. Les dilemmes avec moins de 3 votes ne rapportent rien. Les ex æquo partagent la place et le titre.",
-    "next": "Continuer"
+    "next": "Continuer",
+    "nominalTitle": "Classement",
+    "nominalText": "Des points pour deviner le vote des autres : moins il y a de monde à avoir choisi la même chose, plus ça rapporte.",
+    "nominalNote": "À côté de chacun, les titres remportés. Les ex æquo partagent la place."
   },
   "end": {
     "label": "Partie terminée · {{total, number}} sur {{total, number}}",
@@ -243,7 +260,16 @@
     "gone_many": "{{names}} sont partis.",
     "gone_other": "{{names}} sont partis.",
     "closes": "La salle se ferme 15 minutes après que plus personne n’est connecté.",
-    "leave": "Quitter"
+    "leave": "Quitter",
+    "placeNominal_one": "Tu finis {{position, number}}e sur {{players, number}}, avec {{count}} point.",
+    "placeNominal_many": "Tu finis {{position, number}}e sur {{players, number}}, avec {{count, number}} points.",
+    "placeNominal_other": "Tu finis {{position, number}}e sur {{players, number}}, avec {{count, number}} points.",
+    "knownBest": "Qui te connaît le mieux : {{names}}.",
+    "notInGame": "Cette partie est déjà terminée. S’il y a une revanche, tu y joueras.",
+    "rematch": "Revanche avec le même groupe",
+    "rematchGuest": "{{host}} peut lancer la revanche. Si c’est le cas, tu passeras au lobby avec ceux qui sont encore dans la salle.",
+    "shareCard": "Partager ma carte",
+    "shareGroupCard": "Partager la carte du groupe"
   },
   "notices": {
     "reconnecting": "Reconnexion… tes réponses sont enregistrées",
@@ -435,7 +461,10 @@
     "missing_many": "Il manque {{count}} joueurs pour commencer",
     "gapWarningTitle": "Un dilemme parle de quelqu’un du groupe.",
     "gapWarningNominal": "Dans une salle nominative, il faut au moins {{minimum, number}} joueurs : si vous commencez à moins, sa manche devient aléatoire.",
-    "gapWarningAnonymous": "Dans une salle anonyme, il faut au moins {{minimum, number}} joueurs : si vous commencez à moins, sa manche devient aléatoire."
+    "gapWarningAnonymous": "Dans une salle anonyme, il faut au moins {{minimum, number}} joueurs : si vous commencez à moins, sa manche devient aléatoire.",
+    "noNewDilemmas": "Plus aucun dilemme non joué",
+    "noNewDilemmasNotice": "La manche {{round, number}} n’a plus de dilemmes non joués dans cette salle. Si vous lancez la partie ainsi, cette manche puisera dans toutes les catégories.",
+    "changeCategories": "Changer les catégories"
   },
   "languages": {
     "es": "Español",
@@ -596,5 +625,85 @@
     "fewBody_other": "Nous en avons {{count, number}} sur les {{needed}} nécessaires. Reviens plus tard pour voir comment le monde a voté et si tu avais vu juste.",
     "play": "Le jouer avec mon groupe",
     "arguments": "Lire les arguments de chaque option"
+  },
+  "react": {
+    "dilemmaTitle": "Réagir au dilemme",
+    "voteTitle": "{{name}} a voté « {{option}} »",
+    "ownVoteTitle": "Tu as voté « {{option}} »",
+    "toDilemma": "Réagis au dilemme",
+    "toVote": "Réagis à son vote",
+    "toOwnVote": "Réagis à ton vote",
+    "more": "Plus d’emojis",
+    "anyEmoji": "Écris un emoji",
+    "send": "Réagir",
+    "oneDilemma": "Une seule réaction par dilemme : si tu en choisis une autre, elle remplace la précédente. Avec « + », tu peux utiliser n’importe quel emoji.",
+    "oneVote": "Une seule réaction par vote : si tu en choisis une autre, elle remplace la précédente. Avec « + », tu peux utiliser n’importe quel emoji.",
+    "nominalPrivacy": "Dans cette salle, tout le monde verra qui a réagi.",
+    "anonymousPrivacy": "Dans cette salle, personne ne verra qui a réagi, seulement combien."
+  },
+  "results": {
+    "label": "Résultats · {{step, number}} sur {{total, number}}",
+    "next": "Suivant",
+    "onlyYou": "Toi seul le vois",
+    "knowsTitle": "Qui te connaît le mieux, c’est…",
+    "knowsNobody": "Cette fois, personne n’a deviné tes votes.",
+    "knowsFact_one": "{{count}} point en devinant tes votes",
+    "knowsFact_many": "{{count, number}} points en devinant tes votes",
+    "knowsFact_other": "{{count, number}} points en devinant tes votes",
+    "runnerUp": "Ensuite : {{names}}, {{fact}}",
+    "titles": {
+      "almas-gemelas": "Almas gemelas",
+      "verso-suelto": "Verso suelto",
+      "la-voz-del-grupo": "La voz del grupo",
+      "iman-de-reacciones": "Imán de reacciones",
+      "enigma": "Enigma",
+      "libro-abierto": "Libro abierto",
+      "el-mentalista": "El Mentalista"
+    },
+    "meanings": {
+      "almas-gemelas": "Le duo qui a le mieux deviné le vote l’un de l’autre.",
+      "verso-suelto": "Qui a le plus souvent voté avec la minorité.",
+      "la-voz-del-grupo": "Qui a le plus souvent voté comme la majorité.",
+      "iman-de-reacciones": "Qui a reçu le plus de réactions à ses votes.",
+      "enigma": "La personne dont on a le moins deviné le vote.",
+      "libro-abierto": "La personne dont on a le plus deviné le vote.",
+      "el-mentalista": "Qui a le mieux deviné le vote des autres."
+    },
+    "facts": {
+      "almas-gemelas": "{{count, number}} votes sur {{of, number}} devinés l’un de l’autre",
+      "verso-suelto": "Avec la minorité dans {{count, number}} dilemmes sur {{of, number}}",
+      "la-voz-del-grupo": "Avec la majorité dans {{count, number}} dilemmes sur {{of, number}}",
+      "iman-de-reacciones_one": "{{count}} réaction à ses votes",
+      "iman-de-reacciones_many": "{{count, number}} réactions à ses votes",
+      "iman-de-reacciones_other": "{{count, number}} réactions à ses votes",
+      "enigma": "{{count, number}} votes sur {{of, number}} devinés",
+      "libro-abierto": "{{count, number}} votes sur {{of, number}} devinés",
+      "el-mentalista_one": "{{count}} point",
+      "el-mentalista_many": "{{count, number}} points",
+      "el-mentalista_other": "{{count, number}} points"
+    }
+  },
+  "card": {
+    "personalTitle": "Ta carte",
+    "groupTitle": "La carte du groupe",
+    "close": "Fermer",
+    "share": "Partager",
+    "myGame": "Ma partie de TheLever",
+    "ourGame": "Notre partie de TheLever",
+    "place": "{{position, number}}e sur {{players, number}}",
+    "inAGameOf_one": "dans une partie de {{count}} dilemme moral",
+    "inAGameOf_many": "dans une partie de {{count, number}} dilemmes moraux",
+    "inAGameOf_other": "dans une partie de {{count, number}} dilemmes moraux",
+    "dilemmas_one": "{{count}} dilemme",
+    "dilemmas_many": "{{count, number}} dilemmes",
+    "dilemmas_other": "{{count, number}} dilemmes",
+    "knowsMe": "Qui me connaît le mieux",
+    "someone": "Quelqu’un du groupe",
+    "myTitles": "Mes titres",
+    "withPartner": "{{title}}, avec {{name}}",
+    "mostDivisive": "Celui qui nous a le plus divisés",
+    "footer": "Joue sur thelever.app",
+    "showNames": "Afficher les pseudos de {{names}}",
+    "groupNote": "Ni noms ni votes de personne : seulement comment le groupe s’est réparti."
   }
 }

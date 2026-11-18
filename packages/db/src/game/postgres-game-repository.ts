@@ -8,6 +8,7 @@ import { currentTransaction } from '../transaction.ts';
 type AnswerRow = Insertable<GameTables['answers']>;
 type PlayerDilemmaRow = Insertable<GameTables['game_player_dilemmas']>;
 type PlayerRow = Insertable<GameTables['game_players']>;
+type ReactionRow = Insertable<GameTables['reactions']>;
 
 /**
  * A game in its rows. Inside a command, reading it locks the row of its room, the same lock every
@@ -79,6 +80,7 @@ export class PostgresGameRepository implements GameRepository {
     await this.#savePlayers(db, snapshot, playerRowsOf(snapshot));
     await this.#upsertPlayerDilemmas(db, playerDilemmaRowsOf(snapshot));
     await this.#upsertAnswers(db, answerRowsOf(snapshot));
+    await this.#saveReactions(db, snapshot);
   }
 
   /** Writes only what the command changed since it read or saved the game. */
@@ -87,8 +89,14 @@ export class PostgresGameRepository implements GameRepository {
     known: GameSnapshot,
     snapshot: GameSnapshot,
   ): Promise<void> {
-    if (!isDeepStrictEqual(known.peopleInTheGap, snapshot.peopleInTheGap)) {
+    if (
+      !isDeepStrictEqual(known.peopleInTheGap, snapshot.peopleInTheGap) ||
+      !isDeepStrictEqual(known.timesSpent, snapshot.timesSpent)
+    ) {
       await this.#saveDilemmas(db, snapshot);
+    }
+    if (!isDeepStrictEqual(known.reactions, snapshot.reactions)) {
+      await this.#saveReactions(db, snapshot);
     }
     const answers = changesOf(answerRowsOf(known), answerRowsOf(snapshot), answerKey);
     // The answers go before the players they belong to.
@@ -117,8 +125,10 @@ export class PostgresGameRepository implements GameRepository {
       round_ends_at: round?.endsAt ?? null,
       round_revealed_by: round?.revealedBy ?? null,
       round_moved_on_by: round?.movedOnBy ?? null,
+      round_revealed_at: round?.revealedAt ?? null,
       stage: stage.kind,
       stage_moved_on_by: stage.movedOnBy,
+      stage_step: stage.step,
     };
     await db
       .insertInto('games')
@@ -138,13 +148,15 @@ export class PostgresGameRepository implements GameRepository {
 
   /**
    * The dilemmas of a game, and the options it copied of each, never change once it exists; who
-   * takes the gap of each is chosen when the game starts.
+   * takes the gap of each is chosen when the game starts, and the time spent on each comes as the
+   * group moves on from it.
    */
   async #saveDilemmas(
     db: Transaction<GameTables>,
-    { id, dilemmas, peopleInTheGap }: GameSnapshot,
+    { id, dilemmas, peopleInTheGap, timesSpent }: GameSnapshot,
   ): Promise<void> {
     const people = new Map(peopleInTheGap.map(({ dilemmaId, playerId }) => [dilemmaId, playerId]));
+    const spent = new Map(timesSpent.map(({ dilemmaId, ms }) => [dilemmaId, ms]));
     await db
       .insertInto('game_dilemmas')
       .values(
@@ -158,11 +170,13 @@ export class PostgresGameRepository implements GameRepository {
           has_gap: hasGap,
           fixed_order: fixedOrder,
           person_in_the_gap: people.get(dilemmaId) ?? null,
+          time_spent_ms: spent.get(dilemmaId) ?? null,
         })),
       )
       .onConflict((conflict) =>
         conflict.columns(['game_id', 'position']).doUpdateSet((eb) => ({
           person_in_the_gap: eb.ref('excluded.person_in_the_gap'),
+          time_spent_ms: eb.ref('excluded.time_spent_ms'),
         })),
       )
       .execute();
@@ -223,6 +237,13 @@ export class PostgresGameRepository implements GameRepository {
         })),
       )
       .execute();
+  }
+
+  /** The reactions of a game are few: they are written whole, in their order, whenever one changes. */
+  async #saveReactions(db: Transaction<GameTables>, snapshot: GameSnapshot): Promise<void> {
+    await db.deleteFrom('reactions').where('game_id', '=', snapshot.id).execute();
+    const rows = reactionRowsOf(snapshot);
+    if (rows.length > 0) await db.insertInto('reactions').values(rows).execute();
   }
 
   async #deleteAnswers(db: Transaction<GameTables>, rows: readonly AnswerRow[]): Promise<void> {
@@ -301,6 +322,7 @@ function readGame(db: Kysely<GameTables>, id: string) {
             'game_dilemmas.has_gap as hasGap',
             'game_dilemmas.fixed_order as fixedOrder',
             'game_dilemmas.person_in_the_gap as personInTheGap',
+            'game_dilemmas.time_spent_ms as timeSpentMs',
             'game_dilemma_options.option_id as optionId',
           ])
           .whereRef('game_dilemmas.game_id', '=', 'games.id')
@@ -328,6 +350,13 @@ function readGame(db: Kysely<GameTables>, id: string) {
       ).as('playerDilemmas'),
       jsonArrayFrom(
         eb
+          .selectFrom('reactions')
+          .selectAll('reactions')
+          .whereRef('reactions.game_id', '=', 'games.id')
+          .orderBy('reactions.position'),
+      ).as('reactions'),
+      jsonArrayFrom(
+        eb
           .selectFrom('answers')
           .innerJoin('game_dilemmas', (join) =>
             join
@@ -346,7 +375,7 @@ function readGame(db: Kysely<GameTables>, id: string) {
 type GameRow = NonNullable<Awaited<ReturnType<typeof readGame>>>;
 
 function snapshotOf(row: GameRow): GameSnapshot {
-  const { dilemmas, peopleInTheGap } = dilemmasOf(row.options);
+  const { dilemmas, peopleInTheGap, timesSpent } = dilemmasOf(row.options);
   return {
     id: row.id,
     roomId: row.room_id,
@@ -369,12 +398,26 @@ function snapshotOf(row: GameRow): GameSnapshot {
             startedAt: row.round_started_at,
             endsAt: row.round_ends_at,
             revealedBy: row.round_revealed_by,
+            revealedAt: row.round_revealed_at,
             movedOnBy: row.round_moved_on_by,
           }
         : null,
-    stage: { kind: row.stage, movedOnBy: row.stage_moved_on_by },
+    stage: { kind: row.stage, movedOnBy: row.stage_moved_on_by, step: row.stage_step },
     dilemmas,
     peopleInTheGap,
+    timesSpent,
+    reactions: row.reactions.map((reaction) => ({
+      dilemmaId: reaction.dilemma_id,
+      playerId: reaction.player_id,
+      aboutId: reaction.about_player_id,
+      emoji: reaction.emoji,
+      seal: {
+        gameConsentVersion: reaction.game_consent_version,
+        researchConsentVersion: reaction.research_consent_version,
+        commercialLicenceConsentVersion: reaction.commercial_licence_consent_version,
+        underEighteen: reaction.under_eighteen,
+      },
+    })),
     players: row.players.map(({ player_id, has_left, joined_late }) => {
       const ofPlayer = row.playerDilemmas.filter((dilemma) => dilemma.player_id === player_id);
       return {
@@ -419,7 +462,7 @@ function snapshotOf(row: GameRow): GameSnapshot {
 /** One row per option, in order, grouped into the dilemmas they belong to. */
 function dilemmasOf(
   options: GameRow['options'],
-): Pick<GameSnapshot, 'dilemmas' | 'peopleInTheGap'> {
+): Pick<GameSnapshot, 'dilemmas' | 'peopleInTheGap' | 'timesSpent'> {
   const dilemmas = new Map<
     string,
     {
@@ -429,6 +472,7 @@ function dilemmasOf(
       hasGap: boolean;
       fixedOrder: boolean;
       personInTheGap: string | null;
+      timeSpentMs: number | null;
       optionIds: string[];
     }
   >();
@@ -440,6 +484,7 @@ function dilemmasOf(
     hasGap,
     fixedOrder,
     personInTheGap,
+    timeSpentMs,
     optionId,
   } of options) {
     const dilemma = dilemmas.get(dilemmaId) ?? {
@@ -449,6 +494,7 @@ function dilemmasOf(
       hasGap,
       fixedOrder,
       personInTheGap,
+      timeSpentMs,
       optionIds: [],
     };
     dilemma.optionIds.push(optionId);
@@ -468,6 +514,9 @@ function dilemmasOf(
     ),
     peopleInTheGap: [...dilemmas].flatMap(([dilemmaId, { personInTheGap }]) =>
       personInTheGap ? [{ dilemmaId, playerId: personInTheGap }] : [],
+    ),
+    timesSpent: [...dilemmas].flatMap(([dilemmaId, { timeSpentMs }]) =>
+      timeSpentMs === null ? [] : [{ dilemmaId, ms: timeSpentMs }],
     ),
   };
 }
@@ -543,6 +592,21 @@ function answerRowsOf({ id, dilemmas, players }: GameSnapshot): AnswerRow[] {
       under_eighteen: answer.seal.underEighteen,
     })),
   );
+}
+
+function reactionRowsOf({ id, reactions }: GameSnapshot): ReactionRow[] {
+  return reactions.map((reaction, position) => ({
+    game_id: id,
+    position,
+    dilemma_id: reaction.dilemmaId,
+    player_id: reaction.playerId,
+    about_player_id: reaction.aboutId,
+    emoji: reaction.emoji,
+    game_consent_version: reaction.seal.gameConsentVersion,
+    research_consent_version: reaction.seal.researchConsentVersion,
+    commercial_licence_consent_version: reaction.seal.commercialLicenceConsentVersion,
+    under_eighteen: reaction.seal.underEighteen,
+  }));
 }
 
 /** The key of an answer, or of a dilemma of a player, within its game. */

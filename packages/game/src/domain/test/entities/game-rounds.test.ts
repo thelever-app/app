@@ -9,7 +9,6 @@ import { DilemmaNotInRoundError } from '../../errors/dilemma-not-in-round.error.
 import { DilemmaNotReportedAsOffensiveError } from '../../errors/dilemma-not-reported-as-offensive.error.ts';
 import { DilemmaSkippedError } from '../../errors/dilemma-skipped.error.ts';
 import { DuplicateVotePredictionError } from '../../errors/duplicate-vote-prediction.error.ts';
-import { NoNextRoundError } from '../../errors/no-next-round.error.ts';
 import { PlayerLeftGameError } from '../../errors/player-left-game.error.ts';
 import { PlayerNotPredictableError } from '../../errors/player-not-predictable.error.ts';
 import { PredictionsNotAllowedError } from '../../errors/predictions-not-allowed.error.ts';
@@ -99,7 +98,7 @@ function everyoneAnswers(game: Game, votes: Record<string, string> = {}, at = AT
   for (const playerId of EVERYONE) {
     game.answer(playerId, dilemmaId, complete(game, playerId, votes[playerId]), SEAL, at);
   }
-  game.revealIfEveryoneAnswered(EVERYONE);
+  game.revealIfEveryoneAnswered(EVERYONE, AT);
 }
 
 describe('Game, by rounds', () => {
@@ -116,6 +115,7 @@ describe('Game, by rounds', () => {
         startedAt: AT,
         endsAt: after(60 * SECOND),
         revealedBy: null,
+        revealedAt: null,
         movedOnBy: null,
       });
       expect(game.isInDecisionPhase).toBe(true);
@@ -437,7 +437,7 @@ describe('Game, by rounds', () => {
       game.pullEvents();
 
       // Act
-      const revealed = game.revealIfEveryoneAnswered(['Ana', 'Luis']);
+      const revealed = game.revealIfEveryoneAnswered(['Ana', 'Luis'], AT);
 
       // Assert
       expect(revealed).toBe(true);
@@ -455,8 +455,8 @@ describe('Game, by rounds', () => {
       game.answer('Ana', 'TestDilemma1', complete(game, 'Ana'), SEAL, AT);
 
       // Act & Assert
-      expect(game.revealIfEveryoneAnswered(['Ana', 'Luis'])).toBe(false);
-      expect(game.revealIfEveryoneAnswered([])).toBe(false);
+      expect(game.revealIfEveryoneAnswered(['Ana', 'Luis'], AT)).toBe(false);
+      expect(game.revealIfEveryoneAnswered([], AT)).toBe(false);
       expect(game.isInDecisionPhase).toBe(true);
     });
 
@@ -470,9 +470,9 @@ describe('Game, by rounds', () => {
       game.rejoin('Marta');
 
       // Act & Assert
-      expect(game.revealIfEveryoneAnswered(EVERYONE)).toBe(false);
+      expect(game.revealIfEveryoneAnswered(EVERYONE, AT)).toBe(false);
       game.leave('Marta');
-      expect(game.revealIfEveryoneAnswered(EVERYONE)).toBe(true);
+      expect(game.revealIfEveryoneAnswered(EVERYONE, AT)).toBe(true);
     });
 
     it('should reveal when the time for the dilemma runs out, and only once', () => {
@@ -491,7 +491,7 @@ describe('Game, by rounds', () => {
       const game = gameOfThree();
 
       // Act
-      game.reveal('host');
+      game.reveal('host', AT);
 
       // Assert
       expect(game.round?.revealedBy).toBe('host');
@@ -513,18 +513,18 @@ describe('Game, by rounds', () => {
       );
 
       // Act
-      game.reveal('time');
+      game.reveal('time', AT);
 
       // Assert
       expect(game.didNotVoteOf('Marta')).toEqual([]);
-      expect(game.pointsOf('Marta')).toEqual([{ dilemmaId: 'TestDilemma1', points: 50 }]);
+      expect(game.pointsOf('Marta')).toEqual([{ dilemmaId: 'TestDilemma1', points: 10 }]);
       expect(game.pointsOf('Ana')).toEqual([{ dilemmaId: 'TestDilemma1', points: null }]);
     });
 
     it('should not take any answer once the dilemma is revealed', () => {
       // Arrange
       const game = gameOfThree();
-      game.reveal('host');
+      game.reveal('host', AT);
 
       // Act & Assert
       expect(() => game.answer('Luis', 'TestDilemma1', complete(game, 'Luis'), SEAL, AT)).toThrow(
@@ -552,6 +552,7 @@ describe('Game, by rounds', () => {
         startedAt: after(30 * SECOND),
         endsAt: after(90 * SECOND),
         revealedBy: null,
+        revealedAt: null,
         movedOnBy: 'Marta',
       });
       expect(game.pullEvents()).toEqual([
@@ -583,7 +584,7 @@ describe('Game, by rounds', () => {
       expect(game.round?.position).toBe(0);
     });
 
-    it('should not move on from the last round', () => {
+    it('should move on from the last round to the game results, keeping the last round', () => {
       // Arrange
       const game = gameOfThree();
       for (const position of [0, 1]) {
@@ -592,8 +593,13 @@ describe('Game, by rounds', () => {
       }
       everyoneAnswers(game);
 
-      // Act & Assert
-      expect(() => game.moveOn('Ana', 2, AT)).toThrow(NoNextRoundError);
+      // Act
+      const moved = game.moveOn('Ana', 2, AT);
+
+      // Assert
+      expect(moved).toBe(true);
+      expect(game.stage).toEqual({ kind: 'results', movedOnBy: 'Ana', step: 0 });
+      expect(game.round?.position).toBe(2);
     });
   });
 
@@ -738,7 +744,7 @@ describe('Game, by rounds', () => {
 
       // Assert
       expect(game.revealOf(0).votes).toContainEqual({ playerId: 'Pedro', vote: 'TestWait' });
-      expect(game.pointsOf('Ana')).toEqual([{ dilemmaId: 'TestDilemma1', points: 100 }]);
+      expect(game.pointsOf('Ana')).toEqual([{ dilemmaId: 'TestDilemma1', points: 66 }]);
       expect(game.pointsOf('Pedro')).toEqual([]);
     });
 
@@ -791,7 +797,7 @@ describe('Game, by rounds', () => {
       answer('Ana', 'TestPull');
       answer('Luis', 'TestWait');
       answer('Marta', 'TestPull');
-      game.revealIfEveryoneAnswered(EVERYONE);
+      game.revealIfEveryoneAnswered(EVERYONE, AT);
 
       // Act
       const reveal = game.revealOf(0);
@@ -822,7 +828,7 @@ describe('Game, by rounds', () => {
       const game = gameOfThree();
       game.answer('Ana', 'TestDilemma1', complete(game, 'Ana'), SEAL, AT);
       game.answer('Luis', 'TestDilemma1', { vote: 'TestPull' }, SEAL, AT);
-      game.reveal('host');
+      game.reveal('host', AT);
 
       // Act
       const reveal = game.revealOf(0);
@@ -855,7 +861,7 @@ describe('Game, by rounds', () => {
       const game = gameOfThree(ANONYMOUS);
       game.answer('Luis', 'TestDilemma1', { vote: 'TestPull' }, SEAL, AT);
       game.answer('Marta', 'TestDilemma1', { vote: 'TestWait' }, SEAL, AT);
-      game.reveal('time');
+      game.reveal('time', AT);
 
       // Act
       const reveal = game.revealOf(0);
@@ -878,7 +884,7 @@ describe('Game, by rounds', () => {
       game.skip('Luis', 'TestDilemma1');
       game.answer('Ana', 'TestDilemma1', complete(game, 'Ana'), SEAL, AT);
       game.leave('Marta');
-      game.revealIfEveryoneAnswered(['Ana', 'Luis']);
+      game.revealIfEveryoneAnswered(['Ana', 'Luis'], AT);
       game.joinLate('Pedro', new KeepOrderRandomness());
       game.moveOn('Luis', 0, after(2 * SECOND));
 

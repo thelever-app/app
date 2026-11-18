@@ -19,6 +19,7 @@ export { PostgresDilemmaQueries } from './dilemmas/postgres-dilemma-queries.ts';
 export { PostgresWorldResultRepository } from './dilemmas/postgres-world-result-repository.ts';
 export { PostgresRoomRepository } from './game/postgres-room-repository.ts';
 export { PostgresGameRepository } from './game/postgres-game-repository.ts';
+export { PostgresDilemmaLikes } from './game/postgres-dilemma-likes.ts';
 export { PostgresPlayerNotifier, GAME_EVENTS_CHANNEL } from './game/postgres-player-notifier.ts';
 export { GameEventsListener } from './game/game-events-listener.ts';
 export { PostgresInstances } from './game/postgres-instances.ts';

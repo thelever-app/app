@@ -118,6 +118,8 @@ export interface Database {
     last_connected_at: Date;
     /** When every player had left. */
     closed_at: Date | null;
+    /** The dilemmas of the games the room played before, which its rematches do not repeat. */
+    played_dilemma_ids: string[];
   };
   room_players: {
     id: string;
@@ -174,10 +176,14 @@ export interface Database {
     round_ends_at: Date | null;
     round_revealed_by: RevealedBy | null;
     round_moved_on_by: string | null;
-    /** The rounds, the game results of an anonymous room, or the end of the game. */
+    /** When the dilemma of the round was revealed; null in its decision phase. */
+    round_revealed_at: Date | null;
+    /** The rounds, the game results, or the end of the game. */
     stage: GameStage;
     /** Who moved everyone to the results or to the end; null in the rounds. */
     stage_moved_on_by: string | null;
+    /** The screen of the results everyone is on, from 0; null out of the results. */
+    stage_step: number | null;
     version: number;
     variant: RoomVariant;
     group_nature: GroupNature;
@@ -196,6 +202,8 @@ export interface Database {
     person_in_the_gap: string | null;
     /** The player who chose it in the lobby, for a round of the players; null for the others. */
     chosen_by_player_id: string | null;
+    /** How long the group spent on its reveal, which nobody sees; null until it moved on. */
+    time_spent_ms: number | null;
   };
   /** The options of each dilemma a game plays, copied when it starts: Game reads only its own tables. */
   game_dilemma_options: {
@@ -248,6 +256,32 @@ export interface Database {
     option_order: string[];
     response_time_ms: number | null;
   };
+  /** The reactions in the reveal of each dilemma, in the order they were made, each with its seal. */
+  reactions: {
+    game_id: string;
+    position: number;
+    dilemma_id: string;
+    player_id: string;
+    /** Whose vote it is a reaction to; null for one to the dilemma. */
+    about_player_id: string | null;
+    emoji: string;
+    game_consent_version: string;
+    research_consent_version: string | null;
+    commercial_licence_consent_version: string | null;
+    under_eighteen: boolean;
+  };
+  /** One like per identity and dilemma in all, apart from the rooms, which are deleted. */
+  dilemma_likes: {
+    identity: string;
+    dilemma_id: string;
+    /** In the reveal of a game, or from the catalog, which weighs less. */
+    given_in: 'game' | 'catalog';
+    liked_at: Date;
+    game_consent_version: string;
+    research_consent_version: string | null;
+    commercial_licence_consent_version: string | null;
+    under_eighteen: boolean;
+  };
 }
 
 /** The answers to each option of a version of a dilemma, by its position. */
@@ -287,6 +321,8 @@ export type GameTables = Pick<
   | 'game_players'
   | 'game_player_dilemmas'
   | 'answers'
+  | 'reactions'
+  | 'dilemma_likes'
 >;
 
 /** The database as the adapters and the room server get it. */

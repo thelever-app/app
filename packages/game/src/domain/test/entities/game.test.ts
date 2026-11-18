@@ -67,7 +67,7 @@ function gameInDecisionPhase(): { game: Game; ana: Player; luis: Player } {
 /** The host reveals the dilemma of the round and Ana takes everyone to the next one. */
 function nextRound(game: Game): void {
   const position = game.round?.position as number;
-  game.reveal('host');
+  game.reveal('host', AT);
   game.moveOn('TestAnaId', position, AT);
 }
 
@@ -566,9 +566,12 @@ describe('Game', () => {
           startedAt: AT,
           endsAt: new Date('2026-11-09T10:01:00Z'),
           revealedBy: null,
+          revealedAt: null,
           movedOnBy: null,
         },
-        stage: { kind: 'rounds', movedOnBy: null },
+        stage: { kind: 'rounds', movedOnBy: null, step: null },
+        reactions: [],
+        timesSpent: [],
         peopleInTheGap: [],
         players: [
           {

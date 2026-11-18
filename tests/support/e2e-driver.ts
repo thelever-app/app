@@ -29,11 +29,16 @@ import {
   LanguageDto,
   RoomPreviewResponseDto,
   ServerMessageDto,
+  TitleDto,
   type GameStateDto,
   type RoomStateDto,
 } from '@thelever-app/protocol';
 import { isDeepStrictEqual } from 'node:util';
-import { DistributionPredictionVO, type PredictedShare } from '@thelever-app/game';
+import {
+  DistributionPredictionVO,
+  GAME_LIKE_WEIGHT,
+  type PredictedShare,
+} from '@thelever-app/game';
 import type {
   BrowserContext,
   BrowserContextOptions,
@@ -44,6 +49,7 @@ import type {
 } from 'playwright';
 import type {
   AnswerPlan,
+  CardView,
   CatalogEntry,
   DistributionPredictionView,
   EndOfTheGameView,
@@ -55,14 +61,19 @@ import type {
   JoinRefusal,
   PlayerView,
   PublicPageView,
+  ReactionsView,
   RecordedAnswer,
+  RecordedLike,
+  RecordedReaction,
   ReportReason,
+  ResultsScreenView,
   RevealView,
   RoomChoices,
   RoomPreview,
   RoundSetting,
   RoundView,
   SettingsView,
+  TitleView,
   WorldResultView,
 } from './driver.ts';
 import type { E2eStack } from './e2e-stack.ts';
@@ -140,11 +151,26 @@ function textIn(language: string, key: string): string {
 
 /** The text of the Spanish catalog under the key, with the values in its placeholders. */
 function spanish(key: string, values: Readonly<Record<string, string | number>> = {}): string {
-  return textIn('es', key).replace(/\{\{(\w+)[^}]*\}\}/g, (_, name: string) => {
-    const value = values[name];
-    if (value === undefined) throw new Error(`The text "${key}" needs a value for ${name}`);
-    return String(value);
-  });
+  return textIn('es', pluralOf(key, values.count)).replace(
+    /\{\{(\w+)[^}]*\}\}/g,
+    (_, name: string) => {
+      const value = values[name];
+      if (value === undefined) throw new Error(`The text "${key}" needs a value for ${name}`);
+      return String(value);
+    },
+  );
+}
+
+/** The key of the Spanish plural form for the count, when the text has plural forms. */
+function pluralOf(key: string, count: string | number | undefined): string {
+  if (typeof count !== 'number') return key;
+  const plural = `${key}_${new Intl.PluralRules('es').select(count)}`;
+  try {
+    textIn('es', key);
+    return key;
+  } catch {
+    return plural;
+  }
 }
 
 /** Any text of the Spanish catalog under the key, whatever its placeholders say. */
@@ -285,7 +311,20 @@ const SCREEN = {
   toResults: spanish('reveal.toResults'),
   yourVote: spanish('distribution.yourVote'),
   rankingTitle: spanish('ranking.title'),
+  nominalRankingTitle: spanish('ranking.nominalTitle'),
   rankingNext: spanish('ranking.next'),
+  resultsNext: spanish('results.next'),
+  knownBest: spanish('results.knowsTitle'),
+  like: spanish('reveal.like'),
+  dilemmaReactions: spanish('reveal.dilemmaReactions'),
+  reactToDilemma: spanish('reveal.reactToDilemma'),
+  moreEmojis: spanish('react.more'),
+  anyEmoji: spanish('react.anyEmoji'),
+  sendEmoji: spanish('react.send'),
+  rematch: spanish('end.rematch'),
+  shareCard: spanish('end.shareCard'),
+  shareGroupCard: spanish('end.shareGroupCard'),
+  cardShare: spanish('card.share'),
   endTitle: spanish('end.title'),
   endLeave: spanish('end.leave'),
   titles:
@@ -796,9 +835,16 @@ export class E2eDriver implements GameDriver {
     return this.#playerCalled(player).askedForAnotherAvatar;
   }
 
-  /** As the lobby on the device has it, from the last state the room server sent. */
+  /**
+   * As the lobby on the device has it, from the last state of the lobby the room server sent: in a
+   * game, the settings it is played with, which only the lobby changes.
+   */
   async settingsSeenBy(viewer: string): Promise<SettingsView> {
-    return this.#lobbyOf(viewer).settings;
+    const lobby = this.#playerCalled(viewer).screen?.received.findLast(
+      (message): message is RoomStateDto => message.type === 'room-state',
+    );
+    if (!lobby) throw new Error(`${viewer} has never had the lobby open`);
+    return lobby.settings;
   }
 
   async changeSettings(host: string, changes: Partial<SettingsView>): Promise<void> {
@@ -1464,18 +1510,413 @@ export class E2eDriver implements GameDriver {
     const watcher = this.#playerCalled(viewer);
     const game = lastGameOf(watcher);
     if (game?.stage.kind !== 'results' || !game.ranking) return undefined;
-    const list = screenOf(watcher).page.getByRole('list', { name: SCREEN.rankingTitle });
+    const anonymous = isAnonymous(watcher);
+    const list = screenOf(watcher).page.getByRole('list', {
+      name: anonymous ? SCREEN.rankingTitle : SCREEN.nominalRankingTitle,
+    });
     await list.waitFor();
     await waitUntil(
       async () => (await list.getByRole('listitem').count()) === game.ranking!.length || undefined,
       `${viewer} sees every player in the ranking`,
     );
-    return game.ranking.map(({ playerId, position, points, mentalist }) => ({
+    // The rows in the order of the ranking, each with the badges of the titles it won.
+    const badges = await list
+      .getByRole('listitem')
+      .evaluateAll((rows) =>
+        rows.map((row) =>
+          [...row.querySelectorAll('[role="img"]')].map(
+            (badge) => badge.getAttribute('aria-label') ?? '',
+          ),
+        ),
+      );
+    return game.ranking.map(({ playerId, position, points, mentalist }, index) => ({
       player: this.#nameOf(playerId),
       position,
       points,
       mentalist,
+      titles: anonymous ? [] : (badges[index] ?? []),
     }));
+  }
+
+  /**
+   * The screen of the results `viewer` is on, as it shows it: the title, with each winner by the
+   * nicknames on it, their avatars and the fact; who knows them best; or the ranking.
+   */
+  async resultsScreenSeenBy(viewer: string): Promise<ResultsScreenView | undefined> {
+    const watcher = this.#playerCalled(viewer);
+    const game = lastGameOf(watcher);
+    if (game?.stage.kind !== 'results') return undefined;
+    const { page } = screenOf(watcher);
+    const titles = game.results?.titles ?? [];
+    const step = game.stage.step ?? 0;
+    const title = isAnonymous(watcher) ? undefined : titles[step];
+    if (title) {
+      const section = page.locator(`section[data-title="${title.title}"]`);
+      await section.waitFor();
+      const winners = await section.getByTestId('title-winner').evaluateAll((items) =>
+        items.map((item) => ({
+          text: item.textContent ?? '',
+          avatars: item.querySelectorAll('[data-face]').length,
+        })),
+      );
+      const facts = titles[step]!.winners.map((holder) =>
+        spanish(`results.facts.${title.title}`, { count: holder.count, of: holder.of ?? 0 }),
+      );
+      const runnerUp = section.getByTestId('title-runner-up');
+      const runnersUpText = (await runnerUp.count()) > 0 ? await runnerUp.textContent() : '';
+      return {
+        kind: 'title',
+        title: (await section.getByRole('heading').textContent()) ?? '',
+        winners: winners.map(({ text }) => this.#namesIn(text)),
+        withAvatarsAndFacts: winners.every(
+          ({ text, avatars }, index) =>
+            avatars === this.#namesIn(text).length && text.includes(facts[index] ?? '\0'),
+        ),
+        runnersUp: title.runnersUp
+          .map(({ playerIds }) => playerIds.map((playerId) => this.#nameOf(playerId)))
+          .filter((names) =>
+            names.every((name) => runnersUpText?.includes(this.#playerCalled(name).nickname)),
+          ),
+      };
+    }
+    if (!isAnonymous(watcher) && step === titles.length) {
+      const known = page.getByTestId('known-best');
+      await known.waitFor();
+      const names = page.getByTestId('known-best-names');
+      return {
+        kind: 'known-best',
+        by: (await names.count()) > 0 ? this.#namesIn((await names.textContent()) ?? '') : [],
+      };
+    }
+    await page
+      .getByRole('list', {
+        name: isAnonymous(watcher) ? SCREEN.rankingTitle : SCREEN.nominalRankingTitle,
+      })
+      .waitFor();
+    return { kind: 'ranking' };
+  }
+
+  /** As the room server sent them to the host, in the order the screens of the results show them. */
+  async titlesOfTheGame(): Promise<TitleView[]> {
+    const game = this.#gameOf(this.#hostName());
+    return (game.results?.titles ?? []).map(({ title, winners }) => ({
+      title: spanish(`results.titles.${title}`),
+      winners: winners.map(({ playerIds }) => playerIds.map((playerId) => this.#nameOf(playerId))),
+    }));
+  }
+
+  /** «Revancha con el mismo grupo», and everyone still in the room gets the lobby. */
+  async startRematch(host: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    // Who is still in the room, as the host last saw it.
+    const inTheRoom = this.#gameOf(host)
+      .players.filter(({ left }) => !left)
+      .map(({ playerId }) => playerId);
+    await page.getByRole('button', { name: SCREEN.rematch }).click();
+    const staying = this.#withScreens().filter(
+      (player) =>
+        player.screen?.link && player.playerId !== undefined && inTheRoom.includes(player.playerId),
+    );
+    await waitUntil(
+      () => staying.every((player) => lastLobbyOf(player)) || undefined,
+      'everyone still in the room gets the lobby of the rematch',
+    );
+  }
+
+  async canStartRematch(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    await page.getByRole('heading', { name: SCREEN.endTitle }).waitFor();
+    return steady(
+      async () => (await page.getByRole('button', { name: SCREEN.rematch }).count()) > 0,
+    );
+  }
+
+  /** The rounds the lobby marks as having nothing left the room has not played. */
+  async roundsWithoutNewDilemmasSeenBy(viewer: string): Promise<number[]> {
+    const watcher = this.#playerCalled(viewer);
+    const { page } = screenOf(watcher);
+    await page.getByTestId('room-code').waitFor();
+    // Rounds alike in a row share a row, numbered «2–3».
+    const rows = await steady(() =>
+      page
+        .locator('li[data-without-new-dilemmas]')
+        .evaluateAll((rounds) => rounds.map((round) => round.firstElementChild?.textContent ?? '')),
+    );
+    return rows.flatMap((row) => {
+      const [from, to = from] = row.split('–').map(Number);
+      return Array.from({ length: to! - from! + 1 }, (_, index) => from! + index);
+    });
+  }
+
+  /** «Compartir mi tarjeta», or that of the group, once the card is drawn. */
+  async openCard(player: string): Promise<CardView> {
+    const sharer = this.#playerCalled(player);
+    const { page } = screenOf(sharer);
+    await page
+      .getByRole('button', { name: isAnonymous(sharer) ? SCREEN.shareGroupCard : SCREEN.shareCard })
+      .click();
+    return this.#cardOn(sharer);
+  }
+
+  async showNicknamesOnTheCard(player: string): Promise<CardView> {
+    const sharer = this.#playerCalled(player);
+    const { page } = screenOf(sharer);
+    const before = await page.getByTestId('share-card').getAttribute('aria-label');
+    await page.getByRole('dialog').getByRole('switch').check();
+    await waitUntil(
+      async () =>
+        (await page.getByTestId('share-card').getAttribute('aria-label')) !== before || undefined,
+      `${player} sees the card with the nicknames`,
+    );
+    return this.#cardOn(sharer);
+  }
+
+  /**
+   * What the card says, read from the words it gives who cannot see it and from the avatars it
+   * draws, once it is drawn and can be shared.
+   */
+  async #cardOn(sharer: E2ePlayer): Promise<CardView> {
+    const { page } = screenOf(sharer);
+    const card = page.getByTestId('share-card');
+    await card.waitFor();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: SCREEN.cardShare })
+      .and(page.locator(':enabled'))
+      .waitFor();
+    const lines = ((await card.getAttribute('aria-label')) ?? '').split('. ');
+    const avatars = ((await card.getAttribute('data-avatars')) ?? '').split(' ').filter(Boolean);
+    const game = this.#gameOf(sharer.name);
+    const others = game.players.filter(({ playerId }) => playerId !== sharer.playerId);
+    const someone = spanish('pickDilemmas.someone');
+    const divisive = game.dilemmas.findIndex(({ text }) =>
+      lines.includes(text.replaceAll(GAP_MARKER, someone)),
+    );
+    return {
+      headline: lines[1] ?? '',
+      titles: TitleDto.options
+        .map((title) => spanish(`results.titles.${title}`))
+        .filter((name) => lines.some((line) => line === name || line.startsWith(`${name}, `))),
+      avatarsOf: avatars.map((avatar) => {
+        const found = others.find(
+          (player) => `${player.avatar.face}:${player.avatar.color}` === avatar,
+        );
+        if (!found) throw new Error(`The card shows the avatar ${avatar}, of nobody else`);
+        return this.#nameOf(found.playerId);
+      }),
+      nicknamesOf: others
+        .filter(({ nickname }) => lines.some((line) => line.includes(nickname)))
+        .map(({ playerId }) => this.#nameOf(playerId)),
+      mostDivisive: divisive === -1 ? null : divisive + 1,
+    };
+  }
+
+  /** The players of the scenario whose nicknames are in the text, in the order of the room. */
+  #namesIn(text: string): string[] {
+    return [...this.#players.values()]
+      .filter((player) => player.nickname && text.includes(player.nickname))
+      .map(({ name }) => name);
+  }
+
+  // Reactions and likes, in the reveal of the round
+
+  /** From the reveal: the button of the dilemma, or the voter, and the emoji on the sheet. */
+  async react(player: string, to: string | null, emoji = '😂'): Promise<void> {
+    const reactor = this.#playerCalled(player);
+    const { page } = screenOf(reactor);
+    const region = page.getByRole('main', { name: SCREEN.reveal });
+    await region.waitFor();
+    if (to === null) {
+      await region.getByRole('button', { name: SCREEN.reactToDilemma }).click();
+    } else {
+      const about = this.#playerCalled(to);
+      const name =
+        about.playerId === reactor.playerId
+          ? spanish('playerList.you', { name: about.nickname })
+          : about.nickname;
+      await region
+        .getByRole('button', { name: spanish('reveal.reactToVoteOf', { name }), exact: true })
+        .click();
+    }
+    const sheet = page.getByRole('dialog');
+    const quick = sheet.getByRole('button', { name: emoji, exact: true });
+    if ((await quick.count()) > 0) {
+      await quick.click();
+    } else {
+      await sheet.getByRole('button', { name: SCREEN.moreEmojis }).click();
+      await sheet.getByRole('textbox', { name: SCREEN.anyEmoji }).fill(emoji);
+      await sheet.getByRole('button', { name: SCREEN.sendEmoji }).click();
+    }
+    await sheet.waitFor({ state: 'hidden' });
+    const aboutId = to === null ? null : this.#playerCalled(to).playerId;
+    await waitUntil(() => {
+      const yours = lastGameOf(reactor)?.reveal?.yourReactions;
+      if (!yours) return undefined;
+      return aboutId === null
+        ? yours.dilemma === emoji || undefined
+        : yours.votes.some((vote) => vote.aboutId === aboutId && vote.emoji === emoji) || undefined;
+    }, `${player} gets their reaction back`);
+  }
+
+  /** The chips of the dilemma, by who they name or how many they count, and those under each vote. */
+  async reactionsSeenBy(viewer: string): Promise<ReactionsView> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const region = page.getByRole('main', { name: SCREEN.reveal });
+    await region.waitFor();
+    const seen = await steady(async () => ({
+      dilemma: await region
+        .getByRole('list', { name: SCREEN.dilemmaReactions })
+        .locator('li[data-emoji]')
+        .evaluateAll((chips) =>
+          chips.map((chip) => ({
+            emoji: chip.getAttribute('data-emoji') ?? '',
+            label: chip.getAttribute('aria-label') ?? '',
+          })),
+        ),
+      votes: await region.locator('li[data-player-id]').evaluateAll((voters) =>
+        voters.flatMap((voter) =>
+          [...voter.querySelectorAll('li[data-reactor]')].map((reaction) => ({
+            about: voter.getAttribute('data-player-id') ?? '',
+            by: reaction.getAttribute('data-reactor') ?? '',
+            emoji: reaction.getAttribute('data-emoji') ?? '',
+          })),
+        ),
+      ),
+    }));
+    return {
+      dilemma: seen.dilemma.map(({ emoji, label }) => {
+        const said = label.slice(`${emoji}: `.length);
+        const count = said.match(/^(\d+) reacci/)?.[1];
+        if (count !== undefined) return { emoji, by: [], count: Number(count) };
+        const by = this.#namesIn(said);
+        return { emoji, by, count: by.length };
+      }),
+      votes: seen.votes.map(({ about, by, emoji }) => ({
+        by: this.#namesIn(by)[0] ?? by,
+        about: this.#nameOf(about),
+        emoji,
+      })),
+    };
+  }
+
+  /** As the game keeps them in the database, with their seals. */
+  async reactionsRecorded(): Promise<RecordedReaction[]> {
+    const { gameId, dilemmas } = this.#gameOf(this.#hostName());
+    const rows = await this.#withDatabase((db) =>
+      db
+        .selectFrom('reactions')
+        .selectAll()
+        .where('game_id', '=', gameId)
+        .orderBy('position')
+        .execute(),
+    );
+    const order = dilemmas.map(({ dilemmaId }) => dilemmaId);
+    return rows.map((row) => ({
+      by: this.#nameOf(row.player_id),
+      about: row.about_player_id && this.#nameOf(row.about_player_id),
+      position: order.indexOf(row.dilemma_id) + 1,
+      emoji: row.emoji,
+      researchConsent: row.research_consent_version !== null,
+      commercialLicenceConsent: row.commercial_licence_consent_version !== null,
+      underEighteen: row.under_eighteen,
+    }));
+  }
+
+  /** «Buen dilema» on the reveal, until the room server says the player gave it. */
+  async like(player: string): Promise<void> {
+    const liker = this.#playerCalled(player);
+    const { page } = screenOf(liker);
+    await page.getByRole('button', { name: SCREEN.like }).click();
+    await waitUntil(
+      () => lastGameOf(liker)?.reveal?.youLiked || undefined,
+      `${player} gets their like back`,
+    );
+  }
+
+  /** As it is kept in the database for the identity of the player, which outlives the room. */
+  async likeRecordedFor(player: string, position: number): Promise<RecordedLike | undefined> {
+    const dilemmaId = this.#dilemmaIdAt(position);
+    const identity = await this.#identityOf(player);
+    const row = await this.#withDatabase((db) =>
+      db
+        .selectFrom('dilemma_likes')
+        .selectAll()
+        .where('identity', '=', identity)
+        .where('dilemma_id', '=', dilemmaId)
+        .executeTakeFirst(),
+    );
+    return (
+      row && {
+        researchConsent: row.research_consent_version !== null,
+        commercialLicenceConsent: row.commercial_licence_consent_version !== null,
+        underEighteen: row.under_eighteen,
+      }
+    );
+  }
+
+  /** The likes given in a game to the dilemma, by what each one weighs. */
+  async likesCountedFor(position: number): Promise<number> {
+    const dilemmaId = this.#dilemmaIdAt(position);
+    const rows = await this.#withDatabase((db) =>
+      db
+        .selectFrom('dilemma_likes')
+        .select('given_in')
+        .where('dilemma_id', '=', dilemmaId)
+        .execute(),
+    );
+    assert.ok(
+      rows.every(({ given_in }) => given_in === 'game'),
+      'the scenario has likes from the catalog, which the e2e driver does not weigh',
+    );
+    return rows.length * GAME_LIKE_WEIGHT;
+  }
+
+  /** A like of a game before this one: kept in the database for the identity of the player. */
+  async likedBefore(player: string, position: number): Promise<void> {
+    const dilemmaId = this.#dilemmaIdAt(position);
+    const identity = await this.#identityOf(player);
+    await this.#withDatabase((db) =>
+      db
+        .insertInto('dilemma_likes')
+        .values({
+          identity,
+          dilemma_id: dilemmaId,
+          given_in: 'game',
+          liked_at: new Date(),
+          game_consent_version: '0',
+          research_consent_version: null,
+          commercial_licence_consent_version: null,
+          under_eighteen: false,
+        })
+        .execute(),
+    );
+  }
+
+  async timeSpentRecordedFor(position: number): Promise<number | null> {
+    const dilemmaId = this.#dilemmaIdAt(position);
+    const { gameId } = this.#gameOf(this.#hostName());
+    const row = await this.#withDatabase((db) =>
+      db
+        .selectFrom('game_dilemmas')
+        .select('time_spent_ms')
+        .where('game_id', '=', gameId)
+        .where('dilemma_id', '=', dilemmaId)
+        .executeTakeFirstOrThrow(),
+    );
+    return row.time_spent_ms === null ? null : row.time_spent_ms / 1000;
+  }
+
+  /** The identity the room keeps for the player. */
+  async #identityOf(player: string): Promise<string> {
+    const playerId = this.#playerIdOf(this.#playerCalled(player));
+    const row = await this.#withDatabase((db) =>
+      db
+        .selectFrom('room_players')
+        .select('identity')
+        .where('id', '=', playerId)
+        .executeTakeFirstOrThrow(),
+    );
+    return row.identity;
   }
 
   async titlesSeenBy(viewer: string): Promise<boolean> {
@@ -2267,7 +2708,13 @@ export class E2eDriver implements GameDriver {
       personInTheGap: await this.#personInTheGapOnScreen(page, reveal),
       personInTheGapHits: await this.#hitsOnScreen(page, reveal.personInTheGapHits),
       chosenBy: reveal.chosenBy && this.#nameOf(reveal.chosenBy),
-      showsPoints: SCREEN.points.test((await page.locator('body').textContent()) ?? ''),
+      // A total of anyone, not the points of the dilemma the player alone sees.
+      showsPoints: SCREEN.points.test(
+        (await page.getByTestId('your-points').allTextContents()).reduce(
+          (text, own) => text.replace(own, ''),
+          (await page.locator('body').textContent()) ?? '',
+        ),
+      ),
       ownDistributionPrediction:
         reveal.yourDistributionPrediction?.map(({ optionId, share }) => ({
           option: textOf(optionId),
@@ -2312,8 +2759,16 @@ export class E2eDriver implements GameDriver {
     points: number | null,
     anonymous: boolean,
   ): Promise<number | null> {
-    // The reveal of a nominal room does not show the points of the player yet.
-    if (!anonymous) return points;
+    if (!anonymous) {
+      // On the summary of their hits, or on the card of the person in the gap: theirs alone.
+      const own = page.getByTestId('your-points');
+      if (points === null) {
+        assert.equal(await own.count(), 0, 'the reveal shows points it should not');
+        return null;
+      }
+      await own.filter({ hasText: String(points) }).waitFor();
+      return points;
+    }
     const shown = page.getByText(spanish('reveal.yourPrediction'));
     if (points === null) {
       assert.equal(await shown.count(), 0, 'the reveal shows a prediction it should not');
@@ -2328,11 +2783,19 @@ export class E2eDriver implements GameDriver {
    * anonymous room, «Ver resultados», to the ranking; and from it, «Continuar», to the end.
    */
   async moveOn(player: string): Promise<void> {
-    const { page } = screenOf(this.#playerCalled(player));
+    const mover = this.#playerCalled(player);
+    const { page } = screenOf(mover);
     const game = this.#gameOf(player);
     if (game.stage.kind === 'results') {
-      await page.getByRole('button', { name: SCREEN.rankingNext }).click();
-      await this.#untilEveryoneIsAt('ended');
+      const { step } = game.stage;
+      const footer = page.locator('footer');
+      // By the state, not by the screen, which may still be drawing the step before: the ranking is
+      // the only screen of an anonymous room, and the last of a nominal one.
+      const onRanking = isAnonymous(mover) || (step ?? 0) >= (game.results?.titles.length ?? 0) + 1;
+      await footer
+        .getByRole('button', { name: onRanking ? SCREEN.rankingNext : SCREEN.resultsNext })
+        .click();
+      await this.#untilEveryoneMovesOnFrom(step);
       return;
     }
     const from = game.round.position;
@@ -2343,6 +2806,19 @@ export class E2eDriver implements GameDriver {
     }
     await page.getByRole('button', { name: SCREEN.next }).click();
     await this.#untilEveryoneIsOnRound(from + 1);
+  }
+
+  /** Until no screen is on that step of the results any more. */
+  async #untilEveryoneMovesOnFrom(step: number | null): Promise<void> {
+    const online = this.#withScreens().filter(({ screen }) => screen?.link);
+    await waitUntil(
+      () =>
+        online.every((player) => {
+          const stage = lastGameOf(player)?.stage;
+          return stage?.kind !== 'results' || stage.step !== step;
+        }) || undefined,
+      `everyone moves on from the screen ${step} of the results`,
+    );
   }
 
   async #untilEveryoneIsAt(stage: 'results' | 'ended'): Promise<void> {
@@ -3543,14 +4019,14 @@ const DEVICE_WATCHER = `
     decoded += 1;
     return buffer;
   };
-  // Whether the page could sound now: its audio running and the five sounds loaded.
+  // Whether the page could sound now: its audio running and the six sounds loaded.
   Object.defineProperty(window, '__deviceCanSound', {
-    value: () => decoded >= 5 && [...contexts].some((context) => context.state === 'running'),
+    value: () => decoded >= 6 && [...contexts].some((context) => context.state === 'running'),
   });
   const start = AudioBufferSourceNode.prototype.start;
   AudioBufferSourceNode.prototype.start = function (...args) {
     const file = (this.buffer && fileOf.get(this.buffer)) || '';
-    const found = /(player-joined|game-started|answer-confirmed|last-seconds|dilemma-revealed)/.exec(file);
+    const found = /(player-joined|game-started|answer-confirmed|last-seconds|dilemma-revealed|game-ended)/.exec(file);
     log.sounds.push(found ? found[1] : 'an unknown sound');
     return start.apply(this, args);
   };

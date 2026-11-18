@@ -216,6 +216,61 @@ describe('PostgresRoomRepository', () => {
       expect((await rooms.findById(room.id))?.currentGameId).toBe(game.id);
     });
 
+    it('should take out of the room who left the game once the rematch starts', async () => {
+      // Arrange
+      const { room, idGenerator } = await savedRoom();
+      room.join(
+        {
+          nickname: 'Marta',
+          identity: 'TestMartaIdentity',
+          avatar: room.suggestAvatar(new SequentialRandomness()),
+        },
+        idGenerator,
+        new Date(),
+      );
+      const marta = room.players[2]!;
+      room.connect(marta.id, 'TestMartaConnection', new Date());
+      const rooms = new PostgresRoomRepository(database.db(), 'TestInstanceA');
+      await rooms.save(room);
+      const game = Game.create(
+        {
+          roomId: room.id,
+          dilemmas: [
+            {
+              dilemmaId: 'TestDilemma',
+              version: 1,
+              origin: 'random',
+              chosenBy: null,
+              hasGap: false,
+              fixedOrder: false,
+              optionIds: ['TestOptionA', 'TestOptionB'],
+            },
+          ],
+          settings: TEST_GAME_SETTINGS,
+        },
+        idGenerator,
+      );
+      room.startGame(room.host.id, game.id);
+      game.start(room.players, new Date(), new SequentialRandomness());
+      await new PostgresGameRepository(database.db()).save(game);
+      await rooms.save(room);
+      room.leave(
+        marta.id,
+        room.players.map(({ id }) => id),
+        new Date(),
+      );
+      await rooms.save(room);
+      room.startRematch(room.host.id, ['TestDilemma']);
+
+      // Act
+      await rooms.save(room);
+
+      // Assert
+      const saved = await rooms.findById(room.id);
+      expect(saved?.players.map(({ nickname }) => nickname)).toEqual(['Ana', 'Luis']);
+      expect(saved?.currentGameId).toBeNull();
+    });
+
     it('should refuse a game in progress that is not a game of the room', async () => {
       // Arrange
       const { room, idGenerator } = await savedRoom();

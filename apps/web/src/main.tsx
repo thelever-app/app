@@ -18,6 +18,7 @@ import { OpenRoomProvider, type OpenRoom } from './room/open-room-context.tsx';
 import { newTraceparent } from './room/traceparent.ts';
 import answerConfirmed from './assets/sounds/answer-confirmed.m4a';
 import dilemmaRevealed from './assets/sounds/dilemma-revealed.m4a';
+import gameEnded from './assets/sounds/game-ended.m4a';
 import gameStarted from './assets/sounds/game-started.m4a';
 import lastSeconds from './assets/sounds/last-seconds.m4a';
 import playerJoined from './assets/sounds/player-joined.m4a';
@@ -66,6 +67,7 @@ async function start(): Promise<void> {
         'answer-confirmed': answerConfirmed,
         'last-seconds': lastSeconds,
         'dilemma-revealed': dilemmaRevealed,
+        'game-ended': gameEnded,
       },
       preference,
       browserAudio(),

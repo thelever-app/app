@@ -259,11 +259,11 @@ describe('the rounds over the room sockets', () => {
     const ended = await stateWhere(ana, (state) => state.stage.kind === 'ended');
 
     // Assert
-    expect(results.stage).toEqual({ kind: 'results', movedOnBy: states[2]!.playerId });
+    expect(results.stage).toEqual({ kind: 'results', movedOnBy: states[2]!.playerId, step: 0 });
     expect(results.ranking?.map(({ playerId }) => playerId).sort()).toEqual(
       states.map(({ playerId }) => playerId).sort(),
     );
-    expect(ended.stage).toEqual({ kind: 'ended', movedOnBy: states[1]!.playerId });
+    expect(ended.stage).toEqual({ kind: 'ended', movedOnBy: states[1]!.playerId, step: null });
   });
 
   it('should pass the role of a host who leaves, and close their socket', async () => {

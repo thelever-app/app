@@ -12,3 +12,4 @@ export { InMemoryDilemmaCatalog, type InMemoryDilemma } from './in-memory-dilemm
 export { InMemorySealProvider, SEAL_BEFORE_FIRST_ACCESS } from './in-memory-seal-provider.ts';
 export { ManualClock } from './manual-clock.ts';
 export { InMemoryDilemmaReports } from './in-memory-dilemma-reports.ts';
+export { InMemoryDilemmaLikes } from './in-memory-dilemma-likes.ts';

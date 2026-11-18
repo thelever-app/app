@@ -86,10 +86,10 @@ describe('revealIfEveryoneAnswered', () => {
     room.disconnect('Luis', 'LuisConnection', NOW);
 
     // Act & Assert
-    revealIfEveryoneAnswered(room, game);
+    revealIfEveryoneAnswered(room, game, AT);
     expect(game.isInDecisionPhase).toBe(true);
     vote(game, 'Marta');
-    revealIfEveryoneAnswered(room, game);
+    revealIfEveryoneAnswered(room, game, AT);
     expect(game.round?.revealedBy).toBe('everyone');
   });
 });
@@ -103,7 +103,7 @@ describe('handOverHostIfAway', () => {
     // Act & Assert
     handOverHostIfAway(room, game);
     expect(room.host.id).toBe('Ana');
-    game.reveal('time');
+    game.reveal('time', AT);
     handOverHostIfAway(room, game);
     expect(room.host.id).toBe('Luis');
   });
@@ -111,7 +111,7 @@ describe('handOverHostIfAway', () => {
   it('should leave the role with a connected host', () => {
     // Arrange
     const { room, game } = roomAndGame();
-    game.reveal('host');
+    game.reveal('host', AT);
 
     // Act
     handOverHostIfAway(room, game);

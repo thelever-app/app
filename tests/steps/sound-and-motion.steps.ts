@@ -12,6 +12,7 @@ const SOUND = {
   answer: 'answer-confirmed',
   lastSeconds: 'last-seconds',
   reveal: 'dilemma-revealed',
+  ended: 'game-ended',
 } as const;
 
 /** Waits until the device of `player` has played the sound of `moment`. */
@@ -198,6 +199,30 @@ Then('{string} hears no sound effect', async function (this: GameWorld, player: 
   await doesNotHear(this, player);
 });
 
+// At the end of the game
+
+// Playing every round and every screen of the results takes a while.
+Given(
+  '{string} and {string} see the last screen of the game results',
+  { timeout: 180_000 },
+  async function (this: GameWorld, host: string, guest: string) {
+    await this.hostIs(host);
+    await this.isInTheRoom(guest);
+    await this.toTheResults();
+    while ((await this.driver.resultsScreenSeenBy(host))?.kind !== 'ranking') {
+      await this.driver.moveOn(host);
+    }
+  },
+);
+
+Then(
+  '{string} and {string} hear the sound effect of the game ending',
+  async function (this: GameWorld, first: string, second: string) {
+    await hears(this, first, SOUND.ended);
+    await hears(this, second, SOUND.ended);
+  },
+);
+
 Then('the device of {string} does not vibrate', async function (this: GameWorld, player: string) {
   assert.equal(await this.driver.vibrationsOf(player), 0, `the device of ${player} vibrated`);
 });
@@ -224,6 +249,17 @@ When('the player goes through the lobby and a round', async function (this: Game
   await this.driver.answer(this.player);
   await this.driver.runOutRound();
 });
+
+When(
+  'the player goes through the game results to the end of the game',
+  { timeout: 180_000 },
+  async function (this: GameWorld) {
+    await this.hostIs(this.player);
+    await this.isInTheRoom('Luis');
+    await this.toTheResults();
+    await this.throughTheResults();
+  },
+);
 
 Then('no component moves or changes size', async function (this: GameWorld) {
   assert.deepEqual(await this.driver.movementsSeenBy(this.player), []);

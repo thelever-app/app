@@ -749,11 +749,14 @@ Then(
 );
 
 Then('no player sees that time', async function (this: GameWorld) {
-  const seconds = (await this.driver.answerRecordedFor(this.player, 1))?.responseTimeSeconds;
-  assert.ok(seconds, 'no response time was recorded');
+  // The time the group spent on a dilemma, or the response time of the player.
+  const seconds =
+    this.timeSpentSeconds ??
+    (await this.driver.answerRecordedFor(this.player, 1))?.responseTimeSeconds;
+  assert.ok(seconds, 'no time was recorded');
   for (const seen of await this.driver.everythingPlayersSee()) {
     const text = JSON.stringify(seen);
-    assert.ok(!/response.?time/i.test(text), `a player sees the response time in ${text}`);
+    assert.ok(!/response.?time|time.?spent/i.test(text), `a player sees the time in ${text}`);
     assert.ok(!text.includes(String(seconds * 1000)), `a player sees ${seconds} s in ${text}`);
   }
 });

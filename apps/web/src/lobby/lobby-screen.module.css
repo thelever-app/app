@@ -233,6 +233,17 @@
   font-weight: 600;
 }
 
+.noticeText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.round[data-without-new-dilemmas] {
+  background: var(--color-surface);
+}
+
 /* The rounds in order, on one card, a line between each row. */
 .roundList {
   margin: 0;

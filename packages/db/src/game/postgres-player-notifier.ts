@@ -2,6 +2,7 @@ import { context, propagation } from '@opentelemetry/api';
 import {
   AnsweredCountChangedEvent,
   ConnectionChangedEvent,
+  DilemmaLikedEvent,
   DilemmaRevealedEvent,
   type DomainEvent,
   type GameStage,
@@ -13,6 +14,7 @@ import {
   PlayerLeftEvent,
   type PlayerNotifier,
   ProgressUpdatedEvent,
+  ReactionsChangedEvent,
   RoundStartedEvent,
 } from '@thelever-app/game';
 import { type Kysely, sql } from 'kysely';
@@ -133,6 +135,18 @@ function decisionPhaseEventOf(event: Record<string, unknown>): DomainEvent {
       );
     case 'PlayerJoinedLate':
       return new PlayerJoinedLateEvent(
+        String(event.gameId),
+        String(event.playerId),
+        Number(event.gameVersion),
+      );
+    case 'ReactionsChanged':
+      return new ReactionsChangedEvent(
+        String(event.gameId),
+        Number(event.position),
+        Number(event.gameVersion),
+      );
+    case 'DilemmaLiked':
+      return new DilemmaLikedEvent(
         String(event.gameId),
         String(event.playerId),
         Number(event.gameVersion),

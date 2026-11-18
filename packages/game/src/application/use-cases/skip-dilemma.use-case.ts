@@ -59,7 +59,7 @@ export class SkipDilemmaUseCase {
       return;
     }
     game.skip(playerId, dilemmaId);
-    revealIfEveryoneAnswered(room, game);
+    revealIfEveryoneAnswered(room, game, at);
     handOverHostIfAway(room, game);
     const gameEvents = game.pullEvents();
     const roomEvents = room.pullEvents();

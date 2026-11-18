@@ -5,6 +5,7 @@ import { MoveOnUseCase } from '../../use-cases/move-on.use-case.ts';
 import { RevealEarlyUseCase } from '../../use-cases/reveal-early.use-case.ts';
 import { GameStageChangedEvent } from '../../../domain/events/game-stage-changed.event.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
+import { InMemoryDilemmaLikes } from '../../../adapters/in-memory/in-memory-dilemma-likes.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { gameInDecisionPhase } from '../support/game-in-decision-phase.ts';
 
@@ -30,6 +31,7 @@ async function arrange() {
     game.roomRepository,
     game.gameRepository,
     game.catalog,
+    new InMemoryDilemmaLikes(),
   );
   const stateOf = (playerId: string) =>
     getGameState.execute({ gameId: game.gameId, playerId, language: 'es' });
@@ -98,7 +100,7 @@ describe('The distribution prediction, in an anonymous room', () => {
 
     // Assert
     const state = await stateOf(anaId);
-    expect(state.stage).toEqual({ kind: 'rounds', movedOnBy: null });
+    expect(state.stage).toEqual({ kind: 'rounds', movedOnBy: null, step: null });
     expect(state.ranking).toBeNull();
   });
 
@@ -112,7 +114,7 @@ describe('The distribution prediction, in an anonymous room', () => {
     // Assert
     const state = await stateOf(martaId);
     const rounds = state.dilemmas.length;
-    expect(state.stage).toEqual({ kind: 'results', movedOnBy: luisId });
+    expect(state.stage).toEqual({ kind: 'results', movedOnBy: luisId, step: 0 });
     expect(state.ranking).toEqual([
       { playerId: anaId, points: 100 * rounds, position: 1, mentalist: true },
       { playerId: luisId, points: 100 * rounds - 40, position: 2, mentalist: false },
@@ -135,7 +137,7 @@ describe('The distribution prediction, in an anonymous room', () => {
 
     // Assert
     const state = await stateOf(martaId);
-    expect(state.stage).toEqual({ kind: 'ended', movedOnBy: martaId });
+    expect(state.stage).toEqual({ kind: 'ended', movedOnBy: martaId, step: null });
     expect(state.ranking).not.toBeNull();
     const stages = notifier
       .receivedBy(martaId)

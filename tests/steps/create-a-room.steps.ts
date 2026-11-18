@@ -355,7 +355,14 @@ When('the host expels {string}', async function (this: GameWorld, player: string
   this.inRoom.delete(player);
 });
 
+/** Once the game has ended, the player leaves it; in the lobby, after being expelled, they are out. */
 Then('{string} leaves the room', async function (this: GameWorld, player: string) {
+  if (this.ended) {
+    await this.driver.leave(player);
+    this.away.add(player);
+    this.inRoom.delete(player);
+    return;
+  }
   assert.equal(await this.driver.isInTheRoom(player), false);
 });
 

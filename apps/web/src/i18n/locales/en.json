@@ -138,7 +138,8 @@
   "newHost": {
     "title": "You're the host now",
     "disconnected": "{{host}} is still offline. From the next round you can reveal early from the ⋮ menu. If they come back, they get the role back.",
-    "left": "{{host}} has left the game. Your options are in the ⋮ menu."
+    "left": "{{host}} has left the game. Your options are in the ⋮ menu.",
+    "ended": "{{host}} is still offline. You can start the rematch now. If they come back, they get the role back."
   },
   "lateJoin": {
     "illustration": "La Palanca, next to a railway junction",
@@ -198,7 +199,18 @@
     "aboutYouAnonymous": "You didn’t vote: you predicted how the others would split. Only you see your prediction and your points.",
     "aboutHits": "{{right, number}} of {{of, number}}",
     "aboutHitsLabel": "right",
-    "aboutYouHitsLabel": "right"
+    "aboutYouHitsLabel": "right",
+    "like": "Good dilemma",
+    "dilemmaReactions": "Reactions to the dilemma",
+    "reactionBy": "{{emoji}}: {{names}}",
+    "reactionCount_one": "{{emoji}}: {{count}} reaction",
+    "reactionCount_other": "{{emoji}}: {{count, number}} reactions",
+    "reactToDilemma": "React to the dilemma",
+    "reactToVoteOf": "React to {{name}}’s vote",
+    "reactionsToVote": "Reactions to {{name}}’s vote",
+    "reactToVoteHint": "Tap someone to react to their vote.",
+    "dilemmaPoints_one": "{{count}} point for you",
+    "dilemmaPoints_other": "{{count, number}} points for you"
   },
   "ranking": {
     "label": "Results",
@@ -210,7 +222,10 @@
     "points": "{{points, number}}",
     "pointsUnit": "points",
     "note": "Whoever comes first is El Mentalista of the game. Dilemmas with fewer than 3 votes score nothing. Ties share the place and the title.",
-    "next": "Continue"
+    "next": "Continue",
+    "nominalTitle": "Leaderboard",
+    "nominalText": "Points for guessing the others’ votes: the fewer people chose the same, the more you get.",
+    "nominalNote": "Next to each person, the titles they won. Ties share the place."
   },
   "end": {
     "label": "Game over · {{total, number}} of {{total, number}}",
@@ -224,7 +239,15 @@
     "gone_one": "{{names}} has left.",
     "gone_other": "{{names}} have left.",
     "closes": "The room closes 15 minutes after nobody is left connected.",
-    "leave": "Leave"
+    "leave": "Leave",
+    "placeNominal_one": "You came #{{position, number}} of {{players, number}}, with {{count}} point.",
+    "placeNominal_other": "You came #{{position, number}} of {{players, number}}, with {{count, number}} points.",
+    "knownBest": "Who knows you best: {{names}}.",
+    "notInGame": "This game is already over. If there’s a rematch, you’ll play in it.",
+    "rematch": "Rematch with the same group",
+    "rematchGuest": "{{host}} can start the rematch. If they do, you’ll go to the lobby with whoever is still in the room.",
+    "shareCard": "Share my card",
+    "shareGroupCard": "Share the group card"
   },
   "notices": {
     "reconnecting": "Reconnecting… your answers are saved",
@@ -412,7 +435,10 @@
     "guestWait": "{{host}} will start the game when you're all here.",
     "gapWarningTitle": "A dilemma is about someone in the group.",
     "gapWarningNominal": "In a nominal room it needs at least {{minimum, number}} players: if you start with fewer, its round becomes random.",
-    "gapWarningAnonymous": "In an anonymous room it needs at least {{minimum, number}} players: if you start with fewer, its round becomes random."
+    "gapWarningAnonymous": "In an anonymous room it needs at least {{minimum, number}} players: if you start with fewer, its round becomes random.",
+    "noNewDilemmas": "No unplayed dilemmas left",
+    "noNewDilemmasNotice": "Round {{round, number}} has no unplayed dilemmas left in this room. If you start the game like this, that round will draw from all categories.",
+    "changeCategories": "Change categories"
   },
   "languages": {
     "es": "Español",
@@ -569,5 +595,80 @@
     "fewBody_other": "We have {{count, number}} of the {{needed}} needed. Come back later to see how the world voted and whether you got it right.",
     "play": "Play it with my group",
     "arguments": "Read the arguments for each option"
+  },
+  "react": {
+    "dilemmaTitle": "React to the dilemma",
+    "voteTitle": "{{name}} voted “{{option}}”",
+    "ownVoteTitle": "You voted “{{option}}”",
+    "toDilemma": "React to the dilemma",
+    "toVote": "React to their vote",
+    "toOwnVote": "React to your vote",
+    "more": "More emojis",
+    "anyEmoji": "Type an emoji",
+    "send": "React",
+    "oneDilemma": "Only one reaction per dilemma: if you pick another, it replaces the previous one. With “+” you can use any emoji.",
+    "oneVote": "Only one reaction per vote: if you pick another, it replaces the previous one. With “+” you can use any emoji.",
+    "nominalPrivacy": "In this room everyone will see who reacted.",
+    "anonymousPrivacy": "In this room nobody will see who reacted, only how many."
+  },
+  "results": {
+    "label": "Results · {{step, number}} of {{total, number}}",
+    "next": "Next",
+    "onlyYou": "Only you can see this",
+    "knowsTitle": "Who knows you best is…",
+    "knowsNobody": "This time nobody guessed your votes.",
+    "knowsFact_one": "{{count}} point guessing your votes",
+    "knowsFact_other": "{{count, number}} points guessing your votes",
+    "runnerUp": "Then: {{names}}, {{fact}}",
+    "titles": {
+      "almas-gemelas": "Almas gemelas",
+      "verso-suelto": "Verso suelto",
+      "la-voz-del-grupo": "La voz del grupo",
+      "iman-de-reacciones": "Imán de reacciones",
+      "enigma": "Enigma",
+      "libro-abierto": "Libro abierto",
+      "el-mentalista": "El Mentalista"
+    },
+    "meanings": {
+      "almas-gemelas": "The pair who best guessed each other’s votes.",
+      "verso-suelto": "Who voted with the minority most often.",
+      "la-voz-del-grupo": "Who voted with the majority most often.",
+      "iman-de-reacciones": "Who got the most reactions to their votes.",
+      "enigma": "Whose votes were guessed least.",
+      "libro-abierto": "Whose votes were guessed most.",
+      "el-mentalista": "Who best guessed everyone else’s votes."
+    },
+    "facts": {
+      "almas-gemelas": "Guessed {{count, number}} of {{of, number}} of each other’s votes",
+      "verso-suelto": "With the minority in {{count, number}} of {{of, number}} dilemmas",
+      "la-voz-del-grupo": "With the majority in {{count, number}} of {{of, number}} dilemmas",
+      "iman-de-reacciones_one": "{{count}} reaction to their votes",
+      "iman-de-reacciones_other": "{{count, number}} reactions to their votes",
+      "enigma": "{{count, number}} of {{of, number}} votes guessed",
+      "libro-abierto": "{{count, number}} of {{of, number}} votes guessed",
+      "el-mentalista_one": "{{count}} point",
+      "el-mentalista_other": "{{count, number}} points"
+    }
+  },
+  "card": {
+    "personalTitle": "Your card",
+    "groupTitle": "The group’s card",
+    "close": "Close",
+    "share": "Share",
+    "myGame": "My TheLever game",
+    "ourGame": "Our TheLever game",
+    "place": "#{{position, number}} of {{players, number}}",
+    "inAGameOf_one": "in a game of {{count}} moral dilemma",
+    "inAGameOf_other": "in a game of {{count, number}} moral dilemmas",
+    "dilemmas_one": "{{count}} dilemma",
+    "dilemmas_other": "{{count, number}} dilemmas",
+    "knowsMe": "Who knows me best",
+    "someone": "Someone in the group",
+    "myTitles": "My titles",
+    "withPartner": "{{title}}, with {{name}}",
+    "mostDivisive": "The one that split us most",
+    "footer": "Play at thelever.app",
+    "showNames": "Show the nicknames of {{names}}",
+    "groupNote": "No one’s names or votes: just how the group split."
   }
 }

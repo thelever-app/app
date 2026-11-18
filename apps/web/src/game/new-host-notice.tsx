@@ -39,7 +39,9 @@ export function NewHostNotice() {
           <span>
             {previousHost.left
               ? t('newHost.left', { host: previousHost.nickname })
-              : t('newHost.disconnected', { host: previousHost.nickname })}
+              : game.stage.kind === 'ended'
+                ? t('newHost.ended', { host: previousHost.nickname })
+                : t('newHost.disconnected', { host: previousHost.nickname })}
           </span>
         </span>
       </div>

@@ -46,12 +46,32 @@ import visibilityOff from '@material-symbols/svg-500/rounded/visibility_off-fill
 import volumeOff from '@material-symbols/svg-500/rounded/volume_off-fill.svg?url';
 import volumeUp from '@material-symbols/svg-500/rounded/volume_up-fill.svg?url';
 import work from '@material-symbols/svg-500/rounded/work-fill.svg?url';
+import addReaction from '@material-symbols/svg-500/rounded/add_reaction.svg?url';
+import callSplit from '@material-symbols/svg-500/rounded/call_split.svg?url';
+import campaign from '@material-symbols/svg-500/rounded/campaign-fill.svg?url';
+import favorite from '@material-symbols/svg-500/rounded/favorite-fill.svg?url';
+import help from '@material-symbols/svg-500/rounded/help-fill.svg?url';
+import menuBook from '@material-symbols/svg-500/rounded/menu_book-fill.svg?url';
+import replay from '@material-symbols/svg-500/rounded/replay.svg?url';
+import thumbUp from '@material-symbols/svg-500/rounded/thumb_up.svg?url';
+import thumbUpFilled from '@material-symbols/svg-500/rounded/thumb_up-fill.svg?url';
+import warning from '@material-symbols/svg-500/rounded/warning-fill.svg?url';
 import styles from './icon.module.css';
 
 /** The Material Symbols the screens use, hosted with the app: never loaded from Google. */
 const ICONS = {
   add,
   addCircle,
+  addReaction,
+  callSplit,
+  campaign,
+  favorite,
+  help,
+  menuBook,
+  replay,
+  thumbUp,
+  thumbUpFilled,
+  warning,
   arrowBack,
   arrowForward,
   block,

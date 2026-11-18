@@ -226,7 +226,7 @@ export function describeGameRepositoryContract(
           new Date(STARTED_AT.getTime() + 6 * SECOND),
         );
         for (const [position] of dilemmas.entries()) {
-          if (game.isInDecisionPhase) game.reveal('host');
+          if (game.isInDecisionPhase) game.reveal('host', STARTED_AT);
           game.moveOn('TestAnaId', position, new Date(STARTED_AT.getTime() + MINUTE));
         }
         game.moveOn('TestLuisId', dilemmas.length, new Date(STARTED_AT.getTime() + 2 * MINUTE));
@@ -237,7 +237,8 @@ export function describeGameRepositoryContract(
 
         // Assert
         expect(found?.toSnapshot()).toEqual(game.toSnapshot());
-        expect(found?.stage).toEqual({ kind: 'ended', movedOnBy: 'TestLuisId' });
+        expect(found?.stage).toEqual({ kind: 'ended', movedOnBy: 'TestLuisId', step: null });
+        expect(found?.timeSpentOn(first.dilemmaId)).toBe(MINUTE);
         const [ana] = found?.answersOf('TestAnaId') ?? [];
         expect(ana?.distributionPrediction?.[0]).toEqual({
           optionId: first.optionIds[1],
@@ -271,7 +272,9 @@ export function describeGameRepositoryContract(
           LUIS_SEAL,
           new Date(STARTED_AT.getTime() + 20 * SECOND),
         );
-        game.reveal('host');
+        game.reveal('host', new Date(STARTED_AT.getTime() + 30 * SECOND));
+        game.react('TestLuisId', 0, { kind: 'dilemma' }, '😮', LUIS_SEAL);
+        game.react('TestAnaId', 0, { kind: 'vote', playerId: 'TestLuisId' }, '❤️', ANA_SEAL);
         await games.save(game);
 
         // Act
@@ -282,8 +285,41 @@ export function describeGameRepositoryContract(
         expect(found?.personInTheGap(second.dilemmaId)).not.toBeNull();
         expect(found?.pointsOf('TestAnaId')[0]).toEqual({
           dilemmaId: first.dilemmaId,
-          points: 100,
+          points: 55,
         });
+        expect(found?.round?.revealedAt).toEqual(new Date(STARTED_AT.getTime() + 30 * SECOND));
+        expect(found?.reactions()).toHaveLength(2);
+      });
+
+      it('should find a saved nominal game on a screen of its results, keeping its reactions', async () => {
+        // Arrange
+        const { games, room, game, dilemmas, first } = await arrange({
+          ...ANONYMOUS,
+          variant: 'nominal',
+        });
+        start(game, room);
+        game.answer(
+          'TestAnaId',
+          first.dilemmaId,
+          { vote: first.optionIds[0] },
+          ANA_SEAL,
+          STARTED_AT,
+        );
+        game.reveal('host', STARTED_AT);
+        game.react('TestLuisId', 0, { kind: 'vote', playerId: 'TestAnaId' }, '😂', LUIS_SEAL);
+        for (const [position] of dilemmas.entries()) {
+          if (game.isInDecisionPhase) game.reveal('host', STARTED_AT);
+          game.moveOn('TestAnaId', position, new Date(STARTED_AT.getTime() + MINUTE));
+        }
+        game.moveOn('TestLuisId', dilemmas.length, STARTED_AT);
+        await games.save(game);
+
+        // Act
+        const found = await games.findById('TestGameId');
+
+        // Assert
+        expect(found?.toSnapshot()).toEqual(game.toSnapshot());
+        expect(found?.stage).toEqual({ kind: 'results', movedOnBy: 'TestLuisId', step: 1 });
       });
 
       it('should find a saved game with a player who joined it late', async () => {
@@ -293,7 +329,7 @@ export function describeGameRepositoryContract(
           variant: 'nominal',
         });
         start(game, room);
-        game.reveal('time');
+        game.reveal('time', STARTED_AT);
         room.join(
           {
             nickname: 'Marta',

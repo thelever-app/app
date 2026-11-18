@@ -13,7 +13,7 @@ import { DilemmasMissingError } from '../errors/dilemmas-missing.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { DuplicateVotePredictionError } from '../errors/duplicate-vote-prediction.error.ts';
 import { InvalidDistributionPredictionError } from '../errors/invalid-distribution-prediction.error.ts';
-import { NoNextRoundError } from '../errors/no-next-round.error.ts';
+import { NoVoteToReactToError } from '../errors/no-vote-to-react-to.error.ts';
 import { OptionNotInDilemmaError } from '../errors/option-not-in-dilemma.error.ts';
 import { PlayerLeftGameError } from '../errors/player-left-game.error.ts';
 import { PlayerNotInGameError } from '../errors/player-not-in-game.error.ts';
@@ -28,17 +28,21 @@ import { GameStageChangedEvent } from '../events/game-stage-changed.event.ts';
 import type { DomainEvent } from '../events/domain-event.ts';
 import { PlayerJoinedLateEvent } from '../events/player-joined-late.event.ts';
 import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
+import { ReactionsChangedEvent } from '../events/reactions-changed.event.ts';
 import { RoundStartedEvent } from '../events/round-started.event.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
 import type { DilemmaOrigin } from '../vos/round.vo.ts';
+import { gameResults, type GameResults } from '../services/game-results.ts';
+import { mostDivisiveDilemma } from '../services/most-divisive-dilemma.ts';
 import { peopleInTheGap } from '../services/people-in-the-gap.ts';
 import { rankByPoints, type RankedPlayer } from '../services/rank-by-points.ts';
 import { shuffle } from '../services/random-choice.ts';
 import { scoreDistributionPrediction } from '../services/score-distribution-prediction.ts';
-import { scorePredictions } from '../services/score-predictions.ts';
+import { scoreVotePredictions } from '../services/score-vote-predictions.ts';
 import { AnswerVO, type AnswerProps, type Seal, type VotePrediction } from '../vos/answer.vo.ts';
 import { DilemmaVO } from '../vos/dilemma.vo.ts';
+import { EmojiVO } from '../vos/emoji.vo.ts';
 import {
   DistributionPredictionVO,
   type PredictedShare,
@@ -46,6 +50,7 @@ import {
 import type { GroupNature, Place } from '../vos/group.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { VoteVO } from '../vos/vote.vo.ts';
+import { MINIMUM_VOTES_TO_SHOW } from '../vos/votes-to-show.ts';
 import type {
   DilemmaLanguage,
   RoomVariant,
@@ -85,7 +90,7 @@ export interface GameSettings {
 export type RoundPhase = 'decision' | 'reveal';
 
 /**
- * The rounds, one after another; then, in an anonymous room, the game results; then the end of the
+ * The rounds, one after another; then the game results, screen by screen; then the end of the
  * game, where nothing is played any more.
  */
 export type GameStage = 'rounds' | 'results' | 'ended';
@@ -104,6 +109,8 @@ export interface Round {
   readonly endsAt: Date;
   /** Null until the dilemma is revealed. */
   readonly revealedBy: RevealedBy | null;
+  /** When the dilemma was revealed; null until then. */
+  readonly revealedAt: Date | null;
   /** Who moved on to this round from the reveal of the previous one; null for the first. */
   readonly movedOnBy: string | null;
 }
@@ -127,8 +134,30 @@ export interface AnswerDraft {
   readonly ready?: boolean;
 }
 
-/** In an anonymous room, a dilemma voted by fewer players shows no distribution: it would give their votes away. */
-export const MINIMUM_VOTES_TO_SHOW = 3;
+export { MINIMUM_VOTES_TO_SHOW };
+
+/** What a reaction is to: the dilemma itself, or, in a nominal room, the vote of a player, one's own too. */
+export type ReactionTarget =
+  { readonly kind: 'dilemma' } | { readonly kind: 'vote'; readonly playerId: string };
+
+/** A reaction in the reveal of a dilemma: to the dilemma, without whom it is about, or to their vote. */
+export interface Reaction {
+  readonly dilemmaId: string;
+  readonly playerId: string;
+  /** Whose vote it is a reaction to; null for one to the dilemma. */
+  readonly aboutId: string | null;
+  readonly emoji: string;
+  readonly seal: Seal;
+}
+
+/** Where the game is: its rounds, its results and which of their screens, or its end. */
+export interface GameStageState {
+  readonly kind: GameStage;
+  /** Who moved everyone there; null for the rounds. */
+  readonly movedOnBy: string | null;
+  /** In the results, the screen everyone is on, from 0; null otherwise. */
+  readonly step: number | null;
+}
 
 /**
  * What the reveal of a dilemma shows. In an anonymous room only the distribution and the count of
@@ -160,6 +189,21 @@ export interface DilemmaReveal {
    */
   readonly personInTheGapHits: { readonly right: number; readonly of: number } | null;
   readonly chosenBy: string | null;
+  /**
+   * Each emoji the dilemma got, the most first, and who reacted with it; in an anonymous room,
+   * only how many.
+   */
+  readonly dilemmaReactions: readonly {
+    readonly emoji: string;
+    readonly count: number;
+    readonly playerIds: readonly string[];
+  }[];
+  /** In a nominal room, each reaction to a vote. */
+  readonly voteReactions: readonly {
+    readonly playerId: string;
+    readonly aboutId: string;
+    readonly emoji: string;
+  }[];
 }
 
 export interface GameSnapshot {
@@ -169,7 +213,10 @@ export interface GameSnapshot {
   readonly settings: GameSettings;
   readonly version: number;
   readonly round: Omit<Round, 'dilemmaId'> | null;
-  readonly stage: { readonly kind: GameStage; readonly movedOnBy: string | null };
+  readonly stage: GameStageState;
+  readonly reactions: readonly Reaction[];
+  /** How long the group spent on the reveal of each dilemma it moved on from. */
+  readonly timesSpent: readonly { readonly dilemmaId: string; readonly ms: number }[];
   readonly peopleInTheGap: readonly { readonly dilemmaId: string; readonly playerId: string }[];
   readonly players: readonly {
     readonly id: string;
@@ -210,6 +257,7 @@ interface RoundState {
   readonly startedAt: Date;
   readonly endsAt: Date;
   revealedBy: RevealedBy | null;
+  revealedAt: Date | null;
   readonly movedOnBy: string | null;
 }
 
@@ -228,6 +276,11 @@ export class Game {
   #stage: GameStage = 'rounds';
   /** Who moved everyone on to the stage; null for the rounds. */
   #stageMovedOnBy: string | null = null;
+  /** The screen of the results everyone is on. */
+  #stageStep = 0;
+  /** In the order they were made, a new one taking the place of the one it replaces. */
+  #reactions: Reaction[] = [];
+  readonly #timesSpent = new Map<string, number>();
   /** Goes up with every change, so the clients can drop what is older than what they hold. */
   #version = 0;
   #peopleInTheGap = new Map<string, string>();
@@ -308,6 +361,7 @@ export class Game {
       dilemmaId: this.#roundDilemma().dilemmaId,
       startedAt: new Date(this.#round.startedAt),
       endsAt: new Date(this.#round.endsAt),
+      revealedAt: this.#round.revealedAt && new Date(this.#round.revealedAt),
     };
   }
 
@@ -324,9 +378,13 @@ export class Game {
     return this.#version;
   }
 
-  /** Where the game is: its rounds, its results or its end, and who moved everyone there. */
-  get stage(): { readonly kind: GameStage; readonly movedOnBy: string | null } {
-    return { kind: this.#stage, movedOnBy: this.#stageMovedOnBy };
+  /** Where the game is: its rounds, its results and which screen, or its end, and who moved everyone there. */
+  get stage(): GameStageState {
+    return {
+      kind: this.#stage,
+      movedOnBy: this.#stageMovedOnBy,
+      step: this.#stage === 'results' ? this.#stageStep : null,
+    };
   }
 
   /**
@@ -445,14 +503,14 @@ export class Game {
    * Reveals the dilemma of the round once every player who is connected and has not left has
    * answered it. With nobody connected it waits for its time. Whether it revealed it.
    */
-  revealIfEveryoneAnswered(connectedPlayerIds: readonly string[]): boolean {
+  revealIfEveryoneAnswered(connectedPlayerIds: readonly string[], at: Date): boolean {
     if (!this.isInDecisionPhase) return false;
     const connected = new Set(connectedPlayerIds);
     const present = this.#activePlayerIds().filter((playerId) => connected.has(playerId));
     if (present.length === 0 || !present.every((playerId) => this.hasAnswered(playerId))) {
       return false;
     }
-    this.reveal('everyone');
+    this.reveal('everyone', at);
     return true;
   }
 
@@ -463,7 +521,7 @@ export class Game {
   runOutRound(at: Date): boolean {
     if (!this.#round || this.#round.phase !== 'decision') return false;
     if (at.getTime() < this.#round.endsAt.getTime()) return false;
-    this.reveal('time');
+    this.reveal('time', at);
     return true;
   }
 
@@ -472,7 +530,7 @@ export class Game {
    * not vote", but for the person in the gap, who has none to give; nobody can answer it any more
    * and the predictions made are scored. Who may ask for it is up to the room.
    */
-  reveal(by: RevealedBy): void {
+  reveal(by: RevealedBy, at: Date): void {
     const { dilemmaId } = this.#decisionDilemma(this.#roundDilemma().dilemmaId);
     const person = this.#peopleInTheGap.get(dilemmaId);
     for (const [playerId, state] of this.#players) {
@@ -486,29 +544,38 @@ export class Game {
     const round = this.#round as RoundState;
     round.phase = 'reveal';
     round.revealedBy = by;
+    round.revealedAt = new Date(at);
     this.#version += 1;
     this.#events.push(new DilemmaRevealedEvent(this.id, round.position, this.#version));
   }
 
   /**
    * From the reveal of the round at that position, the player takes everyone to the next round;
-   * from the last one, in an anonymous room, to the game results; and from the results, at the
-   * position after the last round, to the end of the game. Asked from where the game no longer is,
-   * it does nothing, so two players who move on at once move one step. Whether it moved on.
+   * from the last one, to the first screen of the game results; from each screen of the results,
+   * at the positions after the last round, to the next one; and from the last, to the end of the
+   * game. The time the group spent on the reveal is recorded. Asked from where the game no longer
+   * is, it does nothing, so two players who move on at once move one step. Whether it moved on.
    */
   moveOn(playerId: string, fromPosition: number, at: Date): boolean {
     this.#activeStateOf(playerId);
     const round = this.#round;
     if (!round || this.#stage === 'ended') return false;
     if (this.#stage === 'results') {
-      return fromPosition === this.#dilemmas.length && this.#moveOnTo('ended', playerId);
+      if (fromPosition !== this.#dilemmas.length + this.#stageStep) return false;
+      if (this.#stageStep < this.#resultsScreens() - 1) {
+        return this.#moveOnTo('results', playerId, this.#stageStep + 1);
+      }
+      return this.#moveOnTo('ended', playerId);
     }
     if (round.position !== fromPosition || round.phase !== 'reveal') return false;
-    if (round.position === this.#dilemmas.length - 1) {
-      // The results of a nominal room, with their titles, do not exist yet.
-      if (this.#settings.variant !== 'anonymous') throw new NoNextRoundError();
-      return this.#moveOnTo('results', playerId);
+    if (round.revealedAt) {
+      // The instance that moves on may run a few milliseconds behind the one that revealed.
+      this.#timesSpent.set(
+        this.#roundDilemma().dilemmaId,
+        Math.max(0, at.getTime() - round.revealedAt.getTime()),
+      );
     }
+    if (round.position === this.#dilemmas.length - 1) return this.#moveOnTo('results', playerId);
 
     const next = this.#roundAt(round.position + 1, at, playerId);
     this.#round = next;
@@ -517,10 +584,85 @@ export class Game {
     return true;
   }
 
+  /**
+   * In the reveal of the round at that position, the player reacts with one emoji to its dilemma,
+   * or, in a nominal room, to the vote of a player, their own too; a new reaction to the same
+   * thing takes the place of the one before. Outside that reveal it does nothing, so a reaction
+   * that arrives once the group moved on is lost. Whether it took it.
+   */
+  react(
+    playerId: string,
+    position: number,
+    target: ReactionTarget,
+    emoji: string,
+    seal: Seal,
+  ): boolean {
+    this.#activeStateOf(playerId);
+    const { value } = new EmojiVO(emoji);
+    const round = this.#round;
+    if (this.#stage !== 'rounds' || round?.position !== position || round.phase !== 'reveal') {
+      return false;
+    }
+    const { dilemmaId } = this.#roundDilemma();
+    const aboutId = target.kind === 'vote' ? target.playerId : null;
+    if (aboutId !== null) {
+      const vote = this.#players.get(aboutId)?.answers.get(dilemmaId)?.vote ?? null;
+      if (this.#settings.variant === 'anonymous' || vote === null) {
+        throw new NoVoteToReactToError(aboutId, dilemmaId);
+      }
+    }
+
+    this.#reactions = [
+      ...this.#reactions.filter(
+        (reaction) =>
+          !(
+            reaction.dilemmaId === dilemmaId &&
+            reaction.playerId === playerId &&
+            reaction.aboutId === aboutId
+          ),
+      ),
+      { dilemmaId, playerId, aboutId, emoji: value, seal: { ...seal } },
+    ];
+    this.#version += 1;
+    this.#events.push(new ReactionsChangedEvent(this.id, position, this.#version));
+    return true;
+  }
+
+  /** Every reaction kept, in the order they were made. Who may see them is up to the caller. */
+  reactions(): readonly Reaction[] {
+    return this.#reactions.map((reaction) => ({ ...reaction, seal: { ...reaction.seal } }));
+  }
+
+  /** The reactions of the player in the reveal at that position: to the dilemma, and to each vote. */
+  reactionOf(
+    playerId: string,
+    position: number,
+  ): {
+    readonly dilemma: string | null;
+    readonly votes: readonly { readonly aboutId: string; readonly emoji: string }[];
+  } {
+    const dilemmaId = this.#dilemmas[position]?.dilemmaId;
+    const own = this.#reactions.filter(
+      (reaction) => reaction.dilemmaId === dilemmaId && reaction.playerId === playerId,
+    );
+    return {
+      dilemma: own.find(({ aboutId }) => aboutId === null)?.emoji ?? null,
+      votes: own.flatMap(({ aboutId, emoji }) => (aboutId === null ? [] : [{ aboutId, emoji }])),
+    };
+  }
+
+  /** How long the group spent on the reveal of the dilemma; null until it moved on from it. */
+  timeSpentOn(dilemmaId: string): number | null {
+    this.#dilemmaOf(dilemmaId);
+    return this.#timesSpent.get(dilemmaId) ?? null;
+  }
+
   /** The player leaves on purpose: they keep their answers, and no round waits for them any more. */
   leave(playerId: string): void {
     const state = this.#stateOf(playerId);
-    if (state.left) return;
+    // Once the rounds are over, the results stay as they ended them: who leaves still counts in
+    // them, so no screen of the results changes under everyone. The room keeps that they left.
+    if (state.left || this.#stage !== 'rounds') return;
     state.left = true;
     this.#version += 1;
   }
@@ -638,20 +780,66 @@ export class Game {
   }
 
   /**
-   * In an anonymous room, once the rounds are over: who reads the group best, by the points of
-   * their distribution predictions, without who left the game. Null while the rounds go on, and
-   * in a nominal room, whose results come with their titles.
+   * Once the rounds are over, the players by their points, without who left the game: in an
+   * anonymous room, who reads the group best, also who joined late; in a nominal one, who started
+   * the game, El Mentalista being whoever holds that title. Null while the rounds go on.
    */
   ranking(): readonly RankedPlayer[] | null {
-    if (this.#settings.variant !== 'anonymous' || this.#stage === 'rounds') return null;
+    if (this.#stage === 'rounds') return null;
+    if (this.#settings.variant === 'nominal') return (this.results() as GameResults).ranking;
     return rankByPoints(
-      this.#activePlayerIds().map((playerId) => ({
+      this.#activePlayerIds().map((playerId) => ({ playerId, points: this.#totalOf(playerId) })),
+    );
+  }
+
+  /**
+   * In a nominal room, once the rounds are over: the titles of the game, who knows each player
+   * best and the ranking, among the players who did not leave it. Null while the rounds go on, and
+   * in an anonymous room, whose results are the ranking alone.
+   */
+  results(): GameResults | null {
+    if (this.#settings.variant !== 'nominal' || this.#stage === 'rounds') return null;
+    return gameResults({
+      players: this.#activePlayerIds().map((playerId) => ({
         playerId,
-        points: [...this.#stateOf(playerId).points.values()].reduce<number>(
-          (total, points) => total + (points ?? 0),
-          0,
-        ),
+        points: this.#totalOf(playerId),
+        ranked: !this.#stateOf(playerId).joinedLate,
       })),
+      dilemmas: this.#dilemmas.map(({ dilemmaId }) => {
+        const answers = [...this.#players].flatMap(([playerId, state]) => {
+          const answer = state.answers.get(dilemmaId);
+          return answer ? [{ playerId, answer }] : [];
+        });
+        return {
+          personInTheGap: this.#peopleInTheGap.get(dilemmaId) ?? null,
+          votes: this.#votesOf(dilemmaId),
+          predictions: answers.flatMap(({ playerId, answer }) =>
+            answer.votePredictions.map((prediction) => ({
+              playerId,
+              aboutId: prediction.playerId,
+              vote: prediction.vote,
+            })),
+          ),
+          voteReactions: this.#reactions.flatMap(({ dilemmaId: reacted, playerId, aboutId }) =>
+            reacted === dilemmaId && aboutId !== null ? [{ playerId, aboutId }] : [],
+          ),
+        };
+      }),
+    });
+  }
+
+  /**
+   * Once the rounds are over, for the card of the group: the dilemma that divided it the most,
+   * of those with enough votes to show their distribution; null while the rounds go on, or
+   * without any.
+   */
+  mostDivisiveDilemma(): string | null {
+    if (this.#stage === 'rounds') return null;
+    return mostDivisiveDilemma(
+      this.#dilemmas.map((_, position) => {
+        const { dilemmaId, distribution } = this.revealOf(position);
+        return { dilemmaId, distribution };
+      }),
     );
   }
 
@@ -714,6 +902,7 @@ export class Game {
             }
           : null,
       chosenBy: nominal ? (this.#origins.get(dilemmaId)?.chosenBy ?? null) : null,
+      ...this.#reactionsShownOf(dilemmaId),
     };
   }
 
@@ -735,8 +924,11 @@ export class Game {
         ...this.#round,
         startedAt: new Date(this.#round.startedAt),
         endsAt: new Date(this.#round.endsAt),
+        revealedAt: this.#round.revealedAt && new Date(this.#round.revealedAt),
       },
       stage: this.stage,
+      reactions: this.reactions(),
+      timesSpent: [...this.#timesSpent].map(([dilemmaId, ms]) => ({ dilemmaId, ms })),
       peopleInTheGap: [...this.#peopleInTheGap].map(([dilemmaId, playerId]) => ({
         dilemmaId,
         playerId,
@@ -762,11 +954,18 @@ export class Game {
     game.#version = snapshot.version;
     game.#stage = snapshot.stage.kind;
     game.#stageMovedOnBy = snapshot.stage.movedOnBy;
+    game.#stageStep = snapshot.stage.step ?? 0;
     game.#round = snapshot.round && {
       ...snapshot.round,
       startedAt: new Date(snapshot.round.startedAt),
       endsAt: new Date(snapshot.round.endsAt),
+      revealedAt: snapshot.round.revealedAt && new Date(snapshot.round.revealedAt),
     };
+    game.#reactions = snapshot.reactions.map((reaction) => ({
+      ...reaction,
+      seal: { ...reaction.seal },
+    }));
+    for (const { dilemmaId, ms } of snapshot.timesSpent) game.#timesSpent.set(dilemmaId, ms);
     game.#peopleInTheGap = new Map(
       snapshot.peopleInTheGap.map(({ dilemmaId, playerId }) => [dilemmaId, playerId]),
     );
@@ -813,6 +1012,7 @@ export class Game {
       startedAt: new Date(at),
       endsAt: new Date(at.getTime() + this.#settings.timePerDilemmaSeconds * MS_PER_SECOND),
       revealedBy: null,
+      revealedAt: null,
       movedOnBy,
     };
   }
@@ -944,9 +1144,10 @@ export class Game {
     return [...this.#players].filter(([, state]) => !state.left).map(([playerId]) => playerId);
   }
 
-  #moveOnTo(stage: GameStage, playerId: string): boolean {
+  #moveOnTo(stage: GameStage, playerId: string, step = 0): boolean {
     this.#stage = stage;
     this.#stageMovedOnBy = playerId;
+    this.#stageStep = step;
     this.#version += 1;
     this.#events.push(new GameStageChangedEvent(this.id, stage, playerId, this.#version));
     return true;
@@ -977,14 +1178,68 @@ export class Game {
     }
   }
 
+  /**
+   * In a nominal room, the vote predictions of who started the game, the person in the gap's too:
+   * each right one scores more the fewer voters chose that option.
+   */
   #score(dilemmaId: string): void {
-    const points = scorePredictions({
-      playerIds: this.#startingPlayerIds(),
-      answerOf: (playerId) => this.#stateOf(playerId).answers.get(dilemmaId),
-      predictedBy: (playerId) => this.playersToPredictBy(playerId, dilemmaId),
+    const points = scoreVotePredictions({
+      predictorIds: this.#startingPlayerIds(),
+      votes: this.#votesOf(dilemmaId),
+      predictionsOf: (playerId) =>
+        this.#stateOf(playerId).answers.get(dilemmaId)?.votePredictions ?? [],
     });
     for (const [playerId, scored] of points) {
       this.#stateOf(playerId).points.set(dilemmaId, scored);
     }
+  }
+
+  /** The vote of each player who voted the dilemma. */
+  #votesOf(dilemmaId: string): Map<string, string> {
+    return new Map(
+      [...this.#players].flatMap(([playerId, state]) => {
+        const vote = state.answers.get(dilemmaId)?.vote ?? null;
+        return vote === null ? [] : [[playerId, vote] as const];
+      }),
+    );
+  }
+
+  /** The points of the player in every dilemma revealed, added up. */
+  #totalOf(playerId: string): number {
+    return [...this.#stateOf(playerId).points.values()].reduce<number>(
+      (total, points) => total + (points ?? 0),
+      0,
+    );
+  }
+
+  /** How many screens the results have: the ranking alone in an anonymous room; in a nominal one, each title won, who knows each one best and the ranking. */
+  #resultsScreens(): number {
+    const results = this.results();
+    return results ? results.titles.length + 2 : 1;
+  }
+
+  /** The reactions of the dilemma as its reveal shows them: in an anonymous room, nobody's name. */
+  #reactionsShownOf(dilemmaId: string): Pick<DilemmaReveal, 'dilemmaReactions' | 'voteReactions'> {
+    const nominal = this.#settings.variant === 'nominal';
+    const ofDilemma = this.#reactions.filter((reaction) => reaction.dilemmaId === dilemmaId);
+    const byEmoji = new Map<string, string[]>();
+    for (const { aboutId, emoji, playerId } of ofDilemma) {
+      if (aboutId !== null) continue;
+      byEmoji.set(emoji, [...(byEmoji.get(emoji) ?? []), playerId]);
+    }
+    return {
+      dilemmaReactions: [...byEmoji]
+        .map(([emoji, playerIds]) => ({
+          emoji,
+          count: playerIds.length,
+          playerIds: nominal ? playerIds : [],
+        }))
+        .sort((a, b) => b.count - a.count),
+      voteReactions: nominal
+        ? ofDilemma.flatMap(({ playerId, aboutId, emoji }) =>
+            aboutId === null ? [] : [{ playerId, aboutId, emoji }],
+          )
+        : [],
+    };
   }
 }

@@ -124,7 +124,9 @@ describe('the lobby over the room sockets', () => {
     for (const client of [ana, luis]) {
       const { settings, rounds } = await client.next('room-state');
       expect(settings).toMatchObject({ variant: 'anonymous' });
-      expect(rounds).toEqual([{ roundId: 9, origin: 'random', categories: ['honesty'] }]);
+      expect(rounds).toEqual([
+        { roundId: 9, origin: 'random', categories: ['honesty'], withoutNewDilemmas: false },
+      ]);
     }
   });
 

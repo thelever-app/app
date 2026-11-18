@@ -78,7 +78,7 @@ export class AnswerDilemmaUseCase {
       return;
     }
     game.answer(playerId, dilemmaId, draft, await this.#sealProvider.sealFor(player.identity), at);
-    revealIfEveryoneAnswered(room, game);
+    revealIfEveryoneAnswered(room, game, at);
     handOverHostIfAway(room, game);
     const gameEvents = game.pullEvents();
     const roomEvents = room.pullEvents();

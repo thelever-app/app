@@ -2,16 +2,19 @@ import type {
   DidNotVoteReason,
   DilemmaReveal,
   Game,
-  GameStage,
+  GameStageState,
   Round,
 } from '../../domain/entities/game.ts';
+import type { GameTitle, KnownBest } from '../../domain/services/game-results.ts';
 import type { RankedPlayer } from '../../domain/services/rank-by-points.ts';
 import type { VotePrediction } from '../../domain/vos/answer.vo.ts';
 import type { PredictedShare } from '../../domain/vos/distribution-prediction.vo.ts';
 import { GameNotFoundError } from '../errors/game-not-found.error.ts';
 import { RoomNotFoundError } from '../errors/room-not-found.error.ts';
 import { DecisionPhaseNotStartedError } from '../../domain/errors/decision-phase-not-started.error.ts';
+import { PlayerNotInGameError } from '../../domain/errors/player-not-in-game.error.ts';
 import type { DilemmaCatalog, DilemmaContent } from '../ports/dilemma-catalog.port.ts';
+import type { DilemmaLikes } from '../ports/dilemma-likes.port.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 
@@ -33,11 +36,30 @@ export interface GetGameStateOutput {
   /** The code of the room, so the players can invite others during the game. */
   readonly code: string;
   /** The round in progress: which dilemma, its phase and when its time runs out. */
-  readonly round: Omit<Round, 'dilemmaId' | 'startedAt'>;
-  /** Whether the game is in its rounds, its results or its end, and who moved everyone there. */
-  readonly stage: { readonly kind: GameStage; readonly movedOnBy: string | null };
-  /** In an anonymous room, once the rounds are over, who reads the group best; null otherwise. */
+  readonly round: Omit<Round, 'dilemmaId' | 'startedAt' | 'revealedAt'>;
+  /** Whether the game is in its rounds, which screen of its results or its end, and who moved everyone there. */
+  readonly stage: GameStageState;
+  /**
+   * Once the rounds are over, the ranking: in an anonymous room, who reads the group best; in a
+   * nominal one, by the points of the vote predictions. Null while the rounds go on.
+   */
   readonly ranking: readonly RankedPlayer[] | null;
+  /**
+   * Once the rounds are over: in a nominal room, the titles won, in their order, and who knows the
+   * player who asks best, which only they see; for the card of the group, the dilemma that divided
+   * it the most. Null while the rounds go on.
+   */
+  readonly results: {
+    readonly titles: readonly GameTitle[];
+    readonly knownBestBy: KnownBest | null;
+    /** With how many chose each option, in the order of the catalog. */
+    readonly mostDivisiveDilemma: {
+      readonly dilemmaId: string;
+      readonly distribution: readonly { readonly optionId: string; readonly count: number }[];
+    } | null;
+  } | null;
+  /** Whether the player who asks plays the game: who joined the room once its rounds were over does not. */
+  readonly inGame: boolean;
   /** Who may reveal the dilemma of the round early now. */
   readonly hostId: string;
   /** How many have answered the dilemma of the round; all an anonymous room tells about it. */
@@ -51,6 +73,13 @@ export interface GetGameStateOutput {
     | (DilemmaReveal & {
         readonly yourDistributionPrediction: readonly PredictedShare[] | null;
         readonly yourPoints: number | null;
+        /** The reactions of the player who asks: in an anonymous room, nobody else learns them. */
+        readonly yourReactions: {
+          readonly dilemma: string | null;
+          readonly votes: readonly { readonly aboutId: string; readonly emoji: string }[];
+        };
+        /** Whether the player who asks has ever liked this dilemma. */
+        readonly youLiked: boolean;
       })
     | null;
   /**
@@ -101,15 +130,18 @@ export class GetGameStateUseCase {
   readonly #roomRepository: RoomRepository;
   readonly #gameRepository: GameRepository;
   readonly #dilemmaCatalog: DilemmaCatalog;
+  readonly #likes: DilemmaLikes;
 
   constructor(
     roomRepository: RoomRepository,
     gameRepository: GameRepository,
     dilemmaCatalog: DilemmaCatalog,
+    likes: DilemmaLikes,
   ) {
     this.#roomRepository = roomRepository;
     this.#gameRepository = gameRepository;
     this.#dilemmaCatalog = dilemmaCatalog;
+    this.#likes = likes;
   }
 
   async execute({ gameId, playerId, language }: GetGameStateInput): Promise<GetGameStateOutput> {
@@ -118,18 +150,24 @@ export class GetGameStateUseCase {
     const room = await this.#roomRepository.findById(game.roomId);
     if (!room) throw new RoomNotFoundError(game.roomId);
 
-    // Throws if the player does not play this game, before anything about it is returned.
-    const answers = game
-      .answersOf(playerId)
-      .map(({ dilemmaId, vote, votePredictions, distributionPrediction, ready }) => ({
+    // Who joined the room once the rounds were over sees the results and the end, without anything
+    // of their own; anyone else must play it, which is checked before anything about it is returned.
+    const inGame = game.playerIds.includes(playerId);
+    if (!inGame && (game.stage.kind === 'rounds' || !room.hasPlayer(playerId))) {
+      throw new PlayerNotInGameError(playerId);
+    }
+    const answers = (inGame ? game.answersOf(playerId) : []).map(
+      ({ dilemmaId, vote, votePredictions, distributionPrediction, ready }) => ({
         dilemmaId,
         vote,
         votePredictions,
         distributionPrediction,
         ready,
-      }));
+      }),
+    );
     const round = game.round;
     if (!round) throw new DecisionPhaseNotStartedError();
+    const identity = room.players.find(({ id }) => id === playerId)?.identity ?? '';
     const anonymous = game.settings.variant === 'anonymous';
 
     // Nicknames live in the room; the game only knows who plays it.
@@ -150,7 +188,9 @@ export class GetGameStateUseCase {
       language,
     );
     const dilemmas = contents.map((content) => {
-      const optionOrder = game.optionOrderOf(playerId, content.dilemmaId);
+      const optionOrder = inGame
+        ? game.optionOrderOf(playerId, content.dilemmaId)
+        : content.options.map(({ optionId }) => optionId);
       const options = optionOrder.map((optionId) =>
         content.options.find((option) => option.optionId === optionId)!,
       );
@@ -177,19 +217,31 @@ export class GetGameStateUseCase {
       },
       stage: game.stage,
       ranking: game.ranking(),
+      results: this.#resultsFor(game, playerId),
+      inGame,
       hostId: room.host.id,
       answeredCount: game.answeredCount,
-      reveal: round.phase === 'reveal' ? this.#revealFor(game, playerId, round.position) : null,
+      reveal:
+        round.phase === 'reveal' && inGame
+          ? await this.#revealFor(game, playerId, identity, round.position)
+          : null,
       dilemmas,
-      playersToPredict: game.playersToPredictBy(playerId, game.dilemmas[round.position]!.dilemmaId),
+      playersToPredict: inGame
+        ? game.playersToPredictBy(playerId, game.dilemmas[round.position]!.dilemmaId)
+        : [],
       players,
       answers,
-      reports: game.reportsOf(playerId),
-      didNotVote: game.didNotVoteOf(playerId),
+      reports: inGame ? game.reportsOf(playerId) : [],
+      didNotVote: inGame ? game.didNotVoteOf(playerId) : [],
     };
   }
 
-  #revealFor(game: Game, playerId: string, position: number): GetGameStateOutput['reveal'] {
+  async #revealFor(
+    game: Game,
+    playerId: string,
+    identity: string,
+    position: number,
+  ): Promise<GetGameStateOutput['reveal']> {
     const reveal = game.revealOf(position);
     const answer = game.answersOf(playerId).find(({ dilemmaId }) => dilemmaId === reveal.dilemmaId);
     const scored = game.pointsOf(playerId).find(({ dilemmaId }) => dilemmaId === reveal.dilemmaId);
@@ -199,6 +251,22 @@ export class GetGameStateUseCase {
         ? null
         : (answer?.distributionPrediction ?? null),
       yourPoints: scored?.points ?? null,
+      yourReactions: game.reactionOf(playerId, position),
+      youLiked: await this.#likes.hasLiked(identity, reveal.dilemmaId),
+    };
+  }
+
+  #resultsFor(game: Game, playerId: string): GetGameStateOutput['results'] {
+    if (game.stage.kind === 'rounds') return null;
+    const results = game.results();
+    const divisive = game.mostDivisiveDilemma();
+    const position = game.dilemmas.findIndex(({ dilemmaId }) => dilemmaId === divisive);
+    const distribution = position === -1 ? null : game.revealOf(position).distribution;
+    return {
+      titles: results?.titles ?? [],
+      knownBestBy: results?.knownBestBy.get(playerId) ?? null,
+      mostDivisiveDilemma:
+        divisive !== null && distribution !== null ? { dilemmaId: divisive, distribution } : null,
     };
   }
 }

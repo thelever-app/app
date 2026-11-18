@@ -3,6 +3,7 @@ import type { Category } from '@thelever-app/game';
 import { AcceptanceDriver } from './acceptance-driver.ts';
 import type {
   AnswerPlan,
+  CardView,
   GameDriver,
   PublicPageView,
   RoomChoices,
@@ -116,6 +117,18 @@ export class GameWorld extends World {
    */
   readonly plans = new Map<number, Map<string, AnswerPlan | null>>();
 
+  /**
+   * The reactions each player makes in the reveal of the dilemma in each position (from 1) when a
+   * step brings the game to it: to the vote of a player, or to the dilemma for null.
+   */
+  readonly reactions = new Map<
+    number,
+    { readonly player: string; readonly to: string | null; readonly emoji: string }[]
+  >();
+
+  /** What a step does once the rounds are over, before the game ends. */
+  readonly beforeTheEnd: (() => Promise<void>)[] = [];
+
   /** The dilemmas of the test data the scenario calls by a name, by that name. */
   readonly #named = new Map<string, string>();
 
@@ -124,6 +137,8 @@ export class GameWorld extends World {
   #roomCreated = false;
   #gameRequested = false;
   #gameStarted = false;
+  #endRequested = false;
+  #ended = false;
 
   constructor(options: IWorldOptions) {
     super(options);
@@ -202,6 +217,62 @@ export class GameWorld extends World {
     this.#gameStarted = true;
   }
 
+  /**
+   * The scenario plays a game to its end, once its Givens have set it up: the first When or Then
+   * plays it (see the hooks).
+   */
+  requestEnd(): void {
+    this.requestGame();
+    this.#endRequested = true;
+  }
+
+  /** Whether the game of the scenario is played to its end, or will be. */
+  get endRequested(): boolean {
+    return this.#endRequested;
+  }
+
+  /** Whether a step started the game of the scenario. */
+  get gameStarted(): boolean {
+    return this.#gameStarted;
+  }
+
+  /** Whether a step already played the game of the scenario to its end. */
+  get ended(): boolean {
+    return this.#ended;
+  }
+
+  /** The card the player has open, as the last step opened or changed it. */
+  card: CardView | undefined;
+
+  /** The seconds a step recorded the group spent on a dilemma, which nobody must see. */
+  timeSpentSeconds: number | undefined;
+
+  /** Plays the game to its end if the scenario asked for it and no step has yet. */
+  async endIfRequested(): Promise<void> {
+    if (!this.#endRequested || this.#ended) return;
+    this.#ended = true;
+    await this.toTheResults();
+    for (const step of this.beforeTheEnd) await step();
+    await this.throughTheResults();
+  }
+
+  /** The game is on the first screen of its results: every round played as its plans say. */
+  async toTheResults(): Promise<void> {
+    await this.game();
+    const last = (await this.driver.dilemmasOfTheGame()).length;
+    await this.toRevealOf(last);
+    const mover = this.present()[0];
+    if (!mover) throw new Error('Nobody is left to move on to the results');
+    if (!(await this.driver.resultsScreenSeenBy(mover))) await this.driver.moveOn(mover);
+  }
+
+  /** From the screen of the results everyone is on, a player present moves everyone to the end. */
+  async throughTheResults(): Promise<void> {
+    const mover = this.present()[0];
+    if (!mover) throw new Error('Nobody is left to move on to the end');
+    while (!(await this.driver.endOfTheGameSeenBy(mover))) await this.driver.moveOn(mover);
+  }
+
   /** The plan of `player` for the dilemma in that position, which a later step follows. */
   plan(position: number, player: string, plan: AnswerPlan | null): void {
     const plans = this.plans.get(position) ?? new Map<string, AnswerPlan | null>();
@@ -237,6 +308,9 @@ export class GameWorld extends World {
       await this.driver.answer(player, plan);
     }
     if (!(await this.driver.revealSeenBy(host))) await this.driver.revealEarly(host);
+    for (const { player, to, emoji } of this.reactions.get(position) ?? []) {
+      await this.driver.react(player, to, emoji);
+    }
   }
 
   /**

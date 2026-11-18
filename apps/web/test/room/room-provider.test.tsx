@@ -23,7 +23,9 @@ const GAME_STATE: GameStateDto = {
     revealedBy: null,
     movedOnBy: null,
   },
-  stage: { kind: 'rounds', movedOnBy: null },
+  stage: { kind: 'rounds', movedOnBy: null, step: null },
+  results: null,
+  inGame: true,
   ranking: null,
   hostId: 'test-player-id-0',
   serverTime: '2026-11-09T10:00:00.000Z',
@@ -398,6 +400,45 @@ describe('useRoom', () => {
       type: 'expel-player',
       playerId: 'test-marta-id',
     });
+  });
+
+  it('should answer a request only with the state that shows it done, not with one of another player', async () => {
+    // Arrange
+    const fake = fakeConnection();
+    const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(fake.connection) });
+    act(() => fake.deliver(GAME_STATE));
+    let answered = false;
+
+    // Act
+    const request = result.current.request(
+      { type: 'like-dilemma', position: 0 },
+      (game) => game.answeredCount === 2,
+    );
+    void request.then(() => (answered = true));
+    act(() => fake.deliver({ ...GAME_STATE, answeredCount: 1 }));
+    await Promise.resolve();
+    const answeredByAnother = answered;
+    act(() => fake.deliver({ ...GAME_STATE, answeredCount: 2 }));
+    await request;
+
+    // Assert
+    expect(fake.connection.send).toHaveBeenCalledWith({ type: 'like-dilemma', position: 0 });
+    expect(answeredByAnother).toBe(false);
+    expect(answered).toBe(true);
+  });
+
+  it('should answer a request the server rejects', async () => {
+    // Arrange
+    const fake = fakeConnection();
+    const { result } = renderHook(() => useRoom(), { wrapper: wrapperFor(fake.connection) });
+    act(() => fake.deliver(GAME_STATE));
+
+    // Act
+    const request = result.current.request({ type: 'like-dilemma', position: 0 }, () => false);
+    act(() => fake.deliver({ type: 'error', command: 'like-dilemma', code: 'invalid-message' }));
+
+    // Assert
+    await expect(request).resolves.toBeUndefined();
   });
 
   it('should keep the same answerDilemma across renders', () => {

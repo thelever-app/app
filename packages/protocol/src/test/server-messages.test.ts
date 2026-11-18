@@ -22,8 +22,10 @@ const gameState = {
     revealedBy: 'everyone',
     movedOnBy: null,
   },
-  stage: { kind: 'rounds', movedOnBy: null },
+  stage: { kind: 'rounds', movedOnBy: null, step: null },
   ranking: null,
+  results: null,
+  inGame: true,
   hostId: 'player-1',
   serverTime: '2026-11-09T10:01:12.345Z',
   answeredCount: 2,
@@ -47,6 +49,10 @@ const gameState = {
     chosenBy: null,
     yourDistributionPrediction: null,
     yourPoints: 50,
+    dilemmaReactions: [{ emoji: '😂', count: 2, playerIds: ['player-1', 'player-2'] }],
+    voteReactions: [{ playerId: 'player-2', aboutId: 'player-1', emoji: '❤️' }],
+    yourReactions: { dilemma: '😂', votes: [{ aboutId: 'player-1', emoji: '❤️' }] },
+    youLiked: true,
   },
   dilemmas: [
     {
@@ -144,7 +150,7 @@ describe('GameStateDto', () => {
     // Arrange
     const ended = {
       ...gameState,
-      stage: { kind: 'ended', movedOnBy: 'player-1' },
+      stage: { kind: 'ended', movedOnBy: 'player-1', step: null },
       ranking: [
         { playerId: 'player-2', points: 180, position: 1, mentalist: true },
         { playerId: 'player-1', points: 120, position: 2, mentalist: false },
@@ -181,7 +187,65 @@ describe('GameStateDto', () => {
     // Act
     const result = GameStateDto.safeParse({
       ...gameState,
-      stage: { kind: 'titles', movedOnBy: null },
+      stage: { kind: 'titles', movedOnBy: null, step: null },
+    });
+
+    // Assert
+    expect(result.success).toBe(false);
+  });
+
+  it('should accept the titles of a nominal room on a screen of its results, and who knows the player best', () => {
+    // Act
+    const result = GameStateDto.safeParse({
+      ...gameState,
+      stage: { kind: 'results', movedOnBy: 'player-2', step: 1 },
+      ranking: [
+        { playerId: 'player-1', points: 120, position: 1, mentalist: true },
+        { playerId: 'player-2', points: 55, position: 2, mentalist: false },
+      ],
+      results: {
+        titles: [
+          {
+            title: 'almas-gemelas',
+            winners: [{ playerIds: ['player-1', 'player-2'], count: 5, of: 6 }],
+            runnersUp: [],
+          },
+          {
+            title: 'el-mentalista',
+            winners: [{ playerIds: ['player-1'], count: 120, of: null }],
+            runnersUp: [{ playerIds: ['player-2'], count: 55, of: null }],
+          },
+        ],
+        knownBestBy: { playerIds: ['player-1'], points: 55 },
+        mostDivisiveDilemma: {
+          dilemmaId: 'dilemma-1',
+          distribution: [
+            { optionId: 'option-1', count: 2 },
+            { optionId: 'option-2', count: 1 },
+          ],
+        },
+      },
+    });
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
+  it('should refuse a title it does not know', () => {
+    // Act
+    const result = GameStateDto.safeParse({
+      ...gameState,
+      results: {
+        titles: [
+          {
+            title: 'el-gafe',
+            winners: [{ playerIds: ['player-1'], count: 1, of: null }],
+            runnersUp: [],
+          },
+        ],
+        knownBestBy: null,
+        mostDivisiveDilemma: null,
+      },
     });
 
     // Assert

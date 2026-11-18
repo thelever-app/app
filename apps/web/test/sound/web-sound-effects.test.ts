@@ -9,6 +9,7 @@ const SOUNDS: Record<Moment, string> = {
   'answer-confirmed': '/sounds/answer-confirmed.m4a',
   'last-seconds': '/sounds/last-seconds.m4a',
   'dilemma-revealed': '/sounds/dilemma-revealed.m4a',
+  'game-ended': '/sounds/game-ended.m4a',
 };
 
 /**
@@ -51,7 +52,7 @@ function aDevice({ vibrate = true, audioSession = true, startsOn = 1, missing = 
       return new TextEncoder().encode(url).buffer as ArrayBuffer;
     },
   };
-  const loaded = missing ? 4 : 5;
+  const loaded = missing ? 5 : 6;
   const touch = async () => {
     page.dispatchEvent(new Event('touchend'));
     await vi.waitFor(() => expect(context.decodeAudioData).toHaveBeenCalledTimes(loaded));

@@ -149,7 +149,8 @@
   "newHost": {
     "title": "Ara ets l’amfitrió",
     "disconnected": "{{host}} continua sense connexió. A partir de la ronda següent pots revelar abans d’hora des del menú ⋮. Si torna, recupera el rol.",
-    "left": "{{host}} ha sortit de la partida. Les teves opcions són al menú ⋮."
+    "left": "{{host}} ha sortit de la partida. Les teves opcions són al menú ⋮.",
+    "ended": "{{host}} continua sense connexió. Ara pots llançar la revenja. Si torna, recupera el rol."
   },
   "lateJoin": {
     "illustration": "La Palanca, al costat d’un canvi d’agulles",
@@ -214,7 +215,20 @@
     "aboutYouAnonymous": "No has votat: has predit com es repartirien els altres. La teva predicció i els teus punts només els veus tu.",
     "aboutHits": "{{right, number}} de {{of, number}}",
     "aboutHitsLabel": "encerts",
-    "aboutYouHitsLabel": "encerts"
+    "aboutYouHitsLabel": "encerts",
+    "like": "Bon dilema",
+    "dilemmaReactions": "Reaccions al dilema",
+    "reactionBy": "{{emoji}}: {{names}}",
+    "reactionCount_one": "{{emoji}}: {{count}} reacció",
+    "reactionCount_many": "{{emoji}}: {{count, number}} reaccions",
+    "reactionCount_other": "{{emoji}}: {{count, number}} reaccions",
+    "reactToDilemma": "Reaccionar al dilema",
+    "reactToVoteOf": "Reaccionar al vot de {{name}}",
+    "reactionsToVote": "Reaccions al vot de {{name}}",
+    "reactToVoteHint": "Toca algú per reaccionar al seu vot.",
+    "dilemmaPoints_one": "{{count}} punt per a tu",
+    "dilemmaPoints_many": "{{count, number}} punts per a tu",
+    "dilemmaPoints_other": "{{count, number}} punts per a tu"
   },
   "ranking": {
     "label": "Resultats",
@@ -226,7 +240,10 @@
     "points": "{{points, number}}",
     "pointsUnit": "punts",
     "note": "Qui queda primer és El Mentalista de la partida. Els dilemes amb menys de 3 vots no puntuen. Els empats comparteixen lloc i títol.",
-    "next": "Continuar"
+    "next": "Continuar",
+    "nominalTitle": "Classificació",
+    "nominalText": "Punts per endevinar el vot dels altres: com menys gent hagi triat el mateix, més punts.",
+    "nominalNote": "Al costat de cadascú, els títols que ha guanyat. Els empats comparteixen lloc."
   },
   "end": {
     "label": "Partida acabada · {{total, number}} de {{total, number}}",
@@ -243,7 +260,16 @@
     "gone_many": "{{names}} se n’han anat.",
     "gone_other": "{{names}} se n’han anat.",
     "closes": "La sala es tanca 15 minuts després que no quedi ningú connectat.",
-    "leave": "Sortir"
+    "leave": "Sortir",
+    "placeNominal_one": "Has quedat {{position, number}}. de {{players, number}}, amb {{count}} punt.",
+    "placeNominal_many": "Has quedat {{position, number}}. de {{players, number}}, amb {{count, number}} punts.",
+    "placeNominal_other": "Has quedat {{position, number}}. de {{players, number}}, amb {{count, number}} punts.",
+    "knownBest": "Qui et coneix millor és {{names}}.",
+    "notInGame": "Aquesta partida ja ha acabat. Si hi ha revenja, hi jugaràs.",
+    "rematch": "Revenja amb el mateix grup",
+    "rematchGuest": "{{host}} pot llançar la revenja. Si ho fa, passaràs al lobby amb els qui encara siguin a la sala.",
+    "shareCard": "Compartir la meva targeta",
+    "shareGroupCard": "Compartir la targeta del grup"
   },
   "notices": {
     "reconnecting": "Tornant a connectar… les teves respostes estan desades",
@@ -435,7 +461,10 @@
     "missing_many": "Falten {{count}} jugadors per començar",
     "gapWarningTitle": "Un dilema va sobre algú del grup.",
     "gapWarningNominal": "En sala nominal necessita com a mínim {{minimum, number}} jugadors: si comenceu amb menys, la seva ronda passa a ser aleatòria.",
-    "gapWarningAnonymous": "En sala anònima necessita com a mínim {{minimum, number}} jugadors: si comenceu amb menys, la seva ronda passa a ser aleatòria."
+    "gapWarningAnonymous": "En sala anònima necessita com a mínim {{minimum, number}} jugadors: si comenceu amb menys, la seva ronda passa a ser aleatòria.",
+    "noNewDilemmas": "Ja no queden dilemes per jugar",
+    "noNewDilemmasNotice": "La ronda {{round, number}} ja no té dilemes per jugar en aquesta sala. Si comenceu la partida així, aquesta ronda sortirà de totes les categories.",
+    "changeCategories": "Canviar les categories"
   },
   "languages": {
     "es": "Español",
@@ -596,5 +625,85 @@
     "fewBody_other": "En portem {{count, number}} de les {{needed}} que calen. Torna més tard per veure com ha votat el món i si l’has encertat.",
     "play": "Jugar-lo amb el meu grup",
     "arguments": "Llegir els arguments de cada opció"
+  },
+  "react": {
+    "dilemmaTitle": "Reaccionar al dilema",
+    "voteTitle": "{{name}} ha votat «{{option}}»",
+    "ownVoteTitle": "Has votat «{{option}}»",
+    "toDilemma": "Reacciona al dilema",
+    "toVote": "Reacciona al seu vot",
+    "toOwnVote": "Reacciona al teu vot",
+    "more": "Més emojis",
+    "anyEmoji": "Escriu un emoji",
+    "send": "Reaccionar",
+    "oneDilemma": "Només una reacció per dilema: si en tries una altra, substitueix l’anterior. Amb «+» pots fer servir qualsevol emoji.",
+    "oneVote": "Només una reacció per vot: si en tries una altra, substitueix l’anterior. Amb «+» pots fer servir qualsevol emoji.",
+    "nominalPrivacy": "En aquesta sala tothom veurà qui ha reaccionat.",
+    "anonymousPrivacy": "En aquesta sala ningú no veurà qui ha reaccionat, només quants."
+  },
+  "results": {
+    "label": "Resultats · {{step, number}} de {{total, number}}",
+    "next": "Següent",
+    "onlyYou": "Només ho veus tu",
+    "knowsTitle": "Qui et coneix millor és…",
+    "knowsNobody": "Aquesta vegada ningú no ha encertat els teus vots.",
+    "knowsFact_one": "{{count}} punt endevinant els teus vots",
+    "knowsFact_many": "{{count, number}} punts endevinant els teus vots",
+    "knowsFact_other": "{{count, number}} punts endevinant els teus vots",
+    "runnerUp": "Després: {{names}}, {{fact}}",
+    "titles": {
+      "almas-gemelas": "Almas gemelas",
+      "verso-suelto": "Verso suelto",
+      "la-voz-del-grupo": "La voz del grupo",
+      "iman-de-reacciones": "Imán de reacciones",
+      "enigma": "Enigma",
+      "libro-abierto": "Libro abierto",
+      "el-mentalista": "El Mentalista"
+    },
+    "meanings": {
+      "almas-gemelas": "La parella que millor s’ha endevinat el vot.",
+      "verso-suelto": "Qui ha votat més vegades amb la minoria.",
+      "la-voz-del-grupo": "Qui ha votat més vegades el que ha triat la majoria.",
+      "iman-de-reacciones": "Qui ha rebut més reaccions als seus vots.",
+      "enigma": "A qui menys li han encertat el vot.",
+      "libro-abierto": "A qui més li han encertat el vot.",
+      "el-mentalista": "Qui ha endevinat millor el vot dels altres."
+    },
+    "facts": {
+      "almas-gemelas": "S’han encertat {{count, number}} de {{of, number}} vots",
+      "verso-suelto": "Amb la minoria en {{count, number}} de {{of, number}} dilemes",
+      "la-voz-del-grupo": "Amb la majoria en {{count, number}} de {{of, number}} dilemes",
+      "iman-de-reacciones_one": "{{count}} reacció als seus vots",
+      "iman-de-reacciones_many": "{{count, number}} reaccions als seus vots",
+      "iman-de-reacciones_other": "{{count, number}} reaccions als seus vots",
+      "enigma": "Li han encertat {{count, number}} de {{of, number}} vots",
+      "libro-abierto": "Li han encertat {{count, number}} de {{of, number}} vots",
+      "el-mentalista_one": "{{count}} punt",
+      "el-mentalista_many": "{{count, number}} punts",
+      "el-mentalista_other": "{{count, number}} punts"
+    }
+  },
+  "card": {
+    "personalTitle": "La teva targeta",
+    "groupTitle": "La targeta del grup",
+    "close": "Tancar",
+    "share": "Compartir",
+    "myGame": "La meva partida de TheLever",
+    "ourGame": "La nostra partida de TheLever",
+    "place": "{{position, number}}. de {{players, number}}",
+    "inAGameOf_one": "en una partida de {{count}} dilema moral",
+    "inAGameOf_many": "en una partida de {{count, number}} dilemes morals",
+    "inAGameOf_other": "en una partida de {{count, number}} dilemes morals",
+    "dilemmas_one": "{{count}} dilema",
+    "dilemmas_many": "{{count, number}} dilemes",
+    "dilemmas_other": "{{count, number}} dilemes",
+    "knowsMe": "Qui em coneix millor",
+    "someone": "Algú del grup",
+    "myTitles": "Els meus títols",
+    "withPartner": "{{title}}, amb {{name}}",
+    "mostDivisive": "El que més ens ha dividit",
+    "footer": "Juga a thelever.app",
+    "showNames": "Mostrar els sobrenoms de {{names}}",
+    "groupNote": "Sense noms ni vots de ningú: només com s’ha repartit el grup."
   }
 }

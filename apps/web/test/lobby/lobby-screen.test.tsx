@@ -13,7 +13,7 @@ const MIXED_ROUNDS: LobbyRoundDto[] = [
     origin: 'specific',
     dilemma: { dilemmaId: 'test-dilemma-9', text: 'La palanca', hasGap: false },
   },
-  { roundId: 2, origin: 'random', categories: null },
+  { roundId: 2, origin: 'random', categories: null, withoutNewDilemmas: false },
   { roundId: 3, origin: 'players', dilemma: null, chosenByYou: false },
 ];
 
@@ -137,12 +137,27 @@ describe('LobbyScreen', () => {
     it('should show each round in its order, grouping only random rounds of the same categories', async () => {
       // Arrange
       const rounds: LobbyRoundDto[] = [
-        { roundId: 1, origin: 'random', categories: ['honesty'] },
-        { roundId: 2, origin: 'random', categories: ['honesty'] },
-        { roundId: 3, origin: 'random', categories: ['loyalty', 'honesty'] },
-        { roundId: 4, origin: 'random', categories: ['honesty', 'loyalty'] },
-        { roundId: 5, origin: 'random', categories: ['honesty', 'loyalty', 'justice'] },
-        { roundId: 6, origin: 'random', categories: null },
+        { roundId: 1, origin: 'random', categories: ['honesty'], withoutNewDilemmas: false },
+        { roundId: 2, origin: 'random', categories: ['honesty'], withoutNewDilemmas: false },
+        {
+          roundId: 3,
+          origin: 'random',
+          categories: ['loyalty', 'honesty'],
+          withoutNewDilemmas: false,
+        },
+        {
+          roundId: 4,
+          origin: 'random',
+          categories: ['honesty', 'loyalty'],
+          withoutNewDilemmas: false,
+        },
+        {
+          roundId: 5,
+          origin: 'random',
+          categories: ['honesty', 'loyalty', 'justice'],
+          withoutNewDilemmas: false,
+        },
+        { roundId: 6, origin: 'random', categories: null, withoutNewDilemmas: false },
       ];
 
       // Act
@@ -691,6 +706,27 @@ describe('LobbyScreen', () => {
 
       // Assert
       expect(screen.getByRole('alert').textContent).toBe(t('roomErrors.nickname-and-avatar-taken'));
+    });
+  });
+
+  describe('the lobby of a rematch', () => {
+    it('should tell the host which random round has no dilemmas left to play, and let them change it', async () => {
+      // Arrange
+      const rounds: LobbyRoundDto[] = [
+        { roundId: 1, origin: 'random', categories: null, withoutNewDilemmas: false },
+        { roundId: 2, origin: 'random', categories: ['honesty'], withoutNewDilemmas: true },
+      ];
+
+      // Act
+      const { t } = await renderLobby(aRoom({ rounds }));
+
+      // Assert
+      expect(screen.getByTestId('rounds-without-new-dilemmas').textContent).toContain(
+        t('lobby.noNewDilemmasNotice', { round: 2 }),
+      );
+      expect(screen.getByText(t('lobby.noNewDilemmas'))).toBeDefined();
+      fireEvent.click(screen.getByRole('button', { name: t('lobby.changeCategories') }));
+      expect(await screen.findByRole('dialog')).toBeDefined();
     });
   });
 });

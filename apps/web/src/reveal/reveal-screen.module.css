@@ -510,3 +510,170 @@
   composes: primary from '../styles/buttons.module.css';
   flex-grow: 1;
 }
+
+/* «Buen dilema», in the head: once given, it stays. */
+.like {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 0 10px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.like[aria-pressed='true'] {
+  background: var(--color-accent);
+  box-shadow: inset 0 0 0 1.5px var(--color-ink);
+  cursor: default;
+}
+
+.reactions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.reactionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reactionChip {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.reactionChip[data-yours] {
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+.reactors {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.reactionCount {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.reactButton {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 0 10px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* The whole chip of a voter reacts to their vote. */
+.voterButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.voter {
+  position: relative;
+}
+
+.voteReactions {
+  position: absolute;
+  top: -10px;
+  right: -6px;
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.voteReactions li {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-raised);
+  box-shadow: 0 0 0 1px var(--color-border);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.reactHint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-ink-muted);
+}
+
+.summaryPoints {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.summaryPointsValue {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryPointsUnit {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.dilemmaPoints {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}

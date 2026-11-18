@@ -83,7 +83,11 @@ export class StartGameUseCase {
     // Only how to space them and whether they have the gap, of a few drawn at random for each set
     // of categories a round draws from: the game reads nothing else, and never the whole catalog.
     const { playsTheGap } = room;
-    const excludedIds = fixedDilemmaIds(settings.rounds, room.chosenDilemmas, playsTheGap);
+    // Nor the dilemmas the room played in its games before, so a rematch never repeats one.
+    const excludedIds = [
+      ...fixedDilemmaIds(settings.rounds, room.chosenDilemmas, playsTheGap),
+      ...room.playedDilemmaIds,
+    ];
     const playedBy = [...room.playedBy].map(([dilemmaId, players]) => ({ dilemmaId, players }));
     const candidatesOf = async (
       categories: readonly Category[] | null,
@@ -115,24 +119,49 @@ export class StartGameUseCase {
       const ids = new Set(drawn.map(({ dilemmaId }) => dilemmaId));
       return [...drawn, ...forAdults.filter(({ dilemmaId }) => !ids.has(dilemmaId))];
     };
-    const candidates = new Map<string, Candidates>(
-      await Promise.all(
-        categoriesToDraw(settings.rounds, room.chosenDilemmas, playsTheGap).map(
-          async ({ categories, rounds }): Promise<[string, Candidates]> => [
-            categoriesKey(categories),
-            {
-              inCatalog: await candidatesOf(categories, rounds, 'in-catalog'),
-              inExploration: settings.newDilemmas
-                ? await candidatesOf(categories, rounds, 'in-exploration')
-                : [],
-            },
-          ],
+    const candidatesFor = async (rounds: typeof settings.rounds) =>
+      new Map<string, Candidates>(
+        await Promise.all(
+          categoriesToDraw(rounds, room.chosenDilemmas, playsTheGap).map(
+            async ({ categories, rounds }): Promise<[string, Candidates]> => [
+              categoriesKey(categories),
+              {
+                inCatalog: await candidatesOf(categories, rounds, 'in-catalog'),
+                inExploration: settings.newDilemmas
+                  ? await candidatesOf(categories, rounds, 'in-exploration')
+                  : [],
+              },
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    // In a rematch, the random rounds beyond the dilemmas their categories have left that the room
+    // has not played play from every category, as its lobby warned the host.
+    const firstDraw = await candidatesFor(settings.rounds);
+    const left = (categories: readonly Category[]) => {
+      const drawn = firstDraw.get(categoriesKey(categories));
+      return new Set(
+        [...(drawn?.inCatalog ?? []), ...(drawn?.inExploration ?? [])].map(
+          ({ dilemmaId }) => dilemmaId,
+        ),
+      ).size;
+    };
+    const played = new Map<string, number>();
+    let fellBack = false;
+    const rounds = settings.rounds.map((round) => {
+      if (round.origin !== 'random' || round.categories === null) return round;
+      if (room.playedDilemmaIds.length === 0) return round;
+      const key = categoriesKey(round.categories);
+      const before = played.get(key) ?? 0;
+      played.set(key, before + 1);
+      if (before < left(round.categories)) return round;
+      fellBack = true;
+      return { ...round, categories: null };
+    });
+    const candidates = fellBack ? await candidatesFor(rounds) : firstDraw;
     const composed = composeGame(
       {
-        rounds: settings.rounds,
+        rounds,
         chosenDilemmas: room.chosenDilemmas,
         newDilemmas: settings.newDilemmas,
         candidates,
