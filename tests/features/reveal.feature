@@ -233,7 +233,7 @@ Feature: Reveal
       Then nobody sees how many chose each option
       And all players see that there were too few votes to show it
 
-    @ui @todo
+    @ui
     Scenario: Too few votes score nothing
       Given only "Luis" and "Marta" voted the first dilemma
       When the reveal is on the first dilemma
@@ -246,14 +246,37 @@ Feature: Reveal
       When the reveal is on the first dilemma
       Then no player sees who chose it
 
-    @ui @todo
+    @ui
     Scenario: The last round leads to the ranking of who reads the group best
       Given the reveal is on the last dilemma
       When a player moves on
       Then all players see the ranking of who reads the group best
-      And nobody sees El Mentalista or who knows them best
+      And nobody sees the titles of the game or who knows them best
 
-    @ui @todo
+    @ui
+    Scenario: The leader of the ranking is El Mentalista
+      Given "Luis" has the most points for the distribution predictions
+      When the ranking of who reads the group best is shown
+      Then "Luis" is marked as El Mentalista of the game
+
+    @ui
+    Scenario: A tie at the top shares El Mentalista
+      Given "Ana" and "Luis" share the most points for the distribution predictions
+      When the ranking of who reads the group best is shown
+      Then "Ana" and "Luis" are both marked as El Mentalista of the game
+
+    Scenario: Nobody is El Mentalista without points
+      Given no dilemma had enough votes to score
+      When the ranking of who reads the group best is shown
+      Then nobody is marked as El Mentalista of the game
+
+    @ui
+    Scenario: A player who left the game is not in the ranking
+      Given "Marta" left the game
+      When the ranking of who reads the group best is shown
+      Then the ranking has "Ana" and "Luis"
+
+    @ui
     Scenario: The ranking of an anonymous room ends the game
       Given the ranking of who reads the group best is shown
       When a player moves on
@@ -269,7 +292,6 @@ Feature: Reveal
     Background:
       Given an anonymous room with 10 players
 
-    @todo
     Scenario Outline: Points depend on how close the prediction was
       Given the first dilemma has 2 options and the group voted <real>
       And "Ana" predicted <predicted>
@@ -283,14 +305,13 @@ Feature: Reveal
         | 70 % and 30 % | 30 % and 70 % | 60     |
         | 70 % and 30 % | 0 % and 100 % | 30     |
 
-    @todo
     Scenario: Points are rounded to a whole number
       Given 9 of the players voted the first dilemma, 6 for the first option and 3 for the second
       And "Ana" predicted 50 % and 50 %
       When the reveal is on the first dilemma
       Then "Ana" scores 83 points for the first dilemma
 
-    @ui @todo
+    @ui
     Scenario: Each player sees their own prediction and points in private
       Given "Ana" predicted 50 % and 50 % on the first dilemma
       When the reveal is on the first dilemma
@@ -298,14 +319,21 @@ Feature: Reveal
       And "Ana" sees the points she scored for the first dilemma
       And no other player receives the prediction or the points of "Ana"
 
-    @todo
     Scenario: Players who did not vote score nothing
       Given "Ana" did not vote the first dilemma
       When the reveal is on the first dilemma
       Then "Ana" scores no points for the first dilemma
 
-    @ui @todo
+    Scenario: A player who joined late scores for the distribution prediction
+      Given "Pedro" joined the game in the second round
+      And "Pedro" voted the second dilemma and predicted its distribution
+      When the reveal is on the second dilemma
+      Then "Pedro" scores points for the second dilemma
+      And "Pedro" is in the ranking of who reads the group best
+
+    @ui
     Scenario: Ties in the ranking share the position
-      Given "Ana" and "Luis" have the same total of points
+      Given "Ana" and "Luis" share the highest total of points and "Marta" has the next one
       When the ranking of who reads the group best is shown
-      Then "Ana" and "Luis" share the same position
+      Then "Ana" and "Luis" share the first position
+      And "Marta" is third

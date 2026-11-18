@@ -285,7 +285,7 @@ Feature: Decision phase
       And that the group sees how many chose each option of each dilemma
       And that their answers are only used to play and are deleted within 24 hours of the room closing, except their history
 
-    @ui @todo
+    @ui
     Scenario: A player has answered only after voting and pressing Ready
       Given "Luis" is on the first dilemma
       When "Luis" votes
@@ -293,12 +293,11 @@ Feature: Decision phase
       When "Luis" presses Ready
       Then the first dilemma counts as answered by "Luis"
 
-    @ui @todo
+    @ui
     Scenario: A player cannot predict the distribution before voting
       Given "Luis" has not voted the current dilemma
       Then "Luis" cannot predict the distribution
 
-    @todo
     Scenario: The current distribution prediction counts when time runs out
       Given "Luis" voted the first dilemma and set his distribution prediction to 70 % and 30 %
       And "Luis" has not pressed Ready
@@ -316,7 +315,7 @@ Feature: Decision phase
     Background:
       Given the room is anonymous
 
-    @ui @todo
+    @ui
     Scenario Outline: The distribution prediction starts with an even split
       Given a dilemma with <options> options
       When a player has voted it
@@ -326,22 +325,21 @@ Feature: Decision phase
       Examples:
         | options | split                  |
         | 2       | 50 %, 50 %             |
-        | 3       | 40 %, 30 %, 30 %       |
-        | 4       | 30 %, 30 %, 20 %, 20 % |
+        | 3       | 35 %, 35 %, 30 %       |
+        | 4       | 25 %, 25 %, 25 %, 25 % |
 
-    @ui @todo
+    @ui
     Scenario: Moving one option adjusts the others in proportion
-      Given a distribution prediction of 30 %, 30 %, 20 % and 20 %
+      Given a distribution prediction of 40 %, 30 %, 20 % and 10 %
       When the player moves the first option to 60 %
-      Then the distribution prediction is 60 %, 20 %, 10 % and 10 %
+      Then the distribution prediction is 60 %, 20 %, 15 % and 5 %
 
-    @todo
-    Scenario: The distribution prediction always adds up to 100 % in steps of 10 %
+    Scenario: The distribution prediction always adds up to 100 % in steps of 5 %
       When a player moves any option of their distribution prediction
-      Then every option is a multiple of 10 %
+      Then every option is a multiple of 5 %
       And all the options add up to 100 %
 
-    @ui @todo
+    @ui @screen
     Scenario: Two options are predicted with a single slider
       Given a dilemma with 2 options
       When a player predicts the distribution

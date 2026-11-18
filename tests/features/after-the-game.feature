@@ -108,6 +108,12 @@ Feature: After the game
       And "Ana" starts a rematch
       Then the rematch lobby has "Ana" and "Luis"
 
+    @ui
+    Scenario: The end of the game shows who is still in the room
+      When "Marta" leaves the game
+      Then "Ana" and "Luis" see at the end of the game that they are still in the room
+      And that "Marta" has left
+
     Scenario: The room closes when everyone has left
       When every player has left the room
       Then the room closes
