@@ -1,5 +1,6 @@
 import {
   type AvatarFace,
+  type LobbyDilemma,
   type PlayerColor,
   Room,
   type RoomRepository,
@@ -111,7 +112,7 @@ export class PostgresRoomRepository implements RoomRepository {
     await db
       .insertInto('room_players')
       .values(
-        players.map(({ id: playerId, nickname, identity, avatar }, position) => ({
+        players.map(({ id: playerId, nickname, identity, avatar, playedDilemmaIds }, position) => ({
           id: playerId,
           room_id: id,
           position,
@@ -120,6 +121,7 @@ export class PostgresRoomRepository implements RoomRepository {
           avatar_face: avatar.face as AvatarFace,
           avatar_color: avatar.color as PlayerColor,
           has_left: snapshot.leftPlayerIds.includes(playerId),
+          played_dilemma_ids: [...playedDilemmaIds],
         })),
       )
       .onConflict((conflict) =>
@@ -129,6 +131,7 @@ export class PostgresRoomRepository implements RoomRepository {
           avatar_face: eb.ref('excluded.avatar_face'),
           avatar_color: eb.ref('excluded.avatar_color'),
           has_left: eb.ref('excluded.has_left'),
+          played_dilemma_ids: eb.ref('excluded.played_dilemma_ids'),
         })),
       )
       .execute();
@@ -182,6 +185,9 @@ export class PostgresRoomRepository implements RoomRepository {
             dilemma_id: dilemma?.dilemmaId ?? null,
             minimum_age: dilemma?.minimumAge ?? null,
             compromising: dilemma?.compromising ?? null,
+            type: dilemma?.type ?? null,
+            scale: dilemma?.scale ?? null,
+            has_gap: dilemma?.hasGap ?? null,
             chosen_by_player_id: round.origin === 'players' ? (chosen?.playerId ?? null) : null,
           };
         }),
@@ -235,6 +241,7 @@ function readRoom(db: Kysely<GameTables>, id: string) {
             'room_players.avatar_face',
             'room_players.avatar_color',
             'room_players.has_left',
+            'room_players.played_dilemma_ids',
           ])
           .whereRef('room_players.room_id', '=', 'rooms.id')
           .orderBy('room_players.position'),
@@ -256,6 +263,9 @@ function readRoom(db: Kysely<GameTables>, id: string) {
             'room_rounds.dilemma_id as dilemmaId',
             'room_rounds.minimum_age as minimumAge',
             'room_rounds.compromising',
+            'room_rounds.type',
+            'room_rounds.scale',
+            'room_rounds.has_gap as hasGap',
             'room_rounds.chosen_by_player_id as chosenBy',
           ])
           .whereRef('room_rounds.room_id', '=', 'rooms.id')
@@ -290,21 +300,22 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
       timePerDilemmaSeconds: row.time_per_dilemma_seconds,
       newDilemmas: row.new_dilemmas,
     },
-    players: row.players.map(({ id, nickname, identity, avatar_face, avatar_color }) => ({
-      id,
-      nickname,
-      identity,
-      avatar: { face: avatar_face, color: avatar_color },
-    })),
+    players: row.players.map(
+      ({ id, nickname, identity, avatar_face, avatar_color, played_dilemma_ids }) => ({
+        id,
+        nickname,
+        identity,
+        avatar: { face: avatar_face, color: avatar_color },
+        playedDilemmaIds: played_dilemma_ids,
+      }),
+    ),
     version: row.version,
     connections: row.connections,
     expelledIdentities: row.expelled.map(({ identity }) => identity),
-    chosenDilemmas: row.rounds.flatMap(
-      ({ roundId, origin, dilemmaId, minimumAge, compromising, chosenBy }) =>
-        origin !== 'players' || dilemmaId === null || minimumAge === null || compromising === null
-          ? []
-          : [{ roundId, playerId: chosenBy, dilemmaId, minimumAge, compromising }],
-    ),
+    chosenDilemmas: row.rounds.flatMap((round) => {
+      const dilemma = round.origin === 'players' ? lobbyDilemmaOf(round) : undefined;
+      return dilemma ? [{ ...dilemma, roundId: round.roundId, playerId: round.chosenBy }] : [];
+    }),
     currentGameId: row.current_game_id,
     absentHostId: row.absent_host_player_id,
     leftPlayerIds: row.players.filter(({ has_left }) => has_left).map(({ id }) => id),
@@ -315,11 +326,26 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
 
 /** A round as the settings keep it; the dilemma a player chose stays apart, in the room. */
 function roundOf(row: RoomRow['rounds'][number]): RoundSnapshot {
-  const { roundId: id, dilemmaId, minimumAge, compromising } = row;
+  const { roundId: id } = row;
   if (row.origin === 'random') return { id, origin: 'random', categories: row.categories };
   if (row.origin === 'players') return { id, origin: 'players' };
-  if (dilemmaId === null || minimumAge === null || compromising === null) {
-    throw new Error(`round ${id} of a room is specific and has no dilemma`);
+  const dilemma = lobbyDilemmaOf(row);
+  if (!dilemma) throw new Error(`round ${id} of a room is specific and has no dilemma`);
+  return { id, origin: 'specific', dilemma };
+}
+
+/** The dilemma of a round, whole; none for a round without one, which the checks keep whole. */
+function lobbyDilemmaOf(row: RoomRow['rounds'][number]): LobbyDilemma | undefined {
+  const { dilemmaId, type, scale, minimumAge, hasGap, compromising } = row;
+  if (
+    dilemmaId === null ||
+    type === null ||
+    scale === null ||
+    minimumAge === null ||
+    hasGap === null ||
+    compromising === null
+  ) {
+    return undefined;
   }
-  return { id, origin: 'specific', dilemma: { dilemmaId, minimumAge, compromising } };
+  return { dilemmaId, type, scale, minimumAge, hasGap, compromising };
 }

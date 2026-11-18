@@ -39,7 +39,8 @@ async function databaseAt(migration: string): Promise<Kysely<Database>> {
       add column type text,
       add column compromising boolean,
       add column scale text,
-      add column fixed_order boolean
+      add column fixed_order boolean,
+      add column has_gap boolean
   `.execute(db);
   return db;
 }

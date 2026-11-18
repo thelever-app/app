@@ -45,7 +45,7 @@ describeGameRepositoryContract('PostgresGameRepository', async () => {
     .execute();
   const dilemmaRepository = new PostgresDilemmaRepository(database.db());
   const idGenerator = new SequentialIdGenerator('dilemma');
-  const dilemmas = CONTRACT_DILEMMAS.map(({ text, options }) =>
+  const dilemmas = CONTRACT_DILEMMAS.map(({ text, options, fixedOrder }) =>
     Dilemma.create(
       {
         text,
@@ -57,7 +57,7 @@ describeGameRepositoryContract('PostgresGameRepository', async () => {
         type: 'standard',
         compromising: false,
         scale: 'everyday',
-        fixedOrder: false,
+        fixedOrder,
       },
       idGenerator,
     ),
@@ -71,6 +71,7 @@ describeGameRepositoryContract('PostgresGameRepository', async () => {
       version: dilemma.version,
       optionIds: dilemma.options.map(({ id }) => id),
       hasGap: dilemma.text.includes(GAP_MARKER),
+      fixedOrder: dilemma.fixedOrder,
     })),
   };
 });
@@ -119,6 +120,7 @@ describe('PostgresGameRepository inside a command', () => {
           chosenBy: null,
           optionIds: dilemma.options.map(({ id }) => id),
           hasGap: false,
+          fixedOrder: false,
         })),
         settings: ANONYMOUS,
       },
@@ -295,6 +297,7 @@ describe('PostgresGameRepository inside a command', () => {
         chosenBy: 'TestAnaId',
         optionIds: ['TestOptionB', 'TestOptionA'],
         hasGap: true,
+        fixedOrder: false,
       },
       {
         dilemmaId: 'TestDilemma2',
@@ -303,6 +306,7 @@ describe('PostgresGameRepository inside a command', () => {
         chosenBy: null,
         optionIds: ['TestOptionC', 'TestOptionD'],
         hasGap: false,
+        fixedOrder: false,
       },
     ] as const;
     const game = Game.create({ roomId: room.id, dilemmas, settings: TEST_GAME_SETTINGS }, ids);
@@ -336,6 +340,7 @@ describe('PostgresGameRepository outside a command', () => {
         chosenBy: null,
         optionIds: ['TestOptionA'],
         hasGap: false,
+        fixedOrder: false,
       },
     ] as const;
     const game = Game.create({ roomId: room.id, dilemmas, settings: TEST_GAME_SETTINGS }, ids);

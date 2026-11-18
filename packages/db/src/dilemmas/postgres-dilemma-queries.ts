@@ -1,12 +1,15 @@
 import {
   type CandidateCriteria,
   type Category,
+  type DilemmaCandidate,
+  type DilemmaType,
   type DilemmaCriteria,
   type DilemmaPage,
   type DilemmaQueries,
   type DilemmaSummary,
   InvalidPageError,
   type PageRequest,
+  type Scale,
   WORD_SIMILARITY,
 } from '@thelever-app/dilemmas';
 import { type Kysely, type RawBuilder, sql } from 'kysely';
@@ -33,13 +36,32 @@ export class PostgresDilemmaQueries implements DilemmaQueries {
     this.#db = db;
   }
 
-  async idsOf(criteria: CandidateCriteria): Promise<string[]> {
-    if (criteria.categories?.length === 0) return [];
+  async candidatesOf(criteria: CandidateCriteria): Promise<DilemmaCandidate[]> {
+    if (criteria.categories?.length === 0 || criteria.count === 0) return [];
     const rows = await this.#matching(this.#connection(), criteria)
-      .select('dilemmas.id')
-      .orderBy(sql`dilemmas.id collate "C"`)
+      .$if(!criteria.includeGap, (query) => query.where('dilemma_versions.has_gap', '=', false))
+      .$if(criteria.excludedIds.length > 0, (query) =>
+        query.where(sql<boolean>`dilemmas.id <> all(${[...criteria.excludedIds]}::text[])`),
+      )
+      .select([
+        'dilemmas.id',
+        'dilemma_versions.type',
+        'dilemma_versions.scale',
+        'dilemma_versions.minimum_age',
+        'dilemma_versions.has_gap',
+      ])
+      // Those nobody played first, and at random within each: only `count` leave the database.
+      .orderBy(sql`dilemmas.id = any(${[...criteria.playedIds]}::text[])`)
+      .orderBy(sql`random()`)
+      .limit(criteria.count)
       .execute();
-    return rows.map(({ id }) => id);
+    return rows.map(({ id, type, scale, minimum_age, has_gap }) => ({
+      id,
+      type,
+      scale,
+      minimumAge: minimum_age,
+      hasGap: has_gap,
+    }));
   }
 
   async search(criteria: DilemmaCriteria, { after, size }: PageRequest): Promise<DilemmaPage> {
@@ -127,7 +149,10 @@ export class PostgresDilemmaQueries implements DilemmaQueries {
         'dilemma_versions.text',
         'dilemma_versions.minimum_age',
         'dilemma_versions.category',
+        'dilemma_versions.type',
+        'dilemma_versions.scale',
         compromisingNow().as('compromising'),
+        'dilemma_versions.has_gap',
         sql<string[]>`array(
           select tag from dilemma_version_tags as tags
           where tags.dilemma_id = dilemma_versions.dilemma_id
@@ -143,7 +168,7 @@ export class PostgresDilemmaQueries implements DilemmaQueries {
   }
 
   /** The current version of each public dilemma that matches what a game and a search share. */
-  #matching(db: Kysely<DilemmasTables>, criteria: CandidateCriteria) {
+  #matching(db: Kysely<DilemmasTables>, criteria: Omit<DilemmaCriteria, 'text' | 'dilemmaIds'>) {
     return (
       db
         .selectFrom('dilemmas')
@@ -195,6 +220,9 @@ interface SummaryRow {
   readonly tags: string[];
   readonly option_count: number;
   readonly compromising: boolean;
+  readonly type: DilemmaType;
+  readonly scale: Scale;
+  readonly has_gap: boolean;
   readonly whole_tag?: boolean;
   readonly similarity?: number;
 }
@@ -209,6 +237,9 @@ function summaryOf(row: SummaryRow): DilemmaSummary {
     tags: row.tags,
     optionCount: row.option_count,
     compromising: row.compromising,
+    type: row.type,
+    scale: row.scale,
+    hasGap: row.has_gap,
   };
 }
 

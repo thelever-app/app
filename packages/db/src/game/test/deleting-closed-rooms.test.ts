@@ -116,10 +116,26 @@ async function playedRoom() {
         { id: 2, origin: 'specific', dilemmaId: second.id },
       ],
     },
-    [{ dilemmaId: second.id, minimumAge: 16, compromising: false }],
+    [
+      {
+        dilemmaId: second.id,
+        type: 'standard',
+        scale: 'everyday',
+        minimumAge: 16,
+        hasGap: false,
+        compromising: false,
+      },
+    ],
   );
   room.expel(ana.id, marta.id);
-  room.chooseRoundDilemma(luis.id, 1, { dilemmaId: first.id, minimumAge: 16, compromising: false });
+  room.chooseRoundDilemma(luis.id, 1, {
+    dilemmaId: first.id,
+    type: 'standard',
+    scale: 'everyday',
+    minimumAge: 16,
+    hasGap: false,
+    compromising: false,
+  });
   const game = Game.create(
     {
       roomId: room.id,
@@ -130,6 +146,7 @@ async function playedRoom() {
         chosenBy: null,
         optionIds: dilemma.options.map(({ id }) => id),
         hasGap: false,
+        fixedOrder: false,
       })),
       settings: { ...TEST_GAME_SETTINGS, variant: 'anonymous' },
     },
