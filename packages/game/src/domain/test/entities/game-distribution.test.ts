@@ -401,13 +401,17 @@ describe('Game, in an anonymous room', () => {
       ]);
     });
 
-    it('should leave out who left the game', () => {
+    it('should leave out who left the game during its rounds, and keep who left once in the ranking', () => {
       // Arrange
       const game = gameOfFour();
-      toTheResults(game);
+      everyoneAnswers(game, { Ana: SAME, Luis: SAME, Marta: SAME, Sara: SAME });
+      game.moveOn('Ana', 0, AT);
+      game.leave('Marta');
+      everyoneAnswers(game, { Ana: SAME, Luis: SAME, Sara: SAME });
+      game.moveOn('Luis', 1, AT);
 
       // Act
-      game.leave('Marta');
+      game.leave('Sara');
 
       // Assert
       expect(game.ranking()?.map(({ playerId }) => playerId)).toEqual(['Ana', 'Luis', 'Sara']);

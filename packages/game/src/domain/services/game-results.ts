@@ -175,7 +175,8 @@ function one(playerId: string, value: number, count: number, of: number | null):
 
 /**
  * The winners, with the best value, and the runners-up, with the next one. Nobody wins when every
- * candidate ties, nor, for the most, when the best is nothing; and nobody comes second with nothing.
+ * candidate ties, a single one included, who would win against nobody; nor, for the most, when the
+ * best is nothing; and nobody comes second with nothing.
  */
 function award(
   candidates: readonly Candidate[],
@@ -187,7 +188,7 @@ function award(
   const [top, next] = values;
   if (top === undefined) return null;
   if (best === 'most' && top <= 0) return null;
-  if (candidates.length > 1 && values.length === 1) return null;
+  if (values.length === 1) return null;
   const holders = (value: number | undefined) =>
     candidates
       .filter((candidate) => candidate.value === value)

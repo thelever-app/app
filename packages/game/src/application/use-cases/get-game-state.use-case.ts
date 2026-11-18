@@ -58,7 +58,7 @@ export interface GetGameStateOutput {
       readonly distribution: readonly { readonly optionId: string; readonly count: number }[];
     } | null;
   } | null;
-  /** Whether the player who asks plays the game: who joined the room once it had ended does not. */
+  /** Whether the player who asks plays the game: who joined the room once its rounds were over does not. */
   readonly inGame: boolean;
   /** Who may reveal the dilemma of the round early now. */
   readonly hostId: string;
@@ -150,10 +150,10 @@ export class GetGameStateUseCase {
     const room = await this.#roomRepository.findById(game.roomId);
     if (!room) throw new RoomNotFoundError(game.roomId);
 
-    // Who joined the room once the game had ended sees its end, without anything of their own;
-    // anyone else must play it, which is checked before anything about it is returned.
+    // Who joined the room once the rounds were over sees the results and the end, without anything
+    // of their own; anyone else must play it, which is checked before anything about it is returned.
     const inGame = game.playerIds.includes(playerId);
-    if (!inGame && (game.stage.kind !== 'ended' || !room.hasPlayer(playerId))) {
+    if (!inGame && (game.stage.kind === 'rounds' || !room.hasPlayer(playerId))) {
       throw new PlayerNotInGameError(playerId);
     }
     const answers = (inGame ? game.answersOf(playerId) : []).map(

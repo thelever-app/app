@@ -42,19 +42,26 @@ export class SearchDilemmasUseCase {
     const room = await findRoom(this.#roomRepository, roomId);
     if (!room.playerWith(identity)) throw new IdentityNotInRoomError(roomId);
 
-    const page = await this.#dilemmaCatalog.search(
-      {
-        ...(category && { categories: [category] }),
-        ...(text && { text }),
-        maximumMinimumAge: room.settings.maximumMinimumAge,
-        status: 'in-catalog',
-        language: room.settings.dilemmaLanguage,
-        includeCompromising: room.settings.includesCompromisingDilemmas,
-      },
-      { size: SEARCH_PAGE_SIZE, ...(after !== undefined && { after }) },
-    );
-    // What the room already played cannot be chosen again.
+    const criteria = {
+      ...(category && { categories: [category] }),
+      ...(text && { text }),
+      maximumMinimumAge: room.settings.maximumMinimumAge,
+      status: 'in-catalog' as const,
+      language: room.settings.dilemmaLanguage,
+      includeCompromising: room.settings.includesCompromisingDilemmas,
+    };
+    // What the room already played cannot be chosen again. A page left empty by it goes on to the
+    // next one, so the list never looks over while there are more.
     const played = new Set(room.playedDilemmaIds);
-    return { ...page, dilemmas: page.dilemmas.filter(({ dilemmaId }) => !played.has(dilemmaId)) };
+    let from = after;
+    for (;;) {
+      const page = await this.#dilemmaCatalog.search(criteria, {
+        size: SEARCH_PAGE_SIZE,
+        ...(from !== undefined && { after: from }),
+      });
+      const dilemmas = page.dilemmas.filter(({ dilemmaId }) => !played.has(dilemmaId));
+      if (dilemmas.length > 0 || page.next === undefined) return { ...page, dilemmas };
+      from = page.next;
+    }
   }
 }

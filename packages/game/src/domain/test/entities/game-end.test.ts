@@ -143,6 +143,24 @@ describe('Game, at the end', () => {
       expect(game.stage).toEqual({ kind: 'ended', movedOnBy: 'Ana', step: null });
     });
 
+    it('should keep the results as the rounds ended them when a player leaves during them', () => {
+      // Arrange
+      const game = gameOf(['Ana', 'Luis', 'Marta']);
+      playAll(game);
+      game.moveOn('Luis', 2, AT);
+      game.moveOn('Luis', 3, AT);
+      const results = game.results();
+      const ranking = game.ranking();
+
+      // Act
+      game.leave('Marta');
+
+      // Assert
+      expect(game.results()).toEqual(results);
+      expect(game.ranking()).toEqual(ranking);
+      expect(game.stage.step).toBe(1);
+    });
+
     it('should move one screen only when two players move on from the same one', () => {
       // Arrange
       const game = gameOf(['Ana', 'Luis', 'Marta']);
@@ -212,6 +230,18 @@ describe('Game, at the end', () => {
       expect(game.timeSpentOn('TestDilemma1')).toBe(90 * SECOND);
       expect(game.timeSpentOn('TestDilemma2')).toBe(30 * SECOND);
       expect(game.round?.revealedAt).toEqual(after(200 * SECOND));
+    });
+
+    it('should record no time below nothing when the clock that moves on is behind the one that revealed', () => {
+      // Arrange
+      const game = gameOf(['Ana', 'Luis', 'Marta'], NOMINAL, 2);
+      round(game, ALIKE, undefined, after(10 * SECOND));
+
+      // Act
+      game.moveOn('Luis', 0, after(10 * SECOND - 3));
+
+      // Assert
+      expect(game.timeSpentOn('TestDilemma1')).toBe(0);
     });
   });
 

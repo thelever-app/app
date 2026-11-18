@@ -234,6 +234,21 @@ describe('gameResults', () => {
     expect(titleOf(results, 'el-mentalista')).toBeUndefined();
   });
 
+  it('should give no title when a single player can get it, who would win against nobody', () => {
+    // Arrange: only Ana voted 3 dilemmas; Luis, 2.
+    const dilemmas = [0, 1, 2].map((index) =>
+      dilemma(index < 2 ? { TestAna: PULL, TestLuis: WAIT } : { TestAna: PULL }, {
+        reactions: [['TestLuis', 'TestAna']],
+      }),
+    );
+
+    // Act
+    const results = gameResults({ players: players({ TestAna: 90 }), dilemmas });
+
+    // Assert
+    expect(results.titles).toEqual([]);
+  });
+
   it('should tell each player who knows them best, by the points of the predictions about them, shared on a tie', () => {
     // Arrange
     const dilemmas = threeVoted({

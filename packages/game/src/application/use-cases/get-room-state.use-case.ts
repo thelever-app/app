@@ -90,7 +90,17 @@ export class GetRoomStateUseCase {
       hasGap,
     });
     const { rounds, ...settings } = room.settings.toSnapshot();
-    const exhausted = await this.#exhaustedCategories(room);
+    const left = await this.#dilemmasLeft(room);
+    // The rounds of the same categories take what is left in turn: the ones beyond it have none.
+    const taken = new Map<string, number>();
+    const withoutNewDilemmas = (categories: readonly Category[] | null): boolean => {
+      const key = categoriesKey(categories);
+      const available = left.get(key);
+      if (available === undefined) return false;
+      const before = taken.get(key) ?? 0;
+      taken.set(key, before + 1);
+      return before >= available;
+    };
 
     return {
       roomId: room.id,
@@ -107,7 +117,7 @@ export class GetRoomStateUseCase {
             roundId: round.id,
             origin: 'random',
             categories: round.categories,
-            withoutNewDilemmas: exhausted.has(categoriesKey(round.categories)),
+            withoutNewDilemmas: withoutNewDilemmas(round.categories),
           };
         }
         if (round.origin === 'specific') {
@@ -138,24 +148,28 @@ export class GetRoomStateUseCase {
   }
 
   /**
-   * In the lobby of a rematch, the categories of its random rounds where the catalog has no
-   * dilemma left that the room has not played nor plays in another round, by their key.
+   * In the lobby of a rematch, how many dilemmas the catalog has left for the categories of its
+   * random rounds that the room has not played nor plays in another round, by their key, up to
+   * as many as the rounds of those categories need.
    */
-  async #exhaustedCategories(room: Room): Promise<Set<string>> {
-    if (!room.isInLobby || room.playedDilemmaIds.length === 0) return new Set();
+  async #dilemmasLeft(room: Room): Promise<Map<string, number>> {
+    if (!room.isInLobby || room.playedDilemmaIds.length === 0) return new Map();
     const { settings } = room;
-    const categorySets = new Map(
-      settings.rounds.flatMap((round) =>
-        round.origin === 'random'
-          ? [[categoriesKey(round.categories), round.categories] as const]
-          : [],
-      ),
-    );
+    const categorySets = new Map<
+      string,
+      { categories: readonly Category[] | null; rounds: number }
+    >();
+    for (const round of settings.rounds) {
+      if (round.origin !== 'random') continue;
+      const key = categoriesKey(round.categories);
+      const rounds = (categorySets.get(key)?.rounds ?? 0) + 1;
+      categorySets.set(key, { categories: round.categories, rounds });
+    }
     const statuses = settings.newDilemmas
       ? (['in-catalog', 'in-exploration'] as const)
       : (['in-catalog'] as const);
-    const exhausted = await Promise.all(
-      [...categorySets].map(async ([key, categories]) => {
+    const counted = await Promise.all(
+      [...categorySets].map(async ([key, { categories, rounds }]): Promise<[string, number]> => {
         const found = await Promise.all(
           statuses.map((status) =>
             this.#dilemmaCatalog.findCandidates({
@@ -164,7 +178,7 @@ export class GetRoomStateUseCase {
               status,
               language: settings.dilemmaLanguage,
               includeCompromising: settings.includesCompromisingDilemmas,
-              count: 1,
+              count: rounds,
               includeGap: room.playsTheGap,
               excludedIds: [...room.playedDilemmaIds, ...room.roundDilemmaIds],
               onlyForAdults: false,
@@ -172,10 +186,10 @@ export class GetRoomStateUseCase {
             }),
           ),
         );
-        return found.every((candidates) => candidates.length === 0) ? [key] : [];
+        return [key, new Set(found.flat().map(({ dilemmaId }) => dilemmaId)).size];
       }),
     );
-    return new Set(exhausted.flat());
+    return new Map(counted);
   }
 
   async #textsOf(dilemmaIds: readonly string[], language: string): Promise<Map<string, string>> {

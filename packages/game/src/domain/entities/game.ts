@@ -569,9 +569,10 @@ export class Game {
     }
     if (round.position !== fromPosition || round.phase !== 'reveal') return false;
     if (round.revealedAt) {
+      // The instance that moves on may run a few milliseconds behind the one that revealed.
       this.#timesSpent.set(
         this.#roundDilemma().dilemmaId,
-        at.getTime() - round.revealedAt.getTime(),
+        Math.max(0, at.getTime() - round.revealedAt.getTime()),
       );
     }
     if (round.position === this.#dilemmas.length - 1) return this.#moveOnTo('results', playerId);
@@ -659,7 +660,9 @@ export class Game {
   /** The player leaves on purpose: they keep their answers, and no round waits for them any more. */
   leave(playerId: string): void {
     const state = this.#stateOf(playerId);
-    if (state.left) return;
+    // Once the rounds are over, the results stay as they ended them: who leaves still counts in
+    // them, so no screen of the results changes under everyone. The room keeps that they left.
+    if (state.left || this.#stage !== 'rounds') return;
     state.left = true;
     this.#version += 1;
   }

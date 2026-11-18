@@ -80,9 +80,10 @@ export class JoinRoomUseCase {
     if (events.length > 0 || playedChanged) await this.#roomRepository.save(room);
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
-    // Who comes once the game has ended waits in the room for the rematch, without playing it.
+    // Who comes once the rounds are over, in the results or at the end, watches them and waits in
+    // the room for the rematch, without playing the game.
     const joinedLate =
-      game !== undefined && game.stage.kind !== 'ended' && !game.playerIds.includes(player.id);
+      game !== undefined && game.stage.kind === 'rounds' && !game.playerIds.includes(player.id);
     if (game && joinedLate) {
       game.joinLate(player.id, this.#randomness);
       await this.#gameRepository.save(game);

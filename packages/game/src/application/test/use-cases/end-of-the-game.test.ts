@@ -290,7 +290,34 @@ describe('The end of the game', () => {
     });
   });
 
-  describe('JoinRoomUseCase, once the game has ended', () => {
+  describe('JoinRoomUseCase, once the rounds are over', () => {
+    it('should let who comes during the results watch them without playing the game', async () => {
+      // Arrange
+      const arranged = await arrange();
+      const { joinRoom, getGameState, gameRepository, moveOn, roomId, gameId, anaId } = arranged;
+      await toTheLastReveal(arranged);
+      await moveOn.execute({
+        roomId,
+        playerId: anaId,
+        fromPosition: arranged.dilemmaIds.length - 1,
+      });
+
+      // Act
+      const { playerId, joinedLate } = await joinRoom.execute({
+        roomId,
+        nickname: 'Pedro',
+        identity: 'TestPedroIdentity',
+        avatar: { face: 'face-04', color: 'teal' },
+      });
+
+      // Assert
+      expect(joinedLate).toBe(false);
+      expect((await gameRepository.findById(gameId))?.playerIds).not.toContain(playerId);
+      const state = await getGameState.execute({ gameId, playerId, language: 'es' });
+      expect(state).toMatchObject({ inGame: false, answers: [], stage: { kind: 'results' } });
+      expect(state.ranking?.map((ranked) => ranked.playerId)).not.toContain(playerId);
+    });
+
     it('should let the player wait in the room for the rematch, seeing the end without playing it', async () => {
       // Arrange
       const arranged = await arrange();

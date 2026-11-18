@@ -135,19 +135,26 @@ export class StartGameUseCase {
           ),
         ),
       );
-    // In a rematch, a random round whose categories have nothing left the room has not played
-    // plays from every category, as its lobby warned the host.
+    // In a rematch, the random rounds beyond the dilemmas their categories have left that the room
+    // has not played play from every category, as its lobby warned the host.
     const firstDraw = await candidatesFor(settings.rounds);
-    const exhausted = (categories: readonly Category[]) => {
-      if (room.playedDilemmaIds.length === 0) return false;
+    const left = (categories: readonly Category[]) => {
       const drawn = firstDraw.get(categoriesKey(categories));
-      return !drawn || (drawn.inCatalog.length === 0 && drawn.inExploration.length === 0);
+      return new Set(
+        [...(drawn?.inCatalog ?? []), ...(drawn?.inExploration ?? [])].map(
+          ({ dilemmaId }) => dilemmaId,
+        ),
+      ).size;
     };
+    const played = new Map<string, number>();
     let fellBack = false;
     const rounds = settings.rounds.map((round) => {
-      if (round.origin !== 'random' || round.categories === null || !exhausted(round.categories)) {
-        return round;
-      }
+      if (round.origin !== 'random' || round.categories === null) return round;
+      if (room.playedDilemmaIds.length === 0) return round;
+      const key = categoriesKey(round.categories);
+      const before = played.get(key) ?? 0;
+      played.set(key, before + 1);
+      if (before < left(round.categories)) return round;
       fellBack = true;
       return { ...round, categories: null };
     });
