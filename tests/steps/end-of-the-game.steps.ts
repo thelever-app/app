@@ -769,6 +769,15 @@ Then(
       assert.notEqual(own, theirs, 'the scenario needs points of their own for each one');
       assert.equal((await this.driver.revealSeenBy(viewer))?.ownPoints, own);
     }
+    // Nor anywhere else in what reaches the others, under any name of points.
+    const messages = await this.driver.messagesReceivedByOthers(player);
+    assert.ok(messages.length > 0, 'nobody else received anything');
+    for (const message of messages) {
+      assert.ok(
+        !new RegExp(`points":${theirs}\\b`, 'i').test(JSON.stringify(message)),
+        `a message gives the points of ${player}`,
+      );
+    }
   },
 );
 

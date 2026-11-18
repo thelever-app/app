@@ -2783,13 +2783,15 @@ export class E2eDriver implements GameDriver {
    * anonymous room, «Ver resultados», to the ranking; and from it, «Continuar», to the end.
    */
   async moveOn(player: string): Promise<void> {
-    const { page } = screenOf(this.#playerCalled(player));
+    const mover = this.#playerCalled(player);
+    const { page } = screenOf(mover);
     const game = this.#gameOf(player);
     if (game.stage.kind === 'results') {
       const { step } = game.stage;
       const footer = page.locator('footer');
-      const onRanking =
-        (await footer.getByRole('button', { name: SCREEN.rankingNext }).count()) > 0;
+      // By the state, not by the screen, which may still be drawing the step before: the ranking is
+      // the only screen of an anonymous room, and the last of a nominal one.
+      const onRanking = isAnonymous(mover) || (step ?? 0) >= (game.results?.titles.length ?? 0) + 1;
       await footer
         .getByRole('button', { name: onRanking ? SCREEN.rankingNext : SCREEN.resultsNext })
         .click();
