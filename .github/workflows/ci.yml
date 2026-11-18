@@ -77,6 +77,12 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The scenarios split among three jobs at once, a share each, so each one stays well under its
+    # limit. One failing does not stop the others, to see every failure at once.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     # The room server keeps the games in PostgreSQL: the same one as the checks.
     services:
       postgres:
@@ -114,12 +120,13 @@ jobs:
         run: pnpm test:e2e
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/thelever
+          E2E_SHARD: ${{ matrix.shard }}/3
 
       # How long each step took, slowest first, also when a scenario fails.
       - name: Keep the time of each e2e step
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: e2e-usage
+          name: e2e-usage-${{ matrix.shard }}
           path: tests/reports/e2e-usage.txt
           if-no-files-found: ignore
