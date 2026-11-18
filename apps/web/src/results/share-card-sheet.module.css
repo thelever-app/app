@@ -1,0 +1,82 @@
+.overlay {
+  composes: overlay from '../game/sheet.module.css';
+}
+
+/* The card takes the whole column, as the design draws it. */
+.sheet {
+  composes: sheet from '../game/sheet.module.css';
+  max-height: 100dvh;
+  gap: var(--space-4);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  composes: title from '../styles/typography.module.css';
+  margin: 0;
+}
+
+.close {
+  width: 44px;
+  height: 44px;
+  margin-right: -10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.card {
+  align-self: center;
+  width: min(270px, 60dvw);
+  aspect-ratio: 9 / 16;
+  border-radius: var(--radius-lg);
+  background: var(--color-ink);
+  box-shadow: 0 8px 24px rgb(23 20 15 / 0.25);
+}
+
+.share {
+  composes: next from '../reveal/reveal-screen.module.css';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.share:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.switch {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.switch input {
+  width: 44px;
+  height: 24px;
+  accent-color: var(--color-ink);
+}
+
+.note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-ink-muted);
+  text-align: center;
+}

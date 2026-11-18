@@ -24,6 +24,9 @@ import {
   HostChangedEvent,
   JoinRoomUseCase,
   LeaveRoomUseCase,
+  LikeDilemmaUseCase,
+  ReactUseCase,
+  StartRematchUseCase,
   LobbyChangedEvent,
   MoveOnUseCase,
   PlayerJoinedLateEvent,
@@ -34,6 +37,8 @@ import {
   SkipDilemmaUseCase,
   type Clock,
   ProgressUpdatedEvent,
+  ReactionsChangedEvent,
+  DilemmaLikedEvent,
   AnsweredCountChangedEvent,
   DilemmaRevealedEvent,
   RoundStartedEvent,
@@ -50,6 +55,7 @@ import {
 } from '@thelever-app/game';
 import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
 import {
+  InMemoryDilemmaLikes,
   InMemoryDilemmaReports,
   InMemoryGameRepository,
   InMemoryRoomRepository,
@@ -114,6 +120,8 @@ const SENT_AS_STATE = [
   HostChangedEvent,
   PlayerLeftEvent,
   PlayerJoinedLateEvent,
+  ReactionsChangedEvent,
+  DilemmaLikedEvent,
 ] as const;
 
 /** Who uses the screen in the simulation. */
@@ -202,6 +210,8 @@ export class SimulatedRoomConnection implements RoomConnection {
     const notifier = this.#notifier;
     const idGenerator = this.#idGenerator;
     const clock = BROWSER_CLOCK;
+    const sealProvider = new InMemorySealProvider();
+    const likes = new InMemoryDilemmaLikes();
     this.#useCases = {
       createRoom: new CreateRoomUseCase(rooms, catalog, idGenerator, MATH_RANDOMNESS, clock),
       joinRoom: new JoinRoomUseCase({
@@ -214,7 +224,7 @@ export class SimulatedRoomConnection implements RoomConnection {
       }),
       connectPlayer: new ConnectPlayerUseCase(rooms, games, notifier, idGenerator, clock),
       getRoomState: new GetRoomStateUseCase(rooms, catalog),
-      getGameState: new GetGameStateUseCase(rooms, games, catalog),
+      getGameState: new GetGameStateUseCase(rooms, games, catalog, likes),
       searchDilemmas: new SearchDilemmasUseCase(rooms, catalog),
       changeAvatar: new ChangeAvatarUseCase(rooms, notifier),
       changeSettings: new ChangeRoomSettingsUseCase(rooms, catalog, notifier),
@@ -238,11 +248,26 @@ export class SimulatedRoomConnection implements RoomConnection {
         roomRepository: rooms,
         gameRepository: games,
         notifier,
-        sealProvider: new InMemorySealProvider(),
+        sealProvider,
         clock,
       }),
       revealEarly: new RevealEarlyUseCase(rooms, games, notifier, clock),
       moveOn: new MoveOnUseCase(rooms, games, notifier, clock),
+      react: new ReactUseCase({
+        roomRepository: rooms,
+        gameRepository: games,
+        sealProvider,
+        notifier,
+      }),
+      likeDilemma: new LikeDilemmaUseCase({
+        roomRepository: rooms,
+        gameRepository: games,
+        likes,
+        sealProvider,
+        notifier,
+        clock,
+      }),
+      startRematch: new StartRematchUseCase(rooms, games, notifier),
       runOutRound: new RunOutRoundUseCase(rooms, games, notifier, clock),
       leaveRoom: new LeaveRoomUseCase(rooms, games, notifier, clock),
       skipDilemma: new SkipDilemmaUseCase({
@@ -415,6 +440,21 @@ export class SimulatedRoomConnection implements RoomConnection {
       case 'leave-room':
         await useCases.leaveRoom.execute({ roomId, playerId });
         this.close();
+        return;
+      case 'react':
+        await useCases.react.execute({
+          roomId,
+          playerId,
+          position: message.position,
+          target: message.target,
+          emoji: message.emoji,
+        });
+        return;
+      case 'like-dilemma':
+        await useCases.likeDilemma.execute({ roomId, playerId, position: message.position });
+        return;
+      case 'start-rematch':
+        await useCases.startRematch.execute({ roomId, playerId });
         return;
       case 'change-avatar':
         await useCases.changeAvatar.execute({

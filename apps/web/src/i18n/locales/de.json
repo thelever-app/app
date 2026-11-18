@@ -138,7 +138,8 @@
   "newHost": {
     "title": "Du bist jetzt Gastgeber",
     "disconnected": "{{host}} ist weiterhin offline. Ab der nächsten Runde kannst du im Menü ⋮ früher aufdecken. Kommt {{host}} zurück, geht die Rolle wieder zurück.",
-    "left": "{{host}} hat das Spiel verlassen. Deine Optionen findest du im Menü ⋮."
+    "left": "{{host}} hat das Spiel verlassen. Deine Optionen findest du im Menü ⋮.",
+    "ended": "{{host}} ist weiterhin offline. Jetzt kannst du die Revanche starten. Kommt {{host}} zurück, geht die Rolle wieder zurück."
   },
   "lateJoin": {
     "illustration": "La Palanca neben einer Weiche",
@@ -198,7 +199,18 @@
     "aboutYouAnonymous": "Du hast nicht abgestimmt: Du hast vorhergesagt, wie sich die anderen aufteilen. Deine Vorhersage und deine Punkte siehst nur du.",
     "aboutHits": "{{right, number}} von {{of, number}}",
     "aboutHitsLabel": "richtig",
-    "aboutYouHitsLabel": "richtig"
+    "aboutYouHitsLabel": "richtig",
+    "like": "Gutes Dilemma",
+    "dilemmaReactions": "Reaktionen auf das Dilemma",
+    "reactionBy": "{{emoji}}: {{names}}",
+    "reactionCount_one": "{{emoji}}: {{count}} Reaktion",
+    "reactionCount_other": "{{emoji}}: {{count, number}} Reaktionen",
+    "reactToDilemma": "Auf das Dilemma reagieren",
+    "reactToVoteOf": "Auf die Stimme von {{name}} reagieren",
+    "reactionsToVote": "Reaktionen auf die Stimme von {{name}}",
+    "reactToVoteHint": "Tippe auf jemanden, um auf die Stimme zu reagieren.",
+    "dilemmaPoints_one": "{{count}} Punkt für dich",
+    "dilemmaPoints_other": "{{count, number}} Punkte für dich"
   },
   "ranking": {
     "label": "Ergebnisse",
@@ -210,7 +222,10 @@
     "points": "{{points, number}}",
     "pointsUnit": "Punkte",
     "note": "Wer Erster wird, ist El Mentalista der Partie. Dilemmas mit weniger als 3 Stimmen bringen keine Punkte. Bei Gleichstand teilt man sich Platz und Titel.",
-    "next": "Weiter"
+    "next": "Weiter",
+    "nominalTitle": "Rangliste",
+    "nominalText": "Punkte fürs Erraten der Stimmen der anderen: je weniger dasselbe gewählt haben, desto mehr.",
+    "nominalNote": "Neben jeder Person die Titel, die sie gewonnen hat. Bei Gleichstand teilt man sich den Platz."
   },
   "end": {
     "label": "Partie beendet · {{total, number}} von {{total, number}}",
@@ -224,7 +239,15 @@
     "gone_one": "{{names}} ist gegangen.",
     "gone_other": "{{names}} sind gegangen.",
     "closes": "Der Raum schließt 15 Minuten, nachdem niemand mehr verbunden ist.",
-    "leave": "Verlassen"
+    "leave": "Verlassen",
+    "placeNominal_one": "Du bist {{position, number}}. von {{players, number}}, mit {{count}} Punkt.",
+    "placeNominal_other": "Du bist {{position, number}}. von {{players, number}}, mit {{count, number}} Punkten.",
+    "knownBest": "Am besten kennt dich: {{names}}.",
+    "notInGame": "Diese Partie ist schon vorbei. Gibt es eine Revanche, spielst du mit.",
+    "rematch": "Revanche mit derselben Gruppe",
+    "rematchGuest": "{{host}} kann die Revanche starten. Dann kommst du mit allen, die noch im Raum sind, in die Lobby.",
+    "shareCard": "Meine Karte teilen",
+    "shareGroupCard": "Gruppenkarte teilen"
   },
   "notices": {
     "reconnecting": "Verbinde neu… deine Antworten sind gespeichert",
@@ -412,7 +435,10 @@
     "guestWait": "{{host}} startet das Spiel, wenn alle da sind.",
     "gapWarningTitle": "Ein Dilemma handelt von jemandem aus der Gruppe.",
     "gapWarningNominal": "In einem namentlichen Raum braucht es mindestens {{minimum, number}} Spieler: Startet ihr mit weniger, wird seine Runde zufällig.",
-    "gapWarningAnonymous": "In einem anonymen Raum braucht es mindestens {{minimum, number}} Spieler: Startet ihr mit weniger, wird seine Runde zufällig."
+    "gapWarningAnonymous": "In einem anonymen Raum braucht es mindestens {{minimum, number}} Spieler: Startet ihr mit weniger, wird seine Runde zufällig.",
+    "noNewDilemmas": "Keine ungespielten Dilemmas mehr",
+    "noNewDilemmasNotice": "Runde {{round, number}} hat in diesem Raum keine ungespielten Dilemmas mehr. Startet ihr das Spiel so, kommt diese Runde aus allen Kategorien.",
+    "changeCategories": "Kategorien ändern"
   },
   "languages": {
     "es": "Español",
@@ -569,5 +595,80 @@
     "fewBody_other": "Wir haben {{count, number}} der nötigen {{needed}}. Schau später wieder vorbei, um zu sehen, wie die Welt abgestimmt hat und ob du richtig lagst.",
     "play": "Mit meiner Gruppe spielen",
     "arguments": "Die Argumente zu jeder Option lesen"
+  },
+  "react": {
+    "dilemmaTitle": "Auf das Dilemma reagieren",
+    "voteTitle": "{{name}} hat „{{option}}“ gewählt",
+    "ownVoteTitle": "Du hast „{{option}}“ gewählt",
+    "toDilemma": "Reagiere auf das Dilemma",
+    "toVote": "Reagiere auf diese Stimme",
+    "toOwnVote": "Reagiere auf deine Stimme",
+    "more": "Mehr Emojis",
+    "anyEmoji": "Gib ein Emoji ein",
+    "send": "Reagieren",
+    "oneDilemma": "Nur eine Reaktion pro Dilemma: Wählst du eine andere, ersetzt sie die vorherige. Mit „+“ kannst du jedes Emoji verwenden.",
+    "oneVote": "Nur eine Reaktion pro Stimme: Wählst du eine andere, ersetzt sie die vorherige. Mit „+“ kannst du jedes Emoji verwenden.",
+    "nominalPrivacy": "In diesem Raum sehen alle, wer reagiert hat.",
+    "anonymousPrivacy": "In diesem Raum sieht niemand, wer reagiert hat, nur wie viele."
+  },
+  "results": {
+    "label": "Ergebnisse · {{step, number}} von {{total, number}}",
+    "next": "Weiter",
+    "onlyYou": "Nur du siehst das",
+    "knowsTitle": "Am besten kennt dich…",
+    "knowsNobody": "Diesmal hat niemand deine Stimmen erraten.",
+    "knowsFact_one": "{{count}} Punkt beim Erraten deiner Stimmen",
+    "knowsFact_other": "{{count, number}} Punkte beim Erraten deiner Stimmen",
+    "runnerUp": "Danach: {{names}}, {{fact}}",
+    "titles": {
+      "almas-gemelas": "Almas gemelas",
+      "verso-suelto": "Verso suelto",
+      "la-voz-del-grupo": "La voz del grupo",
+      "iman-de-reacciones": "Imán de reacciones",
+      "enigma": "Enigma",
+      "libro-abierto": "Libro abierto",
+      "el-mentalista": "El Mentalista"
+    },
+    "meanings": {
+      "almas-gemelas": "Das Paar, das gegenseitig die Stimmen am besten erraten hat.",
+      "verso-suelto": "Wer am häufigsten mit der Minderheit gestimmt hat.",
+      "la-voz-del-grupo": "Wer am häufigsten so gestimmt hat wie die Mehrheit.",
+      "iman-de-reacciones": "Wer die meisten Reaktionen auf die eigenen Stimmen bekommen hat.",
+      "enigma": "Wessen Stimmen am seltensten erraten wurden.",
+      "libro-abierto": "Wessen Stimmen am häufigsten erraten wurden.",
+      "el-mentalista": "Wer die Stimmen der anderen am besten erraten hat."
+    },
+    "facts": {
+      "almas-gemelas": "Gegenseitig {{count, number}} von {{of, number}} Stimmen erraten",
+      "verso-suelto": "Mit der Minderheit in {{count, number}} von {{of, number}} Dilemmas",
+      "la-voz-del-grupo": "Mit der Mehrheit in {{count, number}} von {{of, number}} Dilemmas",
+      "iman-de-reacciones_one": "{{count}} Reaktion auf die eigenen Stimmen",
+      "iman-de-reacciones_other": "{{count, number}} Reaktionen auf die eigenen Stimmen",
+      "enigma": "{{count, number}} von {{of, number}} Stimmen erraten",
+      "libro-abierto": "{{count, number}} von {{of, number}} Stimmen erraten",
+      "el-mentalista_one": "{{count}} Punkt",
+      "el-mentalista_other": "{{count, number}} Punkte"
+    }
+  },
+  "card": {
+    "personalTitle": "Deine Karte",
+    "groupTitle": "Die Karte der Gruppe",
+    "close": "Schließen",
+    "share": "Teilen",
+    "myGame": "Meine TheLever-Partie",
+    "ourGame": "Unsere TheLever-Partie",
+    "place": "{{position, number}}. von {{players, number}}",
+    "inAGameOf_one": "in einer Partie mit {{count}} moralischen Dilemma",
+    "inAGameOf_other": "in einer Partie mit {{count, number}} moralischen Dilemmas",
+    "dilemmas_one": "{{count}} Dilemma",
+    "dilemmas_other": "{{count, number}} Dilemmas",
+    "knowsMe": "Wer mich am besten kennt",
+    "someone": "Jemand aus der Gruppe",
+    "myTitles": "Meine Titel",
+    "withPartner": "{{title}}, mit {{name}}",
+    "mostDivisive": "Was uns am meisten gespalten hat",
+    "footer": "Spiel auf thelever.app",
+    "showNames": "Spitznamen von {{names}} zeigen",
+    "groupNote": "Keine Namen, keine Stimmen: nur, wie sich die Gruppe aufgeteilt hat."
   }
 }

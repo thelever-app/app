@@ -1,0 +1,106 @@
+.overlay {
+  composes: overlay from '../game/sheet.module.css';
+}
+
+.sheet {
+  composes: sheet from '../game/sheet.module.css';
+  gap: var(--space-4);
+}
+
+.handle {
+  composes: handle from '../game/sheet.module.css';
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  composes: title from '../styles/typography.module.css';
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-ink-muted);
+}
+
+.prompt {
+  composes: signage from '../styles/typography.module.css';
+  color: var(--color-ink-muted);
+}
+
+.emojis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.emoji {
+  height: 48px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.emoji[aria-pressed='true'] {
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+.more {
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  cursor: pointer;
+}
+
+.typed {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.input {
+  flex-grow: 1;
+  min-height: 48px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1.5px var(--color-ink);
+  font: inherit;
+  font-size: 20px;
+}
+
+.send {
+  composes: next from './reveal-screen.module.css';
+  flex: none;
+  padding: 0 var(--space-4);
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-ink-muted);
+}

@@ -13,6 +13,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
@@ -36,6 +37,11 @@ interface Room {
   /** The last message the server rejected, until the next state or until the player dismisses it. */
   readonly rejection: ErrorDto | undefined;
   readonly send: (command: RoomCommandDto) => void;
+  /**
+   * Sends the command and resolves once the server answers with the next state, or rejects it: what
+   * an optimistic screen waits for before showing what the server says.
+   */
+  readonly request: (command: RoomCommandDto) => Promise<void>;
   /** The answer to a dilemma as it stands: the vote and, in a nominal room, the predictions made. */
   readonly answerDilemma: (answer: AnswerDraft) => void;
   readonly dismissRejection: () => void;
@@ -59,11 +65,16 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
     INITIAL_ROOM_STATE,
   );
 
+  // Who waits for the answer of the server to a command they sent.
+  const waiting = useRef<(() => void)[]>([]);
   useEffect(
     () =>
       connection.subscribe((message) => {
         if (message.type === 'game-state') noteServerTime(message.serverTime);
         dispatch(message);
+        if (['game-state', 'room-state', 'error', 'expelled'].includes(message.type)) {
+          for (const done of waiting.current.splice(0)) done();
+        }
       }),
     [connection],
   );
@@ -83,6 +94,15 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
     [connection],
   );
 
+  const request = useCallback(
+    (command: RoomCommandDto) =>
+      new Promise<void>((resolve) => {
+        waiting.current.push(resolve);
+        connection.send(command);
+      }),
+    [connection],
+  );
+
   const answerDilemma = useCallback(
     (answer: AnswerDraft) => {
       send({ type: 'answer-dilemma', ...answer });
@@ -95,14 +115,22 @@ export function RoomProvider({ connection, fallback, rejected, children }: RoomP
   }, []);
 
   const room = useMemo(
-    () =>
-      (lobby ?? game) && { lobby, game, status, rejection, send, answerDilemma, dismissRejection },
-    [lobby, game, status, rejection, send, answerDilemma, dismissRejection],
+    () => ({
+      lobby,
+      game,
+      status,
+      rejection,
+      send,
+      request,
+      answerDilemma,
+      dismissRejection,
+    }),
+    [lobby, game, status, rejection, send, request, answerDilemma, dismissRejection],
   );
 
   // The connection hands over why before it gives up, so the reason is already here.
   if (status === 'rejected') return rejected(expelled ? 'player-expelled' : rejection?.code);
-  if (!room) return fallback;
+  if (!lobby && !game) return fallback;
   return <RoomContext value={room}>{children}</RoomContext>;
 }
 

@@ -206,6 +206,25 @@ describe('momentsBetween', () => {
     });
   });
 
+  describe('when the game ends', () => {
+    it('should hear the end once the last screen of the results takes everyone to it', () => {
+      // Arrange
+      const round = { ...aGame().round, position: 2, phase: 'reveal' as const };
+      const before = aGame({
+        round,
+        stage: { kind: 'results', movedOnBy: 'test-luis-id', step: 3 },
+      });
+      const after = aGame({
+        round,
+        stage: { kind: 'ended', movedOnBy: 'test-luis-id', step: null },
+      });
+
+      // Act & Assert
+      expect(momentsBetween(inGame(before), inGame(after))).toEqual(['game-ended']);
+      expect(momentsBetween(inGame(after), inGame(after))).toEqual([]);
+    });
+  });
+
   describe('when the dilemma is revealed', () => {
     it('should hear the reveal', () => {
       // Arrange

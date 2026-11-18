@@ -3,7 +3,12 @@ import { selfAnswered, selfSkipped } from '../components/players.ts';
 
 /** The moments of the game that sound, and some of them vibrate, on the device of each player. */
 export type Moment =
-  'player-joined' | 'game-started' | 'answer-confirmed' | 'last-seconds' | 'dilemma-revealed';
+  | 'player-joined'
+  | 'game-started'
+  | 'answer-confirmed'
+  | 'last-seconds'
+  | 'dilemma-revealed'
+  | 'game-ended';
 
 /** What the room looks like on screen at one render: the lobby or the game, and the time left. */
 export interface RoomSnapshot {
@@ -43,6 +48,7 @@ function gameMoments(
   after: GameStateDto,
   secondsLeft: number | undefined,
 ): Moment[] {
+  if (before.stage.kind !== 'ended' && after.stage.kind === 'ended') return ['game-ended'];
   const sameRound = before.round.position === after.round.position;
   if (!sameRound) return [];
   if (before.round.phase === 'decision' && after.round.phase === 'reveal') {

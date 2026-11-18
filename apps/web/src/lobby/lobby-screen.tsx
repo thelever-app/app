@@ -42,6 +42,11 @@ export function LobbyScreen() {
   const [muted, setMuted] = useMuted();
   const { rows, gone } = useLeavingPlayers(lobby.players);
   const close = () => setOpen({ sheet: 'none' });
+  // In the lobby of a rematch, the first round whose categories have nothing new left to play.
+  const exhaustedIndex = lobby.rounds.findIndex(
+    (round) => round.origin === 'random' && round.withoutNewDilemmas,
+  );
+  const exhausted = exhaustedIndex === -1 ? undefined : exhaustedIndex + 1;
 
   const isHost = lobby.hostId === lobby.playerId;
   const host = lobby.players.find(({ playerId }) => playerId === lobby.hostId);
@@ -178,6 +183,27 @@ export function LobbyScreen() {
                     ? 'lobby.gapWarningAnonymous'
                     : 'lobby.gapWarningNominal',
                   { minimum: lobby.minimumPlayersForTheGap },
+                )}
+              </span>
+            </p>
+          )}
+          {exhausted !== undefined && (
+            <p
+              role="status"
+              className={styles.gapWarning}
+              data-testid="rounds-without-new-dilemmas"
+            >
+              <Icon name="warning" size={22} />
+              <span className={styles.noticeText}>
+                <span>{t('lobby.noNewDilemmasNotice', { round: exhausted })}</span>
+                {isHost && (
+                  <button
+                    type="button"
+                    className={styles.change}
+                    onClick={() => setOpen({ sheet: 'settings' })}
+                  >
+                    {t('lobby.changeCategories')}
+                  </button>
                 )}
               </span>
             </p>
@@ -398,7 +424,9 @@ function RoundRowItem({ row, hostName, isHost, onChoose, onClear }: RoundRowItem
   );
   const meta =
     round.origin === 'random'
-      ? randomMeta(round.categories, to - from + 1, t)
+      ? round.withoutNewDilemmas
+        ? t('lobby.noNewDilemmas')
+        : randomMeta(round.categories, to - from + 1, t)
       : round.origin === 'specific'
         ? isHost
           ? t('lobby.rounds.chosenByYou')
@@ -410,7 +438,12 @@ function RoundRowItem({ row, hostName, isHost, onChoose, onClear }: RoundRowItem
             : t('lobby.rounds.chosenByPlayer');
 
   return (
-    <li className={styles.round}>
+    <li
+      className={styles.round}
+      data-without-new-dilemmas={
+        (round.origin === 'random' && round.withoutNewDilemmas) || undefined
+      }
+    >
       <span className={styles.roundNumber}>{number}</span>
       <Icon name={icon} size={20} />
       <span className={styles.roundText}>

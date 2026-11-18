@@ -1,0 +1,133 @@
+.screen {
+  composes: screen from '../reveal/reveal-screen.module.css';
+}
+
+.header {
+  composes: header from '../reveal/reveal-screen.module.css';
+}
+
+.top {
+  composes: top from '../reveal/reveal-screen.module.css';
+}
+
+.label {
+  composes: position from '../reveal/reveal-screen.module.css';
+}
+
+/* The players, and for a while who moved everyone on, on the same line: it covers nothing below. */
+.strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.movedOn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}
+
+.main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-6) var(--space-4) var(--space-4);
+}
+
+/* One title, as on a stage: its sign, its name, its winners and who came next. */
+.titleScreen {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.titleIcon {
+  width: 72px;
+  height: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-ink);
+  color: var(--color-accent);
+}
+
+.titleName {
+  composes: display from '../styles/typography.module.css';
+  margin: 0;
+}
+
+.titleMeaning {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-ink-muted);
+}
+
+.winners {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.winner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.winnerAvatars {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.winnerName {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 600;
+}
+
+.fact {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.runnerUp {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-ink-muted);
+}
+
+.private {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.footer {
+  composes: footer from '../reveal/reveal-screen.module.css';
+}
+
+.next {
+  composes: next from '../reveal/reveal-screen.module.css';
+}

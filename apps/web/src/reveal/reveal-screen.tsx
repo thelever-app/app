@@ -8,6 +8,14 @@ import { isAnonymous, usePlayerName } from '../components/players.ts';
 import { DilemmaText, personInTheGapOf } from '../game/dilemma-text.tsx';
 import { GameMenu } from '../game/game-menu.tsx';
 import { missedOf } from './missed.ts';
+import {
+  type ReactionTarget,
+  type YourReactions,
+  useOptimisticLike,
+  useOptimisticReactions,
+  withYourReaction,
+} from './optimistic.ts';
+import { ReactSheet } from './react-sheet.tsx';
 import styles from './reveal-screen.module.css';
 
 type Game = GameStateDto;
@@ -26,6 +34,10 @@ interface RevealScreenProps {
   readonly isLast: boolean;
   readonly onLeave: () => void;
   readonly onShowQr: () => void;
+  /** «Buen dilema», resolved once the server answers. */
+  readonly onLike: () => Promise<void>;
+  /** A reaction to the dilemma or to a vote, resolved once the server answers. */
+  readonly onReact: (target: ReactionTarget, emoji: string) => Promise<void>;
 }
 
 /**
@@ -40,9 +52,15 @@ export function RevealScreen({
   isLast,
   onLeave,
   onShowQr,
+  onLike,
+  onReact,
 }: RevealScreenProps) {
   const { t } = useTranslation();
+  const nameOf = usePlayerName();
   const [isGroupOpen, setIsGroupOpen] = useState(false);
+  const [reacting, setReacting] = useState<ReactionTarget | undefined>(undefined);
+  const [liked, like] = useOptimisticLike(reveal.youLiked, onLike);
+  const [yours, react] = useOptimisticReactions(reveal.yourReactions, onReact);
   const dilemma = game.dilemmas.find(({ dilemmaId }) => dilemmaId === reveal.dilemmaId)!;
   const person = personInTheGapOf(game, reveal);
   const anonymous = isAnonymous(game);
@@ -59,6 +77,16 @@ export function RevealScreen({
           <p className={styles.position}>
             {t('reveal.position', { position: reveal.position + 1, total: game.dilemmas.length })}
           </p>
+          <button
+            type="button"
+            className={styles.like}
+            aria-pressed={liked}
+            disabled={liked}
+            onClick={like}
+          >
+            <Icon name={liked ? 'thumbUpFilled' : 'thumbUp'} size={20} />
+            {t('reveal.like')}
+          </button>
           <GameMenu
             code={game.code}
             onShowQr={onShowQr}
@@ -86,12 +114,25 @@ export function RevealScreen({
             </span>
           </p>
         )}
+        <DilemmaReactions
+          game={game}
+          reactions={withYourReaction(
+            reveal.dilemmaReactions,
+            reveal.yourReactions.dilemma,
+            yours.dilemma,
+            game.playerId,
+            anonymous,
+          )}
+          yours={yours.dilemma}
+          onReact={() => setReacting({ kind: 'dilemma' })}
+        />
         {personPlayer && (
           <AboutCard
             person={personPlayer}
             aboutYou={aboutYou}
             anonymous={anonymous}
             hits={reveal.personInTheGapHits}
+            points={aboutYou && !anonymous ? reveal.yourPoints : null}
           />
         )}
         {anonymous ? (
@@ -103,6 +144,8 @@ export function RevealScreen({
             dilemma={dilemma}
             person={person}
             aboutYou={aboutYou}
+            yours={yours}
+            onReactTo={(playerId) => setReacting({ kind: 'vote', playerId })}
           />
         )}
       </main>
@@ -114,6 +157,114 @@ export function RevealScreen({
         </footer>
       )}
       <GroupProgressSheet game={game} open={isGroupOpen} onOpenChange={setIsGroupOpen} />
+      {reacting && (
+        <ReactSheet
+          open
+          onOpenChange={(open) => {
+            if (!open) setReacting(undefined);
+          }}
+          {...sheetTextsOf(reacting)}
+          current={
+            reacting.kind === 'dilemma'
+              ? yours.dilemma
+              : (yours.votes.find(({ aboutId }) => aboutId === reacting.playerId)?.emoji ?? null)
+          }
+          onReact={(emoji) => react(reacting, emoji)}
+        />
+      )}
+    </div>
+  );
+
+  /** What the sheet says about what the player reacts to, and whether the others will see who. */
+  function sheetTextsOf(target: ReactionTarget) {
+    const privacy = anonymous ? t('react.anonymousPrivacy') : t('react.nominalPrivacy');
+    if (target.kind === 'dilemma') {
+      return {
+        title: t('react.dilemmaTitle'),
+        prompt: t('react.toDilemma'),
+        notes: [t('react.oneDilemma'), privacy],
+      };
+    }
+    const voter = playerOf(target.playerId);
+    const vote = reveal.votes.find(({ playerId }) => playerId === target.playerId)?.vote;
+    const option = dilemma.options.find(({ optionId }) => optionId === vote)?.text ?? '';
+    const own = target.playerId === game.playerId;
+    return {
+      title: own
+        ? t('react.ownVoteTitle', { option: option.replaceAll('{gap}', person ?? '') })
+        : t('react.voteTitle', {
+            name: voter ? nameOf(voter) : '',
+            option: option.replaceAll('{gap}', person ?? ''),
+          }),
+      lead: voter && <Avatar avatar={voter.avatar} size="md" />,
+      prompt: own ? t('react.toOwnVote') : t('react.toVote'),
+      notes: [t('react.oneVote'), privacy],
+    };
+  }
+}
+
+/**
+ * The reactions to the dilemma: each emoji with who reacted with it, or how many in an anonymous
+ * room, and the way to react to it.
+ */
+function DilemmaReactions({
+  game,
+  reactions,
+  yours,
+  onReact,
+}: {
+  readonly game: Game;
+  readonly reactions: Reveal['dilemmaReactions'];
+  readonly yours: string | null;
+  readonly onReact: () => void;
+}) {
+  const { t } = useTranslation();
+  const nameOf = usePlayerName();
+  return (
+    <div className={styles.reactions}>
+      {reactions.length > 0 && (
+        <ul className={styles.reactionChips} aria-label={t('reveal.dilemmaReactions')}>
+          {reactions.map(({ emoji, count, playerIds }) => {
+            const reactors = playerIds.flatMap((playerId) =>
+              game.players.filter((player) => player.playerId === playerId),
+            );
+            return (
+              <li
+                key={emoji}
+                className={styles.reactionChip}
+                data-yours={emoji === yours || undefined}
+                data-emoji={emoji}
+                aria-label={
+                  reactors.length > 0
+                    ? t('reveal.reactionBy', {
+                        emoji,
+                        names: reactors.map((player) => nameOf(player)).join(', '),
+                      })
+                    : t('reveal.reactionCount', { emoji, count })
+                }
+              >
+                <span aria-hidden="true">{emoji}</span>
+                {reactors.length > 0 ? (
+                  <span aria-hidden="true" className={styles.reactors}>
+                    {reactors.slice(0, 3).map((player) => (
+                      <Avatar key={player.playerId} avatar={player.avatar} size="xs" />
+                    ))}
+                    {reactors.length > 3 && `+${reactors.length - 3}`}
+                  </span>
+                ) : (
+                  <span aria-hidden="true" className={styles.reactionCount}>
+                    {count}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <button type="button" className={styles.reactButton} onClick={onReact}>
+        <Icon name="addReaction" size={20} />
+        {t('reveal.reactToDilemma')}
+      </button>
     </div>
   );
 }
@@ -168,11 +319,14 @@ function AboutCard({
   aboutYou,
   anonymous,
   hits,
+  points,
 }: {
   readonly person: Player;
   readonly aboutYou: boolean;
   readonly anonymous: boolean;
   readonly hits: Reveal['personInTheGapHits'];
+  /** What the predictions of the person in the gap scored, for themselves alone. */
+  readonly points: number | null;
 }) {
   const { t } = useTranslation();
   const title = aboutYou
@@ -206,6 +360,11 @@ function AboutCard({
           <span className={styles.aboutHitsLabel}>
             {aboutYou ? t('reveal.aboutYouHitsLabel') : t('reveal.aboutHitsLabel')}
           </span>
+          {points !== null && (
+            <span className={styles.dilemmaPoints} data-testid="your-points">
+              {t('reveal.dilemmaPoints', { count: points })}
+            </span>
+          )}
         </p>
       )}
     </section>
@@ -279,9 +438,12 @@ function Bar({
 function HitsSummary({
   right,
   missed,
+  points,
 }: {
   readonly right: number;
   readonly missed: readonly string[];
+  /** What the right ones scored in this dilemma, for the player alone. */
+  readonly points: number | null;
 }) {
   const { t, i18n } = useTranslation();
   const count = right + missed.length;
@@ -311,6 +473,12 @@ function HitsSummary({
           </p>
           <p className={styles.summaryLine}>{text}</p>
         </div>
+        {points !== null && (
+          <span className={styles.summaryPoints} data-testid="your-points">
+            <span className={styles.summaryPointsValue}>{points}</span>
+            <span className={styles.summaryPointsUnit}>{t('ranking.pointsUnit')}</span>
+          </span>
+        )}
       </div>
       {count <= MAX_SEGMENTS ? (
         <div aria-hidden="true" className={styles.segments}>
@@ -334,7 +502,14 @@ function NominalResult({
   dilemma,
   person,
   aboutYou,
-}: ResultProps & { readonly aboutYou: boolean }) {
+  yours,
+  onReactTo,
+}: ResultProps & {
+  readonly aboutYou: boolean;
+  /** The reactions of the player, as they see them now. */
+  readonly yours: YourReactions;
+  readonly onReactTo: (playerId: string) => void;
+}) {
   const { t, i18n } = useTranslation();
   const nameOf = usePlayerName();
   const list = (names: readonly string[]) =>
@@ -360,11 +535,20 @@ function NominalResult({
   const absent = reveal.votes.flatMap(({ playerId, vote }) =>
     vote === null ? (playerOf(playerId) ?? []) : [],
   );
+  // The reactions to each vote, with that of the player as they see it now.
+  const reactionsTo = (aboutId: string) => [
+    ...reveal.voteReactions.filter(
+      (reaction) => reaction.aboutId === aboutId && reaction.playerId !== game.playerId,
+    ),
+    ...yours.votes
+      .filter((reaction) => reaction.aboutId === aboutId)
+      .map(({ emoji }) => ({ playerId: game.playerId, aboutId, emoji })),
+  ];
 
   return (
     <>
       {said.size > 0 && !aboutYou && (
-        <HitsSummary right={said.size - missed.length} missed={missed} />
+        <HitsSummary right={said.size - missed.length} missed={missed} points={reveal.yourPoints} />
       )}
       <h2 className={styles.whoVoted}>{t('reveal.whoVoted')}</h2>
       {options.map((option) => {
@@ -407,22 +591,51 @@ function NominalResult({
                       : result === 'missed'
                         ? t('reveal.voterMissed', { name: nameOf(voter), letter })
                         : nameOf(voter);
+                  const reactions = reactionsTo(voter.playerId);
                   return (
                     <li
                       key={voter.playerId}
                       className={styles.voter}
                       data-result={result}
+                      data-player-id={voter.playerId}
                       aria-label={label}
                     >
-                      <Avatar avatar={voter.avatar} size="s" />
-                      <span aria-hidden="true">{nameOf(voter)}</span>
-                      {result === 'missed' && (
-                        <span aria-hidden="true" className={styles.guess}>
-                          {t('reveal.guessed', { letter })}
-                        </span>
-                      )}
-                      {(result === 'right' || result === 'missed') && (
-                        <Icon name={result === 'right' ? 'check' : 'close'} size={18} />
+                      <button
+                        type="button"
+                        className={styles.voterButton}
+                        aria-label={t('reveal.reactToVoteOf', { name: nameOf(voter) })}
+                        onClick={() => onReactTo(voter.playerId)}
+                      >
+                        <Avatar avatar={voter.avatar} size="s" />
+                        <span aria-hidden="true">{nameOf(voter)}</span>
+                        {result === 'missed' && (
+                          <span aria-hidden="true" className={styles.guess}>
+                            {t('reveal.guessed', { letter })}
+                          </span>
+                        )}
+                        {(result === 'right' || result === 'missed') && (
+                          <Icon name={result === 'right' ? 'check' : 'close'} size={18} />
+                        )}
+                      </button>
+                      {reactions.length > 0 && (
+                        <ul
+                          className={styles.voteReactions}
+                          aria-label={t('reveal.reactionsToVote', { name: nameOf(voter) })}
+                        >
+                          {reactions.map(({ playerId, emoji }) => {
+                            const reactor = playerOf(playerId);
+                            return (
+                              <li
+                                key={playerId}
+                                data-emoji={emoji}
+                                data-reactor={reactor?.nickname}
+                                title={reactor ? nameOf(reactor) : undefined}
+                              >
+                                {emoji}
+                              </li>
+                            );
+                          })}
+                        </ul>
                       )}
                     </li>
                   );
@@ -432,6 +645,7 @@ function NominalResult({
           </section>
         );
       })}
+      <p className={styles.reactHint}>{t('reveal.reactToVoteHint')}</p>
       {absent.length > 0 && (
         <p className={styles.absent}>
           <span className={styles.absentAvatars}>

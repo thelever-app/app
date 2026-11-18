@@ -29,7 +29,7 @@ function atStage(kind: 'results' | 'ended', ranking = RANKING): GameStateDto {
   return aGame({
     players: PLAYERS,
     round: { ...game.round, position: 2, phase: 'reveal', revealedBy: 'host' },
-    stage: { kind, movedOnBy: 'test-luis-id' },
+    stage: { kind, movedOnBy: 'test-luis-id', step: kind === 'results' ? 0 : null },
     ranking,
   });
 }

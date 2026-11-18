@@ -49,6 +49,10 @@ const NOMINAL_REVEAL: Reveal = {
   chosenBy: 'test-luis-id',
   yourDistributionPrediction: null,
   yourPoints: null,
+  dilemmaReactions: [],
+  voteReactions: [],
+  yourReactions: { dilemma: null, votes: [] },
+  youLiked: false,
 };
 
 function revealed(reveal: Reveal, overrides: Partial<GameStateDto> = {}): GameStateDto {
@@ -75,6 +79,10 @@ const ANONYMOUS_REVEAL: Reveal = {
   chosenBy: null,
   yourDistributionPrediction: null,
   yourPoints: null,
+  dilemmaReactions: [],
+  voteReactions: [],
+  yourReactions: { dilemma: null, votes: [] },
+  youLiked: false,
 };
 const ANONYMOUS_PLAYERS = PLAYERS.map((player) => ({ ...player, answered: null }));
 
@@ -376,6 +384,10 @@ describe('RevealPhase', () => {
           { optionId: 'test-option-1b', share: 45 },
         ],
         yourPoints: 88,
+        dilemmaReactions: [],
+        voteReactions: [],
+        yourReactions: { dilemma: null, votes: [] },
+        youLiked: false,
       };
 
       // Act
@@ -420,7 +432,7 @@ describe('RevealPhase', () => {
     expect(connection.send).toHaveBeenCalledWith({ type: 'move-on', fromPosition: 0 });
   });
 
-  it('should not offer a next round on the last one of a nominal room, whose results come later', async () => {
+  it('should take everyone from the last one of a nominal room to its results', async () => {
     // Act
     const { t } = await renderReveal(
       revealed({ ...NOMINAL_REVEAL, position: 2, dilemmaId: 'test-dilemma-3' }),
@@ -428,7 +440,7 @@ describe('RevealPhase', () => {
 
     // Assert
     expect(screen.queryByRole('button', { name: t('reveal.next') })).toBeNull();
-    expect(screen.queryByRole('button', { name: t('reveal.toResults') })).toBeNull();
+    expect(screen.getByRole('button', { name: t('reveal.toResults') })).toBeDefined();
   });
 
   it('should show no points of anyone', async () => {
@@ -437,5 +449,96 @@ describe('RevealPhase', () => {
 
     // Assert
     expect(screen.queryByText(/punto/i)).toBeNull();
+  });
+
+  describe('reactions and «Buen dilema»', () => {
+    it('should mark «Buen dilema» at once and send it, and keep it marked once given', async () => {
+      // Arrange
+      const { connection, t } = await renderReveal(revealed(NOMINAL_REVEAL));
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('reveal.like') }));
+
+      // Assert
+      expect(connection.send).toHaveBeenCalledWith({ type: 'like-dilemma', position: 0 });
+      expect(
+        screen.getByRole('button', { name: t('reveal.like') }).getAttribute('aria-pressed'),
+      ).toBe('true');
+    });
+
+    it('should react to the dilemma with an emoji, showing it at once among the reactions', async () => {
+      // Arrange
+      const { connection, t } = await renderReveal(
+        revealed({
+          ...NOMINAL_REVEAL,
+          dilemmaReactions: [{ emoji: '😂', count: 1, playerIds: ['test-luis-id'] }],
+        }),
+      );
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('reveal.reactToDilemma') }));
+      fireEvent.click(screen.getByRole('button', { name: '😂' }));
+
+      // Assert
+      expect(connection.send).toHaveBeenCalledWith({
+        type: 'react',
+        position: 0,
+        target: { kind: 'dilemma' },
+        emoji: '😂',
+      });
+      const chips = within(screen.getByRole('list', { name: t('reveal.dilemmaReactions') }));
+      expect(chips.getByRole('listitem').getAttribute('aria-label')).toBe(
+        t('reveal.reactionBy', { emoji: '😂', names: 'Luis, Ana (tú)' }),
+      );
+    });
+
+    it('should react to the vote of a player with any emoji typed', async () => {
+      // Arrange
+      const { connection, t } = await renderReveal(revealed(NOMINAL_REVEAL));
+
+      // Act
+      fireEvent.click(
+        screen.getByRole('button', { name: t('reveal.reactToVoteOf', { name: 'Luis' }) }),
+      );
+      fireEvent.click(screen.getByRole('button', { name: t('react.more') }));
+      fireEvent.change(screen.getByRole('textbox', { name: t('react.anyEmoji') }), {
+        target: { value: '🦄 hola' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: t('react.send') }));
+
+      // Assert
+      expect(connection.send).toHaveBeenCalledWith({
+        type: 'react',
+        position: 0,
+        target: { kind: 'vote', playerId: 'test-luis-id' },
+        emoji: '🦄',
+      });
+    });
+
+    it('should show in an anonymous room only how many reacted with each emoji', async () => {
+      // Act
+      const { t } = await renderReveal(
+        revealed(
+          { ...ANONYMOUS_REVEAL, dilemmaReactions: [{ emoji: '🤔', count: 3, playerIds: [] }] },
+          { players: ANONYMOUS_PLAYERS },
+        ),
+      );
+
+      // Assert
+      const chip = within(
+        screen.getByRole('list', { name: t('reveal.dilemmaReactions') }),
+      ).getByRole('listitem');
+      expect(chip.getAttribute('aria-label')).toBe(
+        t('reveal.reactionCount', { emoji: '🤔', count: 3 }),
+      );
+    });
+
+    it('should show the player in private the points the dilemma gave them', async () => {
+      // Act
+      await renderReveal(revealed({ ...NOMINAL_REVEAL, yourPoints: 111 }));
+
+      // Assert
+      expect(screen.getByTestId('your-points').textContent).toContain('111');
+    });
   });
 });
