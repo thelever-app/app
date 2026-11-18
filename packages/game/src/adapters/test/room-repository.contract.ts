@@ -24,13 +24,14 @@ function room(id = 'TestRoomId', hostId = 'TestAnaId', code = 'K7M2Q'): Room {
   );
 }
 
-/** A new player joins with the next free avatar. */
+/** A new player joins with the next free avatar, having played a dilemma named after them. */
 function join(saved: Room, name: string): void {
   saved.join(
     {
       nickname: name,
       identity: `Test${name}Identity`,
       avatar: saved.suggestAvatar(new FixedRandomness()),
+      playedDilemmaIds: [`Test${name}PlayedDilemma`],
     },
     new FixedIdGenerator(`Test${name}Id`),
     NOW,
@@ -219,20 +220,38 @@ export function describeRoomRepositoryContract(
               { id: 9, origin: 'random', categories: null },
             ],
           },
-          [{ dilemmaId: 'TestSpecificDilemma', minimumAge: 18, compromising: false }],
+          [
+            {
+              dilemmaId: 'TestSpecificDilemma',
+              type: 'standard',
+              scale: 'everyday',
+              minimumAge: 18,
+              hasGap: false,
+              compromising: false,
+            },
+          ],
         );
         saved.chooseRoundDilemma('TestLuisId', 7, {
           dilemmaId: 'TestChosenDilemma',
+          type: 'standard',
+          scale: 'everyday',
+          hasGap: false,
           minimumAge: 18,
           compromising: false,
         });
         saved.chooseRoundDilemma('TestMartaId', 1, {
           dilemmaId: 'TestOtherChosenDilemma',
+          type: 'standard',
+          scale: 'everyday',
+          hasGap: false,
           minimumAge: 16,
           compromising: false,
         });
         saved.chooseRoundDilemma('TestPabloId', 3, {
           dilemmaId: 'TestPablosDilemma',
+          type: 'standard',
+          scale: 'everyday',
+          hasGap: false,
           minimumAge: 16,
           compromising: false,
         });
@@ -254,6 +273,9 @@ export function describeRoomRepositoryContract(
         saved.changeSettings('TestAnaId', { rounds: [{ id: 1, origin: 'players' }] });
         saved.chooseRoundDilemma('TestLuisId', 1, {
           dilemmaId: 'TestChosenDilemma',
+          type: 'standard',
+          scale: 'everyday',
+          hasGap: false,
           minimumAge: 16,
           compromising: false,
         });
@@ -268,6 +290,9 @@ export function describeRoomRepositoryContract(
         expect(found?.chosenDilemmas).toEqual([
           {
             dilemmaId: 'TestChosenDilemma',
+            type: 'standard',
+            scale: 'everyday',
+            hasGap: false,
             minimumAge: 16,
             compromising: false,
             roundId: 1,
@@ -281,7 +306,13 @@ export function describeRoomRepositoryContract(
         const repository = await create();
         const lobby = room();
         join(lobby, 'Luis');
-        const compromising = { minimumAge: 16, compromising: true } as const;
+        const compromising = {
+          type: 'standard',
+          scale: 'everyday',
+          minimumAge: 16,
+          hasGap: false,
+          compromising: true,
+        } as const;
         const saved = Room.restore({
           ...lobby.toSnapshot(),
           settings: {

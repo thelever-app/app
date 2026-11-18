@@ -39,7 +39,8 @@
     "playerPending": "{{name}} · non ha ancora risposto",
     "playerDisconnected": "{{name}} (disconnesso)",
     "movedOn": "{{name}} è già al dilemma successivo",
-    "playerMovedOn": "{{label}} · è già al successivo"
+    "playerMovedOn": "{{label}} · è già al successivo",
+    "aboutYou": "Dilemma {{position, number}} di {{total, number}} · Parla di te"
   },
   "groupSheet": {
     "title": "Il gruppo",
@@ -72,6 +73,11 @@
   "game": {
     "timeLeft": "Restano {{time}}"
   },
+  "aboutYou": {
+    "title": "Parla di te: cosa faranno con te?",
+    "nominal": "Questo dilemma non lo voti. Indovina cosa sceglierà ciascuno: nel reveal tutti vedranno quanti ne hai indovinati.",
+    "anonymous": "Questo dilemma non lo voti. Indovina come si divideranno gli altri; nessuno vedrà la tua previsione."
+  },
   "predict": {
     "voted": "Hai votato «",
     "votedEnd": "»",
@@ -81,7 +87,8 @@
     "missing_one": "Manca {{count}} risposta",
     "missing_many": "Mancano {{count, number}} risposte",
     "missing_other": "Mancano {{count, number}} risposte",
-    "next": "Fatto"
+    "next": "Fatto",
+    "aboutYouQuestion": "Cosa sceglierà ciascuno?"
   },
   "distribution": {
     "question": "Come si dividerà il gruppo?",
@@ -89,7 +96,10 @@
     "hintTwo": "Contando anche te. Muovi la barra e le due opzioni si adattano da sole: fanno sempre 100%.",
     "yourVote": "il tuo voto",
     "shareOf": "Percentuale che prevedi per {{option}}",
-    "percent": "{{value, number}}%"
+    "percent": "{{value, number}}%",
+    "aboutYouQuestion": "Come si divideranno gli altri?",
+    "aboutYouHint": "Senza contare te. Muovi una barra e le altre si adattano da sole: fanno sempre 100%.",
+    "aboutYouHintTwo": "Senza contare te. Muovi la barra e le due opzioni si adattano da sole: fanno sempre 100%."
   },
   "gameMenu": {
     "open": "Altre opzioni",
@@ -153,7 +163,6 @@
     "region": "Risultato",
     "position": "Dilemma {{position, number}} di {{total, number}} · Risultato",
     "chosenBy": "L’ha scelto {{name}}",
-    "about": "Questo dilemma era su {{name}}",
     "yourHitsRegion": "Le tue previsioni",
     "hitsAll": "Li hai indovinati tutti!",
     "hitsCount": "Ne hai indovinati {{right, number}} su {{count, number}}",
@@ -196,7 +205,16 @@
     "introAnswered_many": "Hanno risposto {{count, number}} su {{total, number}}.",
     "introAnswered_other": "Hanno risposto {{count, number}} su {{total, number}}.",
     "introNominal": "Ci siamo: ora vedrete cosa ha votato ciascuno.",
-    "introAnonymous": "Ci siamo: ora vedrete quanti hanno scelto ogni opzione."
+    "introAnonymous": "Ci siamo: ora vedrete quanti hanno scelto ogni opzione.",
+    "aboutTitle": "Parlava di {{name}}",
+    "aboutYouTitle": "Parlava di te",
+    "aboutNominal": "Non ha votato: ha indovinato cosa avrebbe fatto ciascuno",
+    "aboutYouNominal": "Non hai votato: hai indovinato cosa avrebbe fatto ciascuno. Tutti vedono quanti ne hai indovinati.",
+    "aboutAnonymous": "Non ha votato: ha previsto come vi sareste divisi. La previsione e i punti restano privati.",
+    "aboutYouAnonymous": "Non hai votato: hai previsto come si sarebbero divisi gli altri. La tua previsione e i tuoi punti li vedi solo tu.",
+    "aboutHits": "{{right, number}} su {{of, number}}",
+    "aboutHitsLabel": "indovinati",
+    "aboutYouHitsLabel": "indovinati"
   },
   "ranking": {
     "label": "Risultati",
@@ -414,7 +432,10 @@
     "missing_one": "Manca {{count}} giocatore per iniziare",
     "missing_other": "Mancano {{count}} giocatori per iniziare",
     "guestWait": "{{host}} inizierà la partita quando ci sarete tutti.",
-    "missing_many": "Mancano {{count}} giocatori per iniziare"
+    "missing_many": "Mancano {{count}} giocatori per iniziare",
+    "gapWarningTitle": "Un dilemma parla di qualcuno del gruppo.",
+    "gapWarningNominal": "In una stanza nominale servono almeno {{minimum, number}} giocatori: se iniziate in meno, il suo round diventa casuale.",
+    "gapWarningAnonymous": "In una stanza anonima servono almeno {{minimum, number}} giocatori: se iniziate in meno, il suo round diventa casuale."
   },
   "languages": {
     "es": "Español",

@@ -122,7 +122,14 @@ describe('CreateRoomUseCase', () => {
       expect(room?.settings.rounds[0]).toEqual({
         id: 1,
         origin: 'specific',
-        dilemma: { dilemmaId: 'TestCatalog5', minimumAge: 16, compromising: false },
+        dilemma: {
+          dilemmaId: 'TestCatalog5',
+          type: 'standard',
+          scale: 'everyday',
+          minimumAge: 16,
+          hasGap: false,
+          compromising: false,
+        },
       });
     });
 

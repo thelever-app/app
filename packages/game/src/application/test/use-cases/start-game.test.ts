@@ -11,7 +11,7 @@ import type { RoundChange } from '../../../domain/entities/room.ts';
 import type { Category } from '../../../domain/vos/category.vo.ts';
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
 import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
-import { EXPLORATION_SLOTS, lobbyCatalog } from '../support/test-catalog.ts';
+import { CANDIDATES_PER_ROUND, EXPLORATION_SLOTS, lobbyCatalog } from '../support/test-catalog.ts';
 
 async function arrange() {
   const notifier = new InMemoryPlayerNotifier();
@@ -27,6 +27,7 @@ async function arrange() {
       clock: lobby.clock,
     },
     EXPLORATION_SLOTS,
+    CANDIDATES_PER_ROUND,
   );
   const changeSettings = new ChangeRoomSettingsUseCase(
     lobby.roomRepository,
@@ -132,7 +133,8 @@ describe('StartGameUseCase', () => {
     });
 
     it('should take the dilemmas from every category by default', async () => {
-      // Arrange: ten dilemmas for everyone in the catalog, eight of life-and-death and two of honesty.
+      // Arrange: eleven dilemmas for everyone in the catalog, eight of life-and-death, two of
+      // honesty and one of loyalty.
       const { startGame, changeSettings, gameRepository, roomId, anaId } = await arrange();
       await changeSettings.execute({
         roomId,
@@ -147,8 +149,8 @@ describe('StartGameUseCase', () => {
       const ids = (await gameRepository.findById(gameId))?.dilemmas.map(
         ({ dilemmaId }) => dilemmaId,
       );
-      expect(ids).toHaveLength(10);
-      expect(ids).toEqual(expect.arrayContaining(['TestHonesty1', 'TestHonesty2']));
+      expect(ids).toHaveLength(11);
+      expect(ids).toEqual(expect.arrayContaining(['TestHonesty1', 'TestHonesty2', 'TestGap1']));
     });
 
     it('should copy the settings of the room into the game', async () => {
@@ -259,13 +261,155 @@ describe('StartGameUseCase', () => {
         playerId: anaId,
         changes: { rounds: [{ origin: 'specific', dilemmaId: 'TestCatalog3' }] },
       });
-      const findCandidateIds = vi.spyOn(catalog, 'findCandidateIds');
+      const findCandidates = vi.spyOn(catalog, 'findCandidates');
 
       // Act
       await startGame.execute({ roomId, playerId: anaId });
 
       // Assert
-      expect(findCandidateIds).not.toHaveBeenCalled();
+      expect(findCandidates).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['nominal', true],
+      ['anonymous', false],
+    ] as const)(
+      'should play a dilemma with the gap in a %s room of three only if it has the players it needs: %s',
+      async (variant, played) => {
+        // Arrange
+        const { startGame, changeSettings, gameRepository, roomId, anaId } = await arrange();
+        await changeSettings.execute({
+          roomId,
+          playerId: anaId,
+          changes: {
+            variant,
+            rounds: [{ origin: 'specific', dilemmaId: 'TestGap1' }],
+            newDilemmas: false,
+          },
+        });
+
+        // Act
+        const { gameId } = await startGame.execute({ roomId, playerId: anaId });
+
+        // Assert
+        const [first] = (await gameRepository.findById(gameId))?.dilemmas ?? [];
+        expect(first?.dilemmaId === 'TestGap1').toBe(played);
+        expect(first?.origin).toBe(played ? 'specific' : 'random');
+      },
+    );
+
+    it('should draw first the dilemmas nobody in the room has played', async () => {
+      // Arrange: Luis played four of the eight dilemmas of life-and-death for everyone.
+      const lobby = await arrange();
+      const { startGame, changeSettings, gameRepository, roomRepository, roomId, anaId } = lobby;
+      const played = ['TestCatalog3', 'TestCatalog4', 'TestCatalog5', 'TestCatalog6'];
+      const room = (await roomRepository.findById(roomId))!;
+      const luis = room.playerWith('TestLuisIdentity')!;
+      room.join(
+        {
+          nickname: luis.nickname,
+          identity: luis.identity,
+          avatar: luis.avatar,
+          playedDilemmaIds: played,
+        },
+        lobby.idGenerator,
+        lobby.clock.now(),
+      );
+      await roomRepository.save(room);
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { rounds: randomRounds(4, ['life-and-death']), newDilemmas: false },
+      });
+
+      // Act
+      const { gameId } = await startGame.execute({ roomId, playerId: anaId });
+
+      // Assert
+      const ids = (await gameRepository.findById(gameId))?.dilemmas.map(
+        ({ dilemmaId }) => dilemmaId,
+      );
+      expect([...(ids ?? [])].sort()).toEqual([
+        'TestCatalog10',
+        'TestCatalog7',
+        'TestCatalog8',
+        'TestCatalog9',
+      ]);
+    });
+
+    it('should draw a few candidates for each round, never the dilemmas the rounds already play', async () => {
+      // Arrange
+      const { startGame, changeSettings, catalog, roomId, anaId } = await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: {
+          rounds: [
+            ...randomRounds(2, ['life-and-death']),
+            { origin: 'specific', dilemmaId: 'TestCatalog3' },
+          ],
+          newDilemmas: false,
+        },
+      });
+      const findCandidates = vi.spyOn(catalog, 'findCandidates');
+
+      // Act
+      await startGame.execute({ roomId, playerId: anaId });
+
+      // Assert
+      expect(findCandidates).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          categories: ['life-and-death'],
+          count: 2 * CANDIDATES_PER_ROUND,
+          excludedIds: ['TestCatalog3'],
+          playedBy: [],
+          includeGap: true,
+          onlyForAdults: false,
+        }),
+      );
+    });
+
+    it('should draw a few dilemmas for adults apart in an adults-only room', async () => {
+      // Arrange: life-and-death has two dilemmas for adults among ten.
+      const { startGame, changeSettings, catalog, roomId, anaId } = await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: {
+          adultsOnly: true,
+          rounds: randomRounds(6, ['life-and-death']),
+          newDilemmas: false,
+        },
+      });
+      const findCandidates = vi.spyOn(catalog, 'findCandidates');
+
+      // Act
+      await startGame.execute({ roomId, playerId: anaId });
+
+      // Assert: one for adults in every five rounds, and their candidates.
+      expect(findCandidates).toHaveBeenCalledWith(
+        expect.objectContaining({ count: 6 * CANDIDATES_PER_ROUND, onlyForAdults: false }),
+      );
+      expect(findCandidates).toHaveBeenCalledWith(
+        expect.objectContaining({ count: 2 * CANDIDATES_PER_ROUND, onlyForAdults: true }),
+      );
+    });
+
+    it('should not draw a dilemma with the gap for a room without the players it needs', async () => {
+      // Arrange: an anonymous room of three.
+      const { startGame, changeSettings, catalog, roomId, anaId } = await arrange();
+      await changeSettings.execute({
+        roomId,
+        playerId: anaId,
+        changes: { variant: 'anonymous', rounds: randomRounds(1), newDilemmas: false },
+      });
+      const findCandidates = vi.spyOn(catalog, 'findCandidates');
+
+      // Act
+      await startGame.execute({ roomId, playerId: anaId });
+
+      // Assert
+      expect(findCandidates).toHaveBeenCalledWith(expect.objectContaining({ includeGap: false }));
     });
 
     it('should never draw a compromising dilemma', async () => {

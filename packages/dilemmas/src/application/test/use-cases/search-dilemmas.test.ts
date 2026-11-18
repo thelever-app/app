@@ -71,6 +71,9 @@ describe('SearchDilemmasUseCase', () => {
           tags: ['testfamily'],
           optionCount: 2,
           compromising: false,
+          type: 'standard',
+          scale: 'everyday',
+          hasGap: false,
         },
         {
           dilemmaId: 'TestDilemma2',
@@ -81,6 +84,9 @@ describe('SearchDilemmasUseCase', () => {
           tags: [],
           optionCount: 2,
           compromising: false,
+          type: 'standard',
+          scale: 'everyday',
+          hasGap: false,
         },
       ]);
     });

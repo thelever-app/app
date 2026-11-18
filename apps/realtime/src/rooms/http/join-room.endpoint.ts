@@ -26,13 +26,19 @@ export class JoinRoomEndpoint implements HttpEndpoint {
   }
 
   async handle(req: Request, res: Response): Promise<void> {
-    const { nickname, avatar } = parseBody(JoinRoomRequestDto, req.body);
+    const { nickname, avatar, playedDilemmaIds = [] } = parseBody(JoinRoomRequestDto, req.body);
     const roomId = String(req.params.roomId);
     const release = await this.#roomLock.acquire(roomId);
     let joined: JoinRoomOutput;
     try {
       joined = await this.#runCommand(() =>
-        this.#joinRoom.execute({ roomId, nickname, identity: identityOf(res), avatar }),
+        this.#joinRoom.execute({
+          roomId,
+          nickname,
+          identity: identityOf(res),
+          avatar,
+          playedDilemmaIds,
+        }),
       );
     } finally {
       release();

@@ -10,6 +10,9 @@ export const EXPLORATION_SLOTS: ExplorationSlots = [
   { fromRandomRounds: 11, slots: 3 },
 ];
 
+/** How many candidates each round draws from, as the room server does. */
+export const CANDIDATES_PER_ROUND = 3;
+
 function dilemma(dilemmaId: string) {
   return {
     dilemmaId,
@@ -26,8 +29,8 @@ export function testCatalog(): InMemoryDilemmaCatalog {
 /**
  * Enough to put a game together and search, in Spanish: ten dilemmas of the catalog in
  * life-and-death, two of them for adults and three tagged "family", three in exploration, two
- * in honesty and a compromising one in love-and-relationships; and ten in Catalan, for a room that
- * plays in another language.
+ * in honesty, a compromising one in love-and-relationships and one with the gap in loyalty; and
+ * ten in Catalan, for a room that plays in another language.
  */
 export function lobbyCatalog(): InMemoryDilemmaCatalog {
   return new InMemoryDilemmaCatalog([
@@ -48,6 +51,11 @@ export function lobbyCatalog(): InMemoryDilemmaCatalog {
       ...dilemma('TestCompromising1'),
       category: 'love-and-relationships' as const,
       compromising: true,
+    },
+    {
+      ...dilemma('TestGap1'),
+      text: 'TextOfTestGap1 about {gap}',
+      category: 'loyalty' as const,
     },
     ...Array.from({ length: 10 }, (_, index) => ({
       ...dilemma(`TestCatalan${index + 1}`),

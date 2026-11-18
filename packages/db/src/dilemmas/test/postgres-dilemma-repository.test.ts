@@ -1,6 +1,6 @@
 import {
   Dilemma,
-  FindDilemmaIdsUseCase,
+  FindCandidatesUseCase,
   GetDilemmasUseCase,
   SearchDilemmasUseCase,
 } from '@thelever-app/dilemmas';
@@ -40,10 +40,7 @@ describeDilemmaCatalogContract('PublishedDilemmasCatalog on PostgreSQL', async (
   const idGenerator = new SequentialIdGenerator('dilemma');
   const stored = [];
   for (const { status, translations, ...content } of CONTRACT_DILEMMAS) {
-    const created = Dilemma.create(
-      { ...content, language: 'es', type: 'standard', scale: 'everyday', fixedOrder: false },
-      idGenerator,
-    ).toSnapshot();
+    const created = Dilemma.create({ ...content, language: 'es' }, idGenerator).toSnapshot();
     const original = Dilemma.restore({ ...created, version: { ...created.version, status } });
     await repository.save(original);
     for (const { language, text, options } of translations) {
@@ -61,7 +58,7 @@ describeDilemmaCatalogContract('PublishedDilemmasCatalog on PostgreSQL', async (
   const catalog = new PublishedDilemmasCatalog(
     new GetDilemmasUseCase(repository),
     new SearchDilemmasUseCase(queries),
-    new FindDilemmaIdsUseCase(queries),
+    new FindCandidatesUseCase(queries),
   );
   return { catalog, stored };
 });

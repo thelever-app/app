@@ -24,6 +24,8 @@ export interface CreateRoomInput {
   readonly dilemmaLanguage: string;
   /** A dilemma of the general catalog in that language, for the first round, specific. */
   readonly firstRoundDilemmaId?: string;
+  /** The dilemmas the device of the host says they played. */
+  readonly hostPlayedDilemmaIds?: readonly string[];
 }
 
 export interface CreateRoomOutput {

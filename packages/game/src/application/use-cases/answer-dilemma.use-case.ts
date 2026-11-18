@@ -17,7 +17,8 @@ export interface AnswerDilemmaInput {
   readonly roomId: string;
   readonly playerId: string;
   readonly dilemmaId: string;
-  readonly vote: string;
+  /** Null for the person in the gap, who does not vote the dilemma about them. */
+  readonly vote: string | null;
   /** In a nominal room, the vote predictions made so far. */
   readonly votePredictions?: readonly VotePrediction[];
   /** In an anonymous room, the distribution prediction so far; without it, the one the player had. */

@@ -145,6 +145,8 @@ describe('ClientMessageDto', () => {
     // Act & Assert
     expect(ClientMessageDto.parse(connect).type).toBe('connect');
     expect(ClientMessageDto.parse(answerDilemma).type).toBe('answer-dilemma');
+    // The person in the gap answers without a vote.
+    expect(ClientMessageDto.parse({ ...answerDilemma, vote: null }).type).toBe('answer-dilemma');
   });
 
   it('should reject a message no schema knows', () => {

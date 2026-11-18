@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { AvatarDto, GroupNatureDto, LanguageDto, PlaceDto } from '../client-messages.ts';
+import {
+  AvatarDto,
+  GroupNatureDto,
+  LanguageDto,
+  PlaceDto,
+  PlayedDilemmaIdsDto,
+} from '../client-messages.ts';
 
 /** POST /rooms: whoever calls creates a room and becomes its host. Who calls comes from their token. */
 export const CreateRoomRequestDto = z.strictObject({
@@ -12,6 +18,7 @@ export const CreateRoomRequestDto = z.strictObject({
   dilemmaLanguage: LanguageDto,
   /** A dilemma of the general catalog in that language, for the first round, specific. */
   firstRoundDilemmaId: z.string().min(1).max(200).optional(),
+  playedDilemmaIds: PlayedDilemmaIdsDto.optional(),
 });
 
 export const CreateRoomResponseDto = z.strictObject({

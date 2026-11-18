@@ -42,6 +42,16 @@ import { Player, type PlayerSnapshot } from './player.ts';
  * votes in the reveal would tell each one what the other voted.
  */
 export const MINIMUM_PLAYERS: Readonly<Record<RoomVariant, number>> = { nominal: 2, anonymous: 3 };
+
+/**
+ * The fewest players a game plays the dilemmas with the gap with: with fewer, the person in the gap
+ * would predict one or two players, and in an anonymous room the distribution of the others would
+ * give their votes away.
+ */
+export const MINIMUM_PLAYERS_FOR_THE_GAP: Readonly<Record<RoomVariant, number>> = {
+  nominal: 3,
+  anonymous: 4,
+};
 export const MAXIMUM_PLAYERS = 50;
 
 /** How long a room stays open with no player connected (glossary, «Cerrar la sala»). */
@@ -117,6 +127,8 @@ export interface CreateRoomProps {
   readonly createdAt: Date;
   /** A dilemma of the general catalog for the first round, specific, if the room suits it. */
   readonly firstRoundDilemma?: LobbyDilemma;
+  /** The dilemmas the device of the host says they played. */
+  readonly hostPlayedDilemmaIds?: readonly string[];
 }
 
 export class Room {
@@ -171,7 +183,12 @@ export class Room {
     const id = idGenerator.generate();
     const settings = RoomSettingsVO.defaults(props.dilemmaLanguage).toSnapshot();
     const host = Player.create(
-      { nickname: props.hostNickname, identity: props.hostIdentity, avatar: props.hostAvatar },
+      {
+        nickname: props.hostNickname,
+        identity: props.hostIdentity,
+        avatar: props.hostAvatar,
+        playedDilemmaIds: props.hostPlayedDilemmaIds ?? [],
+      },
       idGenerator,
     );
     const { code, groupNature, place, createdAt } = props;
@@ -180,10 +197,9 @@ export class Room {
       host,
     ]);
     if (props.firstRoundDilemma) {
-      const { dilemmaId, minimumAge, compromising } = props.firstRoundDilemma;
-      if (!room.#suits(props.firstRoundDilemma)) throw new DilemmaNotSuitableError(dilemmaId);
+      const dilemma = lobbyDilemmaOf(props.firstRoundDilemma);
+      if (!room.#suits(dilemma)) throw new DilemmaNotSuitableError(dilemma.dilemmaId);
       const [first, ...rest] = room.#settings.rounds;
-      const dilemma = { dilemmaId, minimumAge, compromising };
       room.#settings = room.#settings.with({
         rounds: [{ id: first!.id, origin: 'specific', dilemma }, ...rest],
       });
@@ -258,21 +274,29 @@ export class Room {
   }
 
   /**
-   * A new player joins with the avatar they chose. Whoever is already in the room gets their player
-   * back, so joining twice changes nothing. Nobody joins a closed room, not even who was in it.
+   * A new player joins with the avatar they chose and the dilemmas their device says they played.
+   * Whoever is already in the room gets their player back, with what their device says now, so
+   * joining twice changes nothing else. Nobody joins a closed room, not even who was in it.
    */
   join(
     {
       nickname,
       identity,
       avatar,
-    }: { readonly nickname: string; readonly identity: string; readonly avatar: AvatarVO },
+      playedDilemmaIds = [],
+    }: {
+      readonly nickname: string;
+      readonly identity: string;
+      readonly avatar: AvatarVO;
+      readonly playedDilemmaIds?: readonly string[];
+    },
     idGenerator: IdGenerator,
     at: Date,
   ): Player {
     this.#ensureOpenAt(at);
     const existing = this.playerWith(identity);
     if (existing) {
+      existing.havePlayed(playedDilemmaIds);
       // Who left the game on purpose comes back as a player, never as the host.
       if (this.#leftPlayerIds.delete(existing.id)) {
         this.#version += 1;
@@ -285,7 +309,7 @@ export class Room {
 
     this.#ensureNobodyLooksTheSame(new NicknameVO(nickname), avatar);
 
-    const player = Player.create({ nickname, identity, avatar }, idGenerator);
+    const player = Player.create({ nickname, identity, avatar, playedDilemmaIds }, idGenerator);
     this.#players.push(player);
     this.#changeLobby('player-joined');
     return player;
@@ -355,7 +379,7 @@ export class Room {
       }
       if (change.origin === 'players') return { id, origin: 'players' };
       const dilemma = found(change.dilemmaId);
-      if (dilemma) return { id, origin: 'specific', dilemma: { ...dilemma } };
+      if (dilemma) return { id, origin: 'specific', dilemma: lobbyDilemmaOf(dilemma) };
       const before = current.find((round) => round.id === id);
       const kept = before?.origin === 'specific' && before.dilemma.dilemmaId === change.dilemmaId;
       if (kept) return randomRound(id);
@@ -403,8 +427,7 @@ export class Room {
     }
     if (!this.#suits(dilemma)) throw new DilemmaNotSuitableError(dilemma.dilemmaId);
 
-    const { dilemmaId, minimumAge, compromising } = dilemma;
-    this.#chosenDilemmas.push({ dilemmaId, minimumAge, compromising, roundId, playerId });
+    this.#chosenDilemmas.push({ ...lobbyDilemmaOf(dilemma), roundId, playerId });
     this.#changeLobby('dilemmas-changed');
   }
 
@@ -438,6 +461,27 @@ export class Room {
   /** The fewest players a game of this room starts with, by its variant. */
   get minimumPlayers(): number {
     return MINIMUM_PLAYERS[this.#settings.variant];
+  }
+
+  /** The fewest players a game of this room plays the dilemmas with the gap with, by its variant. */
+  get minimumPlayersForTheGap(): number {
+    return MINIMUM_PLAYERS_FOR_THE_GAP[this.#settings.variant];
+  }
+
+  /** Whether a game started now would play the dilemmas with the gap. */
+  get playsTheGap(): boolean {
+    return this.#players.length >= this.minimumPlayersForTheGap;
+  }
+
+  /** How many players of the room have each dilemma among those they played, by its id. */
+  get playedBy(): ReadonlyMap<string, number> {
+    const counts = new Map<string, number>();
+    for (const player of this.#players) {
+      for (const dilemmaId of player.playedDilemmaIds) {
+        counts.set(dilemmaId, (counts.get(dilemmaId) ?? 0) + 1);
+      }
+    }
+    return counts;
   }
 
   /**
@@ -691,6 +735,12 @@ export class Room {
     this.#version += 1;
     this.#events.push(new ConnectionChangedEvent(this.id, playerId, connected, this.#version));
   }
+}
+
+/** What the room keeps of a dilemma of the lobby, and nothing else it may have been given. */
+function lobbyDilemmaOf(dilemma: LobbyDilemma): LobbyDilemma {
+  const { dilemmaId, type, scale, minimumAge, hasGap, compromising } = dilemma;
+  return { dilemmaId, type, scale, minimumAge, hasGap, compromising };
 }
 
 /** A round of the settings as the host would set it again, to keep it as it is. */

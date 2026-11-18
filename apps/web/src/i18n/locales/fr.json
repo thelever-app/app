@@ -39,7 +39,8 @@
     "playerPending": "{{name}} · n’a pas encore répondu",
     "playerDisconnected": "{{name}} (hors ligne)",
     "movedOn": "{{name}} a passé ce dilemme",
-    "playerMovedOn": "{{label}} · a passé ce dilemme"
+    "playerMovedOn": "{{label}} · a passé ce dilemme",
+    "aboutYou": "Dilemme {{position, number}} sur {{total, number}} · C’est sur toi"
   },
   "groupSheet": {
     "title": "Le groupe",
@@ -72,6 +73,11 @@
   "game": {
     "timeLeft": "Il reste {{time}}"
   },
+  "aboutYou": {
+    "title": "C’est sur toi : que vont-ils faire de toi ?",
+    "nominal": "Tu ne votes pas ce dilemme. Devine ce que chacun va choisir : au reveal, tout le monde verra combien tu en as trouvé.",
+    "anonymous": "Tu ne votes pas ce dilemme. Devine comment les autres vont se répartir ; personne ne verra ta prédiction."
+  },
   "predict": {
     "voted": "Tu as voté « ",
     "votedEnd": " »",
@@ -81,7 +87,8 @@
     "missing_one": "Il manque {{count}} réponse",
     "missing_many": "Il manque {{count, number}} réponses",
     "missing_other": "Il manque {{count, number}} réponses",
-    "next": "Terminé"
+    "next": "Terminé",
+    "aboutYouQuestion": "Que va choisir chacun ?"
   },
   "distribution": {
     "question": "Comment le groupe va-t-il se répartir ?",
@@ -89,7 +96,10 @@
     "hintTwo": "Toi compris. Bouge la barre et les deux options s’ajustent toutes seules : elles font toujours 100 %.",
     "yourVote": "ton vote",
     "shareOf": "Pourcentage que tu prédis pour {{option}}",
-    "percent": "{{value, number}} %"
+    "percent": "{{value, number}} %",
+    "aboutYouQuestion": "Comment les autres vont-ils se répartir ?",
+    "aboutYouHint": "Sans toi. Bouge une barre et les autres s’ajustent toutes seules : elles font toujours 100 %.",
+    "aboutYouHintTwo": "Sans toi. Bouge la barre et les deux options s’ajustent toutes seules : elles font toujours 100 %."
   },
   "gameMenu": {
     "open": "Plus d’options",
@@ -153,7 +163,6 @@
     "region": "Révélation",
     "position": "Dilemme {{position, number}} sur {{total, number}} · Révélation",
     "chosenBy": "Choisi par {{name}}",
-    "about": "Ce dilemme parlait de {{name}}",
     "yourHitsRegion": "Tes bonnes prédictions",
     "hitsAll": "Tu as lu dans leurs pensées !",
     "hitsCount": "Tu en as trouvé {{right, number}} sur {{count, number}}",
@@ -196,7 +205,16 @@
     "introAnswered_many": "Vous êtes {{count, number}} sur {{total, number}} à avoir répondu.",
     "introAnswered_other": "Vous êtes {{count, number}} sur {{total, number}} à avoir répondu.",
     "introNominal": "C’est le moment : vous allez voir qui a voté quoi.",
-    "introAnonymous": "C’est le moment : vous allez voir combien ont choisi chaque option."
+    "introAnonymous": "C’est le moment : vous allez voir combien ont choisi chaque option.",
+    "aboutTitle": "C’était sur {{name}}",
+    "aboutYouTitle": "C’était sur toi",
+    "aboutNominal": "N’a pas voté : a deviné ce que ferait chacun",
+    "aboutYouNominal": "Tu n’as pas voté : tu as deviné ce que ferait chacun. Tout le monde voit combien tu en as trouvé.",
+    "aboutAnonymous": "N’a pas voté : a prédit comment vous vous répartiriez. Sa prédiction et ses points sont privés.",
+    "aboutYouAnonymous": "Tu n’as pas voté : tu as prédit comment les autres se répartiraient. Ta prédiction et tes points, toi seul les vois.",
+    "aboutHits": "{{right, number}} sur {{of, number}}",
+    "aboutHitsLabel": "trouvés",
+    "aboutYouHitsLabel": "trouvés"
   },
   "ranking": {
     "label": "Résultats",
@@ -414,7 +432,10 @@
     "missing_one": "Il manque {{count}} joueur pour commencer",
     "missing_other": "Il manque {{count}} joueurs pour commencer",
     "guestWait": "{{host}} lancera la partie quand vous serez tous là.",
-    "missing_many": "Il manque {{count}} joueurs pour commencer"
+    "missing_many": "Il manque {{count}} joueurs pour commencer",
+    "gapWarningTitle": "Un dilemme parle de quelqu’un du groupe.",
+    "gapWarningNominal": "Dans une salle nominative, il faut au moins {{minimum, number}} joueurs : si vous commencez à moins, sa manche devient aléatoire.",
+    "gapWarningAnonymous": "Dans une salle anonyme, il faut au moins {{minimum, number}} joueurs : si vous commencez à moins, sa manche devient aléatoire."
   },
   "languages": {
     "es": "Español",

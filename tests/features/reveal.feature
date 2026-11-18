@@ -138,6 +138,14 @@ Feature: Reveal
       Then "Marta" appears as "did not vote"
       And her vote is not counted in the distribution
 
+    @ui
+    Scenario: The reveal shows how many votes the person in the gap guessed
+      Given "Marta" was chosen for the gap of the first dilemma
+      And "Marta" predicted the votes of "Ana" and "Luis" and only the one of "Ana" was right
+      When the reveal is on the first dilemma
+      Then all players see "Marta" as the person in the gap, without a vote
+      And all players see that "Marta" guessed 1 of 2 votes
+
     @ui @todo
     Scenario: A private dilemma shows its author
       Given the first dilemma is a private dilemma of "Ana"
@@ -323,6 +331,13 @@ Feature: Reveal
       Given "Ana" did not vote the first dilemma
       When the reveal is on the first dilemma
       Then "Ana" scores no points for the first dilemma
+
+    Scenario: The person in the gap scores for the distribution prediction
+      Given "Ana" was chosen for the gap of the first dilemma
+      And the other 9 players voted it, 6 for the first option and 3 for the second
+      And "Ana" predicted 70 % and 30 %
+      When the reveal is on the first dilemma
+      Then "Ana" scores 97 points for the first dilemma
 
     Scenario: A player who joined late scores for the distribution prediction
       Given "Pedro" joined the game in the second round

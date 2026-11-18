@@ -315,7 +315,7 @@ export function describeGameRepositoryContract(
         expect(found?.didNotVoteOf('TestMartaId')).toEqual([
           { dilemmaId: first.dilemmaId, reason: 'joined-late' },
         ]);
-        expect(found?.playersToPredictBy('TestMartaId')).toEqual([]);
+        expect(found?.playersToPredictBy('TestMartaId', first.dilemmaId)).toEqual([]);
       });
 
       it('should find a saved game that has not started', async () => {

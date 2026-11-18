@@ -103,6 +103,13 @@ export const GameStateDto = z.strictObject({
         }),
       ),
       personInTheGap: z.string().min(1).nullable(),
+      /**
+       * In a nominal room, how many of the votes they predict the person in the gap got right; null
+       * without the gap and in an anonymous room.
+       */
+      personInTheGapHits: z
+        .strictObject({ right: z.number().int().nonnegative(), of: z.number().int().nonnegative() })
+        .nullable(),
       /** Who added it in the lobby, only in a nominal room. */
       chosenBy: z.string().min(1).nullable(),
       /** The distribution prediction of the player who receives it; null without one or with too few votes. */
@@ -128,8 +135,9 @@ export const GameStateDto = z.strictObject({
     )
     .min(1),
   /**
-   * The players whose vote this player predicts in each dilemma: every other one who started the
-   * game, none in an anonymous room nor for a player who joined late.
+   * The players whose vote this player predicts in the dilemma of the round: every other one who
+   * started the game but the person in the gap, who predicts them all; none in an anonymous room
+   * nor for a player who joined late.
    */
   playersToPredict: z.array(z.string().min(1)),
   players: z
@@ -151,7 +159,8 @@ export const GameStateDto = z.strictObject({
   answers: z.array(
     z.strictObject({
       dilemmaId: z.string().min(1),
-      vote: z.string().min(1),
+      /** Null for the dilemma the player is the person in the gap of. */
+      vote: z.string().min(1).nullable(),
       votePredictions: z.array(
         z.strictObject({ playerId: z.string().min(1), vote: z.string().min(1) }),
       ),
@@ -174,7 +183,12 @@ export const GameStateDto = z.strictObject({
 });
 
 /** The dilemma of a round, in the language of the room. Never who chose it. */
-const LobbyDilemmaDto = z.strictObject({ dilemmaId: z.string().min(1), text: z.string() });
+const LobbyDilemmaDto = z.strictObject({
+  dilemmaId: z.string().min(1),
+  text: z.string(),
+  /** Whether it is about someone in the group, which needs more players than the game. */
+  hasGap: z.boolean(),
+});
 
 /** A round of the lobby, in the order the game plays them. */
 export const LobbyRoundDto = z.discriminatedUnion('origin', [
@@ -212,6 +226,8 @@ export const RoomStateDto = z.strictObject({
   rounds: z.array(LobbyRoundDto).min(1).max(MAXIMUM_ROUNDS),
   /** The fewest players a game of the room starts with, by its variant: 2 nominal, 3 anonymous. */
   minimumPlayers: z.number().int().positive(),
+  /** The fewest players a game of the room plays the dilemmas with the gap with: 3 nominal, 4 anonymous. */
+  minimumPlayersForTheGap: z.number().int().positive(),
   /** In the order they entered. */
   players: z
     .array(
@@ -304,6 +320,7 @@ export const ErrorCodeDto = z.enum([
   'distribution-prediction-not-allowed',
   'invalid-distribution-prediction',
   'player-not-predictable',
+  'person-in-the-gap-votes',
   'duplicate-vote-prediction',
   'answer-incomplete',
   'dilemma-skipped',

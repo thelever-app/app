@@ -60,7 +60,10 @@ export interface GetGameStateOutput {
   readonly dilemmas: readonly (Omit<DilemmaContent, 'language'> & {
     readonly personInTheGap: string | null;
   })[];
-  /** The players whose vote the player who asks predicts in each dilemma; none in an anonymous room. */
+  /**
+   * The players whose vote the player who asks predicts in the dilemma of the round: without the
+   * person in the gap, who predicts everyone else; none in an anonymous room.
+   */
   readonly playersToPredict: readonly string[];
   readonly players: readonly {
     readonly playerId: string;
@@ -75,7 +78,8 @@ export interface GetGameStateOutput {
   /** Only the answers of the player who asks, never anybody else's, complete or not yet. */
   readonly answers: readonly {
     readonly dilemmaId: string;
-    readonly vote: string;
+    /** Null for the dilemma the player is the person in the gap of. */
+    readonly vote: string | null;
     readonly votePredictions: readonly VotePrediction[];
     /** In an anonymous room, the distribution prediction so far; null in a nominal one. */
     readonly distributionPrediction: readonly PredictedShare[] | null;
@@ -177,7 +181,7 @@ export class GetGameStateUseCase {
       answeredCount: game.answeredCount,
       reveal: round.phase === 'reveal' ? this.#revealFor(game, playerId, round.position) : null,
       dilemmas,
-      playersToPredict: game.playersToPredictBy(playerId),
+      playersToPredict: game.playersToPredictBy(playerId, game.dilemmas[round.position]!.dilemmaId),
       players,
       answers,
       reports: game.reportsOf(playerId),

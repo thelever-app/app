@@ -1,6 +1,6 @@
 import {
   DilemmaNotFoundError as DilemmasNotFoundError,
-  type FindDilemmaIds,
+  type FindCandidates,
   GAP_MARKER as DILEMMAS_GAP_MARKER,
   type GetDilemmas,
   type GetDilemmasInput,
@@ -11,6 +11,7 @@ import {
 import {
   type CandidateSearch,
   type CatalogPage,
+  type CandidateDilemma,
   type DilemmaCatalog,
   type DilemmaContent,
   DilemmaNotFoundError,
@@ -28,26 +29,27 @@ import {
 export class PublishedDilemmasCatalog implements DilemmaCatalog {
   readonly #getDilemmas: GetDilemmas;
   readonly #searchDilemmas: SearchDilemmas;
-  readonly #findDilemmaIds: FindDilemmaIds;
+  readonly #findCandidates: FindCandidates;
 
   constructor(
     getDilemmas: GetDilemmas,
     searchDilemmas: SearchDilemmas,
-    findDilemmaIds: FindDilemmaIds,
+    findCandidates: FindCandidates,
   ) {
     this.#getDilemmas = getDilemmas;
     this.#searchDilemmas = searchDilemmas;
-    this.#findDilemmaIds = findDilemmaIds;
+    this.#findCandidates = findCandidates;
   }
 
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {
     // The structure does not depend on the language: ask for the original content.
     const found = await this.#find({ dilemmas: dilemmaIds.map((dilemmaId) => ({ dilemmaId })) });
-    return found.map(({ dilemmaId, version, options, hasGap }) => ({
+    return found.map(({ dilemmaId, version, options, hasGap, fixedOrder }) => ({
       dilemmaId,
       version,
       optionIds: options.map(({ optionId }) => optionId),
       hasGap,
+      fixedOrder,
     }));
   }
 
@@ -64,9 +66,15 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
     }));
   }
 
-  async findCandidateIds(criteria: CandidateSearch): Promise<readonly string[]> {
-    const { dilemmaIds } = await this.#findDilemmaIds.execute(criteria);
-    return dilemmaIds;
+  async findCandidates(criteria: CandidateSearch): Promise<readonly CandidateDilemma[]> {
+    const { candidates } = await this.#findCandidates.execute(criteria);
+    return candidates.map(({ dilemmaId, type, scale, minimumAge, hasGap }) => ({
+      dilemmaId,
+      type,
+      scale,
+      minimumAge,
+      hasGap,
+    }));
   }
 
   async search(criteria: DilemmaSearch, { size, after }: SearchPage): Promise<CatalogPage> {
@@ -79,7 +87,7 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
       // Game keeps the version a game plays when it starts, not when it is found.
       return {
         dilemmas: dilemmas.map(
-          ({ dilemmaId, text, minimumAge, category, tags, optionCount, compromising }) => ({
+          ({
             dilemmaId,
             text,
             minimumAge,
@@ -87,6 +95,20 @@ export class PublishedDilemmasCatalog implements DilemmaCatalog {
             tags,
             optionCount,
             compromising,
+            type,
+            scale,
+            hasGap,
+          }) => ({
+            dilemmaId,
+            text,
+            minimumAge,
+            category,
+            tags,
+            optionCount,
+            compromising,
+            type,
+            scale,
+            hasGap,
           }),
         ),
         ...(next !== undefined && { next }),

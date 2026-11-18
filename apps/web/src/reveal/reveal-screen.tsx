@@ -49,6 +49,8 @@ export function RevealScreen({
   const playerOf = (playerId: string | null) =>
     game.players.find((player) => player.playerId === playerId);
   const adder = playerOf(reveal.chosenBy);
+  const personPlayer = playerOf(reveal.personInTheGap);
+  const aboutYou = reveal.personInTheGap === game.playerId;
 
   return (
     <div className={styles.screen}>
@@ -76,26 +78,32 @@ export function RevealScreen({
         <h1 className={styles.text}>
           <DilemmaText text={dilemma.text} personInTheGap={person} />
         </h1>
-        {(adder || person) && (
+        {adder && (
           <p className={styles.chips}>
-            {adder && (
-              <span className={styles.chip}>
-                <Avatar avatar={adder.avatar} size="xs" />
-                {t('reveal.chosenBy', { name: adder.nickname })}
-              </span>
-            )}
-            {person && (
-              <span className={styles.chip}>
-                <Icon name="personPin" size={18} />
-                {t('reveal.about', { name: person })}
-              </span>
-            )}
+            <span className={styles.chip}>
+              <Avatar avatar={adder.avatar} size="xs" />
+              {t('reveal.chosenBy', { name: adder.nickname })}
+            </span>
           </p>
+        )}
+        {personPlayer && (
+          <AboutCard
+            person={personPlayer}
+            aboutYou={aboutYou}
+            anonymous={anonymous}
+            hits={reveal.personInTheGapHits}
+          />
         )}
         {anonymous ? (
           <AnonymousResult reveal={reveal} dilemma={dilemma} person={person} />
         ) : (
-          <NominalResult game={game} reveal={reveal} dilemma={dilemma} person={person} />
+          <NominalResult
+            game={game}
+            reveal={reveal}
+            dilemma={dilemma}
+            person={person}
+            aboutYou={aboutYou}
+          />
         )}
       </main>
       {onMoveOn && (
@@ -148,6 +156,60 @@ interface ResultProps {
   readonly reveal: Reveal;
   readonly dilemma: Game['dilemmas'][number];
   readonly person: string | undefined;
+}
+
+/**
+ * Who the dilemma was about: they did not vote it, they predicted what the group would do with them.
+ * In a nominal room everyone sees how many votes they guessed; in an anonymous one, their
+ * prediction and points are theirs alone.
+ */
+function AboutCard({
+  person,
+  aboutYou,
+  anonymous,
+  hits,
+}: {
+  readonly person: Player;
+  readonly aboutYou: boolean;
+  readonly anonymous: boolean;
+  readonly hits: Reveal['personInTheGapHits'];
+}) {
+  const { t } = useTranslation();
+  const title = aboutYou
+    ? t('reveal.aboutYouTitle')
+    : t('reveal.aboutTitle', { name: person.nickname });
+  const text = anonymous
+    ? aboutYou
+      ? t('reveal.aboutYouAnonymous')
+      : t('reveal.aboutAnonymous')
+    : aboutYou
+      ? t('reveal.aboutYouNominal')
+      : t('reveal.aboutNominal');
+  return (
+    <section className={styles.about} aria-label={title}>
+      {anonymous ? (
+        <span className={styles.aboutIcon}>
+          <Icon name="personPin" size={24} />
+        </span>
+      ) : (
+        <Avatar avatar={person.avatar} size="sm" />
+      )}
+      <div className={styles.aboutBody}>
+        <p className={styles.aboutTitle}>{title}</p>
+        <p className={styles.aboutText}>{text}</p>
+      </div>
+      {!anonymous && hits && (
+        <p className={styles.aboutHits}>
+          <span className={styles.aboutHitsCount}>
+            {t('reveal.aboutHits', { right: hits.right, of: hits.of })}
+          </span>
+          <span className={styles.aboutHitsLabel}>
+            {aboutYou ? t('reveal.aboutYouHitsLabel') : t('reveal.aboutHitsLabel')}
+          </span>
+        </p>
+      )}
+    </section>
+  );
 }
 
 /** How many hits a segment each fit in the summary; with more, a single bar. */
@@ -265,7 +327,14 @@ function HitsSummary({
   );
 }
 
-function NominalResult({ game, reveal, dilemma, person }: ResultProps) {
+/** The person in the gap reads how many they guessed on the card about them, not in a summary. */
+function NominalResult({
+  game,
+  reveal,
+  dilemma,
+  person,
+  aboutYou,
+}: ResultProps & { readonly aboutYou: boolean }) {
   const { t, i18n } = useTranslation();
   const nameOf = usePlayerName();
   const list = (names: readonly string[]) =>
@@ -294,7 +363,9 @@ function NominalResult({ game, reveal, dilemma, person }: ResultProps) {
 
   return (
     <>
-      {said.size > 0 && <HitsSummary right={said.size - missed.length} missed={missed} />}
+      {said.size > 0 && !aboutYou && (
+        <HitsSummary right={said.size - missed.length} missed={missed} />
+      )}
       <h2 className={styles.whoVoted}>{t('reveal.whoVoted')}</h2>
       {options.map((option) => {
         const voters = reveal.votes.flatMap(({ playerId, vote }) =>

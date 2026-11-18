@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FindDilemmaIdsUseCase,
+  FindCandidatesUseCase,
   GetDilemmasUseCase,
   SearchDilemmasUseCase,
 } from '@thelever-app/dilemmas';
@@ -30,7 +30,7 @@ async function catalogWithContractDilemmas() {
     catalog: new PublishedDilemmasCatalog(
       new GetDilemmasUseCase(repository),
       new SearchDilemmasUseCase(repository),
-      new FindDilemmaIdsUseCase(repository),
+      new FindCandidatesUseCase(repository),
     ),
     stored,
     repository,

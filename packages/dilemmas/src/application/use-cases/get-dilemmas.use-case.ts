@@ -22,6 +22,8 @@ export interface GetDilemmasOutput {
     readonly options: readonly { readonly optionId: string; readonly text: string }[];
     /** Whether a player of the room takes the place of "someone in the group" in it. */
     readonly hasGap: boolean;
+    /** Whether every player sees its options in this order, without shuffling them. */
+    readonly fixedOrder: boolean;
     /** The language of the text and the options returned. */
     readonly language: string;
   }[];
@@ -65,6 +67,7 @@ export class GetDilemmasUseCase implements GetDilemmas {
             text: read.options[index]!.text,
           })),
           hasGap: hasGap([played.text, ...played.options.map((option) => option.text)]),
+          fixedOrder: played.fixedOrder,
           language: read.language,
         };
       }),

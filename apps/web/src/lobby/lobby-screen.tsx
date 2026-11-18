@@ -48,6 +48,10 @@ export function LobbyScreen() {
   const self = lobby.players.find(({ playerId }) => playerId === lobby.playerId);
   // The room says how many it needs, by its variant: the screen only counts what is missing.
   const missing = Math.max(0, lobby.minimumPlayers - lobby.players.length);
+  // A dilemma about someone in the group needs more players than the game: the screen warns of it.
+  const warnsOfTheGap =
+    lobby.players.length < lobby.minimumPlayersForTheGap &&
+    lobby.rounds.some((round) => round.origin !== 'random' && round.dilemma?.hasGap);
   const { settings } = lobby;
 
   const share = async () => {
@@ -164,6 +168,20 @@ export function LobbyScreen() {
               />
             ))}
           </ol>
+          {warnsOfTheGap && (
+            <p role="status" className={styles.gapWarning}>
+              <Icon name="personPin" size={22} />
+              <span>
+                <strong className={styles.gapWarningTitle}>{t('lobby.gapWarningTitle')}</strong>{' '}
+                {t(
+                  settings.variant === 'anonymous'
+                    ? 'lobby.gapWarningAnonymous'
+                    : 'lobby.gapWarningNominal',
+                  { minimum: lobby.minimumPlayersForTheGap },
+                )}
+              </span>
+            </p>
+          )}
           <span className={styles.caption}>
             {lobby.rounds.some(({ origin }) => origin === 'players')
               ? t('lobby.rounds.secretHint')

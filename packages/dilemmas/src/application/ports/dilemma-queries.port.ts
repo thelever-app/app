@@ -1,6 +1,8 @@
 import type { DilemmaStatus } from '../../domain/entities/dilemma.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
+import type { DilemmaType } from '../../domain/vos/dilemma-type.vo.ts';
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
+import type { Scale } from '../../domain/vos/scale.vo.ts';
 
 /** How alike a word typed and part of a text or tag must be to match, as pg_trgm's word_similarity: one wrong letter still matches. */
 export const WORD_SIMILARITY = 0.5;
@@ -25,8 +27,28 @@ export interface DilemmaCriteria {
   readonly includeCompromising: boolean;
 }
 
-/** The criteria a game is put together with: no text, no ids. */
-export type CandidateCriteria = Omit<DilemmaCriteria, 'text' | 'dilemmaIds'>;
+/** The criteria a game is put together with: no text, no ids, and how many it draws. */
+export interface CandidateCriteria extends Omit<DilemmaCriteria, 'text' | 'dilemmaIds'> {
+  /** At most how many are drawn. */
+  readonly count: number;
+  /** Whether those with the gap are drawn too: only for a room with the players it needs. */
+  readonly includeGap: boolean;
+  /** Never drawn: the dilemmas the game already plays. */
+  readonly excludedIds: readonly string[];
+  /** Only the dilemmas for adults: for an adults-only room to have some to space. */
+  readonly onlyForAdults: boolean;
+  /**
+   * How many players of the room played each dilemma: those played by fewer are drawn first, and
+   * one nobody played before any.
+   */
+  readonly playedBy: readonly PlayedBy[];
+}
+
+/** How many players of a room played a dilemma. */
+export interface PlayedBy {
+  readonly dilemmaId: string;
+  readonly players: number;
+}
 
 /** What a list of dilemmas shows of each one, at its current version: never its options or its arguments. */
 export interface DilemmaSummary {
@@ -39,6 +61,20 @@ export interface DilemmaSummary {
   readonly optionCount: number;
   /** Whether an honest answer can show a player up before someone in the role the dilemma names. */
   readonly compromising: boolean;
+  readonly type: DilemmaType;
+  readonly scale: Scale;
+  /** Whether its text or any of its options has the gap "someone in the group". */
+  readonly hasGap: boolean;
+}
+
+/** What a game is put together with of a dilemma, at its current version: its id and its classification. */
+export interface DilemmaCandidate {
+  readonly id: string;
+  readonly type: DilemmaType;
+  readonly scale: Scale;
+  readonly minimumAge: MinimumAge;
+  /** Whether its text or any of its options has the gap "someone in the group". */
+  readonly hasGap: boolean;
 }
 
 /** Which page of a search: the first one, or the one after the `next` of the page before. */
@@ -58,8 +94,11 @@ export interface DilemmaPage {
  * never whole dilemmas, and only as many as asked for.
  */
 export interface DilemmaQueries {
-  /** The ids of the public dilemmas that match, by id: all of them, since a game draws from them. */
-  idsOf(criteria: CandidateCriteria): Promise<string[]>;
+  /**
+   * At most `count` of the public dilemmas that match, drawn at random, those played by fewer
+   * players of the room before the others: a game draws from them.
+   */
+  candidatesOf(criteria: CandidateCriteria): Promise<DilemmaCandidate[]>;
   /**
    * A page of the public dilemmas that match: with a text, the best matches first and then by id;
    * without one, by id. A page starts right after where the page before ended in that order, even

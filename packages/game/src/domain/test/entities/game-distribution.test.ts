@@ -42,6 +42,7 @@ function gameOfFour(settings: GameSettings = ANONYMOUS): Game {
     version: 1,
     optionIds: ['TestPull', 'TestWait'],
     hasGap: false,
+    fixedOrder: false,
     origin: 'random',
     chosenBy: null,
   }));

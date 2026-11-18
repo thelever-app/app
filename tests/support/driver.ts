@@ -1,4 +1,4 @@
-import type { Category } from '@thelever-app/game';
+import type { Category, DilemmaType, Scale } from '@thelever-app/game';
 
 /** What the host chooses on the screen to create a room; the driver picks test data for the rest. */
 export interface RoomChoices {
@@ -62,6 +62,10 @@ export interface CatalogEntry {
   readonly minimumAge: number;
   readonly category: Category;
   readonly status: 'in-catalog' | 'in-exploration';
+  readonly type: DilemmaType;
+  readonly scale: Scale;
+  /** Whether its text or an option has the gap "someone in the group". */
+  readonly hasGap: boolean;
 }
 
 /** The share of an option in a distribution prediction, by the text of the option. */
@@ -72,14 +76,13 @@ export interface PredictedShareView {
 
 /** What the game keeps of the answer of a player to a dilemma. */
 export interface RecordedAnswer {
-  /** The text of the option voted, as the test data writes it. */
-  readonly vote: string;
+  /** The text of the option voted, as the test data writes it; null for the person in the gap. */
+  readonly vote: string | null;
   /** By the name the scenario gives each predicted player, with the text of the option. */
   readonly votePredictions: readonly { readonly player: string; readonly vote: string }[];
   /** The texts of the options in the order the voter saw them. */
   readonly optionOrder: readonly string[];
   readonly responseTimeSeconds: number | null;
-  readonly voterInTheGap: boolean;
   /** In an anonymous room, the share of each option, in the order the voter saw them; null in a nominal one. */
   readonly distributionPrediction: readonly PredictedShareView[] | null;
   readonly researchConsent: boolean;
@@ -118,6 +121,8 @@ export interface AnswerPlan {
   readonly distribution?: readonly PredictedShareView[];
   /** In an anonymous room, false leaves the prediction without Ready. */
   readonly ready?: boolean;
+  /** In a nominal room, the vote predictions, by name and text; the first option for everyone unless it says. */
+  readonly predictions?: readonly { readonly player: string; readonly vote: string }[];
 }
 
 /** What a player sees of their distribution prediction on the dilemma of the round. */
@@ -161,6 +166,8 @@ export interface RevealView {
     readonly right: boolean;
   }[];
   readonly personInTheGap: string | null;
+  /** In a nominal room, how many of the votes they predict the person in the gap guessed. */
+  readonly personInTheGapHits: { readonly right: number; readonly of: number } | null;
   readonly chosenBy: string | null;
   /** Whether it shows a total of points of anyone. */
   readonly showsPoints: boolean;
@@ -271,6 +278,16 @@ export interface GameDriver {
   canClearRoundDilemma(player: string, round: number): Promise<boolean>;
   /** Who `viewer` can tell chose the dilemma of a round of the players, from everything they see of the rounds. */
   choosersSeenBy(viewer: string): Promise<string[]>;
+  /**
+   * The minimum of players the lobby of `viewer` warns a dilemma about someone in the group of its
+   * rounds needs; none without a warning.
+   */
+  gapWarningSeenBy(viewer: string): Promise<number | undefined>;
+  /**
+   * The device of `player` has played those dilemmas of the catalog. A player already in the room
+   * enters it again, since the device says it on entering. Only in the application.
+   */
+  playedOnTheirDevice(player: string, dilemmaIds: readonly string[]): Promise<void>;
   /** The ids of the dilemmas of the catalog that a search of `player` shows first, for what they typed. */
   searchDilemmas(player: string, text?: string): Promise<string[]>;
   /** The ids of each of the first `pages` pages of a search of `player`, asking for more after each one. */
@@ -312,6 +329,10 @@ export interface GameDriver {
    * nominal room, the first option for each vote prediction.
    */
   answer(player: string, plan?: AnswerPlan): Promise<void>;
+  /** Whether `player` sees that the dilemma of the round is about them. */
+  aboutThemSeenBy(player: string): Promise<boolean>;
+  /** Whether `player` has any way to vote the dilemma of the round. */
+  canVote(player: string): Promise<boolean>;
   /** `player` votes the dilemma of the round, with the option given or the first one. */
   vote(player: string, option?: string): Promise<void>;
   /** `player` changes the vote of the dilemma of the round to the option given or another one. */

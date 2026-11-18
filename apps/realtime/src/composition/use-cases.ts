@@ -1,7 +1,7 @@
 import {
   type DilemmaQueries,
   type DilemmaRepository,
-  FindDilemmaIdsUseCase,
+  FindCandidatesUseCase,
   GetDilemmasUseCase,
   SearchDilemmasUseCase as SearchCatalogUseCase,
 } from '@thelever-app/dilemmas';
@@ -53,7 +53,7 @@ export function dilemmaCatalog(
     new PublishedDilemmasCatalog(
       new GetDilemmasUseCase(dilemmaRepository),
       new SearchCatalogUseCase(dilemmaQueries),
-      new FindDilemmaIdsUseCase(dilemmaQueries),
+      new FindCandidatesUseCase(dilemmaQueries),
     ),
   );
 }
@@ -107,6 +107,12 @@ const EXPLORATION_SLOTS: ExplorationSlots = [
   { fromRandomRounds: 6, slots: 2 },
   { fromRandomRounds: 11, slots: 3 },
 ];
+
+/**
+ * How many candidates each round of a game draws its dilemma from, at most: enough to space them,
+ * never the whole catalog. A setting, as the exploration slots are.
+ */
+const CANDIDATES_PER_ROUND = 3;
 
 /** The commands of Game: each one changes a room or a game and notifies its players. */
 export interface GameCommands extends LobbyUseCases, RoundUseCases {
@@ -166,6 +172,7 @@ export function gameCommands({
         clock,
       },
       EXPLORATION_SLOTS,
+      CANDIDATES_PER_ROUND,
     ),
     // Until the first access exists, every answer carries the seal of before it.
     answerDilemma: new AnswerDilemmaUseCase({

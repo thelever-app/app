@@ -147,7 +147,11 @@ Given(
   async function (this: GameWorld, person: string) {
     this.beforeTheGame();
     const host = await this.host();
-    const found = await this.driver.searchDilemmas(host, 'about {gap}');
+    // One for each player, so each one is about someone else.
+    const found = (await this.driver.searchDilemmas(host, 'about {gap}')).slice(
+      0,
+      this.inRoom.size,
+    );
     await this.driver.setRounds(
       host,
       found.map((dilemmaId) => ({ origin: 'specific', dilemmaId })),
@@ -156,6 +160,61 @@ Given(
     const about = [...(await this.driver.peopleInTheGap())].find(([, chosen]) => chosen === person);
     assert.ok(about, `no dilemma of the game is about ${person}`);
     this.position = about[0];
+  },
+);
+
+Given(
+  '{string} predicted the votes of {string} and {string} and only the one of {string} was right',
+  function (this: GameWorld, person: string, first: string, second: string, right: string) {
+    const position = positionOf(this, 'first');
+    const wrong = right === first ? second : first;
+    this.plan(position, right, { vote: PULL });
+    this.plan(position, wrong, { vote: NOTHING });
+    this.plan(position, person, {
+      predictions: [
+        { player: right, vote: PULL },
+        { player: wrong, vote: PULL },
+      ],
+    });
+  },
+);
+
+Then(
+  'all players see {string} as the person in the gap, without a vote',
+  async function (this: GameWorld, person: string) {
+    for (const viewer of this.present()) {
+      const { personInTheGap, votes } = await revealSeenBy(this, viewer);
+      assert.equal(personInTheGap, person);
+      assert.ok(
+        !votes.some(({ player }) => player === person),
+        `${viewer} sees a vote of ${person}`,
+      );
+    }
+  },
+);
+
+Then(
+  'all players see that {string} guessed {int} of {int} votes',
+  async function (this: GameWorld, person: string, right: number, of: number) {
+    for (const viewer of this.present()) {
+      const reveal = await revealSeenBy(this, viewer);
+      assert.equal(reveal.personInTheGap, person);
+      assert.deepEqual(reveal.personInTheGapHits, { right, of });
+    }
+  },
+);
+
+Given(
+  'the other {int} players voted it, {int} for the first option and {int} for the second',
+  async function (this: GameWorld, voters: number, pulling: number, waiting: number) {
+    const position = positionOf(this, 'first');
+    const person = (await this.driver.peopleInTheGap()).get(position);
+    const others = [...this.inRoom].filter((player) => player !== person);
+    assert.equal(others.length, voters);
+    assert.equal(pulling + waiting, voters);
+    others.forEach((player, index) => {
+      this.plan(position, player, { vote: index < pulling ? PULL : NOTHING });
+    });
   },
 );
 
@@ -528,8 +587,9 @@ Given(
 Given(
   /^"([^"]+)" predicted (\d+) % and (?:\d+) %$/,
   function (this: GameWorld, player: string, first: string) {
-    const plan = this.plans.get(1)?.get(player) ?? { vote: PULL };
-    this.plan(1, player, { ...plan, distribution: predicting(Number(first)) });
+    const position = positionOf(this, 'first');
+    const plan = this.plans.get(position)?.get(player) ?? { vote: PULL };
+    this.plan(position, player, { ...plan, distribution: predicting(Number(first)) });
   },
 );
 
@@ -549,7 +609,7 @@ Given(
 Then(
   '{string} scores {int} points for the first dilemma',
   async function (this: GameWorld, player: string, points: number) {
-    assert.equal(await pointsIn(this, player, 1), points);
+    assert.equal(await pointsIn(this, player, positionOf(this, 'first')), points);
   },
 );
 

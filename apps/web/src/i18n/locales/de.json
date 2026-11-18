@@ -33,7 +33,8 @@
     "playerPending": "{{name}} · hat noch nicht geantwortet",
     "playerDisconnected": "{{name}} (offline)",
     "movedOn": "{{name}} ist schon beim nächsten",
-    "playerMovedOn": "{{label}} · ist schon beim nächsten"
+    "playerMovedOn": "{{label}} · ist schon beim nächsten",
+    "aboutYou": "Dilemma {{position, number}} von {{total, number}} · Es geht um dich"
   },
   "groupSheet": {
     "title": "Die Gruppe",
@@ -63,6 +64,11 @@
   "game": {
     "timeLeft": "Noch {{time}}"
   },
+  "aboutYou": {
+    "title": "Es geht um dich: Was machen sie mit dir?",
+    "nominal": "Über dieses Dilemma stimmst du nicht ab. Rate, was die anderen wählen: Im Reveal sehen alle, wie viele du richtig hattest.",
+    "anonymous": "Über dieses Dilemma stimmst du nicht ab. Rate, wie sich die anderen aufteilen; niemand sieht deine Vorhersage."
+  },
   "predict": {
     "voted": "Deine Stimme: „",
     "votedEnd": "“",
@@ -71,7 +77,8 @@
     "back": "Zurück zu deiner Stimme",
     "missing_one": "Noch {{count}} Antwort offen",
     "missing_other": "Noch {{count, number}} Antworten offen",
-    "next": "Fertig"
+    "next": "Fertig",
+    "aboutYouQuestion": "Was wählt jede Person?"
   },
   "distribution": {
     "question": "Wie wird sich die Gruppe aufteilen?",
@@ -79,7 +86,10 @@
     "hintTwo": "Du zählst mit. Bewege den Balken, beide Optionen passen sich von selbst an: zusammen immer 100 %.",
     "yourVote": "deine Stimme",
     "shareOf": "Anteil, den du für {{option}} vorhersagst",
-    "percent": "{{value, number}} %"
+    "percent": "{{value, number}} %",
+    "aboutYouQuestion": "Wie teilen sich die anderen auf?",
+    "aboutYouHint": "Ohne dich. Bewege einen Balken, die anderen passen sich von selbst an: zusammen immer 100 %.",
+    "aboutYouHintTwo": "Ohne dich. Bewege den Balken, beide Optionen passen sich von selbst an: zusammen immer 100 %."
   },
   "gameMenu": {
     "open": "Weitere Optionen",
@@ -142,7 +152,6 @@
     "region": "Auflösung",
     "position": "Dilemma {{position, number}} von {{total, number}} · Auflösung",
     "chosenBy": "Gewählt von {{name}}",
-    "about": "Dieses Dilemma ging um {{name}}",
     "yourHitsRegion": "Deine Treffer",
     "hitsAll": "Du hast alle durchschaut!",
     "hitsCount": "{{right, number}} von {{count, number}} richtig",
@@ -180,7 +189,16 @@
     "introAnswered_one": "{{count}} von {{total, number}} hat geantwortet.",
     "introAnswered_other": "{{count, number}} von {{total, number}} haben geantwortet.",
     "introNominal": "Jetzt seht ihr, wer was gewählt hat.",
-    "introAnonymous": "Jetzt seht ihr, wie viele welche Option gewählt haben."
+    "introAnonymous": "Jetzt seht ihr, wie viele welche Option gewählt haben.",
+    "aboutTitle": "Es ging um {{name}}",
+    "aboutYouTitle": "Es ging um dich",
+    "aboutNominal": "Hat nicht abgestimmt: hat geraten, was jede Person tun würde",
+    "aboutYouNominal": "Du hast nicht abgestimmt: Du hast geraten, was jede Person tun würde. Alle sehen, wie viele du richtig hattest.",
+    "aboutAnonymous": "Hat nicht abgestimmt: hat vorhergesagt, wie ihr euch aufteilt. Vorhersage und Punkte bleiben privat.",
+    "aboutYouAnonymous": "Du hast nicht abgestimmt: Du hast vorhergesagt, wie sich die anderen aufteilen. Deine Vorhersage und deine Punkte siehst nur du.",
+    "aboutHits": "{{right, number}} von {{of, number}}",
+    "aboutHitsLabel": "richtig",
+    "aboutYouHitsLabel": "richtig"
   },
   "ranking": {
     "label": "Ergebnisse",
@@ -391,7 +409,10 @@
     "start": "Spiel starten",
     "missing_one": "Es fehlt noch {{count}} Spieler zum Start",
     "missing_other": "Es fehlen noch {{count}} Spieler zum Start",
-    "guestWait": "{{host}} startet das Spiel, wenn alle da sind."
+    "guestWait": "{{host}} startet das Spiel, wenn alle da sind.",
+    "gapWarningTitle": "Ein Dilemma handelt von jemandem aus der Gruppe.",
+    "gapWarningNominal": "In einem namentlichen Raum braucht es mindestens {{minimum, number}} Spieler: Startet ihr mit weniger, wird seine Runde zufällig.",
+    "gapWarningAnonymous": "In einem anonymen Raum braucht es mindestens {{minimum, number}} Spieler: Startet ihr mit weniger, wird seine Runde zufällig."
   },
   "languages": {
     "es": "Español",

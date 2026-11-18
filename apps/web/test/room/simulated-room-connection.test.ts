@@ -135,7 +135,7 @@ describe('SimulatedRoomConnection', () => {
         {
           roundId: 1,
           origin: 'specific',
-          dilemma: { dilemmaId: first!.dilemmaId, text: first!.text },
+          dilemma: { dilemmaId: first!.dilemmaId, text: first!.text, hasGap: false },
         },
         { roundId: 9, origin: 'players', dilemma: null, chosenByYou: false },
       ]);
@@ -163,7 +163,7 @@ describe('SimulatedRoomConnection', () => {
       expect(chosen).toEqual({
         roundId: 1,
         origin: 'players',
-        dilemma: { dilemmaId: first!.dilemmaId, text: first!.text },
+        dilemma: { dilemmaId: first!.dilemmaId, text: first!.text, hasGap: false },
         chosenByYou: true,
       });
       expect(lastLobby(opened.received).rounds).toEqual([
@@ -237,6 +237,30 @@ describe('SimulatedRoomConnection', () => {
       const answered = received
         .filter((message) => message.type === 'player-answered')
         .map(({ playerId }) => playerId);
+      expect(answered).toEqual([ids[1], ids[2]]);
+    });
+
+    it('should let a fake player answer a dilemma about them, without a vote', async () => {
+      // Arrange: every dilemma has the gap, and whoever it is about, both fake players answer.
+      connection = await SimulatedRoomConnection.open({
+        ...OPTIONS,
+        dilemmas: [{ text: 'TestText about {gap}', options: ['TestOptionA', 'TestOptionB'] }],
+      });
+      const received: ServerMessageDto[] = [];
+      connection.subscribe((message) => received.push(message));
+      await vi.advanceTimersByTimeAsync(2000);
+      connection.send({ type: 'start-game' });
+      await vi.advanceTimersByTimeAsync(0);
+      const ids = lastGame(received).players.map(({ playerId }) => playerId);
+
+      // Act
+      await vi.advanceTimersByTimeAsync(5000);
+
+      // Assert
+      const answered = received
+        .filter((message) => message.type === 'player-answered')
+        .map(({ playerId }) => playerId);
+      expect(lastGame(received).dilemmas[0]?.personInTheGap).not.toBeNull();
       expect(answered).toEqual([ids[1], ids[2]]);
     });
 

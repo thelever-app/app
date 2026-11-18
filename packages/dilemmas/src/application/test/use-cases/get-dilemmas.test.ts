@@ -115,6 +115,7 @@ describe('GetDilemmasUseCase', () => {
             { optionId: 'TestOption2E', text: 'TestOptionE' },
           ],
           hasGap: false,
+          fixedOrder: false,
           language: 'es',
         },
         {
@@ -126,6 +127,7 @@ describe('GetDilemmasUseCase', () => {
             { optionId: 'TestOption1B', text: 'TestOptionB' },
           ],
           hasGap: false,
+          fixedOrder: false,
           language: 'es',
         },
       ]);
@@ -217,6 +219,7 @@ describe('GetDilemmasUseCase', () => {
             { optionId: 'TestOptionEsIdB', text: 'TestOptionenB' },
           ],
           hasGap: false,
+          fixedOrder: false,
           language: 'en',
         });
       });

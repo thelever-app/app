@@ -268,6 +268,9 @@ const SCREEN = {
   continue: 'Continuar',
   choose: 'Elige una opción',
   predictQuestion: '¿Qué votó cada uno?',
+  aboutYou: spanish('aboutYou.title'),
+  aboutYouQuestion: spanish('predict.aboutYouQuestion'),
+  gapWarning: spanish('lobby.gapWarningTitle'),
   voteOf: (nickname: string) => `El voto de ${nickname}`,
   next: 'Siguiente dilema',
   moreOptions: 'Más opciones',
@@ -1296,7 +1299,10 @@ export class E2eDriver implements GameDriver {
     return (this.#votes.get(player) ?? []).map(({ vote }) => vote);
   }
 
-  /** On screen: the vote and, in a nominal room, the predictions of the plan, confirmed with «Listo». */
+  /**
+   * On screen: the vote and, in a nominal room, the predictions of the plan, confirmed with «Listo»;
+   * the person in the gap has no vote to give, only the predictions.
+   */
   async answer(player: string, plan: AnswerPlan = {}): Promise<void> {
     const answerer = this.#playerCalled(player);
     // Brought in without a browser, the player never connects: as for one who disconnected, the
@@ -1306,7 +1312,8 @@ export class E2eDriver implements GameDriver {
     const option = plan.vote ? optionCalled(dilemma, plan.vote) : firstOptionOf(dilemma);
     const wasAnswered = await this.hasAnswered(player);
     const heard = this.#answeredCountsHeardByOthers(answerer);
-    await this.#chooseAndContinue(answerer, dilemma, option.optionId);
+    const aboutThem = dilemma.personInTheGap === answerer.playerId;
+    if (!aboutThem) await this.#chooseAndContinue(answerer, dilemma, option.optionId);
     if (isAnonymous(answerer)) {
       if (plan.distribution) {
         await this.#setDistribution(answerer, dilemma, sharesOn(dilemma, plan.distribution));
@@ -1326,9 +1333,15 @@ export class E2eDriver implements GameDriver {
     const complete = plan.votePredictions !== false;
     if (complete) {
       for (const playerId of playersToPredict) {
-        await this.#tapVotePrediction(answerer, dilemma, playerId, option.optionId);
+        const said = plan.predictions?.find(
+          (prediction) => this.#playerIdOf(this.#playerCalled(prediction.player)) === playerId,
+        );
+        const predicted = said ? optionCalled(dilemma, said.vote) : option;
+        await this.#tapVotePrediction(answerer, dilemma, playerId, predicted.optionId);
       }
     }
+    // The person in the gap has no vote to go back to: without every prediction, nothing is sent.
+    if (aboutThem && !complete) return;
     await page.getByRole('button', { name: complete ? SCREEN.done : SCREEN.back }).click();
     await this.#untilRoomKeeps(answerer, dilemma.dilemmaId, (answer) =>
       complete
@@ -1382,7 +1395,8 @@ export class E2eDriver implements GameDriver {
   async predictDistribution(player: string, shares: readonly PredictedShareView[]): Promise<void> {
     const predictor = this.#playerCalled(player);
     const dilemma = await this.#roundDilemmaOn(predictor);
-    if (!this.#savedAnswerOf(predictor, dilemma.dilemmaId)) await this.vote(player);
+    const aboutThem = dilemma.personInTheGap === predictor.playerId;
+    if (!aboutThem && !this.#savedAnswerOf(predictor, dilemma.dilemmaId)) await this.vote(player);
     await this.#setDistribution(predictor, dilemma, sharesOn(dilemma, shares));
   }
 
@@ -1795,7 +1809,43 @@ export class E2eDriver implements GameDriver {
 
   async voteRecordedFor(player: string, position: number): Promise<string | undefined> {
     const dilemmaId = this.#dilemmaIdAt(position);
-    return this.#gameOf(player).answers.find((answer) => answer.dilemmaId === dilemmaId)?.vote;
+    return (
+      this.#gameOf(player).answers.find((answer) => answer.dilemmaId === dilemmaId)?.vote ??
+      undefined
+    );
+  }
+
+  /** The screen tells them «Va sobre ti» instead of asking for their vote. */
+  async aboutThemSeenBy(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    return steady(async () => (await page.getByText(SCREEN.aboutYou).count()) > 0);
+  }
+
+  /** Whether the screen offers the options to vote: the person in the gap gets only predictions. */
+  async canVote(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    return steady(
+      async () =>
+        (await page.getByRole('main', { name: SCREEN.reveal }).count()) === 0 &&
+        ((await page.getByRole('button', { name: SCREEN.choose }).count()) > 0 ||
+          (await page.getByRole('button', { name: SCREEN.continue }).count()) > 0 ||
+          (await page.getByRole('button', { name: SCREEN.changeAnswer }).count()) > 0),
+    );
+  }
+
+  /** The warning under the rounds of the lobby, with the players it says the dilemma needs. */
+  async gapWarningSeenBy(viewer: string): Promise<number | undefined> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const warning = page.getByRole('status').filter({ hasText: SCREEN.gapWarning });
+    if (!(await steady(async () => (await warning.count()) > 0))) return undefined;
+    const minimum = /(\d+)/.exec((await warning.textContent()) ?? '')?.[1];
+    return minimum === undefined ? undefined : Number(minimum);
+  }
+
+  async playedOnTheirDevice(): Promise<void> {
+    throw new Error(
+      'Putting the game together happens in the application: the scenario must not be @ui',
+    );
   }
 
   /** Whether the screen offers the options of the dilemma of the round, or to change the answer. */
@@ -1937,14 +1987,28 @@ export class E2eDriver implements GameDriver {
   }
 
   /** What the heading of the dilemma says on screen, with the nickname in the gap. */
+  /** The heading of the vote; the person in the gap, who has no vote, reads it under «Va sobre ti». */
   async dilemmaTextSeenBy(player: string, position: number): Promise<string> {
     const page = await this.#onRound(this.#playerCalled(player), position);
-    return steady(async () => (await page.getByRole('heading', { level: 1 }).textContent()) ?? '');
+    return steady(async () => {
+      const aboutThem = page.getByTestId('dilemma-text');
+      if ((await aboutThem.count()) > 0) return (await aboutThem.textContent()) ?? '';
+      return (await page.getByRole('heading', { level: 1 }).textContent()) ?? '';
+    });
   }
 
+  /**
+   * The options as the vote lists them; for the person in the gap of an anonymous room, who has no
+   * vote, as the bars of their prediction take them, in the order the room sent them.
+   */
   async optionsSeenBy(player: string, position: number): Promise<string[]> {
-    const page = await this.#onRound(this.#playerCalled(player), position);
-    return steady(() => page.getByRole('main').getByRole('radio').allTextContents());
+    const seer = this.#playerCalled(player);
+    const page = await this.#onRound(seer, position);
+    const voted = await steady(() => page.getByRole('main').getByRole('radio').allTextContents());
+    if (voted.length > 0 || (await page.getByRole('slider').count()) === 0) return voted;
+    const game = lastGameOf(seer);
+    const dilemma = game?.dilemmas[position - 1];
+    return dilemma ? dilemma.options.map((option) => textOnScreen(option, game, dilemma)) : [];
   }
 
   async peopleInTheGap(): Promise<Map<number, string>> {
@@ -1996,14 +2060,13 @@ export class E2eDriver implements GameDriver {
       this.#dilemmaOn(answerer, dilemmaId).options.find((option) => option.optionId === optionId)
         ?.text ?? optionId;
     return {
-      vote: textOf(row.vote),
+      vote: row.vote && textOf(row.vote),
       votePredictions: row.vote_predictions.map((prediction) => ({
         player: this.#nameOf(prediction.playerId),
         vote: textOf(prediction.vote),
       })),
       optionOrder: row.option_order.map(textOf),
       responseTimeSeconds: row.response_time_ms === null ? null : row.response_time_ms / 1000,
-      voterInTheGap: row.voter_in_the_gap,
       distributionPrediction:
         row.distribution_prediction?.map(({ optionId, share }) => ({
           option: textOf(optionId),
@@ -2201,7 +2264,8 @@ export class E2eDriver implements GameDriver {
         about: this.#nameOf(aboutId),
         right,
       })),
-      personInTheGap: reveal.personInTheGap && this.#nameOf(reveal.personInTheGap),
+      personInTheGap: await this.#personInTheGapOnScreen(page, reveal),
+      personInTheGapHits: await this.#hitsOnScreen(page, reveal.personInTheGapHits),
       chosenBy: reveal.chosenBy && this.#nameOf(reveal.chosenBy),
       showsPoints: SCREEN.points.test((await page.locator('body').textContent()) ?? ''),
       ownDistributionPrediction:
@@ -2211,6 +2275,35 @@ export class E2eDriver implements GameDriver {
         })) ?? null,
       ownPoints: await this.#pointsOnScreen(page, reveal.yourPoints, isAnonymous(watcher)),
     };
+  }
+
+  /** Who the reveal says the dilemma was about, on the card about them. */
+  async #personInTheGapOnScreen(
+    page: Page,
+    reveal: NonNullable<GameStateDto['reveal']>,
+  ): Promise<string | null> {
+    if (!reveal.personInTheGap) return null;
+    const game = lastGameOf(this.#playerCalled(this.#hostName()));
+    const nickname = game?.players.find(
+      ({ playerId }) => playerId === reveal.personInTheGap,
+    )?.nickname;
+    const aboutYou = await page.getByRole('region', { name: spanish('reveal.aboutYouTitle') });
+    if ((await aboutYou.count()) === 0) {
+      await page
+        .getByRole('region', { name: spanish('reveal.aboutTitle', { name: nickname ?? '' }) })
+        .waitFor();
+    }
+    return this.#nameOf(reveal.personInTheGap);
+  }
+
+  /** How many votes the card about the person in the gap says they guessed. */
+  async #hitsOnScreen(
+    page: Page,
+    hits: NonNullable<GameStateDto['reveal']>['personInTheGapHits'],
+  ): Promise<{ readonly right: number; readonly of: number } | null> {
+    if (!hits) return null;
+    await page.getByText(spanish('reveal.aboutHits', hits), { exact: true }).waitFor();
+    return hits;
   }
 
   /** The points of the player in the reveal, which the screen must show them; none, none shown. */
@@ -2328,14 +2421,18 @@ export class E2eDriver implements GameDriver {
     );
   }
 
-  /** On the predictions; then «Listo» if the answer is complete, or back to the vote if not. */
+  /**
+   * On the predictions; then «Listo» if the answer is complete, or back to the vote if not. The
+   * person in the gap, who has no vote to go back to, sends nothing until they are complete.
+   */
   async predictVotes(
     player: string,
     predictions: readonly { readonly player: string; readonly vote: string }[],
   ): Promise<void> {
     const predictor = this.#playerCalled(player);
     const dilemma = await this.#roundDilemmaOn(predictor);
-    await this.#toPredictions(predictor);
+    const aboutThem = dilemma.personInTheGap === predictor.playerId;
+    if (!aboutThem) await this.#toPredictions(predictor);
     for (const prediction of predictions) {
       const predicted = this.#playerCalled(prediction.player);
       const option = optionCalled(dilemma, prediction.vote);
@@ -2346,6 +2443,7 @@ export class E2eDriver implements GameDriver {
         option.optionId,
       );
     }
+    if (aboutThem && predictions.length < this.#gameOf(player).playersToPredict.length) return;
     await this.#leavePredictions(predictor);
     await this.#untilRoomKeeps(
       predictor,

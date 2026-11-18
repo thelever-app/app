@@ -53,6 +53,27 @@ describe('POST /rooms/:roomId/players', () => {
     expect(response.body).toEqual({ code: 'nickname-and-avatar-taken' });
   });
 
+  it('should take the dilemmas the device says the player played, and turn away too many', async () => {
+    // Arrange
+    const { server, room } = await roomOfAna();
+    const played = Array.from({ length: 2001 }, (_, index) => `dilemma-${index}`);
+
+    // Act
+    const tooMany = await request(server)
+      .post(`/rooms/${room.roomId}/players`)
+      .set('Authorization', bearer('luis'))
+      .send({ nickname: 'Luis', avatar: JOIN_AVATAR, playedDilemmaIds: played });
+    const joined = await request(server)
+      .post(`/rooms/${room.roomId}/players`)
+      .set('Authorization', bearer('luis'))
+      .send({ nickname: 'Luis', avatar: JOIN_AVATAR, playedDilemmaIds: played.slice(0, 3) });
+
+    // Assert
+    expect(tooMany.status).toBe(400);
+    expect(tooMany.body).toEqual({ code: 'invalid-message' });
+    expect(joined.status).toBe(201);
+  });
+
   it('should answer invalid-message to a join without an avatar', async () => {
     // Arrange
     const { server, room } = await roomOfAna();

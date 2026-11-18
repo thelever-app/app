@@ -110,6 +110,7 @@ describe('Player', () => {
         nickname: 'TestNickName',
         identity: 'TestTestNickNameIdentity',
         avatar: { face: 'face-01', color: 'khaki' },
+        playedDilemmaIds: [],
       });
     });
   });
@@ -139,6 +140,7 @@ describe('Player', () => {
         nickname: 'TestNickName',
         identity: 'TestTestNickNameIdentity',
         avatar: { face: 'face-05', color: 'olive' },
+        playedDilemmaIds: ['TestDilemma1'],
       };
 
       // Act
@@ -148,6 +150,7 @@ describe('Player', () => {
       expect(player.id).toBe('TestId');
       expect(player.nickname).toBe('TestNickName');
       expect(player.avatar).toEqual(new AvatarVO('face-05', 'olive'));
+      expect(player.playedDilemmaIds).toEqual(['TestDilemma1']);
     });
 
     it('should throw an error for an avatar that does not exist', () => {
@@ -157,6 +160,7 @@ describe('Player', () => {
         nickname: 'TestNickName',
         identity: 'TestTestNickNameIdentity',
         avatar: { face: 'rocket_launch', color: 'olive' },
+        playedDilemmaIds: [],
       };
 
       // Act & Assert

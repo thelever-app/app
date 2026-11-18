@@ -5,6 +5,7 @@ import {
   Dilemma,
   type DilemmaRepository,
   type DilemmaSnapshot,
+  hasGap,
   type TranslationOf,
 } from '@thelever-app/dilemmas';
 import {
@@ -317,6 +318,7 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
         compromising: version.compromising,
         scale: version.scale,
         fixed_order: version.fixedOrder,
+        has_gap: hasGap([version.text, ...version.options.map((option) => option.text)]),
         status: version.status,
         translation_of_version: version.translationOf?.version ?? null,
         translation: version.translation ?? null,

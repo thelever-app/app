@@ -1,6 +1,6 @@
 import {
   Dilemma,
-  FindDilemmaIdsUseCase,
+  FindCandidatesUseCase,
   GetDilemmasUseCase,
   SearchDilemmasUseCase as SearchCatalogUseCase,
 } from '@thelever-app/dilemmas';
@@ -102,6 +102,9 @@ const EXPLORATION_SLOTS: ExplorationSlots = [
   { fromRandomRounds: 11, slots: 3 },
 ];
 
+/** The same as the room server: how many candidates each round draws from. */
+const CANDIDATES_PER_ROUND = 3;
+
 /** The events that reach the screen as the state it may see after them, as the room server sends them. */
 const SENT_AS_STATE = [
   LobbyChangedEvent,
@@ -182,7 +185,7 @@ export class SimulatedRoomConnection implements RoomConnection {
   readonly #catalog = new PublishedDilemmasCatalog(
     new GetDilemmasUseCase(this.#repositories.dilemmas),
     new SearchCatalogUseCase(this.#repositories.dilemmas),
-    new FindDilemmaIdsUseCase(this.#repositories.dilemmas),
+    new FindCandidatesUseCase(this.#repositories.dilemmas),
   );
   readonly #useCases;
   #roomId = '';
@@ -229,6 +232,7 @@ export class SimulatedRoomConnection implements RoomConnection {
           clock,
         },
         EXPLORATION_SLOTS,
+        CANDIDATES_PER_ROUND,
       ),
       answerDilemma: new AnswerDilemmaUseCase({
         roomRepository: rooms,
@@ -453,8 +457,9 @@ export class SimulatedRoomConnection implements RoomConnection {
 
   /**
    * The round that just started: each fake player answers it when their time comes, each one with a
-   * different option so votes vary and with every prediction a nominal room asks for; and, as the
-   * timer of the room server, the room runs it out when its time ends.
+   * different option so votes vary, the person in the gap with no vote, and with every prediction a
+   * nominal room asks for; and, as the timer of the room server, the room runs it out when its time
+   * ends.
    */
   async #playRound(): Promise<void> {
     const { game } = await this.#gameOf(this.#playerId);
@@ -470,7 +475,8 @@ export class SimulatedRoomConnection implements RoomConnection {
           roomId: this.#roomId,
           playerId,
           dilemmaId: dilemma.dilemmaId,
-          vote,
+          // The person in the gap does not vote: they only predict.
+          vote: dilemma.personInTheGap === playerId ? null : vote,
           votePredictions: seen.playersToPredict.map((predicted) => ({
             playerId: predicted,
             vote,

@@ -6,10 +6,13 @@ import {
   categoriesKey,
   categoriesToDraw,
   composeGame,
+  fixedDilemmaIds,
+  SPACING_ROUNDS,
   type Candidates,
   type ExplorationSlots,
 } from '../../domain/services/compose-game.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
+import type { CandidateDilemma } from '../../domain/vos/classification.vo.ts';
 import type { DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
@@ -28,9 +31,9 @@ export interface StartGameOutput {
 }
 
 /**
- * The host starts the game the lobby got ready: it is put together from the rounds of the room and
- * goes straight into the decision phase with everyone in the room, and the time of its first round
- * starts.
+ * The host starts the game the lobby got ready: it is put together from the rounds of the room,
+ * spaced and with what nobody in the room has played first, and goes straight into the decision
+ * phase with everyone in the room, and the time of its first round starts.
  */
 export class StartGameUseCase {
   readonly #roomRepository: RoomRepository;
@@ -41,6 +44,7 @@ export class StartGameUseCase {
   readonly #randomness: Randomness;
   readonly #clock: Clock;
   readonly #explorationSlots: ExplorationSlots;
+  readonly #candidatesPerRound: number;
 
   constructor(
     ports: {
@@ -53,6 +57,11 @@ export class StartGameUseCase {
       readonly clock: Clock;
     },
     explorationSlots: ExplorationSlots,
+    /**
+     * How many candidates a round draws its dilemma from, at most: enough to space it and for
+     * rounds of categories in common, never the whole catalog. A setting, not a rule of the game.
+     */
+    candidatesPerRound: number,
   ) {
     this.#roomRepository = ports.roomRepository;
     this.#gameRepository = ports.gameRepository;
@@ -62,6 +71,7 @@ export class StartGameUseCase {
     this.#randomness = ports.randomness;
     this.#clock = ports.clock;
     this.#explorationSlots = explorationSlots;
+    this.#candidatesPerRound = candidatesPerRound;
   }
 
   async execute({ roomId, playerId }: StartGameInput): Promise<StartGameOutput> {
@@ -70,28 +80,51 @@ export class StartGameUseCase {
     room.ensureCanStartGame(playerId);
     const { settings } = room;
 
-    // Only their ids, for each set of categories a round draws from: the game reads nothing else.
-    const idsOf = async (
+    // Only how to space them and whether they have the gap, of a few drawn at random for each set
+    // of categories a round draws from: the game reads nothing else, and never the whole catalog.
+    const { playsTheGap } = room;
+    const excludedIds = fixedDilemmaIds(settings.rounds, room.chosenDilemmas, playsTheGap);
+    const playedBy = [...room.playedBy].map(([dilemmaId, players]) => ({ dilemmaId, players }));
+    const candidatesOf = async (
       categories: readonly Category[] | null,
+      rounds: number,
       status: 'in-catalog' | 'in-exploration',
-    ): Promise<string[]> => [
-      ...(await this.#dilemmaCatalog.findCandidateIds({
-        // Null plays every category: the search then looks at all of them.
-        ...(categories && { categories }),
-        maximumMinimumAge: settings.maximumMinimumAge,
-        status,
-        language: settings.dilemmaLanguage,
-        includeCompromising: settings.includesCompromisingDilemmas,
-      })),
-    ];
+    ): Promise<CandidateDilemma[]> => {
+      const draw = (count: number, onlyForAdults: boolean) =>
+        this.#dilemmaCatalog.findCandidates({
+          // Null plays every category: the search then looks at all of them.
+          ...(categories && { categories }),
+          maximumMinimumAge: settings.maximumMinimumAge,
+          status,
+          language: settings.dilemmaLanguage,
+          includeCompromising: settings.includesCompromisingDilemmas,
+          count,
+          includeGap: playsTheGap,
+          excludedIds,
+          onlyForAdults,
+          playedBy,
+        });
+      const drawn = await draw(rounds * this.#candidatesPerRound, false);
+      if (!settings.adultsOnly) return [...drawn];
+      // An adults-only room plays one for adults in every few rounds: those are drawn apart too, so
+      // a draw at random does not leave them out.
+      const forAdults = await draw(
+        Math.ceil(rounds / SPACING_ROUNDS) * this.#candidatesPerRound,
+        true,
+      );
+      const ids = new Set(drawn.map(({ dilemmaId }) => dilemmaId));
+      return [...drawn, ...forAdults.filter(({ dilemmaId }) => !ids.has(dilemmaId))];
+    };
     const candidates = new Map<string, Candidates>(
       await Promise.all(
-        categoriesToDraw(settings.rounds, room.chosenDilemmas).map(
-          async (categories): Promise<[string, Candidates]> => [
+        categoriesToDraw(settings.rounds, room.chosenDilemmas, playsTheGap).map(
+          async ({ categories, rounds }): Promise<[string, Candidates]> => [
             categoriesKey(categories),
             {
-              inCatalog: await idsOf(categories, 'in-catalog'),
-              inExploration: settings.newDilemmas ? await idsOf(categories, 'in-exploration') : [],
+              inCatalog: await candidatesOf(categories, rounds, 'in-catalog'),
+              inExploration: settings.newDilemmas
+                ? await candidatesOf(categories, rounds, 'in-exploration')
+                : [],
             },
           ],
         ),
@@ -104,6 +137,9 @@ export class StartGameUseCase {
         newDilemmas: settings.newDilemmas,
         candidates,
         explorationSlots: this.#explorationSlots,
+        playsTheGap,
+        adultsOnly: settings.adultsOnly,
+        playedBy: room.playedBy,
       },
       this.#randomness,
     );

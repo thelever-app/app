@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { InvalidPageError } from '../../application/errors/invalid-page.error.ts';
 import type {
+  CandidateCriteria,
   DilemmaCriteria,
   DilemmaQueries,
 } from '../../application/ports/dilemma-queries.port.ts';
 import type { DilemmaRepository } from '../../application/ports/dilemma-repository.port.ts';
 import { Dilemma, type DilemmaStatus, type Visibility } from '../../domain/entities/dilemma.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
+import { GAP_MARKER } from '../../domain/vos/gap.ts';
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.ts';
 
@@ -48,6 +50,23 @@ function catalogDilemma(
   });
 }
 
+/** A draw that leaves nothing out: more than any test saves, none played or excluded. */
+const A_GAME = {
+  count: 100,
+  includeGap: true,
+  excludedIds: [],
+  onlyForAdults: false,
+  playedBy: [],
+} as const;
+
+/** The ids of the candidates the queries draw, sorted: they come in no order. */
+async function idsOf(
+  queries: DilemmaQueries,
+  criteria: DilemmaCriteria & Partial<CandidateCriteria>,
+): Promise<string[]> {
+  return (await queries.candidatesOf({ ...A_GAME, ...criteria })).map(({ id }) => id).sort();
+}
+
 /** A dilemma of three options at its first version, and at its second, for adults and in another category. */
 function threeOptions(): Dilemma {
   return Dilemma.create(
@@ -80,14 +99,14 @@ function revised(): Dilemma {
       text: 'TestRevisedText',
       options: [
         { id: 'TestOptionId1', text: 'TestOption1' },
-        { id: 'TestOptionId3', text: 'TestOption3' },
+        { id: 'TestOptionId3', text: `TestOption3 about ${GAP_MARKER}` },
       ],
       category: 'loyalty',
       tags: ['testtag3'],
       minimumAge: 18,
-      type: 'standard',
+      type: 'game-theory',
       compromising: false,
-      scale: 'everyday',
+      scale: 'extreme',
       fixedOrder: false,
     },
     new FixedIdGenerator(),
@@ -137,6 +156,13 @@ function compromisingWithAnOutdatedTranslation(): Dilemma[] {
     new FixedIdGenerator(),
   );
   return [threeOptions(), original, outdated];
+}
+
+const TEN_IDS = Array.from({ length: 10 }, (_, index) => `TestDilemma${index}`);
+
+/** Ten dilemmas alike, TestDilemma0 to TestDilemma9. */
+function tenDilemmas(): Dilemma[] {
+  return TEN_IDS.map((id) => catalogDilemma(id));
 }
 
 const EVERYONE: DilemmaCriteria = {
@@ -191,6 +217,9 @@ export function describeDilemmaQueriesContract(
             tags: ['testtag3'],
             optionCount: 2,
             compromising: false,
+            type: 'game-theory',
+            scale: 'extreme',
+            hasGap: true,
           },
         ]);
       });
@@ -505,8 +534,8 @@ export function describeDilemmaQueriesContract(
       });
     });
 
-    describe('idsOf', () => {
-      it('should give every id of the public dilemmas that match, by id', async () => {
+    describe('candidatesOf', () => {
+      it('should give every public dilemma that matches, when asked for as many', async () => {
         // Arrange
         const queries = await saved(
           catalogDilemma('TestDilemmaB'),
@@ -518,7 +547,7 @@ export function describeDilemmaQueriesContract(
         );
 
         // Act
-        const found = await queries.idsOf({ ...EVERYONE, categories: ['honesty'] });
+        const found = await idsOf(queries, { ...EVERYONE, categories: ['honesty'] });
 
         // Assert
         expect(found).toEqual(['TestDilemmaA', 'TestDilemmaB']);
@@ -532,8 +561,8 @@ export function describeDilemmaQueriesContract(
         );
 
         // Act
-        const without = await queries.idsOf(EVERYONE);
-        const included = await queries.idsOf({ ...EVERYONE, includeCompromising: true });
+        const without = await idsOf(queries, EVERYONE);
+        const included = await idsOf(queries, { ...EVERYONE, includeCompromising: true });
 
         // Assert
         expect(without).toEqual(['TestDilemma']);
@@ -545,10 +574,30 @@ export function describeDilemmaQueriesContract(
         const queries = await saved(...compromisingWithAnOutdatedTranslation());
 
         // Act
-        const found = await queries.idsOf({ ...EVERYONE, language: 'en' });
+        const found = await idsOf(queries, { ...EVERYONE, language: 'en' });
 
         // Assert
         expect(found).toEqual([]);
+      });
+
+      it('should classify each dilemma at its current version', async () => {
+        // Arrange
+        const queries = await saved(revised(), catalogDilemma('TestOther'));
+
+        // Act
+        const found = await queries.candidatesOf({ ...EVERYONE, ...A_GAME, maximumMinimumAge: 18 });
+
+        // Assert
+        expect(found.toSorted((one, other) => one.id.localeCompare(other.id))).toEqual([
+          {
+            id: 'TestDilemmaId',
+            type: 'game-theory',
+            scale: 'extreme',
+            minimumAge: 18,
+            hasGap: true,
+          },
+          { id: 'TestOther', type: 'standard', scale: 'everyday', minimumAge: 16, hasGap: false },
+        ]);
       });
 
       it('should give only the dilemmas in the language given, at their current version', async () => {
@@ -556,8 +605,8 @@ export function describeDilemmaQueriesContract(
         const queries = await saved(threeOptions(), revised(), translation());
 
         // Act
-        const english = await queries.idsOf({ ...EVERYONE, language: 'en' });
-        const spanishHonesty = await queries.idsOf({
+        const english = await idsOf(queries, { ...EVERYONE, language: 'en' });
+        const spanishHonesty = await idsOf(queries, {
           ...EVERYONE,
           maximumMinimumAge: 18,
           language: 'es',
@@ -567,6 +616,97 @@ export function describeDilemmaQueriesContract(
         // Assert
         expect(english).toEqual(['TestTranslationId']);
         expect(spanishHonesty).toEqual([]);
+      });
+
+      it('should draw no more than asked for', async () => {
+        // Arrange
+        const queries = await saved(...tenDilemmas());
+
+        // Act
+        const found = await idsOf(queries, { ...EVERYONE, count: 3 });
+
+        // Assert
+        expect(found).toHaveLength(3);
+      });
+
+      it('should draw those played by fewer players first, and those nobody played before any', async () => {
+        // Arrange: two players played the first seven, one the eighth, and nobody the last two.
+        const queries = await saved(...tenDilemmas());
+        const playedBy = TEN_IDS.slice(0, 8).map((dilemmaId, index) => ({
+          dilemmaId,
+          players: index < 7 ? 2 : 1,
+        }));
+
+        // Act
+        const unplayed = await idsOf(queries, { ...EVERYONE, count: 2, playedBy });
+        const fewest = await idsOf(queries, { ...EVERYONE, count: 3, playedBy });
+        const more = await idsOf(queries, { ...EVERYONE, count: 4, playedBy });
+
+        // Assert
+        expect(unplayed).toEqual(TEN_IDS.slice(8));
+        expect(fewest).toEqual(TEN_IDS.slice(7));
+        expect(more).toHaveLength(4);
+        expect(more).toEqual(expect.arrayContaining(TEN_IDS.slice(7)));
+      });
+
+      it('should draw only the dilemmas for adults when asked for those', async () => {
+        // Arrange
+        const queries = await saved(
+          catalogDilemma('TestDilemma'),
+          catalogDilemma('TestAdultDilemma', { minimumAge: 18 }),
+        );
+
+        // Act
+        const found = await idsOf(queries, {
+          ...EVERYONE,
+          maximumMinimumAge: 18,
+          onlyForAdults: true,
+        });
+
+        // Assert
+        expect(found).toEqual(['TestAdultDilemma']);
+      });
+
+      it('should never draw a dilemma excluded', async () => {
+        // Arrange
+        const queries = await saved(...tenDilemmas());
+
+        // Act
+        const found = await idsOf(queries, { ...EVERYONE, excludedIds: TEN_IDS.slice(0, 8) });
+
+        // Assert
+        expect(found).toEqual(TEN_IDS.slice(8));
+      });
+
+      it('should leave out the dilemmas with the gap unless they are included', async () => {
+        // Arrange
+        const queries = await saved(
+          catalogDilemma('TestDilemma'),
+          catalogDilemma('TestGapDilemma', { text: `TestText about ${GAP_MARKER}` }),
+        );
+
+        // Act
+        const without = await idsOf(queries, { ...EVERYONE, includeGap: false });
+        const included = await idsOf(queries, EVERYONE);
+
+        // Assert
+        expect(without).toEqual(['TestDilemma']);
+        expect(included).toEqual(['TestDilemma', 'TestGapDilemma']);
+      });
+
+      it('should draw different dilemmas each time', async () => {
+        // Arrange
+        const queries = await saved(...tenDilemmas());
+        const drawn = new Set<string>();
+
+        // Act
+        for (let draw = 0; draw < 30; draw += 1) {
+          const [id] = await idsOf(queries, { ...EVERYONE, count: 1 });
+          drawn.add(id!);
+        }
+
+        // Assert
+        expect(drawn.size).toBeGreaterThan(1);
       });
     });
   });

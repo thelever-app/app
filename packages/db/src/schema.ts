@@ -9,6 +9,8 @@ import type {
 } from '@thelever-app/dilemmas';
 import type {
   Category as RoomCategory,
+  DilemmaType as RoomDilemmaType,
+  Scale as RoomScale,
   AvatarFace,
   DilemmaLanguage,
   DilemmaOrigin,
@@ -53,6 +55,8 @@ export interface Database {
     scale: Scale;
     /** Whether every player sees its options in their order instead of shuffled. */
     fixed_order: boolean;
+    /** Whether its text or any of its options has the gap "someone in the group". */
+    has_gap: boolean;
     status: DilemmaStatus;
     /** In a translation, the version of the original this version translates. */
     translation_of_version: number | null;
@@ -124,6 +128,8 @@ export interface Database {
     avatar_face: AvatarFace;
     avatar_color: PlayerColor;
     has_left: Generated<boolean>;
+    /** The dilemmas the device of the player says they played, which the room puts games together with. */
+    played_dilemma_ids: string[];
   };
   room_expelled_identities: {
     room_id: string;
@@ -132,7 +138,8 @@ export interface Database {
   /**
    * The rounds of a room in order. A random one has its categories (null, every one); a specific
    * one, its dilemma; one of the players, the dilemma a player chose and who, once chosen. Of each
-   * dilemma, the minimum age it had and whether it was compromising when it got into the round.
+   * dilemma, the minimum age it had, whether it was compromising, its type, its scale and whether
+   * it had the gap when it got into the round.
    */
   room_rounds: {
     room_id: string;
@@ -143,6 +150,9 @@ export interface Database {
     dilemma_id: string | null;
     minimum_age: 16 | 18 | null;
     compromising: boolean | null;
+    type: RoomDilemmaType | null;
+    scale: RoomScale | null;
+    has_gap: boolean | null;
     chosen_by_player_id: string | null;
   };
   instances: {
@@ -182,6 +192,7 @@ export interface Database {
     dilemma_version: number;
     origin: DilemmaOrigin;
     has_gap: boolean;
+    fixed_order: boolean;
     person_in_the_gap: string | null;
     /** The player who chose it in the lobby, for a round of the players; null for the others. */
     chosen_by_player_id: string | null;
@@ -222,12 +233,12 @@ export interface Database {
     player_id: string;
     dilemma_id: string;
     dilemma_version: number;
-    vote: string;
+    /** Null for the person in the gap, who does not vote the dilemma about them. */
+    vote: string | null;
     game_consent_version: string;
     research_consent_version: string | null;
     commercial_licence_consent_version: string | null;
     under_eighteen: boolean;
-    voter_in_the_gap: boolean;
     /** Written as JSON text: the driver would turn an array into a PostgreSQL array. */
     vote_predictions: ColumnType<VotePrediction[], string, string>;
     /** In an anonymous room; written as JSON text, like the vote predictions. */

@@ -17,14 +17,13 @@ const PROPS: AnswerProps = {
   optionOrder: ['TestOtherOption', 'TestOption'],
   responseTimeMs: null,
   seal: SEAL,
-  voterInTheGap: false,
 };
 
 describe('AnswerVO', () => {
   describe('constructor', () => {
     it('should keep the vote, the predictions and what is recorded with them', () => {
       // Act
-      const answerVO = new AnswerVO({ ...PROPS, voterInTheGap: true });
+      const answerVO = new AnswerVO(PROPS);
 
       // Assert
       expect(answerVO.vote).toBe('TestOption');
@@ -32,7 +31,6 @@ describe('AnswerVO', () => {
       expect(answerVO.optionOrder).toEqual(PROPS.optionOrder);
       expect(answerVO.responseTimeMs).toBeNull();
       expect(answerVO.seal).toEqual(SEAL);
-      expect(answerVO.voterInTheGap).toBe(true);
     });
 
     it('should keep the distribution prediction and whether it is ready', () => {
@@ -91,6 +89,15 @@ describe('AnswerVO', () => {
 
       // Assert
       expect(answerVO.seal.underEighteen).toBe(false);
+    });
+
+    it('should keep no vote for the person in the gap', () => {
+      // Act
+      const answerVO = new AnswerVO({ ...PROPS, vote: null });
+
+      // Assert
+      expect(answerVO.vote).toBeNull();
+      expect(answerVO.toProps().vote).toBeNull();
     });
 
     it('should throw an error if the vote is missing', () => {

@@ -11,7 +11,7 @@ import { SequentialRandomness } from '../../../adapters/in-memory/sequential-ran
 import { ManualClock } from '../../../adapters/in-memory/manual-clock.ts';
 import type { RoomVariant } from '../../../domain/vos/room-settings.vo.ts';
 import { KeepOrderRandomness } from '../../../domain/test/support/keep-order-randomness.ts';
-import { EXPLORATION_SLOTS, testCatalog } from './test-catalog.ts';
+import { CANDIDATES_PER_ROUND, EXPLORATION_SLOTS, testCatalog } from './test-catalog.ts';
 
 /** What a test game copies from its room when it is created by hand. */
 export const TEST_GAME_SETTINGS = {
@@ -90,6 +90,7 @@ export async function lobbyOfThree(
       clock,
     },
     EXPLORATION_SLOTS,
+    CANDIDATES_PER_ROUND,
   );
 
   return {

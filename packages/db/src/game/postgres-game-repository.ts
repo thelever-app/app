@@ -148,7 +148,7 @@ export class PostgresGameRepository implements GameRepository {
     await db
       .insertInto('game_dilemmas')
       .values(
-        dilemmas.map(({ dilemmaId, version, origin, chosenBy, hasGap }, position) => ({
+        dilemmas.map(({ dilemmaId, version, origin, chosenBy, hasGap, fixedOrder }, position) => ({
           game_id: id,
           position,
           dilemma_id: dilemmaId,
@@ -156,6 +156,7 @@ export class PostgresGameRepository implements GameRepository {
           origin,
           chosen_by_player_id: chosenBy,
           has_gap: hasGap,
+          fixed_order: fixedOrder,
           person_in_the_gap: people.get(dilemmaId) ?? null,
         })),
       )
@@ -256,7 +257,6 @@ export class PostgresGameRepository implements GameRepository {
           research_consent_version: eb.ref('excluded.research_consent_version'),
           commercial_licence_consent_version: eb.ref('excluded.commercial_licence_consent_version'),
           under_eighteen: eb.ref('excluded.under_eighteen'),
-          voter_in_the_gap: eb.ref('excluded.voter_in_the_gap'),
         })),
       )
       .execute();
@@ -299,6 +299,7 @@ function readGame(db: Kysely<GameTables>, id: string) {
             'game_dilemmas.origin',
             'game_dilemmas.chosen_by_player_id as chosenBy',
             'game_dilemmas.has_gap as hasGap',
+            'game_dilemmas.fixed_order as fixedOrder',
             'game_dilemmas.person_in_the_gap as personInTheGap',
             'game_dilemma_options.option_id as optionId',
           ])
@@ -400,7 +401,6 @@ function snapshotOf(row: GameRow): GameSnapshot {
               commercialLicenceConsentVersion: answer.commercial_licence_consent_version,
               underEighteen: answer.under_eighteen,
             },
-            voterInTheGap: answer.voter_in_the_gap,
           })),
         didNotVote: ofPlayer.flatMap(({ dilemma_id, did_not_vote }) =>
           did_not_vote ? [{ dilemmaId: dilemma_id, reason: did_not_vote }] : [],
@@ -427,6 +427,7 @@ function dilemmasOf(
       origin: GameRow['options'][number]['origin'];
       chosenBy: string | null;
       hasGap: boolean;
+      fixedOrder: boolean;
       personInTheGap: string | null;
       optionIds: string[];
     }
@@ -437,6 +438,7 @@ function dilemmasOf(
     origin,
     chosenBy,
     hasGap,
+    fixedOrder,
     personInTheGap,
     optionId,
   } of options) {
@@ -445,6 +447,7 @@ function dilemmasOf(
       origin,
       chosenBy,
       hasGap,
+      fixedOrder,
       personInTheGap,
       optionIds: [],
     };
@@ -453,11 +456,12 @@ function dilemmasOf(
   }
   return {
     dilemmas: [...dilemmas].map(
-      ([dilemmaId, { version, origin, chosenBy, hasGap, optionIds }]) => ({
+      ([dilemmaId, { version, origin, chosenBy, hasGap, fixedOrder, optionIds }]) => ({
         dilemmaId,
         version,
         optionIds,
         hasGap,
+        fixedOrder,
         origin,
         chosenBy,
       }),
@@ -537,7 +541,6 @@ function answerRowsOf({ id, dilemmas, players }: GameSnapshot): AnswerRow[] {
       research_consent_version: answer.seal.researchConsentVersion,
       commercial_licence_consent_version: answer.seal.commercialLicenceConsentVersion,
       under_eighteen: answer.seal.underEighteen,
-      voter_in_the_gap: answer.voterInTheGap,
     })),
   );
 }

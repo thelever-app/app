@@ -1,5 +1,6 @@
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import type { GameStateDto } from '@thelever-app/protocol';
+import { playedDilemmas } from '../../src/game/played-dilemmas.ts';
 import { describe, expect, it } from 'vitest';
 import { ResultsPhase } from '../../src/phases/results-phase.tsx';
 import { fakeConnection } from '../support/fake-connection.ts';
@@ -119,6 +120,17 @@ describe('ResultsPhase', () => {
       const room = screen.getByRole('region', { name: t('end.inRoom', { count: 3 }) });
       expect(within(room).getAllByRole('listitem')).toHaveLength(3);
       expect(within(room).getByText(t('end.gone', { count: 1, names: 'Pablo' }))).toBeDefined();
+    });
+
+    it('should keep on the device the dilemmas the player played', async () => {
+      // Arrange
+      localStorage.clear();
+
+      // Act
+      await renderPhase(atStage('ended'));
+
+      // Assert
+      expect(playedDilemmas()).toEqual(atStage('ended').dilemmas.map(({ dilemmaId }) => dilemmaId));
     });
 
     it('should let the player leave the room', async () => {

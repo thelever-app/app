@@ -21,6 +21,43 @@ Feature: Decision phase
       And each new dilemma is of the categories of its round
       And the rest come from the catalog
 
+    Scenario: Game theory dilemmas are never in consecutive rounds
+      Given a game of 10 random rounds from every category
+      And there are enough suitable dilemmas that are not game theory dilemmas
+      When the game is put together
+      Then no two game theory dilemmas are in consecutive rounds
+
+    Scenario: Would-you-rather dilemmas are never in consecutive rounds
+      Given a game of 10 random rounds from every category
+      And there are enough suitable dilemmas that are not would-you-rather dilemmas
+      When the game is put together
+      Then no two would-you-rather dilemmas are in consecutive rounds
+
+    Scenario: At most one extreme dilemma in any five rounds
+      Given a game of 10 random rounds from every category
+      And there are enough suitable dilemmas that are not extreme
+      When the game is put together
+      Then no five consecutive rounds have more than one extreme dilemma
+
+    Scenario: An adults-only room gets adults-only dilemmas
+      Given an adults-only room with a game of 10 random rounds from every category
+      And there are enough adults-only dilemmas
+      When the game is put together
+      Then every five consecutive rounds include at least one adults-only dilemma
+
+    Scenario: Dilemmas nobody in the room has played come first
+      Given "Luis" has 3 catalog dilemmas in his history and "Marta" has 2
+      And there are enough suitable dilemmas that nobody in the room has played
+      When a game of 10 random rounds from every category is put together
+      Then none of the dilemmas in the history of "Ana", "Luis" or "Marta" is chosen
+
+    Scenario: Dilemmas played by fewer players come next
+      Given there are only 8 suitable dilemmas that nobody in the room has played
+      And 2 suitable dilemmas are only in the history of "Luis"
+      And 2 suitable dilemmas are in the history of "Ana", "Luis" and "Marta"
+      When a game of 10 random rounds from every category without new dilemmas is put together
+      Then the game has the 8 dilemmas nobody has played and the 2 only "Luis" has played
+
     @ui
     Scenario: A player who has answered waits for the others
       When "Luis" answers the first dilemma
@@ -85,12 +122,24 @@ Feature: Decision phase
       When the players get those dilemmas
       Then "Ana", "Luis" and "Marta" are each chosen once
 
-    Scenario: The answer records whether the voter was the person in the gap
+    @ui
+    Scenario: The person in the gap does not vote
       Given a dilemma with the gap "someone in the group" for which "Marta" was chosen
-      When "Marta" and "Luis" answer it
-      Then the answer of "Marta" records that she was the person in the gap
-      And the answer of "Luis" records that he was not
-      And the dilemma keeps its text with the gap, without the nickname
+      When the players get that dilemma
+      Then "Marta" sees that the dilemma is about her
+      And "Marta" cannot vote it
+
+    Scenario: The dilemma keeps its text with the gap
+      Given a dilemma with the gap "someone in the group" for which "Marta" was chosen
+      When "Ana" and "Luis" answer it
+      Then the dilemma keeps its text with the gap, without the nickname
+      And the game records that "Marta" was the person in the gap
+
+    Scenario: The person in the gap is never recorded as "did not vote"
+      Given a dilemma with the gap "someone in the group" for which "Marta" was chosen
+      And "Marta" has not answered it
+      When the time for the dilemma runs out
+      Then "Marta" is not recorded as "did not vote" for that dilemma
 
     Scenario: Each answer records the consents and whether the player was under 18
       Given "Luis" declared a birth year that makes him 17
@@ -108,6 +157,13 @@ Feature: Decision phase
       When "Ana" and "Luis" get that dilemma
       Then each of them sees the three options in a random order
       And the order each of them saw is recorded with their answer
+
+    @ui
+    Scenario: Options with a fixed order keep it for every player
+      Given a dilemma with a fixed order and the options "half", "a third" and "a tenth"
+      When "Ana" and "Luis" get that dilemma
+      Then both see the options in the order "half", "a third" and "a tenth"
+      And that order is recorded with their answers
 
     @ui
     Scenario: Each player reads the dilemma in their language
@@ -269,7 +325,7 @@ Feature: Decision phase
 
     Scenario: A player predicts the vote of every other player
       Given a game with 10 players
-      When a player gets a dilemma
+      When a player gets a dilemma without the gap "someone in the group"
       Then the player predicts the vote of the other 9 players
 
   Rule: Anonymous room
@@ -344,3 +400,79 @@ Feature: Decision phase
       Given a dilemma with 2 options
       When a player predicts the distribution
       Then the player moves a single slider that sets both options
+
+  Rule: The person in the gap in a nominal room
+
+    Background:
+      Given "Ana" hosts a nominal room with "Luis", "Marta" and "Sara"
+      And the first dilemma has the gap "someone in the group" and "Marta" is chosen for it
+      And the game has started
+
+    @ui
+    Scenario: The person in the gap answers by predicting every other vote
+      When "Marta" makes the vote predictions that "Ana" voted "do nothing", "Luis" voted "pull the lever" and "Sara" voted "do nothing"
+      Then the first dilemma counts as answered by "Marta"
+
+    @ui
+    Scenario: The person in the gap has not answered with predictions missing
+      When "Marta" makes the vote prediction that "Ana" voted "do nothing"
+      Then the first dilemma does not count as answered by "Marta"
+
+    @ui
+    Scenario: Nobody predicts the vote of the person in the gap
+      When "Luis" gets the first dilemma
+      Then "Luis" predicts the votes of "Ana" and "Sara" only
+
+  Rule: The person in the gap in an anonymous room
+
+    Background:
+      Given "Ana" hosts an anonymous room with "Luis", "Marta" and "Sara"
+      And the first dilemma has the gap "someone in the group" and "Marta" is chosen for it
+      And the game has started
+
+    @ui
+    Scenario: The person in the gap predicts the distribution without voting
+      When "Marta" sets her distribution prediction to 70 % and 30 % and presses Ready
+      Then the first dilemma counts as answered by "Marta"
+      And "Marta" has no vote on the first dilemma
+
+  Rule: Dilemmas about someone in the group need enough players
+
+    Scenario Outline: Dilemmas with the gap are only played in rooms that are big enough
+      Given a <variant> room with <players> players
+      And the host chose a dilemma with the gap "someone in the group" for a specific round
+      When the game starts
+      Then the dilemma with the gap is <result>
+
+      Examples:
+        | variant   | players | result               |
+        | nominal   | 2       | left out of the game |
+        | nominal   | 3       | played               |
+        | anonymous | 3       | left out of the game |
+        | anonymous | 4       | played               |
+
+    Scenario: The round of a dilemma with the gap left out gets a random dilemma
+      Given a nominal room with 2 players
+      And the host chose a dilemma with the gap "someone in the group" for the first round
+      When the game starts
+      Then the first round plays a random dilemma from every category
+
+    Scenario: Random rounds leave out dilemmas with the gap in a room that is too small
+      Given a nominal room with 2 players
+      And a game of 8 random rounds from every category
+      When the game starts
+      Then the game has 8 dilemmas
+      And none of them has the gap "someone in the group"
+
+    @ui
+    Scenario Outline: The lobby warns that a dilemma with the gap needs more players
+      Given a <variant> room with <players> players
+      And a player chose a dilemma with the gap "someone in the group" for a round of the players
+      When the players are in the lobby
+      Then every player sees that a dilemma about someone in the group needs at least <minimum> players
+      And the host can still start the game
+
+      Examples:
+        | variant   | players | minimum |
+        | anonymous | 3       | 4       |
+        | nominal   | 2       | 3       |

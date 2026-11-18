@@ -8,15 +8,26 @@ import { z } from 'zod';
  * before entering: an avatar is refused only to someone with the same nickname. 7 since joining
  * a game in progress: a dilemma already revealed when the player joined is "did not vote" too.
  * 8 since the rounds of the room. 9 since the distribution prediction: an answer of an anonymous
- * room carries it and Ready, and the game has its results and its end.
+ * room carries it and Ready, and the game has its results and its end. 10 since the person in the
+ * gap predicts without voting: their answer has no vote, nobody predicts them and the reveal says
+ * how many votes they guessed.
  */
-export const CONTRACT_VERSION = 9;
+export const CONTRACT_VERSION = 10;
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a
  * dilemma and of its options; the game state says who it is.
  */
 export const GAP_MARKER = '{gap}';
+
+/** The most dilemmas a device says its player played: more than the catalog will have for a while. */
+export const MAXIMUM_PLAYED_DILEMMAS = 2000;
+
+/**
+ * The dilemmas of the catalog the device of the player played, which it sends on entering a room:
+ * only to put the games together with, so the room does not play them again.
+ */
+export const PlayedDilemmaIdsDto = z.array(z.string().min(1).max(200)).max(MAXIMUM_PLAYED_DILEMMAS);
 
 /** The languages a player can read the dilemmas in. */
 export const LanguageDto = z.enum(['es', 'en', 'fr', 'de', 'it', 'pt', 'ca']);
@@ -146,7 +157,8 @@ export const DistributionPredictionDto = z
 export const AnswerDilemmaDto = z.strictObject({
   type: z.literal('answer-dilemma'),
   dilemmaId: z.string().min(1),
-  vote: z.string().min(1),
+  /** Null for the person in the gap, who does not vote the dilemma about them. */
+  vote: z.string().min(1).nullable(),
   /**
    * In a nominal room, the vote predictions made so far, sent again with every change: at most one
    * about each of the other players of a room of 50.

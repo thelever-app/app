@@ -357,6 +357,42 @@ Then('the order each of them saw is recorded with their answer', async function 
   }
 });
 
+Given(
+  'a dilemma with a fixed order and the options {string}, {string} and {string}',
+  async function (this: GameWorld, first: string, second: string, third: string) {
+    this.beforeTheGame();
+    const found = await this.driver.searchDilemmas(await this.host(), 'fixed-order');
+    assert.equal(found.length, 1, 'the test data has no dilemma with a fixed order');
+    await specificRounds(this, found);
+    this.options = [first, second, third];
+  },
+);
+
+Then(
+  'both see the options in the order {string}, {string} and {string}',
+  async function (this: GameWorld, first: string, second: string, third: string) {
+    for (const viewer of this.viewers) {
+      const seen = await this.driver.optionsSeenBy(viewer, 1);
+      assert.deepEqual(
+        seen.map((option) => option.toLowerCase()),
+        [first, second, third],
+      );
+    }
+  },
+);
+
+Then('that order is recorded with their answers', async function (this: GameWorld) {
+  for (const viewer of this.viewers) {
+    await this.driver.answer(viewer);
+    assert.deepEqual(
+      (await this.driver.answerRecordedFor(viewer, 1))?.optionOrder.map((option) =>
+        option.toLowerCase(),
+      ),
+      this.options,
+    );
+  }
+});
+
 // The language each player reads in
 
 /** Test data: the dilemma with a translation into English and the one only in Spanish. */
@@ -452,7 +488,7 @@ Given(
   'a game with {int} dilemmas with the gap {string}',
   async function (this: GameWorld, count: number, gap: string) {
     assert.equal(gap, GAP);
-    const picked = await pickTheDilemmasWithTheGap(this);
+    const picked = await pickTheDilemmasWithTheGap(this, count);
     assert.equal(picked, count, `the test data has ${picked} dilemmas with the gap`);
   },
 );
@@ -499,23 +535,135 @@ Then(
 );
 
 Then(
-  'the answer of {string} records that she was the person in the gap',
+  '{string} sees that the dilemma is about her',
   async function (this: GameWorld, player: string) {
-    assert.ok(this.position, 'no step said which dilemma');
-    assert.equal((await this.driver.answerRecordedFor(player, this.position))?.voterInTheGap, true);
+    assert.ok(await this.driver.aboutThemSeenBy(player), `${player} is not told it is about her`);
   },
 );
 
+Then('{string} cannot vote it', async function (this: GameWorld, player: string) {
+  assert.equal(await this.driver.canVote(player), false, `${player} can vote it`);
+});
+
 Then(
-  'the answer of {string} records that he was not',
-  async function (this: GameWorld, player: string) {
+  'the game records that {string} was the person in the gap',
+  async function (this: GameWorld, person: string) {
     assert.ok(this.position, 'no step said which dilemma');
-    assert.equal(
-      (await this.driver.answerRecordedFor(player, this.position))?.voterInTheGap,
-      false,
+    assert.equal((await this.driver.peopleInTheGap()).get(this.position), person);
+  },
+);
+
+Given('{string} has not answered it', async function (this: GameWorld, player: string) {
+  assert.ok(this.position, 'no step said which dilemma');
+  await this.toRound(this.position);
+  assert.equal(await this.driver.hasAnswered(player), false);
+});
+
+Then(
+  '{string} is not recorded as {string} for that dilemma',
+  async function (this: GameWorld, player: string, recorded: string) {
+    assert.equal(recorded, 'did not vote');
+    assert.ok(this.position, 'no step said which dilemma');
+    assert.ok(
+      !(await this.driver.didNotVoteRecordedFor(player)).includes(this.position),
+      `${player} is recorded as "did not vote"`,
     );
   },
 );
+
+// The person in the gap answers by predicting
+
+Given(
+  '{string} hosts a nominal room with {string}, {string} and {string}',
+  async function (this: GameWorld, host: string, first: string, second: string, third: string) {
+    await this.hostIs(host);
+    for (const player of [first, second, third]) await this.isInTheRoom(player);
+    assert.equal((await this.driver.settingsSeenBy(host)).variant, 'nominal');
+    this.variant = 'nominal';
+  },
+);
+
+Given(
+  '{string} hosts an anonymous room with {string}, {string} and {string}',
+  async function (this: GameWorld, host: string, first: string, second: string, third: string) {
+    await this.hostIs(host);
+    for (const player of [first, second, third]) await this.isInTheRoom(player);
+    await this.driver.changeSettings(host, { variant: 'anonymous' });
+    this.variant = 'anonymous';
+  },
+);
+
+/**
+ * The game, with a dilemma with the gap for each player, is on the round of the one about that
+ * person: the scenario calls it the first dilemma.
+ */
+Given(
+  'the first dilemma has the gap {string} and {string} is chosen for it',
+  async function (this: GameWorld, gap: string, person: string) {
+    assert.equal(gap, GAP);
+    this.requestGame();
+    await pickTheDilemmasWithTheGap(this);
+    this.position = await positionOfTheDilemmaAbout(this, person);
+    await this.toRound(this.position);
+  },
+);
+
+When(
+  '{string} makes the vote predictions that {string} voted {string}, {string} voted {string} and {string} voted {string}',
+  async function (
+    this: GameWorld,
+    player: string,
+    first: string,
+    firstVote: string,
+    second: string,
+    secondVote: string,
+    third: string,
+    thirdVote: string,
+  ) {
+    await this.driver.predictVotes(player, [
+      { player: first, vote: firstVote },
+      { player: second, vote: secondVote },
+      { player: third, vote: thirdVote },
+    ]);
+  },
+);
+
+When(
+  '{string} makes the vote prediction that {string} voted {string}',
+  async function (this: GameWorld, player: string, about: string, vote: string) {
+    await this.driver.predictVotes(player, [{ player: about, vote }]);
+  },
+);
+
+When('{string} gets the first dilemma', async function (this: GameWorld, player: string) {
+  assert.equal(await this.driver.dilemmaShownTo(player), this.position ?? 1);
+});
+
+Then(
+  '{string} predicts the votes of {string} and {string} only',
+  async function (this: GameWorld, player: string, first: string, second: string) {
+    const predicted = await this.driver.playersToPredictBy(player);
+    assert.deepEqual([...predicted].sort(), [first, second].sort());
+  },
+);
+
+When(
+  /^"([^"]+)" sets her distribution prediction to (.+) and presses Ready$/,
+  async function (this: GameWorld, player: string, written: string) {
+    await this.driver.predictDistribution(
+      player,
+      await sharesSeenBy(this, player, sharesOf(written)),
+    );
+    await this.driver.pressReady(player);
+    this.player = player;
+  },
+);
+
+Then('{string} has no vote on the first dilemma', async function (this: GameWorld, player: string) {
+  const answer = await this.driver.answerRecordedFor(player, this.position ?? 1);
+  assert.ok(answer, `${player} has no answer`);
+  assert.equal(answer.vote, null);
+});
 
 Then(
   'the dilemma keeps its text with the gap, without the nickname',
@@ -529,10 +677,14 @@ Then(
   },
 );
 
-async function pickTheDilemmasWithTheGap(world: GameWorld): Promise<number> {
+/** A dilemma with the gap for each player of the room, unless a step says how many. */
+async function pickTheDilemmasWithTheGap(
+  world: GameWorld,
+  count = world.inRoom.size,
+): Promise<number> {
   world.beforeTheGame();
   const host = await world.host();
-  const found = await world.driver.searchDilemmas(host, 'about {gap}');
+  const found = (await world.driver.searchDilemmas(host, 'about {gap}')).slice(0, count);
   await specificRounds(world, found);
   return found.length;
 }
@@ -995,9 +1147,17 @@ Given('a game with {int} players', async function (this: GameWorld, players: num
   this.requestGame();
 });
 
-When('a player gets a dilemma', async function (this: GameWorld) {
-  await this.game();
-});
+When(
+  'a player gets a dilemma without the gap {string}',
+  async function (this: GameWorld, gap: string) {
+    assert.equal(gap, GAP);
+    // The game the test data names the options of, whose dilemmas have no gap.
+    this.dilemmaCount = 1;
+    await this.game();
+    const [first] = await this.driver.dilemmasOfTheGame();
+    assert.equal(this.driver.catalogEntryOf(first!).hasGap, false);
+  },
+);
 
 Then(
   'the player predicts the vote of the other {int} players',
@@ -1122,7 +1282,7 @@ Then(
 Then('the option the player voted is marked as their vote', async function (this: GameWorld) {
   const seen = await this.driver.distributionPredictionSeenBy(this.player);
   const recorded = await this.driver.answerRecordedFor(this.player, 1);
-  assert.ok(seen && recorded, `${this.player} has not voted`);
+  assert.ok(seen && recorded?.vote, `${this.player} has not voted`);
   assert.equal(seen.vote, this.optionsSeen.indexOf(recorded.vote));
 });
 

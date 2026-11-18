@@ -1,10 +1,11 @@
 import type { GameStateDto } from '@thelever-app/protocol';
-import { useId } from 'react';
+import { useEffect, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import mascotCelebrating from '../assets/brand/mascot-celebrating.svg';
 import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
 import { usePlayerName } from '../components/players.ts';
+import { playedIn, rememberPlayed } from '../game/played-dilemmas.ts';
 import styles from './end-screen.module.css';
 
 interface EndScreenProps {
@@ -14,7 +15,8 @@ interface EndScreenProps {
 
 /**
  * The end of the game: the place of the player in an anonymous room, who is still in the room and
- * who has left, and the way out. Nothing is played any more.
+ * who has left, and the way out. Nothing is played any more, and the device keeps the dilemmas the
+ * player played, so the next rooms put first what nobody played.
  */
 export function EndScreen({ game, onLeave }: EndScreenProps) {
   const { t, i18n } = useTranslation();
@@ -25,6 +27,12 @@ export function EndScreen({ game, onLeave }: EndScreenProps) {
   const mine = game.ranking?.find(({ playerId }) => playerId === game.playerId);
   const staying = game.players.filter(({ left }) => !left);
   const gone = game.players.filter(({ left }) => left).map(({ nickname }) => nickname);
+  // Once per game: a new state of the same game, as someone leaves, keeps the same dilemmas.
+  const { gameId } = game;
+  const played = playedIn(game).join();
+  useEffect(() => {
+    if (played !== '') rememberPlayed(played.split(','));
+  }, [gameId, played]);
 
   return (
     <div className={styles.screen}>

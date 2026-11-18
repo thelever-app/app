@@ -27,6 +27,7 @@ export function aRoom(overrides: Partial<RoomStateDto> = {}): RoomStateDto {
     },
     rounds: DEFAULT_ROUNDS,
     minimumPlayers: 2,
+    minimumPlayersForTheGap: 3,
     players: [
       {
         playerId: 'test-ana-id',
