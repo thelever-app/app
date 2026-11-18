@@ -936,7 +936,10 @@ export class AcceptanceDriver implements GameDriver {
     await this.#send(player, draft);
   }
 
-  /** The application turns down a prediction without a vote: the screen offers none. */
+  /**
+   * The application turns down an answer without a vote, prediction or not, as it does the vote
+   * predictions: there is no prediction of the distribution without a vote to go with it.
+   */
   async canPredictDistribution(player: string): Promise<boolean> {
     const { dilemmaId, options } = await this.#roundDilemmaOf(player);
     return this.#accepts(
@@ -979,7 +982,10 @@ export class AcceptanceDriver implements GameDriver {
     }));
   }
 
-  /** The game state has no titles of the game nor who knows each player best. */
+  /**
+   * The application has no titles of the game nor who knows each player best yet: the state of the
+   * game has no field for them, so a player cannot see them.
+   */
   async titlesSeenBy(viewer: string): Promise<boolean> {
     const state = await this.#gameStateOf(viewer);
     return 'titles' in state || 'whoKnowsBest' in state;

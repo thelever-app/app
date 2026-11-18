@@ -190,6 +190,7 @@
     "position": "{{position, number}}.",
     "mentalist": "El Mentalista",
     "points": "{{points, number}}",
+    "pointsUnit": "Punkte",
     "note": "Wer Erster wird, ist El Mentalista der Partie. Dilemmas mit weniger als 3 Stimmen bringen keine Punkte. Bei Gleichstand teilt man sich Platz und Titel.",
     "next": "Weiter"
   },

@@ -3,7 +3,7 @@ import {
   type PredictedShare,
 } from '@thelever-app/game/distribution-prediction';
 import { GAP_MARKER, type GameStateDto } from '@thelever-app/protocol';
-import { type CSSProperties, type SyntheticEvent, useId } from 'react';
+import { type CSSProperties, type KeyboardEvent, type SyntheticEvent, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
 import { DilemmaText } from './dilemma-text.tsx';
@@ -24,6 +24,18 @@ interface DistributionPredictCardProps {
   readonly onBack: () => void;
   readonly onReady: () => void;
 }
+
+/** The keys that move a bar; any other, a Tab that lands on it, changes nothing to send. */
+const MOVING_KEYS = new Set([
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'ArrowDown',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown',
+]);
 
 /** The colour of an option by its position, as on the dilemma: a and b for two, 1 to 4 for more. */
 function optionColor(count: number, index: number): string {
@@ -66,7 +78,12 @@ export function DistributionPredictCard({
     'aria-valuetext': t('distribution.percent', { value: shareOf(optionId) }),
     onChange: (event: SyntheticEvent<HTMLInputElement>) => onChange(moved(optionId, event)),
     onPointerUp: (event: SyntheticEvent<HTMLInputElement>) => onRelease(moved(optionId, event)),
-    onKeyUp: (event: SyntheticEvent<HTMLInputElement>) => onRelease(moved(optionId, event)),
+    // A drag the browser takes over for a scroll ends without the pointer going up.
+    onPointerCancel: (event: SyntheticEvent<HTMLInputElement>) => onRelease(moved(optionId, event)),
+    onBlur: (event: SyntheticEvent<HTMLInputElement>) => onRelease(moved(optionId, event)),
+    onKeyUp: (event: KeyboardEvent<HTMLInputElement>) => {
+      if (MOVING_KEYS.has(event.key)) onRelease(moved(optionId, event));
+    },
   });
   const plain = (text: string) => text.replaceAll(GAP_MARKER, personInTheGap ?? '');
 

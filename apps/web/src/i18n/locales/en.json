@@ -190,6 +190,7 @@
     "position": "#{{position, number}}",
     "mentalist": "El Mentalista",
     "points": "{{points, number}}",
+    "pointsUnit": "points",
     "note": "Whoever comes first is El Mentalista of the game. Dilemmas with fewer than 3 votes score nothing. Ties share the place and the title.",
     "next": "Continue"
   },

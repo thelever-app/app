@@ -206,6 +206,7 @@
     "position": "{{position, number}}e",
     "mentalist": "El Mentalista",
     "points": "{{points, number}}",
+    "pointsUnit": "points",
     "note": "Qui arrive premier est El Mentalista de la partie. Les dilemmes avec moins de 3 votes ne rapportent rien. Les ex æquo partagent la place et le titre.",
     "next": "Continuer"
   },

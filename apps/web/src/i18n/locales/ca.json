@@ -206,6 +206,7 @@
     "position": "{{position, number}}.",
     "mentalist": "El Mentalista",
     "points": "{{points, number}}",
+    "pointsUnit": "punts",
     "note": "Qui queda primer és El Mentalista de la partida. Els dilemes amb menys de 3 vots no puntuen. Els empats comparteixen lloc i títol.",
     "next": "Continuar"
   },

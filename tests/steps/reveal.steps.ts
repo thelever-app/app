@@ -526,10 +526,23 @@ Given(
 );
 
 Given(
-  /^"([^"]+)" predicted (\d+) % and (?:\d+) %(?: on the first dilemma)?$/,
+  /^"([^"]+)" predicted (\d+) % and (?:\d+) %$/,
   function (this: GameWorld, player: string, first: string) {
     const plan = this.plans.get(1)?.get(player) ?? { vote: PULL };
     this.plan(1, player, { ...plan, distribution: predicting(Number(first)) });
+  },
+);
+
+// The others predict something else, so what each player receives tells whose it is.
+Given(
+  /^"([^"]+)" predicted (\d+) % and (?:\d+) % on the first dilemma$/,
+  function (this: GameWorld, player: string, first: string) {
+    const share = Number(first);
+    for (const other of this.inRoom) {
+      if (other === player) continue;
+      this.plan(1, other, { vote: PULL, distribution: predicting(share === 30 ? 70 : 30) });
+    }
+    this.plan(1, player, { vote: PULL, distribution: predicting(share) });
   },
 );
 
@@ -576,6 +589,12 @@ Then(
       const reveal = await this.driver.revealSeenBy(viewer);
       if (!reveal) continue;
       const { ownDistributionPrediction, ownPoints } = reveal;
+      const theirs = this.plans.get(1)?.get(player)?.distribution;
+      assert.notDeepEqual(
+        [...(ownDistributionPrediction ?? [])].sort((a, b) => a.option.localeCompare(b.option)),
+        [...(theirs ?? [])].sort((a, b) => a.option.localeCompare(b.option)),
+        `${viewer} receives the prediction of ${player}`,
+      );
       const own = await this.driver.answerRecordedFor(viewer, 1);
       assert.deepEqual(ownDistributionPrediction, own?.distributionPrediction ?? null);
       assert.equal(ownPoints, (await pointsIn(this, viewer, 1)) ?? null);

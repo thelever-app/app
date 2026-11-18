@@ -14,8 +14,6 @@ interface DilemmaCardProps {
   readonly savedVote: string | undefined;
   /** An anonymous room never shows the vote, not even in the reveal. */
   readonly anonymous: boolean;
-  /** The answer is on its way to the room: the player cannot send it again meanwhile. */
-  readonly isSending: boolean;
   readonly onContinue: (vote: string) => void;
 }
 
@@ -29,7 +27,6 @@ export function DilemmaCard({
   personInTheGap,
   savedVote,
   anonymous,
-  isSending,
   onContinue,
 }: DilemmaCardProps) {
   const { t } = useTranslation();
@@ -70,7 +67,7 @@ export function DilemmaCard({
         <button
           type="button"
           className={styles.continue}
-          disabled={chosen === undefined || isSending}
+          disabled={chosen === undefined}
           onClick={() => {
             if (chosen !== undefined) onContinue(chosen);
           }}

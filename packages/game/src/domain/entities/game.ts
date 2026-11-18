@@ -920,7 +920,9 @@ export class Game {
       count: voters.filter(({ answer }) => answer.vote === optionId).length,
     }));
     for (const { state, answer } of voters) {
-      const prediction = answer.distributionPrediction as DistributionPredictionVO;
+      // An answer kept from before the prediction existed counts as a vote, with nothing to score.
+      const prediction = answer.distributionPrediction;
+      if (!prediction) continue;
       state.points.set(dilemmaId, scoreDistributionPrediction(prediction, distribution));
     }
   }

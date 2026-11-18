@@ -77,11 +77,27 @@ describe('DistributionPredictCard', () => {
 
     // Act
     fireEvent.pointerUp(slider);
+    fireEvent.pointerCancel(slider);
     fireEvent.keyUp(slider, { key: 'ArrowRight' });
+    fireEvent.blur(slider);
 
     // Assert
-    expect(onRelease).toHaveBeenCalledTimes(2);
+    expect(onRelease).toHaveBeenCalledTimes(4);
     expect(onRelease).toHaveBeenLastCalledWith(sharesOf(40, 30, 20, 10));
+  });
+
+  it('should hand nothing over for a key that does not move the bar', async () => {
+    // Arrange
+    const { onRelease, t } = await renderCard();
+    const slider = screen.getByRole('slider', {
+      name: t('distribution.shareOf', { option: 'Opción D' }),
+    });
+
+    // Act
+    fireEvent.keyUp(slider, { key: 'Tab' });
+
+    // Assert
+    expect(onRelease).not.toHaveBeenCalled();
   });
 
   it('should be ready at any moment, since the shares always add up to 100 %', async () => {

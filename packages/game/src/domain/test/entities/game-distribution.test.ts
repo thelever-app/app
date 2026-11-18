@@ -246,6 +246,48 @@ describe('Game, in an anonymous room', () => {
       expect(game.pointsOf('Sara')).toEqual([]);
     });
 
+    it('should count but not score the answers kept from before the prediction, which have none', () => {
+      // Arrange: answers complete with the vote, as the game kept them before.
+      const before = gameOfFour().toSnapshot();
+      const restored = Game.restore({
+        ...before,
+        players: before.players.map((player, index) => ({
+          ...player,
+          answers:
+            index === 3
+              ? []
+              : [
+                  {
+                    dilemmaId: 'TestDilemma1',
+                    vote: 'TestPull',
+                    votePredictions: [],
+                    distributionPrediction: null,
+                    ready: true,
+                    optionOrder: ['TestPull', 'TestWait'],
+                    responseTimeMs: 1000,
+                    seal: SEAL,
+                    voterInTheGap: false,
+                  },
+                ],
+        })),
+      });
+      restored.answer(
+        'Sara',
+        'TestDilemma1',
+        { vote: 'TestPull', distributionPrediction: predicted(100, 0), ready: true },
+        SEAL,
+        AT,
+      );
+
+      // Act
+      restored.reveal('everyone');
+
+      // Assert
+      expect(restored.revealOf(0).voteCount).toBe(4);
+      expect(restored.pointsOf('Ana')).toEqual([]);
+      expect(restored.pointsOf('Sara')).toEqual([{ dilemmaId: 'TestDilemma1', points: 100 }]);
+    });
+
     it('should score a player who joined late from their round', () => {
       // Arrange
       const game = gameOfFour();

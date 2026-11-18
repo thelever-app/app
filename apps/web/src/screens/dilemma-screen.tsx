@@ -129,7 +129,6 @@ export function DilemmaScreen({
           personInTheGap={person}
           savedVote={vote}
           anonymous={anonymous}
-          isSending={false}
           onContinue={(chosen) => {
             setVote(chosen);
             if (anonymous) {

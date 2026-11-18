@@ -120,6 +120,10 @@
   text-align: right;
 }
 
+.hidden {
+  composes: hidden from '../reveal/reveal-screen.module.css';
+}
+
 .note {
   margin: 0;
   font-size: 12px;

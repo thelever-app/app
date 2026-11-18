@@ -71,7 +71,10 @@ export function RankingScreen({ game, onMoveOn, onLeave, onShowQr }: RankingScre
                   <Icon name="psychology" size={18} />
                 </span>
               )}
-              <span className={styles.points}>{t('ranking.points', { points })}</span>
+              <span className={styles.points}>
+                {t('ranking.points', { points })}
+                <span className={styles.hidden}> {t('ranking.pointsUnit')}</span>
+              </span>
             </li>
           ))}
         </ol>
