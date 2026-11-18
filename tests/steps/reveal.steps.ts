@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import type { RankedView, RevealView } from '../support/driver.ts';
 import { OPTION_TEXTS } from '../support/test-catalog.ts';
 import type { GameWorld } from '../support/world.ts';
+import { everyTitle } from './end-of-the-game.steps.ts';
 
 const POSITIONS: Record<string, number> = { first: 1, second: 2, third: 3 };
 
@@ -63,6 +64,8 @@ Given(
 
 Given('the reveal is on the {word} dilemma', async function (this: GameWorld, ordinal: string) {
   if (ordinal === 'last') {
+    // A nominal room plays toward its titles: with nothing else said, a game where each one has a winner.
+    if (this.variant === 'nominal' && this.plans.size === 0) everyTitle(this, [...this.inRoom][0]!);
     await this.game();
     await this.toRevealOf((await this.driver.dilemmasOfTheGame()).length);
     return;

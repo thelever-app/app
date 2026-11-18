@@ -133,13 +133,15 @@ export interface DistributionPredictionView {
   readonly vote: number;
 }
 
-/** A player in the ranking of who reads the group best, by the name the scenario gives them. */
+/** A player in the ranking, by the name the scenario gives them. */
 export interface RankedView {
   readonly player: string;
   /** From 1, shared on a tie. */
   readonly position: number;
   readonly points: number;
   readonly mentalist: boolean;
+  /** In a nominal room, the names of the titles they won, as the badges next to them say. */
+  readonly titles: readonly string[];
 }
 
 /** What a player sees at the end of the game. */
@@ -147,6 +149,76 @@ export interface EndOfTheGameView {
   /** By their nicknames. */
   readonly stillInTheRoom: readonly string[];
   readonly gone: readonly string[];
+}
+
+/** The screen of the results a player is on. */
+export type ResultsScreenView =
+  | {
+      readonly kind: 'title';
+      /** Its name, as the game shows it. */
+      readonly title: string;
+      /** Each winner, or pair of Almas gemelas, by the names the scenario gives them. */
+      readonly winners: readonly (readonly string[])[];
+      /** Whether each winner is shown with their avatar and the fact that earned it. */
+      readonly withAvatarsAndFacts: boolean;
+      readonly runnersUp: readonly (readonly string[])[];
+    }
+  | { readonly kind: 'known-best'; readonly by: readonly string[] }
+  | { readonly kind: 'ranking' };
+
+/** A title of the game and who won it, by the names the scenario gives them. */
+export interface TitleView {
+  readonly title: string;
+  readonly winners: readonly (readonly string[])[];
+}
+
+/** What a player sees of the reactions in the reveal of the round. */
+export interface ReactionsView {
+  /** Each emoji the dilemma got, who reacted with it (none in an anonymous room) and how many. */
+  readonly dilemma: readonly {
+    readonly emoji: string;
+    readonly by: readonly string[];
+    readonly count: number;
+  }[];
+  readonly votes: readonly {
+    readonly by: string;
+    readonly about: string;
+    readonly emoji: string;
+  }[];
+}
+
+/** What the game keeps of a reaction, with its seal. */
+export interface RecordedReaction {
+  readonly by: string;
+  /** Whose vote it is a reaction to; null for the dilemma. */
+  readonly about: string | null;
+  /** The dilemma, by its position (from 1). */
+  readonly position: number;
+  readonly emoji: string;
+  readonly researchConsent: boolean;
+  readonly commercialLicenceConsent: boolean;
+  readonly underEighteen: boolean;
+}
+
+/** What is kept of a like, with its seal. */
+export interface RecordedLike {
+  readonly researchConsent: boolean;
+  readonly commercialLicenceConsent: boolean;
+  readonly underEighteen: boolean;
+}
+
+/** The card a player has open to share. */
+export interface CardView {
+  /** Its big line: the place, or how many dilemmas the group played. */
+  readonly headline: string;
+  /** The names of the titles on it. */
+  readonly titles: readonly string[];
+  /** Whose avatars are on it, by the names the scenario gives them. */
+  readonly avatarsOf: readonly string[];
+  /** Whose nicknames are on it, by the names the scenario gives them. */
+  readonly nicknamesOf: readonly string[];
+  /** The dilemma on it as the one that divided the group the most, by its position (from 1). */
+  readonly mostDivisive: number | null;
 }
 
 /** What a player sees of the reveal of a dilemma, by the names the scenario gives the players. */
@@ -444,13 +516,45 @@ export interface GameDriver {
   /** How many sliders the player moves to predict the distribution (@screen). */
   distributionSlidersSeenBy(player: string): Promise<number>;
 
+  // Reactions and likes, in the reveal of the round
+
+  /** `player` reacts in the reveal of the round to the vote of `to`, or to the dilemma for null. */
+  react(player: string, to: string | null, emoji?: string): Promise<void>;
+  reactionsSeenBy(viewer: string): Promise<ReactionsView>;
+  /** Every reaction the game keeps. Only in the application, or in its database. */
+  reactionsRecorded(): Promise<RecordedReaction[]>;
+  /** `player` gives «Buen dilema» to the dilemma of the reveal of the round. */
+  like(player: string): Promise<void>;
+  /** The like of `player` to the dilemma in that position (from 1), as it is kept. */
+  likeRecordedFor(player: string, position: number): Promise<RecordedLike | undefined>;
+  /** What the likes of the dilemma in that position (from 1) weigh for its rating. */
+  likesCountedFor(position: number): Promise<number>;
+  /** `player` gave «Buen dilema» to the dilemma in that position (from 1) in a game before this one. */
+  likedBefore(player: string, position: number): Promise<void>;
+  /** The seconds the group spent on the reveal of the dilemma in that position (from 1), as kept. */
+  timeSpentRecordedFor(position: number): Promise<number | null>;
+
   // The game results and the end
 
-  /** The ranking of who reads the group best, as the player sees it, once the rounds are over. */
+  /** The ranking, as the player sees it, once the rounds are over. */
   rankingSeenBy(viewer: string): Promise<readonly RankedView[] | undefined>;
   /** Whether the player sees the titles of the game or who knows them best. */
   titlesSeenBy(viewer: string): Promise<boolean>;
+  /** The screen of the results the player is on; undefined out of the results. */
+  resultsScreenSeenBy(viewer: string): Promise<ResultsScreenView | undefined>;
+  /** Every title of the game with a winner, in the order they are shown. */
+  titlesOfTheGame(): Promise<TitleView[]>;
   endOfTheGameSeenBy(viewer: string): Promise<EndOfTheGameView | undefined>;
+  /** `host` starts the rematch from the end of the game. */
+  startRematch(host: string): Promise<void>;
+  /** Whether `player` has a way to start the rematch. */
+  canStartRematch(player: string): Promise<boolean>;
+  /** The rounds (from 1) the lobby of `viewer` says have no dilemmas left the room has not played. */
+  roundsWithoutNewDilemmasSeenBy(viewer: string): Promise<number[]>;
+  /** `player` opens their card, or that of the group, to share it. */
+  openCard(player: string): Promise<CardView>;
+  /** `player` turns on, on the card they have open, the nicknames of the others. */
+  showNicknamesOnTheCard(player: string): Promise<CardView>;
   /** What the vote predictions of `player` scored in each dilemma revealed so far; null for none made. */
   pointsOf(
     player: string,

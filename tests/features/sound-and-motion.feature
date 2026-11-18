@@ -61,3 +61,15 @@ Feature: Sound and motion
     Given a device with reduced motion
     When the player goes through the lobby and a round
     Then no component moves or changes size
+
+  @ui @screen
+  Scenario: A sound effect plays when the game ends
+    Given "Ana" and "Luis" see the last screen of the game results
+    When a player moves on
+    Then "Ana" and "Luis" hear the sound effect of the game ending
+
+  @ui @screen
+  Scenario: With reduced motion nothing moves in the game results
+    Given a device with reduced motion
+    When the player goes through the game results to the end of the game
+    Then no component moves or changes size

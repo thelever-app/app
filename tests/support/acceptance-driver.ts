@@ -16,6 +16,9 @@ import {
   LeaveRoomUseCase,
   ReportDilemmaUseCase,
   MoveOnUseCase,
+  ReactUseCase,
+  LikeDilemmaUseCase,
+  StartRematchUseCase,
   RevealEarlyUseCase,
   RunOutRoundUseCase,
   SkipDilemmaUseCase,
@@ -53,12 +56,14 @@ import {
 } from '@thelever-app/game';
 import {
   InMemoryDilemmaCatalog,
+  InMemoryDilemmaLikes,
   InMemoryDilemmaReports,
   InMemoryGameRepository,
   ManualClock,
   InMemoryPlayerNotifier,
   InMemoryRoomRepository,
   InMemorySealProvider,
+  SEAL_BEFORE_FIRST_ACCESS,
   SequentialIdGenerator,
   SequentialRandomness,
   type InMemoryDilemma,
@@ -97,8 +102,10 @@ import {
   LanguageTagTranslator,
   SequentialIdGenerator as SequentialDilemmaIds,
 } from '@thelever-app/dilemmas/in-memory';
+import type { TitleDto } from '@thelever-app/protocol';
 import type {
   AnswerPlan,
+  CardView,
   CatalogEntry,
   Declaration,
   GameDriver,
@@ -107,14 +114,19 @@ import type {
   JoinRefusal,
   PlayerView,
   PublicPageView,
+  ReactionsView,
   RecordedAnswer,
+  RecordedLike,
+  RecordedReaction,
   ReportReason,
+  ResultsScreenView,
   RevealView,
   RoomChoices,
   RoomPreview,
   RoundSetting,
   RoundView,
   SettingsView,
+  TitleView,
   WorldResultView,
 } from './driver.ts';
 import {
@@ -129,6 +141,17 @@ import {
 
 /** Test data: the vote the driver casts when a step does not say which one; the first option. */
 const VOTE = 'option-1';
+
+/** The names of the titles of the game, as the screens and the scenarios write them. */
+const TITLE_NAMES: Readonly<Record<TitleDto, string>> = {
+  'almas-gemelas': 'Almas gemelas',
+  'verso-suelto': 'Verso suelto',
+  'la-voz-del-grupo': 'La voz del grupo',
+  'iman-de-reacciones': 'Imán de reacciones',
+  enigma: 'Enigma',
+  'libro-abierto': 'Libro abierto',
+  'el-mentalista': 'El Mentalista',
+};
 /** Test data: the vote the driver changes to; the second option of every dilemma. */
 const OTHER_VOTE = 'option-2';
 
@@ -296,6 +319,9 @@ export class AcceptanceDriver implements GameDriver {
   /** What each identity declared and consented to, which the seal provider hands out. */
   readonly #seals = new Map<string, Seal>();
   readonly #reports = new InMemoryDilemmaReports();
+  readonly #likes = new InMemoryDilemmaLikes();
+  /** Whether each player turned on the nicknames of the others on the card they have open. */
+  readonly #namesOnTheCard = new Set<string>();
   /** The Dilemmas context, for what the curation team does: Game reads its own test catalog. */
   readonly #curatedCatalog = new InMemoryCuratedCatalog();
   readonly #dilemmaRepository = new InMemoryDilemmaRepository();
@@ -344,6 +370,9 @@ export class AcceptanceDriver implements GameDriver {
   readonly #revealEarly: RevealEarlyUseCase;
   readonly #runOutRound: RunOutRoundUseCase;
   readonly #moveOn: MoveOnUseCase;
+  readonly #react: ReactUseCase;
+  readonly #likeDilemma: LikeDilemmaUseCase;
+  readonly #startRematch: StartRematchUseCase;
   readonly #leaveRoom: LeaveRoomUseCase;
   readonly #reportDilemma: ReportDilemmaUseCase;
   readonly #skipDilemma: SkipDilemmaUseCase;
@@ -416,7 +445,22 @@ export class AcceptanceDriver implements GameDriver {
       sealProvider: new InMemorySealProvider(this.#seals),
       clock,
     });
-    this.#getGameState = new GetGameStateUseCase(rooms, this.#gameRepository, catalog);
+    this.#getGameState = new GetGameStateUseCase(rooms, this.#gameRepository, catalog, this.#likes);
+    this.#react = new ReactUseCase({
+      roomRepository: rooms,
+      gameRepository: games,
+      sealProvider: new InMemorySealProvider(this.#seals),
+      notifier,
+    });
+    this.#likeDilemma = new LikeDilemmaUseCase({
+      roomRepository: rooms,
+      gameRepository: games,
+      likes: this.#likes,
+      sealProvider: new InMemorySealProvider(this.#seals),
+      notifier,
+      clock,
+    });
+    this.#startRematch = new StartRematchUseCase(rooms, games, notifier);
     this.#connectPlayer = new ConnectPlayerUseCase(rooms, games, notifier, idGenerator, clock);
     this.#disconnectPlayer = new DisconnectPlayerUseCase(rooms, games, notifier, clock);
     this.#revealEarly = new RevealEarlyUseCase(rooms, games, notifier, clock);
@@ -897,7 +941,10 @@ export class AcceptanceDriver implements GameDriver {
 
     // Every player has the game open, as their device would after the game starts.
     for (const player of this.#players.keys()) {
-      if (this.#players.get(player)?.playerId) await this.reconnect(player);
+      // Who was expelled from the lobby has no room to open.
+      if (this.#players.get(player)?.playerId && (await this.isInTheRoom(player))) {
+        await this.reconnect(player);
+      }
     }
   }
 
@@ -1020,22 +1067,208 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async rankingSeenBy(viewer: string) {
-    const { ranking } = await this.#gameStateOf(viewer);
+    const { ranking, results } = await this.#gameStateOf(viewer);
     return ranking?.map(({ playerId, position, points, mentalist }) => ({
       player: this.#nameOf(playerId),
       position,
       points,
       mentalist,
+      titles: (results?.titles ?? [])
+        .filter(({ winners }) => winners.some(({ playerIds }) => playerIds.includes(playerId)))
+        .map(({ title }) => TITLE_NAMES[title]),
     }));
   }
 
-  /**
-   * The application has no titles of the game nor who knows each player best yet: the state of the
-   * game has no field for them, so a player cannot see them.
-   */
+  /** Whether the state of the player has titles won or who knows them best. */
   async titlesSeenBy(viewer: string): Promise<boolean> {
-    const state = await this.#gameStateOf(viewer);
-    return 'titles' in state || 'whoKnowsBest' in state;
+    const { results } = await this.#gameStateOf(viewer);
+    return (results?.titles.length ?? 0) > 0 || (results?.knownBestBy ?? null) !== null;
+  }
+
+  async resultsScreenSeenBy(viewer: string): Promise<ResultsScreenView | undefined> {
+    const { stage, results } = await this.#gameStateOf(viewer);
+    if (stage.kind !== 'results') return undefined;
+    if ((await this.#currentGame()).settings.variant === 'anonymous') return { kind: 'ranking' };
+    const titles = results?.titles ?? [];
+    const step = stage.step ?? 0;
+    const title = titles[step];
+    if (title) {
+      return {
+        kind: 'title',
+        title: TITLE_NAMES[title.title],
+        winners: title.winners.map(({ playerIds }) => playerIds.map((id) => this.#nameOf(id))),
+        withAvatarsAndFacts: true,
+        runnersUp: title.runnersUp.map(({ playerIds }) => playerIds.map((id) => this.#nameOf(id))),
+      };
+    }
+    if (step === titles.length) {
+      return {
+        kind: 'known-best',
+        by: (results?.knownBestBy?.playerIds ?? []).map((id) => this.#nameOf(id)),
+      };
+    }
+    return { kind: 'ranking' };
+  }
+
+  async titlesOfTheGame(): Promise<TitleView[]> {
+    const { results } = await this.#gameStateOf(this.#hostName());
+    return (results?.titles ?? []).map(({ title, winners }) => ({
+      title: TITLE_NAMES[title],
+      winners: winners.map(({ playerIds }) => playerIds.map((id) => this.#nameOf(id))),
+    }));
+  }
+
+  async startRematch(host: string): Promise<void> {
+    await this.#startRematch.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(host),
+    });
+  }
+
+  /** The end of the game offers the rematch to the host alone. */
+  async canStartRematch(player: string): Promise<boolean> {
+    const { stage, hostId } = await this.#gameStateOf(player);
+    return stage.kind === 'ended' && hostId === this.#playerIdOf(player);
+  }
+
+  async roundsWithoutNewDilemmasSeenBy(viewer: string): Promise<number[]> {
+    const { rounds } = await this.#roomStateOf(viewer);
+    return rounds.flatMap((round, index) =>
+      round.origin === 'random' && round.withoutNewDilemmas ? [index + 1] : [],
+    );
+  }
+
+  async openCard(player: string): Promise<CardView> {
+    this.#namesOnTheCard.delete(player);
+    return this.#cardOf(player);
+  }
+
+  async showNicknamesOnTheCard(player: string): Promise<CardView> {
+    this.#namesOnTheCard.add(player);
+    return this.#cardOf(player);
+  }
+
+  /** What the card of the player says, as the screen puts it together from their state. */
+  async #cardOf(player: string): Promise<CardView> {
+    const { ranking, results, dilemmas, playerId } = await this.#gameStateOf(player);
+    if ((await this.#currentGame()).settings.variant === 'anonymous') {
+      const divisive = results?.mostDivisiveDilemma?.dilemmaId;
+      const position = dilemmas.findIndex(({ dilemmaId }) => dilemmaId === divisive);
+      return {
+        headline: `${dilemmas.length} dilemas`,
+        titles: [],
+        avatarsOf: [],
+        nicknamesOf: [],
+        mostDivisive: position === -1 ? null : position + 1,
+      };
+    }
+    const mine = ranking?.find((ranked) => ranked.playerId === playerId);
+    const won = (results?.titles ?? []).filter(({ winners }) =>
+      winners.some(({ playerIds }) => playerIds.includes(playerId)),
+    );
+    const partners = won
+      .filter(({ title }) => title === 'almas-gemelas')
+      .flatMap(({ winners }) =>
+        winners.flatMap(({ playerIds }) =>
+          playerIds.includes(playerId) ? playerIds.filter((other) => other !== playerId) : [],
+        ),
+      );
+    const others = [...new Set([...(results?.knownBestBy?.playerIds ?? []), ...partners])].map(
+      (id) => this.#nameOf(id),
+    );
+    return {
+      headline: mine ? `${mine.position}.º de ${ranking?.length ?? 0}` : '',
+      titles: won.map(({ title }) => TITLE_NAMES[title]),
+      avatarsOf: others,
+      nicknamesOf: this.#namesOnTheCard.has(player) ? others : [],
+      mostDivisive: null,
+    };
+  }
+
+  // Reactions and likes
+
+  async react(player: string, to: string | null, emoji = '😂'): Promise<void> {
+    const { round } = await this.#gameStateOf(player);
+    await this.#react.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+      position: round.position,
+      target: to === null ? { kind: 'dilemma' } : { kind: 'vote', playerId: this.#playerIdOf(to) },
+      emoji,
+    });
+  }
+
+  async reactionsSeenBy(viewer: string): Promise<ReactionsView> {
+    const { reveal } = await this.#gameStateOf(viewer);
+    return {
+      dilemma: (reveal?.dilemmaReactions ?? []).map(({ emoji, playerIds, count }) => ({
+        emoji,
+        by: playerIds.map((id) => this.#nameOf(id)),
+        count,
+      })),
+      votes: (reveal?.voteReactions ?? []).map(({ playerId, aboutId, emoji }) => ({
+        by: this.#nameOf(playerId),
+        about: this.#nameOf(aboutId),
+        emoji,
+      })),
+    };
+  }
+
+  async reactionsRecorded(): Promise<RecordedReaction[]> {
+    const game = await this.#currentGame();
+    const ids = game.dilemmas.map(({ dilemmaId }) => dilemmaId);
+    return game.reactions().map(({ dilemmaId, playerId, aboutId, emoji, seal }) => ({
+      by: this.#nameOf(playerId),
+      about: aboutId && this.#nameOf(aboutId),
+      position: ids.indexOf(dilemmaId) + 1,
+      emoji,
+      researchConsent: seal.researchConsentVersion !== null,
+      commercialLicenceConsent: seal.commercialLicenceConsentVersion !== null,
+      underEighteen: seal.underEighteen,
+    }));
+  }
+
+  async like(player: string): Promise<void> {
+    const { round } = await this.#gameStateOf(player);
+    await this.#likeDilemma.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+      position: round.position,
+    });
+  }
+
+  async likeRecordedFor(player: string, position: number): Promise<RecordedLike | undefined> {
+    const dilemmaId = await this.#dilemmaIdAt(position);
+    const { identity } = this.#playerCalled(player);
+    const like = this.#likes.likes.find(
+      (kept) => kept.identity === identity && kept.dilemmaId === dilemmaId,
+    );
+    return (
+      like && {
+        researchConsent: like.seal.researchConsentVersion !== null,
+        commercialLicenceConsent: like.seal.commercialLicenceConsentVersion !== null,
+        underEighteen: like.seal.underEighteen,
+      }
+    );
+  }
+
+  async likesCountedFor(position: number): Promise<number> {
+    return this.#likes.weightOf(await this.#dilemmaIdAt(position));
+  }
+
+  async likedBefore(player: string, position: number): Promise<void> {
+    const { identity } = this.#playerCalled(player);
+    await this.#likes.like({
+      identity,
+      dilemmaId: await this.#dilemmaIdAt(position),
+      seal: this.#seals.get(identity) ?? SEAL_BEFORE_FIRST_ACCESS,
+      at: this.#clock.now(),
+    });
+  }
+
+  async timeSpentRecordedFor(position: number): Promise<number | null> {
+    const spent = (await this.#currentGame()).timeSpentOn(await this.#dilemmaIdAt(position));
+    return spent === null ? null : spent / 1000;
   }
 
   async endOfTheGameSeenBy(viewer: string) {
@@ -1745,13 +1978,13 @@ export class AcceptanceDriver implements GameDriver {
     };
   }
 
-  /** From a round, or from the game results, which come after the last one. */
+  /** From a round, or from a screen of the game results, which come after the last one. */
   async moveOn(player: string): Promise<void> {
     const { round, stage, dilemmas } = await this.#gameStateOf(player);
     await this.#moveOn.execute({
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(player),
-      fromPosition: stage.kind === 'results' ? dilemmas.length : round.position,
+      fromPosition: stage.kind === 'results' ? dilemmas.length + (stage.step ?? 0) : round.position,
     });
   }
 
@@ -1768,8 +2001,10 @@ export class AcceptanceDriver implements GameDriver {
     );
   }
 
+  /** Who moved everyone to the round they are on or, in the results, to the screen they are on. */
   async movedOnSeenBy(viewer: string): Promise<string | null> {
-    const { movedOnBy } = (await this.#gameStateOf(viewer)).round;
+    const { round, stage } = await this.#gameStateOf(viewer);
+    const movedOnBy = stage.kind === 'rounds' ? round.movedOnBy : stage.movedOnBy;
     return movedOnBy && this.#nameOf(movedOnBy);
   }
 

@@ -15,27 +15,21 @@ Given(
   },
 );
 
+/** Who hosts the room: who created it, before the game; once it has ended, who the players see. */
 Given('{string} is the host', async function (this: GameWorld, player: string) {
-  await this.hostIs(player);
+  if (!this.ended) {
+    await this.hostIs(player);
+    return;
+  }
+  for (const viewer of this.present()) {
+    assert.equal(await this.driver.hostSeenBy(viewer), player, `${viewer} sees another host`);
+  }
 });
 
-/**
- * Only an anonymous room has its results and its end yet: a room the scenario does not say the
- * variant of plays as one; a nominal room goes as far as there is, the reveal of its last round.
- */
-// A game of a few rounds, played through to its end: more than a step usually takes.
-Given('the game has ended', { timeout: 90_000 }, async function (this: GameWorld) {
+/** The game is played to its end at the first When or Then, once the Givens have set it up. */
+Given('the game has ended', function (this: GameWorld) {
   this.dilemmaCount ??= 3;
-  if (this.variant === undefined) {
-    await this.driver.changeSettings(await this.host(), { variant: 'anonymous' });
-    this.variant = 'anonymous';
-  }
-  await this.game();
-  await this.toRevealOf((await this.driver.dilemmasOfTheGame()).length);
-  if (this.variant !== 'anonymous') return;
-  const host = await this.host();
-  await this.driver.moveOn(host);
-  await this.driver.moveOn(host);
+  this.requestEnd();
 });
 
 Then(
@@ -73,6 +67,7 @@ When('every player has left the room', async function (this: GameWorld) {
 Given(
   'no player has been connected to the room for {int} minutes',
   async function (this: GameWorld, minutes: number) {
+    await this.endIfRequested();
     for (const player of this.present()) {
       await this.driver.disconnect(player);
       this.away.add(player);
@@ -81,13 +76,15 @@ Given(
   },
 );
 
-Given('every player is still connected', function (this: GameWorld) {
+Given('every player is still connected', async function (this: GameWorld) {
+  await this.endIfRequested();
   assert.deepEqual(this.present(), [...this.inRoom]);
 });
 
 Given(
   'nobody has done anything in the room for {int} minutes',
   async function (this: GameWorld, minutes: number) {
+    await this.endIfRequested();
     await this.driver.letTimePass(minutes * MINUTE);
   },
 );

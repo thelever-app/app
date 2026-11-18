@@ -9,19 +9,60 @@ Feature: After the game
       Given a nominal room with players "Ana", "Luis" and "Marta"
       And the game has ended
 
-    @ui @todo
+    @ui
     Scenario: A player shares a personal card
-      Given "Luis" finished second, is El Mentalista and is best known by "Marta"
+      Given "Luis" finished first, is El Mentalista and "Verso suelto" and is best known by "Marta"
       When "Luis" shares his card
-      Then the card shows that he finished second
-      And that he is El Mentalista
+      Then the card shows that he finished first
+      And his titles El Mentalista and "Verso suelto"
       And that "Marta" knows him best
 
-    @ui @todo
-    Scenario: A player removes another nickname from the card
+    @ui
+    Scenario: The card shows the partner of Almas gemelas
+      Given "Luis" and "Ana" are "Almas gemelas"
+      When "Luis" shares his card
+      Then the card shows the title "Almas gemelas" with the avatar of "Ana"
+      And "Luis" can show the nickname of "Ana" before sharing
+
+    @ui
+    Scenario: The card hides the other nicknames unless the player shows them
       Given "Luis" is best known by "Marta"
-      When "Luis" removes the nickname of "Marta" from his card
+      When "Luis" shares his card
       Then the card shows the avatar of "Marta" without her nickname
+      When "Luis" shows the other nicknames on his card
+      Then the card shows the nickname of "Marta"
+
+    @ui @screen @todo
+    Scenario: A player chooses to watch a rewarded ad to see how each player reads them
+      Given a rewarded ad is ready
+      When "Luis" chooses to watch the rewarded ad at the end of the game
+      And the ad finishes
+      Then only "Luis" sees how many of his votes each other player guessed
+      And the dilemma where the fewest players guessed his vote
+
+    @ui @todo
+    Scenario: There is no reward when no rewarded ad is ready
+      Given no rewarded ad is ready
+      When "Luis" sees the end of the game
+      Then he is not offered the reward
+
+    @todo
+    Scenario: A late player is counted only on the rounds they played
+      Given "Marta" joined the game in the third of 6 rounds
+      When "Marta" watches the rewarded ad
+      Then the guesses about her votes count only the 4 rounds she played
+
+    @ui @todo
+    Scenario: The reward is not kept
+      Given "Luis" has seen how each player reads him
+      When "Luis" leaves the end of the game
+      Then that reward is not in his history
+      And it is not on his card
+
+    @ui @todo
+    Scenario: Nobody has to watch the rewarded ad
+      When "Luis" does not choose the rewarded ad
+      Then "Luis" can share his card and play the rematch as usual
 
   Rule: Anonymous room
 
@@ -29,21 +70,19 @@ Feature: After the game
       Given an anonymous room with players "Ana", "Luis" and "Marta" and 8 dilemmas
       And the game has ended
 
-    @ui @todo
+    @ui
     Scenario: A player shares the group card
       When "Luis" shares the card
       Then the card shows that the group played 8 dilemmas
       And shows the dilemma that divided the group the most
       And shows no information about any player
 
-    @todo
     Scenario: The most divisive dilemma is the closest to an even split
       Given the third dilemma was voted 2 to 1
       And every other dilemma was voted 3 to 0
       When "Luis" shares the card
       Then the card shows the third dilemma as the one that divided the group the most
 
-    @todo
     Scenario: A tie for the most divisive dilemma goes to the first one
       Given the second and the fifth dilemmas were both voted 2 to 1
       And every other dilemma was voted 3 to 0
@@ -57,52 +96,51 @@ Feature: After the game
       And "Ana" is the host
       And the game has ended
 
-    @ui @todo
+    @ui
     Scenario: The host starts a rematch with the same group
       When "Ana" starts a rematch
       Then all players still in the room move to the lobby of a new game
       And the new game keeps the configuration of the previous one
 
     @ui @screen @todo
-    Scenario: Players watch a video ad before the rematch lobby
-      When "Ana" starts a rematch
-      Then each player still in the room is shown a video ad they can skip after 5 seconds
-      And then moves to the lobby of the rematch
+    Scenario: Each player sees one interstitial ad when leaving the game results
+      When "Luis" leaves the game results for the end of the game
+      Then "Luis" is shown one full screen ad from the ad network
+      And then sees the end of the game
+      And is not shown another full screen ad in that game
 
-    @ui @todo
+    @ui
     Scenario: The host is still disconnected when the game ends
       Given "Luis" has been in the room longer than "Marta"
       And "Ana" disconnected before the game ended
       Then "Luis" is the host
       And "Luis" can start a rematch
 
-    @ui @todo
+    @ui
     Scenario: The host changes the configuration before the rematch starts
       Given the players are in the lobby of the rematch
       When "Ana" changes the rounds
       Then the rematch uses the new rounds
 
-    @todo
     Scenario: The rematch keeps the rounds
       Given round 1 had a specific dilemma and round 3 was chosen by the players
       When the players are in the lobby of the rematch
       Then round 1 is random from every category
       And round 3 is empty
 
-    @todo
     Scenario: The rematch does not repeat dilemmas
       Given the room has already played 8 dilemmas
       When the rematch starts
       Then none of its dilemmas has been played before in that room
 
-    @ui @todo
+    @ui
     Scenario: The categories of a random round run out
       Given the room has played every dilemma of the categories of round 2
       When "Ana" starts a rematch
       Then "Ana" is told round 2 has no new dilemmas left
       And "Ana" can change its categories
 
-    @ui @todo
+    @ui
     Scenario: A player leaves instead of playing the rematch
       When "Marta" leaves the room
       And "Ana" starts a rematch
@@ -113,6 +151,35 @@ Feature: After the game
       When "Marta" leaves the game
       Then "Ana" and "Luis" see at the end of the game that they are still in the room
       And that "Marta" has left
+
+    @ui @todo
+    Scenario: A player plays the dilemmas of a past game with another group
+      Given "Luis" played a game hosted by "Ana" with 6 dilemmas from the catalog
+      When "Luis" opens that game in his history
+      And chooses to play these dilemmas with another group
+      Then "Luis" is the host of a new room with those 6 dilemmas
+
+    @todo
+    Scenario: Private dilemmas of other players are not copied
+      Given the game played a private dilemma of "Ana" and a private dilemma of "Luis"
+      When "Luis" plays these dilemmas with another group
+      Then the new room has the private dilemma of "Luis"
+      And it does not have the private dilemma of "Ana"
+
+    @ui @todo
+    Scenario: The home screen suggests it once on another day
+      Given "Luis" played a game hosted by "Ana" yesterday
+      When "Luis" opens the app today
+      Then the home screen suggests playing the dilemmas of the game with "Ana" with his own people
+      When "Luis" closes the suggestion
+      Then it is not shown again for that game
+
+    @todo
+    Scenario: The analytics counts rooms born from another room
+      Given "Luis" has not objected to the usage analytics
+      When "Luis" plays the dilemmas of a past game with another group
+      Then the usage analytics counts one room born from another
+      And it records no vote
 
     Scenario: The room closes when everyone has left
       When every player has left the room
@@ -134,3 +201,30 @@ Feature: After the game
       When the players see the end of the game
       Then a 320 x 100 banner ad appears below the main actions
       And it does not cover any of them
+
+    @ui @todo
+    Scenario: An adult player is invited to support TheLever at the end of every third game
+      Given "Luis" is 18 or older
+      And "Luis" had finished 2 games on this device before this one
+      When "Luis" sees the end of the game
+      Then the end of the game shows one line to support TheLever with a donation
+      And it does not cover the main actions
+      When "Luis" sees the end of his next game
+      Then the end of the game shows no invitation to donate
+
+    @ui @todo
+    Scenario: The home screen invites an adult player to support TheLever once
+      Given "Luis" is 18 or older
+      And "Luis" has finished 3 games on this device
+      When "Luis" opens the home screen
+      Then the home screen shows a card to support TheLever with a donation
+      When "Luis" closes the card
+      Then it is not shown again on this device
+
+    @ui @todo
+    Scenario: A player under 18 is not invited to donate
+      Given "Marta" is 17
+      And "Marta" has finished 3 games on this device
+      When "Marta" sees the end of the game
+      And opens the home screen
+      Then she sees no invitation to donate

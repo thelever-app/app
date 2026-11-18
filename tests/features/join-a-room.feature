@@ -195,7 +195,7 @@ Feature: Join a room
     When the player tries to join that game again
     Then the player does not enter the room
 
-  @ui @todo
+  @ui
   Scenario: An expelled player can join the rematch
     Given a player who was expelled from a game
     When the host starts the rematch
