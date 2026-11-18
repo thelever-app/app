@@ -55,10 +55,29 @@ export const es: SiteTexts = {
     scene: 'La Palanca, saludando junto a un desvío de vías',
     howToPlay: 'Cómo se juega',
     steps: [
-      'Crea una sala y comparte el enlace o el código.',
-      'En cada ronda, todos votáis el mismo dilema en privado y predecís a los demás.',
-      'Se revela el resultado y lo comentáis. Al final, los títulos de la partida.',
+      { title: 'Crea la sala', text: 'Comparte el enlace o el código y que entre tu gente.' },
+      {
+        title: 'Vota y predice',
+        text: 'En cada ronda, todos votáis el mismo dilema en privado y predecís a los demás.',
+      },
+      {
+        title: 'Descubrid quién piensa qué',
+        text: 'Se revela el resultado y lo comentáis. Al final, los títulos de la partida.',
+      },
     ],
+    screens: {
+      roomCode: 'Código de la sala',
+      share: 'Compartir enlace',
+      round: 'Dilema 2 de 6',
+      dilemma: '¿Mentirías para salvar el trabajo de un amigo?',
+      yes: 'Sí, mentiría',
+      no: 'No, diría la verdad',
+      private: 'Nadie del grupo verá tu voto',
+      result: '3 de 5 dijeron sí',
+      yesCount: 'Sí · 3',
+      noCount: 'No · 2',
+      right: 'Acertaste con Ana y Luis',
+    },
     categories: 'Categorías',
   },
   category: {

@@ -12,6 +12,7 @@
     "@material-symbols/svg-500": "^0.47.6",
     "@thelever-app/db": "workspace:*",
     "@thelever-app/dilemmas": "workspace:*",
+    "@thelever-app/ui": "workspace:*",
     "express": "^5.2.1",
     "google-auth-library": "^11.3.1"
   },

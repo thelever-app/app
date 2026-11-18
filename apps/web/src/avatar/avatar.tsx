@@ -1,8 +1,6 @@
-import { createAvatar } from '@dicebear/core';
-import * as notionistsNeutral from '@dicebear/notionists-neutral';
 import type { AvatarDto } from '@thelever-app/protocol';
 import { type CSSProperties, useMemo } from 'react';
-import { FACES } from './faces.ts';
+import { faceDataUri } from '@thelever-app/ui';
 import styles from './avatar.module.css';
 
 /**
@@ -25,17 +23,7 @@ const faceUris = new Map<AvatarDto['face'], string>();
 export function faceUri(face: AvatarDto['face']): string {
   const cached = faceUris.get(face);
   if (cached) return cached;
-  const { glasses, ...parts } = FACES[face];
-  const uri = createAvatar(notionistsNeutral, {
-    scale: 125,
-    // The colour of the player shows behind the face: the style would paint it white.
-    backgroundColor: ['transparent'],
-    brows: [parts.brows],
-    eyes: [parts.eyes],
-    lips: [parts.lips],
-    nose: [parts.nose],
-    ...(glasses ? { glasses: [glasses], glassesProbability: 100 } : { glassesProbability: 0 }),
-  }).toDataUri();
+  const uri = faceDataUri(face);
   faceUris.set(face, uri);
   return uri;
 }

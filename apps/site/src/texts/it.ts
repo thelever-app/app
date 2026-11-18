@@ -54,10 +54,32 @@ export const it: SiteTexts = {
     scene: 'La Palanca che saluta accanto a uno scambio ferroviario',
     howToPlay: 'Come si gioca',
     steps: [
-      'Crea una stanza e condividi il link o il codice.',
-      'A ogni turno votate tutti lo stesso dilemma in segreto e prevedete gli altri.',
-      'Si svela il risultato e ne parlate. Alla fine, i titoli della partita.',
+      {
+        title: 'Crea la stanza',
+        text: 'Condividi il link o il codice e fai entrare la tua gente.',
+      },
+      {
+        title: 'Vota e prevedi',
+        text: 'A ogni turno votate tutti lo stesso dilemma in segreto e prevedete gli altri.',
+      },
+      {
+        title: 'Scoprite chi pensa cosa',
+        text: 'Si svela il risultato e ne parlate. Alla fine, i titoli della partita.',
+      },
     ],
+    screens: {
+      roomCode: 'Codice della stanza',
+      share: 'Condividi il link',
+      round: 'Dilemma 2 di 6',
+      dilemma: 'Mentiresti per salvare il lavoro di un amico?',
+      yes: 'Sì, mentirei',
+      no: 'No, direi la verità',
+      private: 'Nessuno del gruppo vedrà il tuo voto',
+      result: '3 su 5 hanno detto sì',
+      yesCount: 'Sì · 3',
+      noCount: 'No · 2',
+      right: 'Hai indovinato Ana e Luis',
+    },
     categories: 'Categorie',
   },
   category: {

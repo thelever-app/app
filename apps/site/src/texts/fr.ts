@@ -55,10 +55,29 @@ export const fr: SiteTexts = {
     scene: 'La Palanca, qui fait signe à côté d’un aiguillage',
     howToPlay: 'Comment jouer',
     steps: [
-      'Crée une salle et partage le lien ou le code.',
-      'À chaque manche, vous votez tous le même dilemme en secret et vous prédisez les autres.',
-      'Le résultat est révélé et vous en discutez. À la fin, les titres de la partie.',
+      { title: 'Crée la salle', text: 'Partage le lien ou le code et fais entrer tes proches.' },
+      {
+        title: 'Vote et prédis',
+        text: 'À chaque manche, vous votez tous le même dilemme en secret et vous prédisez les autres.',
+      },
+      {
+        title: 'Découvrez qui pense quoi',
+        text: 'Le résultat est révélé et vous en discutez. À la fin, les titres de la partie.',
+      },
     ],
+    screens: {
+      roomCode: 'Code de la salle',
+      share: 'Partager le lien',
+      round: 'Dilemme 2 sur 6',
+      dilemma: 'Mentirais-tu pour sauver le travail d’un ami ?',
+      yes: 'Oui, je mentirais',
+      no: 'Non, je dirais la vérité',
+      private: 'Personne du groupe ne verra ton vote',
+      result: '3 sur 5 ont dit oui',
+      yesCount: 'Oui · 3',
+      noCount: 'Non · 2',
+      right: 'Tu as deviné Ana et Luis',
+    },
     categories: 'Catégories',
   },
   category: {

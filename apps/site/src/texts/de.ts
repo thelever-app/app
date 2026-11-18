@@ -55,10 +55,32 @@ export const de: SiteTexts = {
     scene: 'La Palanca winkt neben einer Weiche',
     howToPlay: 'So wird gespielt',
     steps: [
-      'Erstelle einen Raum und teile den Link oder den Code.',
-      'In jeder Runde stimmt ihr alle geheim über dasselbe Dilemma ab und sagt die anderen voraus.',
-      'Das Ergebnis wird aufgedeckt und ihr sprecht darüber. Am Ende gibt es die Titel des Spiels.',
+      {
+        title: 'Erstelle den Raum',
+        text: 'Teile den Link oder den Code und lass deine Leute herein.',
+      },
+      {
+        title: 'Stimme ab und sag voraus',
+        text: 'In jeder Runde stimmt ihr alle geheim über dasselbe Dilemma ab und sagt die anderen voraus.',
+      },
+      {
+        title: 'Findet heraus, wer was denkt',
+        text: 'Das Ergebnis wird aufgedeckt und ihr sprecht darüber. Am Ende gibt es die Titel des Spiels.',
+      },
     ],
+    screens: {
+      roomCode: 'Raumcode',
+      share: 'Link teilen',
+      round: 'Dilemma 2 von 6',
+      dilemma: 'Würdest du lügen, um den Job eines Freundes zu retten?',
+      yes: 'Ja, ich würde lügen',
+      no: 'Nein, ich würde die Wahrheit sagen',
+      private: 'Niemand aus der Gruppe sieht deine Stimme',
+      result: '3 von 5 sagten Ja',
+      yesCount: 'Ja · 3',
+      noCount: 'Nein · 2',
+      right: 'Ana und Luis richtig erraten',
+    },
     categories: 'Kategorien',
   },
   category: {

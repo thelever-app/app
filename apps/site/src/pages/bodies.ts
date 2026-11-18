@@ -38,9 +38,7 @@ export function homeBody(language: string, texts: SiteTexts, appBase: string): H
     </div>
     <section class="home-section">
       <h2>${texts.home.howToPlay}</h2>
-      <ol class="steps" role="list">
-        ${texts.home.steps.map((step) => html`<li>${step}</li>`)}
-      </ol>
+      ${howToPlay(texts)}
     </section>
     <section class="home-section">
       <h2>${texts.home.categories}</h2>
@@ -52,6 +50,94 @@ export function homeBody(language: string, texts: SiteTexts, appBase: string): H
       </ul>
     </section>
   </div>`;
+}
+
+/** Test data of the miniatures: who is in the room, by the face and the colour the app gives them. */
+const FACES = [
+  ['face-01', 'teal'],
+  ['face-02', 'khaki'],
+  ['face-03', 'rust'],
+  ['face-04', 'olive'],
+  ['face-05', 'cyan'],
+] as const;
+
+/** A code as the room gets one: five characters, without those that look alike. */
+const ROOM_CODE = 'K7QFM';
+
+function face(index: number): Html {
+  const [name, color] = FACES[index]!;
+  return html`<span class="mini-face mini-${color}"
+    ><img src="${assetPath(`faces/${name}.svg`)}" alt="" width="34" height="34"
+  /></span>`;
+}
+
+/** A step of how to play: a screen of the app in miniature, which only decorates, and what it says. */
+function step(
+  number: number,
+  { title, text }: { readonly title: string; readonly text: string },
+  screen: Html,
+  dark = false,
+): Html {
+  return html`<li class="step">
+    <div class="step-screen" aria-hidden="true">
+      <div class="${dark ? 'mini mini-dark' : 'mini'}">${screen}</div>
+    </div>
+    <div class="step-text">
+      <div class="step-head">
+        <span class="step-number" aria-hidden="true">${number}</span>
+        <h3>${title}</h3>
+      </div>
+      <p>${text}</p>
+    </div>
+  </li>`;
+}
+
+/** «Cómo se juega»: create the room, vote and predict, and find out who thinks what. */
+function howToPlay(texts: SiteTexts): Html {
+  const { steps, screens } = texts.home;
+  const [create, vote, reveal] = steps as [
+    (typeof steps)[number],
+    (typeof steps)[number],
+    (typeof steps)[number],
+  ];
+  return html`<ol class="steps" role="list">
+    ${step(
+      1,
+      create,
+      html`<span class="mini-label">${screens.roomCode}</span>
+        <span class="mini-code">${ROOM_CODE}</span>
+        <span class="mini-faces"
+          >${[0, 1, 2].map(face)}<span class="mini-add">${icon('add')}</span></span
+        >
+        <span class="mini-share">${screens.share}</span>`,
+    )}
+    ${step(
+      2,
+      vote,
+      html`<span class="mini-label">${screens.round}</span>
+        <span class="mini-dilemma">${screens.dilemma}</span>
+        <span class="mini-option mini-a">${screens.yes}</span>
+        <span class="mini-option mini-b">${screens.no}</span>
+        <span class="mini-private">${icon('lock')}${screens.private}</span>`,
+    )}
+    ${step(
+      3,
+      reveal,
+      html`<span class="mini-label">${screens.result}</span>
+        <span class="mini-result">
+          <span class="mini-column mini-yes"
+            ><span class="mini-faces">${[0, 1, 2].map(face)}</span
+            ><span class="mini-bar mini-a">${screens.yesCount}</span></span
+          >
+          <span class="mini-column mini-no"
+            ><span class="mini-faces">${[3, 4].map(face)}</span
+            ><span class="mini-bar mini-b">${screens.noCount}</span></span
+          >
+        </span>
+        <span class="mini-right">${screens.right}</span>`,
+      true,
+    )}
+  </ol>`;
 }
 
 export function categoryBody(

@@ -6,3 +6,4 @@
  * artifact; `pnpm --filter @thelever-app/ui tokens` regenerates `tokens.css` from it.
  */
 export { tokensCss, type DesignTokens } from './tokens-css.ts';
+export { FACES, faceDataUri, faceSvg, type Face } from './faces.ts';
