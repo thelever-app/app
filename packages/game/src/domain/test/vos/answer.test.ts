@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AnswerVO, type AnswerProps } from '../../vos/answer.vo.ts';
+import { InvalidDistributionPredictionError } from '../../errors/invalid-distribution-prediction.error.ts';
 import { VoteMissingError } from '../../errors/vote-missing.error.ts';
 
 const SEAL = {
@@ -11,6 +12,8 @@ const SEAL = {
 const PROPS: AnswerProps = {
   vote: 'TestOption',
   votePredictions: [{ playerId: 'TestAnaId', vote: 'TestOtherOption' }],
+  distributionPrediction: null,
+  ready: false,
   optionOrder: ['TestOtherOption', 'TestOption'],
   responseTimeMs: null,
   seal: SEAL,
@@ -30,6 +33,39 @@ describe('AnswerVO', () => {
       expect(answerVO.responseTimeMs).toBeNull();
       expect(answerVO.seal).toEqual(SEAL);
       expect(answerVO.voterInTheGap).toBe(true);
+    });
+
+    it('should keep the distribution prediction and whether it is ready', () => {
+      // Arrange
+      const distributionPrediction = [
+        { optionId: 'TestOtherOption', share: 35 },
+        { optionId: 'TestOption', share: 65 },
+      ];
+
+      // Act
+      const answerVO = new AnswerVO({
+        ...PROPS,
+        votePredictions: [],
+        distributionPrediction,
+        ready: true,
+      });
+
+      // Assert
+      expect(answerVO.distributionPrediction?.shares).toEqual(distributionPrediction);
+      expect(answerVO.toProps().distributionPrediction).toEqual(distributionPrediction);
+      expect(answerVO.ready).toBe(true);
+    });
+
+    it('should throw an error for a distribution prediction that does not add up to 100 %', () => {
+      // Act
+      const create = () =>
+        new AnswerVO({
+          ...PROPS,
+          distributionPrediction: [{ optionId: 'TestOption', share: 90 }],
+        });
+
+      // Assert
+      expect(create).toThrow(InvalidDistributionPredictionError);
     });
 
     it('should trim the vote and the predicted votes', () => {

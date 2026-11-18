@@ -26,6 +26,8 @@ const ANSWERED: GameStateDto = {
       dilemmaId: 'test-dilemma-1',
       vote: 'test-option-1a',
       votePredictions: [{ playerId: 'test-luis-id', vote: 'test-option-1b' }],
+      distributionPrediction: null,
+      ready: false,
     },
   ],
   players: NOMINAL.players.map((player) =>
@@ -51,22 +53,32 @@ describe('DecisionPhase', () => {
     expect(screen.getByRole('heading', { name: 'Texto del dilema 2' })).toBeDefined();
   });
 
-  it('should send the vote of an anonymous room with «Listo», once', async () => {
+  it('should send the vote of an anonymous room as it continues, and the prediction with «Listo», once', async () => {
     // Arrange
     const { connection, t } = await renderPhase(ANONYMOUS);
     fireEvent.click(screen.getByRole('radio', { name: 'Opción 1A' }));
 
     // Act
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.done') }));
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
+    const voted = [...connection.send.mock.calls];
+    fireEvent.click(screen.getByRole('button', { name: t('predict.next') }));
 
     // Assert
-    expect(connection.send).toHaveBeenCalledWith({
+    expect(voted).toEqual([
+      [{ type: 'answer-dilemma', dilemmaId: 'test-dilemma-1', vote: 'test-option-1a' }],
+    ]);
+    expect(connection.send).toHaveBeenLastCalledWith({
       type: 'answer-dilemma',
       dilemmaId: 'test-dilemma-1',
       vote: 'test-option-1a',
+      distributionPrediction: [
+        { optionId: 'test-option-1a', share: 50 },
+        { optionId: 'test-option-1b', share: 50 },
+      ],
+      ready: true,
     });
     expect(
-      screen.getByRole<HTMLButtonElement>('button', { name: t('dilemma.done') }).disabled,
+      screen.getByRole<HTMLButtonElement>('button', { name: t('predict.next') }).disabled,
     ).toBe(true);
   });
 
@@ -106,12 +118,24 @@ describe('DecisionPhase', () => {
     expect(screen.getByRole('heading', { name: t('waiting.title') })).toBeDefined();
   });
 
-  it('should wait for the others once an anonymous room has the answer of the player', async () => {
+  it('should wait for the others once an anonymous room has the answer of the player, Ready', async () => {
     // Act
-    const { t } = await renderPhase({ ...ANONYMOUS, answers: ANSWERED.answers, answeredCount: 1 });
+    const { t } = await renderPhase({
+      ...ANONYMOUS,
+      answers: ANSWERED.answers.map((answer) => ({ ...answer, ready: true })),
+      answeredCount: 1,
+    });
 
     // Assert
     expect(screen.getByRole('heading', { name: t('waiting.title') })).toBeDefined();
+  });
+
+  it('should not wait for the others while the anonymous answer has only the vote', async () => {
+    // Act
+    const { t } = await renderPhase({ ...ANONYMOUS, answers: ANSWERED.answers });
+
+    // Assert
+    expect(screen.queryByRole('heading', { name: t('waiting.title') })).toBeNull();
   });
 
   it('should let the player change their answer and come back to waiting, keeping the predictions', async () => {
@@ -155,12 +179,13 @@ describe('DecisionPhase', () => {
     // Arrange
     const { connection, deliver, t } = await renderPhase(ANONYMOUS);
     fireEvent.click(screen.getByRole('radio', { name: 'Opción 1A' }));
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.done') }));
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
+    fireEvent.click(screen.getByRole('button', { name: t('predict.next') }));
 
     // Act
     act(() => deliver({ type: 'error', command: 'answer-dilemma', code: 'option-not-in-dilemma' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Opción 1B' }));
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.done') }));
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
 
     // Assert
     expect(connection.send).toHaveBeenLastCalledWith({

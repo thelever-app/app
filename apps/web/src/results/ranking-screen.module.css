@@ -1,0 +1,140 @@
+.screen {
+  composes: screen from '../reveal/reveal-screen.module.css';
+}
+
+.header {
+  composes: header from '../reveal/reveal-screen.module.css';
+}
+
+.top {
+  composes: top from '../reveal/reveal-screen.module.css';
+}
+
+.label {
+  composes: position from '../reveal/reveal-screen.module.css';
+}
+
+.main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-4) var(--space-4);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.title {
+  composes: title from '../styles/typography.module.css';
+  margin: 0;
+}
+
+.text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.ranking {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+}
+
+/* The player, on the surface. */
+.row[data-self] {
+  background: var(--color-surface);
+}
+
+.row[data-self] .name {
+  font-weight: 600;
+}
+
+.position {
+  width: 28px;
+  flex: none;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.name {
+  flex-grow: 1;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* El Mentalista: the inverted sign. */
+.mentalist {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.points {
+  width: 56px;
+  flex: none;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.hidden {
+  composes: hidden from '../reveal/reveal-screen.module.css';
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-ink-muted);
+}
+
+.footer {
+  composes: footer from '../reveal/reveal-screen.module.css';
+}
+
+.next {
+  composes: next from '../reveal/reveal-screen.module.css';
+}

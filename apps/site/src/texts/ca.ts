@@ -55,10 +55,29 @@ export const ca: SiteTexts = {
     scene: 'La Palanca, saludant al costat d’un canvi d’agulles',
     howToPlay: 'Com es juga',
     steps: [
-      'Crea una sala i comparteix l’enllaç o el codi.',
-      'A cada ronda, tots voteu el mateix dilema en privat i predieu els altres.',
-      'Es revela el resultat i el comenteu. Al final, els títols de la partida.',
+      { title: 'Crea la sala', text: 'Comparteix l’enllaç o el codi i que entri la teva gent.' },
+      {
+        title: 'Vota i prediu',
+        text: 'A cada ronda, tots voteu el mateix dilema en privat i predieu els altres.',
+      },
+      {
+        title: 'Descobriu qui pensa què',
+        text: 'Es revela el resultat i el comenteu. Al final, els títols de la partida.',
+      },
     ],
+    screens: {
+      roomCode: 'Codi de la sala',
+      share: 'Comparteix l’enllaç',
+      round: 'Dilema 2 de 6',
+      dilemma: 'Mentiries per salvar la feina d’un amic?',
+      yes: 'Sí, mentiria',
+      no: 'No, diria la veritat',
+      private: 'Ningú del grup veurà el teu vot',
+      result: '3 de 5 han dit que sí',
+      yesCount: 'Sí · 3',
+      noCount: 'No · 2',
+      right: 'Has encertat l’Ana i en Luis',
+    },
     categories: 'Categories',
   },
   category: {

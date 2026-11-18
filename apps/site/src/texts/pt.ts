@@ -55,10 +55,29 @@ export const pt: SiteTexts = {
     scene: 'La Palanca, a acenar junto a uma agulha da linha',
     howToPlay: 'Como se joga',
     steps: [
-      'Cria uma sala e partilha o link ou o código.',
-      'Em cada ronda, todos votam o mesmo dilema em segredo e preveem os outros.',
-      'O resultado é revelado e vocês comentam-no. No fim, os títulos da partida.',
+      { title: 'Cria a sala', text: 'Partilha o link ou o código e deixa entrar a tua gente.' },
+      {
+        title: 'Vota e prevê',
+        text: 'Em cada ronda, todos votam o mesmo dilema em segredo e preveem os outros.',
+      },
+      {
+        title: 'Descubram quem pensa o quê',
+        text: 'O resultado é revelado e vocês comentam-no. No fim, os títulos da partida.',
+      },
     ],
+    screens: {
+      roomCode: 'Código da sala',
+      share: 'Partilhar link',
+      round: 'Dilema 2 de 6',
+      dilemma: 'Mentirias para salvar o emprego de um amigo?',
+      yes: 'Sim, mentiria',
+      no: 'Não, diria a verdade',
+      private: 'Ninguém do grupo verá o teu voto',
+      result: '3 de 5 disseram sim',
+      yesCount: 'Sim · 3',
+      noCount: 'Não · 2',
+      right: 'Acertaste com a Ana e o Luis',
+    },
     categories: 'Categorias',
   },
   category: {

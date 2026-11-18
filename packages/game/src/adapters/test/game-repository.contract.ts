@@ -200,6 +200,53 @@ export function describeGameRepositoryContract(
         expect(found?.revealOf(0).tooFewVotes).toBe(true);
       });
 
+      it('should find a saved anonymous game at its end, with its distribution predictions and Ready', async () => {
+        // Arrange
+        const { games, room, game, dilemmas, first } = await arrange();
+        start(game, room);
+        game.answer(
+          'TestAnaId',
+          first.dilemmaId,
+          {
+            vote: first.optionIds[0],
+            distributionPrediction: [
+              { optionId: first.optionIds[1], share: 35 },
+              { optionId: first.optionIds[0], share: 65 },
+            ],
+            ready: true,
+          },
+          ANA_SEAL,
+          new Date(STARTED_AT.getTime() + 5 * SECOND),
+        );
+        game.answer(
+          'TestLuisId',
+          first.dilemmaId,
+          { vote: first.optionIds[1] },
+          LUIS_SEAL,
+          new Date(STARTED_AT.getTime() + 6 * SECOND),
+        );
+        for (const [position] of dilemmas.entries()) {
+          if (game.isInDecisionPhase) game.reveal('host');
+          game.moveOn('TestAnaId', position, new Date(STARTED_AT.getTime() + MINUTE));
+        }
+        game.moveOn('TestLuisId', dilemmas.length, new Date(STARTED_AT.getTime() + 2 * MINUTE));
+        await games.save(game);
+
+        // Act
+        const found = await games.findById('TestGameId');
+
+        // Assert
+        expect(found?.toSnapshot()).toEqual(game.toSnapshot());
+        expect(found?.stage).toEqual({ kind: 'ended', movedOnBy: 'TestLuisId' });
+        const [ana] = found?.answersOf('TestAnaId') ?? [];
+        expect(ana?.distributionPrediction?.[0]).toEqual({
+          optionId: first.optionIds[1],
+          share: 35,
+        });
+        expect(ana?.ready).toBe(true);
+        expect(found?.answersOf('TestLuisId')[0]?.ready).toBe(false);
+      });
+
       it('should find a saved nominal game in the reveal, with its predictions, its points and the person in the gap', async () => {
         // Arrange
         const { games, room, game, first, second } = await arrange({

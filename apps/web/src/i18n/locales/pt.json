@@ -30,6 +30,7 @@
     "more": "+{{count, number}}",
     "showAll": "Ver todos",
     "predicting": "Dilema {{position, number}} de {{total, number}} · Prevê",
+    "predictingDistribution": "Dilema {{position, number}} de {{total, number}} · Prevê a distribuição",
     "anonymousGroup": "Quantos já responderam",
     "anonymousCount_one": "Respondeu {{count}} · faltam {{pending, number}}",
     "anonymousCount_many": "Responderam {{count, number}} · faltam {{pending, number}}",
@@ -54,8 +55,7 @@
     "privacy": "Ninguém do grupo verá o teu voto até à revelação. Até lá, podes mudá-lo.",
     "choose": "Escolhe uma opção",
     "continue": "Continuar",
-    "privacyAnonymous": "Ninguém do grupo verá o teu voto, nem na revelação. Podes mudá-lo até o dilema ser revelado.",
-    "done": "Pronto"
+    "privacyAnonymous": "Ninguém do grupo verá o teu voto, nem na revelação. Podes mudá-lo até o dilema ser revelado."
   },
   "waiting": {
     "position": "Dilema {{position, number}} de {{total, number}} · Já respondeste",
@@ -82,6 +82,14 @@
     "missing_many": "Faltam {{count, number}} respostas",
     "missing_other": "Faltam {{count, number}} respostas",
     "next": "Pronto"
+  },
+  "distribution": {
+    "question": "Como se vai dividir o grupo?",
+    "hint": "Contando contigo. Move uma barra e as outras ajustam-se sozinhas: somam sempre 100 %.",
+    "hintTwo": "Contando contigo. Move a barra e as duas opções ajustam-se sozinhas: somam sempre 100 %.",
+    "yourVote": "o teu voto",
+    "shareOf": "Percentagem que prevês para {{option}}",
+    "percent": "{{value, number}} %"
   },
   "gameMenu": {
     "open": "Mais opções",
@@ -159,14 +167,19 @@
     "voterRight": "{{name}}, acertaste",
     "voterMissed": "{{name}}, falhaste: disseste {{letter}}",
     "optionCount": "{{count, number}} · {{percent}}",
+    "optionCountPredicted": "{{count, number}} · {{percent}} · tu, {{predicted}}",
     "didNotVote_one": "Não votou · {{names}}",
     "didNotVote_many": "Não votaram · {{names}}",
     "didNotVote_other": "Não votaram · {{names}}",
     "next": "Dilema seguinte",
+    "toResults": "Ver os resultados",
     "anonymousDidNotVote_one": "{{count}} pessoa não votou.",
     "anonymousDidNotVote_many": "{{count, number}} pessoas não votaram.",
     "anonymousDidNotVote_other": "{{count, number}} pessoas não votaram.",
     "anonymousNote": "Nesta sala ninguém vê quem votou o quê.",
+    "yourPrediction": "A tua previsão da distribuição",
+    "yourPredictionHint": "A marca preta em cada barra é o que previste.",
+    "points": "+{{points, number}}",
     "fewVotesTitle": "Poucos votos para mostrar a distribuição",
     "fewVotesVoted_one": "Só votou {{count}} pessoa",
     "fewVotesVoted_many": "Só votaram {{count, number}} pessoas",
@@ -175,7 +188,7 @@
     "fewVotesDidNot_one": "e {{count}} não votou",
     "fewVotesDidNot_many": "e {{count, number}} não votaram",
     "fewVotesDidNot_other": "e {{count, number}} não votaram",
-    "fewVotesWhy": "Com menos de 3 votos, a distribuição deixaria adivinhar quem votou o quê.",
+    "fewVotesWhy": "Com menos de 3 votos, a distribuição deixaria adivinhar quem votou o quê, por isso este dilema não dá pontos.",
     "introPosition": "Dilema {{position, number}} de {{total, number}} · Fim da decisão",
     "introTitle": "Chegou a revelação",
     "introMascot": "La Palanca, a festejar",
@@ -184,6 +197,35 @@
     "introAnswered_other": "Responderam {{count, number}} de {{total, number}}.",
     "introNominal": "Agora sim: vão ver o que votou cada um.",
     "introAnonymous": "Agora sim: vão ver quantos escolheram cada opção."
+  },
+  "ranking": {
+    "label": "Resultados",
+    "anonymous": "Sala anónima",
+    "title": "Quem lê melhor o grupo",
+    "text": "Pontos por te aproximares da distribuição real de cada dilema. Ninguém viu o voto de ninguém.",
+    "position": "{{position, number}}.º",
+    "mentalist": "El Mentalista",
+    "points": "{{points, number}}",
+    "pointsUnit": "pontos",
+    "note": "Quem fica em primeiro é El Mentalista da partida. Os dilemas com menos de 3 votos não dão pontos. Os empates partilham lugar e título.",
+    "next": "Continuar"
+  },
+  "end": {
+    "label": "Partida terminada · {{total, number}} de {{total, number}}",
+    "title": "Fim da linha",
+    "mascot": "La Palanca, a festejar",
+    "place_one": "Ficaste em {{position, number}}.º de {{players, number}} a ler o grupo, com {{count}} ponto.",
+    "place_many": "Ficaste em {{position, number}}.º de {{players, number}} a ler o grupo, com {{count, number}} pontos.",
+    "place_other": "Ficaste em {{position, number}}.º de {{players, number}} a ler o grupo, com {{count, number}} pontos.",
+    "placeMentalist_one": "Ninguém leu melhor o grupo: ficaste em 1.º de {{players, number}}, com {{count}} ponto.",
+    "placeMentalist_many": "Ninguém leu melhor o grupo: ficaste em 1.º de {{players, number}}, com {{count, number}} pontos.",
+    "placeMentalist_other": "Ninguém leu melhor o grupo: ficaste em 1.º de {{players, number}}, com {{count, number}} pontos.",
+    "inRoom": "Ainda na sala · {{count, number}}",
+    "gone_one": "{{names}} saiu.",
+    "gone_many": "{{names}} saíram.",
+    "gone_other": "{{names}} saíram.",
+    "closes": "A sala fecha 15 minutos depois de não ficar ninguém ligado.",
+    "leave": "Sair"
   },
   "notices": {
     "reconnecting": "A restabelecer a ligação… as tuas respostas estão guardadas",

@@ -7,6 +7,7 @@ import { NewHostNotice } from '../game/new-host-notice.tsx';
 import { LobbyScreen } from '../lobby/lobby-screen.tsx';
 import { QrScreen } from '../lobby/qr-screen.tsx';
 import { DecisionPhase } from '../phases/decision-phase.tsx';
+import { ResultsPhase } from '../phases/results-phase.tsx';
 import { RevealPhase } from '../phases/reveal-phase.tsx';
 import { RoomApiProvider } from '../room/room-api-context.tsx';
 import type { ConnectedRoom } from '../room/connect-room.ts';
@@ -72,7 +73,10 @@ export function RoomScreen() {
   );
 }
 
-/** The lobby, or the game: first the notice of who has just joined it late, then its round. */
+/**
+ * The lobby, or the game: first the notice of who has just joined it late, then its round, and
+ * after the last one its results and its end.
+ */
 export function RoomContent() {
   const { lobby, game } = useRoom();
   const { joinedLate, forget } = useJoinedLate();
@@ -83,7 +87,9 @@ export function RoomContent() {
   const showQr = () => setIsQrOpen(true);
   return (
     <>
-      {game?.round.phase === 'reveal' ? (
+      {game && game.stage.kind !== 'rounds' ? (
+        <ResultsPhase onShowQr={showQr} />
+      ) : game?.round.phase === 'reveal' ? (
         <RevealPhase onShowQr={showQr} />
       ) : (
         <DecisionPhase onShowQr={showQr} />

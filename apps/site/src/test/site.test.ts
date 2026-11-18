@@ -510,6 +510,21 @@ describe('the public web', () => {
     expect(home).toContain('<ol class="steps" role="list">');
   });
 
+  it('should show each step of how to play with a screen of the app in miniature that only decorates', async () => {
+    // Act
+    const home = String((await answer('/es/', { dilemmas: [], withdrawn: [] })).body);
+
+    // Assert
+    for (const { title, text } of es.home.steps) {
+      expect(home).toContain(`<h3>${title}</h3>`);
+      expect(home).toContain(text);
+    }
+    expect(home.match(/<div class="step-screen" aria-hidden="true">/g)).toHaveLength(3);
+    expect(home).toContain(es.home.screens.roomCode);
+    expect(home).toMatch(/src="\/_site\/faces\/face-01\.svg\?v=[0-9a-f]+"/);
+    expect(home).toMatch(/class="mini-code">[A-HJ-KM-NP-Z2-9]{5}</);
+  });
+
   it('should leave the logo of the home and its x-default to the home, not to the page of an address that does not exist', async () => {
     // Act
     const home = String((await answer('/es/', { dilemmas: [], withdrawn: [] })).body);

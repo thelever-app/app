@@ -292,6 +292,7 @@ Given(
     await this.isInTheRoom(firstPlayer);
     await this.isInTheRoom(secondPlayer);
     assert.equal((await this.driver.settingsSeenBy(host)).variant, 'nominal');
+    this.variant = 'nominal';
   },
 );
 
@@ -302,6 +303,7 @@ Given(
     await this.isInTheRoom(firstPlayer);
     await this.isInTheRoom(secondPlayer);
     await this.driver.changeSettings(host, { variant: 'anonymous' });
+    this.variant = 'anonymous';
   },
 );
 
@@ -1018,7 +1020,173 @@ async function bringInPlayers(world: GameWorld, count: number): Promise<void> {
 // An anonymous room
 
 When('{string} votes', async function (this: GameWorld, player: string) {
-  await this.driver.answer(player);
+  await this.driver.vote(player);
+});
+
+When('{string} presses Ready', async function (this: GameWorld, player: string) {
+  await this.driver.pressReady(player);
+});
+
+Then('{string} cannot predict the distribution', async function (this: GameWorld, player: string) {
+  assert.equal(await this.driver.canPredictDistribution(player), false);
+});
+
+/** The shares of a step, as "70 % and 30 %" or "40 %, 30 %, 20 % and 10 %". */
+function sharesOf(written: string): number[] {
+  return [...written.matchAll(/(\d+) %/g)].map(([, share]) => Number(share));
+}
+
+/** The shares of a step for the options of the dilemma of the round, in the order the player sees them. */
+async function sharesSeenBy(
+  world: GameWorld,
+  player: string,
+  shares: readonly number[],
+): Promise<{ readonly option: string; readonly share: number }[]> {
+  const position = await world.driver.dilemmaShownTo(player);
+  const options = await world.driver.optionsSeenBy(player, position);
+  assert.equal(options.length, shares.length, `the dilemma has ${options.length} options`);
+  return options.map((option, index) => ({ option, share: shares[index]! }));
+}
+
+Given(
+  /^"([^"]+)" voted the first dilemma and set his distribution prediction to (.+)$/,
+  async function (this: GameWorld, player: string, written: string) {
+    await this.game();
+    this.player = player;
+    await this.driver.predictDistribution(
+      player,
+      await sharesSeenBy(this, player, sharesOf(written)),
+    );
+  },
+);
+
+Given('{string} has not pressed Ready', async function (this: GameWorld, player: string) {
+  assert.equal(await this.driver.hasAnswered(player), false);
+});
+
+Then(
+  /^his vote and his distribution prediction of (.+) count$/,
+  async function (this: GameWorld, written: string) {
+    const recorded = await this.driver.answerRecordedFor(this.player, 1);
+    assert.ok(recorded, `${this.player} has no answer`);
+    assert.deepEqual(
+      recorded.distributionPrediction?.map(({ share }) => share),
+      sharesOf(written),
+    );
+  },
+);
+
+// The distribution prediction in an anonymous room
+
+/** Test data: a dilemma of the test data with that many options. */
+const DILEMMA_WITH: Record<number, string> = {
+  2: 'life-and-death-1',
+  3: 'three-options-1',
+  4: 'four-choices-1',
+};
+
+/** The room plays only the dilemma with that many options, with as many players as an anonymous game needs. */
+async function onlyADilemmaWith(world: GameWorld, options: number): Promise<void> {
+  const dilemmaId = DILEMMA_WITH[options];
+  assert.ok(dilemmaId, `the test data has no dilemma with ${options} options`);
+  world.requestGame();
+  await bringInPlayers(world, 3);
+  await specificRounds(world, [dilemmaId]);
+  world.player = await world.host();
+}
+
+Given('a dilemma with {int} options', async function (this: GameWorld, options: number) {
+  await onlyADilemmaWith(this, options);
+});
+
+When('a player has voted it', async function (this: GameWorld) {
+  await this.game();
+  // Once voted, the screen shows the bars instead of the options.
+  this.optionsSeen = await this.driver.optionsSeenBy(this.player, 1);
+  await this.driver.vote(this.player);
+});
+
+When('a player predicts the distribution', async function (this: GameWorld) {
+  await this.game();
+  await this.driver.vote(this.player);
+});
+
+Then(
+  /^the distribution prediction starts at (.+) in the order the player sees the options$/,
+  async function (this: GameWorld, written: string) {
+    const seen = await this.driver.distributionPredictionSeenBy(this.player);
+    assert.deepEqual(seen?.shares, sharesOf(written));
+  },
+);
+
+Then('the option the player voted is marked as their vote', async function (this: GameWorld) {
+  const seen = await this.driver.distributionPredictionSeenBy(this.player);
+  const recorded = await this.driver.answerRecordedFor(this.player, 1);
+  assert.ok(seen && recorded, `${this.player} has not voted`);
+  assert.equal(seen.vote, this.optionsSeen.indexOf(recorded.vote));
+});
+
+Given(/^a distribution prediction of (.+)$/, async function (this: GameWorld, written: string) {
+  const shares = sharesOf(written);
+  await onlyADilemmaWith(this, shares.length);
+  await this.game();
+  await this.driver.predictDistribution(this.player, await sharesSeenBy(this, this.player, shares));
+});
+
+When(
+  /^the player moves the first option to (\d+) %$/,
+  async function (this: GameWorld, share: string) {
+    await this.driver.moveDistributionShare(this.player, 0, Number(share));
+  },
+);
+
+Then(/^the distribution prediction is (.+)$/, async function (this: GameWorld, written: string) {
+  const seen = await this.driver.distributionPredictionSeenBy(this.player);
+  assert.deepEqual(seen?.shares, sharesOf(written));
+});
+
+When(
+  'a player moves any option of their distribution prediction',
+  async function (this: GameWorld) {
+    await onlyADilemmaWith(this, 4);
+    await this.game();
+    await this.driver.vote(this.player);
+    const seen: (readonly number[])[] = [];
+    for (const [option, share] of [
+      [0, 35],
+      [3, 5],
+      [1, 90],
+      [2, 45],
+      [0, 0],
+      [3, 100],
+    ] as const) {
+      await this.driver.moveDistributionShare(this.player, option, share);
+      seen.push((await this.driver.distributionPredictionSeenBy(this.player))?.shares ?? []);
+    }
+    this.distributionsSeen = seen;
+  },
+);
+
+Then(/^every option is a multiple of (\d+) %$/, function (this: GameWorld, step: string) {
+  for (const shares of this.distributionsSeen) {
+    assert.ok(
+      shares.every((share) => share % Number(step) === 0),
+      `${shares.join(', ')} has a share off the steps`,
+    );
+  }
+});
+
+Then('all the options add up to 100 %', function (this: GameWorld) {
+  for (const shares of this.distributionsSeen) {
+    assert.equal(
+      shares.reduce((total, share) => total + share, 0),
+      100,
+    );
+  }
+});
+
+Then('the player moves a single slider that sets both options', async function (this: GameWorld) {
+  assert.equal(await this.driver.distributionSlidersSeenBy(this.player), 1);
 });
 
 Then(

@@ -81,6 +81,8 @@ describe('DilemmaScreen', () => {
             dilemmaId: 'test-dilemma-1',
             vote: 'test-option-1b',
             votePredictions: [],
+            distributionPrediction: null,
+            ready: false,
           },
         ],
       }),
@@ -98,17 +100,54 @@ describe('DilemmaScreen', () => {
     expect(screen.queryByRole('button', { name: /anterior|volver/i })).toBeNull();
   });
 
-  it('should say in an anonymous room that the vote is never shown, and confirm it with «Listo»', async () => {
+  it('should say in an anonymous room that the vote is never shown, and go on to predict the distribution', async () => {
     // Arrange
     const { onAnswer, onDone, t } = await renderScreen(ANONYMOUS);
+    const privacy = screen.queryByText(t('dilemma.privacyAnonymous'));
     fireEvent.click(option('Opción 1A'));
 
     // Act
-    fireEvent.click(screen.getByRole('button', { name: t('dilemma.done') }));
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
 
     // Assert
-    expect(screen.getByText(t('dilemma.privacyAnonymous'))).toBeDefined();
+    expect(privacy).not.toBeNull();
     expect(onAnswer).toHaveBeenCalledWith({ dilemmaId: 'test-dilemma-1', vote: 'test-option-1a' });
+    expect(screen.getByRole('heading', { name: t('distribution.question') })).toBeDefined();
+    expect(screen.getByRole('slider')).toBeDefined();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('should send the distribution prediction when the player lets go of the bar, and with «Listo»', async () => {
+    // Arrange
+    const { onAnswer, onDone, t } = await renderScreen(ANONYMOUS);
+    fireEvent.click(option('Opción 1A'));
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
+    onAnswer.mockClear();
+    const slider = screen.getByRole('slider');
+
+    // Act
+    fireEvent.change(slider, { target: { value: '70' } });
+    const whileMoving = onAnswer.mock.calls.length;
+    fireEvent.pointerUp(slider);
+    fireEvent.click(screen.getByRole('button', { name: t('predict.next') }));
+
+    // Assert
+    const prediction = [
+      { optionId: 'test-option-1a', share: 70 },
+      { optionId: 'test-option-1b', share: 30 },
+    ];
+    expect(whileMoving).toBe(0);
+    expect(onAnswer.mock.calls).toEqual([
+      [{ dilemmaId: 'test-dilemma-1', vote: 'test-option-1a', distributionPrediction: prediction }],
+      [
+        {
+          dilemmaId: 'test-dilemma-1',
+          vote: 'test-option-1a',
+          distributionPrediction: prediction,
+          ready: true,
+        },
+      ],
+    ]);
     expect(onDone).toHaveBeenCalledOnce();
   });
 

@@ -9,7 +9,8 @@ import type { SocketMessageHandler } from './socket-message-handler.ts';
 
 /**
  * `answer-dilemma`: the player answers a dilemma, complete or with the predictions made so far, or
- * changes an answer they already gave.
+ * changes an answer they already gave; in an anonymous room, with the distribution prediction and
+ * Ready.
  */
 export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemma'> {
   readonly type = 'answer-dilemma';
@@ -32,7 +33,7 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
   }
 
   async handle(
-    { dilemmaId, vote, votePredictions }: AnswerDilemmaDto,
+    { dilemmaId, vote, votePredictions, distributionPrediction, ready }: AnswerDilemmaDto,
     connection: RoomConnection,
   ): Promise<void> {
     const session = connection.session;
@@ -47,6 +48,8 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
           dilemmaId,
           vote,
           ...(votePredictions && { votePredictions }),
+          ...(distributionPrediction && { distributionPrediction }),
+          ...(ready !== undefined && { ready }),
         }),
       );
       // Once committed, and still in the lock. The use case only tells the others: the player learns

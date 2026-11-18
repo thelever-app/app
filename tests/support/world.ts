@@ -101,6 +101,15 @@ export class GameWorld extends World {
   /** How many rounds the game plays, besides those a step set; the room decides if unset. */
   dilemmaCount: number | undefined;
 
+  /** The variant a step said the room has; the room decides if unset. */
+  variant: 'nominal' | 'anonymous' | undefined;
+
+  /** The options of the dilemma of the round in the order the player saw them before voting. */
+  optionsSeen: readonly string[] = [];
+
+  /** What the player saw of their distribution prediction after each move a step made. */
+  distributionsSeen: readonly (readonly number[])[] = [];
+
   /**
    * How each player answers the dilemma in each position (from 1) when a step brings the game to
    * its reveal: their plan, or null for who does not vote. Who is not in it answers in full.
@@ -145,9 +154,17 @@ export class GameWorld extends World {
       this.#host = host;
       this.#roomCreated = true;
       this.inRoom.add(host);
+      if (this.variant === 'anonymous') {
+        await this.driver.changeSettings(host, { variant: 'anonymous' });
+      }
     }
     if (!this.#host) throw new Error('The room has no host');
     return this.#host;
+  }
+
+  /** Whether a step has created the room of the scenario. */
+  get roomCreated(): boolean {
+    return this.#roomCreated;
   }
 
   /** The room is hosted by `host`, who creates it if no step has yet. */

@@ -159,6 +159,9 @@ importers:
       '@thelever-app/dilemmas':
         specifier: workspace:*
         version: link:../../packages/dilemmas
+      '@thelever-app/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       express:
         specifier: ^5.2.1
         version: 5.2.1
@@ -187,12 +190,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@dicebear/core':
-        specifier: ^9.4.3
-        version: 9.4.3
-      '@dicebear/notionists-neutral':
-        specifier: ^9.4.2
-        version: 9.4.2(@dicebear/core@9.4.3)
       '@fontsource/barlow':
         specifier: ^5.3.0
         version: 5.3.0
@@ -369,6 +366,13 @@ importers:
         version: link:../config
 
   packages/ui:
+    dependencies:
+      '@dicebear/core':
+        specifier: ^9.4.3
+        version: 9.4.3
+      '@dicebear/notionists-neutral':
+        specifier: ^9.4.2
+        version: 9.4.2(@dicebear/core@9.4.3)
     devDependencies:
       '@thelever-app/config':
         specifier: workspace:*

@@ -25,6 +25,7 @@
     "more": "+{{count, number}}",
     "showAll": "Alle ansehen",
     "predicting": "Dilemma {{position, number}} von {{total, number}} · Vorhersage",
+    "predictingDistribution": "Dilemma {{position, number}} von {{total, number}} · Verteilung vorhersagen",
     "anonymousGroup": "Wie viele geantwortet haben",
     "anonymousCount_one": "{{count}} hat geantwortet · noch {{pending, number}} offen",
     "anonymousCount_other": "{{count, number}} haben geantwortet · noch {{pending, number}} offen",
@@ -46,8 +47,7 @@
     "privacy": "Niemand aus der Gruppe sieht deine Stimme vor der Auflösung. Bis dahin kannst du sie ändern.",
     "choose": "Wähle eine Option",
     "continue": "Weiter",
-    "privacyAnonymous": "Niemand aus der Gruppe sieht deine Stimme, auch nicht bei der Auflösung. Ändern kannst du sie, bis das Dilemma aufgedeckt wird.",
-    "done": "Fertig"
+    "privacyAnonymous": "Niemand aus der Gruppe sieht deine Stimme, auch nicht bei der Auflösung. Ändern kannst du sie, bis das Dilemma aufgedeckt wird."
   },
   "waiting": {
     "position": "Dilemma {{position, number}} von {{total, number}} · Beantwortet",
@@ -72,6 +72,14 @@
     "missing_one": "Noch {{count}} Antwort offen",
     "missing_other": "Noch {{count, number}} Antworten offen",
     "next": "Fertig"
+  },
+  "distribution": {
+    "question": "Wie wird sich die Gruppe aufteilen?",
+    "hint": "Du zählst mit. Bewege einen Balken, die anderen passen sich von selbst an: zusammen immer 100 %.",
+    "hintTwo": "Du zählst mit. Bewege den Balken, beide Optionen passen sich von selbst an: zusammen immer 100 %.",
+    "yourVote": "deine Stimme",
+    "shareOf": "Anteil, den du für {{option}} vorhersagst",
+    "percent": "{{value, number}} %"
   },
   "gameMenu": {
     "open": "Weitere Optionen",
@@ -148,19 +156,24 @@
     "voterRight": "{{name}}, richtig getippt",
     "voterMissed": "{{name}}, daneben: dein Tipp war {{letter}}",
     "optionCount": "{{count, number}} · {{percent}}",
+    "optionCountPredicted": "{{count, number}} · {{percent}} · du: {{predicted}}",
     "didNotVote_one": "Nicht abgestimmt · {{names}}",
     "didNotVote_other": "Nicht abgestimmt · {{names}}",
     "next": "Nächstes Dilemma",
+    "toResults": "Ergebnisse ansehen",
     "anonymousDidNotVote_one": "{{count}} Person hat nicht abgestimmt.",
     "anonymousDidNotVote_other": "{{count, number}} Personen haben nicht abgestimmt.",
     "anonymousNote": "In diesem Raum sieht niemand, wer was gewählt hat.",
+    "yourPrediction": "Deine Vorhersage der Verteilung",
+    "yourPredictionHint": "Die schwarze Markierung auf jedem Balken ist deine Vorhersage.",
+    "points": "+{{points, number}}",
     "fewVotesTitle": "Zu wenige Stimmen, um die Verteilung zu zeigen",
     "fewVotesVoted_one": "Nur {{count}} Person hat abgestimmt",
     "fewVotesVoted_other": "Nur {{count, number}} Personen haben abgestimmt",
     "fewVotesNobody": "Niemand hat abgestimmt",
     "fewVotesDidNot_one": "und {{count}} nicht",
     "fewVotesDidNot_other": "und {{count, number}} nicht",
-    "fewVotesWhy": "Bei weniger als 3 Stimmen ließe die Verteilung erraten, wer was gewählt hat.",
+    "fewVotesWhy": "Bei weniger als 3 Stimmen ließe die Verteilung erraten, wer was gewählt hat, deshalb gibt es für dieses Dilemma keine Punkte.",
     "introPosition": "Dilemma {{position, number}} von {{total, number}} · Abstimmung beendet",
     "introTitle": "Das Dilemma wird aufgedeckt",
     "introMascot": "La Palanca jubelt",
@@ -168,6 +181,32 @@
     "introAnswered_other": "{{count, number}} von {{total, number}} haben geantwortet.",
     "introNominal": "Jetzt seht ihr, wer was gewählt hat.",
     "introAnonymous": "Jetzt seht ihr, wie viele welche Option gewählt haben."
+  },
+  "ranking": {
+    "label": "Ergebnisse",
+    "anonymous": "Anonymer Raum",
+    "title": "Wer die Gruppe am besten liest",
+    "text": "Punkte dafür, der echten Verteilung jedes Dilemmas nahezukommen. Niemand hat die Stimme von jemandem gesehen.",
+    "position": "{{position, number}}.",
+    "mentalist": "El Mentalista",
+    "points": "{{points, number}}",
+    "pointsUnit": "Punkte",
+    "note": "Wer Erster wird, ist El Mentalista der Partie. Dilemmas mit weniger als 3 Stimmen bringen keine Punkte. Bei Gleichstand teilt man sich Platz und Titel.",
+    "next": "Weiter"
+  },
+  "end": {
+    "label": "Partie beendet · {{total, number}} von {{total, number}}",
+    "title": "Endstation",
+    "mascot": "La Palanca feiert",
+    "place_one": "Du bist {{position, number}}. von {{players, number}} beim Lesen der Gruppe, mit {{count}} Punkt.",
+    "place_other": "Du bist {{position, number}}. von {{players, number}} beim Lesen der Gruppe, mit {{count, number}} Punkten.",
+    "placeMentalist_one": "Niemand hat die Gruppe besser gelesen: Du bist 1. von {{players, number}}, mit {{count}} Punkt.",
+    "placeMentalist_other": "Niemand hat die Gruppe besser gelesen: Du bist 1. von {{players, number}}, mit {{count, number}} Punkten.",
+    "inRoom": "Noch im Raum · {{count, number}}",
+    "gone_one": "{{names}} ist gegangen.",
+    "gone_other": "{{names}} sind gegangen.",
+    "closes": "Der Raum schließt 15 Minuten, nachdem niemand mehr verbunden ist.",
+    "leave": "Verlassen"
   },
   "notices": {
     "reconnecting": "Verbinde neu… deine Antworten sind gespeichert",

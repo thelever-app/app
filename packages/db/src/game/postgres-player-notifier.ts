@@ -4,6 +4,8 @@ import {
   ConnectionChangedEvent,
   DilemmaRevealedEvent,
   type DomainEvent,
+  type GameStage,
+  GameStageChangedEvent,
   HostChangedEvent,
   type LobbyChange,
   LobbyChangedEvent,
@@ -106,6 +108,13 @@ function decisionPhaseEventOf(event: Record<string, unknown>): DomainEvent {
       return new RoundStartedEvent(
         String(event.gameId),
         Number(event.position),
+        String(event.movedOnBy),
+        Number(event.gameVersion),
+      );
+    case 'GameStageChanged':
+      return new GameStageChangedEvent(
+        String(event.gameId),
+        String(event.stage) as GameStage,
         String(event.movedOnBy),
         Number(event.gameVersion),
       );

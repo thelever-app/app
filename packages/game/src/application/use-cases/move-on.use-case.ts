@@ -9,13 +9,17 @@ import { notifyGame } from './notify-game.ts';
 export interface MoveOnInput {
   readonly roomId: string;
   readonly playerId: string;
-  /** The position of the round whose reveal the player is moving on from. */
+  /**
+   * The position of the round whose reveal the player is moving on from or, from the game results,
+   * the number of rounds.
+   */
   readonly fromPosition: number;
 }
 
 /**
- * Any player takes everyone from the reveal of a round to the next one. Two players who move on
- * from the same round at once move one round: the second finds it already moved and nothing happens.
+ * Any player takes everyone from the reveal of a round to the next one, from the last one of an
+ * anonymous room to the game results, and from them to the end of the game. Two players who move
+ * on at once move one step: the second finds it already moved and nothing happens.
  */
 export class MoveOnUseCase {
   readonly #roomRepository: RoomRepository;

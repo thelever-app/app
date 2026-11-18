@@ -24,6 +24,8 @@ const GAME_STATE: GameStateDto = {
     revealedBy: null,
     movedOnBy: null,
   },
+  stage: { kind: 'rounds', movedOnBy: null },
+  ranking: null,
   hostId: 'test-ana-id',
   serverTime: '2026-11-09T10:00:00.000Z',
   answeredCount: 0,

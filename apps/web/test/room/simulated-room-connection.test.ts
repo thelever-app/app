@@ -264,7 +264,9 @@ describe('SimulatedRoomConnection', () => {
 
       // Assert
       const game = lastGame(received);
-      expect(game.answers).toEqual([{ dilemmaId, vote, votePredictions }]);
+      expect(game.answers).toEqual([
+        { dilemmaId, vote, votePredictions, distributionPrediction: null, ready: false },
+      ]);
       expect(game.round).toMatchObject({ position: 0, phase: 'reveal', revealedBy: 'everyone' });
       expect(game.reveal?.votes).toHaveLength(3);
     });

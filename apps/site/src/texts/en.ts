@@ -55,10 +55,29 @@ export const en: SiteTexts = {
     scene: 'La Palanca, waving next to a railway junction',
     howToPlay: 'How to play',
     steps: [
-      'Create a room and share the link or the code.',
-      'In each round, you all vote on the same dilemma in private and predict the others.',
-      'The result is revealed and you talk it over. At the end, the titles of the game.',
+      { title: 'Create the room', text: 'Share the link or the code and let your people in.' },
+      {
+        title: 'Vote and predict',
+        text: 'In each round, you all vote on the same dilemma in private and predict the others.',
+      },
+      {
+        title: 'Find out who thinks what',
+        text: 'The result is revealed and you talk it over. At the end, the titles of the game.',
+      },
     ],
+    screens: {
+      roomCode: 'Room code',
+      share: 'Share link',
+      round: 'Dilemma 2 of 6',
+      dilemma: 'Would you lie to save a friend’s job?',
+      yes: 'Yes, I would lie',
+      no: 'No, I would tell the truth',
+      private: 'Nobody in the group will see your vote',
+      result: '3 of 5 said yes',
+      yesCount: 'Yes · 3',
+      noCount: 'No · 2',
+      right: 'You got Ana and Luis right',
+    },
     categories: 'Categories',
   },
   category: {

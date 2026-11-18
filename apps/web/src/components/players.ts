@@ -16,14 +16,15 @@ export function isAnonymous(game: Pick<GameStateDto, 'players'>): boolean {
 
 /**
  * Whether the player using the screen answered the dilemma of the round: the room says so in a
- * nominal room; in an anonymous one, which tells nobody who answered, their own answers do.
+ * nominal room; in an anonymous one, which tells nobody who answered, their own answer does, once
+ * it is Ready.
  */
 export function selfAnswered(
   game: Pick<GameStateDto, 'playerId' | 'players' | 'answers' | 'dilemmas' | 'round'>,
 ): boolean {
   if (isAnonymous(game)) {
     const dilemma = game.dilemmas[game.round.position];
-    return game.answers.some(({ dilemmaId }) => dilemmaId === dilemma?.dilemmaId);
+    return game.answers.some(({ dilemmaId, ready }) => dilemmaId === dilemma?.dilemmaId && ready);
   }
   const self = game.players.find(({ playerId }) => playerId === game.playerId);
   return self !== undefined && hasAnswered(self);

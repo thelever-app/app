@@ -20,8 +20,10 @@ const VISIBLE_PLAYERS = 6;
 interface RevealScreenProps {
   readonly game: Game;
   readonly reveal: Reveal;
-  /** Takes everyone to the next round; none on the last one. */
+  /** Takes everyone to the next round, or from the last one to the game results; none without them. */
   readonly onMoveOn: (() => void) | undefined;
+  /** The last round, whose way on leads to the game results. */
+  readonly isLast: boolean;
   readonly onLeave: () => void;
   readonly onShowQr: () => void;
 }
@@ -31,7 +33,14 @@ interface RevealScreenProps {
  * each one voted, with how the predictions of the player went next to each vote; in an anonymous room, only the distribution, or that
  * there were too few votes to show it.
  */
-export function RevealScreen({ game, reveal, onMoveOn, onLeave, onShowQr }: RevealScreenProps) {
+export function RevealScreen({
+  game,
+  reveal,
+  onMoveOn,
+  isLast,
+  onLeave,
+  onShowQr,
+}: RevealScreenProps) {
   const { t } = useTranslation();
   const [isGroupOpen, setIsGroupOpen] = useState(false);
   const dilemma = game.dilemmas.find(({ dilemmaId }) => dilemmaId === reveal.dilemmaId)!;
@@ -92,7 +101,7 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave, onShowQr }: Reve
       {onMoveOn && (
         <footer className={styles.footer}>
           <button type="button" className={styles.next} onClick={onMoveOn}>
-            {t('reveal.next')}
+            {isLast ? t('reveal.toResults') : t('reveal.next')}
           </button>
         </footer>
       )}
@@ -102,7 +111,7 @@ export function RevealScreen({ game, reveal, onMoveOn, onLeave, onShowQr }: Reve
 }
 
 /** Who is in the game, the player first, as on the strip of the decision. */
-function Players({
+export function Players({
   players,
   selfId,
 }: {
@@ -175,11 +184,31 @@ function optionsOf(
   });
 }
 
-function Bar({ percent, color }: { readonly percent: string; readonly color: string }) {
+/** The share of an option and, in an anonymous room, a mark at the share the player predicted. */
+function Bar({
+  percent,
+  color,
+  predicted,
+}: {
+  readonly percent: string;
+  readonly color: string;
+  readonly predicted?: string | undefined;
+}) {
   const style = { '--share': percent, '--option': color } as CSSProperties;
-  return (
+  const bar = (
     <div aria-hidden="true" className={styles.track}>
       <div className={styles.bar} style={style} />
+    </div>
+  );
+  if (predicted === undefined) return bar;
+  return (
+    <div className={styles.marked}>
+      {bar}
+      <span
+        aria-hidden="true"
+        className={styles.mark}
+        style={{ '--predicted': predicted } as CSSProperties}
+      />
     </div>
   );
 }
@@ -369,21 +398,48 @@ function AnonymousResult({ reveal, dilemma, person }: Omit<ResultProps, 'game'>)
       </div>
     );
   }
+  const predicted = reveal.yourDistributionPrediction;
+  const predictedOf = (optionId: string) =>
+    predicted?.find((share) => share.optionId === optionId)?.share;
   return (
     <div className={styles.distribution}>
-      {optionsOf({ reveal, dilemma }, 'catalog').map((option) => (
-        <section key={option.optionId} className={styles.anonymousOption}>
-          <div className={styles.optionHead}>
-            <h2 className={styles.optionText}>
-              <DilemmaText text={option.text} personInTheGap={person} />
-            </h2>
-            <span className={styles.optionCount}>
-              {t('reveal.optionCount', { count: option.count, percent: option.percent })}
-            </span>
-          </div>
-          <Bar percent={option.percent} color={option.color} />
-        </section>
-      ))}
+      {optionsOf({ reveal, dilemma }, 'catalog').map((option) => {
+        const share = predictedOf(option.optionId);
+        return (
+          <section key={option.optionId} className={styles.anonymousOption}>
+            <div className={styles.optionHead}>
+              <h2 className={styles.optionText}>
+                <DilemmaText text={option.text} personInTheGap={person} />
+              </h2>
+              <span className={styles.optionCount}>
+                {share === undefined
+                  ? t('reveal.optionCount', { count: option.count, percent: option.percent })
+                  : t('reveal.optionCountPredicted', {
+                      count: option.count,
+                      percent: option.percent,
+                      predicted: `${share}%`,
+                    })}
+              </span>
+            </div>
+            <Bar
+              percent={option.percent}
+              color={option.color}
+              predicted={share === undefined ? undefined : `${share}%`}
+            />
+          </section>
+        );
+      })}
+      {reveal.yourPoints !== null && (
+        <div role="status" className={styles.yourPrediction}>
+          <span className={styles.yourPredictionText}>
+            <span className={styles.yourPredictionTitle}>{t('reveal.yourPrediction')}</span>
+            <span className={styles.yourPredictionHint}>{t('reveal.yourPredictionHint')}</span>
+          </span>
+          <span className={styles.yourPoints}>
+            {t('reveal.points', { points: reveal.yourPoints })}
+          </span>
+        </div>
+      )}
       <p className={styles.anonymousHint}>
         {didNot > 0 && <>{t('reveal.anonymousDidNotVote', { count: didNot })} </>}
         {t('reveal.anonymousNote')}

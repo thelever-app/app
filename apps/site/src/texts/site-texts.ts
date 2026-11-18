@@ -47,7 +47,26 @@ export interface SiteTexts {
     /** What the illustration of the home shows, for those who cannot see it. */
     readonly scene: string;
     readonly howToPlay: string;
-    readonly steps: readonly string[];
+    readonly steps: readonly { readonly title: string; readonly text: string }[];
+    /** The texts of the three screens of the app the steps show in miniature, which only decorate. */
+    readonly screens: {
+      readonly roomCode: string;
+      readonly share: string;
+      /** The position of a dilemma, as the app says it. */
+      readonly round: string;
+      /** A dilemma of example, with its two options. */
+      readonly dilemma: string;
+      readonly yes: string;
+      readonly no: string;
+      /** What the app says of the vote, which the group never sees. */
+      readonly private: string;
+      /** The result of the example, how many said yes and how many each option got. */
+      readonly result: string;
+      readonly yesCount: string;
+      readonly noCount: string;
+      /** The predictions of the player that were right. */
+      readonly right: string;
+    };
     readonly categories: string;
   };
   readonly category: {

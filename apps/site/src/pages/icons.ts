@@ -8,6 +8,8 @@ const SOURCES = {
   translate: '@material-symbols/svg-500/rounded/translate-fill.svg',
   'how-to-vote': '@material-symbols/svg-500/rounded/how_to_vote-fill.svg',
   groups: '@material-symbols/svg-500/rounded/groups-fill.svg',
+  lock: '@material-symbols/svg-500/rounded/lock-fill.svg',
+  add: '@material-symbols/svg-500/rounded/add.svg',
 } as const;
 
 export type IconName = keyof typeof SOURCES;

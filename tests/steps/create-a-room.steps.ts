@@ -174,7 +174,12 @@ When('the host chooses the anonymous reveal', async function (this: GameWorld) {
   await this.driver.changeSettings(await this.host(), { variant: 'anonymous' });
 });
 
+// Before there is a room it sets it up; once there is one, it says what the room is.
 Then(/^the room is (nominal|anonymous)$/, async function (this: GameWorld, variant: string) {
+  if (!this.roomCreated) {
+    this.variant = variant as 'nominal' | 'anonymous';
+    return;
+  }
   assert.equal((await this.driver.settingsSeenBy(await this.host())).variant, variant);
 });
 

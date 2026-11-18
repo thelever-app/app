@@ -4,7 +4,13 @@ import { momentsBetween, remembered, type RoomSnapshot } from '../../src/sound/m
 import { aGame } from '../support/game.ts';
 import { aRoom } from '../support/room.ts';
 
-const ANA_ANSWER = { dilemmaId: 'test-dilemma-1', vote: 'test-option-1a', votePredictions: [] };
+const ANA_ANSWER = {
+  dilemmaId: 'test-dilemma-1',
+  vote: 'test-option-1a',
+  votePredictions: [],
+  distributionPrediction: null,
+  ready: false,
+};
 
 /** The game with Ana's answer to the dilemma of the round, as the server confirms it. */
 function answered(game: GameStateDto, answer = ANA_ANSWER): GameStateDto {
@@ -141,9 +147,13 @@ describe('momentsBetween', () => {
       });
 
       // Act & Assert
-      expect(momentsBetween(inGame(game), inGame({ ...game, answers: [ANA_ANSWER] }))).toEqual([
-        'answer-confirmed',
-      ]);
+      expect(momentsBetween(inGame(game), inGame({ ...game, answers: [ANA_ANSWER] }))).toEqual([]);
+      expect(
+        momentsBetween(
+          inGame(game),
+          inGame({ ...game, answers: [{ ...ANA_ANSWER, ready: true }] }),
+        ),
+      ).toEqual(['answer-confirmed']);
     });
 
     it('should hear nothing when another player answers', () => {

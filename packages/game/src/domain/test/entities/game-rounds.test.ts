@@ -77,10 +77,11 @@ function gameOfThree(settings: GameSettings = NOMINAL, randomness = new KeepOrde
   return game;
 }
 
-/** The complete answer of a player in a nominal room: the vote and every prediction. */
+/** The complete answer of a player: the vote with every prediction, or with Ready in an anonymous room. */
 function complete(game: Game, playerId: string, vote = 'TestPull') {
   return {
     vote,
+    ready: true,
     votePredictions: game
       .playersToPredictBy(playerId)
       .map((other) => ({ playerId: other, vote: 'TestPull' })),
@@ -310,7 +311,7 @@ describe('Game, by rounds', () => {
       const game = gameOfThree(ANONYMOUS);
 
       // Act
-      game.answer('Luis', 'TestDilemma1', { vote: 'TestPull' }, SEAL, AT);
+      game.answer('Luis', 'TestDilemma1', { vote: 'TestPull', ready: true }, SEAL, AT);
 
       // Assert
       expect(game.answeredCount).toBe(1);
@@ -576,7 +577,7 @@ describe('Game, by rounds', () => {
     it('should not count among those who answered while away', () => {
       // Arrange
       const game = gameOfThree(ANONYMOUS);
-      game.answer('Luis', 'TestDilemma1', { vote: 'TestPull' }, SEAL, AT);
+      game.answer('Luis', 'TestDilemma1', { vote: 'TestPull', ready: true }, SEAL, AT);
 
       // Act
       game.leave('Luis');

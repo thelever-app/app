@@ -178,6 +178,35 @@ describe('the messages of the rounds', () => {
     ).toBe(true);
   });
 
+  it('should accept an answer with the distribution prediction and Ready', () => {
+    // Arrange
+    const answer = { type: 'answer-dilemma', dilemmaId: 'dilemma-1', vote: 'option-1' };
+    const distributionPrediction = [
+      { optionId: 'option-1', share: 55 },
+      { optionId: 'option-2', share: 45 },
+    ];
+
+    // Act & Assert
+    expect(
+      AnswerDilemmaDto.safeParse({ ...answer, distributionPrediction, ready: true }).success,
+    ).toBe(true);
+    expect(
+      AnswerDilemmaDto.safeParse({
+        ...answer,
+        distributionPrediction: [{ optionId: 'option-1', share: 100 }],
+      }).success,
+    ).toBe(false);
+    expect(
+      AnswerDilemmaDto.safeParse({
+        ...answer,
+        distributionPrediction: [
+          { optionId: 'option-1', share: 150 },
+          { optionId: 'option-2', share: -50 },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
   it('should take a vote prediction about each of the other 49 players of a full room, and no more', () => {
     // Arrange
     const answer = { type: 'answer-dilemma', dilemmaId: 'dilemma-1', vote: 'option-1' };

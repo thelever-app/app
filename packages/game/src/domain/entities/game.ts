@@ -8,9 +8,11 @@ import { DilemmaNotInRoundError } from '../errors/dilemma-not-in-round.error.ts'
 import { DilemmaNotReportedAsOffensiveError } from '../errors/dilemma-not-reported-as-offensive.error.ts';
 import { DilemmaNotRevealedError } from '../errors/dilemma-not-revealed.error.ts';
 import { DilemmaSkippedError } from '../errors/dilemma-skipped.error.ts';
+import { DistributionPredictionNotAllowedError } from '../errors/distribution-prediction-not-allowed.error.ts';
 import { DilemmasMissingError } from '../errors/dilemmas-missing.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { DuplicateVotePredictionError } from '../errors/duplicate-vote-prediction.error.ts';
+import { InvalidDistributionPredictionError } from '../errors/invalid-distribution-prediction.error.ts';
 import { NoNextRoundError } from '../errors/no-next-round.error.ts';
 import { OptionNotInDilemmaError } from '../errors/option-not-in-dilemma.error.ts';
 import { PlayerLeftGameError } from '../errors/player-left-game.error.ts';
@@ -20,6 +22,7 @@ import { PlayersMissingError } from '../errors/players-missing.error.ts';
 import { PredictionsNotAllowedError } from '../errors/predictions-not-allowed.error.ts';
 import { AnsweredCountChangedEvent } from '../events/answered-count-changed.event.ts';
 import { DilemmaRevealedEvent } from '../events/dilemma-revealed.event.ts';
+import { GameStageChangedEvent } from '../events/game-stage-changed.event.ts';
 import type { DomainEvent } from '../events/domain-event.ts';
 import { PlayerJoinedLateEvent } from '../events/player-joined-late.event.ts';
 import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
@@ -28,10 +31,16 @@ import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
 import type { DilemmaOrigin } from '../vos/round.vo.ts';
 import { peopleInTheGap } from '../services/people-in-the-gap.ts';
+import { rankByPoints, type RankedPlayer } from '../services/rank-by-points.ts';
 import { shuffle } from '../services/random-choice.ts';
+import { scoreDistributionPrediction } from '../services/score-distribution-prediction.ts';
 import { scorePredictions } from '../services/score-predictions.ts';
 import { AnswerVO, type AnswerProps, type Seal, type VotePrediction } from '../vos/answer.vo.ts';
 import { DilemmaVO } from '../vos/dilemma.vo.ts';
+import {
+  DistributionPredictionVO,
+  type PredictedShare,
+} from '../vos/distribution-prediction.vo.ts';
 import type { GroupNature, Place } from '../vos/group.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { VoteVO } from '../vos/vote.vo.ts';
@@ -69,6 +78,12 @@ export interface GameSettings {
 /** Each round answers its dilemma in the decision phase, then shows it in the reveal. */
 export type RoundPhase = 'decision' | 'reveal';
 
+/**
+ * The rounds, one after another; then, in an anonymous room, the game results; then the end of the
+ * game, where nothing is played any more.
+ */
+export type GameStage = 'rounds' | 'results' | 'ended';
+
 /** What revealed the dilemma of a round: everyone answered, its time ran out, or the host. */
 export type RevealedBy = 'everyone' | 'time' | 'host';
 
@@ -97,6 +112,10 @@ export type DidNotVoteReason = 'not-answered' | 'reported' | 'joined-late';
 export interface AnswerDraft {
   readonly vote: string;
   readonly votePredictions?: readonly VotePrediction[];
+  /** In an anonymous room, the distribution prediction so far; without it, the one the player had or the even split. */
+  readonly distributionPrediction?: readonly PredictedShare[];
+  /** In an anonymous room, the player pressed Ready: once given, it stays. */
+  readonly ready?: boolean;
 }
 
 /** In an anonymous room, a dilemma voted by fewer players shows no distribution: it would give their votes away. */
@@ -136,6 +155,7 @@ export interface GameSnapshot {
   readonly settings: GameSettings;
   readonly version: number;
   readonly round: Omit<Round, 'dilemmaId'> | null;
+  readonly stage: { readonly kind: GameStage; readonly movedOnBy: string | null };
   readonly peopleInTheGap: readonly { readonly dilemmaId: string; readonly playerId: string }[];
   readonly players: readonly {
     readonly id: string;
@@ -152,7 +172,7 @@ export interface GameSnapshot {
       readonly dilemmaId: string;
       readonly reason: DidNotVoteReason;
     }[];
-    /** What the vote predictions of the player scored in each dilemma revealed; null for none made. */
+    /** What the predictions of the player scored in each dilemma revealed; null for none made. */
     readonly points: readonly { readonly dilemmaId: string; readonly points: number | null }[];
     /** The dilemmas the player reported, and whether as offensive, which lets them skip it. */
     readonly reports: readonly { readonly dilemmaId: string; readonly offensive: boolean }[];
@@ -191,6 +211,9 @@ export class Game {
   >;
   readonly #settings: GameSettings;
   #round: RoundState | null = null;
+  #stage: GameStage = 'rounds';
+  /** Who moved everyone on to the stage; null for the rounds. */
+  #stageMovedOnBy: string | null = null;
   /** Goes up with every change, so the clients can drop what is older than what they hold. */
   #version = 0;
   #peopleInTheGap = new Map<string, string>();
@@ -287,6 +310,11 @@ export class Game {
     return this.#version;
   }
 
+  /** Where the game is: its rounds, its results or its end, and who moved everyone there. */
+  get stage(): { readonly kind: GameStage; readonly movedOnBy: string | null } {
+    return { kind: this.#stage, movedOnBy: this.#stageMovedOnBy };
+  }
+
   /**
    * The game starts with its first round. Everyone gets the dilemmas in the same order; each player
    * gets the options of each dilemma in an order of their own; each dilemma with the gap gets its
@@ -311,9 +339,9 @@ export class Game {
 
   /**
    * The player answers the dilemma of the round, or changes their answer, until it is revealed. A
-   * complete answer is the vote in an anonymous room, and the vote with every prediction in a
-   * nominal one; once complete, the player has answered the round. The seal is the one in force
-   * now, also when the player changes an answer.
+   * complete answer is the vote with the distribution prediction and Ready in an anonymous room,
+   * and the vote with every prediction in a nominal one; once complete, the player has answered the
+   * round. The seal is the one in force now, also when the player changes an answer.
    */
   answer(playerId: string, dilemmaId: string, draft: AnswerDraft, seal: Seal, at: Date): void {
     const dilemma = this.#decisionDilemma(dilemmaId);
@@ -326,9 +354,17 @@ export class Game {
 
     const previous = state.answers.get(dilemmaId);
     const wasComplete = previous !== undefined && this.#isComplete(playerId, previous);
+    const anonymous = this.#settings.variant === 'anonymous';
     let answer = new AnswerVO({
       vote,
       votePredictions,
+      distributionPrediction: this.#distributionPredictionOf(
+        dilemma,
+        playerId,
+        draft.distributionPrediction,
+        previous,
+      ),
+      ready: anonymous && (draft.ready === true || previous?.ready === true),
       optionOrder: this.optionOrderOf(playerId, dilemmaId),
       responseTimeMs: previous?.responseTimeMs ?? null,
       seal,
@@ -416,8 +452,8 @@ export class Game {
 
   /**
    * The decision phase of the round ends: whoever has no vote for its dilemma is recorded as "did
-   * not vote", nobody can answer it any more and, in a nominal room, the predictions made are
-   * scored. Who may ask for it is up to the room.
+   * not vote", nobody can answer it any more and the predictions made are scored. Who may ask for it
+   * is up to the room.
    */
   reveal(by: RevealedBy): void {
     const { dilemmaId } = this.#decisionDilemma(this.#roundDilemma().dilemmaId);
@@ -427,6 +463,7 @@ export class Game {
       }
     }
     if (this.#settings.variant === 'nominal') this.#score(dilemmaId);
+    else this.#scoreDistribution(this.#roundDilemma());
     const round = this.#round as RoundState;
     round.phase = 'reveal';
     round.revealedBy = by;
@@ -435,15 +472,24 @@ export class Game {
   }
 
   /**
-   * From the reveal of the round at that position, the player takes everyone to the next round.
-   * Asked from a round that is no longer in its reveal, it does nothing, so two players who move on
-   * at once move one round. Whether it moved on.
+   * From the reveal of the round at that position, the player takes everyone to the next round;
+   * from the last one, in an anonymous room, to the game results; and from the results, at the
+   * position after the last round, to the end of the game. Asked from where the game no longer is,
+   * it does nothing, so two players who move on at once move one step. Whether it moved on.
    */
   moveOn(playerId: string, fromPosition: number, at: Date): boolean {
     this.#activeStateOf(playerId);
     const round = this.#round;
-    if (!round || round.position !== fromPosition || round.phase !== 'reveal') return false;
-    if (round.position === this.#dilemmas.length - 1) throw new NoNextRoundError();
+    if (!round || this.#stage === 'ended') return false;
+    if (this.#stage === 'results') {
+      return fromPosition === this.#dilemmas.length && this.#moveOnTo('ended', playerId);
+    }
+    if (round.position !== fromPosition || round.phase !== 'reveal') return false;
+    if (round.position === this.#dilemmas.length - 1) {
+      // The results of a nominal room, with their titles, do not exist yet.
+      if (this.#settings.variant !== 'anonymous') throw new NoNextRoundError();
+      return this.#moveOnTo('results', playerId);
+    }
 
     const next = this.#roundAt(round.position + 1, at, playerId);
     this.#round = next;
@@ -569,6 +615,24 @@ export class Game {
     );
   }
 
+  /**
+   * In an anonymous room, once the rounds are over: who reads the group best, by the points of
+   * their distribution predictions, without who left the game. Null while the rounds go on, and
+   * in a nominal room, whose results come with their titles.
+   */
+  ranking(): readonly RankedPlayer[] | null {
+    if (this.#settings.variant !== 'anonymous' || this.#stage === 'rounds') return null;
+    return rankByPoints(
+      this.#activePlayerIds().map((playerId) => ({
+        playerId,
+        points: [...this.#stateOf(playerId).points.values()].reduce<number>(
+          (total, points) => total + (points ?? 0),
+          0,
+        ),
+      })),
+    );
+  }
+
   /** What the reveal of the dilemma at that position shows, once it has been revealed. */
   revealOf(position: number): DilemmaReveal {
     const round = this.#round;
@@ -636,6 +700,7 @@ export class Game {
         startedAt: new Date(this.#round.startedAt),
         endsAt: new Date(this.#round.endsAt),
       },
+      stage: this.stage,
       peopleInTheGap: [...this.#peopleInTheGap].map(([dilemmaId, playerId]) => ({
         dilemmaId,
         playerId,
@@ -659,6 +724,8 @@ export class Game {
   static restore(snapshot: GameSnapshot): Game {
     const game = new Game(snapshot.id, snapshot.roomId, snapshot.dilemmas, snapshot.settings);
     game.#version = snapshot.version;
+    game.#stage = snapshot.stage.kind;
+    game.#stageMovedOnBy = snapshot.stage.movedOnBy;
     game.#round = snapshot.round && {
       ...snapshot.round,
       startedAt: new Date(snapshot.round.startedAt),
@@ -752,11 +819,39 @@ export class Game {
     return answer !== undefined && this.#isComplete(playerId, answer);
   }
 
-  /** The vote in an anonymous room; the vote with every prediction in a nominal one. */
+  /** The vote with Ready in an anonymous room; the vote with every prediction in a nominal one. */
   #isComplete(playerId: string, answer: AnswerVO): boolean {
-    if (this.#settings.variant === 'anonymous') return true;
+    if (this.#settings.variant === 'anonymous') return answer.ready;
     const predicted = new Set(answer.votePredictions.map((prediction) => prediction.playerId));
     return this.playersToPredictBy(playerId).every((other) => predicted.has(other));
+  }
+
+  /**
+   * In an anonymous room, the distribution prediction of the answer: the one the player sends,
+   * which covers the options of the dilemma; else the one they had; else the even split, in the
+   * order the player sees the options. None in a nominal room.
+   */
+  #distributionPredictionOf(
+    dilemma: DilemmaVO,
+    playerId: string,
+    shares: readonly PredictedShare[] | undefined,
+    previous: AnswerVO | undefined,
+  ): readonly PredictedShare[] | null {
+    if (this.#settings.variant !== 'anonymous') {
+      if (shares !== undefined) throw new DistributionPredictionNotAllowedError();
+      return null;
+    }
+    if (shares === undefined) {
+      return (
+        previous?.distributionPrediction ??
+        DistributionPredictionVO.even(this.optionOrderOf(playerId, dilemma.dilemmaId))
+      ).shares;
+    }
+    const prediction = new DistributionPredictionVO(shares);
+    if (!prediction.coversExactly(dilemma.optionIds)) {
+      throw new InvalidDistributionPredictionError('has a share for each option of the dilemma');
+    }
+    return prediction.shares;
   }
 
   #ensurePredictionsFit(
@@ -799,6 +894,37 @@ export class Game {
 
   #activePlayerIds(): string[] {
     return [...this.#players].filter(([, state]) => !state.left).map(([playerId]) => playerId);
+  }
+
+  #moveOnTo(stage: GameStage, playerId: string): boolean {
+    this.#stage = stage;
+    this.#stageMovedOnBy = playerId;
+    this.#version += 1;
+    this.#events.push(new GameStageChangedEvent(this.id, stage, playerId, this.#version));
+    return true;
+  }
+
+  /**
+   * In an anonymous room, the distribution prediction of each voter against how many chose each
+   * option; with too few votes nobody scores, because the points would tell the distribution.
+   */
+  #scoreDistribution(dilemma: DilemmaVO): void {
+    const { dilemmaId } = dilemma;
+    const voters = [...this.#players.values()].flatMap((state) => {
+      const answer = state.answers.get(dilemmaId);
+      return answer ? [{ state, answer }] : [];
+    });
+    if (voters.length < MINIMUM_VOTES_TO_SHOW) return;
+    const distribution = dilemma.optionIds.map((optionId) => ({
+      optionId,
+      count: voters.filter(({ answer }) => answer.vote === optionId).length,
+    }));
+    for (const { state, answer } of voters) {
+      // An answer kept from before the prediction existed counts as a vote, with nothing to score.
+      const prediction = answer.distributionPrediction;
+      if (!prediction) continue;
+      state.points.set(dilemmaId, scoreDistributionPrediction(prediction, distribution));
+    }
   }
 
   #score(dilemmaId: string): void {

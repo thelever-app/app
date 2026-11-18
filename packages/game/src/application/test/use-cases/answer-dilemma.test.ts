@@ -55,6 +55,7 @@ describe('AnswerDilemmaUseCase', () => {
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
+        ready: true,
       });
 
       // Assert
@@ -73,6 +74,7 @@ describe('AnswerDilemmaUseCase', () => {
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
+        ready: true,
       });
 
       // Assert
@@ -94,6 +96,7 @@ describe('AnswerDilemmaUseCase', () => {
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
+        ready: true,
       });
 
       // Assert
@@ -111,6 +114,7 @@ describe('AnswerDilemmaUseCase', () => {
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
         vote: 'TestOption',
+        ready: true,
       });
 
       // Assert
@@ -131,6 +135,7 @@ describe('AnswerDilemmaUseCase', () => {
           playerId: 'TestStrangerId',
           dilemmaId: 'TestDilemma1',
           vote: 'TestOption',
+          ready: true,
         }),
       ).rejects.toThrow(PlayerNotInRoomError);
     });
@@ -146,6 +151,7 @@ describe('AnswerDilemmaUseCase', () => {
           playerId: luisId,
           dilemmaId: 'TestDilemma1',
           vote: 'TestOption',
+          ready: true,
         }),
       ).rejects.toThrow(RoomNotFoundError);
     });
@@ -168,6 +174,7 @@ describe('AnswerDilemmaUseCase', () => {
           playerId: lobby.luisId,
           dilemmaId: 'TestDilemma1',
           vote: 'TestOption',
+          ready: true,
         }),
       ).rejects.toThrow(GameNotInProgressError);
     });

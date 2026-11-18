@@ -7,8 +7,10 @@ import { z } from 'zod';
  * per dilemma, the reveal of each dilemma, moving on, leaving and reporting. 6 since the avatar
  * before entering: an avatar is refused only to someone with the same nickname. 7 since joining
  * a game in progress: a dilemma already revealed when the player joined is "did not vote" too.
+ * 8 since the rounds of the room. 9 since the distribution prediction: an answer of an anonymous
+ * room carries it and Ready, and the game has its results and its end.
  */
-export const CONTRACT_VERSION = 8;
+export const CONTRACT_VERSION = 9;
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a
@@ -129,6 +131,15 @@ export const ConnectDto = z.strictObject({
 });
 
 /**
+ * In an anonymous room, the share of the group, in steps of 5 %, the player believes chose each
+ * option of a dilemma, which add up to 100: one for each option, at most 4.
+ */
+export const DistributionPredictionDto = z
+  .array(z.strictObject({ optionId: z.string().min(1), share: z.number().int().min(0).max(100) }))
+  .min(2)
+  .max(4);
+
+/**
  * The player answers a dilemma, or changes an answer they already gave.
  * Who answers and in which game come from the connection, never from the message.
  */
@@ -144,6 +155,9 @@ export const AnswerDilemmaDto = z.strictObject({
     .array(z.strictObject({ playerId: z.string().min(1), vote: z.string().min(1) }))
     .max(49)
     .optional(),
+  distributionPrediction: DistributionPredictionDto.optional(),
+  /** In an anonymous room, the player pressed Ready: the prediction is done. */
+  ready: z.boolean().optional(),
   traceparent: TraceparentDto.optional(),
 });
 
@@ -153,10 +167,16 @@ export const RevealEarlyDto = z.strictObject({
   traceparent: TraceparentDto.optional(),
 });
 
-/** From the reveal of a round, any player takes everyone to the next one. */
+/**
+ * From the reveal of a round, any player takes everyone to the next one; from the last one, to the
+ * game results; and from the results, to the end of the game.
+ */
 export const MoveOnDto = z.strictObject({
   type: z.literal('move-on'),
-  /** The position of the round whose reveal the player moves on from, so two at once move one round. */
+  /**
+   * The position of the round whose reveal the player moves on from, or the number of rounds from
+   * the game results, so two at once move one step.
+   */
   fromPosition: z.number().int().nonnegative(),
   traceparent: TraceparentDto.optional(),
 });
@@ -283,6 +303,7 @@ export type ClearRoundDilemmaDto = z.infer<typeof ClearRoundDilemmaDto>;
 export type ExpelPlayerDto = z.infer<typeof ExpelPlayerDto>;
 export type StartGameDto = z.infer<typeof StartGameDto>;
 export type ConnectDto = z.infer<typeof ConnectDto>;
+export type DistributionPredictionDto = z.infer<typeof DistributionPredictionDto>;
 export type AnswerDilemmaDto = z.infer<typeof AnswerDilemmaDto>;
 export type RevealEarlyDto = z.infer<typeof RevealEarlyDto>;
 export type MoveOnDto = z.infer<typeof MoveOnDto>;

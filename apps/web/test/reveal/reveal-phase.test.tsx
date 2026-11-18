@@ -46,6 +46,8 @@ const NOMINAL_REVEAL: Reveal = {
   ],
   personInTheGap: null,
   chosenBy: 'test-luis-id',
+  yourDistributionPrediction: null,
+  yourPoints: null,
 };
 
 function revealed(reveal: Reveal, overrides: Partial<GameStateDto> = {}): GameStateDto {
@@ -70,6 +72,8 @@ const ANONYMOUS_REVEAL: Reveal = {
   votes: [],
   votePredictions: [],
   chosenBy: null,
+  yourDistributionPrediction: null,
+  yourPoints: null,
 };
 const ANONYMOUS_PLAYERS = PLAYERS.map((player) => ({ ...player, answered: null }));
 
@@ -312,6 +316,49 @@ describe('RevealPhase', () => {
       expect(status).toContain(t('reveal.fewVotesTitle'));
       expect(status).toContain(t('reveal.fewVotesVoted', { count: 2 }));
       expect(screen.queryByRole('heading', { name: 'Opción 1A' })).toBeNull();
+      expect(screen.queryByText(t('reveal.yourPrediction'))).toBeNull();
+      expect(status).toContain(t('reveal.fewVotesWhy'));
+    });
+
+    it('should show the player a mark with their prediction on each bar and their points', async () => {
+      // Arrange
+      const reveal = {
+        ...ANONYMOUS_REVEAL,
+        yourDistributionPrediction: [
+          { optionId: 'test-option-1a', share: 55 },
+          { optionId: 'test-option-1b', share: 45 },
+        ],
+        yourPoints: 88,
+      };
+
+      // Act
+      const { t } = await renderReveal(revealed(reveal, { players: ANONYMOUS_PLAYERS }));
+
+      // Assert
+      expect(
+        screen.getByText(
+          t('reveal.optionCountPredicted', { count: 2, percent: '67%', predicted: '55%' }),
+        ),
+      ).toBeDefined();
+      const prediction = screen.getByRole('status');
+      expect(prediction.textContent).toContain(t('reveal.yourPrediction'));
+      expect(prediction.textContent).toContain(t('reveal.points', { points: 88 }));
+    });
+
+    it('should take everyone from the last round to the game results', async () => {
+      // Arrange
+      const { connection, t } = await renderReveal(
+        revealed(
+          { ...ANONYMOUS_REVEAL, position: 2, dilemmaId: 'test-dilemma-3' },
+          { players: ANONYMOUS_PLAYERS },
+        ),
+      );
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('reveal.toResults') }));
+
+      // Assert
+      expect(connection.send).toHaveBeenCalledWith({ type: 'move-on', fromPosition: 2 });
     });
   });
 
@@ -326,7 +373,7 @@ describe('RevealPhase', () => {
     expect(connection.send).toHaveBeenCalledWith({ type: 'move-on', fromPosition: 0 });
   });
 
-  it('should not offer a next round on the last one', async () => {
+  it('should not offer a next round on the last one of a nominal room, whose results come later', async () => {
     // Act
     const { t } = await renderReveal(
       revealed({ ...NOMINAL_REVEAL, position: 2, dilemmaId: 'test-dilemma-3' }),
@@ -334,6 +381,7 @@ describe('RevealPhase', () => {
 
     // Assert
     expect(screen.queryByRole('button', { name: t('reveal.next') })).toBeNull();
+    expect(screen.queryByRole('button', { name: t('reveal.toResults') })).toBeNull();
   });
 
   it('should show no points of anyone', async () => {

@@ -74,7 +74,7 @@ function roomAndGame(): { room: Room; game: Game } {
 }
 
 function vote(game: Game, playerId: string): void {
-  game.answer(playerId, 'TestDilemma1', { vote: 'TestPull' }, SEAL, AT);
+  game.answer(playerId, 'TestDilemma1', { vote: 'TestPull', ready: true }, SEAL, AT);
 }
 
 describe('revealIfEveryoneAnswered', () => {

@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import express, { type Express } from 'express';
 import { respond, type RespondOptions } from '../respond.ts';
 import { ASSETS } from './assets.ts';
@@ -35,7 +34,7 @@ export function createSiteApp({ site, ...options }: SiteAppOptions): Express {
     res
       .status(200)
       .set({ 'Content-Type': asset.type, 'Cache-Control': ASSET_CACHE })
-      .send(await readFile(asset.file));
+      .send(asset.content);
   });
 
   app.get('/{*path}', async (req, res) => {

@@ -11,6 +11,7 @@ import {
   DilemmaRevealedEvent,
   PlayerJoinedLateEvent,
   RoundStartedEvent,
+  GameStageChangedEvent,
   ProgressUpdatedEvent,
   type DomainEvent,
 } from '@thelever-app/game';
@@ -103,6 +104,7 @@ describe('PostgresPlayerNotifier', () => {
         new HostChangedEvent('TestRoomId', 'TestLuisId', 5),
         new PlayerLeftEvent('TestRoomId', 'TestAnaId', true, 6),
         new PlayerJoinedLateEvent('TestGameId', 'TestPedroId', 11),
+        new GameStageChangedEvent('TestGameId', 'results', 'TestSaraId', 12),
       ];
 
       // Act

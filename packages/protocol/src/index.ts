@@ -18,6 +18,7 @@ export {
 } from './server-messages.ts';
 export {
   AnswerDilemmaDto,
+  DistributionPredictionDto,
   AvatarDto,
   AvatarFaceDto,
   CategoryDto,

@@ -50,6 +50,9 @@ export function PickRoundDilemmaSheet({
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
+        {/* The overlay holds the scroll lock of the picker: without it, the lock of the settings
+            below would keep the lists of the picker from scrolling. */}
+        <Dialog.Overlay className={styles.overlay} />
         <Dialog.Content className={styles.screen} aria-describedby={undefined}>
           <header className={styles.header}>
             <div className={styles.headerTop}>

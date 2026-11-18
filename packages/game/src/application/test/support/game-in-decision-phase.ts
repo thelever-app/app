@@ -116,7 +116,7 @@ export const ROOM_VERSION_WHEN_THE_GAME_STARTS = 4;
 
 /**
  * The same lobby, and Ana has started the game: it is in the decision phase. Anonymous unless
- * asked, so an answer is only the vote.
+ * asked, so an answer is the vote with its distribution prediction and Ready.
  */
 export async function gameInDecisionPhase(
   notifier = new InMemoryPlayerNotifier(),

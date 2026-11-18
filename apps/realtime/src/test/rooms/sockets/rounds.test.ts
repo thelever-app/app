@@ -29,6 +29,36 @@ async function nominalGame(server: Awaited<ReturnType<typeof startRoomServer>>) 
   return { roomId, ana, luis, marta, states };
 }
 
+/** The next game state of the client that shows what the test waits for, skipping those before. */
+async function stateWhere(
+  client: TestClient,
+  shows: (state: Awaited<ReturnType<TestClient['next']>> & { type: 'game-state' }) => boolean,
+) {
+  for (;;) {
+    const state = await client.next('game-state');
+    if (shows(state)) return state;
+  }
+}
+
+/** Ana hosts Luis and Marta in an anonymous game of one seed dilemma, and all three are connected. */
+async function anonymousGame(server: Awaited<ReturnType<typeof startRoomServer>>) {
+  const { roomId } = await lobbyOfThree(server.http);
+  const ana = await TestClient.connected(server.url, 'ana', roomId, 'room-state');
+  ana.send({
+    type: 'change-settings',
+    changes: {
+      variant: 'anonymous',
+      rounds: [{ origin: 'specific' as const, dilemmaId: SEED_DILEMMAS[0]!.id }],
+    },
+  });
+  await ana.next('room-state');
+  const luis = await TestClient.connected(server.url, 'luis', roomId, 'room-state');
+  const marta = await TestClient.connected(server.url, 'marta', roomId, 'room-state');
+  ana.send({ type: 'start-game' });
+  const states = await Promise.all([ana, luis, marta].map((client) => client.next('game-state')));
+  return { roomId, ana, luis, marta, states };
+}
+
 describe('the rounds over the room sockets', () => {
   let server: Awaited<ReturnType<typeof startRoomServer>> | undefined;
 
@@ -112,7 +142,13 @@ describe('the rounds over the room sockets', () => {
 
     // Assert
     expect(draft.answers).toEqual([
-      { dilemmaId: first!.dilemmaId, vote, votePredictions: [{ playerId: someone, vote }] },
+      {
+        dilemmaId: first!.dilemmaId,
+        vote,
+        votePredictions: [{ playerId: someone, vote }],
+        distributionPrediction: null,
+        ready: false,
+      },
     ]);
     expect(await ana.next('player-answered')).toMatchObject({ playerId: states[1]!.playerId });
   });
@@ -166,6 +202,68 @@ describe('the rounds over the room sockets', () => {
       movedOnBy: states[2]!.playerId,
     });
     expect(seen.reveal).toBeNull();
+  });
+
+  it('should count an anonymous answer once Ready comes, and score its distribution prediction in private', async () => {
+    // Arrange
+    server = await startRoomServer();
+    const { ana, luis, marta, states } = await anonymousGame(server);
+    const { dilemmaId, options } = states[0]!.dilemmas[0]!;
+    const [first, second] = options.map(({ optionId }) => optionId) as [string, string];
+    const shares = (share: number) => [
+      { optionId: first, share },
+      { optionId: second, share: 100 - share },
+      ...options.slice(2).map(({ optionId }) => ({ optionId, share: 0 })),
+    ];
+
+    // Act
+    luis.send({ type: 'answer-dilemma', dilemmaId, vote: first });
+    const voted = await luis.next('game-state');
+    for (const [client, share] of [
+      [ana, 100],
+      [luis, 55],
+      [marta, 100],
+    ] as const) {
+      client.send({
+        type: 'answer-dilemma',
+        dilemmaId,
+        vote: first,
+        distributionPrediction: shares(share),
+        ready: true,
+      });
+    }
+
+    // Assert
+    expect(voted.answeredCount).toBe(0);
+    expect(voted.answers[0]?.ready).toBe(false);
+    expect(voted.answers[0]?.distributionPrediction).toHaveLength(options.length);
+    const revealed = await stateWhere(luis, (state) => state.round.phase === 'reveal');
+    expect(revealed.reveal?.yourPoints).toBe(55);
+    expect(revealed.reveal?.yourDistributionPrediction?.[0]).toEqual({
+      optionId: first,
+      share: 55,
+    });
+  });
+
+  it('should take everyone from the last round of an anonymous game to the ranking, and then to its end', async () => {
+    // Arrange
+    server = await startRoomServer();
+    const { ana, luis, marta, states } = await anonymousGame(server);
+    ana.send({ type: 'reveal-early' });
+    await Promise.all([ana, luis, marta].map((client) => client.next('game-state')));
+
+    // Act
+    marta.send({ type: 'move-on', fromPosition: 0 });
+    const results = await luis.next('game-state');
+    luis.send({ type: 'move-on', fromPosition: 1 });
+    const ended = await stateWhere(ana, (state) => state.stage.kind === 'ended');
+
+    // Assert
+    expect(results.stage).toEqual({ kind: 'results', movedOnBy: states[2]!.playerId });
+    expect(results.ranking?.map(({ playerId }) => playerId).sort()).toEqual(
+      states.map(({ playerId }) => playerId).sort(),
+    );
+    expect(ended.stage).toEqual({ kind: 'ended', movedOnBy: states[1]!.playerId });
   });
 
   it('should pass the role of a host who leaves, and close their socket', async () => {

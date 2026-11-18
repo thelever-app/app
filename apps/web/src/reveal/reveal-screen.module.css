@@ -342,6 +342,63 @@
   opacity: 0.4;
 }
 
+/* The bar with the mark of what the player predicted, a thin line over it. */
+.marked {
+  position: relative;
+}
+
+.mark {
+  position: absolute;
+  top: -4px;
+  left: var(--predicted);
+  width: 3px;
+  height: 22px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--color-ink);
+  box-shadow: 0 0 0 1.5px var(--color-bg);
+}
+
+/* The prediction and its points, only for the player: the inverted sign. */
+.yourPrediction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.yourPredictionText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.yourPredictionTitle {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.yourPredictionHint {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-border);
+}
+
+.yourPoints {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-on-accent);
+}
+
 .anonymousHint {
   font-size: 14px;
   line-height: 20px;

@@ -259,12 +259,288 @@ h2 {
   display: none;
 }
 
+/* How to play: each step with a screen of the app in miniature, in a row on the phone. */
 .steps {
   margin: 0;
-  padding-left: 20px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.step {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+/* The phone shows the top of the screen, at six tenths of its size. */
+.step-screen {
+  flex: none;
+  width: 124px;
+  height: 150px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.mini {
+  flex: none;
+  width: 190px;
+  height: 330px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 30px;
+  background: var(--bg);
+  transform: scale(0.6);
+  transform-origin: top center;
+}
+
+.step:first-child .mini {
+  align-items: center;
+  gap: 14px;
+}
+
+.mini-dark {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.mini-label {
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mini-dark .mini-label {
+  color: var(--primary);
+}
+
+.mini-code {
+  align-self: stretch;
+  padding: 6px 0;
+  border-radius: 12px;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 2px var(--ink);
+  text-align: center;
+  font-family: var(--display);
+  font-size: 40px;
+  line-height: 44px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.mini-faces {
+  display: flex;
+}
+
+.mini-face {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  overflow: hidden;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.mini-face + .mini-face,
+.mini-add {
+  margin-left: -6px;
+}
+
+.mini-face img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.mini-dark .mini-face {
+  width: 28px;
+  height: 28px;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+/* The colours of the players, as the app gives them. */
+.mini-teal {
+  background: #5ecdbf;
+}
+
+.mini-khaki {
+  background: #d6c58e;
+}
+
+.mini-rust {
+  background: #f0a07a;
+}
+
+.mini-olive {
+  background: #c3cf6e;
+}
+
+.mini-cyan {
+  background: #67c7e3;
+}
+
+/* Who else may join, and who the player read right: only where the whole screen shows. */
+.mini-add,
+.mini-right {
+  display: none;
+}
+
+.mini-add {
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: inset 0 0 0 2px var(--border-strong);
+  color: var(--muted);
+}
+
+.mini-add .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.mini-share {
+  align-self: stretch;
+  padding: 8px 0;
+  border-radius: 10px;
+  background: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--ink);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mini-dilemma {
+  font-family: var(--display);
+  font-size: 19px;
+  line-height: 23px;
+  font-weight: 600;
+}
+
+/* The two colours of the options of a dilemma of two, as the app gives them. */
+.mini-a {
+  background: #1358de;
+}
+
+.mini-b {
+  background: #bd0468;
+}
+
+.mini-option {
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mini-private {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.mini-private .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.mini-result {
+  display: flex;
+  gap: 4px;
+}
+
+.mini-column {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.mini-yes {
+  flex: 3;
+}
+
+.mini-no {
+  flex: 2;
+}
+
+.mini-bar {
+  height: 56px;
+  display: flex;
+  align-items: flex-end;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mini-right {
+  align-self: center;
+  margin-top: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The number of the step, which the list already says: drawn, and silent for screen readers. */
+.step-number {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--ink);
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.step h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.step p {
+  margin: 0;
   font-size: 15px;
   line-height: 22px;
 }
@@ -642,37 +918,64 @@ h2 {
     line-height: 34px;
   }
 
-  /* Without its numbers, VoiceOver no longer reads it as a list: the page says role="list". */
+  /* Three columns, each with the whole screen of the app above what the step says. */
   .steps {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-    padding: 0;
-    list-style: none;
-    counter-reset: step;
+    gap: 32px;
   }
 
-  .steps li {
-    counter-increment: step;
-    display: flex;
+  .step {
     flex-direction: column;
-    gap: 8px;
-    padding: 20px;
-    border-radius: 16px;
-    background: var(--raised);
-    box-shadow: inset 0 0 0 1px var(--border);
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .step-screen {
+    width: auto;
+    height: 300px;
+    padding-top: 32px;
+    border-radius: 20px;
+  }
+
+  .mini {
+    transform: none;
+  }
+
+  .mini-add,
+  .mini-right {
+    display: inline-flex;
+  }
+
+  /* The number beside the title and its text. */
+  .step-text {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 4px;
+    align-items: start;
+  }
+
+  .step-head {
+    display: contents;
+  }
+
+  .step-number {
+    grid-row: span 2;
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
+  }
+
+  .step h3 {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  .step p {
+    grid-column: 2;
     font-size: 16px;
     line-height: 24px;
-  }
-
-  /* The number of the step, which the list already says: drawn, and silent for screen readers. */
-  .steps li::before {
-    content: counter(step);
-    content: counter(step) / '';
-    font-family: var(--display);
-    font-size: 36px;
-    line-height: 36px;
-    font-weight: 700;
   }
 
   .home .chips {

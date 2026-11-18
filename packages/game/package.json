@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./in-memory": "./src/adapters/in-memory/index.ts",
     "./cache": "./src/adapters/cache/index.ts",
-    "./contracts": "./src/adapters/test/index.ts"
+    "./contracts": "./src/adapters/test/index.ts",
+    "./distribution-prediction": "./src/domain/vos/distribution-prediction.vo.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."

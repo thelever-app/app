@@ -3,7 +3,8 @@
 # generate-site, which writes it from the database. Node runs the TypeScript sources by stripping
 # types, so the image keeps the workspace layout, as the image of the room server does (ADR 0003).
 # packages/db brings packages/game and packages/dilemmas, whose types and tables it uses; the
-# illustrations of La Palanca come from the web of the app, at the same path next to apps/site.
+# illustrations of La Palanca come from the web of the app, at the same path next to apps/site;
+# packages/ui draws the faces of the players the home shows.
 
 FROM node:24.21.0-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS install
 WORKDIR /app
@@ -13,6 +14,7 @@ COPY apps/site/package.json apps/site/
 COPY packages/game/package.json packages/game/
 COPY packages/dilemmas/package.json packages/dilemmas/
 COPY packages/db/package.json packages/db/
+COPY packages/ui/package.json packages/ui/
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts --filter '@thelever-app/site...'
 
 FROM node:24.21.0-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20
@@ -21,6 +23,7 @@ ENV NODE_ENV=production
 COPY --from=install /app/node_modules node_modules
 COPY --from=install /app/apps/site/node_modules apps/site/node_modules
 COPY --from=install /app/packages/db/node_modules packages/db/node_modules
+COPY --from=install /app/packages/ui/node_modules packages/ui/node_modules
 COPY apps/site/package.json apps/site/
 COPY apps/site/src apps/site/src
 COPY apps/site/assets apps/site/assets
@@ -31,5 +34,7 @@ COPY packages/dilemmas/package.json packages/dilemmas/
 COPY packages/dilemmas/src packages/dilemmas/src
 COPY packages/db/package.json packages/db/
 COPY packages/db/src packages/db/src
+COPY packages/ui/package.json packages/ui/
+COPY packages/ui/src packages/ui/src
 USER node
 CMD ["node", "apps/site/src/server.ts"]
