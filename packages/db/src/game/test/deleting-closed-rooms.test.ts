@@ -14,6 +14,7 @@ import type { Database } from '../../schema.ts';
 import { roomOf, TEST_GAME_SETTINGS } from '../../test/support/rooms.ts';
 import { emptyTables, useTestDatabase } from '../../test/support/test-database.ts';
 import { PostgresDilemmaRepository } from '../../dilemmas/postgres-dilemma-repository.ts';
+import { PostgresDilemmaLikes } from '../postgres-dilemma-likes.ts';
 import { PostgresGameRepository } from '../postgres-game-repository.ts';
 import { PostgresRoomRepository } from '../postgres-room-repository.ts';
 import { inTransaction } from '../../transaction.ts';
@@ -36,12 +37,13 @@ const GAME_DATA = [
   'game_players',
   'game_player_dilemmas',
   'answers',
+  'reactions',
 ];
 
 /**
  * The tables that do not hang from any room, so they stay when one is deleted: the
- * dilemmas and the instances of the room server. Likes, counters, reports and the history go here
- * when they come.
+ * dilemmas, the likes and the instances of the room server. Counters, reports and the history go
+ * here when they come.
  */
 const KEPT = [
   'dilemmas',
@@ -54,6 +56,7 @@ const KEPT = [
   'world_results',
   'world_vote_receipts',
   'instances',
+  'dilemma_likes',
 ];
 
 /** How many rows each table of the app has, by its name. */
@@ -74,7 +77,8 @@ async function rowsOfEveryTable(): Promise<Record<string, number>> {
 
 /**
  * Ana's room with Luis, after Marta was expelled, with a dilemma Luis added and one Ana picked, and
- * its game started with the vote of each to the first dilemma: a row in every table of the game data.
+ * its game started with the vote of each to the first dilemma, revealed, with a reaction and a
+ * like: a row in every table of the game data, and a like apart.
  */
 async function playedRoom() {
   await emptyTables(database.db());
@@ -165,6 +169,14 @@ async function playedRoom() {
     );
     room.connect(player.id, `Test${player.nickname}Connection`, new Date());
   }
+  game.reveal('host', startedAt);
+  game.react(luis.id, 0, { kind: 'dilemma' }, '😮', SEAL_BEFORE_FIRST_ACCESS);
+  await new PostgresDilemmaLikes(database.db()).like({
+    identity: luis.identity,
+    dilemmaId: first.id,
+    seal: SEAL_BEFORE_FIRST_ACCESS,
+    at: startedAt,
+  });
   const rooms = new PostgresRoomRepository(database.db(), 'TestInstanceId');
   const games = new PostgresGameRepository(database.db());
   // In one command, as starting the game does: the room points to its game.

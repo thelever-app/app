@@ -214,6 +214,7 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     absent_host_player_id: snapshot.absentHostId,
     last_connected_at: snapshot.lastConnectedAt,
     closed_at: snapshot.closedAt,
+    played_dilemma_ids: [...snapshot.playedDilemmaIds],
   };
 }
 
@@ -319,6 +320,7 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
     currentGameId: row.current_game_id,
     absentHostId: row.absent_host_player_id,
     leftPlayerIds: row.players.filter(({ has_left }) => has_left).map(({ id }) => id),
+    playedDilemmaIds: row.played_dilemma_ids,
     lastConnectedAt: row.last_connected_at,
     closedAt: row.closed_at,
   };

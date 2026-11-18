@@ -131,7 +131,7 @@ describe('PostgresGameRepository inside a command', () => {
     answer(game, ana.id, first.id, first.options[0]!.id);
     answer(game, luis.id, first.id, first.options[0]!.id);
     // Both answered: the first dilemma is revealed, and Ana moves everyone on to the second.
-    game.revealIfEveryoneAnswered([ana.id, luis.id]);
+    game.revealIfEveryoneAnswered([ana.id, luis.id], STARTED_AT);
     game.moveOn(ana.id, 0, STARTED_AT);
     const games = new PostgresGameRepository(database.db());
     await games.save(game);

@@ -8,8 +8,10 @@ import {
   LobbyChangedEvent,
   PlayerLeftEvent,
   AnsweredCountChangedEvent,
+  DilemmaLikedEvent,
   DilemmaRevealedEvent,
   PlayerJoinedLateEvent,
+  ReactionsChangedEvent,
   RoundStartedEvent,
   GameStageChangedEvent,
   ProgressUpdatedEvent,
@@ -105,6 +107,8 @@ describe('PostgresPlayerNotifier', () => {
         new PlayerLeftEvent('TestRoomId', 'TestAnaId', true, 6),
         new PlayerJoinedLateEvent('TestGameId', 'TestPedroId', 11),
         new GameStageChangedEvent('TestGameId', 'results', 'TestSaraId', 12),
+        new ReactionsChangedEvent('TestGameId', 2, 13),
+        new DilemmaLikedEvent('TestGameId', 'TestLuisId', 13),
       ];
 
       // Act
