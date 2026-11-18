@@ -7,6 +7,8 @@
 // to reports/e2e-usage.txt, slowest first, to see where the time goes. With E2E_SHARD, such as 2/3,
 // it runs only that share of the scenarios, so CI splits them among jobs at once.
 
+import process from 'node:process';
+
 export default {};
 
 export const acceptance = {
