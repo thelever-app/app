@@ -254,4 +254,38 @@ describe('the messages of the rounds', () => {
     expect(ReportDilemmaDto.safeParse({ ...report, reason: 'boring' }).success).toBe(false);
     expect(ReportDilemmaDto.safeParse({ ...report, comment: 'x'.repeat(281) }).success).toBe(false);
   });
+
+  it('should accept a reaction to the dilemma or to a vote, a like and the rematch', () => {
+    // Act & Assert
+    expect(
+      ClientMessageDto.safeParse({
+        type: 'react',
+        position: 0,
+        target: { kind: 'dilemma' },
+        emoji: '😂',
+      }).success,
+    ).toBe(true);
+    expect(
+      ClientMessageDto.safeParse({
+        type: 'react',
+        position: 2,
+        target: { kind: 'vote', playerId: 'player-1' },
+        emoji: '❤️',
+      }).success,
+    ).toBe(true);
+    expect(ClientMessageDto.safeParse({ type: 'like-dilemma', position: 1 }).success).toBe(true);
+    expect(ClientMessageDto.safeParse({ type: 'start-rematch' }).success).toBe(true);
+  });
+
+  it('should reject a reaction without a target it knows, or with too long an emoji', () => {
+    // Arrange
+    const reaction = { type: 'react', position: 0, target: { kind: 'dilemma' }, emoji: '😂' };
+
+    // Act & Assert
+    expect(ClientMessageDto.safeParse({ ...reaction, target: { kind: 'room' } }).success).toBe(
+      false,
+    );
+    expect(ClientMessageDto.safeParse({ ...reaction, emoji: 'a'.repeat(33) }).success).toBe(false);
+    expect(ClientMessageDto.safeParse({ ...reaction, emoji: '' }).success).toBe(false);
+  });
 });

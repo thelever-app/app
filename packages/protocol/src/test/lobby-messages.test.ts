@@ -24,8 +24,13 @@ const rounds = [
     origin: 'specific',
     dilemma: { dilemmaId: 'dilemma-1', text: 'Text of the first dilemma', hasGap: false },
   },
-  { roundId: 2, origin: 'random', categories: ['life-and-death', 'honesty'] },
-  { roundId: 5, origin: 'random', categories: null },
+  {
+    roundId: 2,
+    origin: 'random',
+    categories: ['life-and-death', 'honesty'],
+    withoutNewDilemmas: false,
+  },
+  { roundId: 5, origin: 'random', categories: null, withoutNewDilemmas: true },
   {
     roundId: 3,
     origin: 'players',

@@ -15,9 +15,14 @@ export {
   RoomStateDto,
   LobbyRoundDto,
   ServerMessageDto,
+  TitleDto,
 } from './server-messages.ts';
 export {
   AnswerDilemmaDto,
+  ReactDto,
+  LikeDilemmaDto,
+  StartRematchDto,
+  EmojiDto,
   DistributionPredictionDto,
   AvatarDto,
   AvatarFaceDto,

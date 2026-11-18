@@ -1,6 +1,7 @@
 import {
   type DatabaseClient,
   inTransaction,
+  PostgresDilemmaLikes,
   PostgresDilemmaQueries,
   PostgresDilemmaRepository,
   PostgresGameRepository,
@@ -19,8 +20,17 @@ import {
   InMemoryWorldResultRepository,
 } from '@thelever-app/dilemmas/in-memory';
 import { loadSeedDilemmas } from '@thelever-app/dilemmas/seed';
-import type { GameRepository, PlayerNotifier, RoomRepository } from '@thelever-app/game';
-import { InMemoryGameRepository, InMemoryRoomRepository } from '@thelever-app/game/in-memory';
+import type {
+  DilemmaLikes,
+  GameRepository,
+  PlayerNotifier,
+  RoomRepository,
+} from '@thelever-app/game';
+import {
+  InMemoryDilemmaLikes,
+  InMemoryGameRepository,
+  InMemoryRoomRepository,
+} from '@thelever-app/game/in-memory';
 import type { RunCommand } from '../rooms/run-command.ts';
 import type { SocketNotifier } from '../rooms/sockets/socket-notifier.ts';
 
@@ -49,6 +59,8 @@ export interface StorageAdapters {
   readonly worldResults: WorldResultRepository;
   readonly roomRepository: RoomRepository;
   readonly gameRepository: GameRepository;
+  /** The likes, which outlive the rooms. */
+  readonly likes: DilemmaLikes;
   /**
    * The notifier the use cases get, given the sockets of this instance: in memory, those sockets;
    * in PostgreSQL, every instance, which deliver to their own sockets what it publishes.
@@ -69,6 +81,7 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
       ),
       roomRepository: new InMemoryRoomRepository(),
       gameRepository: new InMemoryGameRepository(),
+      likes: new InMemoryDilemmaLikes(),
       notifierFor: (sockets) => sockets,
       runCommand: (command) => command(),
     };
@@ -81,6 +94,7 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
     worldResults: new PostgresWorldResultRepository(db),
     roomRepository: new PostgresRoomRepository(db, instanceId),
     gameRepository: new PostgresGameRepository(db),
+    likes: new PostgresDilemmaLikes(db),
     notifierFor: () => new PostgresPlayerNotifier(db),
     runCommand: (command) => inTransaction(db, command),
   };

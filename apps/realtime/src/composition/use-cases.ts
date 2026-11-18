@@ -14,6 +14,7 @@ import {
   ConnectPlayerUseCase,
   CreateRoomUseCase,
   type DilemmaCatalog,
+  type DilemmaLikes,
   DisconnectConnectionsUseCase,
   DisconnectPlayerUseCase,
   ExpelPlayerUseCase,
@@ -26,6 +27,9 @@ import {
   LeaveRoomUseCase,
   ReportDilemmaUseCase,
   MoveOnUseCase,
+  ReactUseCase,
+  LikeDilemmaUseCase,
+  StartRematchUseCase,
   RevealEarlyUseCase,
   RunOutRoundUseCase,
   SkipDilemmaUseCase,
@@ -63,6 +67,8 @@ export interface GameQueriesDependencies {
   readonly roomRepository: RoomRepository;
   readonly gameRepository: GameRepository;
   readonly catalog: DilemmaCatalog;
+  /** The likes, which the reveal tells each player of. */
+  readonly likes: DilemmaLikes;
   /** The preview suggests an avatar at random. */
   readonly randomness: Randomness;
   /** The preview shows only an open room. */
@@ -81,12 +87,13 @@ export function gameQueries({
   roomRepository,
   gameRepository,
   catalog,
+  likes,
   randomness,
   clock,
 }: GameQueriesDependencies): GameQueries {
   return {
     getRoomState: new GetRoomStateUseCase(roomRepository, catalog),
-    getGameState: new GetGameStateUseCase(roomRepository, gameRepository, catalog),
+    getGameState: new GetGameStateUseCase(roomRepository, gameRepository, catalog, likes),
     getRoomPreview: new GetRoomPreviewUseCase(roomRepository, randomness, clock),
     searchDilemmas: new SearchDilemmasUseCase(roomRepository, catalog),
   };
@@ -132,11 +139,14 @@ export function gameCommands({
   roomRepository,
   gameRepository,
   catalog,
+  likes,
   notifier,
   idGenerator,
   randomness,
   clock,
 }: GameCommandsDependencies): GameCommands {
+  // Until the first access exists, every answer, reaction and like carries the seal of before it.
+  const sealProvider = new InMemorySealProvider();
   return {
     createRoom: new CreateRoomUseCase(roomRepository, catalog, idGenerator, randomness, clock),
     joinRoom: new JoinRoomUseCase({
@@ -174,16 +184,25 @@ export function gameCommands({
       EXPLORATION_SLOTS,
       CANDIDATES_PER_ROUND,
     ),
-    // Until the first access exists, every answer carries the seal of before it.
     answerDilemma: new AnswerDilemmaUseCase({
       roomRepository,
       gameRepository,
       notifier,
-      sealProvider: new InMemorySealProvider(),
+      sealProvider,
       clock,
     }),
     revealEarly: new RevealEarlyUseCase(roomRepository, gameRepository, notifier, clock),
     moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock),
+    react: new ReactUseCase({ roomRepository, gameRepository, sealProvider, notifier }),
+    likeDilemma: new LikeDilemmaUseCase({
+      roomRepository,
+      gameRepository,
+      likes,
+      sealProvider,
+      notifier,
+      clock,
+    }),
+    startRematch: new StartRematchUseCase(roomRepository, gameRepository, notifier),
     runOutRound: new RunOutRoundUseCase(roomRepository, gameRepository, notifier, clock),
     leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier, clock),
     // Until Moderation keeps them, the reports stay in the memory of the instance that took them.

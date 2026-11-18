@@ -10,9 +10,10 @@ import { z } from 'zod';
  * 8 since the rounds of the room. 9 since the distribution prediction: an answer of an anonymous
  * room carries it and Ready, and the game has its results and its end. 10 since the person in the
  * gap predicts without voting: their answer has no vote, nobody predicts them and the reveal says
- * how many votes they guessed.
+ * how many votes they guessed. 11 since the end of the game: the results of a nominal room screen
+ * by screen with their titles, reactions, likes, the cards and the rematch.
  */
-export const CONTRACT_VERSION = 10;
+export const CONTRACT_VERSION = 11;
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a
@@ -181,15 +182,47 @@ export const RevealEarlyDto = z.strictObject({
 
 /**
  * From the reveal of a round, any player takes everyone to the next one; from the last one, to the
- * game results; and from the results, to the end of the game.
+ * first screen of the game results; from each, to the next; and from the last, to the end of the game.
  */
 export const MoveOnDto = z.strictObject({
   type: z.literal('move-on'),
   /**
-   * The position of the round whose reveal the player moves on from, or the number of rounds from
-   * the game results, so two at once move one step.
+   * The position of the round whose reveal the player moves on from or, from a screen of the game
+   * results, the number of rounds plus the number of that screen, so two at once move one step.
    */
   fromPosition: z.number().int().nonnegative(),
+  traceparent: TraceparentDto.optional(),
+});
+
+/** One emoji, any of them, as the keyboard of the phone writes it; the server checks it is one. */
+export const EmojiDto = z.string().min(1).max(32);
+
+/**
+ * In the reveal of a round, the player reacts to its dilemma or, in a nominal room, to the vote of
+ * a player, their own too; a new reaction to the same thing takes the place of the one before.
+ */
+export const ReactDto = z.strictObject({
+  type: z.literal('react'),
+  /** The position of the round whose reveal the player reacts in, so a late one is lost. */
+  position: z.number().int().nonnegative(),
+  target: z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('dilemma') }),
+    z.strictObject({ kind: z.literal('vote'), playerId: z.string().min(1) }),
+  ]),
+  emoji: EmojiDto,
+  traceparent: TraceparentDto.optional(),
+});
+
+/** In the reveal of a round, the player gives «Buen dilema» to its dilemma, once in all. */
+export const LikeDilemmaDto = z.strictObject({
+  type: z.literal('like-dilemma'),
+  position: z.number().int().nonnegative(),
+  traceparent: TraceparentDto.optional(),
+});
+
+/** Once the game has ended, the host takes who is still in the room to the lobby of a new one. */
+export const StartRematchDto = z.strictObject({
+  type: z.literal('start-rematch'),
   traceparent: TraceparentDto.optional(),
 });
 
@@ -279,6 +312,9 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   LeaveRoomDto,
   ReportDilemmaDto,
   SkipDilemmaDto,
+  ReactDto,
+  LikeDilemmaDto,
+  StartRematchDto,
 ]);
 
 /** The type of every message a player sends, so the server can say which one it rejected. */
@@ -296,6 +332,9 @@ export const ClientMessageTypeDto = z.enum([
   'leave-room',
   'report-dilemma',
   'skip-dilemma',
+  'react',
+  'like-dilemma',
+  'start-rematch',
 ]);
 
 export type LanguageDto = z.infer<typeof LanguageDto>;
@@ -323,5 +362,8 @@ export type LeaveRoomDto = z.infer<typeof LeaveRoomDto>;
 export type ReportReasonDto = z.infer<typeof ReportReasonDto>;
 export type ReportDilemmaDto = z.infer<typeof ReportDilemmaDto>;
 export type SkipDilemmaDto = z.infer<typeof SkipDilemmaDto>;
+export type ReactDto = z.infer<typeof ReactDto>;
+export type LikeDilemmaDto = z.infer<typeof LikeDilemmaDto>;
+export type StartRematchDto = z.infer<typeof StartRematchDto>;
 export type ClientMessageDto = z.infer<typeof ClientMessageDto>;
 export type ClientMessageTypeDto = z.infer<typeof ClientMessageTypeDto>;

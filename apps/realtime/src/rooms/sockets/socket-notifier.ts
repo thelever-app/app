@@ -1,6 +1,7 @@
 import {
   AnsweredCountChangedEvent,
   ConnectionChangedEvent,
+  DilemmaLikedEvent,
   DilemmaRevealedEvent,
   GameStageChangedEvent,
   HostChangedEvent,
@@ -8,6 +9,7 @@ import {
   PlayerJoinedLateEvent,
   PlayerLeftEvent,
   ProgressUpdatedEvent,
+  ReactionsChangedEvent,
   RoundStartedEvent,
   type DomainEvent,
   type PlayerNotifier,
@@ -51,6 +53,8 @@ const SENT_AS_STATE = [
   HostChangedEvent,
   PlayerLeftEvent,
   PlayerJoinedLateEvent,
+  ReactionsChangedEvent,
+  DilemmaLikedEvent,
 ] as const;
 
 /** Delivers the events of the use cases to the connections of each player in this instance. */

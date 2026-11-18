@@ -8,8 +8,30 @@ import {
   RoomSettingsDto,
   RoundCategoriesDto,
   DistributionPredictionDto,
+  EmojiDto,
   RoundIdDto,
 } from './client-messages.ts';
+
+/** The titles of a game of a nominal room, in the order they are shown, El Mentalista the last. */
+export const TitleDto = z.enum([
+  'almas-gemelas',
+  'verso-suelto',
+  'la-voz-del-grupo',
+  'iman-de-reacciones',
+  'enigma',
+  'libro-abierto',
+  'el-mentalista',
+]);
+
+/**
+ * Who holds a title, or comes right after: one player, or the pair of Almas gemelas, with the fact
+ * that earned it: how many of how many, or the points of El Mentalista.
+ */
+const TitleHolderDto = z.strictObject({
+  playerIds: z.array(z.string().min(1)).min(1).max(2),
+  count: z.number().int().nonnegative(),
+  of: z.number().int().nonnegative().nullable(),
+});
 
 /** Goes up with every change of the game. The client drops anything older than what it holds (ADR 0003). */
 const GameVersionDto = z.number().int().nonnegative();
@@ -47,16 +69,19 @@ export const GameStateDto = z.strictObject({
     movedOnBy: z.string().min(1).nullable(),
   }),
   /**
-   * The rounds, one after another; then, in an anonymous room, the game results; then the end of
-   * the game. Who moved everyone to the results or to the end; null in the rounds.
+   * The rounds, one after another; then the game results, screen by screen; then the end of the
+   * game. Who moved everyone to the results or to the end; null in the rounds.
    */
   stage: z.strictObject({
     kind: z.enum(['rounds', 'results', 'ended']),
     movedOnBy: z.string().min(1).nullable(),
+    /** In the results, the screen everyone is on, from 0; null otherwise. */
+    step: z.number().int().nonnegative().nullable(),
   }),
   /**
-   * In an anonymous room, once the rounds are over, who reads the group best: every player still
-   * in the game, the most points first, sharing a position on a tie; null otherwise.
+   * Once the rounds are over, the ranking of every player still in the game, the most points
+   * first, sharing a position on a tie: in an anonymous room, who reads the group best; in a
+   * nominal one, without who joined late. Null while the rounds go on.
    */
   ranking: z
     .array(
@@ -68,6 +93,39 @@ export const GameStateDto = z.strictObject({
       }),
     )
     .nullable(),
+  /**
+   * Once the rounds are over: in a nominal room, the titles won, in their order, and who knows the
+   * player who receives it best, which only they get; for the card of the group, the dilemma that
+   * divided it the most. Null while the rounds go on.
+   */
+  results: z
+    .strictObject({
+      titles: z.array(
+        z.strictObject({
+          title: TitleDto,
+          winners: z.array(TitleHolderDto).min(1),
+          runnersUp: z.array(TitleHolderDto),
+        }),
+      ),
+      knownBestBy: z
+        .strictObject({
+          playerIds: z.array(z.string().min(1)),
+          points: z.number().int().nonnegative(),
+        })
+        .nullable(),
+      /** With how many chose each option, in the order of the catalog. */
+      mostDivisiveDilemma: z
+        .strictObject({
+          dilemmaId: z.string().min(1),
+          distribution: z.array(
+            z.strictObject({ optionId: z.string().min(1), count: z.number().int().nonnegative() }),
+          ),
+        })
+        .nullable(),
+    })
+    .nullable(),
+  /** Whether the player who receives it plays the game: who joined the room once it had ended does not. */
+  inGame: z.boolean(),
   /** Who may reveal the dilemma of the round early now. */
   hostId: z.string().min(1),
   /** The time of the server when it sent this state, so the screen can correct its own clock. */
@@ -116,6 +174,32 @@ export const GameStateDto = z.strictObject({
       yourDistributionPrediction: DistributionPredictionDto.nullable(),
       /** What the predictions of the player who receives it scored in this dilemma; null for nothing scored. */
       yourPoints: z.number().int().nonnegative().nullable(),
+      /**
+       * Each emoji the dilemma got, the most first, and who reacted with it; in an anonymous room,
+       * only how many.
+       */
+      dilemmaReactions: z.array(
+        z.strictObject({
+          emoji: EmojiDto,
+          count: z.number().int().positive(),
+          playerIds: z.array(z.string().min(1)),
+        }),
+      ),
+      /** In a nominal room, each reaction to a vote; empty in an anonymous one. */
+      voteReactions: z.array(
+        z.strictObject({
+          playerId: z.string().min(1),
+          aboutId: z.string().min(1),
+          emoji: EmojiDto,
+        }),
+      ),
+      /** The reactions of the player who receives it. */
+      yourReactions: z.strictObject({
+        dilemma: EmojiDto.nullable(),
+        votes: z.array(z.strictObject({ aboutId: z.string().min(1), emoji: EmojiDto })),
+      }),
+      /** Whether the player who receives it has ever liked this dilemma. */
+      youLiked: z.boolean(),
     })
     .nullable(),
   /** In the order every player gets them, in the language of the player. */
@@ -196,6 +280,11 @@ export const LobbyRoundDto = z.discriminatedUnion('origin', [
     roundId: RoundIdDto,
     origin: z.literal('random'),
     categories: RoundCategoriesDto,
+    /**
+     * In the lobby of a rematch, whether its categories have nothing left the room has not played:
+     * if the game starts like that, the round plays from every category.
+     */
+    withoutNewDilemmas: z.boolean(),
   }),
   z.strictObject({ roundId: RoundIdDto, origin: z.literal('specific'), dilemma: LobbyDilemmaDto }),
   z.strictObject({
@@ -305,7 +394,6 @@ export const ErrorCodeDto = z.enum([
   'dilemma-not-in-game',
   'dilemma-not-in-round',
   'dilemma-not-revealed',
-  'no-next-round',
   'player-left',
   'option-not-in-dilemma',
   'dilemma-not-found',
@@ -327,6 +415,10 @@ export const ErrorCodeDto = z.enum([
   'dilemma-already-reported',
   'dilemma-not-reported-as-offensive',
   'already-voted',
+  'invalid-emoji',
+  'no-vote-to-react-to',
+  'game-not-ended',
+  'dilemma-already-played',
 ]);
 
 /** The answer to a rejected message, on the same connection. */
@@ -358,3 +450,4 @@ export type ConnectionChangedDto = z.infer<typeof ConnectionChangedDto>;
 export type ErrorCodeDto = z.infer<typeof ErrorCodeDto>;
 export type ErrorDto = z.infer<typeof ErrorDto>;
 export type ServerMessageDto = z.infer<typeof ServerMessageDto>;
+export type TitleDto = z.infer<typeof TitleDto>;
