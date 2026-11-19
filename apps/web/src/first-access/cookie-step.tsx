@@ -20,7 +20,7 @@ interface CookieStepProps {
 /**
  * The last step of the first access: the cookie manager of Google, over a screen that says what
  * it is about. With Global Privacy Control, the ads are not personalised whatever the person
- * accepts, and the screen says why before going on (RES-43).
+ * accepts, and the screen says why before going on.
  */
 export function CookieStep({ adsenseClient, underEighteen, onDone }: CookieStepProps) {
   const { t } = useTranslation();

@@ -13,7 +13,7 @@ interface FundingSheetProps {
   readonly onOpenChange: (open: boolean) => void;
 }
 
-/** How TheLever is funded (RF-117), from the game consent. */
+/** How TheLever is funded, from the game consent. */
 export function FundingSheet({ open, onOpenChange }: FundingSheetProps) {
   const { t } = useTranslation();
   return (

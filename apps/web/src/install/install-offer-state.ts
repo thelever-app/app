@@ -1,7 +1,7 @@
 /** When the person closed the offer to install the app, and when they last finished a game. */
 const CLOSED_KEY = 'thelever.installOfferClosedAt';
 const FINISHED_KEY = 'thelever.lastFinishedGameAt';
-/** A closed offer stays away at least this long, and until a game is finished after (RF-132). */
+/** A closed offer stays away at least this long, and until a game is finished after. */
 export const OFFER_AGAIN_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 
 function read(storage: Storage, key: string): number | undefined {

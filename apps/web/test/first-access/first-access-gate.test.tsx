@@ -81,6 +81,29 @@ describe('FirstAccessGate', () => {
     ).toBeDefined();
   });
 
+  it('should go on from where the first access is when the age was declared elsewhere', async () => {
+    // Arrange: another tab of the device declared it while this one stayed on the age.
+    const openApp = vi
+      .fn()
+      .mockResolvedValueOnce(ASKS_FOR_THE_AGE)
+      .mockResolvedValueOnce(ASKS_FOR_THE_DOCUMENTS);
+    const declareAge = vi.fn().mockRejectedValue(new RoomApiError('age-already-declared'));
+    const api = fakeRoomApi({ openApp, declareAge });
+    const { t } = await renderAtRoute(gate(), { api });
+    fireEvent.click(await screen.findByRole('button', { name: t('firstAccess.welcome.start') }));
+    fireEvent.change(screen.getByRole('combobox', { name: t('firstAccess.age.year') }), {
+      target: { value: '1990' },
+    });
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('firstAccess.continue') }));
+
+    // Assert
+    expect(
+      await screen.findByRole('heading', { name: t('firstAccess.consent.title') }),
+    ).toBeDefined();
+  });
+
   it('should keep the documents apart, unchecked, and accept them in their order', async () => {
     // Arrange
     const acceptDocument = vi

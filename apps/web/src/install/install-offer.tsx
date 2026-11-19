@@ -19,7 +19,7 @@ function isIos(): boolean {
 }
 
 /**
- * A discreet offer to install the app on the home screen (RF-132): with the offer of the browser
+ * A discreet offer to install the app on the home screen: with the offer of the browser
  * where it makes one, and with how to do it on iOS. Once closed, it comes back only after 30 days
  * and a finished game.
  */

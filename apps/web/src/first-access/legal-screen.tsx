@@ -8,7 +8,7 @@ import { FundingSheet } from './funding-sheet.tsx';
 import { legalPathsIn } from './legal-links.ts';
 import styles from './first-access.module.css';
 
-/** The five points of the game consent, before its statement (RES-40). */
+/** The five points of the game consent, before its statement. */
 const POINTS: readonly (readonly [
   'play' | 'notSold' | 'group' | 'deleted' | 'decide',
   IconName,
@@ -28,9 +28,9 @@ interface LegalScreenProps {
 
 /**
  * The legal documents still to accept. The terms of use and the game consent, each with its own
- * box, unchecked (RES-40); terms that changed so much they must be accepted again, on a screen of
- * their own (RES-71); and a game consent that must be given again, with a notice that it changed
- * (RF-145). Without them, nothing of the app is reachable.
+ * box, unchecked; terms that changed so much they must be accepted again, on a screen of their
+ * own; and a game consent that must be given again, with a notice that it changed. Without them,
+ * nothing of the app is reachable.
  */
 export function LegalScreen({ status, onAccepted }: LegalScreenProps) {
   const termsPending = status.pending.includes('terms-of-use');

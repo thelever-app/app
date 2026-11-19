@@ -32,7 +32,7 @@ export function rememberToldAnonymous(gameId: string): void {
 /**
  * Before the first dilemma of an anonymous game, every player learns what anonymous means: the
  * group never sees their votes, only how many chose each option, and the votes are only used to
- * play (RES-13).
+ * play.
  */
 export function AnonymousNotice({ onStart }: { readonly onStart: () => void }) {
   const { t } = useTranslation();

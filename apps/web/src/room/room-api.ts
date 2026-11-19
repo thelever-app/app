@@ -31,7 +31,7 @@ export class RoomApiError extends Error {
 export interface RoomApi {
   /** Opens the app: the first time, it begins the first access; it says where it is. */
   openApp(): Promise<FirstAccessResponseDto>;
-  /** Once and for good; the month only in a boundary year, month-of-birth-needed without it there. */
+  /** Once and for good; the month only of who may be under 18, month-of-birth-needed without it. */
   declareAge(birthYear: number, birthMonth?: number): Promise<FirstAccessResponseDto>;
   /** Accepts the terms of use, or gives the game consent, in the version the app showed. */
   acceptDocument(

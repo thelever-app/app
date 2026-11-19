@@ -18,8 +18,8 @@ interface AgeScreenProps {
 type Outcome = 'none' | 'month-needed' | 'failed';
 
 /**
- * The year of birth, with no year chosen and no word of the minimum age (RF-77); the month only
- * when the room server says the year is a boundary one. Once sent, it never changes.
+ * The year of birth, with no year chosen and no word of the minimum age; the month only
+ * when the room server asks for it, of who may be under 18. Once sent, it never changes.
  */
 export function AgeScreen({ onDeclared }: AgeScreenProps) {
   const { t, i18n } = useTranslation();
@@ -43,6 +43,15 @@ export function AgeScreen({ onDeclared }: AgeScreenProps) {
     } catch (error) {
       if (error instanceof RoomApiError && error.code === 'month-of-birth-needed') {
         return 'month-needed';
+      }
+      // Declared from another tab of the device: it goes on from where the first access is now.
+      if (error instanceof RoomApiError && error.code === 'age-already-declared') {
+        try {
+          onDeclared(await api.openApp());
+          return 'none';
+        } catch {
+          return 'failed';
+        }
       }
       return 'failed';
     }

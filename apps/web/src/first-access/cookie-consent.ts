@@ -2,7 +2,7 @@
 const ANSWERED_KEY = 'thelever.cookieConsentAnswered';
 /**
  * Where the device keeps whether its ads may be personalised: only for an adult who accepted it in
- * the cookie manager and whose browser does not send Global Privacy Control (RES-43). The ads read
+ * the cookie manager and whose browser does not send Global Privacy Control. The ads read
  * it; nothing else does.
  */
 export const PERSONALISED_ADS_KEY = 'thelever.personalisedAds';
