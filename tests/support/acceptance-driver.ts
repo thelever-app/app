@@ -18,6 +18,7 @@ import {
   MoveOnUseCase,
   ReactUseCase,
   LikeDilemmaUseCase,
+  UnlikeDilemmaUseCase,
   StartRematchUseCase,
   RevealEarlyUseCase,
   RunOutRoundUseCase,
@@ -29,6 +30,7 @@ import {
   type Seal,
   type VotePrediction,
   GetGameStateUseCase,
+  type GetGameStateOutput,
   GetRoomPreviewUseCase,
   GetRoomStateUseCase,
   JoinRoomUseCase,
@@ -116,6 +118,7 @@ import type {
   PublicPageView,
   ReactionsView,
   RecordedAnswer,
+  RankedView,
   RecordedLike,
   RecordedReaction,
   ReportReason,
@@ -372,6 +375,7 @@ export class AcceptanceDriver implements GameDriver {
   readonly #moveOn: MoveOnUseCase;
   readonly #react: ReactUseCase;
   readonly #likeDilemma: LikeDilemmaUseCase;
+  readonly #unlikeDilemma: UnlikeDilemmaUseCase;
   readonly #startRematch: StartRematchUseCase;
   readonly #leaveRoom: LeaveRoomUseCase;
   readonly #reportDilemma: ReportDilemmaUseCase;
@@ -459,6 +463,12 @@ export class AcceptanceDriver implements GameDriver {
       sealProvider: new InMemorySealProvider(this.#seals),
       notifier,
       clock,
+    });
+    this.#unlikeDilemma = new UnlikeDilemmaUseCase({
+      roomRepository: rooms,
+      gameRepository: games,
+      likes: this.#likes,
+      notifier,
     });
     this.#startRematch = new StartRematchUseCase(rooms, games, notifier);
     this.#connectPlayer = new ConnectPlayerUseCase(rooms, games, notifier, idGenerator, clock);
@@ -1067,7 +1077,14 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async rankingSeenBy(viewer: string) {
-    const { ranking, results } = await this.#gameStateOf(viewer);
+    return this.#rankingIn(await this.#gameStateOf(viewer));
+  }
+
+  /** The ranking of a state, each player with the names of the titles they won. */
+  #rankingIn({
+    ranking,
+    results,
+  }: Pick<GetGameStateOutput, 'ranking' | 'results'>): RankedView[] | undefined {
     return ranking?.map(({ playerId, position, points, mentalist }) => ({
       player: this.#nameOf(playerId),
       position,
@@ -1237,6 +1254,15 @@ export class AcceptanceDriver implements GameDriver {
     });
   }
 
+  async unlike(player: string, position?: number): Promise<void> {
+    const { round } = await this.#gameStateOf(player);
+    await this.#unlikeDilemma.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+      position: position === undefined ? round.position : position - 1,
+    });
+  }
+
   async likeRecordedFor(player: string, position: number): Promise<RecordedLike | undefined> {
     const dilemmaId = await this.#dilemmaIdAt(position);
     const { identity } = this.#playerCalled(player);
@@ -1272,13 +1298,19 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async endOfTheGameSeenBy(viewer: string) {
-    const { stage, players } = await this.#gameStateOf(viewer);
+    const state = await this.#gameStateOf(viewer);
+    const { stage, players, results } = state;
     if (stage.kind !== 'ended') return undefined;
     return {
       stillInTheRoom: players
         .filter(({ left }) => !left)
         .map(({ playerId }) => this.#nameOf(playerId)),
       gone: players.filter(({ left }) => left).map(({ playerId }) => this.#nameOf(playerId)),
+      ranking: this.#rankingIn(state) ?? [],
+      titles: (results?.titles ?? []).map(({ title, winners }) => ({
+        title: TITLE_NAMES[title],
+        winners: winners.map(({ playerIds }) => playerIds.map((id) => this.#nameOf(id))),
+      })),
     };
   }
 

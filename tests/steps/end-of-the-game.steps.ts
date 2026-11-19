@@ -189,6 +189,37 @@ Then('the like of {string} is not counted twice', async function (this: GameWorl
   assert.equal(await this.driver.likesCountedFor(1), 1);
 });
 
+When('{string} takes back the like', async function (this: GameWorld, player: string) {
+  await this.driver.unlike(player);
+});
+
+Then('the like no longer counts for the rating of the dilemma', async function (this: GameWorld) {
+  assert.equal(await this.driver.likesCountedFor(1), 0);
+});
+
+Given(
+  '{string} liked the first dilemma during its reveal',
+  async function (this: GameWorld, player: string) {
+    await this.toRevealOf(1);
+    await this.driver.like(player);
+  },
+);
+
+When(
+  '{string} takes back the like to the first dilemma',
+  async function (this: GameWorld, player: string) {
+    await this.driver.unlike(player, 1);
+  },
+);
+
+Then(
+  'the like of {string} still counts for the first dilemma',
+  async function (this: GameWorld, player: string) {
+    assert.ok(await this.driver.likeRecordedFor(player, 1), `${player} has no like`);
+    assert.equal(await this.driver.likesCountedFor(1), 1);
+  },
+);
+
 // Reactions
 
 When('{string} reacts to the dilemma', async function (this: GameWorld, player: string) {

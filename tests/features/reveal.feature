@@ -62,6 +62,19 @@ Feature: Reveal
       Then the like of "Luis" is not counted twice
 
     @ui
+    Scenario: A player takes back the like during the reveal
+      Given the reveal is on the first dilemma
+      And "Luis" likes the dilemma
+      When "Luis" takes back the like
+      Then the like no longer counts for the rating of the dilemma
+
+    Scenario: A like cannot be taken back once the reveal is over
+      Given "Luis" liked the first dilemma during its reveal
+      And the reveal is on the second dilemma
+      When "Luis" takes back the like to the first dilemma
+      Then the like of "Luis" still counts for the first dilemma
+
+    @ui
     Scenario: A player reacts to the dilemma itself
       Given the reveal is on the first dilemma
       When "Luis" reacts to the dilemma

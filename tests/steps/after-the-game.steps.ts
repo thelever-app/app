@@ -110,3 +110,59 @@ Then('the room is still open', async function (this: GameWorld) {
     assert.equal(await this.driver.tryToReconnect(player), true, `${player} could not get back in`);
   }
 });
+
+// The end of the game sums up the game results
+
+/** The end of the game as `viewer` sees it, which must be there. */
+async function endSeenBy(world: GameWorld, viewer: string) {
+  const end = await world.driver.endOfTheGameSeenBy(viewer);
+  assert.ok(end, `${viewer} does not see the end of the game`);
+  return end;
+}
+
+Then(
+  'each player sees at the end of the game the ranking with the badges of the titles',
+  async function (this: GameWorld) {
+    const titles = await this.driver.titlesOfTheGame();
+    assert.ok(titles.length > 0, 'the game has no titles');
+    for (const viewer of this.present()) {
+      const { ranking } = await endSeenBy(this, viewer);
+      assert.equal(ranking.length, this.present().length, `${viewer} misses someone`);
+      for (const { title, winners } of titles) {
+        for (const winner of winners.flat()) {
+          const row = ranking.find(({ player }) => player === winner);
+          assert.ok(row?.titles.includes(title), `${viewer} sees no ${title} next to ${winner}`);
+        }
+      }
+    }
+  },
+);
+
+Then(
+  'each player sees at the end of the game every title of the game with who won it',
+  async function (this: GameWorld) {
+    const titles = await this.driver.titlesOfTheGame();
+    for (const viewer of this.present()) {
+      const seen = (await endSeenBy(this, viewer)).titles;
+      assert.deepEqual(
+        seen.map(({ title, winners }) => ({ title, winners: winners.flat().sort() })),
+        titles.map(({ title, winners }) => ({ title, winners: winners.flat().sort() })),
+      );
+    }
+  },
+);
+
+Then(
+  'each player sees at the end of the game the ranking of who reads the group best',
+  async function (this: GameWorld) {
+    for (const viewer of this.present()) {
+      const { ranking, titles } = await endSeenBy(this, viewer);
+      assert.deepEqual(ranking.map(({ player }) => player).sort(), [...this.present()].sort());
+      assert.ok(
+        ranking.some(({ mentalist }) => mentalist),
+        `${viewer} sees no El Mentalista`,
+      );
+      assert.deepEqual(titles, []);
+    }
+  },
+);

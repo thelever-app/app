@@ -32,6 +32,12 @@ Feature: After the game
       When "Luis" shows the other nicknames on his card
       Then the card shows the nickname of "Marta"
 
+    @ui
+    Scenario: The end of the game sums up the game results
+      Given "Luis" is El Mentalista and "Marta" is "Imán de reacciones"
+      Then each player sees at the end of the game the ranking with the badges of the titles
+      And each player sees at the end of the game every title of the game with who won it
+
     @ui @screen @todo
     Scenario: A player chooses to watch a rewarded ad to see how each player reads them
       Given a rewarded ad is ready
@@ -76,6 +82,10 @@ Feature: After the game
       Then the card shows that the group played 8 dilemmas
       And shows the dilemma that divided the group the most
       And shows no information about any player
+
+    @ui
+    Scenario: The end of the game shows the ranking of who reads the group best
+      Then each player sees at the end of the game the ranking of who reads the group best
 
     Scenario: The most divisive dilemma is the closest to an even split
       Given the third dilemma was voted 2 to 1
