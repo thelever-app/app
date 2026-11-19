@@ -542,6 +542,10 @@ export interface GameDriver {
   titlesSeenBy(viewer: string): Promise<boolean>;
   /** The screen of the results the player is on; undefined out of the results. */
   resultsScreenSeenBy(viewer: string): Promise<ResultsScreenView | undefined>;
+  /** The screen of the results the device of `viewer` shows, from 0: behind the group's if they look back (@screen). */
+  resultsScreenShownTo(viewer: string): Promise<number>;
+  /** `player` looks back, on their device alone, at the screen of the results before (@screen). */
+  goBackInTheResults(player: string): Promise<void>;
   /** Every title of the game with a winner, in the order they are shown. */
   titlesOfTheGame(): Promise<TitleView[]>;
   endOfTheGameSeenBy(viewer: string): Promise<EndOfTheGameView | undefined>;

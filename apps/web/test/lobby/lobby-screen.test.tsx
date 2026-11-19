@@ -230,11 +230,11 @@ describe('LobbyScreen', () => {
     });
 
     it.each([
-      ['anonymous', 3, 4, 'lobby.gapWarningAnonymous'],
-      ['nominal', 2, 3, 'lobby.gapWarningNominal'],
+      ['anonymous', 3, 4],
+      ['nominal', 2, 3],
     ] as const)(
       'should warn a %s room of %i that a dilemma about someone in the group needs %i players',
-      async (variant, players, minimum, key) => {
+      async (variant, players, minimum) => {
         // Arrange
         const room = aRoom();
         const rounds: LobbyRoundDto[] = [
@@ -259,7 +259,7 @@ describe('LobbyScreen', () => {
         // Assert
         const warning = screen.getByRole('status', { name: '' });
         expect(warning.textContent).toContain(t('lobby.gapWarningTitle'));
-        expect(warning.textContent).toContain(t(key, { minimum }));
+        expect(warning.textContent).toContain(t('lobby.gapWarning', { minimum }));
       },
     );
 

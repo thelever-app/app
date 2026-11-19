@@ -106,32 +106,12 @@ describe('RevealPhase', () => {
     // Act
     const { t } = await renderReveal(revealed(NOMINAL_REVEAL), { pastTheIntro: false });
     const intro = screen.queryByRole('heading', { name: t('reveal.introTitle') });
-    const answered = screen.queryByText(t('reveal.introAnswered', { count: 3, total: 4 }), {
-      exact: false,
-    });
     act(() => vi.advanceTimersByTime(REVEAL_INTRO_MS));
 
     // Assert
     expect(intro).not.toBeNull();
-    expect(answered).not.toBeNull();
     expect(screen.queryByRole('heading', { name: t('reveal.introTitle') })).toBeNull();
     expect(screen.getByRole('main', { name: t('reveal.region') })).toBeDefined();
-  });
-
-  it('should count in the passage only who was asked the dilemma, not who joined after it', async () => {
-    // Arrange: Pedro joined once the dilemma was revealed.
-    const pedro = { ...PLAYERS[0]!, playerId: 'test-pedro-id', nickname: 'Pedro' };
-
-    // Act
-    const { t } = await renderReveal(
-      revealed(NOMINAL_REVEAL, { players: [...PLAYERS, pedro], answeredCount: 1 }),
-      { pastTheIntro: false },
-    );
-
-    // Assert
-    expect(
-      screen.getByText(t('reveal.introAnswered', { count: 3, total: 4 }), { exact: false }),
-    ).toBeDefined();
   });
 
   describe('nominal room', () => {

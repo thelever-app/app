@@ -34,7 +34,6 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
   const anonymous = isAnonymous(game);
   const list = (names: readonly string[]) =>
     new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(names);
-  const total = game.dilemmas.length;
   const mine = game.ranking?.find(({ playerId }) => playerId === game.playerId);
   const staying = game.players.filter(({ left }) => !left);
   const gone = game.players.filter(({ left }) => left).map(({ nickname }) => nickname);
@@ -69,7 +68,7 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <p className={styles.label}>{t('end.label', { total })}</p>
+        <p className={styles.label}>{t('end.label')}</p>
       </header>
       <main className={styles.main} tabIndex={0} aria-labelledby={titleId}>
         <div className={styles.summary}>
@@ -89,13 +88,11 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
           {mine && game.ranking && (
             <p className={styles.place} data-testid="end-place">
               {anonymous
-                ? mine.mentalist
-                  ? t('end.placeMentalist', { players: game.ranking.length, count: mine.points })
-                  : t('end.place', {
-                      position: mine.position,
-                      players: game.ranking.length,
-                      count: mine.points,
-                    })
+                ? t('end.place', {
+                    position: mine.position,
+                    players: game.ranking.length,
+                    count: mine.points,
+                  })
                 : t('end.placeNominal', {
                     position: mine.position,
                     players: game.ranking.length,

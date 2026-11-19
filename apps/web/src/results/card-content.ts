@@ -1,6 +1,7 @@
 import { GAP_MARKER, type AvatarDto, type GameStateDto } from '@thelever-app/protocol';
 import type { TFunction } from 'i18next';
-import { soulmatesOf, titlesOf } from './titles.ts';
+import type { IconName } from '../components/icon.tsx';
+import { TITLE_ICONS, soulmatesOf, titlesOf } from './titles.ts';
 
 /** A person on a card: their avatar, and their nickname only if the player shows it. */
 export interface CardPerson {
@@ -10,19 +11,34 @@ export interface CardPerson {
 
 /** A title on a card, with whoever won it with the player: the partner of Almas gemelas. */
 export interface CardChip {
+  readonly icon: IconName;
+  /** The name of the title. */
   readonly text: string;
+  /** What the chip says: with the nickname of the partner only if the player shows it. */
+  readonly shown: string;
   readonly people: readonly CardPerson[];
 }
 
 /** A part of a card under its label: people, chips of titles, a text or the bars of a distribution. */
 export type CardSection =
-  | { readonly kind: 'people'; readonly label: string; readonly people: readonly CardPerson[] }
+  | {
+      readonly kind: 'people';
+      readonly label: string;
+      /** Next to the avatar of whoever the player does not name. */
+      readonly someone: string;
+      readonly people: readonly CardPerson[];
+    }
   | { readonly kind: 'chips'; readonly label: string; readonly chips: readonly CardChip[] }
   | {
       readonly kind: 'dilemma';
       readonly label: string;
       readonly text: string;
-      readonly bars: readonly { readonly text: string; readonly percent: number }[];
+      /** Each option, with the token of its colour, as on the dilemma. */
+      readonly bars: readonly {
+        readonly text: string;
+        readonly percent: number;
+        readonly color: string;
+      }[];
     };
 
 /** What a card says, the same for the image and for who cannot see it. */
@@ -50,10 +66,18 @@ export function personalCardOf(game: GameStateDto, t: Translate, showNames: bool
   const mine = game.ranking?.find(({ playerId }) => playerId === game.playerId);
   const knowers = (game.results?.knownBestBy?.playerIds ?? []).flatMap(personOf);
   const partners = soulmatesOf(game.results, game.playerId).flatMap(personOf);
-  const chips = titlesOf(game.results, game.playerId).map(({ title }) => ({
-    text: t(`results.titles.${title}`),
-    people: title === 'almas-gemelas' ? partners : [],
-  }));
+  const chips = titlesOf(game.results, game.playerId).map(({ title }): CardChip => {
+    const text = t(`results.titles.${title}`);
+    const people = title === 'almas-gemelas' ? partners : [];
+    const names = people.flatMap(({ name }) => (name ? [name] : []));
+    return {
+      icon: TITLE_ICONS[title],
+      text,
+      shown:
+        names.length > 0 ? t('card.withPartner', { title: text, name: names.join(', ') }) : text,
+      people,
+    };
+  });
   return {
     eyebrow: t('card.myGame'),
     headline: mine
@@ -62,7 +86,14 @@ export function personalCardOf(game: GameStateDto, t: Translate, showNames: bool
     subline: mine ? t('card.inAGameOf', { count: game.dilemmas.length }) : null,
     sections: [
       ...(knowers.length > 0
-        ? [{ kind: 'people' as const, label: t('card.knowsMe'), people: knowers }]
+        ? [
+            {
+              kind: 'people' as const,
+              label: t('card.knowsMe'),
+              someone: t('card.someone'),
+              people: knowers,
+            },
+          ]
         : []),
       ...(chips.length > 0 ? [{ kind: 'chips' as const, label: t('card.myTitles'), chips }] : []),
     ],
@@ -91,17 +122,24 @@ export function groupCardOf(game: GameStateDto, t: Translate): CardContent {
               kind: 'dilemma',
               label: t('card.mostDivisive'),
               text: plain(dilemma.text),
-              bars: divisive.distribution.map(({ optionId, count }) => ({
-                text: plain(
-                  dilemma.options.find((option) => option.optionId === optionId)?.text ?? '',
-                ),
-                percent: Math.round((count / total) * 100),
-              })),
+              bars: divisive.distribution.map(({ optionId, count }) => {
+                const index = dilemma.options.findIndex((option) => option.optionId === optionId);
+                return {
+                  text: plain(dilemma.options[index]?.text ?? ''),
+                  percent: Math.round((count / total) * 100),
+                  color: optionColor(dilemma.options.length, index),
+                };
+              }),
             },
           ]
         : [],
     footer: t('card.footer'),
   };
+}
+
+/** The token of the colour of an option by its position, as on the dilemma: a and b for two, 1 to 4 for more. */
+function optionColor(count: number, index: number): string {
+  return count === 2 ? `--color-option-${'ab'[index]}` : `--color-option-${index + 1}`;
 }
 
 /** Everyone whose avatar is on the card, in the order it draws them. */

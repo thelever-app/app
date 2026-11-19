@@ -51,7 +51,7 @@ describe('PlayDilemmaScreen', () => {
       name: t('pickDilemmas.title', { number: 1 }),
     });
     expect(card.textContent).toBe(
-      'Empezáis por este dilemaThe leverVida y muerte · Las otras 7 rondas serán aleatorias. Podrás cambiarlas en los ajustes.',
+      'Empezáis por este dilemaThe leverVida y muerte · Las otras 7 rondas, aleatorias.',
     );
     expect(api.previewDilemma).toHaveBeenCalledWith('TestPublicId');
   });

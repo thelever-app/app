@@ -244,6 +244,9 @@ export class GameWorld extends World {
   /** The card the player has open, as the last step opened or changed it. */
   card: CardView | undefined;
 
+  /** The screen of the results a player was on before looking back, from 0. */
+  resultsScreenBefore: number | undefined;
+
   /** The seconds a step recorded the group spent on a dilemma, which nobody must see. */
   timeSpentSeconds: number | undefined;
 

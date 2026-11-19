@@ -6,9 +6,9 @@ import styles from './avatar.module.css';
 /**
  * xs (28 px) for the predictions, the chips and the dialogs of the game, s (32 px) for its strip and
  * its lists, sm for the lobby, md for the picker, lg (64 px) for the face the player enters with,
- * xl (72 px) for the face being chosen in the picker.
+ * xl (72 px) for the face being chosen in the picker, xxl (104 px) for who won a title of the game.
  */
-export type AvatarSize = 'xs' | 's' | 'sm' | 'md' | 'lg' | 'xl';
+export type AvatarSize = 'xs' | 's' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
 interface AvatarProps {
   readonly avatar: AvatarDto;

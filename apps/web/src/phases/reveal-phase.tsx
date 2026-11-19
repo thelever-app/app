@@ -30,7 +30,7 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   }, [introFor]);
 
   if (!reveal) return null;
-  if (introFor === position) return <RevealIntro game={game} reveal={reveal} />;
+  if (introFor === position) return <RevealIntro />;
   const isLast = position === game.dilemmas.length - 1;
   return (
     <RevealScreen

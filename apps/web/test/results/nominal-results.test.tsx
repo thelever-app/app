@@ -1,12 +1,13 @@
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { GameStateDto } from '@thelever-app/protocol';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { playedDilemmas } from '../../src/game/played-dilemmas.ts';
 import { ResultsPhase } from '../../src/phases/results-phase.tsx';
 import { describeCard, groupCardOf, personalCardOf } from '../../src/results/card-content.ts';
+import { RESULTS_INTRO_MS } from '../../src/results/results-intro.tsx';
 import { fakeConnection } from '../support/fake-connection.ts';
 import { aGame } from '../support/game.ts';
-import { renderWithProviders } from '../support/render.tsx';
+import { providersFor, renderWithProviders } from '../support/render.tsx';
 
 /** Ana uses the screen in a nominal room with Luis and Marta. */
 const PLAYERS: GameStateDto['players'] = ['Ana', 'Luis', 'Marta'].map((nickname) => ({
@@ -73,13 +74,114 @@ async function renderPhase(game: GameStateDto) {
   return { ...fake, t };
 }
 
+/** Renders the phase with the clock faked once the translations are loaded, from its first screen. */
+async function renderFromTheStart(game: GameStateDto) {
+  const fake = fakeConnection();
+  const { Providers, t } = await providersFor({ connection: fake.connection });
+  vi.useFakeTimers();
+  render(<ResultsPhase onShowQr={() => {}} />, { wrapper: Providers });
+  act(() => fake.deliver(game));
+  return { ...fake, t };
+}
+
 describe('ResultsPhase, in a nominal room', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should first mark the passage from the rounds to the results, for a moment', async () => {
+    // Act
+    const { t } = await renderFromTheStart(atStep(0));
+    const intro = screen.queryByRole('heading', { name: t('results.introTitle') });
+    act(() => vi.advanceTimersByTime(RESULTS_INTRO_MS));
+
+    // Assert
+    expect(intro).not.toBeNull();
+    expect(screen.queryByRole('heading', { name: t('results.introTitle') })).toBeNull();
+    expect(screen.getByRole('heading', { name: t('results.titles.almas-gemelas') })).toBeDefined();
+  });
+
+  it('should offer no way back from the first screen of the results', async () => {
+    // Act
+    const { t } = await renderFromTheStart(atStep(0));
+    act(() => vi.advanceTimersByTime(RESULTS_INTRO_MS));
+
+    // Assert
+    expect(screen.queryByRole('button', { name: t('results.back') })).toBeNull();
+  });
+
+  it('should not mark the passage again on a later screen', async () => {
+    // Act
+    const { t } = await renderFromTheStart(atStep(1));
+
+    // Assert
+    expect(screen.queryByRole('heading', { name: t('results.introTitle') })).toBeNull();
+  });
+
+  it('should let the player look back at the screens before on their own, without moving anyone', async () => {
+    // Arrange
+    const { connection, t } = await renderPhase(atStep(2));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('results.back') }));
+    fireEvent.click(screen.getByRole('button', { name: t('results.back') }));
+
+    // Assert
+    expect(screen.getByRole('heading', { name: t('results.titles.almas-gemelas') })).toBeDefined();
+    expect(screen.getByText(t('results.label', { step: 1, total: 5 }))).toBeDefined();
+    expect(screen.queryByRole('button', { name: t('results.back') })).toBeNull();
+    expect(connection.send).not.toHaveBeenCalled();
+  });
+
+  it('should take the player back to the screen of the group, and only from it move everyone on', async () => {
+    // Arrange
+    const { connection, t } = await renderPhase(atStep(2));
+    fireEvent.click(screen.getByRole('button', { name: t('results.back') }));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('results.next') }));
+    const backOnTheGroup = screen.queryByRole('heading', {
+      name: t('results.titles.el-mentalista'),
+    });
+    const sentOnReturning = connection.send.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: t('results.next') }));
+
+    // Assert
+    expect(backOnTheGroup).not.toBeNull();
+    expect(sentOnReturning).toBe(0);
+    expect(connection.send).toHaveBeenCalledWith({ type: 'move-on', fromPosition: 5 });
+  });
+
+  it('should follow the group when it moves on while the player looks back', async () => {
+    // Arrange
+    const { deliver, t } = await renderPhase(atStep(2));
+    fireEvent.click(screen.getByRole('button', { name: t('results.back') }));
+
+    // Act
+    act(() => deliver(atStep(3)));
+
+    // Assert
+    expect(screen.getByRole('heading', { name: t('results.knowsTitle') })).toBeDefined();
+  });
+
+  it('should let the player look back from the ranking', async () => {
+    // Arrange
+    const { t } = await renderPhase(atStep(4));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('results.back') }));
+
+    // Assert
+    expect(screen.getByRole('heading', { name: t('results.knowsTitle') })).toBeDefined();
+  });
+
   it('should show each title on a screen of its own, with its winners, their fact and the runner-up', async () => {
     // Act
     const { t } = await renderPhase(atStep(1));
 
     // Assert
     expect(screen.getByRole('heading', { name: t('results.titles.verso-suelto') })).toBeDefined();
+    expect(screen.getByText(t('results.titleCount', { position: 2, total: 3 }))).toBeDefined();
     expect(screen.getByTestId('title-winner').textContent).toContain('Marta');
     expect(screen.getByTestId('title-winner').textContent).toContain(
       t('results.facts.verso-suelto', { count: 2, of: 3 }),
@@ -225,6 +327,7 @@ describe('the cards', () => {
       {
         kind: 'people',
         label: 'card.knowsMe',
+        someone: 'card.someone',
         people: [
           { avatar: PLAYERS[1]!.avatar, name: 'Luis' },
           { avatar: PLAYERS[2]!.avatar, name: 'Marta' },
@@ -235,13 +338,23 @@ describe('the cards', () => {
         label: 'card.myTitles',
         chips: [
           {
+            icon: 'favorite',
             text: 'results.titles.almas-gemelas',
+            shown: 'card.withPartner{"title":"results.titles.almas-gemelas","name":"Marta"}',
             people: [{ avatar: PLAYERS[2]!.avatar, name: 'Marta' }],
           },
-          { text: 'results.titles.el-mentalista', people: [] },
+          {
+            icon: 'psychology',
+            text: 'results.titles.el-mentalista',
+            shown: 'results.titles.el-mentalista',
+            people: [],
+          },
         ],
       },
     ]);
+    expect(hidden.sections[1]).toMatchObject({
+      chips: [{ shown: 'results.titles.almas-gemelas' }, { shown: 'results.titles.el-mentalista' }],
+    });
     expect(describeCard(shown, t)).toContain(
       'card.withPartner{"title":"results.titles.almas-gemelas","name":"Marta"}',
     );
@@ -288,8 +401,8 @@ describe('the cards', () => {
         label: 'card.mostDivisive',
         text: 'Si pickDilemmas.someone miente, ¿qué haces?',
         bars: [
-          { text: 'Decírselo a pickDilemmas.someone', percent: 67 },
-          { text: 'Callar', percent: 33 },
+          { text: 'Decírselo a pickDilemmas.someone', percent: 67, color: '--color-option-a' },
+          { text: 'Callar', percent: 33, color: '--color-option-b' },
         ],
       },
     ]);

@@ -104,7 +104,7 @@ export const de: SiteTexts = {
   gone: {
     title: 'Dieses Dilemma gibt es auf TheLever nicht mehr',
     heading: 'Dieses Dilemma gibt es auf TheLever nicht mehr',
-    body: 'Wir haben es aus dem Katalog genommen. Wenn dir jemand diesen Link geschickt hat: Viele andere warten auf dich.',
+    body: 'Wir haben es aus dem Katalog genommen.',
     moreOf: (name) => `Dilemmas ansehen: ${name}`,
   },
   notFound: {

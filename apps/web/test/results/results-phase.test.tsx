@@ -1,11 +1,12 @@
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { GameStateDto } from '@thelever-app/protocol';
 import { playedDilemmas } from '../../src/game/played-dilemmas.ts';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ResultsPhase } from '../../src/phases/results-phase.tsx';
+import { RESULTS_INTRO_MS } from '../../src/results/results-intro.tsx';
 import { fakeConnection } from '../support/fake-connection.ts';
 import { aGame } from '../support/game.ts';
-import { renderWithProviders } from '../support/render.tsx';
+import { providersFor } from '../support/render.tsx';
 
 /** Ana uses the screen; Luis and Marta play with her in an anonymous room, and Pablo left. */
 const PLAYERS: GameStateDto['players'] = ['Ana', 'Luis', 'Marta', 'Pablo'].map((nickname) => ({
@@ -34,16 +35,39 @@ function atStage(kind: 'results' | 'ended', ranking = RANKING): GameStateDto {
   });
 }
 
-async function renderPhase(game: GameStateDto) {
+/** Renders the phase with the clock faked once the translations are loaded, and lets the passage go. */
+async function renderPhase(game: GameStateDto, { pastTheIntro = true } = {}) {
   const fake = fakeConnection();
-  const { t } = await renderWithProviders(<ResultsPhase onShowQr={() => {}} />, {
-    connection: fake.connection,
-  });
+  const { Providers, t } = await providersFor({ connection: fake.connection });
+  vi.useFakeTimers();
+  render(<ResultsPhase onShowQr={() => {}} />, { wrapper: Providers });
   act(() => fake.deliver(game));
+  if (pastTheIntro) act(() => vi.advanceTimersByTime(RESULTS_INTRO_MS));
   return { ...fake, t };
 }
 
 describe('ResultsPhase', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should first mark the passage from the rounds to the ranking, for a moment', async () => {
+    // Act
+    const { t } = await renderPhase(atStage('results'), { pastTheIntro: false });
+
+    // Assert
+    expect(screen.getByRole('heading', { name: t('results.introTitle') })).toBeDefined();
+    expect(screen.queryByRole('button', { name: t('ranking.next') })).toBeNull();
+  });
+
+  it('should offer no way back from the only screen of the results of an anonymous room', async () => {
+    // Act
+    const { t } = await renderPhase(atStage('results'));
+
+    // Assert
+    expect(screen.queryByRole('button', { name: t('results.back') })).toBeNull();
+  });
+
   describe('the ranking of who reads the group best', () => {
     it('should rank everyone still in the game by their points, sharing a position on a tie', async () => {
       // Act
@@ -97,7 +121,7 @@ describe('ResultsPhase', () => {
       ).toBeDefined();
     });
 
-    it('should tell El Mentalista that nobody read the group better', async () => {
+    it('should tell El Mentalista their place, with the badge', async () => {
       // Arrange
       const ranking = [
         { playerId: 'test-ana-id', points: 300, position: 1, mentalist: true },
@@ -108,7 +132,9 @@ describe('ResultsPhase', () => {
       const { t } = await renderPhase(atStage('ended', ranking));
 
       // Assert
-      expect(screen.getByText(t('end.placeMentalist', { players: 2, count: 300 }))).toBeDefined();
+      expect(
+        screen.getByText(t('end.place', { position: 1, players: 2, count: 300 })),
+      ).toBeDefined();
       expect(screen.getByText(t('ranking.mentalist'))).toBeDefined();
     });
 

@@ -268,6 +268,16 @@ Feature: Reveal
       When "Marta" moves on
       Then "Ana" and "Luis" see in the player strip that "Marta" moved on
 
+    @ui @screen
+    Scenario: A player looks back at the game results without moving the others
+      Given all players see who is El Mentalista of the game
+      When "Ana" goes back to the previous screen of the game results
+      Then "Ana" sees the previous screen of the game results
+      And "Luis" and "Marta" still see who is El Mentalista of the game
+      When "Ana" moves on
+      Then "Ana" sees who is El Mentalista of the game again
+      And "Luis" and "Marta" still see who is El Mentalista of the game
+
     @ui
     Scenario: El Mentalista is shared in case of a tie
       Given "Ana" and "Luis" have the same highest points

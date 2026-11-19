@@ -178,12 +178,7 @@ export function LobbyScreen() {
               <Icon name="personPin" size={22} />
               <span>
                 <strong className={styles.gapWarningTitle}>{t('lobby.gapWarningTitle')}</strong>{' '}
-                {t(
-                  settings.variant === 'anonymous'
-                    ? 'lobby.gapWarningAnonymous'
-                    : 'lobby.gapWarningNominal',
-                  { minimum: lobby.minimumPlayersForTheGap },
-                )}
+                {t('lobby.gapWarning', { minimum: lobby.minimumPlayersForTheGap })}
               </span>
             </p>
           )}

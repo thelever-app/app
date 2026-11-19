@@ -12,7 +12,7 @@ const SOUND = {
   answer: 'answer-confirmed',
   lastSeconds: 'last-seconds',
   reveal: 'dilemma-revealed',
-  ended: 'game-ended',
+  results: 'game-results',
 } as const;
 
 /** Waits until the device of `player` has played the sound of `moment`. */
@@ -201,25 +201,23 @@ Then('{string} hears no sound effect', async function (this: GameWorld, player: 
 
 // At the end of the game
 
-// Playing every round and every screen of the results takes a while.
+// Playing every round takes a while.
 Given(
-  '{string} and {string} see the last screen of the game results',
+  '{string} and {string} see the reveal of the last dilemma',
   { timeout: 180_000 },
   async function (this: GameWorld, host: string, guest: string) {
     await this.hostIs(host);
     await this.isInTheRoom(guest);
-    await this.toTheResults();
-    while ((await this.driver.resultsScreenSeenBy(host))?.kind !== 'ranking') {
-      await this.driver.moveOn(host);
-    }
+    await this.game();
+    await this.toRevealOf((await this.driver.dilemmasOfTheGame()).length);
   },
 );
 
 Then(
-  '{string} and {string} hear the sound effect of the game ending',
+  '{string} and {string} hear the sound effect of the game results',
   async function (this: GameWorld, first: string, second: string) {
-    await hears(this, first, SOUND.ended);
-    await hears(this, second, SOUND.ended);
+    await hears(this, first, SOUND.results);
+    await hears(this, second, SOUND.results);
   },
 );
 

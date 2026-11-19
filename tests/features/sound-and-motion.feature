@@ -63,10 +63,10 @@ Feature: Sound and motion
     Then no component moves or changes size
 
   @ui @screen
-  Scenario: A sound effect plays when the game ends
-    Given "Ana" and "Luis" see the last screen of the game results
+  Scenario: A sound effect plays when the game results begin
+    Given "Ana" and "Luis" see the reveal of the last dilemma
     When a player moves on
-    Then "Ana" and "Luis" hear the sound effect of the game ending
+    Then "Ana" and "Luis" hear the sound effect of the game results
 
   @ui @screen
   Scenario: With reduced motion nothing moves in the game results

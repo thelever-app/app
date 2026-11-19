@@ -25,22 +25,22 @@ export function KnowsScreen({ game }: { readonly game: GameStateDto }) {
         <Icon name="lock" size={16} />
         {t('results.onlyYou')}
       </span>
-      <h1 id={titleId} className={styles.titleName}>
+      <h1 id={titleId} className={styles.knowsTitle}>
         {t('results.knowsTitle')}
       </h1>
       {knowers.length === 0 ? (
         <p className={styles.titleMeaning}>{t('results.knowsNobody')}</p>
       ) : (
         <div className={styles.winner}>
-          <span className={styles.winnerAvatars}>
+          <span className={styles.knowers}>
             {knowers.map((player) => (
-              <Avatar key={player.playerId} avatar={player.avatar} size="md" />
+              <Avatar key={player.playerId} avatar={player.avatar} size="xxl" />
             ))}
           </span>
           <span className={styles.winnerName} data-testid="known-best-names">
             {names}
           </span>
-          <span className={styles.fact}>
+          <span className={styles.knowsFact}>
             {t('results.knowsFact', { count: known?.points ?? 0 })}
           </span>
         </div>

@@ -101,7 +101,7 @@ export const en: SiteTexts = {
   gone: {
     title: 'This dilemma is no longer on TheLever',
     heading: 'This dilemma is no longer on TheLever',
-    body: 'We have taken it out of the catalog. If someone sent you this link, many others are waiting for you.',
+    body: 'We have taken it out of the catalog.',
     moreOf: (name) => `See dilemmas of ${name.toLowerCase()}`,
   },
   notFound: {

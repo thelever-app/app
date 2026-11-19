@@ -314,6 +314,8 @@ const SCREEN = {
   nominalRankingTitle: spanish('ranking.nominalTitle'),
   rankingNext: spanish('ranking.next'),
   resultsNext: spanish('results.next'),
+  resultsBack: spanish('results.back'),
+  resultsLabel: spanishPattern('results.label'),
   knownBest: spanish('results.knowsTitle'),
   like: spanish('reveal.like'),
   dilemmaReactions: spanish('reveal.dilemmaReactions'),
@@ -470,6 +472,8 @@ export class E2eDriver implements GameDriver {
   #fillers = 0;
   /** The players whose device asks for reduced motion, set before their screen opens. */
   readonly #reducedMotion = new Set<string>();
+  /** How many screens of the results each player looks behind the group, on their own device. */
+  readonly #lookingBack = new Map<string, number>();
   /** The public web: the curated catalog of the scenario, its numbers by name and what was generated. */
   readonly #curatedCatalog = new InMemoryCuratedCatalog();
   readonly #publicNumbers = new Map<string, number>();
@@ -1594,6 +1598,24 @@ export class E2eDriver implements GameDriver {
       })
       .waitFor();
     return { kind: 'ranking' };
+  }
+
+  /** The screen of the results the device of `viewer` shows, from 0, as its label counts it. */
+  async resultsScreenShownTo(viewer: string): Promise<number> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const label = await page.getByText(SCREEN.resultsLabel).textContent();
+    const [shown] = /\d+/.exec(label ?? '') ?? [];
+    if (shown === undefined) throw new Error(`${viewer} sees no screen of the results`);
+    return Number(shown) - 1;
+  }
+
+  /** «Anterior»: the device of `player`, and only it, shows the screen of the results before. */
+  async goBackInTheResults(player: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const shown = await this.resultsScreenShownTo(player);
+    await page.locator('footer').getByRole('button', { name: SCREEN.resultsBack }).click();
+    await waitUntilAsync(async () => (await this.resultsScreenShownTo(player)) === shown - 1);
+    this.#lookingBack.set(player, (this.#lookingBack.get(player) ?? 0) + 1);
   }
 
   /** As the room server sent them to the host, in the order the screens of the results show them. */
@@ -2789,6 +2811,15 @@ export class E2eDriver implements GameDriver {
     if (game.stage.kind === 'results') {
       const { step } = game.stage;
       const footer = page.locator('footer');
+      // Looking back on their own device, the player only comes forward again: nobody else moves.
+      const behind = this.#lookingBack.get(player) ?? 0;
+      if (behind > 0) {
+        const shown = await this.resultsScreenShownTo(player);
+        await footer.getByRole('button', { name: SCREEN.resultsNext }).click();
+        await waitUntilAsync(async () => (await this.resultsScreenShownTo(player)) === shown + 1);
+        this.#lookingBack.set(player, behind - 1);
+        return;
+      }
       // By the state, not by the screen, which may still be drawing the step before: the ranking is
       // the only screen of an anonymous room, and the last of a nominal one.
       const onRanking = isAnonymous(mover) || (step ?? 0) >= (game.results?.titles.length ?? 0) + 1;
@@ -4026,7 +4057,7 @@ const DEVICE_WATCHER = `
   const start = AudioBufferSourceNode.prototype.start;
   AudioBufferSourceNode.prototype.start = function (...args) {
     const file = (this.buffer && fileOf.get(this.buffer)) || '';
-    const found = /(player-joined|game-started|answer-confirmed|last-seconds|dilemma-revealed|game-ended)/.exec(file);
+    const found = /(player-joined|game-started|answer-confirmed|last-seconds|dilemma-revealed|game-results)/.exec(file);
     log.sounds.push(found ? found[1] : 'an unknown sound');
     return start.apply(this, args);
   };

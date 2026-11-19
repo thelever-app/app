@@ -53,30 +53,30 @@
     "summaryAnonymous_other": "{{count, number}} jogadores · ninguém vê quem respondeu"
   },
   "dilemma": {
-    "privacy": "Ninguém do grupo verá o teu voto até à revelação. Até lá, podes mudá-lo.",
+    "privacy": "O teu voto é privado até à revelação.",
     "choose": "Escolhe uma opção",
     "continue": "Continuar",
-    "privacyAnonymous": "Ninguém do grupo verá o teu voto, nem na revelação. Podes mudá-lo até o dilema ser revelado."
+    "privacyAnonymous": "Ninguém verá o teu voto, nem na revelação."
   },
   "waiting": {
     "position": "Dilema {{position, number}} de {{total, number}} · Já respondeste",
     "title": "À espera dos outros",
-    "subtitle": "O dilema é revelado quando todos responderem ou o tempo acabar. Até lá, podes mudar a tua resposta.",
+    "subtitle": "É revelado quando todos responderem ou o tempo acabar.",
     "change": "Mudar a minha resposta",
     "mascotWaiting": "La Palanca, à espera",
     "revealEarly": "Revelar já",
     "revealCaption_one": "Falta {{count}}. Neste dilema ficará como «não votou».",
     "revealCaption_many": "Faltam {{count, number}}. Neste dilema ficarão como «não votou».",
     "revealCaption_other": "Faltam {{count, number}}. Neste dilema ficarão como «não votou».",
-    "guest": "{{host}} pode revelá-lo antes; se não, é revelado quando todos responderem ou o tempo acabar."
+    "guest": "{{host}} pode revelá-lo antes."
   },
   "game": {
     "timeLeft": "Faltam {{time}}"
   },
   "aboutYou": {
-    "title": "É sobre ti: o que vão fazer contigo?",
-    "nominal": "Este dilema não o votas. Adivinha o que cada um vai escolher: no reveal todos verão quantos acertaste.",
-    "anonymous": "Este dilema não o votas. Adivinha como se vão dividir os outros; ninguém verá a tua previsão."
+    "title": "É sobre ti",
+    "nominal": "Não votas: adivinha o que cada um vai escolher.",
+    "anonymous": "Não votas: adivinha como os outros se vão dividir."
   },
   "predict": {
     "voted": "Votaste «",
@@ -92,14 +92,14 @@
   },
   "distribution": {
     "question": "Como se vai dividir o grupo?",
-    "hint": "Contando contigo. Move uma barra e as outras ajustam-se sozinhas: somam sempre 100 %.",
-    "hintTwo": "Contando contigo. Move a barra e as duas opções ajustam-se sozinhas: somam sempre 100 %.",
+    "hint": "Contando contigo. Somam sempre 100%.",
+    "hintTwo": "Contando contigo. Somam sempre 100%.",
     "yourVote": "o teu voto",
     "shareOf": "Percentagem que prevês para {{option}}",
     "percent": "{{value, number}} %",
     "aboutYouQuestion": "Como se vão dividir os outros?",
-    "aboutYouHint": "Sem contar contigo. Move uma barra e as outras ajustam-se sozinhas: somam sempre 100 %.",
-    "aboutYouHintTwo": "Sem contar contigo. Move a barra e as duas opções ajustam-se sozinhas: somam sempre 100 %."
+    "aboutYouHint": "Sem contar contigo. Somam sempre 100%.",
+    "aboutYouHintTwo": "Sem contar contigo. Somam sempre 100%."
   },
   "gameMenu": {
     "open": "Mais opções",
@@ -130,12 +130,11 @@
     "counter": "{{count, number}}/{{max, number}}",
     "chooseReason": "Escolhe um motivo",
     "send": "Enviar",
-    "note": "A equipa vai revê-lo. Ninguém do grupo saberá que o reportaste."
+    "note": "Ninguém do grupo vai saber."
   },
   "reportSent": {
-    "thanks": "Obrigado.",
-    "text": "A equipa vai revê-lo; ninguém do grupo sabe.",
-    "canSkip": "Se preferires não lhe responder, podes saltá-lo.",
+    "thanks": "Obrigado, vamos rever.",
+    "canSkip": "Preferes saltá-lo?",
     "skip": "Saltar dilema"
   },
   "revealEarly": {
@@ -148,16 +147,16 @@
   },
   "newHost": {
     "title": "Agora és o anfitrião",
-    "disconnected": "{{host}} continua sem ligação. A partir da próxima ronda podes revelar antes do tempo no menu ⋮. Se voltar, recupera o papel.",
+    "disconnected": "{{host}} desligou-se. «Revelar já» está no menu ⋮.",
     "left": "{{host}} saiu da partida. As tuas opções estão no menu ⋮.",
-    "ended": "{{host}} continua sem ligação. Agora podes lançar a desforra. Se voltar, recupera o papel."
+    "ended": "{{host}} desligou-se. Podes lançar a desforra."
   },
   "lateJoin": {
     "illustration": "La Palanca, junto a uma agulha da linha",
     "room": "Sala de {{host}}",
     "title": "A partida já começou",
-    "round": "Entras na ronda em curso, o dilema {{position, number}} de {{total, number}}; se já estiver a ser revelado, vais vê-lo com o grupo.",
-    "onlyVote": "Nesta partida só votas: não fazes previsões, ninguém prevê o teu voto e não entras na classificação.",
+    "round": "Entras no dilema {{position, number}} de {{total, number}}.",
+    "onlyVote": "Nesta partida só votas.",
     "enter": "Entrar na ronda"
   },
   "reveal": {
@@ -165,12 +164,12 @@
     "position": "Dilema {{position, number}} de {{total, number}} · Revelação",
     "chosenBy": "Escolhido por {{name}}",
     "yourHitsRegion": "Os teus acertos",
-    "hitsAll": "Leste-os a todos!",
+    "hitsAll": "Acertaste em todos",
     "hitsCount": "Acertaste em {{right, number}} de {{count, number}}",
     "missedOne": "Só falhaste com {{name}}",
     "missedSome": "Falhaste com {{names}}",
     "missedMany": "Falhaste com {{names}} e mais {{count, number}}",
-    "missedAll": "Hoje não os leste",
+    "missedAll": "Não acertaste em ninguém",
     "whoVoted": "O que votou cada um",
     "nobodyChose": "Ninguém a escolheu",
     "guessed": "· disseste {{letter}}",
@@ -198,21 +197,15 @@
     "fewVotesDidNot_one": "e {{count}} não votou",
     "fewVotesDidNot_many": "e {{count, number}} não votaram",
     "fewVotesDidNot_other": "e {{count, number}} não votaram",
-    "fewVotesWhy": "Com menos de 3 votos, a distribuição deixaria adivinhar quem votou o quê, por isso este dilema não dá pontos.",
-    "introPosition": "Dilema {{position, number}} de {{total, number}} · Fim da decisão",
-    "introTitle": "Chegou a revelação",
+    "fewVotesWhy": "Com menos de 3 votos não se mostra nem pontua.",
+    "introTitle": "Revelação",
     "introMascot": "La Palanca, a festejar",
-    "introAnswered_one": "Respondeu {{count}} de {{total, number}}.",
-    "introAnswered_many": "Responderam {{count, number}} de {{total, number}}.",
-    "introAnswered_other": "Responderam {{count, number}} de {{total, number}}.",
-    "introNominal": "Agora sim: vão ver o que votou cada um.",
-    "introAnonymous": "Agora sim: vão ver quantos escolheram cada opção.",
     "aboutTitle": "Era sobre {{name}}",
     "aboutYouTitle": "Era sobre ti",
     "aboutNominal": "Não votou: adivinhou o que faria cada um",
-    "aboutYouNominal": "Não votaste: adivinhaste o que faria cada um. Todos veem quantos acertaste.",
-    "aboutAnonymous": "Não votou: previu como se iriam dividir. A previsão e os pontos são privados.",
-    "aboutYouAnonymous": "Não votaste: previste como se iriam dividir os outros. A tua previsão e os teus pontos só tu os vês.",
+    "aboutYouNominal": "Não votaste: adivinhaste o que faria cada um.",
+    "aboutAnonymous": "Não votou: previu a divisão.",
+    "aboutYouAnonymous": "Não votaste: previste a divisão. Só tu a vês.",
     "aboutHits": "{{right, number}} de {{of, number}}",
     "aboutHitsLabel": "acertos",
     "aboutYouHitsLabel": "acertos",
@@ -234,32 +227,29 @@
     "label": "Resultados",
     "anonymous": "Sala anónima",
     "title": "Quem lê melhor o grupo",
-    "text": "Pontos por te aproximares da distribuição real de cada dilema. Ninguém viu o voto de ninguém.",
+    "text": "Pontos por te aproximares da divisão de cada dilema.",
     "position": "{{position, number}}.º",
     "mentalist": "El Mentalista",
     "points": "{{points, number}}",
     "pointsUnit": "pontos",
-    "note": "Quem fica em primeiro é El Mentalista da partida. Os dilemas com menos de 3 votos não dão pontos. Os empates partilham lugar e título.",
+    "note": "Os empates partilham o lugar.",
     "next": "Continuar",
     "nominalTitle": "Classificação",
     "nominalText": "Pontos por adivinhar o voto dos outros: mais quanto menos gente escolheu o mesmo.",
-    "nominalNote": "Ao lado de cada um, os títulos que ganhou. Os empates partilham lugar."
+    "nominalNote": "Os empates partilham o lugar."
   },
   "end": {
-    "label": "Partida terminada · {{total, number}} de {{total, number}}",
+    "label": "Partida terminada",
     "title": "Fim da linha",
     "mascot": "La Palanca, a festejar",
     "place_one": "Ficaste em {{position, number}}.º de {{players, number}} a ler o grupo, com {{count}} ponto.",
     "place_many": "Ficaste em {{position, number}}.º de {{players, number}} a ler o grupo, com {{count, number}} pontos.",
     "place_other": "Ficaste em {{position, number}}.º de {{players, number}} a ler o grupo, com {{count, number}} pontos.",
-    "placeMentalist_one": "Ninguém leu melhor o grupo: ficaste em 1.º de {{players, number}}, com {{count}} ponto.",
-    "placeMentalist_many": "Ninguém leu melhor o grupo: ficaste em 1.º de {{players, number}}, com {{count, number}} pontos.",
-    "placeMentalist_other": "Ninguém leu melhor o grupo: ficaste em 1.º de {{players, number}}, com {{count, number}} pontos.",
     "inRoom": "Ainda na sala · {{count, number}}",
     "gone_one": "{{names}} saiu.",
     "gone_many": "{{names}} saíram.",
     "gone_other": "{{names}} saíram.",
-    "closes": "A sala fecha 15 minutos depois de não ficar ninguém ligado.",
+    "closes": "A sala fecha ao fim de 15 minutos sem ninguém ligado.",
     "leave": "Sair",
     "placeNominal_one": "Ficaste em {{position, number}}.º de {{players, number}}, com {{count}} ponto.",
     "placeNominal_many": "Ficaste em {{position, number}}.º de {{players, number}}, com {{count, number}} pontos.",
@@ -267,7 +257,7 @@
     "knownBest": "Quem te conhece melhor é {{names}}.",
     "notInGame": "Esta partida já terminou. Se houver desforra, vais jogá-la.",
     "rematch": "Desforra com o mesmo grupo",
-    "rematchGuest": "{{host}} pode lançar a desforra. Se o fizer, passas para o lobby com quem ainda estiver na sala.",
+    "rematchGuest": "{{host}} pode lançar a desforra.",
     "shareCard": "Partilhar o meu cartão",
     "shareGroupCard": "Partilhar o cartão do grupo"
   },
@@ -280,7 +270,7 @@
   "noReturn": {
     "gone": {
       "title": "Esta partida já não existe",
-      "text": "Terminou ou foi fechada. Se o grupo continuar a jogar, pede que te enviem o link novo."
+      "text": "Se o grupo continua a jogar, pede a nova ligação."
     },
     "device": {
       "title": "Este dispositivo não está na partida",
@@ -293,7 +283,7 @@
     },
     "identity": {
       "title": "Não conseguimos reconhecer-te",
-      "text": "Costuma ser passageiro. Tenta outra vez daqui a pouco.",
+      "text": "Tenta de novo daqui a pouco.",
       "action": "Tentar outra vez"
     },
     "expelled": {
@@ -324,7 +314,7 @@
     "missing": {
       "nickname": "Escreve a tua alcunha",
       "groupNature": "Escolhe com quem jogas",
-      "place": "Diz-nos onde estão"
+      "place": "Escolhe onde estão"
     }
   },
   "joinRoom": {
@@ -362,9 +352,8 @@
   },
   "joinCode": {
     "title": "Escreve o código da sala",
-    "text": "São 5 caracteres. Quem criou a sala pode ditar-to.",
+    "text": "5 caracteres.",
     "label": "Código da sala",
-    "hint": "Também o podes colar.",
     "enter": "Entrar",
     "missing_one": "Falta {{count}} carácter",
     "missing_many": "Faltam {{count, number}} caracteres",
@@ -372,7 +361,7 @@
   },
   "accessCode": {
     "title": "O TheLever está em testes",
-    "text": "Por agora só pode jogar quem tem o código de acesso. Escreve-o uma vez e não to voltamos a pedir neste dispositivo.",
+    "text": "Só se joga com código de acesso. É pedido uma vez por dispositivo.",
     "label": "Código de acesso",
     "invalid": "Esse código não é válido.",
     "check": "Confirma que está bem escrito.",
@@ -398,7 +387,7 @@
     },
     "room-full": {
       "title": "Esta sala está completa",
-      "text": "Já tem 50 jogadores, que é o máximo. Podes criar a tua própria sala.",
+      "text": "Já há 50 jogadores, o máximo.",
       "action": "Voltar ao início"
     },
     "player-expelled": {
@@ -425,11 +414,11 @@
     "roundCount_other": "{{count}} rondas",
     "change": "Mudar",
     "adultsOnly": "Só para maiores de 18",
-    "remote": "Jogam à distância: melhor por videochamada, para comentar a revelação em direto.",
+    "remote": "À distância: melhor em videochamada.",
     "rounds": {
       "title": "Rondas · {{count}}",
       "hint": "Jogam-se por esta ordem.",
-      "secretHint": "Jogam-se por esta ordem. Ninguém vai saber que jogador escolheu cada dilema até à revelação.",
+      "secretHint": "Ninguém saberá quem escolheu cada dilema até à revelação.",
       "allCategories": "Todas as categorias",
       "twoCategories": "{{first}} ou {{second}}",
       "someCategories": "{{count}} categorias",
@@ -453,18 +442,17 @@
     "host": "Anfitrião",
     "toExpel": "{{name}}. Toca para expulsar",
     "toChangeAvatar": "{{name}}. Toca para mudar o teu avatar",
-    "waiting": "À espera de mais pessoas. Partilha o código ou o link para entrarem.",
+    "waiting": "Partilha o código ou a ligação.",
     "start": "Começar a partida",
     "missing_one": "Falta {{count}} jogador para começar",
     "missing_other": "Faltam {{count}} jogadores para começar",
-    "guestWait": "{{host}} vai começar a partida quando estiverem todos.",
+    "guestWait": "À espera que {{host}} comece.",
     "missing_many": "Faltam {{count}} jogadores para começar",
     "gapWarningTitle": "Um dilema é sobre alguém do grupo.",
-    "gapWarningNominal": "Numa sala nominal precisa de pelo menos {{minimum, number}} jogadores: se começarem com menos, a sua ronda passa a ser aleatória.",
-    "gapWarningAnonymous": "Numa sala anónima precisa de pelo menos {{minimum, number}} jogadores: se começarem com menos, a sua ronda passa a ser aleatória.",
     "noNewDilemmas": "Já não há dilemas por jogar",
-    "noNewDilemmasNotice": "A ronda {{round, number}} já não tem dilemas por jogar nesta sala. Se começarem a partida assim, essa ronda sairá de todas as categorias.",
-    "changeCategories": "Mudar categorias"
+    "noNewDilemmasNotice": "A ronda {{round, number}} não tem dilemas por jogar: sairá de todas as categorias.",
+    "changeCategories": "Mudar categorias",
+    "gapWarning": "Precisa de pelo menos {{minimum, number}} jogadores; com menos, a ronda será aleatória."
   },
   "languages": {
     "es": "Español",
@@ -490,8 +478,8 @@
     "reveal": "Revelação",
     "nominal": "Nominal",
     "anonymous": "Anónimo",
-    "nominalHint": "Na revelação vê-se o que votou cada um, e joga-se a prever.",
-    "anonymousHint": "Ninguém verá quem votou o quê. Sem previsões nem pontos: só votar.",
+    "nominalHint": "Vê-se o que cada um votou.",
+    "anonymousHint": "Ninguém verá quem votou o quê.",
     "adultsOnly": {
       "label": "Só maiores de 18",
       "hint": "Permite dilemas para adultos. Só poderão entrar maiores de 18."
@@ -503,7 +491,7 @@
     "rounds": {
       "title": "Rondas · {{count}}",
       "range": "De 1 a {{maximum}}",
-      "hint": "Jogam-se por esta ordem. Cada ronda tem um dilema aleatório do catálogo, um concreto que escolhes tu ou o que um jogador escolher na sala de espera.",
+      "hint": "Cada ronda: um dilema aleatório, um que escolhes tu ou um que um jogador escolhe.",
       "origin": "Quem escolhe o dilema da ronda {{number}}",
       "origins": {
         "random": "Aleatório",
@@ -529,7 +517,7 @@
     },
     "newDilemmas": {
       "label": "Incluir dilemas novos",
-      "hint": "Nas rondas aleatórias pode sair algum acabado de chegar ao catálogo. Ajudam a avaliá-lo."
+      "hint": "Podem sair dilemas acabados de chegar ao catálogo."
     },
     "save": "Guardar"
   },
@@ -593,7 +581,7 @@
   "playDilemma": {
     "title": "Nova sala",
     "firstDilemma": "Começam por este dilema",
-    "about": "{{category}} · As outras 7 rondas vão ser aleatórias. Podes mudá-las nas definições.",
+    "about": "{{category}} · As outras 7 rondas, aleatórias.",
     "loading": "À procura do dilema…",
     "notFound": "Este dilema já não está no TheLever. Podes criar uma sala com outros do catálogo.",
     "home": "Ir para o início"
@@ -610,19 +598,19 @@
     "sending": "A enviar o teu voto…",
     "loadingResult": "A procurar como votou o mundo…",
     "sameAsYou": "{{percentage}}%",
-    "thoughtLikeYou": "pensou como tu.",
+    "thoughtLikeYou": "votou o mesmo que tu.",
     "predictionOff_one": "Disseste {{prediction}}%: ficaste a {{count}} ponto.",
     "predictionOff_many": "Disseste {{prediction}}%: ficaste a {{count, number}} pontos.",
     "predictionOff_other": "Disseste {{prediction}}%: ficaste a {{count, number}} pontos.",
-    "predictionRight": "Disseste {{prediction}}%: acertaste em cheio.",
+    "predictionRight": "Disseste {{prediction}}%: acertaste.",
     "yours": "{{option}} · o teu voto",
     "answers_one": "{{count, number}} resposta em todo o mundo. Atualiza-se uma vez por dia.",
     "answers_many": "{{count, number}} respostas em todo o mundo. Atualiza-se uma vez por dia.",
     "answers_other": "{{count, number}} respostas em todo o mundo. Atualiza-se uma vez por dia.",
     "fewTitle": "Ainda há poucas respostas",
-    "fewBody_one": "Temos {{count, number}} das {{needed}} necessárias. Volta mais tarde para veres como votou o mundo e se acertaste.",
-    "fewBody_many": "Temos {{count, number}} das {{needed}} necessárias. Volta mais tarde para veres como votou o mundo e se acertaste.",
-    "fewBody_other": "Temos {{count, number}} das {{needed}} necessárias. Volta mais tarde para veres como votou o mundo e se acertaste.",
+    "fewBody_one": "Há {{count, number}} das {{needed}} necessárias. Volta mais tarde.",
+    "fewBody_many": "Há {{count, number}} das {{needed}} necessárias. Volta mais tarde.",
+    "fewBody_other": "Há {{count, number}} das {{needed}} necessárias. Volta mais tarde.",
     "play": "Jogá-lo com o meu grupo",
     "arguments": "Ler os argumentos de cada opção"
   },
@@ -636,8 +624,8 @@
     "more": "Mais emojis",
     "anyEmoji": "Escreve um emoji",
     "send": "Reagir",
-    "oneDilemma": "Só uma reação por dilema: se escolheres outra, substitui a anterior. Com «+» podes usar qualquer emoji.",
-    "oneVote": "Só uma reação por voto: se escolheres outra, substitui a anterior. Com «+» podes usar qualquer emoji.",
+    "oneDilemma": "Uma reação por dilema; a nova substitui a anterior.",
+    "oneVote": "Uma reação por voto; a nova substitui a anterior.",
     "nominalPrivacy": "Nesta sala todos verão quem reagiu.",
     "anonymousPrivacy": "Nesta sala ninguém verá quem reagiu, só quantos."
   },
@@ -645,12 +633,12 @@
     "label": "Resultados · {{step, number}} de {{total, number}}",
     "next": "Seguinte",
     "onlyYou": "Só tu vês isto",
-    "knowsTitle": "Quem te conhece melhor é…",
-    "knowsNobody": "Desta vez ninguém acertou os teus votos.",
+    "knowsTitle": "Quem te conhece melhor",
+    "knowsNobody": "Ninguém acertou nos teus votos.",
     "knowsFact_one": "{{count}} ponto a adivinhar os teus votos",
     "knowsFact_many": "{{count, number}} pontos a adivinhar os teus votos",
     "knowsFact_other": "{{count, number}} pontos a adivinhar os teus votos",
-    "runnerUp": "Depois: {{names}}, {{fact}}",
+    "runnerUp": "{{position}}: {{names}} · {{fact}}",
     "titles": {
       "almas-gemelas": "Almas gemelas",
       "verso-suelto": "Verso suelto",
@@ -681,7 +669,11 @@
       "el-mentalista_one": "{{count}} ponto",
       "el-mentalista_many": "{{count, number}} pontos",
       "el-mentalista_other": "{{count, number}} pontos"
-    }
+    },
+    "introTitle": "Resultados",
+    "titleCount": "Título {{position, number}} de {{total, number}}",
+    "back": "Anterior",
+    "runnerUpOf": "{{count, number}} de {{of, number}}"
   },
   "card": {
     "personalTitle": "O teu cartão",
@@ -704,6 +696,6 @@
     "mostDivisive": "O que mais nos dividiu",
     "footer": "Joga em thelever.app",
     "showNames": "Mostrar as alcunhas de {{names}}",
-    "groupNote": "Sem nomes nem votos de ninguém: só como o grupo se dividiu."
+    "groupNote": "Sem nomes nem votos."
   }
 }

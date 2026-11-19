@@ -619,6 +619,41 @@ When('{string} moves on', async function (this: GameWorld, player: string) {
   await this.driver.moveOn(player);
 });
 
+When(
+  '{string} goes back to the previous screen of the game results',
+  async function (this: GameWorld, player: string) {
+    this.resultsScreenBefore = await this.driver.resultsScreenShownTo(player);
+    await this.driver.goBackInTheResults(player);
+  },
+);
+
+Then(
+  '{string} sees the previous screen of the game results',
+  async function (this: GameWorld, player: string) {
+    assert.ok(this.resultsScreenBefore !== undefined, 'no step looked back');
+    assert.equal(await this.driver.resultsScreenShownTo(player), this.resultsScreenBefore - 1);
+  },
+);
+
+Then(
+  '{string} and {string} still see who is El Mentalista of the game',
+  async function (this: GameWorld, first: string, second: string) {
+    for (const player of [first, second]) {
+      const seen = await this.driver.resultsScreenSeenBy(player);
+      assert.ok(seen?.kind === 'title' && seen.title === 'El Mentalista', `${player} moved`);
+    }
+  },
+);
+
+Then(
+  '{string} sees who is El Mentalista of the game again',
+  async function (this: GameWorld, player: string) {
+    assert.equal(await this.driver.resultsScreenShownTo(player), this.resultsScreenBefore);
+    const seen = await this.driver.resultsScreenSeenBy(player);
+    assert.ok(seen?.kind === 'title' && seen.title === 'El Mentalista');
+  },
+);
+
 Given(
   '{string} and {string} have the same highest points',
   function (this: GameWorld, first: string, second: string) {

@@ -150,7 +150,11 @@
 }
 
 .footer {
-  composes: footer from '../reveal/reveal-screen.module.css';
+  composes: footer from './results.module.css';
+}
+
+.back {
+  composes: back from './results.module.css';
 }
 
 .next {
