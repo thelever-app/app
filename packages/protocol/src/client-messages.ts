@@ -12,9 +12,10 @@ import { z } from 'zod';
  * gap predicts without voting: their answer has no vote, nobody predicts them and the reveal says
  * how many votes they guessed. 11 since the end of the game: the results of a nominal room screen
  * by screen with their titles, reactions, likes, the cards and the rematch. 12 since taking back
- * a like: `unlike-dilemma`.
+ * a like: `unlike-dilemma`. 13 since the first access: nobody creates or joins a room before it,
+ * and nobody under 18 joins a room for adults (`adults-only-room`).
  */
-export const CONTRACT_VERSION = 12;
+export const CONTRACT_VERSION = 13;
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a
