@@ -435,3 +435,187 @@ legend.legend {
   color: var(--color-ink-muted);
   cursor: not-allowed;
 }
+
+/* The ambience of the room, which opens on the three to choose from. */
+.ambienceCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.ambienceTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-2) 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ambienceNow {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.ambienceLabel {
+  font-weight: 600;
+}
+
+.ambienceChange {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ambienceOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 var(--space-1) 6px;
+}
+
+.ambienceOptions > .hint,
+.ambienceOptions > span {
+  padding: 0 6px;
+}
+
+.ambienceOptions [role='radiogroup'] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ambienceOption {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-2) 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-bg);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  font: inherit;
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ambienceOption[aria-checked='true'] {
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+.ambienceOption:disabled {
+  color: var(--color-ink-muted);
+  cursor: not-allowed;
+}
+
+.ambienceOptionIcon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.ambienceOption[aria-checked='true'] .ambienceOptionIcon {
+  background: var(--color-primary);
+}
+
+.ambienceOptionText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ambienceOptionName {
+  font-family: var(--font-display);
+  font-size: 19px;
+  line-height: 22px;
+  font-weight: 600;
+}
+
+/* Why some contents of the random rounds are off. */
+.contentHint {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+}
+
+/* The content of a random round: any, only for adults or only compromising. */
+.contentRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contentLabel {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+
+.contents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.contentOption {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.contentOption[aria-checked='true'] {
+  background: var(--color-ink);
+  box-shadow: none;
+  color: var(--color-primary);
+}
+
+.contentOption:disabled {
+  background: var(--color-surface);
+  box-shadow: none;
+  color: var(--color-ink-muted);
+  cursor: not-allowed;
+}

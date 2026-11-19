@@ -10,7 +10,8 @@ import { CookieStep } from './cookie-step.tsx';
 import { hasAnsweredCookies } from './cookie-consent.ts';
 import { LegalScreen } from './legal-screen.tsx';
 import { StopScreen } from './stop-screen.tsx';
-import { WelcomeScreen } from './welcome-screen.tsx';
+import { UnderEighteenProvider } from './device-age.tsx';
+import { type Inviter, WelcomeScreen } from './welcome-screen.tsx';
 import styles from './first-access.module.css';
 
 interface FirstAccessGateProps {
@@ -35,7 +36,7 @@ export function FirstAccessGate({ adsenseClient, children }: FirstAccessGateProp
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [started, setStarted] = useState(false);
-  const [host, setHost] = useState<string>();
+  const [inviter, setInviter] = useState<Inviter>();
   const [cookies, setCookies] = useState(hasAnsweredCookies);
   const code = matchPath('/join/:code', pathname)?.params.code;
 
@@ -60,7 +61,8 @@ export function FirstAccessGate({ adsenseClient, children }: FirstAccessGateProp
     if (!welcoming || code === undefined) return;
     let active = true;
     api.previewRoom(code).then(
-      (preview) => active && setHost(preview.hostNickname),
+      (preview) =>
+        active && setInviter({ nickname: preview.hostNickname, avatar: preview.hostAvatar }),
       () => undefined,
     );
     return () => {
@@ -104,13 +106,15 @@ export function FirstAccessGate({ adsenseClient, children }: FirstAccessGateProp
       return started ? (
         <AgeScreen onDeclared={setStatus} />
       ) : (
-        <WelcomeScreen host={host} onStart={() => setStarted(true)} />
+        <WelcomeScreen inviter={inviter} onStart={() => setStarted(true)} />
       );
     case 'documents':
       return <LegalScreen status={status} onAccepted={setStatus} />;
     case 'done':
       return cookies ? (
-        children
+        <UnderEighteenProvider underEighteen={status.underEighteen}>
+          {children}
+        </UnderEighteenProvider>
       ) : (
         <CookieStep
           adsenseClient={adsenseClient}

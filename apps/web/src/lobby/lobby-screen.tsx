@@ -16,6 +16,8 @@ import { ExpelSheet } from './expel-sheet.tsx';
 import { shareInvitation, spelled } from './invitation.ts';
 import { PickRoundDilemmaSheet } from './pick-round-dilemma-sheet.tsx';
 import { QrScreen } from './qr-screen.tsx';
+import { AMBIENCE_ICONS } from './ambiences.ts';
+import { CompromisingNotice } from './compromising-notice.tsx';
 import { RoomSettingsSheet } from './room-settings-sheet.tsx';
 import { dilemmaOf, type RoundRow, roundNumbersByDilemma, roundRows } from './rounds.ts';
 import styles from './lobby-screen.module.css';
@@ -35,6 +37,7 @@ const EXPLAINED = ['start-game', 'change-avatar', 'choose-round-dilemma', 'clear
  */
 export function LobbyScreen() {
   const { t } = useTranslation();
+  const say = t as unknown as Translate;
   const navigate = useNavigate();
   const { lobby, send, rejection } = useLobby();
   const [open, setOpen] = useState<Open>({ sheet: 'none' });
@@ -58,6 +61,20 @@ export function LobbyScreen() {
     lobby.players.length < lobby.minimumPlayersForTheGap &&
     lobby.rounds.some((round) => round.origin !== 'random' && round.dilemma?.hasGap);
   const { settings } = lobby;
+  // Whoever is not the host is told what compromising dilemmas are when they find them on: on
+  // entering a room that has them, or when the host turns them on. What was on before is kept to
+  // notice the change while the screen draws, with no effect.
+  const [compromisingBefore, setCompromisingBefore] = useState(false);
+  const [warned, setWarned] = useState(true);
+  if (settings.compromisingDilemmas !== compromisingBefore) {
+    setCompromisingBefore(settings.compromisingDilemmas);
+    if (settings.compromisingDilemmas && !isHost) setWarned(false);
+  }
+  const leave = () => {
+    // Out of the room: the others see them go, and they may join again.
+    send({ type: 'leave-room' });
+    void navigate(HOME_PATH);
+  };
 
   const share = async () => {
     const shared = await shareInvitation(lobby.code, t('lobby.shareText', { code: lobby.code }));
@@ -94,7 +111,7 @@ export function LobbyScreen() {
               type="button"
               className={styles.iconButton}
               aria-label={t('lobby.leave')}
-              onClick={() => void navigate(HOME_PATH)}
+              onClick={leave}
             >
               <Icon name="close" />
             </button>
@@ -117,6 +134,14 @@ export function LobbyScreen() {
 
       <main className={styles.main}>
         <section className={styles.summary} aria-label={t('settings.title')}>
+          <div className={styles.ambienceRow}>
+            <span className={styles.ambienceName} data-testid="room-ambience">
+              <Icon name={AMBIENCE_ICONS[lobby.ambience]} size={22} />
+              {t(`ambience.${lobby.ambience}.name`)}
+            </span>
+            <span className={styles.signage}>{t('lobby.ambience')}</span>
+          </div>
+          <div className={styles.divider} />
           <div className={styles.variant}>
             <Icon
               name={settings.variant === 'nominal' ? 'visibility' : 'visibilityOff'}
@@ -127,6 +152,22 @@ export function LobbyScreen() {
               {t(`variant.${settings.variant}.text`)}
             </p>
           </div>
+          {settings.compromisingDilemmas && (
+            <div className={styles.variant}>
+              <Icon name="heartBroken" size={22} />
+              <p className={styles.variantText}>
+                <strong>{t('lobby.compromising.name')}</strong> {t('lobby.compromising.text')}
+              </p>
+            </div>
+          )}
+          {settings.adultsOnly && (
+            <div className={styles.variant}>
+              <Icon name="adultsOnly" size={22} />
+              <p className={styles.variantText}>
+                <strong>{t('lobby.adults.name')}</strong> {t('lobby.adults.text')}
+              </p>
+            </div>
+          )}
           <div className={styles.divider} />
           <div className={styles.summaryRow}>
             <span className={styles.summaryText}>
@@ -134,8 +175,7 @@ export function LobbyScreen() {
                 {t('lobby.roundCount', { count: lobby.rounds.length })}
               </span>
               <span className={styles.muted} data-testid="room-settings">
-                {summaryOf(settings, t)}
-                {settings.adultsOnly && ` · ${t('lobby.adultsOnly')}`}
+                {summaryOf(settings, say)}
               </span>
             </span>
             {isHost && (
@@ -313,11 +353,15 @@ export function LobbyScreen() {
         <RoomSettingsSheet
           roomId={lobby.roomId}
           settings={settings}
+          ambience={lobby.ambience}
+          hasPlayerUnderEighteen={lobby.hasPlayerUnderEighteen}
           rounds={lobby.rounds}
           onSave={(changes) => send({ type: 'change-settings', changes })}
+          onChooseAmbience={(ambience) => send({ type: 'choose-ambience', ambience })}
           onClose={close}
         />
       )}
+      {!warned && <CompromisingNotice onUnderstood={() => setWarned(true)} onLeave={leave} />}
       {choosing && (
         <PickRoundDilemmaSheet
           roomId={lobby.roomId}
@@ -352,7 +396,8 @@ export function LobbyScreen() {
   );
 }
 
-type Translate = ReturnType<typeof useTranslation>['t'];
+/** The translation of a key, as the helpers of the lobby use it. */
+type Translate = (key: string, options?: Readonly<Record<string, unknown>>) => string;
 
 /** «60 s por dilema · Español». */
 function summaryOf(settings: RoomSettingsDto, t: Translate): string {
@@ -379,6 +424,17 @@ function randomMeta(categories: readonly Category[] | null, count: number, t: Tr
     : t(`lobby.rounds.random${from}`);
 }
 
+/** «…, 2 solo +18» or «…, 1 solo comprometido y 1 solo +18», after what the row is. */
+function withContents(meta: string, row: RoundRow, t: Translate): string {
+  const parts = [
+    ...(row.compromising > 0
+      ? [t('lobby.rounds.onlyCompromising', { count: row.compromising })]
+      : []),
+    ...(row.adultsOnly > 0 ? [t('lobby.rounds.onlyAdults', { count: row.adultsOnly })] : []),
+  ];
+  return parts.length === 0 ? meta : `${meta} · ${parts.join(', ')}`;
+}
+
 interface RoundRowItemProps {
   readonly row: RoundRow;
   /** The host, who chose the dilemma of each specific round. */
@@ -395,6 +451,7 @@ interface RoundRowItemProps {
  */
 function RoundRowItem({ row, hostName, isHost, onChoose, onClear }: RoundRowItemProps) {
   const { t } = useTranslation();
+  const say = t as unknown as Translate;
   const { from, to, round } = row;
   const someone = t('pickDilemmas.someone');
   const number = from === to ? `${from}` : `${from}–${to}`;
@@ -413,7 +470,7 @@ function RoundRowItem({ row, hostName, isHost, onChoose, onClear }: RoundRowItem
   ) : (
     <span className={styles.roundTitle}>
       {round.origin === 'random'
-        ? categoriesOf(round.categories, t)
+        ? categoriesOf(round.categories, say)
         : t('lobby.rounds.playersEmpty')}
     </span>
   );
@@ -421,7 +478,7 @@ function RoundRowItem({ row, hostName, isHost, onChoose, onClear }: RoundRowItem
     round.origin === 'random'
       ? round.withoutNewDilemmas
         ? t('lobby.noNewDilemmas')
-        : randomMeta(round.categories, to - from + 1, t)
+        : withContents(randomMeta(round.categories, to - from + 1, say), row, say)
       : round.origin === 'specific'
         ? isHost
           ? t('lobby.rounds.chosenByYou')

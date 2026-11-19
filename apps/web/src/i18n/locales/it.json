@@ -320,8 +320,10 @@
     "missing": {
       "nickname": "Scrivi il tuo nickname",
       "groupNature": "Scegli con chi giochi",
-      "place": "Scegli dove siete"
-    }
+      "place": "Scegli dove siete",
+      "ambience": "Scegli un’atmosfera"
+    },
+    "ambience": "Che atmosfera volete?"
   },
   "joinRoom": {
     "roomOf": "Stanza di {{host}} · {{code}}",
@@ -350,7 +352,8 @@
     "round-taken": "Un altro giocatore ha appena scelto il dilemma di quel turno.",
     "duplicate-dilemma": "Quel dilemma è già in un altro turno.",
     "first-access-required": "Prima di giocare, completa il primo accesso.",
-    "adults-only-room": "Questa stanza è solo per maggiori di 18 anni."
+    "adults-only-room": "Questa stanza è solo per maggiori di 18 anni.",
+    "minor-in-room": "Nella stanza c’è qualcuno con meno di 18 anni."
   },
   "home": {
     "title": "Giochiamo?",
@@ -448,7 +451,13 @@
       "playersEmptyMeta": "Se nessuno lo sceglie, sarà casuale",
       "choose": "Scegli",
       "chooseLabel": "Scegli il dilemma del turno {{number}}",
-      "clearLabel": "Togli il tuo dilemma dal turno {{number}}"
+      "clearLabel": "Togli il tuo dilemma dal turno {{number}}",
+      "onlyCompromising_one": "{{count}} solo compromettente",
+      "onlyCompromising_other": "{{count}} solo compromettenti",
+      "onlyAdults_one": "{{count}} solo +18",
+      "onlyAdults_other": "{{count}} solo +18",
+      "onlyCompromising_many": "{{count}} solo compromettenti",
+      "onlyAdults_many": "{{count}} solo +18"
     },
     "players": "Nella stanza · {{count}}",
     "you": "{{name}} (tu)",
@@ -465,7 +474,16 @@
     "noNewDilemmas": "Non restano dilemmi non giocati",
     "noNewDilemmasNotice": "Il turno {{round, number}} non ha dilemmi non giocati: pescherà da tutte le categorie.",
     "changeCategories": "Cambia categorie",
-    "gapWarning": "Servono almeno {{minimum, number}} giocatori; con meno, il turno sarà casuale."
+    "gapWarning": "Servono almeno {{minimum, number}} giocatori; con meno, il turno sarà casuale.",
+    "ambience": "Atmosfera",
+    "compromising": {
+      "name": "Con dilemmi compromettenti:",
+      "text": "alcuni possono metterti in imbarazzo davanti a qualcuno della stanza."
+    },
+    "adults": {
+      "name": "Con dilemmi +18:",
+      "text": "possono entrare solo i maggiori di 18 anni."
+    }
   },
   "languages": {
     "es": "Español",
@@ -494,8 +512,8 @@
     "nominalHint": "Si vede cosa ha votato ciascuno.",
     "anonymousHint": "Nessuno vedrà chi ha votato cosa.",
     "adultsOnly": {
-      "label": "Solo maggiorenni",
-      "hint": "Consente dilemmi per adulti. Potranno entrare solo i maggiorenni."
+      "label": "Includi dilemmi +18",
+      "hint": "Potranno entrare solo i maggiori di 18 anni."
     },
     "language": "Lingua dei dilemmi",
     "timePerDilemma": "Tempo per dilemma",
@@ -532,7 +550,26 @@
       "label": "Includi dilemmi nuovi",
       "hint": "Possono uscire dilemmi appena arrivati nel catalogo."
     },
-    "save": "Salva"
+    "save": "Salva",
+    "ambience": {
+      "label": "Atmosfera:",
+      "change": "Cambia",
+      "hint": "Torna a 8 round casuali; la lingua, il tempo e i dilemmi nuovi restano."
+    },
+    "compromising": {
+      "label": "Dilemmi compromettenti",
+      "hint": "Possono metterti in imbarazzo davanti a qualcuno della stanza.",
+      "onlyAnonymous": "Solo in una stanza anonima"
+    },
+    "content": {
+      "label": "Contenuto",
+      "any": "Qualsiasi",
+      "adults-only": "Solo +18",
+      "compromising": "Solo compromettenti",
+      "needsAdults": "«Solo +18» richiede i dilemmi +18.",
+      "needsCompromising": "«Solo compromettenti» richiede i dilemmi compromettenti.",
+      "needsBoth": "«Solo +18» richiede i dilemmi +18, e «Solo compromettenti», i dilemmi compromettenti."
+    }
   },
   "pickDilemmas": {
     "title": "Dilemma del turno {{number}}",
@@ -552,7 +589,9 @@
     "options_other": "{{count, number}} opzioni",
     "someone": "qualcuno del gruppo",
     "more": "Vedi altri",
-    "moreFailed": "Non è stato possibile caricare altri dilemmi. Riprova."
+    "moreFailed": "Non è stato possibile caricare altri dilemmi. Riprova.",
+    "adultsOnly": "+18",
+    "compromising": "Compromettente"
   },
   "expel": {
     "title": "Espellere {{name}}?",
@@ -594,7 +633,7 @@
   "playDilemma": {
     "title": "Nuova stanza",
     "firstDilemma": "Iniziate con questo dilemma",
-    "about": "{{category}} · Gli altri 7 turni, casuali.",
+    "about": "{{category}} · Gli altri 7 round seguono l’atmosfera che sceglierete.",
     "loading": "Cerco il dilemma…",
     "notFound": "Questo dilemma non è più su TheLever. Puoi creare una stanza con altri del catalogo.",
     "home": "Vai all’inizio"
@@ -719,11 +758,13 @@
     "continue": "Continua",
     "decline": "Non accetto",
     "welcome": {
-      "tagline": "Dilemmi morali da giocare in gruppo",
+      "title": "Dilemmi morali",
+      "subtitle": "da giocare in gruppo",
       "text": "Voti in privato, indovini gli altri e scoprite insieme chi pensa cosa.",
       "start": "Inizia",
       "join": "Unisciti alla partita",
-      "invite": "{{host}} ti invita a giocare"
+      "invite": "{{host}} ti invita a giocare",
+      "art": "La Palanca, accanto a uno scambio dei binari"
     },
     "age": {
       "title": "In che anno sei nato o nata?",
@@ -826,5 +867,34 @@
     "ios": "Tocca Condividi e poi «Aggiungi alla schermata Home».",
     "install": "Installa",
     "close": "Chiudi avviso"
+  },
+  "ambience": {
+    "classic": {
+      "name": "Classica",
+      "line": "Dilemmi per qualsiasi gruppo",
+      "example": "Per esempio: «La leva»"
+    },
+    "spicy": {
+      "name": "Piccante",
+      "line": "Temi per adulti. Solo +18.",
+      "example": "Per esempio: «Più anni o sesso migliore»"
+    },
+    "no-filter": {
+      "name": "Senza filtri",
+      "line": "Anonimo, +18 e con domande compromettenti",
+      "example": "Per esempio: «La domanda del tuo partner» · Da 3 giocatori"
+    },
+    "custom": {
+      "name": "Personalizzata"
+    },
+    "onlyAdults": "Solo per maggiori di 18 anni",
+    "minorInRoom": "Nella stanza c’è qualcuno con meno di 18 anni"
+  },
+  "compromisingNotice": {
+    "title": "Questa partita include dilemmi compromettenti",
+    "text": "Sono dilemmi la cui risposta sincera potrebbe metterti in imbarazzo davanti a qualcuno della stanza, come il tuo partner, la tua famiglia o i tuoi amici.",
+    "anonymous": "Per questo la stanza è anonima: nessuno vedrà cosa voti, solo quanti scelgono ogni opzione. Nei gruppi piccoli, la ripartizione può far indovinare qualche voto.",
+    "understood": "Ho capito",
+    "leave": "Esci dalla stanza"
   }
 }

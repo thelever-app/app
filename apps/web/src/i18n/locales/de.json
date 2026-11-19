@@ -299,8 +299,10 @@
     "missing": {
       "nickname": "Gib deinen Spitznamen ein",
       "groupNature": "Wähle, mit wem du spielst",
-      "place": "Wähle, wo ihr seid"
-    }
+      "place": "Wähle, wo ihr seid",
+      "ambience": "Wähle eine Stimmung"
+    },
+    "ambience": "Welche Stimmung wollt ihr?"
   },
   "joinRoom": {
     "roomOf": "Raum von {{host}} · {{code}}",
@@ -328,7 +330,8 @@
     "round-taken": "Ein anderer Spieler hat gerade das Dilemma dieser Runde gewählt.",
     "duplicate-dilemma": "Dieses Dilemma ist schon in einer anderen Runde.",
     "first-access-required": "Schließe vor dem Spielen die Ersteinrichtung ab.",
-    "adults-only-room": "Dieser Raum ist nur für Personen ab 18."
+    "adults-only-room": "Dieser Raum ist nur für Personen ab 18.",
+    "minor-in-room": "Jemand im Raum ist unter 18."
   },
   "home": {
     "title": "Lust auf eine Runde?",
@@ -424,7 +427,11 @@
       "playersEmptyMeta": "Wählt es niemand, ist es zufällig",
       "choose": "Wählen",
       "chooseLabel": "Dilemma für Runde {{number}} wählen",
-      "clearLabel": "Dein Dilemma aus Runde {{number}} entfernen"
+      "clearLabel": "Dein Dilemma aus Runde {{number}} entfernen",
+      "onlyCompromising_one": "{{count}} nur heikel",
+      "onlyCompromising_other": "{{count}} nur heikel",
+      "onlyAdults_one": "{{count}} nur ab 18",
+      "onlyAdults_other": "{{count}} nur ab 18"
     },
     "players": "Im Raum · {{count}}",
     "you": "{{name}} (du)",
@@ -440,7 +447,16 @@
     "noNewDilemmas": "Keine ungespielten Dilemmas mehr",
     "noNewDilemmasNotice": "Runde {{round, number}} hat keine ungespielten Dilemmas mehr: Sie zieht aus allen Kategorien.",
     "changeCategories": "Kategorien ändern",
-    "gapWarning": "Es braucht mindestens {{minimum, number}} Personen; mit weniger wird die Runde zufällig."
+    "gapWarning": "Es braucht mindestens {{minimum, number}} Personen; mit weniger wird die Runde zufällig.",
+    "ambience": "Stimmung",
+    "compromising": {
+      "name": "Mit heiklen Dilemmas:",
+      "text": "manche können dich vor jemandem im Raum bloßstellen."
+    },
+    "adults": {
+      "name": "Mit Dilemmas ab 18:",
+      "text": "nur Personen ab 18 können beitreten."
+    }
   },
   "languages": {
     "es": "Español",
@@ -469,8 +485,8 @@
     "nominalHint": "Man sieht, wer was gewählt hat.",
     "anonymousHint": "Niemand sieht, wer was gewählt hat.",
     "adultsOnly": {
-      "label": "Nur ab 18",
-      "hint": "Erlaubt Dilemmas für Erwachsene. Beitreten können nur Volljährige."
+      "label": "Dilemmas ab 18 einbeziehen",
+      "hint": "Nur Personen ab 18 können beitreten."
     },
     "language": "Sprache der Dilemmas",
     "timePerDilemma": "Zeit pro Dilemma",
@@ -507,7 +523,26 @@
       "label": "Neue Dilemmas zulassen",
       "hint": "Es können gerade neu hinzugekommene Dilemmas kommen."
     },
-    "save": "Speichern"
+    "save": "Speichern",
+    "ambience": {
+      "label": "Stimmung:",
+      "change": "Ändern",
+      "hint": "Zurück zu 8 zufälligen Runden; Sprache, Zeit und neue Dilemmas bleiben."
+    },
+    "compromising": {
+      "label": "Heikle Dilemmas",
+      "hint": "Sie können dich vor jemandem im Raum bloßstellen.",
+      "onlyAnonymous": "Nur in einem anonymen Raum"
+    },
+    "content": {
+      "label": "Inhalt",
+      "any": "Beliebig",
+      "adults-only": "Nur ab 18",
+      "compromising": "Nur heikle",
+      "needsAdults": "„Nur ab 18“ braucht Dilemmas ab 18.",
+      "needsCompromising": "„Nur heikle“ braucht heikle Dilemmas.",
+      "needsBoth": "„Nur ab 18“ braucht Dilemmas ab 18 und „Nur heikle“ heikle Dilemmas."
+    }
   },
   "pickDilemmas": {
     "title": "Dilemma von Runde {{number}}",
@@ -526,7 +561,9 @@
     "options_other": "{{count, number}} Optionen",
     "someone": "jemand aus der Gruppe",
     "more": "Mehr anzeigen",
-    "moreFailed": "Weitere Dilemmas konnten nicht geladen werden. Versuch es noch einmal."
+    "moreFailed": "Weitere Dilemmas konnten nicht geladen werden. Versuch es noch einmal.",
+    "adultsOnly": "18+",
+    "compromising": "Heikel"
   },
   "expel": {
     "title": "{{name}} entfernen?",
@@ -568,7 +605,7 @@
   "playDilemma": {
     "title": "Neuer Raum",
     "firstDilemma": "Ihr startet mit diesem Dilemma",
-    "about": "{{category}} · Die anderen 7 Runden: zufällig.",
+    "about": "{{category}} · Die anderen 7 Runden folgen der Stimmung, die ihr wählt.",
     "loading": "Dilemma wird gesucht…",
     "notFound": "Dieses Dilemma gibt es auf TheLever nicht mehr. Du kannst einen Raum mit anderen aus dem Katalog erstellen.",
     "home": "Zur Startseite"
@@ -685,11 +722,13 @@
     "continue": "Weiter",
     "decline": "Ich stimme nicht zu",
     "welcome": {
-      "tagline": "Moralische Dilemmas für die ganze Gruppe",
+      "title": "Moralische Dilemmas",
+      "subtitle": "für die ganze Gruppe",
       "text": "Du stimmst geheim ab, rätst, was die anderen gewählt haben, und ihr findet gemeinsam heraus, wer was denkt.",
       "start": "Loslegen",
       "join": "Dem Spiel beitreten",
-      "invite": "{{host}} lädt dich zum Spielen ein"
+      "invite": "{{host}} lädt dich zum Spielen ein",
+      "art": "La Palanca an einer Weiche"
     },
     "age": {
       "title": "In welchem Jahr bist du geboren?",
@@ -792,5 +831,34 @@
     "ios": "Tippe auf Teilen und dann auf „Zum Home-Bildschirm“.",
     "install": "Installieren",
     "close": "Hinweis schließen"
+  },
+  "ambience": {
+    "classic": {
+      "name": "Klassisch",
+      "line": "Dilemmas für jede Gruppe",
+      "example": "Zum Beispiel: „Der Hebel“"
+    },
+    "spicy": {
+      "name": "Pikant",
+      "line": "Themen für Erwachsene. Nur ab 18.",
+      "example": "Zum Beispiel: „Mehr Jahre oder besserer Sex“"
+    },
+    "no-filter": {
+      "name": "Ohne Filter",
+      "line": "Anonym, ab 18 und mit heiklen Fragen",
+      "example": "Zum Beispiel: „Die Frage deines Partners“ · Ab 3 Spielenden"
+    },
+    "custom": {
+      "name": "Eigene"
+    },
+    "onlyAdults": "Nur ab 18",
+    "minorInRoom": "Jemand im Raum ist unter 18"
+  },
+  "compromisingNotice": {
+    "title": "Diese Partie enthält heikle Dilemmas",
+    "text": "Das sind Dilemmas, deren ehrliche Antwort dich vor jemandem im Raum bloßstellen könnte, etwa vor deiner Partnerin oder deinem Partner, deiner Familie oder deinen Freunden.",
+    "anonymous": "Deshalb ist der Raum anonym: Niemand sieht, was du wählst, nur wie viele welche Option wählen. In kleinen Gruppen kann die Verteilung eine Stimme verraten.",
+    "understood": "Verstanden",
+    "leave": "Raum verlassen"
   }
 }

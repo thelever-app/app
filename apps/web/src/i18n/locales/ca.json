@@ -320,8 +320,10 @@
     "missing": {
       "nickname": "Escriu el teu sobrenom",
       "groupNature": "Tria amb qui jugues",
-      "place": "Tria on sou"
-    }
+      "place": "Tria on sou",
+      "ambience": "Tria un ambient"
+    },
+    "ambience": "Quin ambient voleu?"
   },
   "joinRoom": {
     "roomOf": "Sala de {{host}} · {{code}}",
@@ -350,7 +352,8 @@
     "round-taken": "Un altre jugador acaba de triar el dilema d’aquesta ronda.",
     "duplicate-dilemma": "Aquest dilema ja és en una altra ronda.",
     "first-access-required": "Abans de jugar, acaba la primera entrada.",
-    "adults-only-room": "Aquesta sala és només per a majors de 18 anys."
+    "adults-only-room": "Aquesta sala és només per a majors de 18 anys.",
+    "minor-in-room": "Hi ha algú menor de 18 a la sala."
   },
   "home": {
     "title": "Juguem?",
@@ -448,7 +451,13 @@
       "playersEmptyMeta": "Si ningú no la tria, serà aleatòria",
       "choose": "Triar",
       "chooseLabel": "Triar el dilema de la ronda {{number}}",
-      "clearLabel": "Treure el teu dilema de la ronda {{number}}"
+      "clearLabel": "Treure el teu dilema de la ronda {{number}}",
+      "onlyCompromising_one": "{{count}} només compromès",
+      "onlyCompromising_other": "{{count}} només compromesos",
+      "onlyAdults_one": "{{count}} només +18",
+      "onlyAdults_other": "{{count}} només +18",
+      "onlyCompromising_many": "{{count}} només compromesos",
+      "onlyAdults_many": "{{count}} només +18"
     },
     "players": "A la sala · {{count}}",
     "you": "{{name}} (tu)",
@@ -465,7 +474,16 @@
     "noNewDilemmas": "Ja no queden dilemes per jugar",
     "noNewDilemmasNotice": "La ronda {{round, number}} no té dilemes sense jugar: sortirà de totes les categories.",
     "changeCategories": "Canviar les categories",
-    "gapWarning": "Necessita almenys {{minimum, number}} jugadors; amb menys, la ronda serà aleatòria."
+    "gapWarning": "Necessita almenys {{minimum, number}} jugadors; amb menys, la ronda serà aleatòria.",
+    "ambience": "Ambient",
+    "compromising": {
+      "name": "Amb dilemes compromesos:",
+      "text": "alguns et poden deixar en evidència davant d’algú de la sala."
+    },
+    "adults": {
+      "name": "Amb dilemes +18:",
+      "text": "només hi poden entrar majors de 18."
+    }
   },
   "languages": {
     "es": "Español",
@@ -494,8 +512,8 @@
     "nominalHint": "Es veu què ha votat cadascú.",
     "anonymousHint": "Ningú veurà qui ha votat què.",
     "adultsOnly": {
-      "label": "Només majors de 18 anys",
-      "hint": "Permet dilemes per a adults. Només hi podran entrar majors de 18 anys."
+      "label": "Incloure dilemes +18",
+      "hint": "Només hi podran entrar majors de 18."
     },
     "language": "Idioma dels dilemes",
     "timePerDilemma": "Temps per dilema",
@@ -532,7 +550,26 @@
       "label": "Incloure dilemes nous",
       "hint": "Poden sortir dilemes acabats d’arribar al catàleg."
     },
-    "save": "Desar"
+    "save": "Desar",
+    "ambience": {
+      "label": "Ambient:",
+      "change": "Canviar",
+      "hint": "Torna a 8 rondes aleatòries; l’idioma, el temps i els dilemes nous es queden."
+    },
+    "compromising": {
+      "label": "Dilemes compromesos",
+      "hint": "Et poden deixar en evidència davant d’algú de la sala.",
+      "onlyAnonymous": "Només en sala anònima"
+    },
+    "content": {
+      "label": "Contingut",
+      "any": "Qualsevol",
+      "adults-only": "Només +18",
+      "compromising": "Només compromesos",
+      "needsAdults": "«Només +18» necessita els dilemes +18.",
+      "needsCompromising": "«Només compromesos» necessita els dilemes compromesos.",
+      "needsBoth": "«Només +18» necessita els dilemes +18, i «Només compromesos», els dilemes compromesos."
+    }
   },
   "pickDilemmas": {
     "title": "Dilema de la ronda {{number}}",
@@ -552,7 +589,9 @@
     "options_other": "{{count, number}} opcions",
     "someone": "algú del grup",
     "more": "Veure’n més",
-    "moreFailed": "No s’han pogut carregar més dilemes. Torna-ho a provar."
+    "moreFailed": "No s’han pogut carregar més dilemes. Torna-ho a provar.",
+    "adultsOnly": "+18",
+    "compromising": "Compromès"
   },
   "expel": {
     "title": "Vols expulsar {{name}}?",
@@ -594,7 +633,7 @@
   "playDilemma": {
     "title": "Sala nova",
     "firstDilemma": "Comenceu per aquest dilema",
-    "about": "{{category}} · Les altres 7 rondes, aleatòries.",
+    "about": "{{category}} · Les altres 7 rondes, segons l’ambient que trieu.",
     "loading": "Buscant el dilema…",
     "notFound": "Aquest dilema ja no és a TheLever. Pots crear una sala amb d’altres del catàleg.",
     "home": "Anar a l’inici"
@@ -719,11 +758,13 @@
     "continue": "Continua",
     "decline": "No ho accepto",
     "welcome": {
-      "tagline": "Dilemes morals per jugar en grup",
+      "title": "Dilemes morals",
+      "subtitle": "per jugar en grup",
       "text": "Votes en privat, endevines els altres i descobriu junts qui pensa què.",
       "start": "Comença",
       "join": "Uneix-te a la partida",
-      "invite": "{{host}} et convida a jugar"
+      "invite": "{{host}} et convida a jugar",
+      "art": "La Palanca, al costat d’un desviament de vies"
     },
     "age": {
       "title": "En quin any vas néixer?",
@@ -826,5 +867,34 @@
     "ios": "Toca Comparteix i després «Afegeix a la pantalla d’inici».",
     "install": "Instal·la",
     "close": "Tanca l’avís"
+  },
+  "ambience": {
+    "classic": {
+      "name": "Clàssica",
+      "line": "Dilemes per a qualsevol grup",
+      "example": "Per exemple: «La palanca»"
+    },
+    "spicy": {
+      "name": "Picant",
+      "line": "Temes d’adults. Només +18.",
+      "example": "Per exemple: «Més anys o millor sexe»"
+    },
+    "no-filter": {
+      "name": "Sense filtre",
+      "line": "Anònim, +18 i amb preguntes compromeses",
+      "example": "Per exemple: «La pregunta de la teva parella» · Des de 3 jugadors"
+    },
+    "custom": {
+      "name": "Personalitzada"
+    },
+    "onlyAdults": "Només per a majors de 18",
+    "minorInRoom": "Hi ha algú menor de 18 a la sala"
+  },
+  "compromisingNotice": {
+    "title": "Aquesta partida inclou dilemes compromesos",
+    "text": "Són dilemes la resposta sincera dels quals et podria deixar en evidència davant d’algú de la sala, com la teva parella, la teva família o els teus amics.",
+    "anonymous": "Per això la sala és anònima: ningú no veurà què votes, només quants trien cada opció. En grups petits, el repartiment pot deixar endevinar algun vot.",
+    "understood": "Entesos",
+    "leave": "Sortir de la sala"
   }
 }

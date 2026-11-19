@@ -1,30 +1,52 @@
+import type { AvatarDto } from '@thelever-app/protocol';
 import { useTranslation } from 'react-i18next';
-import mascotWaving from '../assets/brand/mascot-waving.svg';
+import wavingAtJunction from '../assets/brand/waving-at-junction.svg';
+import { Avatar } from '../avatar/avatar.tsx';
 import screen from '../screens/screen.module.css';
 import styles from './first-access.module.css';
 
+/** Who invites the person, when they come from the link of a room. */
+export interface Inviter {
+  readonly nickname: string;
+  readonly avatar: AvatarDto;
+}
+
 interface WelcomeScreenProps {
-  /** Who invites them, when the person comes from the link of a room. */
-  readonly host: string | undefined;
+  readonly inviter: Inviter | undefined;
   readonly onStart: () => void;
 }
 
-/** The first screen on a new device: the brand, a line, and the way in. */
-export function WelcomeScreen({ host, onStart }: WelcomeScreenProps) {
+/**
+ * The first screen on a new device: who invites, if anyone, La Palanca by a junction of the
+ * tracks, the brand and what the game is, and the way in.
+ */
+export function WelcomeScreen({ inviter, onStart }: WelcomeScreenProps) {
   const { t } = useTranslation();
   return (
     <div className={screen.screen}>
+      <div aria-hidden="true" className={styles.welcomeStripe} />
       <main className={styles.welcome}>
-        {host !== undefined && (
-          <span className={styles.invite}>{t('firstAccess.welcome.invite', { host })}</span>
-        )}
-        <img className={styles.mascot} src={mascotWaving} alt="" width={160} height={160} />
-        <h1 className={styles.brand}>TheLever.app</h1>
-        <p className={styles.title}>{t('firstAccess.welcome.tagline')}</p>
-        <p className={styles.muted}>{t('firstAccess.welcome.text')}</p>
-        <div className={styles.grow} />
+        <div className={styles.welcomeHero}>
+          {inviter !== undefined && (
+            <span className={styles.invite}>
+              <Avatar avatar={inviter.avatar} />
+              {t('firstAccess.welcome.invite', { host: inviter.nickname })}
+            </span>
+          )}
+          <img
+            className={styles.welcomeArt}
+            src={wavingAtJunction}
+            alt={t('firstAccess.welcome.art')}
+            width={360}
+            height={170}
+          />
+          <span className={styles.welcomeBrand}>TheLever.app</span>
+          <h1 className={styles.welcomeTitle}>{t('firstAccess.welcome.title')}</h1>
+          <p className={styles.welcomeSubtitle}>{t('firstAccess.welcome.subtitle')}</p>
+          <p className={styles.muted}>{t('firstAccess.welcome.text')}</p>
+        </div>
         <button type="button" className={styles.primary} onClick={onStart}>
-          {host === undefined ? t('firstAccess.welcome.start') : t('firstAccess.welcome.join')}
+          {inviter === undefined ? t('firstAccess.welcome.start') : t('firstAccess.welcome.join')}
         </button>
       </main>
     </div>

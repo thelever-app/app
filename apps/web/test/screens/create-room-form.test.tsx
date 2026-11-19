@@ -24,7 +24,12 @@ async function renderForm(createRoom: (request: CreateRoomRequestDto) => Promise
   const api = fakeRoomApi({ createRoom: vi.fn(createRoom) });
   const rendered = await renderAtRoute(<CreateRoomForm />, { api });
   const { t } = rendered;
-  const fill = ({ nickname = 'Ana', nature = 'friends', place = 'remote' } = {}) => {
+  const fill = ({
+    nickname = 'Ana',
+    nature = 'friends',
+    place = 'remote',
+    ambience = 'classic',
+  } = {}) => {
     fireEvent.change(screen.getByRole('textbox', { name: t('createRoom.nickname') }), {
       target: { value: nickname },
     });
@@ -33,6 +38,11 @@ async function renderForm(createRoom: (request: CreateRoomRequestDto) => Promise
     );
     fireEvent.click(
       screen.getByRole('radio', { name: t(`createRoom.place.${place as 'remote'}`) }),
+    );
+    fireEvent.click(
+      screen.getByRole('radio', {
+        name: new RegExp(t(`ambience.${ambience as 'classic'}.name`)),
+      }),
     );
   };
   const submit = () =>
@@ -43,6 +53,19 @@ async function renderForm(createRoom: (request: CreateRoomRequestDto) => Promise
 describe('CreateRoomForm', () => {
   afterEach(() => {
     localStorage.clear();
+  });
+
+  it('should offer the three ambiences, none chosen, with those for adults off for a minor', async () => {
+    // Act: below no first access, the device counts as under 18.
+    const { t } = await renderForm(async () => CREATED);
+
+    // Assert
+    const ambiences = screen.getByRole('group', { name: t('createRoom.ambience') });
+    const radios = [...ambiences.querySelectorAll('input[type="radio"]')] as HTMLInputElement[];
+    expect(radios.map(({ value }) => value)).toEqual(['classic', 'spicy', 'no-filter']);
+    expect(radios.some(({ checked }) => checked)).toBe(false);
+    expect(radios.map(({ disabled }) => disabled)).toEqual([false, true, true]);
+    expect(ambiences.textContent).toContain(t('ambience.onlyAdults'));
   });
 
   it('should start with the nickname the device last played with', async () => {
@@ -90,6 +113,7 @@ describe('CreateRoomForm', () => {
     await waitFor(() => expect(location()).toBe('/rooms/test-room-id'));
     expect(api.createRoom).toHaveBeenCalledWith({
       nickname: ' Ana ',
+      ambience: 'classic',
       avatar: shownAvatar(),
       groupNature: 'friends',
       place: 'remote',
@@ -142,12 +166,15 @@ describe('CreateRoomForm', () => {
     missing.push(button().textContent);
     const disabledUntilTheEnd = button().hasAttribute('disabled');
     fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.remote') }));
+    missing.push(button().textContent);
+    fireEvent.click(screen.getByRole('radio', { name: new RegExp(t('ambience.classic.name')) }));
 
     // Assert
     expect(missing).toEqual([
       t('createRoom.missing.nickname'),
       t('createRoom.missing.groupNature'),
       t('createRoom.missing.place'),
+      t('createRoom.missing.ambience'),
     ]);
     expect(disabledUntilTheEnd).toBe(true);
     expect(screen.getByRole('button', { name: t('createRoom.submit') })).toHaveProperty(

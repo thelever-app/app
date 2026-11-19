@@ -108,8 +108,87 @@
   pointer-events: none;
 }
 
+/* The ambiences, one card each: its symbol, its name, its line and an example. */
+.ambiences {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ambience {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 12px 12px 12px 14px;
+  border-radius: 14px;
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  cursor: pointer;
+}
+
+.ambience:has(input:checked) {
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+.ambience[data-locked] {
+  background: var(--color-surface);
+  box-shadow: none;
+  color: var(--color-ink-muted);
+  cursor: not-allowed;
+}
+
+.ambienceIcon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.ambience:has(input:checked) .ambienceIcon {
+  background: var(--color-primary);
+}
+
+.ambience[data-locked] .ambienceIcon {
+  background: var(--color-border);
+}
+
+.ambienceText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ambienceName {
+  font-family: var(--font-display);
+  font-size: 21px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.ambienceNote {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-ink-muted);
+}
+
+.ambienceMark {
+  flex: none;
+  margin-top: var(--space-2);
+  display: flex;
+}
+
 .nature:has(.radio:focus-visible),
-.place:has(.radio:focus-visible) {
+.place:has(.radio:focus-visible),
+.ambience:has(.radio:focus-visible) {
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }

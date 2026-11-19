@@ -71,3 +71,19 @@
 .line strong {
   font-weight: 600;
 }
+
+/* The ambience of the room: its symbol and name, and the sign on the right. */
+.ambience {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ambienceName {
+  flex-grow: 1;
+  font-family: var(--font-display);
+  font-size: 19px;
+  line-height: 22px;
+  font-weight: 600;
+}

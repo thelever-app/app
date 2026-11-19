@@ -132,3 +132,24 @@
 .taken {
   font-weight: 600;
 }
+
+/* Marks a dilemma for adults or compromising: the room allows it, but the host should know. */
+.marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.mark {
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-ink);
+  color: var(--color-primary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}

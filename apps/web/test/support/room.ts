@@ -5,6 +5,7 @@ export const DEFAULT_ROUNDS: RoomStateDto['rounds'] = Array.from({ length: 8 }, 
   roundId: index + 1,
   origin: 'random',
   categories: null,
+  content: 'any',
   withoutNewDilemmas: false,
 }));
 
@@ -22,10 +23,13 @@ export function aRoom(overrides: Partial<RoomStateDto> = {}): RoomStateDto {
     settings: {
       variant: 'nominal',
       adultsOnly: false,
+      compromisingDilemmas: false,
       dilemmaLanguage: 'es',
       timePerDilemmaSeconds: 60,
       newDilemmas: true,
     },
+    ambience: 'classic',
+    hasPlayerUnderEighteen: false,
     rounds: DEFAULT_ROUNDS,
     minimumPlayers: 2,
     minimumPlayersForTheGap: 3,

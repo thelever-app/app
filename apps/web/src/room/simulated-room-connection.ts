@@ -354,10 +354,11 @@ export class SimulatedRoomConnection implements RoomConnection {
     // As the room server answers: whether a dilemma is compromising stays in the server.
     return SearchDilemmasResponseDto.parse({
       dilemmas: page.dilemmas.map(
-        ({ dilemmaId, text, minimumAge, category, tags, optionCount }) => ({
+        ({ dilemmaId, text, minimumAge, compromising, category, tags, optionCount }) => ({
           dilemmaId,
           text,
           minimumAge,
+          compromising,
           category,
           tags,
           optionCount,
@@ -382,6 +383,7 @@ export class SimulatedRoomConnection implements RoomConnection {
     }
 
     const { roomId, hostId } = await this.#useCases.createRoom.execute({
+      ambience: 'classic',
       hostNickname: this.#options.nickname,
       hostIdentity: SELF_IDENTITY,
       hostAvatar: avatarNumber(0),

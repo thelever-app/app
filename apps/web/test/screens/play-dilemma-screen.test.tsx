@@ -51,7 +51,7 @@ describe('PlayDilemmaScreen', () => {
       name: t('pickDilemmas.title', { number: 1 }),
     });
     expect(card.textContent).toBe(
-      'Empezáis por este dilemaThe leverVida y muerte · Las otras 7 rondas, aleatorias.',
+      'Empezáis por este dilemaThe leverVida y muerte · Las otras 7 rondas, según el ambiente que elijáis.',
     );
     expect(api.previewDilemma).toHaveBeenCalledWith('TestPublicId');
   });
@@ -79,6 +79,7 @@ describe('PlayDilemmaScreen', () => {
     });
     fireEvent.click(screen.getByRole('radio', { name: t('createRoom.groupNature.friends') }));
     fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.together') }));
+    fireEvent.click(screen.getByRole('radio', { name: new RegExp(t('ambience.classic.name')) }));
 
     // Act
     fireEvent.click(screen.getByRole('button', { name: t('createRoom.submit') }));

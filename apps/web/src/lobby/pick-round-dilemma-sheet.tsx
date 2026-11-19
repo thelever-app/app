@@ -141,6 +141,22 @@ export function PickRoundDilemmaSheet({
                           ].join(' · ')}
                         </span>
                       )}
+                      {(dilemma.minimumAge === 18 || dilemma.compromising) && (
+                        <span className={styles.marks}>
+                          {dilemma.minimumAge === 18 && (
+                            <span className={styles.mark}>
+                              <Icon name="adultsOnly" size={14} />
+                              {t('pickDilemmas.adultsOnly')}
+                            </span>
+                          )}
+                          {dilemma.compromising && (
+                            <span className={styles.mark}>
+                              <Icon name="heartBroken" size={14} />
+                              {t('pickDilemmas.compromising')}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </span>
                   </button>
                 );

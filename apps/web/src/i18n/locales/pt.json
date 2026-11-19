@@ -320,8 +320,10 @@
     "missing": {
       "nickname": "Escreve a tua alcunha",
       "groupNature": "Escolhe com quem jogas",
-      "place": "Escolhe onde estão"
-    }
+      "place": "Escolhe onde estão",
+      "ambience": "Escolhe um ambiente"
+    },
+    "ambience": "Que ambiente querem?"
   },
   "joinRoom": {
     "roomOf": "Sala de {{host}} · {{code}}",
@@ -350,7 +352,8 @@
     "round-taken": "Outro jogador acabou de escolher o dilema dessa ronda.",
     "duplicate-dilemma": "Esse dilema já está noutra ronda.",
     "first-access-required": "Antes de jogar, termina a primeira entrada.",
-    "adults-only-room": "Esta sala é só para maiores de 18 anos."
+    "adults-only-room": "Esta sala é só para maiores de 18 anos.",
+    "minor-in-room": "Há alguém com menos de 18 anos na sala."
   },
   "home": {
     "title": "Jogamos?",
@@ -448,7 +451,13 @@
       "playersEmptyMeta": "Se ninguém o escolher, será aleatório",
       "choose": "Escolher",
       "chooseLabel": "Escolher o dilema da ronda {{number}}",
-      "clearLabel": "Tirar o teu dilema da ronda {{number}}"
+      "clearLabel": "Tirar o teu dilema da ronda {{number}}",
+      "onlyCompromising_one": "{{count}} só comprometedor",
+      "onlyCompromising_other": "{{count}} só comprometedores",
+      "onlyAdults_one": "{{count}} só +18",
+      "onlyAdults_other": "{{count}} só +18",
+      "onlyCompromising_many": "{{count}} só comprometedores",
+      "onlyAdults_many": "{{count}} só +18"
     },
     "players": "Na sala · {{count}}",
     "you": "{{name}} (tu)",
@@ -465,7 +474,16 @@
     "noNewDilemmas": "Já não há dilemas por jogar",
     "noNewDilemmasNotice": "A ronda {{round, number}} não tem dilemas por jogar: sairá de todas as categorias.",
     "changeCategories": "Mudar categorias",
-    "gapWarning": "Precisa de pelo menos {{minimum, number}} jogadores; com menos, a ronda será aleatória."
+    "gapWarning": "Precisa de pelo menos {{minimum, number}} jogadores; com menos, a ronda será aleatória.",
+    "ambience": "Ambiente",
+    "compromising": {
+      "name": "Com dilemas comprometedores:",
+      "text": "alguns podem deixar-te mal perante alguém da sala."
+    },
+    "adults": {
+      "name": "Com dilemas +18:",
+      "text": "só podem entrar maiores de 18."
+    }
   },
   "languages": {
     "es": "Español",
@@ -494,8 +512,8 @@
     "nominalHint": "Vê-se o que cada um votou.",
     "anonymousHint": "Ninguém verá quem votou o quê.",
     "adultsOnly": {
-      "label": "Só maiores de 18",
-      "hint": "Permite dilemas para adultos. Só poderão entrar maiores de 18."
+      "label": "Incluir dilemas +18",
+      "hint": "Só poderão entrar maiores de 18."
     },
     "language": "Idioma dos dilemas",
     "timePerDilemma": "Tempo por dilema",
@@ -532,7 +550,26 @@
       "label": "Incluir dilemas novos",
       "hint": "Podem sair dilemas acabados de chegar ao catálogo."
     },
-    "save": "Guardar"
+    "save": "Guardar",
+    "ambience": {
+      "label": "Ambiente:",
+      "change": "Mudar",
+      "hint": "Volta a 8 rondas aleatórias; o idioma, o tempo e os dilemas novos ficam."
+    },
+    "compromising": {
+      "label": "Dilemas comprometedores",
+      "hint": "Podem deixar-te mal perante alguém da sala.",
+      "onlyAnonymous": "Só em sala anónima"
+    },
+    "content": {
+      "label": "Conteúdo",
+      "any": "Qualquer",
+      "adults-only": "Só +18",
+      "compromising": "Só comprometedores",
+      "needsAdults": "«Só +18» precisa dos dilemas +18.",
+      "needsCompromising": "«Só comprometedores» precisa dos dilemas comprometedores.",
+      "needsBoth": "«Só +18» precisa dos dilemas +18, e «Só comprometedores», dos dilemas comprometedores."
+    }
   },
   "pickDilemmas": {
     "title": "Dilema da ronda {{number}}",
@@ -552,7 +589,9 @@
     "options_other": "{{count, number}} opções",
     "someone": "alguém do grupo",
     "more": "Ver mais",
-    "moreFailed": "Não foi possível carregar mais dilemas. Tenta outra vez."
+    "moreFailed": "Não foi possível carregar mais dilemas. Tenta outra vez.",
+    "adultsOnly": "+18",
+    "compromising": "Comprometedor"
   },
   "expel": {
     "title": "Expulsar {{name}}?",
@@ -594,7 +633,7 @@
   "playDilemma": {
     "title": "Nova sala",
     "firstDilemma": "Começam por este dilema",
-    "about": "{{category}} · As outras 7 rondas, aleatórias.",
+    "about": "{{category}} · As outras 7 rondas seguem o ambiente que escolherem.",
     "loading": "À procura do dilema…",
     "notFound": "Este dilema já não está no TheLever. Podes criar uma sala com outros do catálogo.",
     "home": "Ir para o início"
@@ -719,11 +758,13 @@
     "continue": "Continuar",
     "decline": "Não aceito",
     "welcome": {
-      "tagline": "Dilemas morais para jogar em grupo",
+      "title": "Dilemas morais",
+      "subtitle": "para jogar em grupo",
       "text": "Votas em privado, adivinhas os outros e descobrem juntos quem pensa o quê.",
       "start": "Começar",
       "join": "Entrar no jogo",
-      "invite": "{{host}} convida-te para jogar"
+      "invite": "{{host}} convida-te para jogar",
+      "art": "La Palanca, junto a uma agulha da linha"
     },
     "age": {
       "title": "Em que ano nasceste?",
@@ -826,5 +867,34 @@
     "ios": "Toca em Partilhar e depois em «Adicionar ao ecrã principal».",
     "install": "Instalar",
     "close": "Fechar aviso"
+  },
+  "ambience": {
+    "classic": {
+      "name": "Clássica",
+      "line": "Dilemas para qualquer grupo",
+      "example": "Por exemplo: «A alavanca»"
+    },
+    "spicy": {
+      "name": "Picante",
+      "line": "Temas para adultos. Só +18.",
+      "example": "Por exemplo: «Mais anos ou melhor sexo»"
+    },
+    "no-filter": {
+      "name": "Sem filtro",
+      "line": "Anónimo, +18 e com perguntas comprometedoras",
+      "example": "Por exemplo: «A pergunta do teu par» · A partir de 3 jogadores"
+    },
+    "custom": {
+      "name": "Personalizada"
+    },
+    "onlyAdults": "Só para maiores de 18",
+    "minorInRoom": "Há alguém com menos de 18 anos na sala"
+  },
+  "compromisingNotice": {
+    "title": "Este jogo inclui dilemas comprometedores",
+    "text": "São dilemas cuja resposta sincera te pode deixar mal perante alguém da sala, como o teu par, a tua família ou os teus amigos.",
+    "anonymous": "Por isso a sala é anónima: ninguém verá o que votas, só quantos escolhem cada opção. Em grupos pequenos, a repartição pode deixar adivinhar algum voto.",
+    "understood": "Entendido",
+    "leave": "Sair da sala"
   }
 }
