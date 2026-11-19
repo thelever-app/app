@@ -13,9 +13,9 @@ function namesakeOf(nickname: string): string {
 
 // Opening the room
 
-Given('a device that has completed the first access', function (this: GameWorld) {
-  // The first access does not exist yet: any device can join, as the room server allows today.
+Given('a device that has completed the first access', async function (this: GameWorld) {
   this.player = SOMEONE.player;
+  await this.driver.finishFirstAccess(this.player);
 });
 
 Given('an existing room in the lobby', async function (this: GameWorld) {
@@ -143,6 +143,28 @@ When('another player tries to join', async function (this: GameWorld) {
 
 Then('the player is told the room is full', async function (this: GameWorld) {
   assert.equal(await this.driver.joinRefusalSeenBy(this.player), 'room-full');
+});
+
+Given('a room marked as adults only', async function (this: GameWorld) {
+  await this.driver.changeSettings(await this.host(), { adultsOnly: true });
+});
+
+When(
+  'a player who declared an age of {int} tries to join',
+  async function (this: GameWorld, age: number) {
+    this.player = SOMEONE.anotherPlayer;
+    await this.driver.newDevice(this.player, { country: 'ES' });
+    await this.driver.openApp(this.player);
+    await this.driver.declareAge(this.player, age);
+    await this.driver.acceptTerms(this.player);
+    await this.driver.giveGameConsent(this.player);
+    await this.driver.answerCookieConsent(this.player);
+    await this.driver.tryToJoinRoom(this.player);
+  },
+);
+
+Then('the player is told the room is for adults only', async function (this: GameWorld) {
+  assert.equal(await this.driver.joinRefusalSeenBy(this.player), 'adults-only');
 });
 
 Then('does not enter the room', async function (this: GameWorld) {
