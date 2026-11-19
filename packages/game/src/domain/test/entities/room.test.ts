@@ -36,6 +36,7 @@ function roomHostedByAna(): Room {
   return Room.create(
     {
       hostUnderEighteen: false,
+      ambience: 'classic',
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: ANA_AVATAR,
@@ -118,7 +119,7 @@ function lobbyWithAPlayersRound(): Room {
     'TestHostId',
     {
       rounds: [
-        { id: 1, origin: 'random', categories: null },
+        { id: 1, origin: 'random', categories: null, content: 'any' },
         { id: 2, origin: 'players' },
         { id: 3, origin: 'specific', dilemmaId: FOR_EVERYONE.dilemmaId },
       ],
@@ -141,6 +142,7 @@ function roomStartingWith(firstRoundDilemma: {
   return Room.create(
     {
       hostUnderEighteen: false,
+      ambience: 'classic',
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: ANA_AVATAR,
@@ -207,6 +209,7 @@ describe('Room', () => {
         Room.create(
           {
             hostUnderEighteen: false,
+            ambience: 'classic',
             hostNickname: 'Ana',
             hostIdentity: 'TestAnaIdentity',
             hostAvatar: ANA_AVATAR,
@@ -228,6 +231,7 @@ describe('Room', () => {
         Room.create(
           {
             hostUnderEighteen: false,
+            ambience: 'classic',
             hostNickname: 'Ana',
             hostIdentity: 'TestAnaIdentity',
             hostAvatar: ANA_AVATAR,
@@ -263,6 +267,7 @@ describe('Room', () => {
           id: index + 1,
           origin: 'random',
           categories: null,
+          content: 'any',
         })),
       );
       expect(room.chosenDilemmas).toEqual([]);
@@ -415,6 +420,7 @@ describe('Room', () => {
       const room = Room.create(
         {
           hostUnderEighteen: false,
+          ambience: 'classic',
           hostNickname: 'Ana',
           hostIdentity: 'TestAnaIdentity',
           hostAvatar: AvatarVO.all()[0] as AvatarVO,
@@ -529,16 +535,16 @@ describe('Room', () => {
       room.changeSettings('TestHostId', {
         rounds: [
           { id: 3, origin: 'players' },
-          { origin: 'random', categories: ['honesty', 'loyalty'] },
-          { id: 1, origin: 'random', categories: null },
+          { origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
+          { id: 1, origin: 'random', categories: null, content: 'any' },
         ],
       });
 
       // Assert
       expect(room.settings.rounds).toEqual([
         { id: 3, origin: 'players' },
-        { id: 9, origin: 'random', categories: ['honesty', 'loyalty'] },
-        { id: 1, origin: 'random', categories: null },
+        { id: 9, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
+        { id: 1, origin: 'random', categories: null, content: 'any' },
       ]);
     });
 
@@ -606,7 +612,7 @@ describe('Room', () => {
         {
           adultsOnly: true,
           rounds: [
-            { id: 1, origin: 'random', categories: ['honesty'] },
+            { id: 1, origin: 'random', categories: ['honesty'], content: 'any' },
             { id: 2, origin: 'specific', dilemmaId: FOR_ADULTS.dilemmaId },
           ],
         },
@@ -618,8 +624,8 @@ describe('Room', () => {
 
       // Assert
       expect(room.settings.rounds).toEqual([
-        { id: 1, origin: 'random', categories: ['honesty'] },
-        { id: 2, origin: 'random', categories: null },
+        { id: 1, origin: 'random', categories: ['honesty'], content: 'any' },
+        { id: 2, origin: 'random', categories: null, content: 'any' },
       ]);
     });
 
@@ -634,7 +640,12 @@ describe('Room', () => {
 
       // Assert
       expect(room.chosenDilemmas).toEqual([]);
-      expect(room.settings.rounds[1]).toEqual({ id: 2, origin: 'random', categories: null });
+      expect(room.settings.rounds[1]).toEqual({
+        id: 2,
+        origin: 'random',
+        categories: null,
+        content: 'any',
+      });
     });
 
     it('should keep the dilemmas of the rounds that are still in the new language', () => {
@@ -648,7 +659,12 @@ describe('Room', () => {
 
       // Assert
       expect(room.chosenDilemmas).toEqual([{ ...inEnglish, roundId: 2, playerId: 'TestLuisId' }]);
-      expect(room.settings.rounds[2]).toEqual({ id: 3, origin: 'random', categories: null });
+      expect(room.settings.rounds[2]).toEqual({
+        id: 3,
+        origin: 'random',
+        categories: null,
+        content: 'any',
+      });
     });
 
     it('should drop what a player chose when the round is no longer theirs, and keep the others', () => {
@@ -666,7 +682,7 @@ describe('Room', () => {
       // Act
       room.changeSettings('TestHostId', {
         rounds: [
-          { id: 2, origin: 'random', categories: null },
+          { id: 2, origin: 'random', categories: null, content: 'any' },
           { id: 4, origin: 'players' },
         ],
       });
@@ -996,9 +1012,9 @@ describe('Room', () => {
 
       // Assert
       expect(room.settings.rounds).toEqual([
-        { id: 1, origin: 'random', categories: null },
+        { id: 1, origin: 'random', categories: null, content: 'any' },
         { id: 2, origin: 'players' },
-        { id: 3, origin: 'random', categories: null },
+        { id: 3, origin: 'random', categories: null, content: 'any' },
       ]);
       expect(room.chosenDilemmas).toEqual([]);
     });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  categoriesKey,
+  drawKey,
   categoriesToDraw,
   fixedDilemmaIds,
   composeGame,
@@ -49,6 +49,7 @@ function randomRounds(count: number): RoundSnapshot[] {
     id: index + 1,
     origin: 'random',
     categories: null,
+    content: 'any',
   }));
 }
 
@@ -58,12 +59,11 @@ function input(changes: Partial<ComposeGameInput> = {}): ComposeGameInput {
     chosenDilemmas: [],
     newDilemmas: true,
     candidates: new Map([
-      ['*', EVERY_CATEGORY],
-      ['honesty', HONESTY],
+      ['*|any', EVERY_CATEGORY],
+      ['honesty|any', HONESTY],
     ]),
     explorationSlots: EXPLORATION_SLOTS,
     playsTheGap: true,
-    adultsOnly: false,
     playedBy: new Map(),
     ...changes,
   };
@@ -92,7 +92,7 @@ describe('composeGame', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
       { id: 4, origin: 'specific', dilemma: SPECIFIC },
-      { id: 1, origin: 'random', categories: null },
+      { id: 1, origin: 'random', categories: null, content: 'any' },
       { id: 2, origin: 'players' },
     ];
     const chosenDilemmas = [
@@ -128,8 +128,52 @@ describe('composeGame', () => {
   it('should draw the dilemma of a random round from its categories', () => {
     // Act
     const composed = composeGame(
-      input({ rounds: [{ id: 1, origin: 'random', categories: ['honesty'] }], newDilemmas: false }),
+      input({
+        rounds: [{ id: 1, origin: 'random', categories: ['honesty'], content: 'any' }],
+        newDilemmas: false,
+      }),
       new FixedRandomness(),
+    );
+
+    // Assert
+    expect(ids(composed)).toEqual(['TestHonesty1']);
+  });
+
+  it('should draw the dilemma of a round of a content from those of its content', () => {
+    // Arrange
+    const rounds: RoundSnapshot[] = [
+      { id: 1, origin: 'random', categories: null, content: 'adults-only' },
+      { id: 2, origin: 'random', categories: null, content: 'any' },
+    ];
+    const candidates = new Map([
+      ['*|any', { inCatalog: CATALOG.slice(0, 3), inExploration: [] }],
+      ['*|adults-only', { inCatalog: candidatesCalled(['TestAdult1']), inExploration: [] }],
+    ]);
+
+    // Act
+    const composed = composeGame(
+      input({ rounds, candidates, newDilemmas: false }),
+      new KeepOrderRandomness(),
+    );
+
+    // Assert
+    expect(ids(composed)[0]).toBe('TestAdult1');
+  });
+
+  it('should play any content of its categories in a round whose content has nothing left', () => {
+    // Arrange
+    const rounds: RoundSnapshot[] = [
+      { id: 1, origin: 'random', categories: ['honesty'], content: 'compromising' },
+    ];
+    const candidates = new Map([
+      ['honesty|any', { inCatalog: candidatesCalled(['TestHonesty1']), inExploration: [] }],
+      ['honesty|compromising', { inCatalog: [], inExploration: [] }],
+    ]);
+
+    // Act
+    const composed = composeGame(
+      input({ rounds, candidates, newDilemmas: false }),
+      new KeepOrderRandomness(),
     );
 
     // Assert
@@ -140,7 +184,7 @@ describe('composeGame', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
       { id: 1, origin: 'specific', dilemma: { ...SPECIFIC, dilemmaId: 'TestCatalog1' } },
-      { id: 2, origin: 'random', categories: null },
+      { id: 2, origin: 'random', categories: null, content: 'any' },
     ];
 
     // Act
@@ -184,6 +228,7 @@ describe('composeGame', () => {
       id: index + 1,
       origin: 'random',
       categories: ['honesty'],
+      content: 'any',
     }));
 
     // Act
@@ -198,12 +243,15 @@ describe('composeGame', () => {
     (randomness) => {
       // Arrange: every category has TestHonesty1 and TestLoyalty1, and honesty only TestHonesty1.
       const rounds: RoundSnapshot[] = [
-        { id: 1, origin: 'random', categories: null },
-        { id: 2, origin: 'random', categories: ['honesty'] },
+        { id: 1, origin: 'random', categories: null, content: 'any' },
+        { id: 2, origin: 'random', categories: ['honesty'], content: 'any' },
       ];
       const candidates = new Map([
-        ['*', { inCatalog: candidatesCalled(['TestHonesty1', 'TestLoyalty1']), inExploration: [] }],
-        ['honesty', { inCatalog: candidatesCalled(['TestHonesty1']), inExploration: [] }],
+        [
+          '*|any',
+          { inCatalog: candidatesCalled(['TestHonesty1', 'TestLoyalty1']), inExploration: [] },
+        ],
+        ['honesty|any', { inCatalog: candidatesCalled(['TestHonesty1']), inExploration: [] }],
       ]);
 
       // Act
@@ -228,7 +276,7 @@ describe('composeGame', () => {
     const composed = composeGame(
       input({
         candidates: new Map([
-          ['*', { inCatalog: CATALOG.slice(0, 2), inExploration: EXPLORATION }],
+          ['*|any', { inCatalog: CATALOG.slice(0, 2), inExploration: EXPLORATION }],
         ]),
       }),
       new FixedRandomness(),
@@ -299,7 +347,7 @@ describe('composeGame, with the gap', () => {
       hasGap: true,
     }));
     const candidates = new Map([
-      ['*', { inCatalog: [...withGap, ...CATALOG.slice(0, 2)], inExploration: [] }],
+      ['*|any', { inCatalog: [...withGap, ...CATALOG.slice(0, 2)], inExploration: [] }],
     ]);
 
     // Act
@@ -330,7 +378,7 @@ describe('composeGame, spacing', () => {
     return composeGame(
       input({
         rounds: randomRounds(10),
-        candidates: new Map([['*', candidates]]),
+        candidates: new Map([['*|any', candidates]]),
         newDilemmas: false,
         ...changes,
       }),
@@ -342,18 +390,27 @@ describe('composeGame, spacing', () => {
     return ids(composed).map((dilemmaId) => dilemmaId.startsWith('TestKind'));
   }
 
-  it.each([['game-theory'], ['would-you-rather']] as const)(
-    'should never play two %s dilemmas in consecutive rounds',
-    (type) => {
-      // Act
-      const composed = compose(withKind({ type }));
+  it('should never play two would-you-rather dilemmas in consecutive rounds', () => {
+    // Act
+    const composed = compose(withKind({ type: 'would-you-rather' }));
 
-      // Assert
-      const kind = kinds(composed);
-      expect(kind.some((isKind, index) => isKind && kind[index + 1])).toBe(false);
-      expect(kind.filter(Boolean)).toHaveLength(5);
-    },
-  );
+    // Assert
+    const kind = kinds(composed);
+    expect(kind.some((isKind, index) => isKind && kind[index + 1])).toBe(false);
+    expect(kind.filter(Boolean)).toHaveLength(5);
+  });
+
+  it('should play at most one game theory dilemma in any five rounds', () => {
+    // Act
+    const composed = compose(withKind({ type: 'game-theory' }));
+
+    // Assert
+    const kind = kinds(composed);
+    for (let start = 0; start + 5 <= kind.length; start += 1) {
+      expect(kind.slice(start, start + 5).filter(Boolean).length).toBeLessThanOrEqual(1);
+    }
+    expect(kind.filter(Boolean)).toHaveLength(2);
+  });
 
   it('should play two game theory dilemmas in a row when nothing else is left', () => {
     // Act
@@ -381,34 +438,12 @@ describe('composeGame, spacing', () => {
     expect(extreme.filter(Boolean)).toHaveLength(2);
   });
 
-  it('should play a dilemma for adults in every five rounds of an adults-only room', () => {
-    // Arrange: the standard dilemmas come first, so only the rule brings those for adults in.
-    const candidates: Candidates = {
-      inCatalog: [
-        ...CATALOG.slice(0, 10),
-        ...Array.from({ length: 10 }, (_, index) =>
-          candidate(`TestKind${index + 1}`, { minimumAge: 18 }),
-        ),
-      ],
-      inExploration: [],
-    };
-
-    // Act
-    const composed = compose(candidates, { adultsOnly: true });
-
-    // Assert
-    const adults = kinds(composed);
-    for (let start = 0; start + 5 <= adults.length; start += 1) {
-      expect(adults.slice(start, start + 5).some(Boolean)).toBe(true);
-    }
-  });
-
   it('should space the drawn dilemmas around a specific round', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: null },
+      { id: 1, origin: 'random', categories: null, content: 'any' },
       { id: 2, origin: 'specific', dilemma: { ...SPECIFIC, type: 'game-theory' } },
-      { id: 3, origin: 'random', categories: null },
+      { id: 3, origin: 'random', categories: null, content: 'any' },
     ];
 
     // Act
@@ -461,7 +496,7 @@ describe('composeGame, history', () => {
     const composed = composeGame(
       input({
         rounds: randomRounds(2),
-        candidates: new Map([['*', candidates]]),
+        candidates: new Map([['*|any', candidates]]),
         newDilemmas: false,
         playedBy,
       }),
@@ -477,8 +512,8 @@ describe('categoriesToDraw', () => {
   it('should give each set of categories the random rounds and the empty rounds of the players draw from, once', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: ['loyalty', 'honesty'] },
-      { id: 2, origin: 'random', categories: ['honesty', 'loyalty'] },
+      { id: 1, origin: 'random', categories: ['loyalty', 'honesty'], content: 'any' },
+      { id: 2, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
       { id: 3, origin: 'players' },
       { id: 4, origin: 'players' },
       { id: 5, origin: 'specific', dilemma: SPECIFIC },
@@ -491,16 +526,18 @@ describe('categoriesToDraw', () => {
     const draws = categoriesToDraw(rounds, chosenDilemmas, true);
 
     // Assert
-    expect(draws.map(({ categories, rounds }) => [categoriesKey(categories), rounds])).toEqual([
-      ['honesty,loyalty', 2],
-      ['*', 1],
+    expect(
+      draws.map(({ categories, content, rounds }) => [drawKey(categories, content), rounds]),
+    ).toEqual([
+      ['honesty,loyalty|any', 2],
+      ['*|any', 1],
     ]);
   });
 
   it('should draw from every category for a dilemma with the gap in a room without the players it needs', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: ['honesty'] },
+      { id: 1, origin: 'random', categories: ['honesty'], content: 'any' },
       { id: 2, origin: 'specific', dilemma: { ...SPECIFIC, hasGap: true } },
     ];
 
@@ -508,9 +545,33 @@ describe('categoriesToDraw', () => {
     const draws = categoriesToDraw(rounds, [], false);
 
     // Assert
-    expect(draws.map(({ categories, rounds }) => [categoriesKey(categories), rounds])).toEqual([
-      ['honesty', 1],
-      ['*', 1],
+    expect(
+      draws.map(({ categories, content, rounds }) => [drawKey(categories, content), rounds]),
+    ).toEqual([
+      ['honesty|any', 1],
+      ['*|any', 1],
+    ]);
+  });
+
+  it('should draw each content of a set of categories apart, and count its rounds for any content too', () => {
+    // Arrange
+    const rounds: RoundSnapshot[] = [
+      { id: 1, origin: 'random', categories: null, content: 'any' },
+      { id: 2, origin: 'random', categories: null, content: 'adults-only' },
+      { id: 3, origin: 'random', categories: null, content: 'compromising' },
+      { id: 4, origin: 'random', categories: null, content: 'adults-only' },
+    ];
+
+    // Act
+    const draws = categoriesToDraw(rounds, [], true);
+
+    // Assert
+    expect(
+      draws.map(({ categories, content, rounds }) => [drawKey(categories, content), rounds]),
+    ).toEqual([
+      ['*|any', 4],
+      ['*|adults-only', 2],
+      ['*|compromising', 1],
     ]);
   });
 });
@@ -519,7 +580,7 @@ describe('fixedDilemmaIds', () => {
   it('should give the dilemmas the rounds play without drawing them', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: null },
+      { id: 1, origin: 'random', categories: null, content: 'any' },
       { id: 2, origin: 'players' },
       { id: 3, origin: 'players' },
       { id: 4, origin: 'specific', dilemma: SPECIFIC },

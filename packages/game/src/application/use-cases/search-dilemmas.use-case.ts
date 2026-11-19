@@ -48,7 +48,7 @@ export class SearchDilemmasUseCase {
       maximumMinimumAge: room.settings.maximumMinimumAge,
       status: 'in-catalog' as const,
       language: room.settings.dilemmaLanguage,
-      includeCompromising: room.settings.includesCompromisingDilemmas,
+      includeCompromising: room.settings.compromisingDilemmas,
     };
     // What the room already played cannot be chosen again. A page left empty by it goes on to the
     // next one, so the list never looks over while there are more.

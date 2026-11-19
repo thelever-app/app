@@ -13,6 +13,8 @@ import { PlayerExpelledError } from '../errors/player-expelled.error.ts';
 import { PlayerNotInRoomError } from '../errors/player-not-in-room.error.ts';
 import { RoomClosedError } from '../errors/room-closed.error.ts';
 import { AdultsOnlyRoomError } from '../errors/adults-only-room.error.ts';
+import { InvalidRoomSettingError } from '../errors/invalid-room-setting.error.ts';
+import { MinorInRoomError } from '../errors/minor-in-room.error.ts';
 import { RoomFullError } from '../errors/room-full.error.ts';
 import { RoundNotForPlayersError } from '../errors/round-not-for-players.error.ts';
 import { RoundNotFoundError } from '../errors/round-not-found.error.ts';
@@ -25,6 +27,7 @@ import { LobbyChangedEvent, type LobbyChange } from '../events/lobby-changed.eve
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
 import { pickOne } from '../services/random-choice.ts';
+import { AMBIENCES, type Ambience, keptForANewRoom, settingsOf } from '../vos/ambience.vo.ts';
 import { AvatarVO } from '../vos/avatar.vo.ts';
 import { toGroupNature, toPlace, type GroupNature, type Place } from '../vos/group.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
@@ -36,7 +39,12 @@ import {
   type RoomVariant,
 } from '../vos/room-settings.vo.ts';
 import type { Category } from '../vos/category.vo.ts';
-import { randomRound, type LobbyDilemma, type RoundSnapshot } from '../vos/round.vo.ts';
+import {
+  randomRound,
+  type LobbyDilemma,
+  type RoundContent,
+  type RoundSnapshot,
+} from '../vos/round.vo.ts';
 import { Player, type PlayerSnapshot } from './player.ts';
 
 /**
@@ -80,6 +88,8 @@ export type RoundChange =
       readonly id?: number;
       readonly origin: 'random';
       readonly categories: readonly Category[] | null;
+      /** Any content unless given. */
+      readonly content?: RoundContent;
     }
   | { readonly id?: number; readonly origin: 'specific'; readonly dilemmaId: string }
   | { readonly id?: number; readonly origin: 'players' };
@@ -118,6 +128,8 @@ export interface RoomSnapshot {
 }
 
 export interface CreateRoomProps {
+  /** The ambience the room starts with, which sets up its configuration. */
+  readonly ambience: string;
   readonly hostNickname: string;
   readonly hostIdentity: string;
   readonly hostAvatar: AvatarVO;
@@ -183,12 +195,15 @@ export class Room {
   }
 
   /**
-   * The room is born with its host, who is its first player, and the default settings, and with
-   * that dilemma in its first round if it is given one that suits it.
+   * The room is born with its host, who is its first player, and the configuration of its ambience
+   * in the language of the host, and with that dilemma in its first round if it is given one that
+   * suits it. A host under 18 creates no room of an ambience for adults.
    */
   static create(props: CreateRoomProps, idGenerator: IdGenerator): Room {
+    const ambience = ambienceCalled(props.ambience);
     const id = idGenerator.generate();
-    const settings = RoomSettingsVO.defaults(props.dilemmaLanguage).toSnapshot();
+    const settings = settingsOf(ambience, keptForANewRoom(props.dilemmaLanguage)).toSnapshot();
+    if (props.hostUnderEighteen && settings.adultsOnly) throw new MinorInRoomError(id);
     const host = Player.create(
       {
         nickname: props.hostNickname,
@@ -375,7 +390,22 @@ export class Room {
     this.#ensureHostInLobby(playerId);
     const { rounds: roundChanges, ...rest } = changes;
     const current = this.#settings.rounds;
-    const withoutRounds = this.#settings.with(rest);
+    const variant = rest.variant ?? this.#settings.variant;
+    const adultsOnly = rest.adultsOnly ?? this.#settings.adultsOnly;
+    // Making the room nominal turns compromising dilemmas off, and they stay off.
+    const compromisingDilemmas =
+      variant === 'anonymous' && (rest.compromisingDilemmas ?? this.#settings.compromisingDilemmas);
+    if (adultsOnly && !this.#settings.adultsOnly) this.#ensureNobodyUnderEighteen();
+    const allows = (content: RoundContent): boolean =>
+      (content !== 'adults-only' || adultsOnly) &&
+      (content !== 'compromising' || compromisingDilemmas);
+    const withoutRounds = this.#settings.with({
+      ...rest,
+      compromisingDilemmas,
+      rounds: current.map((round) =>
+        round.origin === 'random' && !allows(round.content) ? { ...round, content: 'any' } : round,
+      ),
+    });
     const known =
       withoutRounds.dilemmaLanguage === this.#settings.dilemmaLanguage
         ? [
@@ -395,7 +425,14 @@ export class Room {
     const rounds = given.map((change): RoundSnapshot => {
       const id = change.id ?? (nextId += 1);
       if (change.origin === 'random') {
-        return { id, origin: 'random', categories: change.categories };
+        // A content the room does not allow any more goes back to any.
+        const content = change.content ?? 'any';
+        return {
+          id,
+          origin: 'random',
+          categories: change.categories,
+          content: allows(content) ? content : 'any',
+        };
       }
       if (change.origin === 'players') return { id, origin: 'players' };
       if (this.#playedDilemmaIds.has(change.dilemmaId)) {
@@ -430,6 +467,30 @@ export class Room {
     });
     this.#chosenDilemmas = chosen;
     this.#changeLobby('settings-changed');
+  }
+
+  /**
+   * Only the host, and only in the lobby: the room takes the configuration of the ambience, with 8
+   * random rounds, and keeps its language, its time per dilemma and new dilemmas. Nobody chooses an
+   * ambience for adults with someone under 18 in the room.
+   */
+  chooseAmbience(playerId: string, ambience: string): void {
+    this.#ensureHostInLobby(playerId);
+    const { dilemmaLanguage, timePerDilemmaSeconds, newDilemmas } = this.#settings;
+    const settings = settingsOf(ambienceCalled(ambience), {
+      dilemmaLanguage,
+      timePerDilemmaSeconds,
+      newDilemmas,
+    });
+    if (settings.adultsOnly && !this.#settings.adultsOnly) this.#ensureNobodyUnderEighteen();
+    this.#settings = settings;
+    this.#chosenDilemmas = [];
+    this.#changeLobby('settings-changed');
+  }
+
+  /** Whether someone in the room said they are under 18, which keeps out everything for adults. */
+  get hasPlayerUnderEighteen(): boolean {
+    return this.#players.some((player) => player.underEighteen);
   }
 
   /**
@@ -588,8 +649,11 @@ export class Room {
    * the room closes.
    */
   leave(playerId: string, gamePlayerIds: readonly string[], at: Date): void {
-    this.#player(playerId);
-    if (this.isInLobby) throw new GameNotInProgressError(this.id);
+    const player = this.#player(playerId);
+    if (this.isInLobby) {
+      this.#leaveLobby(player, at);
+      return;
+    }
     if (this.#leftPlayerIds.has(playerId)) return;
 
     this.#leftPlayerIds.add(playerId);
@@ -602,6 +666,28 @@ export class Room {
     this.#events.push(new PlayerLeftEvent(this.id, playerId, true, this.#version));
     if (playerId === this.#hostId) this.#passHostOnFor(playerId, gamePlayerIds);
     if (playerId === this.#absentHostId) this.#absentHostId = null;
+  }
+
+  /**
+   * From the lobby, who leaves is out of the room, with nothing kept of them, and may join again;
+   * the dilemma they chose stays without a chooser. If they were the host, the role passes to who
+   * has been in the room longest; the last one to leave closes the room.
+   */
+  #leaveLobby(player: Player, at: Date): void {
+    if (this.#connections.delete(player.id)) this.#connectionClosed(at);
+    const successor = this.#players.find(({ id }) => id !== player.id);
+    if (!successor) {
+      this.#closedAt = new Date(at);
+      this.#changeLobby('player-left');
+      return;
+    }
+    this.#players.splice(this.#players.indexOf(player), 1);
+    this.#chosenDilemmas = this.#chosenDilemmas.map((chosen) =>
+      chosen.playerId === player.id ? { ...chosen, playerId: null } : chosen,
+    );
+    if (player.id === this.#hostId) this.#changeHost(successor.id);
+    if (player.id === this.#absentHostId) this.#absentHostId = null;
+    this.#changeLobby('player-left');
   }
 
   hasLeft(playerId: string): boolean {
@@ -728,8 +814,12 @@ export class Room {
   #suits(dilemma: LobbyDilemma, settings: RoomSettingsVO = this.#settings): boolean {
     return (
       dilemma.minimumAge <= settings.maximumMinimumAge &&
-      (!dilemma.compromising || settings.includesCompromisingDilemmas)
+      (!dilemma.compromising || settings.compromisingDilemmas)
     );
+  }
+
+  #ensureNobodyUnderEighteen(): void {
+    if (this.hasPlayerUnderEighteen) throw new MinorInRoomError(this.id);
   }
 
   #changeLobby(change: LobbyChange): void {
@@ -800,4 +890,11 @@ function toRoundChange(round: RoundSnapshot): RoundChange {
   return round.origin === 'specific'
     ? { id: round.id, origin: 'specific', dilemmaId: round.dilemma.dilemmaId }
     : round;
+}
+
+function ambienceCalled(ambience: string): Ambience {
+  if (!(AMBIENCES as readonly string[]).includes(ambience)) {
+    throw new InvalidRoomSettingError('ambience', ambience);
+  }
+  return ambience as Ambience;
 }

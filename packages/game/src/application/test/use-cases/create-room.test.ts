@@ -14,6 +14,7 @@ import { DilemmaNotFoundError } from '../../errors/dilemma-not-found.error.ts';
 import { lobbyCatalog, testCatalog } from '../support/test-catalog.ts';
 
 const ANA = {
+  ambience: 'classic',
   hostNickname: 'Ana',
   hostIdentity: 'TestAnaIdentity',
   hostAvatar: { face: 'face-05', color: 'cyan' },

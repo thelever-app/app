@@ -1,6 +1,7 @@
 import type { GameDilemma } from '../../domain/entities/game.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
 import type { CandidateDilemma, DilemmaType, Scale } from '../../domain/vos/classification.vo.ts';
+import type { RoundContent } from '../../domain/vos/round.vo.ts';
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a dilemma
@@ -59,8 +60,8 @@ export interface CandidateSearch extends Omit<DilemmaSearch, 'text' | 'dilemmaId
   readonly includeGap: boolean;
   /** Never drawn: the dilemmas the game already plays. */
   readonly excludedIds: readonly string[];
-  /** Only the dilemmas for adults: for an adults-only room to have some to space. */
-  readonly onlyForAdults: boolean;
+  /** Any of those that suit the room, only the dilemmas for adults or only the compromising ones. */
+  readonly content: RoundContent;
   /**
    * How many players of the room played each dilemma: those played by fewer are drawn first, and
    * one nobody played before any.

@@ -113,9 +113,10 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
     return (
       this.#matching(criteria)
         .filter(
-          ({ dilemmaId, hasGap, minimumAge }) =>
+          ({ dilemmaId, hasGap, minimumAge, compromising }) =>
             (criteria.includeGap || !hasGap) &&
-            (!criteria.onlyForAdults || minimumAge === 18) &&
+            (criteria.content !== 'adults-only' || minimumAge === 18) &&
+            (criteria.content !== 'compromising' || compromising === true) &&
             !criteria.excludedIds.includes(dilemmaId),
         )
         // A stable sort: the same players keep the order they were given.

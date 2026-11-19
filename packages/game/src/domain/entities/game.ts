@@ -1,3 +1,4 @@
+import type { AmbienceOrCustom } from '../vos/ambience.vo.ts';
 import { AnswerIncompleteError } from '../errors/answer-incomplete.error.ts';
 import { DecisionPhaseAlreadyStartedError } from '../errors/decision-phase-already-started.error.ts';
 import { DecisionPhaseNotStartedError } from '../errors/decision-phase-not-started.error.ts';
@@ -79,6 +80,8 @@ export interface PlayedDilemma extends GameDilemma {
 
 /** What the game copies from its room when it starts, and keeps even if the room changes. */
 export interface GameSettings {
+  /** The ambience whose configuration the room had when the game started, or custom. */
+  readonly ambience: AmbienceOrCustom;
   readonly variant: RoomVariant;
   readonly groupNature: GroupNature;
   readonly place: Place;

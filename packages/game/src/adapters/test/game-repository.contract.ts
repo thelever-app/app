@@ -31,6 +31,7 @@ const MINUTE = 60 * SECOND;
 
 /** Different from the defaults, so a repository that loses them fails. */
 const ANONYMOUS: GameSettings = {
+  ambience: 'no-filter',
   variant: 'anonymous',
   groupNature: 'family',
   place: 'remote',
@@ -58,6 +59,7 @@ export function describeGameRepositoryContract(
     const room = Room.create(
       {
         hostUnderEighteen: false,
+        ambience: 'classic',
         hostNickname: 'Ana',
         hostIdentity: 'TestAnaIdentity',
         hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -131,6 +133,7 @@ export function describeGameRepositoryContract(
         const other = Room.create(
           {
             hostUnderEighteen: false,
+            ambience: 'classic',
             hostNickname: 'Eva',
             hostIdentity: 'TestEvaIdentity',
             hostAvatar: new AvatarVO('face-02', 'teal'),

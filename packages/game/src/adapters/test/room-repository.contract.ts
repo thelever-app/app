@@ -12,6 +12,7 @@ function room(id = 'TestRoomId', hostId = 'TestAnaId', code = 'K7M2Q'): Room {
   return Room.create(
     {
       hostUnderEighteen: false,
+      ambience: 'classic',
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -83,6 +84,21 @@ export function describeRoomRepositoryContract(
           'TestLuisId',
           'TestEvaId',
         ]);
+      });
+
+      it('should keep compromising dilemmas and the content of each random round', async () => {
+        // Arrange: No filter turns compromising dilemmas on and gives every round a content.
+        const repository = await create();
+        const saved = room();
+        saved.chooseAmbience('TestAnaId', 'no-filter');
+        await repository.save(saved);
+
+        // Act
+        const found = await repository.findById('TestRoomId');
+
+        // Assert
+        expect(found?.settings.toSnapshot()).toEqual(saved.settings.toSnapshot());
+        expect(found?.settings.compromisingDilemmas).toBe(true);
       });
 
       it('should return undefined if the room does not exist', async () => {
@@ -214,12 +230,12 @@ export function describeRoomRepositoryContract(
             timePerDilemmaSeconds: 60,
             newDilemmas: false,
             rounds: [
-              { id: 4, origin: 'random', categories: ['honesty', 'loyalty'] },
+              { id: 4, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
               { id: 2, origin: 'specific', dilemmaId: 'TestSpecificDilemma' },
               { id: 7, origin: 'players' },
               { id: 1, origin: 'players' },
               { id: 3, origin: 'players' },
-              { id: 9, origin: 'random', categories: null },
+              { id: 9, origin: 'random', categories: null, content: 'any' },
             ],
           },
           [

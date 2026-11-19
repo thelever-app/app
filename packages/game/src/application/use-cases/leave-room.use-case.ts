@@ -5,6 +5,7 @@ import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findCurrentGame } from './find-current-game.ts';
+import { findRoom } from './find-room.ts';
 import { notifyGame } from './notify-game.ts';
 
 export interface LeaveRoomInput {
@@ -13,9 +14,9 @@ export interface LeaveRoomInput {
 }
 
 /**
- * A player leaves the game in progress on purpose: nobody waits for them any more and, if they
- * were the host, the role passes on for good. They can join the room again as a player, unless
- * everyone has left: then the room closes.
+ * A player leaves on purpose. From the game in progress, nobody waits for them any more and, if
+ * they were the host, the role passes on for good; they can join the room again as a player,
+ * unless everyone has left: then the room closes. From the lobby, they are out of the room.
  */
 export class LeaveRoomUseCase {
   readonly #roomRepository: RoomRepository;
@@ -36,6 +37,16 @@ export class LeaveRoomUseCase {
   }
 
   async execute({ roomId, playerId }: LeaveRoomInput): Promise<void> {
+    const lobby = await findRoom(this.#roomRepository, roomId);
+    if (lobby.isInLobby) {
+      // From the lobby, who leaves is out of the room; the others hear it, and so do they.
+      const playerIds = lobby.players.map(({ id }) => id);
+      lobby.leave(playerId, [], this.#clock.now());
+      const events = lobby.pullEvents();
+      await this.#roomRepository.save(lobby);
+      await Promise.allSettled(events.map((event) => this.#notifier.notify(playerIds, event)));
+      return;
+    }
     const { room, game } = await findCurrentGame(
       this.#roomRepository,
       this.#gameRepository,

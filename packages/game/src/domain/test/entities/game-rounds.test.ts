@@ -33,6 +33,7 @@ const SEAL = {
 const AT = new Date('2026-11-09T10:00:00Z');
 const SECOND = 1000;
 const NOMINAL: GameSettings = {
+  ambience: 'classic',
   variant: 'nominal',
   groupNature: 'friends',
   place: 'together',

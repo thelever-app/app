@@ -3,6 +3,7 @@ import type { DomainEvent } from './domain-event.ts';
 export type LobbyChange =
   | 'player-joined'
   | 'player-expelled'
+  | 'player-left'
   | 'avatar-changed'
   | 'settings-changed'
   | 'dilemmas-changed'

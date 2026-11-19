@@ -111,7 +111,7 @@ const A_GAME = {
   count: 100,
   includeGap: true,
   excludedIds: [],
-  onlyForAdults: false,
+  content: 'any',
   playedBy: [],
 } as const;
 
@@ -521,11 +521,28 @@ export function describeDilemmaCatalogContract(
           ...FOR_EVERYONE,
           ...A_GAME,
           maximumMinimumAge: 18,
-          onlyForAdults: true,
+          content: 'adults-only',
         });
 
         // Assert
         expect(found.map(({ dilemmaId }) => dilemmaId)).toEqual([second]);
+      });
+
+      it('should draw only the compromising dilemmas when asked for those', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+        const fourth = stored[3]?.dilemmaId;
+
+        // Act
+        const found = await catalog.findCandidates({
+          ...FOR_EVERYONE,
+          ...A_GAME,
+          includeCompromising: true,
+          content: 'compromising',
+        });
+
+        // Assert
+        expect(found.map(({ dilemmaId }) => dilemmaId)).toEqual([fourth]);
       });
 
       it('should leave out the dilemmas excluded, and those with the gap unless they are included', async () => {

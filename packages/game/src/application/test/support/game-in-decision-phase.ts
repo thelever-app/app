@@ -1,4 +1,7 @@
-import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
+import {
+  InMemorySealProvider,
+  SEAL_BEFORE_FIRST_ACCESS,
+} from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { ChangeRoomSettingsUseCase } from '../../use-cases/change-room-settings.use-case.ts';
 import { CreateRoomUseCase } from '../../use-cases/create-room.use-case.ts';
 import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
@@ -16,12 +19,23 @@ import { CANDIDATES_PER_ROUND, EXPLORATION_SLOTS, testCatalog } from './test-cat
 
 /** What a test game copies from its room when it is created by hand. */
 export const TEST_GAME_SETTINGS = {
+  ambience: 'classic',
   variant: 'nominal',
   groupNature: 'friends',
   place: 'together',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
 } as const;
+
+/** Ana, Luis and Marta declared they are adults, so their room may turn on what is for adults. */
+export const ADULT_SEALS = new InMemorySealProvider(
+  new Map(
+    ['TestAnaIdentity', 'TestLuisIdentity', 'TestMartaIdentity'].map((identity) => [
+      identity,
+      { ...SEAL_BEFORE_FIRST_ACCESS, underEighteen: false },
+    ]),
+  ),
+);
 
 /**
  * Ana hosts a room with Luis and Marta; she creates it and they join, all in the lobby. The game
@@ -39,7 +53,7 @@ export async function lobbyOfThree(
   const randomness = new SequentialRandomness();
   const clock = new ManualClock();
   const joinRoom = new JoinRoomUseCase({
-    sealProvider: new InMemorySealProvider(),
+    sealProvider: ADULT_SEALS,
     roomRepository,
     gameRepository,
     notifier,
@@ -54,8 +68,9 @@ export async function lobbyOfThree(
     idGenerator,
     randomness,
     clock,
-    new InMemorySealProvider(),
+    ADULT_SEALS,
   ).execute({
+    ambience: 'classic',
     hostNickname: 'Ana',
     hostIdentity: 'TestAnaIdentity',
     hostAvatar: { face: 'face-01', color: 'khaki' },
