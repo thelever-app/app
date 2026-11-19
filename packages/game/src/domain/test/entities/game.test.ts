@@ -48,11 +48,11 @@ const LATER = new Date('2026-11-09T10:00:40Z');
 
 function gameInDecisionPhase(): { game: Game; ana: Player; luis: Player } {
   const ana = Player.create(
-    { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
+    { underEighteen: false, nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
     new FixedIdGenerator('TestAnaId'),
   );
   const luis = Player.create(
-    { nickname: 'Luis', identity: 'TestLuisIdentity', avatar: AVATAR },
+    { underEighteen: false, nickname: 'Luis', identity: 'TestLuisIdentity', avatar: AVATAR },
     new FixedIdGenerator('TestLuisId'),
   );
   const game = Game.create(
@@ -168,7 +168,7 @@ describe('Game', () => {
       game.start(
         [
           Player.create(
-            { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
+            { underEighteen: false, nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
             new FixedIdGenerator('TestAnaId'),
           ),
         ],
@@ -187,7 +187,7 @@ describe('Game', () => {
         new FixedIdGenerator('TestId'),
       );
       const ana = Player.create(
-        { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
+        { underEighteen: false, nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
         new FixedIdGenerator('TestAnaId'),
       );
 
@@ -442,7 +442,7 @@ describe('Game', () => {
       game.start(
         [
           Player.create(
-            { nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
+            { underEighteen: false, nickname: 'Ana', identity: 'TestAnaIdentity', avatar: AVATAR },
             new FixedIdGenerator('TestAnaId'),
           ),
         ],

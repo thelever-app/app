@@ -24,6 +24,7 @@ function roomAndGame(): { room: Room; game: Game } {
   const randomness = new SequentialRandomness();
   const room = Room.create(
     {
+      hostUnderEighteen: false,
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -37,7 +38,12 @@ function roomAndGame(): { room: Room; game: Game } {
   );
   for (const nickname of ['Luis', 'Marta']) {
     room.join(
-      { nickname, identity: `Test${nickname}Identity`, avatar: room.suggestAvatar(randomness) },
+      {
+        underEighteen: false,
+        nickname,
+        identity: `Test${nickname}Identity`,
+        avatar: room.suggestAvatar(randomness),
+      },
       new FixedIdGenerator(nickname),
       NOW,
     );

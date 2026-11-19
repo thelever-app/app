@@ -1,3 +1,4 @@
+import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { describe, expect, it } from 'vitest';
 import { CreateRoomUseCase } from '../../use-cases/create-room.use-case.ts';
 import { RoomCodeUnavailableError } from '../../errors/room-code-unavailable.error.ts';
@@ -32,6 +33,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialIdGenerator(),
         new SequentialRandomness(),
         new ManualClock(),
+        new InMemorySealProvider(),
       );
 
       // Act
@@ -59,6 +61,7 @@ describe('CreateRoomUseCase', () => {
         idGenerator,
         new FixedRandomness(0, 0, 0, 0, 0),
         new ManualClock(),
+        new InMemorySealProvider(),
       ).execute(ANA);
 
       // Act
@@ -68,6 +71,7 @@ describe('CreateRoomUseCase', () => {
         idGenerator,
         new FixedRandomness(0, 0, 0, 0, 0, 1, 1, 1, 1, 1),
         new ManualClock(),
+        new InMemorySealProvider(),
       ).execute(ANA);
 
       // Assert
@@ -85,6 +89,7 @@ describe('CreateRoomUseCase', () => {
         idGenerator,
         new FixedRandomness(),
         new ManualClock(),
+        new InMemorySealProvider(),
       ).execute(ANA);
 
       // Act & Assert
@@ -95,6 +100,7 @@ describe('CreateRoomUseCase', () => {
           idGenerator,
           new FixedRandomness(),
           new ManualClock(),
+          new InMemorySealProvider(),
         ).execute(ANA),
       ).rejects.toThrow(RoomCodeUnavailableError);
     });
@@ -108,6 +114,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialIdGenerator(),
         new SequentialRandomness(),
         new ManualClock(),
+        new InMemorySealProvider(),
       );
 
       // Act
@@ -146,6 +153,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialIdGenerator(),
         new SequentialRandomness(),
         new ManualClock(),
+        new InMemorySealProvider(),
       );
 
       // Act & Assert
@@ -162,6 +170,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialIdGenerator(),
         new SequentialRandomness(),
         new ManualClock(),
+        new InMemorySealProvider(),
       );
 
       // Act & Assert
@@ -178,6 +187,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialIdGenerator(),
         new SequentialRandomness(),
         new ManualClock(),
+        new InMemorySealProvider(),
       );
 
       // Act & Assert
@@ -198,6 +208,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialIdGenerator(),
         new SequentialRandomness(),
         new ManualClock(),
+        new InMemorySealProvider(),
       );
 
       // Act & Assert
@@ -214,6 +225,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialIdGenerator(),
         new SequentialRandomness(),
         new ManualClock(),
+        new InMemorySealProvider(),
       );
 
       // Act & Assert

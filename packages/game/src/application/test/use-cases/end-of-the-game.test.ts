@@ -72,6 +72,7 @@ async function arrange() {
     getRoomState: new GetRoomStateUseCase(roomRepository, catalog),
     disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier, clock),
     joinRoom: new JoinRoomUseCase({
+      sealProvider: new InMemorySealProvider(),
       ...ports,
       idGenerator: game.idGenerator,
       randomness: game.randomness,

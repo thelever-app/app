@@ -14,6 +14,7 @@ const NOW = new Date('2026-11-12T10:00:00Z');
 function roomInGame(): Room {
   const room = Room.create(
     {
+      hostUnderEighteen: false,
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -27,6 +28,7 @@ function roomInGame(): Room {
   );
   room.join(
     {
+      underEighteen: false,
       nickname: 'Luis',
       identity: 'TestLuisIdentity',
       avatar: room.suggestAvatar(new FixedRandomness()),
@@ -36,6 +38,7 @@ function roomInGame(): Room {
   );
   room.join(
     {
+      underEighteen: false,
       nickname: 'Marta',
       identity: 'TestMartaIdentity',
       avatar: room.suggestAvatar(new FixedRandomness()),
@@ -58,6 +61,7 @@ const PLAYERS = ['Ana', 'Luis', 'Marta'];
 function pedroJoins(room: Room): void {
   room.join(
     {
+      underEighteen: false,
       nickname: 'Pedro',
       identity: 'TestPedroIdentity',
       avatar: room.suggestAvatar(new FixedRandomness()),
@@ -130,6 +134,7 @@ describe('Room, host and leaving', () => {
       // Arrange
       const room = Room.create(
         {
+          hostUnderEighteen: false,
           hostNickname: 'Ana',
           hostIdentity: 'TestAnaIdentity',
           hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -157,6 +162,7 @@ describe('Room, host and leaving', () => {
       // Act
       const ana = room.join(
         {
+          underEighteen: false,
           nickname: 'Ana',
           identity: 'TestAnaIdentity',
           avatar: room.suggestAvatar(new FixedRandomness()),

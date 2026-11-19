@@ -82,6 +82,7 @@ async function arrange() {
       game.clock,
     ),
     joinRoom: new JoinRoomUseCase({
+      sealProvider: new InMemorySealProvider(),
       ...ports,
       idGenerator: game.idGenerator,
       randomness: game.randomness,

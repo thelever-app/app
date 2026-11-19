@@ -308,6 +308,7 @@ describe('StartGameUseCase', () => {
       const luis = room.playerWith('TestLuisIdentity')!;
       room.join(
         {
+          underEighteen: false,
           nickname: luis.nickname,
           identity: luis.identity,
           avatar: luis.avatar,

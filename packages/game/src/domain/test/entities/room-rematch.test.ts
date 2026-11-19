@@ -26,6 +26,7 @@ function lobbyDilemma(dilemmaId: string): LobbyDilemma {
 function join(room: Room, nickname: string): void {
   room.join(
     {
+      underEighteen: false,
       nickname,
       identity: `Test${nickname}Identity`,
       avatar: room.suggestAvatar(new FixedRandomness()),
@@ -39,6 +40,7 @@ function join(room: Room, nickname: string): void {
 function roomAfterAGame(): Room {
   const room = Room.create(
     {
+      hostUnderEighteen: false,
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),

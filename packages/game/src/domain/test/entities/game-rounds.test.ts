@@ -53,7 +53,12 @@ function after(ms: number): Date {
 function gameOfThree(settings: GameSettings = NOMINAL, randomness = new KeepOrderRandomness()) {
   const players = EVERYONE.map((nickname) =>
     Player.create(
-      { nickname, identity: `Test${nickname}Identity`, avatar: new AvatarVO('face-01', 'khaki') },
+      {
+        underEighteen: false,
+        nickname,
+        identity: `Test${nickname}Identity`,
+        avatar: new AvatarVO('face-01', 'khaki'),
+      },
       new FixedIdGenerator(nickname),
     ),
   );
@@ -137,6 +142,7 @@ describe('Game, by rounds', () => {
       const players = EVERYONE.map((nickname) =>
         Player.create(
           {
+            underEighteen: false,
             nickname,
             identity: `Test${nickname}Identity`,
             avatar: new AvatarVO('face-01', 'khaki'),

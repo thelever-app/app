@@ -17,6 +17,7 @@ function minutesLater(minutes: number): Date {
 function roomOfTwo(): Room {
   const room = Room.create(
     {
+      hostUnderEighteen: false,
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -30,6 +31,7 @@ function roomOfTwo(): Room {
   );
   room.join(
     {
+      underEighteen: false,
       nickname: 'Luis',
       identity: 'TestLuisIdentity',
       avatar: room.suggestAvatar(new FixedRandomness()),
@@ -191,6 +193,7 @@ describe('Room, closing', () => {
       expect(() =>
         room.join(
           {
+            underEighteen: false,
             nickname: 'Pedro',
             identity: 'TestPedroIdentity',
             avatar: new AvatarVO('face-04', 'teal'),
@@ -210,7 +213,12 @@ describe('Room, closing', () => {
       // Act & Assert
       expect(() =>
         room.join(
-          { nickname: luis.nickname, identity: luis.identity, avatar: luis.avatar },
+          {
+            underEighteen: false,
+            nickname: luis.nickname,
+            identity: luis.identity,
+            avatar: luis.avatar,
+          },
           new FixedIdGenerator('Luis'),
           minutesLater(20),
         ),

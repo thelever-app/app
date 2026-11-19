@@ -1,3 +1,8 @@
+import {
+  InMemorySealProvider,
+  SEAL_BEFORE_FIRST_ACCESS,
+} from '../../../adapters/in-memory/in-memory-seal-provider.ts';
+import { AdultsOnlyRoomError } from '../../../domain/errors/adults-only-room.error.ts';
 import { describe, expect, it } from 'vitest';
 import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
 import { RoomNotFoundError } from '../../errors/room-not-found.error.ts';
@@ -32,11 +37,17 @@ async function arrangeGame() {
   return { ...game, notifier, joinRoom: joinRoomOf(game, notifier) };
 }
 
+/** Pablo declared an age that makes him 17. */
+const SEALS = new Map([
+  ['TestPabloIdentity', { ...SEAL_BEFORE_FIRST_ACCESS, underEighteen: true }],
+]);
+
 function joinRoomOf(
   ports: Awaited<ReturnType<typeof lobbyOfThree>>,
   notifier: InMemoryPlayerNotifier,
 ): JoinRoomUseCase {
   return new JoinRoomUseCase({
+    sealProvider: new InMemorySealProvider(SEALS),
     roomRepository: ports.roomRepository,
     gameRepository: ports.gameRepository,
     notifier,
@@ -61,6 +72,29 @@ describe('JoinRoomUseCase', () => {
       expect(pablo?.nickname).toBe('Pablo');
       expect(pablo?.avatar).toMatchObject(PABLO.avatar);
       expect(joinedLate).toBe(false);
+    });
+
+    it('should keep that the player is under 18, as their seal says', async () => {
+      // Arrange
+      const { joinRoom, roomRepository, roomId } = await arrange();
+
+      // Act
+      const { playerId } = await joinRoom.execute({ roomId, ...PABLO });
+
+      // Assert
+      const room = await roomRepository.findById(roomId);
+      expect(room?.players.find(({ id }) => id === playerId)?.underEighteen).toBe(true);
+    });
+
+    it('should not let a player under 18 into a room for adults', async () => {
+      // Arrange
+      const { joinRoom, roomRepository, roomId } = await arrange();
+      const room = await roomRepository.findById(roomId);
+      room!.changeSettings(room!.host.id, { adultsOnly: true });
+      await roomRepository.save(room!);
+
+      // Act & Assert
+      await expect(joinRoom.execute({ roomId, ...PABLO })).rejects.toThrow(AdultsOnlyRoomError);
     });
 
     it('should let a player take the avatar of someone with another nickname', async () => {
@@ -154,6 +188,7 @@ describe('JoinRoomUseCase', () => {
       const room = await roomRepository.findById(roomId);
       const pablo = room!.join(
         {
+          underEighteen: false,
           nickname: PABLO.nickname,
           identity: PABLO.identity,
           avatar: new AvatarVO(PABLO.avatar.face, PABLO.avatar.color),

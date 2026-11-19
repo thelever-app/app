@@ -1,3 +1,4 @@
+import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { ChangeRoomSettingsUseCase } from '../../use-cases/change-room-settings.use-case.ts';
 import { CreateRoomUseCase } from '../../use-cases/create-room.use-case.ts';
 import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
@@ -38,6 +39,7 @@ export async function lobbyOfThree(
   const randomness = new SequentialRandomness();
   const clock = new ManualClock();
   const joinRoom = new JoinRoomUseCase({
+    sealProvider: new InMemorySealProvider(),
     roomRepository,
     gameRepository,
     notifier,
@@ -52,6 +54,7 @@ export async function lobbyOfThree(
     idGenerator,
     randomness,
     clock,
+    new InMemorySealProvider(),
   ).execute({
     hostNickname: 'Ana',
     hostIdentity: 'TestAnaIdentity',

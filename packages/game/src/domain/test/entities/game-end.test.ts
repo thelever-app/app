@@ -40,7 +40,12 @@ function gameOf(
 ): Game {
   const players = nicknames.map((nickname) =>
     Player.create(
-      { nickname, identity: `Test${nickname}Identity`, avatar: new AvatarVO('face-01', 'khaki') },
+      {
+        underEighteen: false,
+        nickname,
+        identity: `Test${nickname}Identity`,
+        avatar: new AvatarVO('face-01', 'khaki'),
+      },
       new FixedIdGenerator(nickname),
     ),
   );

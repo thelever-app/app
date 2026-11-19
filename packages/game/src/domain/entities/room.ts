@@ -12,6 +12,7 @@ import { NotHostError } from '../errors/not-host.error.ts';
 import { PlayerExpelledError } from '../errors/player-expelled.error.ts';
 import { PlayerNotInRoomError } from '../errors/player-not-in-room.error.ts';
 import { RoomClosedError } from '../errors/room-closed.error.ts';
+import { AdultsOnlyRoomError } from '../errors/adults-only-room.error.ts';
 import { RoomFullError } from '../errors/room-full.error.ts';
 import { RoundNotForPlayersError } from '../errors/round-not-for-players.error.ts';
 import { RoundNotFoundError } from '../errors/round-not-found.error.ts';
@@ -132,6 +133,8 @@ export interface CreateRoomProps {
   readonly firstRoundDilemma?: LobbyDilemma;
   /** The dilemmas the device of the host says they played. */
   readonly hostPlayedDilemmaIds?: readonly string[];
+  /** Whether the host is under 18, by the age they declared. */
+  readonly hostUnderEighteen: boolean;
 }
 
 export class Room {
@@ -192,6 +195,7 @@ export class Room {
         identity: props.hostIdentity,
         avatar: props.hostAvatar,
         playedDilemmaIds: props.hostPlayedDilemmaIds ?? [],
+        underEighteen: props.hostUnderEighteen,
       },
       idGenerator,
     );
@@ -285,7 +289,8 @@ export class Room {
   /**
    * A new player joins with the avatar they chose and the dilemmas their device says they played.
    * Whoever is already in the room gets their player back, with what their device says now, so
-   * joining twice changes nothing else. Nobody joins a closed room, not even who was in it.
+   * joining twice changes nothing else. Nobody joins a closed room, not even who was in it, and
+   * nobody under 18 joins a room for adults.
    */
   join(
     {
@@ -293,11 +298,13 @@ export class Room {
       identity,
       avatar,
       playedDilemmaIds = [],
+      underEighteen,
     }: {
       readonly nickname: string;
       readonly identity: string;
       readonly avatar: AvatarVO;
       readonly playedDilemmaIds?: readonly string[];
+      readonly underEighteen: boolean;
     },
     idGenerator: IdGenerator,
     at: Date,
@@ -315,10 +322,14 @@ export class Room {
     }
     if (this.#expelledIdentities.has(identity)) throw new PlayerExpelledError(this.id);
     if (this.#players.length >= MAXIMUM_PLAYERS) throw new RoomFullError(this.id);
+    if (underEighteen && this.#settings.adultsOnly) throw new AdultsOnlyRoomError(this.id);
 
     this.#ensureNobodyLooksTheSame(new NicknameVO(nickname), avatar);
 
-    const player = Player.create({ nickname, identity, avatar, playedDilemmaIds }, idGenerator);
+    const player = Player.create(
+      { nickname, identity, avatar, playedDilemmaIds, underEighteen },
+      idGenerator,
+    );
     this.#players.push(player);
     this.#changeLobby('player-joined');
     return player;

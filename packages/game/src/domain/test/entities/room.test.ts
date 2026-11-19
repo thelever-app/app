@@ -15,6 +15,7 @@ import { NotChooserError } from '../../errors/not-chooser.error.ts';
 import { NotHostError } from '../../errors/not-host.error.ts';
 import { PlayerExpelledError } from '../../errors/player-expelled.error.ts';
 import { PlayerNotInRoomError } from '../../errors/player-not-in-room.error.ts';
+import { AdultsOnlyRoomError } from '../../errors/adults-only-room.error.ts';
 import { RoomFullError } from '../../errors/room-full.error.ts';
 import { RoundNotForPlayersError } from '../../errors/round-not-for-players.error.ts';
 import { RoundNotFoundError } from '../../errors/round-not-found.error.ts';
@@ -29,10 +30,12 @@ import { FixedRandomness } from '../support/fixed-randomness.ts';
 const NOW = new Date('2026-11-12T10:00:00Z');
 
 const ANA_AVATAR = new AvatarVO('face-01', 'khaki');
+const LUIS_AVATAR = new AvatarVO('face-02', 'rust');
 
 function roomHostedByAna(): Room {
   return Room.create(
     {
+      hostUnderEighteen: false,
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: ANA_AVATAR,
@@ -57,7 +60,7 @@ function join(
   avatar = room.suggestAvatar(new FixedRandomness()),
 ): void {
   room.join(
-    { nickname, identity: id.replace(/Id$/, 'Identity'), avatar },
+    { underEighteen: false, nickname, identity: id.replace(/Id$/, 'Identity'), avatar },
     new FixedIdGenerator(id),
     NOW,
   );
@@ -137,6 +140,7 @@ function roomStartingWith(firstRoundDilemma: {
 }): Room {
   return Room.create(
     {
+      hostUnderEighteen: false,
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: ANA_AVATAR,
@@ -202,6 +206,7 @@ describe('Room', () => {
       expect(() =>
         Room.create(
           {
+            hostUnderEighteen: false,
             hostNickname: 'Ana',
             hostIdentity: 'TestAnaIdentity',
             hostAvatar: ANA_AVATAR,
@@ -222,6 +227,7 @@ describe('Room', () => {
       expect(() =>
         Room.create(
           {
+            hostUnderEighteen: false,
             hostNickname: 'Ana',
             hostIdentity: 'TestAnaIdentity',
             hostAvatar: ANA_AVATAR,
@@ -330,7 +336,12 @@ describe('Room', () => {
 
       // Act
       const player = room.join(
-        { nickname: 'Luis again', identity: 'TestLuisIdentity', avatar: ANA_AVATAR },
+        {
+          underEighteen: false,
+          nickname: 'Luis again',
+          identity: 'TestLuisIdentity',
+          avatar: ANA_AVATAR,
+        },
         new FixedIdGenerator('TestOtherId'),
         NOW,
       );
@@ -363,6 +374,31 @@ describe('Room', () => {
       expect(() => join(room, 'TestLateId', 'Late')).toThrow(RoomFullError);
     });
 
+    it('should not let anyone under 18 into a room for adults', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      room.changeSettings('TestHostId', { adultsOnly: true });
+      const luis = { nickname: 'Luis', identity: 'TestLuisIdentity', avatar: LUIS_AVATAR };
+
+      // Act & Assert
+      expect(() =>
+        room.join({ ...luis, underEighteen: true }, new FixedIdGenerator('TestLuisId'), NOW),
+      ).toThrow(AdultsOnlyRoomError);
+      expect(room.players).toHaveLength(1);
+    });
+
+    it('should let anyone under 18 into a room that is not for adults', () => {
+      // Arrange
+      const room = roomHostedByAna();
+      const luis = { nickname: 'Luis', identity: 'TestLuisIdentity', avatar: LUIS_AVATAR };
+
+      // Act
+      room.join({ ...luis, underEighteen: true }, new FixedIdGenerator('TestLuisId'), NOW);
+
+      // Assert
+      expect(room.playerWith('TestLuisIdentity')?.underEighteen).toBe(true);
+    });
+
     it('should throw an error if the player was expelled from the game the lobby is getting ready', () => {
       // Arrange
       const room = lobbyOfThree();
@@ -378,6 +414,7 @@ describe('Room', () => {
       // Arrange: Ana wears the first avatar, so the free ones start at the second.
       const room = Room.create(
         {
+          hostUnderEighteen: false,
           hostNickname: 'Ana',
           hostIdentity: 'TestAnaIdentity',
           hostAvatar: AvatarVO.all()[0] as AvatarVO,
@@ -876,6 +913,7 @@ describe('Room', () => {
       const room = roomHostedByAna();
       room.join(
         {
+          underEighteen: false,
           nickname: 'Luis',
           identity: 'TestLuisIdentity',
           avatar: new AvatarVO('face-02', 'khaki'),
@@ -886,6 +924,7 @@ describe('Room', () => {
       );
       room.join(
         {
+          underEighteen: false,
           nickname: 'Marta',
           identity: 'TestMartaIdentity',
           avatar: new AvatarVO('face-03', 'khaki'),
@@ -898,6 +937,7 @@ describe('Room', () => {
       // Act
       room.join(
         {
+          underEighteen: false,
           nickname: 'Luis',
           identity: 'TestLuisIdentity',
           avatar: new AvatarVO('face-02', 'khaki'),

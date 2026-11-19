@@ -57,6 +57,7 @@ export function describeGameRepositoryContract(
     const { games, rooms, dilemmas } = await create();
     const room = Room.create(
       {
+        hostUnderEighteen: false,
         hostNickname: 'Ana',
         hostIdentity: 'TestAnaIdentity',
         hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -70,6 +71,7 @@ export function describeGameRepositoryContract(
     );
     room.join(
       {
+        underEighteen: false,
         nickname: 'Luis',
         identity: 'TestLuisIdentity',
         avatar: room.suggestAvatar(new FixedRandomness()),
@@ -128,6 +130,7 @@ export function describeGameRepositoryContract(
         await games.save(game);
         const other = Room.create(
           {
+            hostUnderEighteen: false,
             hostNickname: 'Eva',
             hostIdentity: 'TestEvaIdentity',
             hostAvatar: new AvatarVO('face-02', 'teal'),
@@ -332,6 +335,7 @@ export function describeGameRepositoryContract(
         game.reveal('time', STARTED_AT);
         room.join(
           {
+            underEighteen: false,
             nickname: 'Marta',
             identity: 'TestMartaIdentity',
             avatar: room.suggestAvatar(new FixedRandomness()),
