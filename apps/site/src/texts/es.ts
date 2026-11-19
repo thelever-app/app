@@ -1,3 +1,4 @@
+import { appPrivacy, terms } from './legal/es.ts';
 import type { SiteTexts } from './site-texts.ts';
 
 const UPDATED = '17 de noviembre de 2026';
@@ -325,4 +326,6 @@ export const es: SiteTexts = {
       },
     ],
   },
+  terms,
+  appPrivacy,
 };
