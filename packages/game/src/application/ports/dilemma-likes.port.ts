@@ -19,5 +19,7 @@ export interface DilemmaLike {
 export interface DilemmaLikes {
   /** Keeps it once; a like the identity gave to that dilemma from the catalog weighs as one of a game. */
   like(like: DilemmaLike): Promise<void>;
+  /** Takes back the like the identity gave to that dilemma, wherever it gave it; none, nothing. */
+  unlike(identity: string, dilemmaId: string): Promise<void>;
   hasLiked(identity: string, dilemmaId: string): Promise<boolean>;
 }
