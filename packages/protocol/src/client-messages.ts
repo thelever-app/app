@@ -13,7 +13,7 @@ import { z } from 'zod';
  * how many votes they guessed. 11 since the end of the game: the results of a nominal room screen
  * by screen with their titles, reactions, likes, the cards and the rematch.
  */
-export const CONTRACT_VERSION = 11;
+export const CONTRACT_VERSION = 12;
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a
@@ -220,6 +220,13 @@ export const LikeDilemmaDto = z.strictObject({
   traceparent: TraceparentDto.optional(),
 });
 
+/** In the reveal of a round, the player takes back the «Buen dilema» they gave to its dilemma. */
+export const UnlikeDilemmaDto = z.strictObject({
+  type: z.literal('unlike-dilemma'),
+  position: z.number().int().nonnegative(),
+  traceparent: TraceparentDto.optional(),
+});
+
 /** Once the game has ended, the host takes who is still in the room to the lobby of a new one. */
 export const StartRematchDto = z.strictObject({
   type: z.literal('start-rematch'),
@@ -314,6 +321,7 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   SkipDilemmaDto,
   ReactDto,
   LikeDilemmaDto,
+  UnlikeDilemmaDto,
   StartRematchDto,
 ]);
 
@@ -334,6 +342,7 @@ export const ClientMessageTypeDto = z.enum([
   'skip-dilemma',
   'react',
   'like-dilemma',
+  'unlike-dilemma',
   'start-rematch',
 ]);
 
@@ -364,6 +373,7 @@ export type ReportDilemmaDto = z.infer<typeof ReportDilemmaDto>;
 export type SkipDilemmaDto = z.infer<typeof SkipDilemmaDto>;
 export type ReactDto = z.infer<typeof ReactDto>;
 export type LikeDilemmaDto = z.infer<typeof LikeDilemmaDto>;
+export type UnlikeDilemmaDto = z.infer<typeof UnlikeDilemmaDto>;
 export type StartRematchDto = z.infer<typeof StartRematchDto>;
 export type ClientMessageDto = z.infer<typeof ClientMessageDto>;
 export type ClientMessageTypeDto = z.infer<typeof ClientMessageTypeDto>;
