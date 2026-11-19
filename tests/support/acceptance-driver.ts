@@ -766,7 +766,7 @@ export class AcceptanceDriver implements GameDriver {
     return device;
   }
 
-  /** Whether the age was taken: without the month in a boundary year, the screen asks for it. */
+  /** Whether the age was taken: without the month of who may be under 18, the screen asks for it. */
   async #declareBirth(user: string, birthYear: number, birthMonth?: number): Promise<boolean> {
     const { identity } = this.#playerCalled(user);
     try {

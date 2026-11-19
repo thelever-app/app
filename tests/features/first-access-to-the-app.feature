@@ -108,7 +108,7 @@ Feature: First access to the app
       | in the rest of the world | 18  | is shown the terms of use            |
 
   @ui
-  Scenario Outline: The month of birth is asked in a boundary year
+  Scenario Outline: The month of birth is asked of whoever may be under 18
     Given a device <region> that has never used TheLever
     When the user opens the app
     And chooses the year of birth of someone who turns <age> this year
@@ -116,8 +116,10 @@ Feature: First access to the app
 
     Examples:
       | region                   | age |
+      | in the EEA               | 15  |
       | in the EEA               | 16  |
       | in the EEA               | 18  |
+      | in the rest of the world | 17  |
       | in the rest of the world | 18  |
 
   @ui
