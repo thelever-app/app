@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App.tsx';
 import { fakeRoomApi, renderAtRoute } from './support/routing.tsx';
@@ -9,7 +9,7 @@ describe('App', () => {
     const { t } = await renderAtRoute(<App />, { at: '/app' });
 
     // Assert
-    expect(screen.getByRole('heading', { name: t('home.title') })).toBeDefined();
+    expect(await screen.findByRole('heading', { name: t('home.title') })).toBeDefined();
   });
 
   it('should show the room of the code in the address before joining', async () => {
@@ -41,6 +41,6 @@ describe('App', () => {
     const { location } = await renderAtRoute(<App />, { at: '/games/old-game-id' });
 
     // Assert
-    expect(location()).toBe('/app');
+    await waitFor(() => expect(location()).toBe('/app'));
   });
 });

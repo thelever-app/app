@@ -15,6 +15,11 @@ export interface WebConfig {
   readonly authEmulatorUrl?: string;
   /** The reCAPTCHA key App Check proves the app with, in dev and prod; none locally. */
   readonly appCheckSiteKey?: string;
+  /**
+   * The AdSense publisher of the environment (ca-pub-…), whose cookie manager of Google the first
+   * access shows; without it, as locally, there are no cookies to ask about.
+   */
+  readonly adsenseClient?: string;
 }
 
 const FIREBASE_KEYS = ['apiKey', 'authDomain', 'projectId', 'appId'] as const;
@@ -39,7 +44,15 @@ export async function loadWebConfig(fetchConfig: typeof fetch = fetch): Promise<
     ...(raw.appCheckSiteKey === undefined
       ? {}
       : { appCheckSiteKey: nonEmpty(raw.appCheckSiteKey, 'appCheckSiteKey') }),
+    ...(raw.adsenseClient === undefined ? {} : { adsenseClient: publisher(raw.adsenseClient) }),
   };
+}
+
+function publisher(value: unknown): string {
+  if (typeof value !== 'string' || !/^ca-pub-\d+$/.test(value)) {
+    throw new Error('/config.json has no valid adsenseClient');
+  }
+  return value;
 }
 
 function nonEmpty(value: unknown, name: string): string {

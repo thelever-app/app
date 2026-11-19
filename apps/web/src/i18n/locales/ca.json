@@ -348,7 +348,9 @@
     "dilemmas-missing": "No hi ha dilemes per a aquesta configuració. Prova amb altres categories.",
     "nickname-and-avatar-taken": "Algú que es diu com tu ja porta aquest avatar. Tria’n un altre.",
     "round-taken": "Un altre jugador acaba de triar el dilema d’aquesta ronda.",
-    "duplicate-dilemma": "Aquest dilema ja és en una altra ronda."
+    "duplicate-dilemma": "Aquest dilema ja és en una altra ronda.",
+    "first-access-required": "Abans de jugar, acaba la primera entrada.",
+    "adults-only-room": "Aquesta sala és només per a majors de 18 anys."
   },
   "home": {
     "title": "Juguem?",
@@ -405,6 +407,11 @@
       "title": "Aquesta sala ja no existeix",
       "text": "S’ha tancat. Si el grup continua jugant, demana que et passin el codi nou.",
       "action": "Tornar a l’inici"
+    },
+    "adults-only-room": {
+      "title": "Aquesta sala té dilemes +18",
+      "text": "Només hi poden entrar majors de 18 anys.",
+      "action": "Torna a l’inici"
     }
   },
   "lobby": {
@@ -704,5 +711,120 @@
     "footer": "Juga a thelever.app",
     "showNames": "Mostrar els sobrenoms de {{names}}",
     "groupNote": "Sense noms ni vots."
+  },
+  "firstAccess": {
+    "loading": "Carregant…",
+    "retry": "Torna-ho a provar",
+    "stepOf": "Pas {{step}} de {{total}}",
+    "continue": "Continua",
+    "decline": "No ho accepto",
+    "welcome": {
+      "tagline": "Dilemes morals per jugar en grup",
+      "text": "Votes en privat, endevines els altres i descobriu junts qui pensa què.",
+      "start": "Comença",
+      "join": "Uneix-te a la partida",
+      "invite": "{{host}} et convida a jugar"
+    },
+    "age": {
+      "title": "En quin any vas néixer?",
+      "lead": "Serveix per mostrar-te dilemes, sales i anuncis adequats a la teva edat.",
+      "year": "Any de naixement",
+      "chooseYear": "Tria un any",
+      "month": "I en quin mes?",
+      "chooseMonth": "Tria un mes"
+    },
+    "underage": {
+      "title": "Encara no pots fer servir TheLever",
+      "text": "Els seus dilemes tracten temes pensats per a persones més grans. Aquí serem quan arribi el moment."
+    },
+    "country": {
+      "title": "TheLever encara no està disponible al teu país",
+      "text": "Les normes sobre dades i jocs canvien d’un país a un altre, i encara no el podem oferir on ets.",
+      "contact": "Creus que és un error? Escriu-nos"
+    },
+    "consent": {
+      "title": "Abans de jugar: què passa amb els teus vots",
+      "points": {
+        "play": {
+          "title": "Només per jugar.",
+          "text": "Fem servir els teus vots, prediccions i reaccions per jugar, en grup o sol, i veure el resultat."
+        },
+        "notSold": {
+          "title": "No els venem ni els fem servir per a anuncis.",
+          "text": "Amb aquest permís no els donem a ningú, ni els fem servir per perfilar-te ni per investigar."
+        },
+        "group": {
+          "title": "Només els veu el teu grup,",
+          "text": "a la revelació de cada dilema. En una sala anònima, ni això: només el repartiment, sense noms."
+        },
+        "deleted": {
+          "title": "S’esborren en 24 hores",
+          "text": "des que es tanca la sala. Només queda el teu historial, al mòbil, fins que l’esborris."
+        },
+        "decide": {
+          "title": "Tu decideixes.",
+          "text": "Per jugar no et cal nom ni correu, i pots retirar aquest permís escrivint a privacidad@thelever.app."
+        }
+      },
+      "privacy": "Llegeix la política de privadesa",
+      "funding": "Com es finança TheLever",
+      "why": "<strong>Per què t’ho demanem a part:</strong> un vot sobre un dilema pot mostrar el que penses o alguna cosa de la teva vida privada, i la llei de protecció de dades (RGPD) exigeix un permís exprés per a això.",
+      "terms": "He llegit i accepto les <terms>condicions d’ús</terms>.",
+      "statement": "Dono el meu consentiment explícit perquè TheLever tracti els meus vots, prediccions i reaccions, i el que altres prediuen o reaccionen sobre mi, només per jugar i com s’explica a dalt. Sé que poden mostrar les meves conviccions o alguna cosa de la meva vida privada i que puc retirar aquest consentiment quan vulgui.",
+      "checkBoth": "Marca les dues caselles per continuar.",
+      "checkOne": "Marca la casella per continuar.",
+      "declined": "<strong>Sense això no es pot jugar:</strong> els teus vots i prediccions són el joc.",
+      "changed": "<strong>Hem canviat el permís del joc.</strong> Llegeix-lo i torna’l a donar per continuar jugant."
+    },
+    "newTerms": {
+      "title": "Hem canviat les condicions d’ús",
+      "lead": "Per continuar jugant, llegeix-les i accepta-les.",
+      "read": "Llegeix les condicions",
+      "check": "He llegit i accepto les noves condicions d’ús.",
+      "accept": "Accepto i continuo",
+      "declined": "<strong>Sense acceptar-les no es pot jugar.</strong> Les pots acceptar quan vulguis."
+    },
+    "funding": {
+      "title": "Com es finança",
+      "close": "Tanca",
+      "lead": "TheLever és gratis. Es paga així:",
+      "ads": {
+        "title": "Anuncis.",
+        "text": "Mai mentre votes, i mai reben res del que votes."
+      },
+      "research": {
+        "title": "Més endavant, potser investigació.",
+        "text": "Si algun dia volem fer servir partides per investigar, et demanarem permís a part. Si dius que no, jugues igual."
+      }
+    },
+    "cookies": {
+      "title": "Galetes i anuncis",
+      "text": "Res del que respons als dilemes es fa servir per a anuncis.",
+      "globalPrivacyControl": "El teu navegador envia el senyal Global Privacy Control, així que els teus anuncis no es personalitzaran."
+    }
+  },
+  "anonymousNotice": {
+    "label": "Sala anònima",
+    "title": "Ningú del grup sabrà què votes",
+    "hidden": {
+      "title": "El grup no veurà els teus vots.",
+      "text": "Només quants han respost i, a la revelació, quants han triat cada opció."
+    },
+    "deleted": {
+      "title": "Els teus vots només serveixen per jugar:",
+      "text": "s’esborren abans de 24 hores des que es tanca la sala, llevat del teu historial."
+    },
+    "predict": {
+      "title": "Votes i prediu el repartiment.",
+      "text": "Com més t’hi acostis, més punts sumes."
+    },
+    "start": "Entesos, comença"
+  },
+  "installOffer": {
+    "title": "Tingues TheLever a mà",
+    "android": "Afegeix-la a la pantalla d’inici i obre-la com una app més.",
+    "ios": "Toca Comparteix i després «Afegeix a la pantalla d’inici».",
+    "install": "Instal·la",
+    "close": "Tanca l’avís"
   }
 }

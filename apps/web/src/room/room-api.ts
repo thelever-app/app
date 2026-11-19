@@ -1,10 +1,12 @@
 import {
+  type AcceptDocumentRequestDto,
   type AvatarDto,
   type CreateRoomRequestDto,
   type CategoryDto,
   CreateRoomResponseDto,
   DilemmaPreviewResponseDto,
   type ErrorCodeDto,
+  FirstAccessResponseDto,
   HttpErrorDto,
   JoinRoomResponseDto,
   RoomPreviewResponseDto,
@@ -27,6 +29,15 @@ export class RoomApiError extends Error {
 
 /** What a player does with the rooms before entering one, and searching once in it. */
 export interface RoomApi {
+  /** Opens the app: the first time, it begins the first access; it says where it is. */
+  openApp(): Promise<FirstAccessResponseDto>;
+  /** Once and for good; the month only in a boundary year, month-of-birth-needed without it there. */
+  declareAge(birthYear: number, birthMonth?: number): Promise<FirstAccessResponseDto>;
+  /** Accepts the terms of use, or gives the game consent, in the version the app showed. */
+  acceptDocument(
+    document: AcceptDocumentRequestDto['document'],
+    version: number,
+  ): Promise<FirstAccessResponseDto>;
   createRoom(request: CreateRoomRequestDto): Promise<CreateRoomResponseDto>;
   /** The room of a code, as the player typed it or as the link carries it. */
   previewRoom(code: string): Promise<RoomPreviewResponseDto>;
@@ -123,6 +134,14 @@ export function httpRoomApi({
   }
 
   return {
+    openApp: () => call('GET', '/first-access', FirstAccessResponseDto),
+    declareAge: (birthYear, birthMonth) =>
+      call('POST', '/first-access/age', FirstAccessResponseDto, {
+        birthYear,
+        ...(birthMonth !== undefined && { birthMonth }),
+      }),
+    acceptDocument: (document, version) =>
+      call('POST', '/first-access/documents', FirstAccessResponseDto, { document, version }),
     createRoom: (request) => call('POST', '/rooms', CreateRoomResponseDto, request),
     previewRoom: (code) =>
       call('GET', `/rooms/by-code/${encodeURIComponent(code)}`, RoomPreviewResponseDto),
