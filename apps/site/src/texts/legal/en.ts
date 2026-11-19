@@ -114,7 +114,7 @@ export const appPrivacy: OwnPage = {
         '- To vote a dilemma of the website alone, with the same consent: your vote adds to the world result without us keeping what you voted, and only a mark that you already voted that dilemma is kept, so it does not count twice.',
         '- Not to repeat dilemmas, with the same consent: your phone keeps the list of dilemmas you have played, without your votes, and sends it when you join a room, which only uses it to put the games together and deletes it with the room.',
         '- To recognise you, under the terms of use (art. 6.1.b): an anonymous identifier of your device and when you last opened the app.',
-        '- To comply with the law on age (art. 6.1.c): your year of birth and, only in some cases, the month; and your region (European Economic Area, rest of the world or a country where TheLever is not available), which we work out from your IP address with a database on our own server, IP Geolocation by DB-IP (db-ip.com, CC BY 4.0 licence). TheLever does not keep your IP; our sign-in provider, Firebase Authentication (Google), logs it for a few weeks for security.',
+        '- To comply with the law on age (art. 6.1.c): your year of birth and, if you turn 18 this year or later, the month; and your region (European Economic Area, rest of the world or a country where TheLever is not available), which we work out from your IP address with a database on our own server, IP Geolocation by DB-IP (db-ip.com, CC BY 4.0 licence). TheLever does not keep your IP; our sign-in provider, Firebase Authentication (Google), logs it for a few weeks for security.',
         '- To be able to prove what you accepted (art. 6.1.c and 7.1): which version of the terms and of the consent you accepted and when.',
         '- For the ads, with your consent (art. 6.1.a GDPR and art. 22.2 LSSI): the cookies and identifiers of the ad network, according to what you choose in Google’s cookie manager.',
         '- To moderate (legal obligation under the Digital Services Act and legitimate interest in a safe service, art. 6.1.c and 6.1.f): the dilemma you report, the reason and your comment, without telling anyone in the group that you reported it.',
@@ -131,7 +131,7 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Minors',
       paragraphs: [
-        'To play you must be at least 16 in the European Economic Area and 18 in the rest of the world. Players aged 16 and 17 only play dilemmas suited to their age, cannot join rooms with 18+ dilemmas and their ads are never personalised. If we learn that someone is under the minimum age, we delete their data.',
+        'To play you must be at least 16 in the European Economic Area and 18 in the rest of the world. Players aged 16 and 17 only play dilemmas suited to their age, cannot join rooms with 18+ dilemmas and their ads are never personalised. If the age you declare is under the minimum, we only keep your year of birth, the month if you gave it, your region and when you last opened the app, so that you cannot play on that device, and we delete it after 24 months without opening the app. If we learn in some other way that someone is under the minimum age, we delete their data.',
       ],
     },
     {

@@ -115,7 +115,7 @@ export const appPrivacy: OwnPage = {
         '- Para votar sozinho um dilema do site, com o mesmo consentimento: o teu voto soma ao resultado mundial sem que guardemos o que votaste, e fica só uma marca de que já votaste esse dilema, para não contar duas vezes.',
         '- Para não te repetirmos dilemas, com o mesmo consentimento: o teu telemóvel guarda a lista de dilemas que jogaste, sem os teus votos, e envia-a ao entrares numa sala, que só a usa para preparar os jogos e a apaga com a sala.',
         '- Para te reconhecer, pelas condições de utilização (art. 6.1.b): um identificador anónimo do teu dispositivo e quando abriste a app pela última vez.',
-        '- Para cumprir a lei sobre a idade (art. 6.1.c): o teu ano de nascimento e, só em alguns casos, o mês; e a tua região (Espaço Económico Europeu, resto do mundo ou país onde o TheLever não está disponível), que deduzimos do teu endereço IP com uma base de dados no nosso próprio servidor, IP Geolocation by DB-IP (db-ip.com, licença CC BY 4.0). O TheLever não guarda o teu IP; o nosso fornecedor de acesso, o Firebase Authentication (Google), regista-o durante algumas semanas por segurança.',
+        '- Para cumprir a lei sobre a idade (art. 6.1.c): o teu ano de nascimento e, se fazes 18 anos este ano ou mais tarde, o mês; e a tua região (Espaço Económico Europeu, resto do mundo ou país onde o TheLever não está disponível), que deduzimos do teu endereço IP com uma base de dados no nosso próprio servidor, IP Geolocation by DB-IP (db-ip.com, licença CC BY 4.0). O TheLever não guarda o teu IP; o nosso fornecedor de acesso, o Firebase Authentication (Google), regista-o durante algumas semanas por segurança.',
         '- Para podermos provar o que aceitaste (art. 6.1.c e 7.1): que versão das condições e do consentimento aceitaste e quando.',
         '- Para os anúncios, com o teu consentimento (art. 6.1.a RGPD e art. 22.2 LSSI): os cookies e identificadores da rede publicitária, conforme o que escolheres no gestor de cookies da Google.',
         '- Para moderar (obrigação legal do Regulamento dos Serviços Digitais e interesse legítimo num serviço seguro, art. 6.1.c e 6.1.f): o dilema que denuncias, o motivo e o teu comentário, sem dizer a ninguém do grupo que o denunciaste.',
@@ -132,7 +132,7 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Menores',
       paragraphs: [
-        'Para jogar é preciso ter pelo menos 16 anos no Espaço Económico Europeu e 18 no resto do mundo. Os jogadores de 16 e 17 anos só jogam dilemas adequados à sua idade, não entram em salas com dilemas +18 e os seus anúncios nunca são personalizados. Se soubermos que alguém não tem a idade mínima, apagamos os seus dados.',
+        'Para jogar é preciso ter pelo menos 16 anos no Espaço Económico Europeu e 18 no resto do mundo. Os jogadores de 16 e 17 anos só jogam dilemas adequados à sua idade, não entram em salas com dilemas +18 e os seus anúncios nunca são personalizados. Se a idade que declaras não chega à mínima, só guardamos o teu ano de nascimento, o mês se o indicaste, a tua região e quando abriste a app pela última vez, para que não possas jogar nesse dispositivo, e apagamo-los após 24 meses sem abrir a app. Se soubermos por outra via que alguém não tem a idade mínima, apagamos os seus dados.',
       ],
     },
     {

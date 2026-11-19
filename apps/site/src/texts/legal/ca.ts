@@ -115,7 +115,7 @@ export const appPrivacy: OwnPage = {
         '- Per votar sol un dilema de la web, amb el mateix consentiment: el teu vot suma al resultat mundial sense que guardem què vas votar, i només queda una marca que ja vas votar aquest dilema, perquè no compti dues vegades.',
         '- Per no repetir-te dilemes, amb el mateix consentiment: el teu mòbil guarda la llista de dilemes que has jugat, sense els teus vots, i l’envia en entrar en una sala, que només la fa servir per preparar les partides i l’esborra amb la sala.',
         '- Per reconèixer-te, per les condicions d’ús (art. 6.1.b): un identificador anònim del teu dispositiu i quan vas obrir l’app per última vegada.',
-        '- Per complir la llei sobre l’edat (art. 6.1.c): el teu any de naixement i, només en alguns casos, el mes; i la teva regió (Espai Econòmic Europeu, resta del món o país on TheLever no està disponible), que deduïm de la teva adreça IP amb una base de dades al nostre propi servidor, IP Geolocation by DB-IP (db-ip.com, llicència CC BY 4.0). TheLever no guarda la teva IP; el nostre proveïdor d’accés, Firebase Authentication (Google), la registra unes setmanes per seguretat.',
+        '- Per complir la llei sobre l’edat (art. 6.1.c): el teu any de naixement i, si fas 18 anys aquest any o més endavant, el mes; i la teva regió (Espai Econòmic Europeu, resta del món o país on TheLever no està disponible), que deduïm de la teva adreça IP amb una base de dades al nostre propi servidor, IP Geolocation by DB-IP (db-ip.com, llicència CC BY 4.0). TheLever no guarda la teva IP; el nostre proveïdor d’accés, Firebase Authentication (Google), la registra unes setmanes per seguretat.',
         '- Per poder demostrar què vas acceptar (art. 6.1.c i 7.1): quina versió de les condicions i del consentiment vas acceptar i quan.',
         '- Per als anuncis, amb el teu consentiment (art. 6.1.a RGPD i art. 22.2 LSSI): les galetes i identificadors de la xarxa publicitària, segons el que triïs al gestor de galetes de Google.',
         '- Per moderar (obligació legal del Reglament de Serveis Digitals i interès legítim en un servei segur, art. 6.1.c i 6.1.f): el dilema que denuncies, el motiu i el teu comentari, sense dir a ningú del grup que l’has denunciat.',
@@ -132,7 +132,7 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Menors',
       paragraphs: [
-        'Per jugar cal tenir com a mínim 16 anys a l’Espai Econòmic Europeu i 18 a la resta del món. Els jugadors de 16 i 17 anys només juguen dilemes aptes per a la seva edat, no entren en sales amb dilemes +18 i els seus anuncis mai es personalitzen. Si sabem que algú no té l’edat mínima, esborrem les seves dades.',
+        'Per jugar cal tenir com a mínim 16 anys a l’Espai Econòmic Europeu i 18 a la resta del món. Els jugadors de 16 i 17 anys només juguen dilemes aptes per a la seva edat, no entren en sales amb dilemes +18 i els seus anuncis mai es personalitzen. Si l’edat que declares no arriba a la mínima, només guardem el teu any de naixement, el mes si el vas donar, la teva regió i quan vas obrir l’app per última vegada, perquè no puguis jugar en aquest dispositiu, i ho esborrem després de 24 mesos sense obrir l’app. Si sabem per una altra via que algú no té l’edat mínima, esborrem les seves dades.',
       ],
     },
     {

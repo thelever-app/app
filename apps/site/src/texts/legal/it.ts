@@ -115,7 +115,7 @@ export const appPrivacy: OwnPage = {
         '- Per votare da solo un dilemma del sito, con lo stesso consenso: il tuo voto si somma al risultato mondiale senza che conserviamo cosa hai votato, e resta solo un segno che hai già votato quel dilemma, perché non conti due volte.',
         '- Per non ripeterti i dilemmi, con lo stesso consenso: il tuo telefono conserva l’elenco dei dilemmi che hai giocato, senza i tuoi voti, e lo invia quando entri in una stanza, che lo usa solo per preparare le partite e lo cancella con la stanza.',
         '- Per riconoscerti, in base alle condizioni d’uso (art. 6.1.b): un identificativo anonimo del tuo dispositivo e quando hai aperto l’app l’ultima volta.',
-        '- Per rispettare la legge sull’età (art. 6.1.c): il tuo anno di nascita e, solo in alcuni casi, il mese; e la tua regione (Spazio economico europeo, resto del mondo o paese in cui TheLever non è disponibile), che deduciamo dal tuo indirizzo IP con un database sul nostro server, IP Geolocation by DB-IP (db-ip.com, licenza CC BY 4.0). TheLever non conserva il tuo IP; il nostro fornitore di accesso, Firebase Authentication (Google), lo registra per alcune settimane per sicurezza.',
+        '- Per rispettare la legge sull’età (art. 6.1.c): il tuo anno di nascita e, se compi 18 anni quest’anno o più avanti, il mese; e la tua regione (Spazio economico europeo, resto del mondo o paese in cui TheLever non è disponibile), che deduciamo dal tuo indirizzo IP con un database sul nostro server, IP Geolocation by DB-IP (db-ip.com, licenza CC BY 4.0). TheLever non conserva il tuo IP; il nostro fornitore di accesso, Firebase Authentication (Google), lo registra per alcune settimane per sicurezza.',
         '- Per poter dimostrare ciò che hai accettato (art. 6.1.c e 7.1): quale versione delle condizioni e del consenso hai accettato e quando.',
         '- Per la pubblicità, con il tuo consenso (art. 6.1.a GDPR e art. 22.2 LSSI): i cookie e gli identificativi della rete pubblicitaria, secondo ciò che scegli nel gestore dei cookie di Google.',
         '- Per moderare (obbligo legale del regolamento sui servizi digitali e interesse legittimo a un servizio sicuro, art. 6.1.c e 6.1.f): il dilemma che segnali, il motivo e il tuo commento, senza dire a nessuno del gruppo che l’hai segnalato.',
@@ -132,7 +132,7 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Minori',
       paragraphs: [
-        'Per giocare bisogna avere almeno 16 anni nello Spazio economico europeo e 18 nel resto del mondo. I giocatori di 16 e 17 anni giocano solo dilemmi adatti alla loro età, non entrano nelle stanze con dilemmi +18 e la loro pubblicità non è mai personalizzata. Se veniamo a sapere che qualcuno non ha l’età minima, cancelliamo i suoi dati.',
+        'Per giocare bisogna avere almeno 16 anni nello Spazio economico europeo e 18 nel resto del mondo. I giocatori di 16 e 17 anni giocano solo dilemmi adatti alla loro età, non entrano nelle stanze con dilemmi +18 e la loro pubblicità non è mai personalizzata. Se l’età che dichiari non raggiunge quella minima, conserviamo solo il tuo anno di nascita, il mese se l’hai indicato, la tua regione e quando hai aperto l’app l’ultima volta, perché tu non possa giocare su quel dispositivo, e li cancelliamo dopo 24 mesi senza aprire l’app. Se veniamo a sapere in un altro modo che qualcuno non ha l’età minima, cancelliamo i suoi dati.',
       ],
     },
     {
