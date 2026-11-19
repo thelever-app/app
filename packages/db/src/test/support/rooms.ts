@@ -23,6 +23,7 @@ export function roomOf(
   const randomness = new SequentialRandomness();
   const room = Room.create(
     {
+      hostUnderEighteen: false,
       hostNickname: host,
       hostIdentity: `Test${host}Identity`,
       hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -36,7 +37,12 @@ export function roomOf(
   );
   for (const guest of guests) {
     room.join(
-      { nickname: guest, identity: `Test${guest}Identity`, avatar: room.suggestAvatar(randomness) },
+      {
+        underEighteen: false,
+        nickname: guest,
+        identity: `Test${guest}Identity`,
+        avatar: room.suggestAvatar(randomness),
+      },
       idGenerator,
       new Date(),
     );

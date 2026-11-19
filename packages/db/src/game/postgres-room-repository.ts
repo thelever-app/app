@@ -112,17 +112,23 @@ export class PostgresRoomRepository implements RoomRepository {
     await db
       .insertInto('room_players')
       .values(
-        players.map(({ id: playerId, nickname, identity, avatar, playedDilemmaIds }, position) => ({
-          id: playerId,
-          room_id: id,
-          position,
-          nickname,
-          identity,
-          avatar_face: avatar.face as AvatarFace,
-          avatar_color: avatar.color as PlayerColor,
-          has_left: snapshot.leftPlayerIds.includes(playerId),
-          played_dilemma_ids: [...playedDilemmaIds],
-        })),
+        players.map(
+          (
+            { id: playerId, nickname, identity, avatar, playedDilemmaIds, underEighteen },
+            position,
+          ) => ({
+            id: playerId,
+            room_id: id,
+            position,
+            nickname,
+            identity,
+            avatar_face: avatar.face as AvatarFace,
+            avatar_color: avatar.color as PlayerColor,
+            has_left: snapshot.leftPlayerIds.includes(playerId),
+            played_dilemma_ids: [...playedDilemmaIds],
+            under_eighteen: underEighteen,
+          }),
+        ),
       )
       .onConflict((conflict) =>
         conflict.column('id').doUpdateSet((eb) => ({
@@ -243,6 +249,7 @@ function readRoom(db: Kysely<GameTables>, id: string) {
             'room_players.avatar_color',
             'room_players.has_left',
             'room_players.played_dilemma_ids',
+            'room_players.under_eighteen',
           ])
           .whereRef('room_players.room_id', '=', 'rooms.id')
           .orderBy('room_players.position'),
@@ -302,12 +309,21 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
       newDilemmas: row.new_dilemmas,
     },
     players: row.players.map(
-      ({ id, nickname, identity, avatar_face, avatar_color, played_dilemma_ids }) => ({
+      ({
+        id,
+        nickname,
+        identity,
+        avatar_face,
+        avatar_color,
+        played_dilemma_ids,
+        under_eighteen,
+      }) => ({
         id,
         nickname,
         identity,
         avatar: { face: avatar_face, color: avatar_color },
         playedDilemmaIds: played_dilemma_ids,
+        underEighteen: under_eighteen,
       }),
     ),
     version: row.version,

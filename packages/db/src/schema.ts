@@ -132,6 +132,8 @@ export interface Database {
     has_left: Generated<boolean>;
     /** The dilemmas the device of the player says they played, which the room puts games together with. */
     played_dilemma_ids: string[];
+    /** Whether they were under 18 when they entered the room, by the age they declared. */
+    under_eighteen: boolean;
   };
   room_expelled_identities: {
     room_id: string;
@@ -282,6 +284,23 @@ export interface Database {
     commercial_licence_consent_version: string | null;
     under_eighteen: boolean;
   };
+  /** The first access of each identity: the region of its device, never its address, and its age. */
+  first_accesses: {
+    identity: string;
+    region: 'eea' | 'rest-of-world' | 'blocked';
+    birth_year: number | null;
+    /** Only in a boundary year. */
+    birth_month: number | null;
+    /** The deletion after 24 months without opening the app counts from it. */
+    last_opened_at: Date;
+  };
+  /** The last version of each legal document each identity accepted, and when. */
+  legal_acceptances: {
+    identity: string;
+    document: 'terms-of-use' | 'game-consent';
+    version: number;
+    accepted_at: Date;
+  };
 }
 
 /** The answers to each option of a version of a dilemma, by its position. */
@@ -291,6 +310,12 @@ interface WorldAnswers {
   position: number;
   answers: number;
 }
+
+/** The tables of Identity: only its adapters read or write them. */
+export type IdentityTables = Pick<Database, 'first_accesses'>;
+
+/** The tables of Consent: only its adapters read or write them. */
+export type ConsentTables = Pick<Database, 'legal_acceptances'>;
 
 /** The tables of Dilemmas: only its adapters read or write them. */
 export type DilemmasTables = Pick<

@@ -180,6 +180,7 @@ describe('PostgresRoomRepository', () => {
       const { room, idGenerator } = await savedRoom();
       room.join(
         {
+          underEighteen: false,
           nickname: 'Marta',
           identity: 'TestMartaIdentity',
           avatar: room.suggestAvatar(new SequentialRandomness()),
@@ -221,6 +222,7 @@ describe('PostgresRoomRepository', () => {
       const { room, idGenerator } = await savedRoom();
       room.join(
         {
+          underEighteen: false,
           nickname: 'Marta',
           identity: 'TestMartaIdentity',
           avatar: room.suggestAvatar(new SequentialRandomness()),
@@ -276,6 +278,7 @@ describe('PostgresRoomRepository', () => {
       const { room, idGenerator } = await savedRoom();
       room.join(
         {
+          underEighteen: false,
           nickname: 'Marta',
           identity: 'TestMartaIdentity',
           avatar: room.suggestAvatar(new SequentialRandomness()),
