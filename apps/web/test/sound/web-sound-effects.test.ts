@@ -9,7 +9,7 @@ const SOUNDS: Record<Moment, string> = {
   'answer-confirmed': '/sounds/answer-confirmed.m4a',
   'last-seconds': '/sounds/last-seconds.m4a',
   'dilemma-revealed': '/sounds/dilemma-revealed.m4a',
-  'game-ended': '/sounds/game-ended.m4a',
+  'game-results': '/sounds/game-results.m4a',
 };
 
 /**

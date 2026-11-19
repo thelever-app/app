@@ -206,22 +206,37 @@ describe('momentsBetween', () => {
     });
   });
 
-  describe('when the game ends', () => {
-    it('should hear the end once the last screen of the results takes everyone to it', () => {
+  describe('when the game results begin', () => {
+    it('should hear the results once the reveal of the last dilemma takes everyone to them', () => {
       // Arrange
       const round = { ...aGame().round, position: 2, phase: 'reveal' as const };
-      const before = aGame({
+      const before = aGame({ round });
+      const after = aGame({
+        round,
+        stage: { kind: 'results', movedOnBy: 'test-luis-id', step: 0 },
+      });
+
+      // Act & Assert
+      expect(momentsBetween(inGame(before), inGame(after))).toEqual(['game-results']);
+      expect(momentsBetween(inGame(after), inGame(after))).toEqual([]);
+    });
+
+    it('should hear nothing more when the results go on or the game ends', () => {
+      // Arrange
+      const round = { ...aGame().round, position: 2, phase: 'reveal' as const };
+      const first = aGame({ round, stage: { kind: 'results', movedOnBy: null, step: 0 } });
+      const last = aGame({
         round,
         stage: { kind: 'results', movedOnBy: 'test-luis-id', step: 3 },
       });
-      const after = aGame({
+      const ended = aGame({
         round,
         stage: { kind: 'ended', movedOnBy: 'test-luis-id', step: null },
       });
 
       // Act & Assert
-      expect(momentsBetween(inGame(before), inGame(after))).toEqual(['game-ended']);
-      expect(momentsBetween(inGame(after), inGame(after))).toEqual([]);
+      expect(momentsBetween(inGame(first), inGame(last))).toEqual([]);
+      expect(momentsBetween(inGame(last), inGame(ended))).toEqual([]);
     });
   });
 

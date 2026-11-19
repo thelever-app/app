@@ -53,30 +53,30 @@
     "summaryAnonymous_other": "{{count, number}} giocatori · nessuno vede chi ha risposto"
   },
   "dilemma": {
-    "privacy": "Nessuno del gruppo vedrà il tuo voto fino al risultato. Nel frattempo puoi cambiarlo.",
+    "privacy": "Il tuo voto è privato fino al risultato.",
     "choose": "Scegli un’opzione",
     "continue": "Continua",
-    "privacyAnonymous": "Nessuno del gruppo vedrà il tuo voto, nemmeno nel risultato. Puoi cambiarlo finché il dilemma non viene svelato."
+    "privacyAnonymous": "Nessuno vedrà il tuo voto, nemmeno nel risultato."
   },
   "waiting": {
     "position": "Dilemma {{position, number}} di {{total, number}} · Hai risposto",
     "title": "In attesa degli altri",
-    "subtitle": "Il dilemma si svela quando avrete risposto tutti o quando finisce il tempo. Fino ad allora puoi cambiare la tua risposta.",
+    "subtitle": "Si svela quando avrete risposto tutti o finisce il tempo.",
     "change": "Cambia la mia risposta",
     "mascotWaiting": "La Palanca, in attesa",
     "revealEarly": "Svela ora",
     "revealCaption_one": "Ne manca {{count}}. In questo dilemma risulterà «non ha votato».",
     "revealCaption_many": "Ne mancano {{count, number}}. In questo dilemma risulteranno «non ha votato».",
     "revealCaption_other": "Ne mancano {{count, number}}. In questo dilemma risulteranno «non ha votato».",
-    "guest": "{{host}} può svelarlo prima; altrimenti si svela quando avrete risposto tutti o quando finisce il tempo."
+    "guest": "{{host}} può svelarlo prima."
   },
   "game": {
     "timeLeft": "Restano {{time}}"
   },
   "aboutYou": {
-    "title": "Parla di te: cosa faranno con te?",
-    "nominal": "Questo dilemma non lo voti. Indovina cosa sceglierà ciascuno: nel reveal tutti vedranno quanti ne hai indovinati.",
-    "anonymous": "Questo dilemma non lo voti. Indovina come si divideranno gli altri; nessuno vedrà la tua previsione."
+    "title": "Parla di te",
+    "nominal": "Non voti: indovina cosa sceglierà ciascuno.",
+    "anonymous": "Non voti: indovina come si divideranno gli altri."
   },
   "predict": {
     "voted": "Hai votato «",
@@ -92,14 +92,14 @@
   },
   "distribution": {
     "question": "Come si dividerà il gruppo?",
-    "hint": "Contando anche te. Muovi una barra e le altre si adattano da sole: fanno sempre 100%.",
-    "hintTwo": "Contando anche te. Muovi la barra e le due opzioni si adattano da sole: fanno sempre 100%.",
+    "hint": "Contando te. Fanno sempre 100%.",
+    "hintTwo": "Contando te. Fanno sempre 100%.",
     "yourVote": "il tuo voto",
     "shareOf": "Percentuale che prevedi per {{option}}",
     "percent": "{{value, number}}%",
     "aboutYouQuestion": "Come si divideranno gli altri?",
-    "aboutYouHint": "Senza contare te. Muovi una barra e le altre si adattano da sole: fanno sempre 100%.",
-    "aboutYouHintTwo": "Senza contare te. Muovi la barra e le due opzioni si adattano da sole: fanno sempre 100%."
+    "aboutYouHint": "Senza contare te. Fanno sempre 100%.",
+    "aboutYouHintTwo": "Senza contare te. Fanno sempre 100%."
   },
   "gameMenu": {
     "open": "Altre opzioni",
@@ -130,12 +130,11 @@
     "counter": "{{count, number}}/{{max, number}}",
     "chooseReason": "Scegli un motivo",
     "send": "Invia segnalazione",
-    "note": "Lo esaminerà il team. Nessuno del gruppo saprà che l’hai segnalato."
+    "note": "Nessuno del gruppo lo saprà."
   },
   "reportSent": {
-    "thanks": "Grazie.",
-    "text": "Lo esaminerà il team; nessuno del gruppo lo sa.",
-    "canSkip": "Se preferisci non rispondere, puoi saltarlo.",
+    "thanks": "Grazie, lo controlleremo.",
+    "canSkip": "Preferisci saltarlo?",
     "skip": "Salta il dilemma"
   },
   "revealEarly": {
@@ -148,16 +147,16 @@
   },
   "newHost": {
     "title": "Ora sei l’host",
-    "disconnected": "{{host}} è ancora offline. Dal prossimo turno puoi svelare in anticipo dal menu ⋮. Se torna, riprende il ruolo.",
+    "disconnected": "{{host}} si è disconnesso. «Svela ora» è nel menu ⋮.",
     "left": "{{host}} ha lasciato la partita. Le tue opzioni sono nel menu ⋮.",
-    "ended": "{{host}} è ancora offline. Ora puoi lanciare la rivincita. Se torna, riprende il ruolo."
+    "ended": "{{host}} si è disconnesso. Puoi lanciare la rivincita."
   },
   "lateJoin": {
     "illustration": "La Palanca accanto a uno scambio ferroviario",
     "room": "Stanza di {{host}}",
     "title": "La partita è già iniziata",
-    "round": "Entri nel turno in corso, il dilemma {{position, number}} di {{total, number}}; se si sta già svelando, lo vedrai con il gruppo.",
-    "onlyVote": "In questa partita voti e basta: non fai previsioni, nessuno prevede il tuo voto e non entri in classifica.",
+    "round": "Entri nel dilemma {{position, number}} di {{total, number}}.",
+    "onlyVote": "In questa partita voti e basta.",
     "enter": "Entra nel turno"
   },
   "reveal": {
@@ -165,12 +164,12 @@
     "position": "Dilemma {{position, number}} di {{total, number}} · Risultato",
     "chosenBy": "L’ha scelto {{name}}",
     "yourHitsRegion": "Le tue previsioni",
-    "hitsAll": "Li hai indovinati tutti!",
+    "hitsAll": "Li hai indovinati tutti",
     "hitsCount": "Ne hai indovinati {{right, number}} su {{count, number}}",
     "missedOne": "Hai sbagliato solo con {{name}}",
     "missedSome": "Hai sbagliato con {{names}}",
     "missedMany": "Hai sbagliato con {{names}} e altri {{count, number}}",
-    "missedAll": "Oggi non ne hai indovinato nessuno",
+    "missedAll": "Non ne hai indovinato nessuno",
     "whoVoted": "Cosa ha votato ciascuno",
     "nobodyChose": "Nessuno l’ha scelta",
     "guessed": "· hai detto {{letter}}",
@@ -198,21 +197,15 @@
     "fewVotesDidNot_one": "e {{count}} non ha votato",
     "fewVotesDidNot_many": "e {{count, number}} non hanno votato",
     "fewVotesDidNot_other": "e {{count, number}} non hanno votato",
-    "fewVotesWhy": "Con meno di 3 voti, vedere come si sono divisi farebbe indovinare chi ha votato cosa, quindi questo dilemma non dà punti.",
-    "introPosition": "Dilemma {{position, number}} di {{total, number}} · Fine del voto",
-    "introTitle": "Si svela il dilemma",
+    "fewVotesWhy": "Con meno di 3 voti non si mostra né dà punti.",
+    "introTitle": "Risultato",
     "introMascot": "La Palanca che festeggia",
-    "introAnswered_one": "Ha risposto {{count}} su {{total, number}}.",
-    "introAnswered_many": "Hanno risposto {{count, number}} su {{total, number}}.",
-    "introAnswered_other": "Hanno risposto {{count, number}} su {{total, number}}.",
-    "introNominal": "Ci siamo: ora vedrete cosa ha votato ciascuno.",
-    "introAnonymous": "Ci siamo: ora vedrete quanti hanno scelto ogni opzione.",
     "aboutTitle": "Parlava di {{name}}",
     "aboutYouTitle": "Parlava di te",
     "aboutNominal": "Non ha votato: ha indovinato cosa avrebbe fatto ciascuno",
-    "aboutYouNominal": "Non hai votato: hai indovinato cosa avrebbe fatto ciascuno. Tutti vedono quanti ne hai indovinati.",
-    "aboutAnonymous": "Non ha votato: ha previsto come vi sareste divisi. La previsione e i punti restano privati.",
-    "aboutYouAnonymous": "Non hai votato: hai previsto come si sarebbero divisi gli altri. La tua previsione e i tuoi punti li vedi solo tu.",
+    "aboutYouNominal": "Non hai votato: hai indovinato cosa avrebbe fatto ciascuno.",
+    "aboutAnonymous": "Non ha votato: ha previsto la divisione.",
+    "aboutYouAnonymous": "Non hai votato: hai previsto la divisione. La vedi solo tu.",
     "aboutHits": "{{right, number}} su {{of, number}}",
     "aboutHitsLabel": "indovinati",
     "aboutYouHitsLabel": "indovinati",
@@ -234,32 +227,29 @@
     "label": "Risultati",
     "anonymous": "Stanza anonima",
     "title": "Chi legge meglio il gruppo",
-    "text": "Punti per essersi avvicinati a come si è davvero diviso il gruppo in ogni dilemma. Nessuno ha visto il voto di nessuno.",
+    "text": "Punti per avvicinarsi alla divisione di ogni dilemma.",
     "position": "{{position, number}}º",
     "mentalist": "El Mentalista",
     "points": "{{points, number}}",
     "pointsUnit": "punti",
-    "note": "Chi arriva primo è El Mentalista della partita. I dilemmi con meno di 3 voti non danno punti. Chi è a pari merito condivide posto e titolo.",
+    "note": "I pari merito condividono la posizione.",
     "next": "Continua",
     "nominalTitle": "Classifica",
     "nominalText": "Punti per indovinare il voto degli altri: più la scelta è rara, più punti.",
-    "nominalNote": "Accanto a ciascuno, i titoli che ha vinto. Chi è a pari merito condivide il posto."
+    "nominalNote": "I pari merito condividono la posizione."
   },
   "end": {
-    "label": "Partita finita · {{total, number}} di {{total, number}}",
+    "label": "Partita finita",
     "title": "Capolinea",
     "mascot": "La Palanca che festeggia",
     "place_one": "Sei arrivato {{position, number}}º su {{players, number}} a leggere il gruppo, con {{count}} punto.",
     "place_many": "Sei arrivato {{position, number}}º su {{players, number}} a leggere il gruppo, con {{count, number}} punti.",
     "place_other": "Sei arrivato {{position, number}}º su {{players, number}} a leggere il gruppo, con {{count, number}} punti.",
-    "placeMentalist_one": "Nessuno ha letto meglio il gruppo: sei arrivato 1º su {{players, number}}, con {{count}} punto.",
-    "placeMentalist_many": "Nessuno ha letto meglio il gruppo: sei arrivato 1º su {{players, number}}, con {{count, number}} punti.",
-    "placeMentalist_other": "Nessuno ha letto meglio il gruppo: sei arrivato 1º su {{players, number}}, con {{count, number}} punti.",
     "inRoom": "Ancora nella stanza · {{count, number}}",
     "gone_one": "{{names}} se n’è andato.",
     "gone_many": "{{names}} se ne sono andati.",
     "gone_other": "{{names}} se ne sono andati.",
-    "closes": "La stanza si chiude 15 minuti dopo che non resta nessuno connesso.",
+    "closes": "La stanza si chiude dopo 15 minuti senza nessuno connesso.",
     "leave": "Esci",
     "placeNominal_one": "Sei arrivato {{position, number}}º su {{players, number}}, con {{count}} punto.",
     "placeNominal_many": "Sei arrivato {{position, number}}º su {{players, number}}, con {{count, number}} punti.",
@@ -267,7 +257,7 @@
     "knownBest": "Chi ti conosce meglio è {{names}}.",
     "notInGame": "Questa partita è già finita. Se c’è la rivincita, giocherai anche tu.",
     "rematch": "Rivincita con lo stesso gruppo",
-    "rematchGuest": "{{host}} può lanciare la rivincita. Se lo fa, passerai alla lobby con chi è ancora nella stanza.",
+    "rematchGuest": "{{host}} può lanciare la rivincita.",
     "shareCard": "Condividi la mia card",
     "shareGroupCard": "Condividi la card del gruppo"
   },
@@ -280,7 +270,7 @@
   "noReturn": {
     "gone": {
       "title": "Questa partita non c’è più",
-      "text": "È finita o è stata chiusa. Se il gruppo sta ancora giocando, chiedi che ti mandino il nuovo link."
+      "text": "Se il gruppo sta ancora giocando, chiedi il nuovo link."
     },
     "device": {
       "title": "Questo dispositivo non è nella partita",
@@ -293,7 +283,7 @@
     },
     "identity": {
       "title": "Non siamo riusciti a riconoscerti",
-      "text": "Di solito è un problema passeggero. Riprova tra un momento.",
+      "text": "Riprova tra un momento.",
       "action": "Riprova"
     },
     "expelled": {
@@ -324,7 +314,7 @@
     "missing": {
       "nickname": "Scrivi il tuo nickname",
       "groupNature": "Scegli con chi giochi",
-      "place": "Dicci dove siete"
+      "place": "Scegli dove siete"
     }
   },
   "joinRoom": {
@@ -362,9 +352,8 @@
   },
   "joinCode": {
     "title": "Scrivi il codice della stanza",
-    "text": "Sono 5 caratteri. Può dettartelo chi ha creato la stanza.",
+    "text": "5 caratteri.",
     "label": "Codice della stanza",
-    "hint": "Puoi anche incollarlo.",
     "enter": "Entra",
     "missing_one": "Manca {{count}} carattere",
     "missing_many": "Mancano {{count, number}} caratteri",
@@ -372,7 +361,7 @@
   },
   "accessCode": {
     "title": "TheLever è in prova",
-    "text": "Per ora può giocare solo chi ha il codice di accesso. Scrivilo una volta e non te lo chiederemo più su questo dispositivo.",
+    "text": "Si gioca solo con un codice di accesso. Viene chiesto una volta per dispositivo.",
     "label": "Codice di accesso",
     "invalid": "Questo codice non è valido.",
     "check": "Controlla di averlo scritto bene.",
@@ -398,7 +387,7 @@
     },
     "room-full": {
       "title": "Questa stanza è al completo",
-      "text": "Ci sono già 50 giocatori, il massimo. Puoi creare una stanza tutta tua.",
+      "text": "Ci sono già 50 giocatori, il massimo.",
       "action": "Torna all’inizio"
     },
     "player-expelled": {
@@ -425,11 +414,11 @@
     "roundCount_other": "{{count}} turni",
     "change": "Cambia",
     "adultsOnly": "Solo per maggiorenni",
-    "remote": "Giocate a distanza: meglio in videochiamata, per commentare il risultato in diretta.",
+    "remote": "A distanza: meglio in videochiamata.",
     "rounds": {
       "title": "Turni · {{count}}",
       "hint": "Si giocano in quest’ordine.",
-      "secretHint": "Si giocano in quest’ordine. Nessuno saprà quale giocatore ha scelto ogni dilemma fino al risultato.",
+      "secretHint": "Nessuno saprà chi ha scelto ogni dilemma fino al risultato.",
       "allCategories": "Tutte le categorie",
       "twoCategories": "{{first}} o {{second}}",
       "someCategories": "{{count}} categorie",
@@ -453,18 +442,17 @@
     "host": "Host",
     "toExpel": "{{name}}. Tocca per espellere",
     "toChangeAvatar": "{{name}}. Tocca per cambiare il tuo avatar",
-    "waiting": "In attesa di altre persone. Condividi il codice o il link per farle entrare.",
+    "waiting": "Condividi il codice o il link.",
     "start": "Inizia la partita",
     "missing_one": "Manca {{count}} giocatore per iniziare",
     "missing_other": "Mancano {{count}} giocatori per iniziare",
-    "guestWait": "{{host}} inizierà la partita quando ci sarete tutti.",
+    "guestWait": "In attesa che {{host}} inizi.",
     "missing_many": "Mancano {{count}} giocatori per iniziare",
     "gapWarningTitle": "Un dilemma parla di qualcuno del gruppo.",
-    "gapWarningNominal": "In una stanza nominale servono almeno {{minimum, number}} giocatori: se iniziate in meno, il suo round diventa casuale.",
-    "gapWarningAnonymous": "In una stanza anonima servono almeno {{minimum, number}} giocatori: se iniziate in meno, il suo round diventa casuale.",
     "noNewDilemmas": "Non restano dilemmi non giocati",
-    "noNewDilemmasNotice": "Il turno {{round, number}} non ha più dilemmi non giocati in questa stanza. Se iniziate la partita così, quel turno pescherà da tutte le categorie.",
-    "changeCategories": "Cambia categorie"
+    "noNewDilemmasNotice": "Il turno {{round, number}} non ha dilemmi non giocati: pescherà da tutte le categorie.",
+    "changeCategories": "Cambia categorie",
+    "gapWarning": "Servono almeno {{minimum, number}} giocatori; con meno, il turno sarà casuale."
   },
   "languages": {
     "es": "Español",
@@ -490,8 +478,8 @@
     "reveal": "Risultato",
     "nominal": "Nominale",
     "anonymous": "Anonimo",
-    "nominalHint": "Nel risultato si vedrà cosa ha votato ciascuno, e si gioca a prevedere.",
-    "anonymousHint": "Nessuno vedrà chi ha votato cosa. Niente previsioni né punti: si vota e basta.",
+    "nominalHint": "Si vede cosa ha votato ciascuno.",
+    "anonymousHint": "Nessuno vedrà chi ha votato cosa.",
     "adultsOnly": {
       "label": "Solo maggiorenni",
       "hint": "Consente dilemmi per adulti. Potranno entrare solo i maggiorenni."
@@ -503,7 +491,7 @@
     "rounds": {
       "title": "Turni · {{count}}",
       "range": "Da 1 a {{maximum}}",
-      "hint": "Si giocano in quest’ordine. Ogni turno ha un dilemma casuale del catalogo, uno preciso che scegli tu o quello che sceglie un giocatore dalla lobby.",
+      "hint": "Ogni turno: un dilemma casuale, uno che scegli tu o uno che sceglie un giocatore.",
       "origin": "Chi sceglie il dilemma del turno {{number}}",
       "origins": {
         "random": "Casuale",
@@ -529,7 +517,7 @@
     },
     "newDilemmas": {
       "label": "Includi dilemmi nuovi",
-      "hint": "Nei turni casuali può uscirne uno appena arrivato nel catalogo. Aiutate a valutarlo."
+      "hint": "Possono uscire dilemmi appena arrivati nel catalogo."
     },
     "save": "Salva"
   },
@@ -593,7 +581,7 @@
   "playDilemma": {
     "title": "Nuova stanza",
     "firstDilemma": "Iniziate con questo dilemma",
-    "about": "{{category}} · Gli altri 7 turni saranno casuali. Potrai cambiarli nelle impostazioni.",
+    "about": "{{category}} · Gli altri 7 turni, casuali.",
     "loading": "Cerco il dilemma…",
     "notFound": "Questo dilemma non è più su TheLever. Puoi creare una stanza con altri del catalogo.",
     "home": "Vai all’inizio"
@@ -610,19 +598,19 @@
     "sending": "Invio del tuo voto…",
     "loadingResult": "Ricerca del voto del mondo…",
     "sameAsYou": "{{percentage}}%",
-    "thoughtLikeYou": "la pensa come te.",
+    "thoughtLikeYou": "ha votato come te.",
     "predictionOff_one": "Hai detto {{prediction}}%: scarto di {{count}} punto.",
     "predictionOff_many": "Hai detto {{prediction}}%: scarto di {{count, number}} punti.",
     "predictionOff_other": "Hai detto {{prediction}}%: scarto di {{count, number}} punti.",
-    "predictionRight": "Hai detto {{prediction}}%: centro pieno.",
+    "predictionRight": "Hai detto {{prediction}}%: giusto.",
     "yours": "{{option}} · il tuo voto",
     "answers_one": "{{count, number}} risposta in tutto il mondo. Si aggiorna una volta al giorno.",
     "answers_many": "{{count, number}} risposte in tutto il mondo. Si aggiorna una volta al giorno.",
     "answers_other": "{{count, number}} risposte in tutto il mondo. Si aggiorna una volta al giorno.",
     "fewTitle": "Ci sono ancora poche risposte",
-    "fewBody_one": "Ne abbiamo {{count, number}} delle {{needed}} necessarie. Torna più tardi per vedere come ha votato il mondo e se ci hai preso.",
-    "fewBody_many": "Ne abbiamo {{count, number}} delle {{needed}} necessarie. Torna più tardi per vedere come ha votato il mondo e se ci hai preso.",
-    "fewBody_other": "Ne abbiamo {{count, number}} delle {{needed}} necessarie. Torna più tardi per vedere come ha votato il mondo e se ci hai preso.",
+    "fewBody_one": "Ce ne sono {{count, number}} delle {{needed}} necessarie. Torna più tardi.",
+    "fewBody_many": "Ce ne sono {{count, number}} delle {{needed}} necessarie. Torna più tardi.",
+    "fewBody_other": "Ce ne sono {{count, number}} delle {{needed}} necessarie. Torna più tardi.",
     "play": "Giocalo con il mio gruppo",
     "arguments": "Leggi gli argomenti di ogni opzione"
   },
@@ -636,8 +624,8 @@
     "more": "Altre emoji",
     "anyEmoji": "Scrivi un’emoji",
     "send": "Reagisci",
-    "oneDilemma": "Una sola reazione per dilemma: se ne scegli un’altra, sostituisce la precedente. Con «+» puoi usare qualsiasi emoji.",
-    "oneVote": "Una sola reazione per voto: se ne scegli un’altra, sostituisce la precedente. Con «+» puoi usare qualsiasi emoji.",
+    "oneDilemma": "Una reazione per dilemma; la nuova sostituisce la precedente.",
+    "oneVote": "Una reazione per voto; la nuova sostituisce la precedente.",
     "nominalPrivacy": "In questa stanza tutti vedranno chi ha reagito.",
     "anonymousPrivacy": "In questa stanza nessuno vedrà chi ha reagito, solo quanti."
   },
@@ -645,12 +633,12 @@
     "label": "Risultati · {{step, number}} di {{total, number}}",
     "next": "Avanti",
     "onlyYou": "Lo vedi solo tu",
-    "knowsTitle": "Chi ti conosce meglio è…",
-    "knowsNobody": "Questa volta nessuno ha indovinato i tuoi voti.",
+    "knowsTitle": "Chi ti conosce meglio",
+    "knowsNobody": "Nessuno ha indovinato i tuoi voti.",
     "knowsFact_one": "{{count}} punto indovinando i tuoi voti",
     "knowsFact_many": "{{count, number}} punti indovinando i tuoi voti",
     "knowsFact_other": "{{count, number}} punti indovinando i tuoi voti",
-    "runnerUp": "Poi: {{names}}, {{fact}}",
+    "runnerUp": "{{position}}: {{names}} · {{fact}}",
     "titles": {
       "almas-gemelas": "Almas gemelas",
       "verso-suelto": "Verso suelto",
@@ -681,7 +669,11 @@
       "el-mentalista_one": "{{count}} punto",
       "el-mentalista_many": "{{count, number}} punti",
       "el-mentalista_other": "{{count, number}} punti"
-    }
+    },
+    "introTitle": "Risultati",
+    "titleCount": "Titolo {{position, number}} di {{total, number}}",
+    "back": "Indietro",
+    "runnerUpOf": "{{count, number}} su {{of, number}}"
   },
   "card": {
     "personalTitle": "La tua card",
@@ -704,6 +696,6 @@
     "mostDivisive": "Quello che ci ha diviso di più",
     "footer": "Gioca su thelever.app",
     "showNames": "Mostra i nickname di {{names}}",
-    "groupNote": "Nessun nome né voto di nessuno: solo come si è diviso il gruppo."
+    "groupNote": "Senza nomi né voti."
   }
 }

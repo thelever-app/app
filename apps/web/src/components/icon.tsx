@@ -121,6 +121,11 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
+/** Where the symbol is served, for whoever draws it on a canvas instead of on the page. */
+export function iconUrl(name: IconName): string {
+  return ICONS[name];
+}
+
 interface IconProps {
   readonly name: IconName;
   /** In pixels; 24 by default. */

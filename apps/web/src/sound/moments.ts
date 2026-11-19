@@ -8,7 +8,7 @@ export type Moment =
   | 'answer-confirmed'
   | 'last-seconds'
   | 'dilemma-revealed'
-  | 'game-ended';
+  | 'game-results';
 
 /** What the room looks like on screen at one render: the lobby or the game, and the time left. */
 export interface RoomSnapshot {
@@ -48,7 +48,8 @@ function gameMoments(
   after: GameStateDto,
   secondsLeft: number | undefined,
 ): Moment[] {
-  if (before.stage.kind !== 'ended' && after.stage.kind === 'ended') return ['game-ended'];
+  if (before.stage.kind === 'rounds' && after.stage.kind === 'results') return ['game-results'];
+  if (after.stage.kind !== 'rounds') return [];
   const sameRound = before.round.position === after.round.position;
   if (!sameRound) return [];
   if (before.round.phase === 'decision' && after.round.phase === 'reveal') {

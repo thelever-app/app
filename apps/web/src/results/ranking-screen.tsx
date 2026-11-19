@@ -18,6 +18,8 @@ interface RankingScreenProps {
   readonly onShowQr: () => void;
   /** Where the ranking is among the screens of the results, for the label of a nominal room. */
   readonly label?: string;
+  /** In a nominal room, the player looks back, on their own, at the screen before. */
+  readonly onBack?: (() => void) | undefined;
 }
 
 /**
@@ -25,7 +27,14 @@ interface RankingScreenProps {
  * points of their distribution predictions, with El Mentalista first: nobody sees what anybody
  * voted. In a nominal one, by the points of the vote predictions, with the badge of each title won.
  */
-export function RankingScreen({ game, onMoveOn, onLeave, onShowQr, label }: RankingScreenProps) {
+export function RankingScreen({
+  game,
+  onMoveOn,
+  onLeave,
+  onShowQr,
+  label,
+  onBack,
+}: RankingScreenProps) {
   const { t } = useTranslation();
   const nameOf = usePlayerName();
   const [isGroupOpen, setIsGroupOpen] = useState(false);
@@ -103,6 +112,11 @@ export function RankingScreen({ game, onMoveOn, onLeave, onShowQr, label }: Rank
         <p className={styles.note}>{nominal ? t('ranking.nominalNote') : t('ranking.note')}</p>
       </main>
       <footer className={styles.footer}>
+        {onBack && (
+          <button type="button" className={styles.back} onClick={onBack}>
+            {t('results.back')}
+          </button>
+        )}
         {onMoveOn && (
           <button type="button" className={styles.next} onClick={onMoveOn}>
             {t('ranking.next')}

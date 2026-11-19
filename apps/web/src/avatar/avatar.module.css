@@ -42,6 +42,11 @@
   height: 72px;
 }
 
+.xxl {
+  width: 104px;
+  height: 104px;
+}
+
 .face {
   display: block;
   width: 100%;

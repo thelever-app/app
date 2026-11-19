@@ -225,8 +225,7 @@ export function DilemmaScreen({
               <Icon name="checkCircle" size={20} />
             </span>
             <span>
-              <strong className={toast.signal}>{t('reportSent.thanks')}</strong>{' '}
-              {t('reportSent.text')}
+              <strong className={toast.signal}>{t('reportSent.thanks')}</strong>
             </span>
           </p>
           {reportedHere.offensive && (

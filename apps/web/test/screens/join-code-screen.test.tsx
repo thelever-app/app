@@ -38,7 +38,6 @@ describe('JoinCodeScreen', () => {
     // Assert
     expect(submitButton().textContent).toBe(t('joinCode.missing', { count: 2 }));
     expect(submitButton()).toHaveProperty('disabled', true);
-    expect(screen.getByText(t('joinCode.hint'))).toBeDefined();
   });
 
   it('should wait for the button once the code is complete, and then go to its room', async () => {

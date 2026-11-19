@@ -43,7 +43,6 @@ export function JoinCodeScreen() {
         <h1 className={styles.stepTitle}>{t('joinCode.title')}</h1>
         <p className={styles.lead}>{t('joinCode.text')}</p>
         <CodeField code={code} onChange={setCode} />
-        <p className={styles.hint}>{t('joinCode.hint')}</p>
         <div className={styles.submit}>
           <SubmitButton
             pending={false}
