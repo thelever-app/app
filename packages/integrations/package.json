@@ -7,11 +7,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./game": "./src/game/index.ts"
+    "./game": "./src/game/index.ts",
+    "./first-access": "./src/first-access/index.ts"
   },
   "dependencies": {
+    "@thelever-app/consent": "workspace:*",
     "@thelever-app/dilemmas": "workspace:*",
-    "@thelever-app/game": "workspace:*"
+    "@thelever-app/game": "workspace:*",
+    "@thelever-app/identity": "workspace:*"
   },
   "devDependencies": {
     "@thelever-app/config": "workspace:*"
