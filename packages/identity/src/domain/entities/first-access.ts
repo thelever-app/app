@@ -1,14 +1,14 @@
 import { AgeAlreadyDeclaredError } from '../errors/age-already-declared.error.ts';
 import { BlockedCountryError } from '../errors/blocked-country.error.ts';
 import { MonthOfBirthNeededError } from '../errors/month-of-birth-needed.error.ts';
-import { ADULT_AGE, DeclaredAgeVO, isBoundaryYear } from '../vos/declared-age.vo.ts';
+import { ADULT_AGE, DeclaredAgeVO, needsMonthOfBirth } from '../vos/declared-age.vo.ts';
 import { minimumAgeIn, type Region, regionOf } from '../vos/region.vo.ts';
 
 export interface FirstAccessSnapshot {
   readonly identity: string;
   readonly region: Region;
   readonly birthYear: number | null;
-  /** Only in a boundary year. */
+  /** Only of who may be under 18. */
   readonly birthMonth: number | null;
   readonly lastOpenedAt: Date;
 }
@@ -22,12 +22,12 @@ export type FirstAccessStep = 'blocked-country' | 'age' | 'under-minimum-age' | 
 
 /**
  * The first access of whoever uses the app with an identity: the region of their device, never
- * its address; the age they declared, once and for good (RF-47); and when they last opened the
- * app, which the deletion after 24 months without opening it counts from (RES-39).
+ * its address; the age they declared, once and for good; and when they last opened the app, which
+ * the deletion after 24 months without opening it counts from.
  */
 export class FirstAccess {
   readonly #identity: string;
-  readonly #region: Region;
+  #region: Region;
   #age: DeclaredAgeVO | undefined;
   #lastOpenedAt: Date;
 
@@ -71,20 +71,28 @@ export class FirstAccess {
     return this.#region;
   }
 
-  open(now: Date): void {
+  /**
+   * Someone opens the app again, in the country its address is in now. Whether they are in the
+   * EEA or in the rest of the world stays as the first time; a blocked country is where they are:
+   * opening it in one stops them, and opening it again elsewhere takes the region of there.
+   */
+  open(now: Date, country: string | undefined): void {
     this.#lastOpenedAt = now;
+    const region = regionOf(country);
+    if (region === 'blocked' || this.#region === 'blocked') this.#region = region;
   }
 
   /**
-   * The year of birth, and the month only in a boundary year, where it is asked for; a month given
-   * in any other year is not kept. Under the minimum age the first access stops there for good.
+   * The year of birth, and the month only of who may be under 18, where it is asked for; a month
+   * given by an adult is not kept. Under the minimum age the first access stops there until they
+   * reach it.
    */
   declareAge(birthYear: number, birthMonth: number | undefined, now: Date): void {
     if (this.#age) throw new AgeAlreadyDeclaredError(this.#identity);
     if (this.#region === 'blocked') throw new BlockedCountryError(this.#identity);
-    const boundary = isBoundaryYear(birthYear, minimumAgeIn(this.#region), now);
-    if (boundary && birthMonth === undefined) throw new MonthOfBirthNeededError(birthYear);
-    this.#age = new DeclaredAgeVO(birthYear, boundary ? (birthMonth ?? null) : null, now);
+    const monthNeeded = needsMonthOfBirth(birthYear, now);
+    if (monthNeeded && birthMonth === undefined) throw new MonthOfBirthNeededError(birthYear);
+    this.#age = new DeclaredAgeVO(birthYear, monthNeeded ? (birthMonth ?? null) : null, now);
   }
 
   step(now: Date): FirstAccessStep {

@@ -26,7 +26,7 @@ export const FirstAccessResponseDto = z.strictObject({
   underEighteen: z.boolean(),
 });
 
-/** POST /first-access/age: once and for good; the month only in a boundary year. */
+/** POST /first-access/age: once and for good; the month only of who may be under 18. */
 export const DeclareAgeRequestDto = z.strictObject({
   birthYear: z.number().int(),
   birthMonth: z.number().int().min(1).max(12).optional(),

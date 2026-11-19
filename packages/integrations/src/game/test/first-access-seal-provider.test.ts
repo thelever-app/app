@@ -33,7 +33,7 @@ describe('FirstAccessSealProvider', () => {
     // Arrange
     const { seals, openApp, declareAge, accept } = setUp();
     await openApp.execute({ identity: 'uid-luis', country: 'ES' });
-    await declareAge.execute({ identity: 'uid-luis', birthYear: 2009 });
+    await declareAge.execute({ identity: 'uid-luis', birthYear: 2009, birthMonth: 5 });
     await accept.execute({ identity: 'uid-luis', document: 'game-consent', version: 3 });
 
     // Act & Assert

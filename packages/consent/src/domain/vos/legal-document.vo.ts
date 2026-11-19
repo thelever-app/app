@@ -12,8 +12,7 @@ export interface LegalDocumentVersion {
   readonly version: number;
   /**
    * Whether it changes the document so much that who accepted an earlier version must accept it
-   * again before playing: substantial terms (RES-71) or a consent that needs to be given again
-   * (RF-145).
+   * again before playing: substantial terms or a consent that needs to be given again.
    */
   readonly asksAgain: boolean;
 }

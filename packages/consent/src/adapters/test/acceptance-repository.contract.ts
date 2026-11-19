@@ -67,6 +67,34 @@ export function describeAcceptanceRepositoryContract(
       ]);
     });
 
+    it('should not take a document back to a version accepted before', async () => {
+      // Arrange: the game consent is given while the new terms are being accepted.
+      const repository = await create();
+      await repository.save(
+        Acceptances.fromSnapshot({
+          identity: 'TestIdentity',
+          accepted: [{ document: 'terms-of-use', version: 1, acceptedAt: ACCEPTED_AT }],
+        }),
+      );
+      const giving = await repository.findByIdentity('TestIdentity');
+      const accepting = await repository.findByIdentity('TestIdentity');
+      const later = new Date('2026-12-01T08:00:00Z');
+      accepting.accept('terms-of-use', 2, PUBLISHED, later);
+      await repository.save(accepting);
+      giving.accept('game-consent', 1, PUBLISHED, later);
+
+      // Act
+      await repository.save(giving);
+
+      // Assert
+      expect((await repository.findByIdentity('TestIdentity')).toSnapshot().accepted).toEqual(
+        expect.arrayContaining([
+          { document: 'terms-of-use', version: 2, acceptedAt: later },
+          { document: 'game-consent', version: 1, acceptedAt: later },
+        ]),
+      );
+    });
+
     it('should keep each identity apart', async () => {
       // Arrange
       const repository = await create();

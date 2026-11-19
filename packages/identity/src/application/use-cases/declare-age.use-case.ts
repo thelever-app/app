@@ -6,7 +6,7 @@ import type { FirstAccessRepository } from '../ports/first-access-repository.por
 export interface DeclareAgeInput {
   readonly identity: string;
   readonly birthYear: number;
-  /** Only needed in a boundary year: without it there, MonthOfBirthNeededError. */
+  /** Only needed of who may be under 18: without it then, MonthOfBirthNeededError. */
   readonly birthMonth?: number;
 }
 

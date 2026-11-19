@@ -10,7 +10,17 @@ export class InMemoryAcceptanceRepository implements AcceptanceRepository {
     return snapshot ? Acceptances.fromSnapshot(snapshot) : Acceptances.none(identity);
   }
 
+  /** A document never goes back to a version before the one kept, even from what was read before. */
   async save(acceptances: Acceptances): Promise<void> {
-    this.#snapshots.set(acceptances.identity, acceptances.toSnapshot());
+    const { identity, accepted } = acceptances.toSnapshot();
+    const kept = this.#snapshots.get(identity)?.accepted ?? [];
+    const latest = new Map(kept.map((acceptance) => [acceptance.document, acceptance]));
+    for (const acceptance of accepted) {
+      const before = latest.get(acceptance.document);
+      if (!before || before.version <= acceptance.version) {
+        latest.set(acceptance.document, acceptance);
+      }
+    }
+    this.#snapshots.set(identity, { identity, accepted: [...latest.values()] });
   }
 }

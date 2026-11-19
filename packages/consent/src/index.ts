@@ -3,7 +3,7 @@
  *
  * The Consent context: the legal documents the first access asks for, in their versions, and the
  * version each identity accepted. In the MVP, only the terms of use and the game consent; the
- * research consent and the gate of the research events come in Phase 4.
+ * research consent and the gate of the research events come with the dataset.
  */
 export {
   Acceptances,

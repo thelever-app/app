@@ -37,16 +37,29 @@ describe('OpenAppUseCase', () => {
     expect(view).toEqual({ region: 'eea', step: 'age', underEighteen: true });
   });
 
-  it('should keep the region of the first time, wherever the app is opened after', async () => {
+  it('should keep the region of the first time, wherever out of a blocked country it is opened after', async () => {
     // Arrange
     const { openApp } = setUp();
+    await openApp.execute({ identity: 'uid-ana', country: 'ES' });
+
+    // Act
+    const view = await openApp.execute({ identity: 'uid-ana', country: 'US' });
+
+    // Assert
+    expect(view.region).toBe('eea');
+  });
+
+  it('should stop whoever opens it in a blocked country, and keep it so', async () => {
+    // Arrange
+    const { openApp, getFirstAccess } = setUp();
     await openApp.execute({ identity: 'uid-ana', country: 'ES' });
 
     // Act
     const view = await openApp.execute({ identity: 'uid-ana', country: 'GB' });
 
     // Assert
-    expect(view.region).toBe('eea');
+    expect(view.step).toBe('blocked-country');
+    expect((await getFirstAccess.execute('uid-ana'))?.step).toBe('blocked-country');
   });
 
   it('should keep when the app was last opened', async () => {
@@ -81,7 +94,7 @@ describe('DeclareAgeUseCase', () => {
     // Arrange
     const { openApp, declareAge } = setUp();
     await openApp.execute({ identity: 'uid-ana', country: 'US' });
-    await declareAge.execute({ identity: 'uid-ana', birthYear: 2011 });
+    await declareAge.execute({ identity: 'uid-ana', birthYear: 2011, birthMonth: 6 });
 
     // Act & Assert
     await expect(declareAge.execute({ identity: 'uid-ana', birthYear: 1990 })).rejects.toThrow(

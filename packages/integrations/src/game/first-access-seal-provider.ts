@@ -4,7 +4,7 @@ import type { GetFirstAccess } from '@thelever-app/identity/published';
 
 /**
  * The seal of a player from their first access: the version of the game consent they gave last,
- * no research nor commercial licence consent (Phase 4), and whether they are under 18 today, which
+ * no research nor commercial licence consent yet, and whether they are under 18 today, which
  * they are while they have not declared their age.
  */
 export class FirstAccessSealProvider implements SealProvider {

@@ -7,8 +7,8 @@ const EARLIEST_BIRTH_YEAR = 1900;
 export const ADULT_AGE = 18;
 
 /**
- * The year of birth someone declared in the first access and, only in a boundary year, the month.
- * The day is never asked.
+ * The year of birth someone declared in the first access and, only while they may be under 18,
+ * the month. The day is never asked.
  */
 export class DeclaredAgeVO {
   readonly birthYear: number;
@@ -40,10 +40,10 @@ export class DeclaredAgeVO {
 }
 
 /**
- * Whether who was born that year turns the minimum age of their region, or 18, this year: the
- * month is asked only then.
+ * Whether the month is asked for who was born that year: whoever turns 18 this year or later may
+ * still be under 18, and without the month they would wait until the first of January after the
+ * year they reach an age, when they may reach it a month after their birthday. Adults never give it.
  */
-export function isBoundaryYear(birthYear: number, minimumAge: number, on: Date): boolean {
-  const turns = on.getUTCFullYear() - birthYear;
-  return turns === minimumAge || turns === ADULT_AGE;
+export function needsMonthOfBirth(birthYear: number, on: Date): boolean {
+  return on.getUTCFullYear() - birthYear <= ADULT_AGE;
 }

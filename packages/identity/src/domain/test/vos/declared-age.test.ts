@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InvalidDeclaredAgeError } from '../../errors/invalid-declared-age.error.ts';
-import { DeclaredAgeVO, isBoundaryYear } from '../../vos/declared-age.vo.ts';
+import { DeclaredAgeVO, needsMonthOfBirth } from '../../vos/declared-age.vo.ts';
 
 const ON = new Date('2026-11-19T10:00:00Z');
 
@@ -49,13 +49,13 @@ describe('DeclaredAgeVO', () => {
   });
 });
 
-describe('isBoundaryYear', () => {
-  it('should be the year of birth of who turns the minimum age or 18 this year', () => {
+describe('needsMonthOfBirth', () => {
+  it('should ask for the month of whoever turns 18 this year or later, and never of an adult', () => {
     // Act & Assert
-    expect(isBoundaryYear(2010, 16, ON)).toBe(true);
-    expect(isBoundaryYear(2008, 16, ON)).toBe(true);
-    expect(isBoundaryYear(2008, 18, ON)).toBe(true);
-    expect(isBoundaryYear(2009, 16, ON)).toBe(false);
-    expect(isBoundaryYear(2010, 18, ON)).toBe(false);
+    expect(needsMonthOfBirth(2008, ON)).toBe(true);
+    expect(needsMonthOfBirth(2011, ON)).toBe(true);
+    expect(needsMonthOfBirth(2020, ON)).toBe(true);
+    expect(needsMonthOfBirth(2007, ON)).toBe(false);
+    expect(needsMonthOfBirth(1990, ON)).toBe(false);
   });
 });

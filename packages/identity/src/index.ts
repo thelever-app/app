@@ -9,7 +9,7 @@ export {
   type FirstAccessSnapshot,
   type FirstAccessStep,
 } from './domain/entities/first-access.ts';
-export { ADULT_AGE, DeclaredAgeVO, isBoundaryYear } from './domain/vos/declared-age.vo.ts';
+export { ADULT_AGE, DeclaredAgeVO, needsMonthOfBirth } from './domain/vos/declared-age.vo.ts';
 export {
   minimumAgeIn,
   type OpenRegion,

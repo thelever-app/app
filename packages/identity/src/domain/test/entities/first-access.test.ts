@@ -44,10 +44,45 @@ describe('FirstAccess', () => {
       const later = new Date('2026-12-01T09:00:00Z');
 
       // Act
-      firstAccess.open(later);
+      firstAccess.open(later, 'ES');
 
       // Assert
       expect(firstAccess.toSnapshot().lastOpenedAt).toEqual(later);
+    });
+
+    it('should keep the region of the first time between the EEA and the rest of the world', () => {
+      // Arrange
+      const firstAccess = begun('ES');
+
+      // Act
+      firstAccess.open(NOW, 'US');
+
+      // Assert
+      expect(firstAccess.region).toBe('eea');
+    });
+
+    it('should stop whoever opens it in a blocked country, wherever it was opened first', () => {
+      // Arrange
+      const firstAccess = begun('ES');
+      firstAccess.declareAge(1990, undefined, NOW);
+
+      // Act
+      firstAccess.open(NOW, 'RU');
+
+      // Assert
+      expect(firstAccess.step(NOW)).toBe('blocked-country');
+    });
+
+    it('should take the region of where it is opened once out of a blocked country', () => {
+      // Arrange
+      const firstAccess = begun('GB');
+
+      // Act
+      firstAccess.open(NOW, 'ES');
+
+      // Assert
+      expect(firstAccess.region).toBe('eea');
+      expect(firstAccess.step(NOW)).toBe('age');
     });
   });
 
@@ -57,7 +92,7 @@ describe('FirstAccess', () => {
       const firstAccess = begun('ES');
 
       // Act
-      firstAccess.declareAge(2009, undefined, NOW);
+      firstAccess.declareAge(2009, 5, NOW);
 
       // Assert: 17 in 2026, and 16 is enough in the EEA.
       expect(firstAccess.step(NOW)).toBe('done');
@@ -68,22 +103,32 @@ describe('FirstAccess', () => {
       const firstAccess = begun('US');
 
       // Act
-      firstAccess.declareAge(2009, undefined, NOW);
+      firstAccess.declareAge(2009, 5, NOW);
 
       // Assert: 17 in 2026, and 18 is needed out of the EEA.
       expect(firstAccess.step(NOW)).toBe('under-minimum-age');
     });
 
-    it('should ask for the month in a boundary year', () => {
+    it('should ask for the month of who may be under 18', () => {
       // Arrange
       const firstAccess = begun('ES');
 
-      // Act & Assert: who turns 16 in 2026.
-      expect(() => firstAccess.declareAge(2010, undefined, NOW)).toThrow(MonthOfBirthNeededError);
+      // Act & Assert: who turns 15 in 2026.
+      expect(() => firstAccess.declareAge(2011, undefined, NOW)).toThrow(MonthOfBirthNeededError);
       expect(firstAccess.step(NOW)).toBe('age');
     });
 
-    it('should decide with the month in a boundary year', () => {
+    it('should let in who was under the minimum age from the month after they reach it', () => {
+      // Arrange: 15 in November 2026, and turns 16 in February 2027.
+      const firstAccess = begun('ES');
+      firstAccess.declareAge(2011, 2, NOW);
+
+      // Act & Assert
+      expect(firstAccess.step(new Date('2027-02-15T10:00:00Z'))).toBe('under-minimum-age');
+      expect(firstAccess.step(new Date('2027-03-01T10:00:00Z'))).toBe('done');
+    });
+
+    it('should decide with the month in the year they reach the age', () => {
       // Arrange
       const before = begun('ES');
       const after = begun('ES');
@@ -111,7 +156,7 @@ describe('FirstAccess', () => {
     it('should never let the age be declared again', () => {
       // Arrange
       const firstAccess = begun('US');
-      firstAccess.declareAge(2009, undefined, NOW);
+      firstAccess.declareAge(2009, 5, NOW);
 
       // Act & Assert
       expect(() => firstAccess.declareAge(1990, undefined, NOW)).toThrow(AgeAlreadyDeclaredError);
@@ -137,7 +182,7 @@ describe('FirstAccess', () => {
       const adult = begun('ES');
       const minor = begun('ES');
       adult.declareAge(1990, undefined, NOW);
-      minor.declareAge(2009, undefined, NOW);
+      minor.declareAge(2009, 5, NOW);
 
       // Act & Assert
       expect(adult.isUnderEighteen(NOW)).toBe(false);

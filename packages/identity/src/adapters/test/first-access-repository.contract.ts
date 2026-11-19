@@ -4,6 +4,12 @@ import { FirstAccess } from '../../domain/entities/first-access.ts';
 
 const OPENED = new Date('2026-11-19T10:00:00Z');
 
+async function foundIn(repository: FirstAccessRepository): Promise<FirstAccess> {
+  const found = await repository.findByIdentity('TestIdentity');
+  if (!found) throw new Error('TestIdentity has no first access');
+  return found;
+}
+
 /** What every FirstAccessRepository must do, in memory or in PostgreSQL (ADR 0002). */
 export function describeFirstAccessRepositoryContract(
   name: string,
@@ -46,7 +52,7 @@ export function describeFirstAccessRepositoryContract(
       });
       await repository.save(firstAccess);
       const later = new Date('2026-12-01T08:30:00Z');
-      firstAccess.open(later);
+      firstAccess.open(later, 'US');
       firstAccess.declareAge(1990, undefined, later);
 
       // Act
@@ -57,6 +63,33 @@ export function describeFirstAccessRepositoryContract(
       expect(found?.toSnapshot()).toEqual({
         identity: 'TestIdentity',
         region: 'rest-of-world',
+        birthYear: 1990,
+        birthMonth: null,
+        lastOpenedAt: later,
+      });
+    });
+
+    it('should not lose the declared age to a save of what was read before it', async () => {
+      // Arrange: the app opens again while the age is being declared.
+      const repository = await create();
+      await repository.save(
+        FirstAccess.begin({ identity: 'TestIdentity', country: 'ES', now: OPENED }),
+      );
+      const reopened = await foundIn(repository);
+      const declaring = await foundIn(repository);
+      declaring.declareAge(1990, undefined, OPENED);
+      await repository.save(declaring);
+      const later = new Date('2026-11-19T10:00:05Z');
+      reopened.open(later, 'ES');
+
+      // Act
+      await repository.save(reopened);
+
+      // Assert
+      const found = await repository.findByIdentity('TestIdentity');
+      expect(found?.toSnapshot()).toEqual({
+        identity: 'TestIdentity',
+        region: 'eea',
         birthYear: 1990,
         birthMonth: null,
         lastOpenedAt: later,

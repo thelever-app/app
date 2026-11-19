@@ -10,7 +10,14 @@ export class InMemoryFirstAccessRepository implements FirstAccessRepository {
     return snapshot && FirstAccess.fromSnapshot(snapshot);
   }
 
+  /** A declared age stays, even if what is saved was read before it was declared. */
   async save(firstAccess: FirstAccess): Promise<void> {
-    this.#snapshots.set(firstAccess.identity, firstAccess.toSnapshot());
+    const snapshot = firstAccess.toSnapshot();
+    const kept = this.#snapshots.get(snapshot.identity);
+    const declared = kept?.birthYear !== null && kept?.birthYear !== undefined;
+    this.#snapshots.set(
+      snapshot.identity,
+      declared ? { ...snapshot, birthYear: kept.birthYear, birthMonth: kept.birthMonth } : snapshot,
+    );
   }
 }

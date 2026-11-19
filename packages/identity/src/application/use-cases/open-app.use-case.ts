@@ -8,14 +8,15 @@ export interface OpenAppInput {
   readonly identity: string;
   /**
    * The country the address of the device is in, if known. The address itself never gets here:
-   * only the region of this country is kept, and only the first time.
+   * only the region of this country is kept.
    */
   readonly country: string | undefined;
 }
 
 /**
  * Someone opens the app: the first time, their first access begins in the region of their
- * country; every time, it keeps when they opened it. It says where their first access is.
+ * country; every time, it keeps when they opened it and whether they are in a blocked country. It
+ * says where their first access is.
  */
 export class OpenAppUseCase {
   readonly #repository: FirstAccessRepository;
@@ -30,7 +31,7 @@ export class OpenAppUseCase {
     const now = this.#clock.now();
     const found = await this.#repository.findByIdentity(identity);
     const firstAccess = found ?? FirstAccess.begin({ identity, country, now });
-    if (found) found.open(now);
+    if (found) found.open(now, country);
     await this.#repository.save(firstAccess);
     return viewOf(firstAccess, now);
   }

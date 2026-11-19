@@ -1,4 +1,4 @@
-/** The declared age cannot be changed, neither from the app nor through the API (RF-47). */
+/** The declared age cannot be changed, neither from the app nor through the API. */
 export class AgeAlreadyDeclaredError extends Error {
   constructor(identity: string) {
     super(`${identity} already declared an age, which cannot be changed`);
