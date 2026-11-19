@@ -29,18 +29,39 @@ export class PostgresFirstAccessRepository implements FirstAccessRepository {
     );
   }
 
+  /** A declared age stays, even if what is saved was read before it was declared. */
   async save(firstAccess: FirstAccess): Promise<void> {
     const { identity, region, birthYear, birthMonth, lastOpenedAt } = firstAccess.toSnapshot();
-    const row = {
-      region,
-      birth_year: birthYear,
-      birth_month: birthMonth,
-      last_opened_at: lastOpenedAt,
-    };
     await (currentTransaction<IdentityTables>() ?? this.#db)
       .insertInto('first_accesses')
-      .values({ identity, ...row })
-      .onConflict((conflict) => conflict.column('identity').doUpdateSet(row))
+      .values({
+        identity,
+        region,
+        birth_year: birthYear,
+        birth_month: birthMonth,
+        last_opened_at: lastOpenedAt,
+      })
+      .onConflict((conflict) =>
+        conflict.column('identity').doUpdateSet((eb) => {
+          const declared = eb('first_accesses.birth_year', 'is not', null);
+          return {
+            region: eb.ref('excluded.region'),
+            birth_year: eb
+              .case()
+              .when(declared)
+              .then(eb.ref('first_accesses.birth_year'))
+              .else(eb.ref('excluded.birth_year'))
+              .end(),
+            birth_month: eb
+              .case()
+              .when(declared)
+              .then(eb.ref('first_accesses.birth_month'))
+              .else(eb.ref('excluded.birth_month'))
+              .end(),
+            last_opened_at: eb.ref('excluded.last_opened_at'),
+          };
+        }),
+      )
       .execute();
   }
 }

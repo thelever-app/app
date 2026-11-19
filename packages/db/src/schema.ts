@@ -289,7 +289,7 @@ export interface Database {
     identity: string;
     region: 'eea' | 'rest-of-world' | 'blocked';
     birth_year: number | null;
-    /** Only in a boundary year. */
+    /** Only of who may be under 18. */
     birth_month: number | null;
     /** The deletion after 24 months without opening the app counts from it. */
     last_opened_at: Date;

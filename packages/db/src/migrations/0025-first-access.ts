@@ -1,7 +1,7 @@
 import { type Kysely, sql } from 'kysely';
 
 // The first access. Identity keeps, for each identity, the region of its device, never its
-// address; the year of birth it declared and, only in a boundary year, the month; and when it last
+// address; the year of birth it declared and, only of who may be under 18, the month; and when it last
 // opened the app. Consent keeps the last version of each legal document each identity accepted,
 // and when, which proves it. A player of a room keeps whether they were under 18 when they entered
 // it: the players already in a room count as under 18, which is what protects them. A direct

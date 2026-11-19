@@ -27,6 +27,7 @@ export class PostgresAcceptanceRepository implements AcceptanceRepository {
     });
   }
 
+  /** A document never goes back to a version before the one kept, even from what was read before. */
   async save(acceptances: Acceptances): Promise<void> {
     const { identity, accepted } = acceptances.toSnapshot();
     if (accepted.length === 0) return;
@@ -41,10 +42,13 @@ export class PostgresAcceptanceRepository implements AcceptanceRepository {
         })),
       )
       .onConflict((conflict) =>
-        conflict.columns(['identity', 'document']).doUpdateSet((eb) => ({
-          version: eb.ref('excluded.version'),
-          accepted_at: eb.ref('excluded.accepted_at'),
-        })),
+        conflict
+          .columns(['identity', 'document'])
+          .doUpdateSet((eb) => ({
+            version: eb.ref('excluded.version'),
+            accepted_at: eb.ref('excluded.accepted_at'),
+          }))
+          .where((eb) => eb('legal_acceptances.version', '<=', eb.ref('excluded.version'))),
       )
       .execute();
   }
