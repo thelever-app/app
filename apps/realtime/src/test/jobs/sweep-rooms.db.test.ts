@@ -26,6 +26,7 @@ const ids = new SequentialIdGenerator();
 function roomOf(code: string, createdAt: Date): Room {
   return Room.create(
     {
+      hostUnderEighteen: false,
       hostNickname: 'Ana',
       hostIdentity: `TestAna${code}Identity`,
       hostAvatar: new AvatarVO('face-01', 'khaki'),

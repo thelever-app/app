@@ -39,11 +39,12 @@ import {
   type PlayerNotifier,
   type Randomness,
   type RoomRepository,
+  type SealProvider,
   SearchDilemmasUseCase,
   StartGameUseCase,
 } from '@thelever-app/game';
 import { CachedDilemmaCatalog } from '@thelever-app/game/cache';
-import { InMemoryDilemmaReports, InMemorySealProvider } from '@thelever-app/game/in-memory';
+import { InMemoryDilemmaReports } from '@thelever-app/game/in-memory';
 import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
 import type { RoundUseCases } from '../rooms/sockets/round-commands.ts';
 import type { LobbyUseCases } from '../rooms/sockets/lobby-commands.ts';
@@ -104,6 +105,8 @@ export function gameQueries({
 export interface GameCommandsDependencies extends GameQueriesDependencies {
   readonly notifier: PlayerNotifier;
   readonly idGenerator: IdGenerator;
+  /** The seal of each player, from their first access: whether they are under 18 and their consent. */
+  readonly sealProvider: SealProvider;
 }
 
 /**
@@ -145,12 +148,19 @@ export function gameCommands({
   idGenerator,
   randomness,
   clock,
+  sealProvider,
 }: GameCommandsDependencies): GameCommands {
-  // Until the first access exists, every answer, reaction and like carries the seal of before it.
-  const sealProvider = new InMemorySealProvider();
   return {
-    createRoom: new CreateRoomUseCase(roomRepository, catalog, idGenerator, randomness, clock),
+    createRoom: new CreateRoomUseCase(
+      roomRepository,
+      catalog,
+      idGenerator,
+      randomness,
+      clock,
+      sealProvider,
+    ),
     joinRoom: new JoinRoomUseCase({
+      sealProvider,
       roomRepository,
       gameRepository,
       notifier,

@@ -9,6 +9,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getAppCheck } from 'firebase-admin/app-check';
 import { getAuth } from 'firebase-admin/auth';
 import { composeRealtimeServer } from './composition/index.ts';
+import { DbIpCountryLookup, NoCountryLookup } from './first-access/country-lookup.ts';
 import { PING_INTERVAL_MS } from './rooms/sockets/heartbeat.ts';
 import { BEAT_EVERY_MS, SILENT_AFTER_MS } from './rooms/silent-instances.ts';
 import { OpenAccess } from './identity/access-gate.ts';
@@ -41,6 +42,13 @@ const accessGate = accessCodeFile
   ? await SecretFileAccessGate.open(accessCodeFile)
   : new OpenAccess();
 
+// The image of dev and prod carries the countries of DB-IP Lite at DBIP_COUNTRY_FILE; locally
+// there is none, and every address counts as the rest of the world.
+const countryFile = process.env.DBIP_COUNTRY_FILE;
+const countryLookup = countryFile
+  ? await DbIpCountryLookup.open(countryFile)
+  : new NoCountryLookup();
+
 // DATABASE_URL locally and in CI; CLOUD_SQL_INSTANCE and DB_USER in Cloud Run.
 const databaseConfig = databaseConfigFrom(process.env);
 const database = await openDatabase<Database>(databaseConfig, {
@@ -60,6 +68,7 @@ const server = await composeRealtimeServer({
   pingIntervalMs: PING_INTERVAL_MS,
   logger,
   webOrigins,
+  countryLookup,
   storage: {
     kind: 'postgres',
     db: database.db,

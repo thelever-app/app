@@ -7,8 +7,24 @@ import {
   VoteAloneUseCase,
   type WorldResultRepository,
 } from '@thelever-app/dilemmas';
+import {
+  AcceptDocumentUseCase,
+  GetConsentUseCase,
+  PUBLISHED_VERSIONS,
+  type PublishedVersions,
+} from '@thelever-app/consent';
+import { DeclareAgeUseCase, GetFirstAccessUseCase, OpenAppUseCase } from '@thelever-app/identity';
+import { FirstAccessSealProvider } from '@thelever-app/integrations/game';
 import type { WebSocketServer } from 'ws';
 import { createApp } from '../app.ts';
+import type { CountryLookup } from '../first-access/country-lookup.ts';
+import {
+  AcceptDocumentEndpoint,
+  DeclareAgeEndpoint,
+  OpenAppEndpoint,
+  requiringFirstAccess,
+} from '../first-access/first-access.endpoints.ts';
+import { FirstAccessGate } from '@thelever-app/integrations/first-access';
 import { KeyedLock } from '../concurrency/keyed-lock.ts';
 import { authentication } from '../http/authentication.ts';
 import { httpErrorHandler } from '../http/error-handler.ts';
@@ -64,6 +80,10 @@ export interface RealtimeConfiguration {
   readonly logger: Logger;
   /** The origins the web is served from: only those may read the answers of the HTTP routes. */
   readonly webOrigins: readonly string[];
+  /** The country of the address of a call, for the region the first access begins in. */
+  readonly countryLookup: CountryLookup;
+  /** The versions of the legal documents published; those of the code unless a test says otherwise. */
+  readonly publishedVersions?: PublishedVersions;
 }
 
 /** The HTTP server, not listening yet, and the room sockets attached to it. */
@@ -84,12 +104,17 @@ export async function composeRealtimeServer(
   // 1. The adapters of the storage, and the dilemmas Game plays with.
   const { notifierFor, runCommand, ...repositories } = await adaptersFor(storage);
   const catalog = dilemmaCatalog(repositories.dilemmaRepository, repositories.dilemmaQueries);
+  const clock = new SystemClock();
+  const firstAccess = firstAccessUseCases(
+    repositories,
+    configuration.publishedVersions ?? PUBLISHED_VERSIONS,
+    clock,
+  );
 
   // 2. The queries, and with them what sends each player the state of their room. One holder per
   // room at a time in this instance: its commands never interleave, and an event of the room
   // another instance published waits for the command in progress. Sending a game in its decision
   // phase sets the timer of its round in this instance.
-  const clock = new SystemClock();
   const roomLock = new KeyedLock();
   const randomness = new CryptoRandomness();
   const queries = gameQueries({ ...repositories, catalog, randomness, clock });
@@ -116,18 +141,27 @@ export async function composeRealtimeServer(
     idGenerator: new RandomIdGenerator(),
     randomness,
     clock,
+    sealProvider: firstAccess.sealProvider,
   });
 
   // 4. The HTTP routes and the room sockets on the same server.
   const http = createServer(
     createApp(
-      httpEndpoints(
-        commands,
-        queries,
-        dilemmaEndpoints(repositories.dilemmaRepository, repositories.worldResults),
-        roomLock,
-        runCommand,
-      ),
+      [
+        ...firstAccessEndpoints(firstAccess, configuration.countryLookup, runCommand),
+        ...httpEndpoints(
+          commands,
+          queries,
+          dilemmaEndpoints(
+            repositories.dilemmaRepository,
+            repositories.worldResults,
+            firstAccess.gate,
+          ),
+          roomLock,
+          runCommand,
+          firstAccess.gate,
+        ),
+      ],
       {
         authenticate: authentication(
           configuration.tokenVerifier,
@@ -170,18 +204,64 @@ export async function composeRealtimeServer(
   return { http, sockets, ...lifecycle };
 }
 
+/** The use cases of the first access, from Identity and Consent, and what they give Game. */
+interface FirstAccessUseCases {
+  readonly openApp: OpenAppUseCase;
+  readonly declareAge: DeclareAgeUseCase;
+  readonly acceptDocument: AcceptDocumentUseCase;
+  readonly getConsent: GetConsentUseCase;
+  /** What stops who has not finished the first access. */
+  readonly gate: FirstAccessGate;
+  readonly sealProvider: FirstAccessSealProvider;
+}
+
+function firstAccessUseCases(
+  {
+    firstAccesses,
+    acceptances,
+  }: Pick<Awaited<ReturnType<typeof adaptersFor>>, 'firstAccesses' | 'acceptances'>,
+  published: PublishedVersions,
+  clock: SystemClock,
+): FirstAccessUseCases {
+  const getFirstAccess = new GetFirstAccessUseCase(firstAccesses, clock);
+  const getConsent = new GetConsentUseCase(acceptances, published);
+  return {
+    openApp: new OpenAppUseCase(firstAccesses, clock),
+    declareAge: new DeclareAgeUseCase(firstAccesses, clock),
+    acceptDocument: new AcceptDocumentUseCase(acceptances, published, clock),
+    getConsent,
+    gate: new FirstAccessGate(getFirstAccess, getConsent),
+    sealProvider: new FirstAccessSealProvider(getFirstAccess, getConsent),
+  };
+}
+
+/** The routes of the first access: opening the app, the age and the legal documents. */
+function firstAccessEndpoints(
+  { openApp, declareAge, acceptDocument, getConsent, gate }: FirstAccessUseCases,
+  countries: CountryLookup,
+  runCommand: RunCommand,
+): HttpEndpoint[] {
+  return [
+    new OpenAppEndpoint(openApp, getConsent, countries, runCommand),
+    new DeclareAgeEndpoint(declareAge, gate, runCommand),
+    new AcceptDocumentEndpoint(acceptDocument, gate, runCommand),
+  ];
+}
+
 function httpEndpoints(
   commands: GameCommands,
   queries: GameQueries,
   dilemmas: readonly HttpEndpoint[],
   roomLock: KeyedLock,
   runCommand: RunCommand,
+  gate: FirstAccessGate,
 ): HttpEndpoint[] {
   return [
     new HealthEndpoint(),
-    new CreateRoomEndpoint(commands.createRoom, runCommand),
+    // Only who finished the first access creates a room or joins one.
+    requiringFirstAccess(new CreateRoomEndpoint(commands.createRoom, runCommand), gate),
     new RoomPreviewEndpoint(queries.getRoomPreview),
-    new JoinRoomEndpoint(commands.joinRoom, roomLock, runCommand),
+    requiringFirstAccess(new JoinRoomEndpoint(commands.joinRoom, roomLock, runCommand), gate),
     new SearchDilemmasEndpoint(queries.searchDilemmas),
     ...dilemmas,
   ];
@@ -194,10 +274,15 @@ function httpEndpoints(
 function dilemmaEndpoints(
   dilemmaRepository: DilemmaRepository,
   worldResults: WorldResultRepository,
+  gate: FirstAccessGate,
 ): HttpEndpoint[] {
   return [
     new DilemmaPreviewEndpoint(new GetDilemmaPreviewUseCase(dilemmaRepository)),
-    new VoteAloneEndpoint(new VoteAloneUseCase(dilemmaRepository, worldResults)),
+    // Voting alone needs the game consent too: the vote counts for the world result.
+    requiringFirstAccess(
+      new VoteAloneEndpoint(new VoteAloneUseCase(dilemmaRepository, worldResults)),
+      gate,
+    ),
     new WorldResultEndpoint(new GetWorldResultUseCase(dilemmaRepository, worldResults)),
   ];
 }

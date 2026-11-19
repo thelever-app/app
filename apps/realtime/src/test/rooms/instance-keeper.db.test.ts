@@ -41,6 +41,7 @@ describe('InstanceKeeper', () => {
       const rooms = new PostgresRoomRepository(db, 'TestInstance');
       const room = Room.create(
         {
+          hostUnderEighteen: false,
           hostNickname: 'Ana',
           hostIdentity: 'TestAna',
           hostAvatar: new AvatarVO('face-01', 'khaki'),
