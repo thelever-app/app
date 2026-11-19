@@ -2,9 +2,9 @@
 # The image of the public web: the service site, which answers from the bucket, and the job
 # generate-site, which writes it from the database. Node runs the TypeScript sources by stripping
 # types, so the image keeps the workspace layout, as the image of the room server does (ADR 0003).
-# packages/db brings packages/game and packages/dilemmas, whose types and tables it uses; the
-# illustrations of La Palanca come from the web of the app, at the same path next to apps/site;
-# packages/ui draws the faces of the players the home shows.
+# packages/db brings packages/game, packages/dilemmas, packages/identity and packages/consent,
+# whose types and tables it uses; the illustrations of La Palanca come from the web of the app, at
+# the same path next to apps/site; packages/ui draws the faces of the players the home shows.
 
 FROM node:24.21.0-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS install
 WORKDIR /app
@@ -13,6 +13,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/site/package.json apps/site/
 COPY packages/game/package.json packages/game/
 COPY packages/dilemmas/package.json packages/dilemmas/
+COPY packages/identity/package.json packages/identity/
+COPY packages/consent/package.json packages/consent/
 COPY packages/db/package.json packages/db/
 COPY packages/ui/package.json packages/ui/
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts --filter '@thelever-app/site...'
@@ -32,6 +34,10 @@ COPY packages/game/package.json packages/game/
 COPY packages/game/src packages/game/src
 COPY packages/dilemmas/package.json packages/dilemmas/
 COPY packages/dilemmas/src packages/dilemmas/src
+COPY packages/identity/package.json packages/identity/
+COPY packages/identity/src packages/identity/src
+COPY packages/consent/package.json packages/consent/
+COPY packages/consent/src packages/consent/src
 COPY packages/db/package.json packages/db/
 COPY packages/db/src packages/db/src
 COPY packages/ui/package.json packages/ui/
