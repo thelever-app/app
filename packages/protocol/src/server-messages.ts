@@ -317,7 +317,10 @@ export const RoomStateDto = z.strictObject({
   settings: RoomSettingsDto,
   /** The ambience whose configuration the room has, or custom. */
   ambience: AmbienceOrCustomDto,
-  /** Whether someone in the room said they are under 18: nothing for adults can be turned on. */
+  /**
+   * For the host, whether someone in the room said they are under 18: nothing for adults can be
+   * turned on. False for the others, so nobody can tell who it is.
+   */
   hasPlayerUnderEighteen: z.boolean(),
   rounds: z.array(LobbyRoundDto).min(1).max(MAXIMUM_ROUNDS),
   /** The fewest players a game of the room starts with, by its variant: 2 nominal, 3 anonymous. */
