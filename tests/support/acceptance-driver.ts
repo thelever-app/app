@@ -2327,6 +2327,14 @@ export class AcceptanceDriver implements GameDriver {
 
   // Sound and motion happen only on the device: their scenarios are @screen.
 
+  async resultsScreenShownTo(): Promise<number> {
+    throw new Error('Only the device looks back at the results: the scenario must be @screen');
+  }
+
+  async goBackInTheResults(): Promise<void> {
+    throw new Error('Only the device looks back at the results: the scenario must be @screen');
+  }
+
   async soundsHeardBy(): Promise<string[]> {
     throw new Error('Only the device plays sounds: the scenario must be @screen');
   }
