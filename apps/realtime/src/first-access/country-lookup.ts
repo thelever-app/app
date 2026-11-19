@@ -4,7 +4,7 @@ import { type CountryResponse, Reader } from 'mmdb-lib';
 
 /**
  * The country an IP address is in, from a database on the room server itself: the address never
- * leaves it, and only the region of the country is kept (RES-37).
+ * leaves it, and only the region of the country is kept.
  */
 export interface CountryLookup {
   /** The ISO 3166-1 alpha-2 code, or none for an address the database does not place. */

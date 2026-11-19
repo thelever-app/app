@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { CountryLookup } from '../../first-access/country-lookup.ts';
-import { bearer, ROOM_CHOICES, startRoomServer } from '../support/room-server.ts';
+import {
+  bearer,
+  JOIN_AVATAR,
+  post,
+  ROOM_CHOICES,
+  startRoomServer,
+} from '../support/room-server.ts';
 
 /** Test data: an address in Spain, one in the United Kingdom and one in the United States. */
 const COUNTRIES = new Map([
@@ -105,7 +111,52 @@ describe('the first access', () => {
     expect(await response.json()).toEqual({ code: 'first-access-required' });
   });
 
-  it('should ask for the month in a boundary year', async () => {
+  it('should not let anyone join a room or vote alone before finishing it', async () => {
+    // Arrange: Ana finished it and hosts a room; the newcomer only declared the age.
+    const { http } = await server();
+    const { roomId } = await post(`${http}/rooms`, 'ana', { nickname: 'Ana', ...ROOM_CHOICES });
+    await call(http, '/first-access', { from: '198.51.100.10' });
+    await call(http, '/first-access/age', { body: { birthYear: 1990 } });
+
+    // Act
+    const joined = await call(http, `/rooms/${roomId}/players`, {
+      body: { nickname: 'Luis', avatar: JOIN_AVATAR },
+    });
+    const voted = await call(http, '/dilemmas/seed-trolley-public/vote', {
+      body: { optionId: 'any' },
+    });
+
+    // Assert
+    expect(joined.status).toBe(403);
+    expect(await joined.json()).toEqual({ code: 'first-access-required' });
+    expect(voted.status).toBe(403);
+    expect(await voted.json()).toEqual({ code: 'first-access-required' });
+  });
+
+  it('should stop who opens the app again from a blocked country', async () => {
+    // Arrange: Ana finished it in Spain.
+    const { http } = await server();
+    const opened = (from: string) =>
+      fetch(`${http}/first-access`, {
+        headers: { Authorization: bearer('ana'), 'X-Forwarded-For': from },
+      });
+    await opened('198.51.100.10');
+
+    // Act
+    const status = await (await opened('198.51.100.20')).json();
+    const created = await fetch(`${http}/rooms`, {
+      method: 'POST',
+      headers: { Authorization: bearer('ana'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname: 'Ana', ...ROOM_CHOICES }),
+    });
+
+    // Assert
+    expect(status).toMatchObject({ region: 'blocked', step: 'blocked-country' });
+    expect(created.status).toBe(403);
+    expect(await created.json()).toEqual({ code: 'first-access-required' });
+  });
+
+  it('should ask for the month of who may be under 18', async () => {
     // Arrange
     const { http } = await server();
     await call(http, '/first-access', { from: '198.51.100.10' });
@@ -124,7 +175,7 @@ describe('the first access', () => {
     const { http } = await server();
     await call(http, '/first-access', { from: '198.51.100.30' });
     await call(http, '/first-access/age', {
-      body: { birthYear: new Date().getUTCFullYear() - 10 },
+      body: { birthYear: new Date().getUTCFullYear() - 10, birthMonth: 6 },
     });
 
     // Act
