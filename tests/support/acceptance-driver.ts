@@ -10,10 +10,10 @@ import {
   ConnectPlayerUseCase,
   AMBIENCES,
   ChooseAmbienceUseCase,
+  Room,
+  type RoomSettingsChanges,
   CreateRoomUseCase,
-  keptForANewRoom,
   MinorInRoomError,
-  settingsOf,
   DeleteClosedRoomsUseCase,
   DisconnectPlayerUseCase,
   ExpelPlayerUseCase,
@@ -1305,43 +1305,89 @@ export class AcceptanceDriver implements GameDriver {
     });
   }
 
-  /** What the lobby says: an ambience for adults is off while someone in the room is under 18. */
+  /** Whether the application takes the choice: tried on a copy of the room, which stays as it is. */
   async ambiencesInTheSettings(host: string): Promise<AmbienceOption[]> {
-    const { hasPlayerUnderEighteen, settings } = await this.#screenOf(host);
-    return AMBIENCES.map((ambience) => {
-      const forAdults = settingsOf(ambience, keptForANewRoom(settings.dilemmaLanguage)).adultsOnly;
-      return {
+    return Promise.all(
+      AMBIENCES.map(async (ambience) => ({
         ambience,
         described: true,
-        offBecause: forAdults && hasPlayerUnderEighteen ? 'minor-in-room' : null,
-      };
-    });
+        offBecause: (await this.#onACopyOfTheRoom(host, (rooms, playerId) =>
+          new ChooseAmbienceUseCase(rooms, new InMemoryPlayerNotifier()).execute({
+            roomId: this.#currentRoomId(),
+            playerId,
+            ambience,
+          }),
+        ))
+          ? null
+          : ('minor-in-room' as const),
+      })),
+    );
   }
 
   async adultsOnlySwitchSeenBy(host: string): Promise<SwitchView> {
-    const { hasPlayerUnderEighteen, settings } = await this.#screenOf(host);
-    const on = settings.adultsOnly;
-    return { on, offBecause: !on && hasPlayerUnderEighteen ? 'minor-in-room' : null };
+    const on = (await this.#screenOf(host)).settings.adultsOnly;
+    const takes = await this.#onACopyOfTheRoom(host, (rooms, playerId) =>
+      this.#changeSettingsOn(rooms, playerId, { adultsOnly: true }),
+    );
+    return { on, offBecause: on || takes ? null : 'minor-in-room' };
   }
 
+  /** The application turns compromising dilemmas off in a room that is not anonymous. */
   async compromisingSwitchSeenBy(host: string): Promise<SwitchView> {
-    const { settings } = await this.#screenOf(host);
-    return {
-      on: settings.compromisingDilemmas,
-      offBecause: settings.variant === 'anonymous' ? null : 'only-anonymous',
-    };
+    const on = (await this.#screenOf(host)).settings.compromisingDilemmas;
+    const turnedOn = await this.#settingsOnACopy(host, { compromisingDilemmas: true });
+    return { on, offBecause: turnedOn.compromisingDilemmas ? null : 'only-anonymous' };
   }
 
-  /** The contents the room takes for a random round: those it does not allow are off. */
-  async contentsOffFor(host: string): Promise<RoundContent[]> {
-    const { settings } = await this.#screenOf(host);
-    return [
-      ...(settings.adultsOnly ? [] : (['adults-only'] as const)),
-      ...(settings.compromisingDilemmas ? [] : (['compromising'] as const)),
-    ];
+  /** The contents the application turns back to any for that round. */
+  async contentsOffFor(host: string, round: number): Promise<RoundContent[]> {
+    const off: RoundContent[] = [];
+    for (const content of ['adults-only', 'compromising'] as const) {
+      const rounds = (await this.#roomStateOf(host)).rounds.map(roundChangeOf);
+      const changed = rounds.map((other, index) =>
+        index === round - 1 && other.origin === 'random' ? { ...other, content } : other,
+      );
+      const after = await this.#settingsOnACopy(host, { rounds: changed });
+      const set = after.rounds[round - 1];
+      if (set?.origin !== 'random' || set.content !== content) off.push(content);
+    }
+    return off;
   }
 
-  /** Every page of the search, as the screen shows them asking for more. */
+  /** The settings a copy of the room takes with the change. */
+  async #settingsOnACopy(host: string, changes: RoomSettingsChanges) {
+    const rooms = await this.#copyOfTheRoom();
+    await this.#changeSettingsOn(rooms, this.#playerIdOf(host), changes);
+    const room = await rooms.findById(this.#currentRoomId());
+    if (!room) throw new Error('The copy of the room is lost');
+    return room.settings.toSnapshot();
+  }
+
+  /** Whether the command goes through on a copy of the room, or the application refuses it. */
+  async #onACopyOfTheRoom(
+    host: string,
+    command: (rooms: InMemoryRoomRepository, playerId: string) => Promise<unknown>,
+  ): Promise<boolean> {
+    const rooms = await this.#copyOfTheRoom();
+    return this.#accepts(() => command(rooms, this.#playerIdOf(host)), MinorInRoomError);
+  }
+
+  async #copyOfTheRoom(): Promise<InMemoryRoomRepository> {
+    const room = await this.#roomRepository.findById(this.#currentRoomId());
+    if (!room) throw new Error('The scenario has no room');
+    const rooms = new InMemoryRoomRepository();
+    await rooms.save(Room.restore(room.toSnapshot()));
+    return rooms;
+  }
+
+  #changeSettingsOn(rooms: InMemoryRoomRepository, playerId: string, changes: RoomSettingsChanges) {
+    return new ChangeRoomSettingsUseCase(
+      rooms,
+      this.#catalog,
+      new InMemoryPlayerNotifier(),
+    ).execute({ roomId: this.#currentRoomId(), playerId, changes });
+  }
+
   async searchWithMarks(player: string): Promise<MarkedDilemma[]> {
     const dilemmas = [];
     let after: string | undefined;
