@@ -25,6 +25,8 @@ import type {
   VotePrediction,
   GameStage,
   PredictedShare,
+  AmbienceOrCustom,
+  RoundContent,
 } from '@thelever-app/game';
 import type { ColumnType, Generated, Kysely } from 'kysely';
 
@@ -107,6 +109,8 @@ export interface Database {
     place: Place;
     variant: RoomVariant;
     adults_only: boolean;
+    /** Only in an anonymous room. */
+    compromising_dilemmas: boolean;
     dilemma_language: DilemmaLanguage;
     time_per_dilemma_seconds: TimePerDilemmaSeconds;
     new_dilemmas: boolean;
@@ -151,6 +155,8 @@ export interface Database {
     round_id: number;
     origin: DilemmaOrigin;
     categories: RoomCategory[] | null;
+    /** What a random round draws; null in the others. */
+    content: RoundContent | null;
     dilemma_id: string | null;
     minimum_age: 16 | 18 | null;
     compromising: boolean | null;
@@ -187,6 +193,8 @@ export interface Database {
     /** The screen of the results everyone is on, from 0; null out of the results. */
     stage_step: number | null;
     version: number;
+    /** The ambience whose configuration the room had when the game started, or custom. */
+    ambience: AmbienceOrCustom;
     variant: RoomVariant;
     group_nature: GroupNature;
     place: Place;

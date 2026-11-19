@@ -46,7 +46,10 @@ export class PostgresDilemmaQueries implements DilemmaQueries {
     const rows = await this.#matching(this.#connection(), criteria)
       .leftJoin(played, (join) => join.onRef('played.id', '=', 'dilemmas.id'))
       .$if(!criteria.includeGap, (query) => query.where('dilemma_versions.has_gap', '=', false))
-      .$if(criteria.onlyForAdults, (query) => query.where('dilemma_versions.minimum_age', '=', 18))
+      .$if(criteria.content === 'adults-only', (query) =>
+        query.where('dilemma_versions.minimum_age', '=', 18),
+      )
+      .$if(criteria.content === 'compromising', (query) => query.where(compromisingNow()))
       .$if(criteria.excludedIds.length > 0, (query) =>
         query.where(sql<boolean>`dilemmas.id <> all(${[...criteria.excludedIds]}::text[])`),
       )

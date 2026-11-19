@@ -136,6 +136,7 @@ export class PostgresGameRepository implements GameRepository {
         id,
         room_id: roomId,
         ...changing,
+        ambience: settings.ambience,
         variant: settings.variant,
         group_nature: settings.groupNature,
         place: settings.place,
@@ -381,6 +382,7 @@ function snapshotOf(row: GameRow): GameSnapshot {
     roomId: row.room_id,
     version: row.version,
     settings: {
+      ambience: row.ambience,
       variant: row.variant,
       groupNature: row.group_nature,
       place: row.place,
