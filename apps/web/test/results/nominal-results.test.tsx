@@ -310,6 +310,40 @@ describe('EndScreen', () => {
     expect(mine.getByText(t('results.titles.el-mentalista'))).toBeDefined();
   });
 
+  it('should show no list of titles to a player who won none', async () => {
+    // Act
+    await renderPhase(atStep(null, { results: { ...RESULTS, titles: [] } }));
+
+    // Assert
+    expect(screen.queryByTestId('end-my-titles')).toBeNull();
+  });
+
+  it('should tell apart the pairs that share a title on a tie', async () => {
+    // Arrange
+    const tied: NonNullable<GameStateDto['results']> = {
+      ...RESULTS,
+      titles: [
+        {
+          title: 'almas-gemelas',
+          winners: [
+            { playerIds: ['test-ana-id', 'test-marta-id'], count: 4, of: 6 },
+            { playerIds: ['test-luis-id', 'test-marta-id'], count: 4, of: 6 },
+          ],
+          runnersUp: [],
+        },
+      ],
+    };
+
+    // Act
+    const { t } = await renderPhase(atStep(null, { results: tied }));
+
+    // Assert
+    const [title] = within(screen.getByRole('list', { name: t('end.titles') })).getAllByRole(
+      'listitem',
+    );
+    expect(title?.textContent).toContain('Ana (tú) y Marta · Luis y Marta');
+  });
+
   it('should tell the player their place and who knows them best', async () => {
     // Act
     const { t } = await renderPhase(atStep(null));

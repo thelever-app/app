@@ -32,7 +32,8 @@ export function TitlesSummary({
           </span>
           <span className={styles.titleName}>{t(`results.titles.${title}`)}</span>
           <span className={styles.titleWinners}>
-            {list(winners.map(({ playerIds }) => list(winnersOf(playerIds))))}
+            {/* On a tie, each winner apart: a pair of Almas gemelas stays together. */}
+            {winners.map(({ playerIds }) => list(winnersOf(playerIds))).join(' · ')}
           </span>
         </li>
       ))}

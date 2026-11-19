@@ -1982,14 +1982,13 @@ export class E2eDriver implements GameDriver {
       .getByRole('heading', { name: spanish('end.inRoom', { count: staying.length }) })
       .waitFor();
     const titles = page.getByRole('list', { name: SCREEN.endTitles });
-    const shown = isAnonymous(watcher)
-      ? []
-      : await titles.getByRole('listitem').evaluateAll((items) =>
-          items.map((item) => ({
-            title: item.children[1]?.textContent ?? '',
-            winners: item.children[2]?.textContent ?? '',
-          })),
-        );
+    // Read in both rooms, so an anonymous one that showed titles would be caught.
+    const shown = await titles.getByRole('listitem').evaluateAll((items) =>
+      items.map((item) => ({
+        title: item.children[1]?.textContent ?? '',
+        winners: item.children[2]?.textContent ?? '',
+      })),
+    );
     return {
       stillInTheRoom: staying.map(({ playerId }) => this.#nameOf(playerId)),
       gone: game.players.filter(({ left }) => left).map(({ playerId }) => this.#nameOf(playerId)),

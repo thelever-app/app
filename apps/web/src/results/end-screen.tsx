@@ -43,6 +43,7 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
   const gone = game.players.filter(({ left }) => left).map(({ nickname }) => nickname);
   const host = game.players.find(({ playerId }) => playerId === game.hostId);
   const isHost = game.hostId === game.playerId;
+  const myTitles = titlesOf(game.results, game.playerId);
   const knowers = (game.results?.knownBestBy?.playerIds ?? []).flatMap((playerId) =>
     game.players.filter((player) => player.playerId === playerId),
   );
@@ -89,9 +90,10 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
                   {t('ranking.mentalist')}
                 </span>
               )
-            : mine && (
+            : mine &&
+              myTitles.length > 0 && (
                 <ul className={styles.myTitles} data-testid="end-my-titles">
-                  {titlesOf(game.results, game.playerId).map(({ title }) => (
+                  {myTitles.map(({ title }) => (
                     <li key={title} className={styles.mentalist}>
                       <Icon name={TITLE_ICONS[title]} size={18} />
                       {t(`results.titles.${title}`)}

@@ -11,7 +11,8 @@ import { z } from 'zod';
  * room carries it and Ready, and the game has its results and its end. 10 since the person in the
  * gap predicts without voting: their answer has no vote, nobody predicts them and the reveal says
  * how many votes they guessed. 11 since the end of the game: the results of a nominal room screen
- * by screen with their titles, reactions, likes, the cards and the rematch.
+ * by screen with their titles, reactions, likes, the cards and the rematch. 12 since taking back
+ * a like: `unlike-dilemma`.
  */
 export const CONTRACT_VERSION = 12;
 
