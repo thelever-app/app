@@ -36,6 +36,14 @@ export class PostgresDilemmaLikes implements DilemmaLikes {
       .execute();
   }
 
+  async unlike(identity: string, dilemmaId: string): Promise<void> {
+    await (currentTransaction<GameTables>() ?? this.#db)
+      .deleteFrom('dilemma_likes')
+      .where('identity', '=', identity)
+      .where('dilemma_id', '=', dilemmaId)
+      .execute();
+  }
+
   async hasLiked(identity: string, dilemmaId: string): Promise<boolean> {
     const found = await (currentTransaction<GameTables>() ?? this.#db)
       .selectFrom('dilemma_likes')

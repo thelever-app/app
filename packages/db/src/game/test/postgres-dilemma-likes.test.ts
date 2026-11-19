@@ -71,6 +71,22 @@ describe('PostgresDilemmaLikes', () => {
     expect(await likes.hasLiked('TestAnaIdentity', dilemmaId)).toBe(false);
   });
 
+  it('should take back the like of an identity to a dilemma, and only that one', async () => {
+    // Arrange
+    const dilemmaId = await savedDilemma();
+    const likes = new PostgresDilemmaLikes(database.db());
+    await likes.like({ identity: 'TestLuisIdentity', dilemmaId, seal: SEAL, at: AT });
+    await likes.like({ identity: 'TestAnaIdentity', dilemmaId, seal: SEAL, at: AT });
+
+    // Act
+    await likes.unlike('TestLuisIdentity', dilemmaId);
+    await likes.unlike('TestMartaIdentity', dilemmaId);
+
+    // Assert
+    expect(await likes.hasLiked('TestLuisIdentity', dilemmaId)).toBe(false);
+    expect(await likes.hasLiked('TestAnaIdentity', dilemmaId)).toBe(true);
+  });
+
   it('should make a like given from the catalog count as one of a game', async () => {
     // Arrange
     const dilemmaId = await savedDilemma();
