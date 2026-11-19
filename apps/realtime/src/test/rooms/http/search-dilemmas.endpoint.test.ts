@@ -48,6 +48,7 @@ describe('GET /rooms/:roomId/dilemmas', () => {
       dilemmaId: trolley!.id,
       text: trolley!.text,
       minimumAge: trolley!.minimumAge,
+      compromising: trolley!.compromising,
       category: trolley!.category,
       tags: trolley!.tags,
       optionCount: trolley!.options.length,

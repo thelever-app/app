@@ -35,6 +35,7 @@ describe('GET /rooms/by-code/:code', () => {
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
       roomId,
+      ambience: 'classic',
       hostNickname: 'Ana',
       variant: 'nominal',
       adultsOnly: false,
