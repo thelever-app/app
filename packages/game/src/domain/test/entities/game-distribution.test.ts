@@ -32,7 +32,12 @@ const DILEMMAS = ['TestDilemma1', 'TestDilemma2'];
 function gameOfFour(settings: GameSettings = ANONYMOUS): Game {
   const players = EVERYONE.map((nickname) =>
     Player.create(
-      { nickname, identity: `Test${nickname}Identity`, avatar: new AvatarVO('face-01', 'khaki') },
+      {
+        underEighteen: false,
+        nickname,
+        identity: `Test${nickname}Identity`,
+        avatar: new AvatarVO('face-01', 'khaki'),
+      },
       new FixedIdGenerator(nickname),
     ),
   );

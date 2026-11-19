@@ -7,6 +7,7 @@ import { RoomCodeVO } from '../../domain/vos/room-code.vo.ts';
 import { RoomCodeUnavailableError } from '../errors/room-code-unavailable.error.ts';
 import type { DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
+import type { SealProvider } from '../ports/seal-provider.port.ts';
 import { findLobbyDilemmas } from './find-lobby-dilemmas.ts';
 
 /** With over 28 million codes, ten taken in a row means something is wrong, not bad luck. */
@@ -44,6 +45,7 @@ export class CreateRoomUseCase {
   readonly #idGenerator: IdGenerator;
   readonly #randomness: Randomness;
   readonly #clock: Clock;
+  readonly #sealProvider: SealProvider;
 
   constructor(
     roomRepository: RoomRepository,
@@ -51,12 +53,15 @@ export class CreateRoomUseCase {
     idGenerator: IdGenerator,
     randomness: Randomness,
     clock: Clock,
+    /** Whether the host is under 18, by the age they declared. */
+    sealProvider: SealProvider,
   ) {
     this.#roomRepository = roomRepository;
     this.#dilemmaCatalog = dilemmaCatalog;
     this.#idGenerator = idGenerator;
     this.#randomness = randomness;
     this.#clock = clock;
+    this.#sealProvider = sealProvider;
   }
 
   async execute({ firstRoundDilemmaId, ...input }: CreateRoomInput): Promise<CreateRoomOutput> {
@@ -70,8 +75,18 @@ export class CreateRoomUseCase {
     const { face, color } = input.hostAvatar;
     const hostAvatar = new AvatarVO(face, color);
     const createdAt = this.#clock.now();
+    const { underEighteen: hostUnderEighteen } = await this.#sealProvider.sealFor(
+      input.hostIdentity,
+    );
     const room = Room.create(
-      { ...input, hostAvatar, code, createdAt, ...(firstRoundDilemma && { firstRoundDilemma }) },
+      {
+        ...input,
+        hostAvatar,
+        hostUnderEighteen,
+        code,
+        createdAt,
+        ...(firstRoundDilemma && { firstRoundDilemma }),
+      },
       this.#idGenerator,
     );
 

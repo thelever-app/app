@@ -31,7 +31,12 @@ const GAP_DILEMMA = 'TestGapDilemma';
 function gameOfFour(settings: GameSettings = NOMINAL): { game: Game; person: string } {
   const players = EVERYONE.map((nickname) =>
     Player.create(
-      { nickname, identity: `Test${nickname}Identity`, avatar: new AvatarVO('face-01', 'khaki') },
+      {
+        underEighteen: false,
+        nickname,
+        identity: `Test${nickname}Identity`,
+        avatar: new AvatarVO('face-01', 'khaki'),
+      },
       new FixedIdGenerator(nickname),
     ),
   );

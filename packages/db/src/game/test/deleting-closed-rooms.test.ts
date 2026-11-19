@@ -42,8 +42,8 @@ const GAME_DATA = [
 
 /**
  * The tables that do not hang from any room, so they stay when one is deleted: the
- * dilemmas, the likes and the instances of the room server. Counters, reports and the history go
- * here when they come.
+ * dilemmas, the likes, the instances of the room server, and the first access and the legal
+ * documents each identity accepted. Counters, reports and the history go here when they come.
  */
 const KEPT = [
   'dilemmas',
@@ -57,6 +57,8 @@ const KEPT = [
   'world_vote_receipts',
   'instances',
   'dilemma_likes',
+  'first_accesses',
+  'legal_acceptances',
 ];
 
 /** How many rows each table of the app has, by its name. */

@@ -18,6 +18,11 @@ const STATUS: Partial<Record<ErrorCodeDto, number>> = {
   'room-code-not-found': 404,
   'dilemma-not-found': 404,
   'option-not-in-dilemma': 400,
+  'first-access-required': 403,
+  'blocked-country': 403,
+  'adults-only-room': 403,
+  'invalid-declared-age': 400,
+  'month-of-birth-needed': 422,
 };
 
 /** Whether Express could not read the body as JSON. */

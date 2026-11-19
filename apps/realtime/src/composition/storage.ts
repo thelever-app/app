@@ -1,6 +1,10 @@
+import type { AcceptanceRepository } from '@thelever-app/consent';
+import { InMemoryAcceptanceRepository } from '@thelever-app/consent/in-memory';
 import {
   type DatabaseClient,
   inTransaction,
+  PostgresAcceptanceRepository,
+  PostgresFirstAccessRepository,
   PostgresDilemmaLikes,
   PostgresDilemmaQueries,
   PostgresDilemmaRepository,
@@ -31,6 +35,8 @@ import {
   InMemoryGameRepository,
   InMemoryRoomRepository,
 } from '@thelever-app/game/in-memory';
+import type { FirstAccessRepository } from '@thelever-app/identity';
+import { InMemoryFirstAccessRepository } from '@thelever-app/identity/in-memory';
 import type { RunCommand } from '../rooms/run-command.ts';
 import type { SocketNotifier } from '../rooms/sockets/socket-notifier.ts';
 
@@ -61,6 +67,10 @@ export interface StorageAdapters {
   readonly gameRepository: GameRepository;
   /** The likes, which outlive the rooms. */
   readonly likes: DilemmaLikes;
+  /** The first access of each identity, which outlives the rooms too. */
+  readonly firstAccesses: FirstAccessRepository;
+  /** The legal documents each identity accepted. */
+  readonly acceptances: AcceptanceRepository;
   /**
    * The notifier the use cases get, given the sockets of this instance: in memory, those sockets;
    * in PostgreSQL, every instance, which deliver to their own sockets what it publishes.
@@ -82,6 +92,8 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
       roomRepository: new InMemoryRoomRepository(),
       gameRepository: new InMemoryGameRepository(),
       likes: new InMemoryDilemmaLikes(),
+      firstAccesses: new InMemoryFirstAccessRepository(),
+      acceptances: new InMemoryAcceptanceRepository(),
       notifierFor: (sockets) => sockets,
       runCommand: (command) => command(),
     };
@@ -95,6 +107,8 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
     roomRepository: new PostgresRoomRepository(db, instanceId),
     gameRepository: new PostgresGameRepository(db),
     likes: new PostgresDilemmaLikes(db),
+    firstAccesses: new PostgresFirstAccessRepository(db),
+    acceptances: new PostgresAcceptanceRepository(db),
     notifierFor: () => new PostgresPlayerNotifier(db),
     runCommand: (command) => inTransaction(db, command),
   };

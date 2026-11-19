@@ -32,8 +32,10 @@ import {
   TitleDto,
   type GameStateDto,
   type RoomStateDto,
+  FirstAccessResponseDto,
 } from '@thelever-app/protocol';
 import { isDeepStrictEqual } from 'node:util';
+import { currentVersionOf, PUBLISHED_VERSIONS } from '@thelever-app/consent';
 import {
   DistributionPredictionVO,
   GAME_LIKE_WEIGHT,
@@ -51,6 +53,9 @@ import type {
   AnswerPlan,
   CardView,
   CatalogEntry,
+  DeviceOptions,
+  FirstAccessScreen,
+  LegalDocument,
   DistributionPredictionView,
   EndOfTheGameView,
   PredictedShareView,
@@ -264,6 +269,7 @@ const SCREEN = {
     'Esa sala ya no existe': 'room-does-not-exist',
     'Esta sala está completa': 'room-full',
     'No puedes volver a entrar en esta partida': 'expelled',
+    'Esta sala tiene dilemas +18': 'adults-only',
   } as Readonly<Record<string, JoinRefusal>>,
   roomOf: /^Sala de (.+) · [A-Z0-9]{5}$/,
   inTheRoom: /^(\d+) en la sala$/,
@@ -383,6 +389,63 @@ const LOCALES: Readonly<Record<string, string>> = { es: 'es-ES', en: 'en-US', fr
 /** The language of the browsers when a scenario does not name one. */
 const SPANISH = 'es-ES';
 
+/** Where the app loads the cookie manager of Google, which the browsers of the run answer with TEST_COOKIE_MANAGER. */
+const COOKIE_MANAGER = 'https://fundingchoicesmessages.google.com/';
+/** Test data: the name of the test cookie manager. */
+const TEST_COOKIE_MANAGER_NAME = 'Test cookie manager';
+/**
+ * A cookie manager of test in place of Google's: a dialog that accepts or rejects everything and
+ * answers through TCF, as Google's does; once answered, the device keeps it, as Google's does.
+ */
+const TEST_COOKIE_MANAGER = `(() => {
+  const listeners = [];
+  let answer;
+  window.__tcfapi = (command, version, callback) => {
+    if (command !== 'addEventListener') return;
+    listeners.push(callback);
+    if (answer) callback(answer, true);
+  };
+  const answered = localStorage.getItem('test-cookie-manager');
+  if (answered) {
+    answer = { eventStatus: 'tcloaded', gdprApplies: true, purpose: { consents: JSON.parse(answered) } };
+    return;
+  }
+  const dialog = document.createElement('div');
+  dialog.setAttribute('role', 'dialog');
+  dialog.setAttribute('aria-label', '${TEST_COOKIE_MANAGER_NAME}');
+  for (const [label, consents] of [['Accept', { 1: true, 2: true, 3: true, 4: true }], ['Reject', {}]]) {
+    const button = document.createElement('button');
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      localStorage.setItem('test-cookie-manager', JSON.stringify(consents));
+      answer = { eventStatus: 'useractioncomplete', gdprApplies: true, purpose: { consents } };
+      dialog.remove();
+      for (const listener of listeners) listener(answer, true);
+    });
+    dialog.append(button);
+  }
+  document.body.append(dialog);
+})();`;
+/** Test data: an address of each country the scenarios name, as DB-IP Lite places them. */
+const ADDRESSES: Readonly<Record<string, string>> = {
+  ES: '80.58.61.250',
+  US: '8.8.8.8',
+  GB: '81.2.69.142',
+  RU: '77.88.8.8',
+};
+/** The year of birth of every player who finishes the first access as an adult. */
+const ADULT_BIRTH_YEAR = 1990;
+/** Where the web keeps what the cookie manager decided on personalised ads (first-access/cookie-consent.ts). */
+const PERSONALISED_ADS_KEY = 'thelever.personalisedAds';
+/** Where the web keeps when the offer to install the app was closed (install/install-offer-state.ts). */
+const INSTALL_OFFER_CLOSED_KEY = 'thelever.installOfferClosedAt';
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Where the public web publishes the full terms and the privacy policy of the app, in Spanish. */
+const LEGAL_PATHS = {
+  terms: '/es/condiciones-de-uso',
+  privacy: '/es/privacidad-de-la-app',
+} as const;
+
 /** The publisher and the ad units the public web of the run shows ads with. */
 const TEST_ADS = {
   client: 'ca-pub-0000000000000000',
@@ -433,6 +496,8 @@ interface PlayerScreen {
   link: { readonly page: WebSocketRoute; readonly server: WebSocketRoute } | undefined;
   /** While false, the page cannot reach the room server, as with no network. */
   online: boolean;
+  /** The identity the page signed in with, as its calls to the room server carry it. */
+  identity: string | undefined;
 }
 
 /** One player of the scenario, by the name the scenario gives them. */
@@ -473,6 +538,12 @@ export class E2eDriver implements GameDriver {
   #fillers = 0;
   /** The players whose device asks for reduced motion, set before their screen opens. */
   readonly #reducedMotion = new Set<string>();
+  /** The devices of the scenarios of the first access, by the name of their user. */
+  readonly #devices = new Map<string, DeviceOptions>();
+  /** What the notice of an anonymous room told each player before they went on, in order. */
+  readonly #anonymousNotices = new Map<string, readonly string[]>();
+  /** The users whose browser offers to install the app, which is not installed on their device. */
+  readonly #installable = new Set<string>();
   /** How many screens of the results each player looks behind the group, on their own device. */
   readonly #lookingBack = new Map<string, number>();
   /** The public web: the curated catalog of the scenario, its numbers by name and what was generated. */
@@ -507,6 +578,347 @@ export class E2eDriver implements GameDriver {
       this.#curatedCatalog.discarded.push(...loaded.map(({ number }) => number));
       await this.#importCatalog();
     }
+  }
+
+  // The first access
+
+  async newDevice(user: string, options: DeviceOptions): Promise<void> {
+    this.#devices.set(user, options);
+    const player = await this.#withScreen(user, SPANISH, true);
+    if (options.globalPrivacyControl) {
+      await screenOf(player).context.addInitScript(() => {
+        Object.defineProperty(Navigator.prototype, 'globalPrivacyControl', {
+          get: () => true,
+          configurable: true,
+        });
+      });
+    }
+  }
+
+  async openApp(user: string, from?: 'invitation'): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const address =
+      from === 'invitation'
+        ? `${this.#stack.webUrl}/join/${this.#lobbyOf(this.#hostName()).code}`
+        : `${this.#stack.webUrl}/app`;
+    await page.goto(address);
+    const start = page
+      .getByRole('button', { name: SCREEN_TEXT('firstAccess.welcome.start') })
+      .or(page.getByRole('button', { name: SCREEN_TEXT('firstAccess.welcome.join') }));
+    await this.#firstAccessScreenOn(page);
+    if (await start.isVisible()) await start.click();
+  }
+
+  async declareAge(user: string, age: number): Promise<void> {
+    // Born in December of the year before they turned it, so they are that age whatever the day.
+    const { page } = screenOf(this.#playerCalled(user));
+    await this.chooseBirthYear(user, new Date().getUTCFullYear() - age - 1);
+    const month = page.getByRole('combobox', { name: SCREEN_TEXT('firstAccess.age.month') });
+    if (await month.isVisible()) {
+      await month.selectOption('12');
+      await page.getByRole('button', { name: SCREEN_TEXT('firstAccess.continue') }).click();
+      await month.waitFor({ state: 'hidden' });
+    }
+  }
+
+  async chooseBirthYear(user: string, year: number): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const yearField = page.getByRole('combobox', { name: SCREEN_TEXT('firstAccess.age.year') });
+    await yearField.selectOption(String(year));
+    await page.getByRole('button', { name: SCREEN_TEXT('firstAccess.continue') }).click();
+    // The month, or the screen after the age.
+    await page
+      .getByRole('combobox', { name: SCREEN_TEXT('firstAccess.age.month') })
+      .or(page.getByRole('checkbox').first())
+      .or(page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.underage.title') }))
+      .first()
+      .waitFor();
+  }
+
+  async acceptTerms(user: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const newTerms = page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.newTerms.title') });
+    if (await newTerms.isVisible()) {
+      await page.getByRole('checkbox').check();
+      await page.getByRole('button', { name: SCREEN_TEXT('firstAccess.newTerms.accept') }).click();
+      await newTerms.waitFor({ state: 'hidden' });
+      return;
+    }
+    await this.#termsBox(page).check();
+  }
+
+  async declineTerms(user: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('button', { name: SCREEN_TEXT('firstAccess.decline') }).click();
+  }
+
+  async giveGameConsent(user: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const title = page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.consent.title') });
+    await this.#consentBox(page).check();
+    await page.getByRole('button', { name: SCREEN_TEXT('firstAccess.continue') }).click();
+    await title.waitFor({ state: 'hidden' });
+  }
+
+  async answerCookieConsent(user: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page
+      .getByRole('dialog', { name: TEST_COOKIE_MANAGER_NAME })
+      .getByRole('button', { name: 'Accept' })
+      .click();
+  }
+
+  async firstAccessScreenOf(user: string): Promise<FirstAccessScreen> {
+    return this.#firstAccessScreenOn(screenOf(this.#playerCalled(user)).page);
+  }
+
+  async preselected(user: string, choice: 'year' | 'month' | 'game-consent'): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    if (choice === 'game-consent') return this.#consentBox(page).isChecked();
+    const key = choice === 'year' ? 'firstAccess.age.year' : 'firstAccess.age.month';
+    return (await page.getByRole('combobox', { name: SCREEN_TEXT(key) }).inputValue()) !== '';
+  }
+
+  async mentionsMinimumAge(user: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    // The years of the list aside, what the screen says.
+    const said = String(
+      await page.evaluate(`(() => {
+        const copy = document.body.cloneNode(true);
+        for (const list of copy.querySelectorAll('select')) list.remove();
+        return copy.textContent ?? '';
+      })()`),
+    );
+    return /\b1[68]\b|edad mínima/i.test(said);
+  }
+
+  async legalTextsOfferedTo(user: string): Promise<readonly ('terms' | 'privacy')[]> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const offered: ('terms' | 'privacy')[] = [];
+    for (const which of ['terms', 'privacy'] as const) {
+      if ((await page.locator(`a[href="${LEGAL_PATHS[which]}"]`).count()) > 0) offered.push(which);
+    }
+    return offered;
+  }
+
+  async toldTheGameConsentChanged(user: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const said = plainOf(SCREEN_TEXT('firstAccess.consent.changed'));
+    return (await page.getByRole('status').filter({ hasText: said }).count()) > 0;
+  }
+
+  async canUseTheApp(user: string): Promise<boolean> {
+    // The app is behind the first access: only past it does any of its screens show.
+    const screen = await this.firstAccessScreenOf(user);
+    return screen === 'home' || screen === 'join';
+  }
+
+  async acceptedVersionOf(user: string, document: LegalDocument): Promise<number | undefined> {
+    const identity = await this.#identityOfDevice(user);
+    const row = await this.#withDatabase((db) =>
+      db
+        .selectFrom('legal_acceptances')
+        .select('version')
+        .where('identity', '=', identity)
+        .where('document', '=', document)
+        .executeTakeFirst(),
+    );
+    return row?.version;
+  }
+
+  async currentVersionOf(document: LegalDocument): Promise<number> {
+    return currentVersionOf(document, PUBLISHED_VERSIONS);
+  }
+
+  async finishFirstAccess(user: string): Promise<void> {
+    await this.#withScreen(user);
+  }
+
+  async acceptedAnEarlierVersion(user: string, document: LegalDocument): Promise<void> {
+    // The room server of the run publishes the versions of the code: the one before is earlier.
+    const identity = await this.#identityOfDevice(user);
+    await this.#withDatabase((db) =>
+      db
+        .updateTable('legal_acceptances')
+        .set((eb) => ({ version: eb('version', '-', 1) }))
+        .where('identity', '=', identity)
+        .where('document', '=', document)
+        .execute(),
+    );
+  }
+
+  async publishVersionThatAsksAgain(document: LegalDocument): Promise<void> {
+    const current = PUBLISHED_VERSIONS.find((version) => version.document === document);
+    if (!current?.asksAgain) {
+      throw new Error(`The version of ${document} of the code does not ask again`);
+    }
+  }
+
+  async keptFirstAccessOf(): Promise<Readonly<Record<string, unknown>>> {
+    throw new Error('What the app keeps is read in the application: the scenario must not be @ui');
+  }
+
+  async consentPointsShownTo(user: string): Promise<readonly string[]> {
+    const { page } = screenOf(this.#playerCalled(user));
+    // Only what comes before the boxes.
+    return (await page.evaluate(`(() => {
+      const box = document.querySelector('input[type="checkbox"]');
+      return [...document.querySelectorAll('li[data-point]')]
+        .filter((item) => box && item.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING)
+        .map((item) => item.getAttribute('data-point'));
+    })()`)) as string[];
+  }
+
+  async toldWhyTheConsentIsApart(user: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    return (await page.getByTestId('consent-why').count()) > 0;
+  }
+
+  async openHowTheLeverIsFunded(user: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('button', { name: SCREEN_TEXT('firstAccess.consent.funding') }).click();
+    const sheet = page.getByRole('dialog', { name: SCREEN_TEXT('firstAccess.funding.title') });
+    await sheet.waitFor();
+    return sheet.isVisible();
+  }
+
+  async personalisedAdsAllowedFor(user: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    return (
+      (await page.evaluate((key) => localStorage.getItem(key), PERSONALISED_ADS_KEY)) === 'yes'
+    );
+  }
+
+  async toldAboutGlobalPrivacyControl(user: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const told = page.getByText(SCREEN_TEXT('firstAccess.cookies.globalPrivacyControl'));
+    await told.waitFor();
+    return told.isVisible();
+  }
+
+  async browserOffersToInstall(user: string): Promise<void> {
+    this.#installable.add(user);
+    await this.#offerToInstallOn(screenOf(this.#playerCalled(user)).page);
+  }
+
+  /** A browser offers to install an app that is not installed on every load, early. */
+  async #offerToInstallOn(page: Page): Promise<void> {
+    await page.evaluate(`(() => {
+      const offer = new Event('beforeinstallprompt', { cancelable: true });
+      offer.prompt = async () => undefined;
+      window.dispatchEvent(offer);
+    })()`);
+  }
+
+  async reachHome(user: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.goto(`${this.#stack.webUrl}/app`);
+    await page.getByRole('heading', { name: SCREEN_TEXT('home.title') }).waitFor();
+    if (this.#installable.has(user)) await this.#offerToInstallOn(page);
+  }
+
+  async offeredToInstall(user: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const offer = page.getByRole('complementary', { name: SCREEN_TEXT('installOffer.title') });
+    return steady(async () => (await offer.count()) > 0);
+  }
+
+  async closeInstallOffer(user: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('button', { name: SCREEN_TEXT('installOffer.close') }).click();
+  }
+
+  async letDaysPassOnTheDevice(user: string, days: number): Promise<void> {
+    // What the device keeps of when it closed the offer goes back as many days.
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.evaluate(
+      ([key, ms]) => {
+        const closed = Number(localStorage.getItem(key));
+        if (closed > 0) localStorage.setItem(key, String(closed - ms));
+      },
+      [INSTALL_OFFER_CLOSED_KEY, days * DAY_MS] as const,
+    );
+  }
+
+  async finishAGame(user: string): Promise<void> {
+    const rival = `${user}, rival`;
+    await this.createRoom(user);
+    await this.joinRoom(rival);
+    await this.startDecisionPhase(1);
+    await this.answer(user);
+    await this.answer(rival);
+    while (!(await this.resultsScreenSeenBy(user))) await this.moveOn(user);
+    while (!(await this.endOfTheGameSeenBy(user))) await this.moveOn(user);
+  }
+
+  async anonymousNoticeShownTo(player: string): Promise<readonly string[]> {
+    const told = this.#anonymousNotices.get(player);
+    if (!told) throw new Error(`${player} was told nothing before the first dilemma`);
+    return told;
+  }
+
+  /** Where the first access of the page is, once it shows any of its screens. */
+  async #firstAccessScreenOn(page: Page): Promise<FirstAccessScreen> {
+    const screens: readonly (readonly [FirstAccessScreen, Locator])[] = [
+      ['month', page.getByRole('combobox', { name: SCREEN_TEXT('firstAccess.age.month') })],
+      ['age', page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.age.title') })],
+      [
+        'under-minimum-age',
+        page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.underage.title') }),
+      ],
+      [
+        'blocked-country',
+        page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.country.title') }),
+      ],
+      ['new-terms', page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.newTerms.title') })],
+      [
+        'game-consent',
+        page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.consent.title') }),
+      ],
+      ['cookies', page.getByRole('dialog', { name: TEST_COOKIE_MANAGER_NAME })],
+      ['cookies', page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.cookies.title') })],
+      ['home', page.getByRole('heading', { name: SCREEN_TEXT('home.title') })],
+      ['join', page.getByRole('textbox', { name: SCREEN.nickname })],
+      ['age', page.getByRole('button', { name: SCREEN_TEXT('firstAccess.welcome.start') })],
+      ['age', page.getByRole('button', { name: SCREEN_TEXT('firstAccess.welcome.join') })],
+    ];
+    await screens
+      .map(([, locator]) => locator)
+      .reduce((any, locator) => any.or(locator))
+      .first()
+      .waitFor();
+    return steady(async () => {
+      for (const [screen, locator] of screens) {
+        if (!(await locator.isVisible())) continue;
+        // The game consent asks for the terms too while they are to accept, with a box of their own.
+        if (screen === 'game-consent' && (await this.#termsBox(page).count()) > 0) {
+          return (await this.#termsBox(page).isChecked()) ? 'game-consent' : 'terms';
+        }
+        return screen;
+      }
+      throw new Error('The page shows no screen of the first access, nor the app');
+    });
+  }
+
+  /** The box of the terms of use on the screen of the game consent, while they are to accept. */
+  #termsBox(page: Page): Locator {
+    return page
+      .locator('label')
+      .filter({ hasText: plainOf(SCREEN_TEXT('firstAccess.consent.terms')) })
+      .getByRole('checkbox');
+  }
+
+  #consentBox(page: Page): Locator {
+    return page
+      .locator('label')
+      .filter({ hasText: SCREEN_TEXT('firstAccess.consent.statement') })
+      .getByRole('checkbox');
+  }
+
+  /** The identity the device of `user` signed in with, as its calls carried it. */
+  async #identityOfDevice(user: string): Promise<string> {
+    const screen = screenOf(this.#playerCalled(user));
+    return waitUntil(() => screen.identity, `the device of ${user} signs in`);
   }
 
   // Lobby
@@ -709,7 +1121,7 @@ export class E2eDriver implements GameDriver {
     if ((await lateJoin.count()) > 0) {
       joiner.nickname = nickname;
       await page.getByRole('button', { name: SCREEN.enterTheRound }).click();
-      await inGame.first().waitFor();
+      await this.#toTheDilemma(joiner);
     }
     if ((await inGame.count()) > 0) {
       await waitUntil(
@@ -2467,8 +2879,9 @@ export class E2eDriver implements GameDriver {
 
   /** The position the screen of `player` says, on the dilemma, the waiting screen or the reveal. */
   async dilemmaShownTo(player: string): Promise<number> {
-    const { page } = screenOf(this.#playerCalled(player));
-    await page.getByText(SCREEN.position).first().waitFor();
+    const shownTo = this.#playerCalled(player);
+    const { page } = screenOf(shownTo);
+    await this.#toTheDilemma(shownTo);
     return steady(() => positionOn(page));
   }
 
@@ -3435,8 +3848,11 @@ export class E2eDriver implements GameDriver {
     return found.name;
   }
 
-  /** The player of that name, with a browser of their own, opened the first time they need it. */
-  async #withScreen(name: string, locale = SPANISH): Promise<E2ePlayer> {
+  /**
+   * The player of that name, with a browser of their own, opened the first time they need it,
+   * where they finished the first access as an adult; on a new device, they have not.
+   */
+  async #withScreen(name: string, locale = SPANISH, newDevice = false): Promise<E2ePlayer> {
     const known = this.#players.get(name);
     if (known?.screen) return known;
     if (known) throw new Error(`${name} came in without a screen, and the scenario needs one`);
@@ -3461,6 +3877,7 @@ export class E2eDriver implements GameDriver {
       received: [],
       link: undefined,
       online: true,
+      identity: undefined,
     };
     const player: E2ePlayer = {
       name,
@@ -3479,7 +3896,49 @@ export class E2eDriver implements GameDriver {
       (url) => url.host === realtime.host,
       (socket) => this.#link(player, screen, socket),
     );
+    // Each call says who the page signed in as, and comes from the address of its country, as
+    // Google's proxy sees it.
+    await context.route(`${realtime.origin}/**`, async (route) => {
+      const headers = route.request().headers();
+      const token = /^Bearer (.+)$/.exec(headers.authorization ?? '')?.[1];
+      if (token) screen.identity = uidOf(token);
+      const country = this.#devices.get(name)?.country;
+      const address = country === undefined ? undefined : ADDRESSES[country];
+      await route.continue(address ? { headers: { ...headers, 'x-forwarded-for': address } } : {});
+    });
+    if (!newDevice) await this.#throughTheFirstAccess(screen.page, languageOfLocale(locale));
     return player;
+  }
+
+  /** On a page that never used TheLever, the first access as an adult, to the start of the app. */
+  async #throughTheFirstAccess(page: Page, language: string): Promise<void> {
+    await page.goto(`${this.#stack.webUrl}/app`);
+    await this.#acrossTheFirstAccess(page, language);
+  }
+
+  /** From the welcome of the first access, as an adult, to the address the page opened. */
+  async #acrossTheFirstAccess(page: Page, language: string): Promise<void> {
+    const text = (key: string) => textIn(language, key);
+    await page
+      .getByRole('button', { name: text('firstAccess.welcome.start') })
+      .or(page.getByRole('button', { name: text('firstAccess.welcome.join') }))
+      .click();
+    await page
+      .getByRole('combobox', { name: text('firstAccess.age.year') })
+      .selectOption(String(ADULT_BIRTH_YEAR));
+    await page.getByRole('button', { name: text('firstAccess.continue') }).click();
+    const boxes = page.getByRole('checkbox');
+    await boxes.nth(1).waitFor();
+    await boxes.nth(0).check();
+    await boxes.nth(1).check();
+    await page.getByRole('button', { name: text('firstAccess.continue') }).click();
+    await page
+      .getByRole('dialog', { name: TEST_COOKIE_MANAGER_NAME })
+      .getByRole('button', { name: 'Accept' })
+      .click();
+    await page
+      .getByRole('heading', { name: text('firstAccess.cookies.title') })
+      .waitFor({ state: 'hidden' });
   }
 
   /**
@@ -3491,6 +3950,10 @@ export class E2eDriver implements GameDriver {
     // The script of AdSense never leaves the run: a script of test fills the ad units instead.
     await context.route(`${ADSENSE_SCRIPT}*`, (route) =>
       route.fulfill({ contentType: 'text/javascript', body: TEST_ADSENSE }),
+    );
+    // Nor the cookie manager of Google: one of test answers in its place.
+    await context.route(`${COOKIE_MANAGER}**`, (route) =>
+      route.fulfill({ contentType: 'text/javascript', body: TEST_COOKIE_MANAGER }),
     );
     await context.addInitScript(
       ([key, value]) => {
@@ -3504,7 +3967,11 @@ export class E2eDriver implements GameDriver {
       const config = (await response.json()) as Record<string, unknown>;
       await route.fulfill({
         response,
-        json: { ...config, realtimeUrl: realtime.origin.replace(/^http/, 'ws') },
+        json: {
+          ...config,
+          realtimeUrl: realtime.origin.replace(/^http/, 'ws'),
+          adsenseClient: TEST_ADS.client,
+        },
       });
     });
     return context;
@@ -3526,6 +3993,21 @@ export class E2eDriver implements GameDriver {
       Authorization: `Bearer ${idToken}`,
       'X-Access-Code': this.#stack.accessCode,
     };
+    // Through the first access as an adult, as a screen would have gone.
+    const firstAccess = async (path: string, body?: object) => {
+      const response = await fetch(`${this.#stack.realtimeUrl}${path}`, {
+        method: body ? 'POST' : 'GET',
+        headers: { ...authorization, 'Content-Type': 'application/json' },
+        ...(body && { body: JSON.stringify(body) }),
+      });
+      if (!response.ok) throw new Error(`${name} could not go through ${path}: ${response.status}`);
+      return FirstAccessResponseDto.parse(await response.json());
+    };
+    const { current } = await firstAccess('/first-access');
+    await firstAccess('/first-access/age', { birthYear: ADULT_BIRTH_YEAR });
+    for (const document of ['terms-of-use', 'game-consent'] as const) {
+      await firstAccess('/first-access/documents', { document, version: current[document] });
+    }
     const previewed = await fetch(`${this.#stack.realtimeUrl}/rooms/by-code/${code}`, {
       headers: authorization,
     });
@@ -3614,6 +4096,25 @@ export class E2eDriver implements GameDriver {
   }
 
   /** Why the screen says the player cannot enter, if it does. */
+  /**
+   * Until the screen of `player` shows a dilemma of the game: before the first one of an anonymous
+   * room, the notice of what anonymous means, which they read and leave.
+   */
+  async #toTheDilemma(player: E2ePlayer): Promise<void> {
+    const { page } = screenOf(player);
+    const position = page.getByText(SCREEN.position).first();
+    const notice = page.getByRole('button', { name: textIn('es', 'anonymousNotice.start') });
+    await position.or(notice).first().waitFor();
+    if (await notice.isVisible()) {
+      const points = await page
+        .locator('li[data-point]')
+        .evaluateAll((items) => items.map((item) => item.getAttribute('data-point') ?? ''));
+      this.#anonymousNotices.set(player.name, points);
+      await notice.click();
+      await position.waitFor();
+    }
+  }
+
   async #refusalOn(page: Page): Promise<JoinRefusal | undefined> {
     const title = page.locator('[role="alert"] h1');
     if ((await title.count()) === 0) return undefined;
@@ -3650,6 +4151,7 @@ export class E2eDriver implements GameDriver {
     try {
       const page = await context.newPage();
       await page.goto(link);
+      await this.#acrossTheFirstAccess(page, 'es');
       const roomOf = page.getByTestId('room-of');
       await roomOf.waitFor();
       return (await roomOf.textContent())?.endsWith(code) ?? false;
@@ -3711,7 +4213,7 @@ export class E2eDriver implements GameDriver {
     await Promise.all(
       inTheRoom.map(async (player) => {
         await waitUntil(() => lastGameOf(player), `${player.name} gets the game`);
-        await screenOf(player).page.getByText(SCREEN.position).waitFor();
+        await this.#toTheDilemma(player);
       }),
     );
   }
@@ -4141,4 +4643,32 @@ async function waitUntilAsync(
     if (Date.now() > deadline) throw new Error('Timed out waiting for the screen');
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
+}
+
+/** The identity of a Firebase ID token, from its payload: the room server checks its signature. */
+function uidOf(token: string): string | undefined {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString()) as {
+      readonly user_id?: string;
+      readonly sub?: string;
+    };
+    return payload.user_id ?? payload.sub;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The language of the app in a browser of that locale. */
+function languageOfLocale(locale: string): string {
+  return Object.entries(LOCALES).find(([, other]) => other === locale)?.[0] ?? 'es';
+}
+
+/** A text of the app in Spanish, the language of the browsers of the first access. */
+function SCREEN_TEXT(key: string): string {
+  return textIn('es', key);
+}
+
+/** A text of the catalog without its markup, as the screen shows it. */
+function plainOf(text: string): string {
+  return text.replace(/<\/?[a-z]+>/g, '');
 }

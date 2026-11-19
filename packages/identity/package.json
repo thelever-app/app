@@ -1,0 +1,18 @@
+{
+  "name": "@thelever-app/identity",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./in-memory": "./src/adapters/in-memory/index.ts",
+    "./contracts": "./src/adapters/test/index.ts",
+    "./published": "./src/published.ts"
+  },
+  "devDependencies": {
+    "@thelever-app/config": "workspace:*"
+  }
+}

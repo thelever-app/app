@@ -1,3 +1,4 @@
+import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { describe, expect, it } from 'vitest';
 import { RoomCodeNotFoundError } from '../../errors/room-code-not-found.error.ts';
 import { ConnectPlayerUseCase } from '../../use-cases/connect-player.use-case.ts';
@@ -23,6 +24,7 @@ function useCasesOf(arranged: Awaited<ReturnType<typeof lobbyOfThree>>) {
   return {
     getRoomPreview: new GetRoomPreviewUseCase(roomRepository, new FixedRandomness(), clock),
     joinRoom: new JoinRoomUseCase({
+      sealProvider: new InMemorySealProvider(),
       roomRepository,
       gameRepository,
       notifier,
@@ -298,6 +300,7 @@ describe('Closing the room', () => {
         arranged.idGenerator,
         arranged.randomness,
         arranged.clock,
+        new InMemorySealProvider(),
       ).execute({
         hostNickname: 'Pedro',
         hostIdentity: 'TestPedroIdentity',

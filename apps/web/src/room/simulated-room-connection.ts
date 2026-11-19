@@ -216,8 +216,16 @@ export class SimulatedRoomConnection implements RoomConnection {
     const sealProvider = new InMemorySealProvider();
     const likes = new InMemoryDilemmaLikes();
     this.#useCases = {
-      createRoom: new CreateRoomUseCase(rooms, catalog, idGenerator, MATH_RANDOMNESS, clock),
+      createRoom: new CreateRoomUseCase(
+        rooms,
+        catalog,
+        idGenerator,
+        MATH_RANDOMNESS,
+        clock,
+        sealProvider,
+      ),
       joinRoom: new JoinRoomUseCase({
+        sealProvider,
         roomRepository: rooms,
         gameRepository: games,
         notifier,

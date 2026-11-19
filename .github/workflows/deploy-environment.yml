@@ -126,9 +126,15 @@ jobs:
 
       # Hosting answers a file before any rewrite: the app goes as app.html, so the root of the
       # domain reaches the service of the public web, and every address of the app gets app.html.
+      # The config gains the AdSense publisher of the environment, whose cookie manager of Google
+      # the first access shows; without it, as locally, there are no cookies to ask about.
       - name: Put the config of the environment next to the web, and the app as app.html
+        env:
+          ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
         run: |
-          cp "apps/web/config/${{ inputs.environment }}.json" apps/web/dist/config.json
+          jq --arg client "$ADSENSE_CLIENT" \
+            'if $client == "" then . else . + {adsenseClient: $client} end' \
+            "apps/web/config/${{ inputs.environment }}.json" > apps/web/dist/config.json
           mv apps/web/dist/index.html apps/web/dist/app.html
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

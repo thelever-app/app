@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
+import { isAnonymous, selfAnswered } from '../components/players.ts';
 import { RoomNotices } from '../components/room-notices.tsx';
+import {
+  AnonymousNotice,
+  rememberToldAnonymous,
+  toldAnonymousGame,
+} from '../game/anonymous-notice.tsx';
 import { LateJoinNotice, useJoinedLate } from '../game/late-join-notice.tsx';
 import { NewHostNotice } from '../game/new-host-notice.tsx';
 import { LobbyScreen } from '../lobby/lobby-screen.tsx';
@@ -82,8 +88,29 @@ export function RoomContent() {
   const { joinedLate, forget } = useJoinedLate();
   // Here, so the QR stays while someone scans it although the round changes phase.
   const [isQrOpen, setIsQrOpen] = useState(false);
+  // The game whose notice of an anonymous room the player has read, so it shows once per game,
+  // also after reloading the page.
+  const [toldAnonymous, setToldAnonymous] = useState(toldAnonymousGame);
   if (lobby) return <LobbyScreen />;
   if (game && joinedLate) return <LateJoinNotice game={game} onEnter={forget} />;
+  const firstDecision =
+    game?.stage.kind === 'rounds' && game.round.position === 0 && game.round.phase === 'decision';
+  if (
+    game &&
+    firstDecision &&
+    isAnonymous(game) &&
+    !selfAnswered(game) &&
+    toldAnonymous !== game.gameId
+  ) {
+    return (
+      <AnonymousNotice
+        onStart={() => {
+          rememberToldAnonymous(game.gameId);
+          setToldAnonymous(game.gameId);
+        }}
+      />
+    );
+  }
   const showQr = () => setIsQrOpen(true);
   return (
     <>

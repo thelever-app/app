@@ -1364,3 +1364,32 @@ Then(
 Then('no player receives who has answered', async function (this: GameWorld) {
   assert.equal(await this.driver.whoAnsweredIsSent(), false);
 });
+
+// What anonymous means, before the first dilemma of an anonymous room (on the device)
+
+Then(
+  'each player is told that nobody in the group will see their votes',
+  async function (this: GameWorld) {
+    for (const player of this.present()) {
+      assert.ok((await this.driver.anonymousNoticeShownTo(player)).includes('hidden'), player);
+    }
+  },
+);
+
+Then(
+  'that the group sees how many chose each option of each dilemma',
+  async function (this: GameWorld) {
+    for (const player of this.present()) {
+      assert.ok((await this.driver.anonymousNoticeShownTo(player)).includes('hidden'), player);
+    }
+  },
+);
+
+Then(
+  'that their answers are only used to play and are deleted within 24 hours of the room closing, except their history',
+  async function (this: GameWorld) {
+    for (const player of this.present()) {
+      assert.ok((await this.driver.anonymousNoticeShownTo(player)).includes('deleted'), player);
+    }
+  },
+);

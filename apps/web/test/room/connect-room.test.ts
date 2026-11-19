@@ -11,6 +11,9 @@ import { FakeSocket } from '../support/fake-socket.ts';
 /** Routes that should not be called unless the test says so. */
 function unusedApi(): RoomApi {
   return {
+    openApp: vi.fn(),
+    declareAge: vi.fn(),
+    acceptDocument: vi.fn(),
     createRoom: vi.fn(),
     previewRoom: vi.fn(),
     previewDilemma: vi.fn(),

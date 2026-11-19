@@ -69,3 +69,10 @@ export {
 } from './http/world-result.ts';
 export { SearchDilemmasQueryDto, SearchDilemmasResponseDto } from './http/search-dilemmas.ts';
 export { HttpErrorDto } from './http/http-error.ts';
+export {
+  AcceptDocumentRequestDto,
+  DeclareAgeRequestDto,
+  FirstAccessResponseDto,
+  LegalDocumentDto,
+  RegionDto,
+} from './http/first-access.ts';

@@ -5,3 +5,4 @@
  * of them publishes (ADR 0001).
  */
 export { PublishedDilemmasCatalog } from './published-dilemmas-catalog.ts';
+export { FirstAccessSealProvider } from './first-access-seal-provider.ts';

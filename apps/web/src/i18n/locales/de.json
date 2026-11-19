@@ -326,7 +326,9 @@
     "dilemmas-missing": "Für diese Einstellungen gibt es keine Dilemmas. Probier andere Kategorien.",
     "nickname-and-avatar-taken": "Jemand mit deinem Namen hat schon diesen Avatar. Wähle einen anderen.",
     "round-taken": "Ein anderer Spieler hat gerade das Dilemma dieser Runde gewählt.",
-    "duplicate-dilemma": "Dieses Dilemma ist schon in einer anderen Runde."
+    "duplicate-dilemma": "Dieses Dilemma ist schon in einer anderen Runde.",
+    "first-access-required": "Schließe vor dem Spielen die Ersteinrichtung ab.",
+    "adults-only-room": "Dieser Raum ist nur für Personen ab 18."
   },
   "home": {
     "title": "Lust auf eine Runde?",
@@ -382,6 +384,11 @@
       "title": "Diesen Raum gibt es nicht mehr",
       "text": "Er wurde geschlossen. Spielt die Gruppe weiter, lass dir den neuen Code schicken.",
       "action": "Zur Startseite"
+    },
+    "adults-only-room": {
+      "title": "Dieser Raum hat Dilemmas ab 18",
+      "text": "Nur Personen ab 18 können eintreten.",
+      "action": "Zurück zum Start"
     }
   },
   "lobby": {
@@ -670,5 +677,120 @@
     "footer": "Spiel auf thelever.app",
     "showNames": "Spitznamen von {{names}} zeigen",
     "groupNote": "Ohne Namen und Stimmen."
+  },
+  "firstAccess": {
+    "loading": "Wird geladen …",
+    "retry": "Erneut versuchen",
+    "stepOf": "Schritt {{step}} von {{total}}",
+    "continue": "Weiter",
+    "decline": "Ich stimme nicht zu",
+    "welcome": {
+      "tagline": "Moralische Dilemmas für die ganze Gruppe",
+      "text": "Du stimmst geheim ab, rätst, was die anderen gewählt haben, und ihr findet gemeinsam heraus, wer was denkt.",
+      "start": "Loslegen",
+      "join": "Dem Spiel beitreten",
+      "invite": "{{host}} lädt dich zum Spielen ein"
+    },
+    "age": {
+      "title": "In welchem Jahr bist du geboren?",
+      "lead": "Damit zeigen wir dir Dilemmas, Räume und Werbung, die zu deinem Alter passen.",
+      "year": "Geburtsjahr",
+      "chooseYear": "Wähle ein Jahr",
+      "month": "Und in welchem Monat?",
+      "chooseMonth": "Wähle einen Monat"
+    },
+    "underage": {
+      "title": "Du kannst TheLever noch nicht nutzen",
+      "text": "Seine Dilemmas behandeln Themen für ältere Menschen. Wir sind da, wenn es so weit ist."
+    },
+    "country": {
+      "title": "TheLever ist in deinem Land noch nicht verfügbar",
+      "text": "Die Regeln für Daten und Spiele sind von Land zu Land verschieden, und wo du bist, können wir es noch nicht anbieten.",
+      "contact": "Glaubst du, das ist ein Fehler? Schreib uns"
+    },
+    "consent": {
+      "title": "Bevor du spielst: was mit deinen Stimmen passiert",
+      "points": {
+        "play": {
+          "title": "Nur zum Spielen.",
+          "text": "Wir nutzen deine Stimmen, Vorhersagen und Reaktionen zum Spielen, in der Gruppe oder allein, und um das Ergebnis zu zeigen."
+        },
+        "notSold": {
+          "title": "Wir verkaufen sie nicht und nutzen sie nicht für Werbung.",
+          "text": "Mit dieser Einwilligung geben wir sie niemandem und nutzen sie weder für ein Profil von dir noch für die Forschung."
+        },
+        "group": {
+          "title": "Nur deine Gruppe sieht sie,",
+          "text": "bei der Auflösung jedes Dilemmas. In einem anonymen Raum nicht einmal das: nur die Verteilung, ohne Namen."
+        },
+        "deleted": {
+          "title": "Sie werden innerhalb von 24 Stunden gelöscht",
+          "text": "nachdem der Raum geschlossen wurde. Nur dein Verlauf bleibt, auf deinem Handy, bis du ihn löschst."
+        },
+        "decide": {
+          "title": "Du entscheidest.",
+          "text": "Zum Spielen brauchst du weder Namen noch E-Mail, und du kannst diese Einwilligung widerrufen, indem du an privacidad@thelever.app schreibst."
+        }
+      },
+      "privacy": "Datenschutzerklärung lesen",
+      "funding": "Wie TheLever finanziert wird",
+      "why": "<strong>Warum wir dich gesondert fragen:</strong> Eine Stimme zu einem Dilemma kann zeigen, was du denkst, oder etwas aus deinem Privatleben, und das Datenschutzrecht (DSGVO) verlangt dafür eine ausdrückliche Einwilligung.",
+      "terms": "Ich habe die <terms>Nutzungsbedingungen</terms> gelesen und akzeptiere sie.",
+      "statement": "Ich willige ausdrücklich ein, dass TheLever meine Stimmen, Vorhersagen und Reaktionen sowie das, was andere über mich vorhersagen oder darauf reagieren, nur zum Spielen und wie oben erklärt verarbeitet. Ich weiß, dass sie meine Überzeugungen oder etwas aus meinem Privatleben zeigen können und dass ich diese Einwilligung jederzeit widerrufen kann.",
+      "checkBoth": "Setze beide Häkchen, um weiterzumachen.",
+      "checkOne": "Setze das Häkchen, um weiterzumachen.",
+      "declined": "<strong>Ohne das kann man nicht spielen:</strong> Deine Stimmen und Vorhersagen sind das Spiel.",
+      "changed": "<strong>Wir haben die Einwilligung zum Spiel geändert.</strong> Lies sie und erteile sie erneut, um weiterzuspielen."
+    },
+    "newTerms": {
+      "title": "Wir haben die Nutzungsbedingungen geändert",
+      "lead": "Um weiterzuspielen, lies sie und akzeptiere sie.",
+      "read": "Bedingungen lesen",
+      "check": "Ich habe die neuen Nutzungsbedingungen gelesen und akzeptiere sie.",
+      "accept": "Akzeptieren und weiter",
+      "declined": "<strong>Ohne sie zu akzeptieren, kann man nicht spielen.</strong> Du kannst sie akzeptieren, wann du willst."
+    },
+    "funding": {
+      "title": "Wie es finanziert wird",
+      "close": "Schließen",
+      "lead": "TheLever ist kostenlos. So wird es bezahlt:",
+      "ads": {
+        "title": "Werbung.",
+        "text": "Nie, während du abstimmst, und sie bekommt nie etwas von dem, was du wählst."
+      },
+      "research": {
+        "title": "Später vielleicht Forschung.",
+        "text": "Wenn wir Spiele eines Tages für die Forschung nutzen wollen, fragen wir dich gesondert um Erlaubnis. Wenn du Nein sagst, spielst du genauso."
+      }
+    },
+    "cookies": {
+      "title": "Cookies und Werbung",
+      "text": "Nichts von dem, was du bei den Dilemmas antwortest, wird für Werbung genutzt.",
+      "globalPrivacyControl": "Dein Browser sendet das Signal Global Privacy Control, daher wird deine Werbung nicht personalisiert."
+    }
+  },
+  "anonymousNotice": {
+    "label": "Anonymer Raum",
+    "title": "Niemand in der Gruppe erfährt, was du wählst",
+    "hidden": {
+      "title": "Die Gruppe sieht deine Stimmen nicht.",
+      "text": "Nur, wie viele geantwortet haben, und bei der Auflösung, wie viele jede Option gewählt haben."
+    },
+    "deleted": {
+      "title": "Deine Stimmen dienen nur dem Spiel:",
+      "text": "Sie werden innerhalb von 24 Stunden nach dem Schließen des Raums gelöscht, außer deinem Verlauf."
+    },
+    "predict": {
+      "title": "Du stimmst ab und sagst die Verteilung voraus.",
+      "text": "Je näher du kommst, desto mehr Punkte bekommst du."
+    },
+    "start": "Verstanden, los"
+  },
+  "installOffer": {
+    "title": "Hab TheLever immer zur Hand",
+    "android": "Füge die App zu deinem Startbildschirm hinzu und öffne sie wie jede andere.",
+    "ios": "Tippe auf Teilen und dann auf „Zum Home-Bildschirm“.",
+    "install": "Installieren",
+    "close": "Hinweis schließen"
   }
 }

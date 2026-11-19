@@ -15,7 +15,8 @@
     "db:migrate": "node --env-file-if-exists=.env packages/db/src/migrate.ts",
     "test:db": "pnpm --filter @thelever-app/db test && pnpm --filter @thelever-app/realtime test:db",
     "db:seed": "node --env-file-if-exists=.env packages/db/seeds/load.ts",
-    "catalog:import": "node --env-file-if-exists=.env apps/realtime/src/jobs/catalog-import.ts"
+    "catalog:import": "node --env-file-if-exists=.env apps/realtime/src/jobs/catalog-import.ts",
+    "countries:download": "node apps/realtime/scripts/download-countries.ts node_modules/.cache/dbip/dbip-country-lite.mmdb"
   },
   "license": "AGPL-3.0-only",
   "packageManager": "pnpm@10.34.5+sha512.a4ee05f2f73658255bd6a89859c065a45c28a57daefae2c893a168ee2b73168c37b91e83e57ea67654ad03f03031746430e8bce38e362e042605fb8abc80192e",

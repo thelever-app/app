@@ -47,6 +47,7 @@ import {
   RoomClosedError,
   RoomCodeNotFoundError,
   RoomFullError,
+  AdultsOnlyRoomError,
   RoomNotFoundError,
 } from '@thelever-app/game';
 import {
@@ -55,7 +56,16 @@ import {
   InvalidPredictionError,
   UnknownOptionError,
 } from '@thelever-app/dilemmas';
+import { NotCurrentVersionError } from '@thelever-app/consent';
+import {
+  AgeAlreadyDeclaredError,
+  BlockedCountryError,
+  FirstAccessNotBegunError,
+  InvalidDeclaredAgeError,
+  MonthOfBirthNeededError,
+} from '@thelever-app/identity';
 import type { ErrorCodeDto } from '@thelever-app/protocol';
+import { FirstAccessRequiredError } from '@thelever-app/integrations/first-access';
 import { InvalidAccessCodeError } from '../identity/access-gate.ts';
 import { InvalidAppCheckError } from '../identity/app-check-verifier.ts';
 import { InvalidTokenError } from '../identity/token-verifier.ts';
@@ -75,6 +85,7 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [NotHostError, 'not-host'],
   [GameInProgressError, 'game-in-progress'],
   [RoomFullError, 'room-full'],
+  [AdultsOnlyRoomError, 'adults-only-room'],
   [PlayerExpelledError, 'player-expelled'],
   [HostCannotBeExpelledError, 'host-cannot-be-expelled'],
   [NicknameAndAvatarTakenError, 'nickname-and-avatar-taken'],
@@ -121,6 +132,14 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [DilemmaSkippedError, 'dilemma-skipped'],
   [DilemmaAlreadyReportedError, 'dilemma-already-reported'],
   [DilemmaNotReportedAsOffensiveError, 'dilemma-not-reported-as-offensive'],
+  // The first access, from Identity and Consent.
+  [FirstAccessRequiredError, 'first-access-required'],
+  [FirstAccessNotBegunError, 'first-access-not-begun'],
+  [MonthOfBirthNeededError, 'month-of-birth-needed'],
+  [AgeAlreadyDeclaredError, 'age-already-declared'],
+  [InvalidDeclaredAgeError, 'invalid-declared-age'],
+  [BlockedCountryError, 'blocked-country'],
+  [NotCurrentVersionError, 'not-current-version'],
 ];
 
 /** The code to answer with, or undefined if the error is not one a client can cause. */

@@ -86,6 +86,9 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.43.0
         version: 1.43.0
+      '@thelever-app/consent':
+        specifier: workspace:*
+        version: link:../../packages/consent
       '@thelever-app/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -95,6 +98,9 @@ importers:
       '@thelever-app/game':
         specifier: workspace:*
         version: link:../../packages/game
+      '@thelever-app/identity':
+        specifier: workspace:*
+        version: link:../../packages/identity
       '@thelever-app/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
@@ -110,6 +116,9 @@ importers:
       google-auth-library:
         specifier: ^11.3.1
         version: 11.3.1
+      mmdb-lib:
+        specifier: ^3.0.4
+        version: 3.0.4
       ws:
         specifier: ^8.22.0
         version: 8.22.0
@@ -283,12 +292,18 @@ importers:
       '@opentelemetry/api':
         specifier: ^1.10.0
         version: 1.10.0
+      '@thelever-app/consent':
+        specifier: workspace:*
+        version: link:../consent
       '@thelever-app/dilemmas':
         specifier: workspace:*
         version: link:../dilemmas
       '@thelever-app/game':
         specifier: workspace:*
         version: link:../game
+      '@thelever-app/identity':
+        specifier: workspace:*
+        version: link:../identity
       kysely:
         specifier: ^0.29.7
         version: 0.29.7
@@ -336,14 +351,26 @@ importers:
         specifier: workspace:*
         version: link:../config
 
+  packages/identity:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
   packages/integrations:
     dependencies:
+      '@thelever-app/consent':
+        specifier: workspace:*
+        version: link:../consent
       '@thelever-app/dilemmas':
         specifier: workspace:*
         version: link:../dilemmas
       '@thelever-app/game':
         specifier: workspace:*
         version: link:../game
+      '@thelever-app/identity':
+        specifier: workspace:*
+        version: link:../identity
     devDependencies:
       '@thelever-app/config':
         specifier: workspace:*
@@ -399,12 +426,18 @@ importers:
       '@thelever-app/config':
         specifier: workspace:*
         version: link:../packages/config
+      '@thelever-app/consent':
+        specifier: workspace:*
+        version: link:../packages/consent
       '@thelever-app/dilemmas':
         specifier: workspace:*
         version: link:../packages/dilemmas
       '@thelever-app/game':
         specifier: workspace:*
         version: link:../packages/game
+      '@thelever-app/identity':
+        specifier: workspace:*
+        version: link:../packages/identity
       '@thelever-app/integrations':
         specifier: workspace:*
         version: link:../packages/integrations
@@ -4467,6 +4500,10 @@ packages:
   minizlib@3.1.0:
     resolution: {integrity: sha512-KZxYo1BUkWD2TVFLr0MQoM8vUUigWD3LlD83a/75BqC+4qE0Hb1Vo5v1FgcfaNXvfXzr+5EhQ6ing/CaBijTlw==}
     engines: {node: '>= 18'}
+
+  mmdb-lib@3.0.4:
+    resolution: {integrity: sha512-tWy4b2UQaJjRhW/VGpy7ypMMgS7JfPezMsmVW7/utlWm6vv1JgsxXkmjuv/SjN6tsG8YrKHfJ00zHhrOCQDhjg==}
+    engines: {node: '>=10', npm: '>=6'}
 
   module-details-from-path@1.0.4:
     resolution: {integrity: sha512-EGWKgxALGMgzvxYF1UyGTy0HXX/2vHLkw6+NvDKW2jypWbHpjQuj4UMcqQWXHERJhVGKikolT06G3bcKe4fi7w==}
@@ -10327,6 +10364,8 @@ snapshots:
   minizlib@3.1.0:
     dependencies:
       minipass: 7.1.3
+
+  mmdb-lib@3.0.4: {}
 
   module-details-from-path@1.0.4: {}
 

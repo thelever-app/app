@@ -419,6 +419,14 @@ export const ErrorCodeDto = z.enum([
   'no-vote-to-react-to',
   'game-not-ended',
   'dilemma-already-played',
+  'first-access-required',
+  'first-access-not-begun',
+  'month-of-birth-needed',
+  'age-already-declared',
+  'invalid-declared-age',
+  'blocked-country',
+  'not-current-version',
+  'adults-only-room',
 ]);
 
 /** The answer to a rejected message, on the same connection. */

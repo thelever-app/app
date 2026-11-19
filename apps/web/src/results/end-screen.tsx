@@ -1,4 +1,5 @@
 import type { GameStateDto } from '@thelever-app/protocol';
+import { rememberFinishedGame } from '../install/install-offer-state.ts';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import mascotCelebrating from '../assets/brand/mascot-celebrating.svg';
@@ -53,7 +54,10 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
   const { gameId, inGame } = game;
   const played = inGame ? playedIn(game).join() : '';
   useEffect(() => {
-    if (played !== '') rememberPlayed(played.split(','));
+    if (played === '') return;
+    rememberPlayed(played.split(','));
+    // A closed offer to install the app comes back after a finished game.
+    rememberFinishedGame(Date.now());
   }, [gameId, played]);
 
   // Each state of the game is a new object, also when nothing on the card changes, as someone

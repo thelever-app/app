@@ -142,6 +142,7 @@ export { InvalidRoomSettingError } from './domain/errors/invalid-room-setting.er
 export { NotHostError } from './domain/errors/not-host.error.ts';
 export { GameInProgressError } from './domain/errors/game-in-progress.error.ts';
 export { RoomFullError } from './domain/errors/room-full.error.ts';
+export { AdultsOnlyRoomError } from './domain/errors/adults-only-room.error.ts';
 export { RoomClosedError } from './domain/errors/room-closed.error.ts';
 export { PlayerExpelledError } from './domain/errors/player-expelled.error.ts';
 export { NicknameAndAvatarTakenError } from './domain/errors/nickname-and-avatar-taken.error.ts';

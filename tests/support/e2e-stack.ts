@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -44,6 +44,11 @@ const READY_TIMEOUT_MS = 30_000;
  * every browser of a scenario has it, as a device where the player already wrote it.
  */
 const ACCESS_CODE = 'e2e-access-code';
+/**
+ * The countries of DB-IP Lite the room server places each address in, as the image of dev and
+ * prod carries them; downloaded once, where `pnpm countries:download` leaves them.
+ */
+const COUNTRIES_FILE = `${ROOT}node_modules/.cache/dbip/dbip-country-lite.mmdb`;
 /** Locally, DATABASE_URL comes from the .env of the repo; in CI, from the workflow. */
 const ENV_FILE = `${ROOT}.env`;
 
@@ -114,6 +119,16 @@ export async function startE2eStack(): Promise<void> {
   const webUrl = `http://localhost:${WEB_PORT}`;
   const siteUrl = `http://localhost:${SITE_PORT}`;
   const database = await createE2eDatabase();
+  if (!existsSync(COUNTRIES_FILE)) {
+    const download = spawnSync(
+      'node',
+      ['apps/realtime/scripts/download-countries.ts', COUNTRIES_FILE],
+      { cwd: ROOT, stdio: 'inherit' },
+    );
+    if (download.status !== 0) {
+      throw new Error('The countries of DB-IP Lite could not be downloaded');
+    }
+  }
   const secrets = await mkdtemp(join(tmpdir(), 'thelever-e2e-secrets-'));
   const accessCodeFile = join(secrets, 'access-code');
   await writeFile(accessCodeFile, ACCESS_CODE);
@@ -136,6 +151,7 @@ export async function startE2eStack(): Promise<void> {
       DATABASE_URL: urlOf(database),
       WEB_ORIGINS: webUrl,
       ACCESS_CODE_FILE: accessCodeFile,
+      DBIP_COUNTRY_FILE: COUNTRIES_FILE,
     }),
     start('pnpm', [
       '--filter',

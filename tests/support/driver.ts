@@ -102,7 +102,7 @@ export type ReportReason = 'offensive' | 'confusing';
 export type InvitationMethod = 'invitation link' | 'code' | 'QR';
 
 /** Why a player could not get into a room. */
-export type JoinRefusal = 'room-does-not-exist' | 'room-full' | 'expelled';
+export type JoinRefusal = 'room-does-not-exist' | 'room-full' | 'expelled' | 'adults-only';
 
 /**
  * What a scenario can do and observe, in the words of the ubiquitous language.
@@ -253,7 +253,106 @@ export interface RevealView {
   readonly ownPoints: number | null;
 }
 
+/** The legal documents the first access asks for. */
+export type LegalDocument = 'terms-of-use' | 'game-consent';
+
+/**
+ * Where the first access of a device is, as its screen shows it: the welcome, the year of birth
+ * and the month, the stop under the minimum age or in a blocked country, the terms of use, the
+ * game consent, the new terms, the cookie manager, and then the start of the app or the room of
+ * the invitation it came from.
+ */
+export type FirstAccessScreen =
+  | 'age'
+  | 'month'
+  | 'under-minimum-age'
+  | 'blocked-country'
+  | 'terms'
+  | 'game-consent'
+  | 'new-terms'
+  | 'cookies'
+  | 'home'
+  | 'join';
+
+/** A device a scenario of the first access brings in, by where it is and what its browser sends. */
+export interface DeviceOptions {
+  /** The country its address is in, by its ISO code. */
+  readonly country: string;
+  /** Whether its browser sends Global Privacy Control. */
+  readonly globalPrivacyControl?: boolean;
+}
+
 export interface GameDriver {
+  // The first access. Every player a scenario brings in has finished it as an adult, unless the
+  // scenario gives them a device that has never used TheLever.
+
+  /** A device of `user` that has never used TheLever. */
+  newDevice(user: string, options: DeviceOptions): Promise<void>;
+  /** `user` opens the app on their device, or the invitation link to the room of the scenario. */
+  openApp(user: string, from?: 'invitation'): Promise<void>;
+  /** `user` declares an age: the year of birth and, if asked, the month that makes it that age. */
+  declareAge(user: string, age: number): Promise<void>;
+  /** `user` chooses a year of birth and goes on, without the month. */
+  chooseBirthYear(user: string, year: number): Promise<void>;
+  /** `user` accepts the terms of use on the screen that asks for them. */
+  acceptTerms(user: string): Promise<void>;
+  /** `user` does not accept the terms of use. */
+  declineTerms(user: string): Promise<void>;
+  /** `user` gives the game consent, and goes on with what the screen asked for. */
+  giveGameConsent(user: string): Promise<void>;
+  /** `user` answers the cookie manager. */
+  answerCookieConsent(user: string): Promise<void>;
+  firstAccessScreenOf(user: string): Promise<FirstAccessScreen>;
+  /** Whether a choice of the screen of `user` comes chosen: the year, the month or the game consent. */
+  preselected(user: string, choice: 'year' | 'month' | 'game-consent'): Promise<boolean>;
+  /** Whether the screen of `user` says a minimum age. */
+  mentionsMinimumAge(user: string): Promise<boolean>;
+  /** The full texts `user` can open from the screen they are on. */
+  legalTextsOfferedTo(user: string): Promise<readonly ('terms' | 'privacy')[]>;
+  /** Whether the game consent `user` sees says it has changed. */
+  toldTheGameConsentChanged(user: string): Promise<boolean>;
+  /** Whether `user` can reach anything of the app: creating a room or joining one. */
+  canUseTheApp(user: string): Promise<boolean>;
+  /** The version of the document the room server keeps as accepted by `user`, if any. */
+  acceptedVersionOf(user: string, document: LegalDocument): Promise<number | undefined>;
+  /** The version of the document published now. */
+  currentVersionOf(document: LegalDocument): Promise<number>;
+  /** `user` finishes the first access as an adult in the EEA, on the device they have. */
+  finishFirstAccess(user: string): Promise<void>;
+  /** `user` had accepted a version of the document that is no longer enough. */
+  acceptedAnEarlierVersion(user: string, document: LegalDocument): Promise<void>;
+  /** A new version of the document that must be accepted again is published. */
+  publishVersionThatAsksAgain(document: LegalDocument): Promise<void>;
+  /** What the app keeps of the first access of `user`, by its fields. Only in the application. */
+  keptFirstAccessOf(user: string): Promise<Readonly<Record<string, unknown>>>;
+
+  // The first access on the device only (@screen).
+
+  /** The points the game consent tells before its boxes, in order. */
+  consentPointsShownTo(user: string): Promise<readonly string[]>;
+  /** Whether the game consent says why it is asked apart. */
+  toldWhyTheConsentIsApart(user: string): Promise<boolean>;
+  /** `user` opens how TheLever is funded from the game consent; whether it shows. */
+  openHowTheLeverIsFunded(user: string): Promise<boolean>;
+  /** Whether the device of `user` keeps that its ads may be personalised. */
+  personalisedAdsAllowedFor(user: string): Promise<boolean>;
+  /** Whether `user` is told that Global Privacy Control rejects personalised ads. */
+  toldAboutGlobalPrivacyControl(user: string): Promise<boolean>;
+  /** The browser of `user` offers to install the app, which is not installed. */
+  browserOffersToInstall(user: string): Promise<void>;
+  /** `user` reaches the start of the app. */
+  reachHome(user: string): Promise<void>;
+  /** Whether the start offers `user` to install the app. */
+  offeredToInstall(user: string): Promise<boolean>;
+  /** `user` closes the offer to install the app. */
+  closeInstallOffer(user: string): Promise<void>;
+  /** Days pass on the device of `user`. */
+  letDaysPassOnTheDevice(user: string, days: number): Promise<void>;
+  /** `user` plays a game of one round with another player, to its end. */
+  finishAGame(user: string): Promise<void>;
+  /** The points the notice of an anonymous room tells `player` before the first dilemma. */
+  anonymousNoticeShownTo(player: string): Promise<readonly string[]>;
+
   /** Prepares whatever the driver needs before a scenario. */
   start(): Promise<void>;
   /** Releases everything the driver opened during the scenario. */

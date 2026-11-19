@@ -170,7 +170,7 @@ Feature: Join a room
     Then both players are in the room
     And each one is distinguished by their avatar
 
-  @ui @todo
+  @ui
   Scenario: A player under 18 cannot join an adults-only room
     Given a room marked as adults only
     When a player who declared an age of 17 tries to join

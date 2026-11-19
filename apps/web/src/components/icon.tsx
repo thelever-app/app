@@ -56,10 +56,26 @@ import replay from '@material-symbols/svg-500/rounded/replay.svg?url';
 import thumbUp from '@material-symbols/svg-500/rounded/thumb_up.svg?url';
 import thumbUpFilled from '@material-symbols/svg-500/rounded/thumb_up-fill.svg?url';
 import warning from '@material-symbols/svg-500/rounded/warning-fill.svg?url';
+import ad from '@material-symbols/svg-500/rounded/ad-fill.svg?url';
+import autoDelete from '@material-symbols/svg-500/rounded/auto_delete-fill.svg?url';
+import cookie from '@material-symbols/svg-500/rounded/cookie-fill.svg?url';
+import mobileArrowDown from '@material-symbols/svg-500/rounded/mobile_arrow_down-fill.svg?url';
+import publicOff from '@material-symbols/svg-500/rounded/public_off-fill.svg?url';
+import science from '@material-symbols/svg-500/rounded/science-fill.svg?url';
+import sportsEsports from '@material-symbols/svg-500/rounded/sports_esports-fill.svg?url';
+import tune from '@material-symbols/svg-500/rounded/tune-fill.svg?url';
 import styles from './icon.module.css';
 
 /** The Material Symbols the screens use, hosted with the app: never loaded from Google. */
 const ICONS = {
+  ad,
+  autoDelete,
+  cookie,
+  mobileArrowDown,
+  publicOff,
+  science,
+  sportsEsports,
+  tune,
   add,
   addCircle,
   addReaction,

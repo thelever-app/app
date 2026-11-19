@@ -9,6 +9,7 @@ import {
 import WebSocket from 'ws';
 import { SEED_DILEMMAS } from '@thelever-app/dilemmas/seed';
 import { composeRealtimeServer, type Storage } from '../../composition/index.ts';
+import { type CountryLookup, NoCountryLookup } from '../../first-access/country-lookup.ts';
 import { type AccessGate, OpenAccess } from '../../identity/access-gate.ts';
 import { type AppCheckVerifier, UncheckedAppCheck } from '../../identity/app-check-verifier.ts';
 import type { TokenVerifier } from '../../identity/token-verifier.ts';
@@ -28,7 +29,55 @@ export const ROOM_CHOICES = {
 /** The avatar every test player chooses before joining, which nobody else with their nickname has. */
 export const JOIN_AVATAR = { face: 'face-02', color: 'teal' };
 
-/** The HTTP server of the room server, as the composition root builds it but with the fake token verifier. */
+/**
+ * The players of the tests, who have finished the first access as adults before anything else:
+ * a room is only created or joined after it. Any other identity has not even opened the app.
+ */
+export const PLAYERS = ['ana', 'luis', 'marta', 'pedro', 'pablo', 'another-ana'] as const;
+
+/** A year of birth that makes anyone an adult. */
+const ADULT_BIRTH_YEAR = 1990;
+
+/** Each identity opens the app, declares an adult age and accepts the current documents. */
+export async function finishFirstAccess(
+  http: string,
+  identities: readonly string[] = PLAYERS,
+  headers: Readonly<Record<string, string>> = {},
+): Promise<void> {
+  for (const identity of identities) {
+    const call = async (path: string, body?: object) => {
+      const response = await fetch(`${http}${path}`, {
+        method: body ? 'POST' : 'GET',
+        headers: {
+          ...headers,
+          Authorization: bearer(identity),
+          'Content-Type': 'application/json',
+        },
+        ...(body && { body: JSON.stringify(body) }),
+      });
+      if (!response.ok) throw new Error(`${path} answered ${response.status}`);
+      return (await response.json()) as {
+        step: string;
+        pending: string[];
+        current: Record<string, number>;
+      };
+    };
+    // Only what is left: another instance on the same database may have done it already.
+    const opened = await call('/first-access');
+    const { pending, current } =
+      opened.step === 'age'
+        ? await call('/first-access/age', { birthYear: ADULT_BIRTH_YEAR })
+        : opened;
+    for (const document of pending) {
+      await call('/first-access/documents', { document, version: current[document] });
+    }
+  }
+}
+
+/**
+ * The HTTP server of the room server, as the composition root builds it but with the fake token
+ * verifier, where the players of the tests have finished the first access.
+ */
 export async function composedHttpServer() {
   const { http } = await composeRealtimeServer({
     tokenVerifier: new FakeTokenVerifier(),
@@ -38,7 +87,12 @@ export async function composedHttpServer() {
     storage: { kind: 'memory' },
     logger: new ConsoleLogger(),
     webOrigins: [WEB_ORIGIN],
+    countryLookup: new NoCountryLookup(),
   });
+  await new Promise<void>((resolve) => http.listen(0, resolve));
+  const { port } = http.address() as AddressInfo;
+  await finishFirstAccess(`http://localhost:${port}`);
+  await new Promise((resolve) => http.close(resolve));
   return http;
 }
 
@@ -58,6 +112,9 @@ export async function startRoomServer({
   accessGate = new OpenAccess() as AccessGate,
   storage = { kind: 'memory' } as Storage,
   logger = new ConsoleLogger() as Logger,
+  /** What the players send so a closed server lets them through their first access. */
+  firstAccessHeaders = {} as Readonly<Record<string, string>>,
+  countryLookup = new NoCountryLookup() as CountryLookup,
 } = {}) {
   const composed = await composeRealtimeServer({
     tokenVerifier,
@@ -67,10 +124,12 @@ export async function startRoomServer({
     storage,
     logger,
     webOrigins: [WEB_ORIGIN],
+    countryLookup,
   });
   const { http: server, sockets } = composed;
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;
+  await finishFirstAccess(`http://localhost:${port}`, PLAYERS, firstAccessHeaders);
 
   return {
     url: `ws://localhost:${port}`,

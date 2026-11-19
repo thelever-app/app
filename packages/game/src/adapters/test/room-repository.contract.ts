@@ -11,6 +11,7 @@ const NOW = new Date('2026-11-12T10:00:00Z');
 function room(id = 'TestRoomId', hostId = 'TestAnaId', code = 'K7M2Q'): Room {
   return Room.create(
     {
+      hostUnderEighteen: false,
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -28,6 +29,7 @@ function room(id = 'TestRoomId', hostId = 'TestAnaId', code = 'K7M2Q'): Room {
 function join(saved: Room, name: string): void {
   saved.join(
     {
+      underEighteen: false,
       nickname: name,
       identity: `Test${name}Identity`,
       avatar: saved.suggestAvatar(new FixedRandomness()),
@@ -345,7 +347,12 @@ export function describeRoomRepositoryContract(
         const repository = await create();
         const saved = room();
         saved.join(
-          { nickname: 'Luis', identity: 'TestLuisIdentity', avatar: saved.host.avatar },
+          {
+            underEighteen: false,
+            nickname: 'Luis',
+            identity: 'TestLuisIdentity',
+            avatar: saved.host.avatar,
+          },
           new FixedIdGenerator('TestLuisId'),
           NOW,
         );

@@ -10,6 +10,8 @@ export interface PlayerSnapshot {
   readonly avatar: { readonly face: string; readonly color: string };
   /** The dilemmas the device of the player says they played, which the room only puts games together with. */
   readonly playedDilemmaIds: readonly string[];
+  /** Whether they were under 18 when they entered the room, by the age they declared. */
+  readonly underEighteen: boolean;
 }
 
 export class Player {
@@ -19,6 +21,7 @@ export class Player {
   readonly #identity: IdVO;
   #avatar: AvatarVO;
   #playedDilemmaIds: readonly string[];
+  readonly #underEighteen: boolean;
 
   private constructor(
     id: string,
@@ -26,12 +29,14 @@ export class Player {
     identity: string,
     avatar: AvatarVO,
     playedDilemmaIds: readonly string[],
+    underEighteen: boolean,
   ) {
     this.#id = new IdVO(id);
     this.#nickname = new NicknameVO(nickname);
     this.#identity = new IdVO(identity);
     this.#avatar = avatar;
     this.#playedDilemmaIds = [...new Set(playedDilemmaIds)];
+    this.#underEighteen = underEighteen;
   }
 
   static create(
@@ -40,15 +45,24 @@ export class Player {
       identity,
       avatar,
       playedDilemmaIds = [],
+      underEighteen,
     }: {
       readonly nickname: string;
       readonly identity: string;
       readonly avatar: AvatarVO;
       readonly playedDilemmaIds?: readonly string[];
+      readonly underEighteen: boolean;
     },
     idGenerator: IdGenerator,
   ): Player {
-    return new Player(idGenerator.generate(), nickname, identity, avatar, playedDilemmaIds);
+    return new Player(
+      idGenerator.generate(),
+      nickname,
+      identity,
+      avatar,
+      playedDilemmaIds,
+      underEighteen,
+    );
   }
 
   get id(): string {
@@ -72,6 +86,11 @@ export class Player {
     return [...this.#playedDilemmaIds];
   }
 
+  /** Whether they were under 18 when they entered the room. */
+  get underEighteen(): boolean {
+    return this.#underEighteen;
+  }
+
   /** The room checks that nobody else has it. */
   wear(avatar: AvatarVO): void {
     this.#avatar = avatar;
@@ -89,6 +108,7 @@ export class Player {
       identity: this.identity,
       avatar: { face: this.#avatar.face, color: this.#avatar.color },
       playedDilemmaIds: this.playedDilemmaIds,
+      underEighteen: this.#underEighteen,
     };
   }
 
@@ -99,6 +119,7 @@ export class Player {
       snapshot.identity,
       new AvatarVO(snapshot.avatar.face, snapshot.avatar.color),
       snapshot.playedDilemmaIds,
+      snapshot.underEighteen,
     );
   }
 }

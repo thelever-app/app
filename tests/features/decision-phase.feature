@@ -334,7 +334,7 @@ Feature: Decision phase
       Given "Ana" hosts an anonymous room with "Luis" and "Marta"
       And the game has started
 
-    @ui @todo
+    @ui @screen
     Scenario: Each player is told what anonymous means
       When the first round starts
       Then each player is told that nobody in the group will see their votes

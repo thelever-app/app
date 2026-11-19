@@ -28,6 +28,7 @@ import {
   DilemmaSkippedError,
   VoteMissingError,
   type Seal,
+  type SealProvider,
   type VotePrediction,
   GetGameStateUseCase,
   type GetGameStateOutput,
@@ -44,6 +45,7 @@ import {
   RoomCodeNotFoundError,
   RoomClosedError,
   RoomFullError,
+  AdultsOnlyRoomError,
   SearchDilemmasUseCase,
   StartGameUseCase,
   AvatarVO,
@@ -64,8 +66,6 @@ import {
   ManualClock,
   InMemoryPlayerNotifier,
   InMemoryRoomRepository,
-  InMemorySealProvider,
-  SEAL_BEFORE_FIRST_ACCESS,
   SequentialIdGenerator,
   SequentialRandomness,
   type InMemoryDilemma,
@@ -84,7 +84,23 @@ import {
   SearchDilemmasUseCase as SearchCatalogUseCase,
   VoteAloneUseCase,
 } from '@thelever-app/dilemmas';
-import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
+import {
+  AcceptDocumentUseCase,
+  currentVersionOf,
+  GetConsentUseCase,
+  type LegalDocumentVersion,
+  PUBLISHED_VERSIONS,
+} from '@thelever-app/consent';
+import { InMemoryAcceptanceRepository } from '@thelever-app/consent/in-memory';
+import {
+  DeclareAgeUseCase,
+  GetFirstAccessUseCase,
+  MonthOfBirthNeededError,
+  OpenAppUseCase,
+} from '@thelever-app/identity';
+import { InMemoryFirstAccessRepository } from '@thelever-app/identity/in-memory';
+import { FirstAccessGate, FirstAccessRequiredError } from '@thelever-app/integrations/first-access';
+import { FirstAccessSealProvider, PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
 import {
   buildSite,
   type BuiltSite,
@@ -110,10 +126,13 @@ import type {
   CardView,
   CatalogEntry,
   Declaration,
+  DeviceOptions,
+  FirstAccessScreen,
   GameDriver,
   GameSettingsView,
   InvitationMethod,
   JoinRefusal,
+  LegalDocument,
   PlayerView,
   PublicPageView,
   ReactionsView,
@@ -276,6 +295,25 @@ function roundChangeOf(round: LobbyRound): RoundChange {
 }
 
 /** One player of the scenario, as the driver knows them. */
+/** A device a scenario of the first access brings in, and what its screen went through. */
+interface AcceptanceDevice {
+  readonly country: string;
+  /** Whether the age screen asked for the month after the year. */
+  monthAsked: boolean;
+  /** Whether the cookie manager was answered. */
+  cookiesAnswered: boolean;
+  /** Whether the app was opened from the invitation link to a room. */
+  fromInvitation: boolean;
+}
+
+/** The seal of an adult who finished the first access, which every player has unless the scenario says. */
+const ADULT_SEAL: Seal = {
+  gameConsentVersion: '1',
+  researchConsentVersion: null,
+  commercialLicenceConsentVersion: null,
+  underEighteen: false,
+};
+
 interface AcceptancePlayer {
   readonly identity: string;
   playerId: string | undefined;
@@ -319,6 +357,26 @@ export class AcceptanceDriver implements GameDriver {
   /** Kept with its concrete type to read what each player received. */
   readonly #notifier = new InMemoryPlayerNotifier();
   readonly #clock = new ManualClock();
+  /** The first access of each identity and the documents it accepted, in Identity and Consent. */
+  readonly #firstAccesses = new InMemoryFirstAccessRepository();
+  readonly #acceptances = new InMemoryAcceptanceRepository();
+  /** What has been published of the legal documents: a scenario may publish a new version. */
+  readonly #published: LegalDocumentVersion[] = [...PUBLISHED_VERSIONS];
+  readonly #getFirstAccess = new GetFirstAccessUseCase(this.#firstAccesses, this.#clock);
+  readonly #getConsent = new GetConsentUseCase(this.#acceptances, this.#published);
+  readonly #firstAccessGate = new FirstAccessGate(this.#getFirstAccess, this.#getConsent);
+  readonly #firstAccessSeals = new FirstAccessSealProvider(this.#getFirstAccess, this.#getConsent);
+  /** The devices a scenario of the first access brings in, by identity: the others finished it. */
+  readonly #devices = new Map<string, AcceptanceDevice>();
+  /**
+   * The seal of each player: what a scenario declared for them; through their first access, for a
+   * device the scenario brought in; and for everyone else, the one of an adult who finished it.
+   */
+  readonly #sealProvider: SealProvider = {
+    sealFor: async (identity) =>
+      this.#seals.get(identity) ??
+      (this.#devices.has(identity) ? this.#firstAccessSeals.sealFor(identity) : ADULT_SEAL),
+  };
   /** What each identity declared and consented to, which the seal provider hands out. */
   readonly #seals = new Map<string, Seal>();
   readonly #reports = new InMemoryDilemmaReports();
@@ -412,9 +470,17 @@ export class AcceptanceDriver implements GameDriver {
     const games = this.#gameRepository;
     const clock = this.#clock;
 
-    this.#createRoom = new CreateRoomUseCase(rooms, catalog, idGenerator, randomness, clock);
+    this.#createRoom = new CreateRoomUseCase(
+      rooms,
+      catalog,
+      idGenerator,
+      randomness,
+      clock,
+      this.#sealProvider,
+    );
     this.#getRoomPreview = new GetRoomPreviewUseCase(rooms, randomness, clock);
     this.#joinRoom = new JoinRoomUseCase({
+      sealProvider: this.#sealProvider,
       roomRepository: rooms,
       gameRepository: games,
       notifier,
@@ -446,21 +512,21 @@ export class AcceptanceDriver implements GameDriver {
       roomRepository: rooms,
       gameRepository: games,
       notifier,
-      sealProvider: new InMemorySealProvider(this.#seals),
+      sealProvider: this.#sealProvider,
       clock,
     });
     this.#getGameState = new GetGameStateUseCase(rooms, this.#gameRepository, catalog, this.#likes);
     this.#react = new ReactUseCase({
       roomRepository: rooms,
       gameRepository: games,
-      sealProvider: new InMemorySealProvider(this.#seals),
+      sealProvider: this.#sealProvider,
       notifier,
     });
     this.#likeDilemma = new LikeDilemmaUseCase({
       roomRepository: rooms,
       gameRepository: games,
       likes: this.#likes,
-      sealProvider: new InMemorySealProvider(this.#seals),
+      sealProvider: this.#sealProvider,
       notifier,
       clock,
     });
@@ -507,6 +573,223 @@ export class AcceptanceDriver implements GameDriver {
   async openRoomCreation(host: string): Promise<void> {
     const player = this.#introduce(host);
     player.avatar ??= AvatarVO.all()[0];
+  }
+
+  // The first access
+
+  async newDevice(user: string, { country }: DeviceOptions): Promise<void> {
+    const { identity } = this.#introduce(user);
+    this.#devices.set(identity, {
+      country,
+      monthAsked: false,
+      cookiesAnswered: false,
+      fromInvitation: false,
+    });
+  }
+
+  async openApp(user: string, from?: 'invitation'): Promise<void> {
+    const { identity } = this.#playerCalled(user);
+    const device = this.#deviceOf(identity);
+    device.fromInvitation ||= from === 'invitation';
+    await new OpenAppUseCase(this.#firstAccesses, this.#clock).execute({
+      identity,
+      country: device.country,
+    });
+  }
+
+  async declareAge(user: string, age: number): Promise<void> {
+    // Born in December of the year before they turned it, so they are that age whatever the day.
+    const year = this.#clock.now().getUTCFullYear() - age - 1;
+    if (!(await this.#declareBirth(user, year))) await this.#declareBirth(user, year, 12);
+  }
+
+  async chooseBirthYear(user: string, year: number): Promise<void> {
+    await this.#declareBirth(user, year);
+  }
+
+  async acceptTerms(user: string): Promise<void> {
+    await this.#accept(user, 'terms-of-use');
+  }
+
+  async declineTerms(): Promise<void> {
+    // Not accepting is leaving them as they are: the room server keeps nothing.
+  }
+
+  async giveGameConsent(user: string): Promise<void> {
+    await this.#accept(user, 'game-consent');
+  }
+
+  async answerCookieConsent(user: string): Promise<void> {
+    this.#deviceOf(this.#playerCalled(user).identity).cookiesAnswered = true;
+  }
+
+  async firstAccessScreenOf(user: string): Promise<FirstAccessScreen> {
+    const { identity } = this.#playerCalled(user);
+    const device = this.#deviceOf(identity);
+    const status = await this.#firstAccessGate.statusOf(identity);
+    switch (status?.step ?? 'age') {
+      case 'blocked-country':
+      case 'under-minimum-age':
+        return status!.step as FirstAccessScreen;
+      case 'age':
+        return device.monthAsked ? 'month' : 'age';
+      case 'documents':
+        if (status!.pending[0] === 'game-consent') return 'game-consent';
+        return status!.changed.includes('terms-of-use') ? 'new-terms' : 'terms';
+      case 'done':
+        if (!device.cookiesAnswered) return 'cookies';
+        return device.fromInvitation ? 'join' : 'home';
+    }
+  }
+
+  async preselected(user: string, choice: 'year' | 'month' | 'game-consent'): Promise<boolean> {
+    // The year and the month are what the person declares: nothing is chosen for them before.
+    if (choice !== 'game-consent') return false;
+    const status = await this.#firstAccessGate.statusOf(this.#playerCalled(user).identity);
+    return status !== undefined && !status.pending.includes('game-consent');
+  }
+
+  async mentionsMinimumAge(user: string): Promise<boolean> {
+    // What the screen of the age shows comes from where the first access is, which says no age.
+    const status = await this.#firstAccessGate.statusOf(this.#playerCalled(user).identity);
+    return status !== undefined && JSON.stringify(status).match(/\b1[68]\b|minimum/i) !== null;
+  }
+
+  async legalTextsOfferedTo(user: string): Promise<readonly ('terms' | 'privacy')[]> {
+    // The full texts are pages of the public web: the terms while they are to accept, and the
+    // privacy policy beside the game consent.
+    const status = await this.#firstAccessGate.statusOf(this.#playerCalled(user).identity);
+    return status?.pending.includes('terms-of-use') ? ['terms', 'privacy'] : ['privacy'];
+  }
+
+  async toldTheGameConsentChanged(user: string): Promise<boolean> {
+    const status = await this.#firstAccessGate.statusOf(this.#playerCalled(user).identity);
+    return status?.changed.includes('game-consent') === true;
+  }
+
+  async canUseTheApp(user: string): Promise<boolean> {
+    try {
+      await this.#firstAccessGate.ensureDone(this.#playerCalled(user).identity);
+      return true;
+    } catch (error) {
+      if (error instanceof FirstAccessRequiredError) return false;
+      throw error;
+    }
+  }
+
+  async acceptedVersionOf(user: string, document: LegalDocument): Promise<number | undefined> {
+    const accepted = await this.#acceptances.findByIdentity(this.#playerCalled(user).identity);
+    return accepted.versionOf(document);
+  }
+
+  async currentVersionOf(document: LegalDocument): Promise<number> {
+    return currentVersionOf(document, this.#published);
+  }
+
+  async finishFirstAccess(user: string): Promise<void> {
+    await this.newDevice(user, { country: 'ES' });
+    await this.openApp(user);
+    await this.declareAge(user, 30);
+    await this.acceptTerms(user);
+    await this.giveGameConsent(user);
+    await this.answerCookieConsent(user);
+  }
+
+  async acceptedAnEarlierVersion(): Promise<void> {
+    // What the player accepted is the version of then: the next one makes it an earlier one.
+  }
+
+  async publishVersionThatAsksAgain(document: LegalDocument): Promise<void> {
+    const version = currentVersionOf(document, this.#published) + 1;
+    this.#published.push({ document, version, asksAgain: true });
+  }
+
+  async keptFirstAccessOf(user: string): Promise<Readonly<Record<string, unknown>>> {
+    const kept = await this.#firstAccesses.findByIdentity(this.#playerCalled(user).identity);
+    if (!kept) throw new Error(`${user} never opened the app`);
+    return { ...kept.toSnapshot() };
+  }
+
+  async consentPointsShownTo(): Promise<readonly string[]> {
+    throw new Error(
+      'Only the device tells the points of the game consent: the scenario must be @screen',
+    );
+  }
+
+  async toldWhyTheConsentIsApart(): Promise<boolean> {
+    throw new Error('Only the device says why the consent is apart: the scenario must be @screen');
+  }
+
+  async openHowTheLeverIsFunded(): Promise<boolean> {
+    throw new Error('Only the device shows how TheLever is funded: the scenario must be @screen');
+  }
+
+  async personalisedAdsAllowedFor(): Promise<boolean> {
+    throw new Error('Only the device decides on personalised ads: the scenario must be @screen');
+  }
+
+  async toldAboutGlobalPrivacyControl(): Promise<boolean> {
+    throw new Error('Only the device reads Global Privacy Control: the scenario must be @screen');
+  }
+
+  async browserOffersToInstall(): Promise<void> {
+    throw new Error('Only the browser offers to install the app: the scenario must be @screen');
+  }
+
+  async reachHome(): Promise<void> {
+    throw new Error('Only the device has a start: the scenario must be @screen');
+  }
+
+  async offeredToInstall(): Promise<boolean> {
+    throw new Error('Only the device offers to install the app: the scenario must be @screen');
+  }
+
+  async closeInstallOffer(): Promise<void> {
+    throw new Error('Only the device offers to install the app: the scenario must be @screen');
+  }
+
+  async letDaysPassOnTheDevice(): Promise<void> {
+    throw new Error('Only the device keeps when it closed the offer: the scenario must be @screen');
+  }
+
+  async finishAGame(): Promise<void> {
+    throw new Error('Only the device remembers a finished game: the scenario must be @screen');
+  }
+
+  async anonymousNoticeShownTo(): Promise<readonly string[]> {
+    throw new Error('Only the device tells what anonymous means: the scenario must be @screen');
+  }
+
+  #deviceOf(identity: string): AcceptanceDevice {
+    const device = this.#devices.get(identity);
+    if (!device) throw new Error(`The scenario brings in no device for ${identity}`);
+    return device;
+  }
+
+  /** Whether the age was taken: without the month of who may be under 18, the screen asks for it. */
+  async #declareBirth(user: string, birthYear: number, birthMonth?: number): Promise<boolean> {
+    const { identity } = this.#playerCalled(user);
+    try {
+      await new DeclareAgeUseCase(this.#firstAccesses, this.#clock).execute({
+        identity,
+        birthYear,
+        ...(birthMonth !== undefined && { birthMonth }),
+      });
+      this.#deviceOf(identity).monthAsked = false;
+      return true;
+    } catch (error) {
+      if (!(error instanceof MonthOfBirthNeededError)) throw error;
+      this.#deviceOf(identity).monthAsked = true;
+      return false;
+    }
+  }
+
+  async #accept(user: string, document: LegalDocument): Promise<void> {
+    await new AcceptDocumentUseCase(this.#acceptances, this.#published, this.#clock).execute({
+      identity: this.#playerCalled(user).identity,
+      document,
+      version: currentVersionOf(document, this.#published),
+    });
   }
 
   async createRoom(host: string, choices: RoomChoices = {}): Promise<void> {
@@ -649,6 +932,7 @@ export class AcceptanceDriver implements GameDriver {
       if (joinedLate) await this.reconnect(player);
     } catch (error) {
       if (error instanceof RoomFullError) joiner.refusal = 'room-full';
+      else if (error instanceof AdultsOnlyRoomError) joiner.refusal = 'adults-only';
       else if (error instanceof PlayerExpelledError) joiner.refusal = 'expelled';
       else if (error instanceof NicknameAndAvatarTakenError) joiner.askedForAnotherAvatar = true;
       else throw error;
@@ -1287,7 +1571,7 @@ export class AcceptanceDriver implements GameDriver {
     await this.#likes.like({
       identity,
       dilemmaId: await this.#dilemmaIdAt(position),
-      seal: this.#seals.get(identity) ?? SEAL_BEFORE_FIRST_ACCESS,
+      seal: await this.#sealProvider.sealFor(identity),
       at: this.#clock.now(),
     });
   }
@@ -1668,6 +1952,7 @@ export class AcceptanceDriver implements GameDriver {
       new SequentialIdGenerator(),
       new SequentialRandomness(),
       this.#clock,
+      this.#sealProvider,
     ).execute({
       hostNickname: 'Visitor',
       hostIdentity: 'TestVisitorIdentity',

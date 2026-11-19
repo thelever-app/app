@@ -12,7 +12,10 @@ afterEach(async () => {
 
 /** The room server as dev and prod run it: it asks every call to prove it comes from the app. */
 async function serverAskingForAppCheck() {
-  const server = await startRoomServer({ appCheckVerifier: new FakeAppCheckVerifier() });
+  const server = await startRoomServer({
+    appCheckVerifier: new FakeAppCheckVerifier(),
+    firstAccessHeaders: { 'X-Firebase-AppCheck': VALID_APP_CHECK },
+  });
   servers.push(server);
   return server;
 }

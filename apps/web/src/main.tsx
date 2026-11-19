@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter } from 'react-router';
 import { App } from './App.tsx';
+import { keepInstallPrompt } from './install/install-prompt.ts';
 import { loadWebConfig } from './config/web-config.ts';
 import { deviceAccessCode } from './identity/access-code.ts';
 import { signInAnonymousPlayer } from './identity/anonymous-player.ts';
@@ -25,6 +26,9 @@ import playerJoined from './assets/sounds/player-joined.m4a';
 import { SoundProvider } from './sound/sound-context.tsx';
 import { soundPreference } from './sound/sound-preference.ts';
 import { browserAudio, webSoundEffects } from './sound/web-sound-effects.ts';
+
+// The browser offers to install the app once, early: it is kept from the start.
+keepInstallPrompt();
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Missing #root element in index.html');
@@ -79,7 +83,7 @@ async function start(): Promise<void> {
             <OpenRoomProvider openRoom={openRoom}>
               <SoundProvider effects={effects} preference={preference}>
                 <BrowserRouter>
-                  <App />
+                  <App adsenseClient={config.adsenseClient} />
                 </BrowserRouter>
               </SoundProvider>
             </OpenRoomProvider>

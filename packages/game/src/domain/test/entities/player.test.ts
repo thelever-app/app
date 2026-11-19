@@ -13,7 +13,7 @@ describe('Player', () => {
     it('should keep the identity it was created with', () => {
       // Act
       const player = Player.create(
-        { nickname: 'Luis', identity: 'TestLuisIdentity', avatar: AVATAR },
+        { underEighteen: false, nickname: 'Luis', identity: 'TestLuisIdentity', avatar: AVATAR },
         new FixedIdGenerator('TestId'),
       );
 
@@ -25,7 +25,7 @@ describe('Player', () => {
       // Act & Assert
       expect(() =>
         Player.create(
-          { nickname: 'Luis', identity: '', avatar: AVATAR },
+          { underEighteen: false, nickname: 'Luis', identity: '', avatar: AVATAR },
           new FixedIdGenerator('TestId'),
         ),
       ).toThrow(IdMissingError);
@@ -40,7 +40,7 @@ describe('Player', () => {
 
       // Act
       const player = Player.create(
-        { nickname, identity: `Test${nickname}Identity`, avatar: AVATAR },
+        { underEighteen: false, nickname, identity: `Test${nickname}Identity`, avatar: AVATAR },
         new FixedIdGenerator(id),
       );
 
@@ -55,7 +55,7 @@ describe('Player', () => {
 
       // Act
       const player = Player.create(
-        { nickname, identity: `Test${nickname}Identity`, avatar: AVATAR },
+        { underEighteen: false, nickname, identity: `Test${nickname}Identity`, avatar: AVATAR },
         new FixedIdGenerator(id),
       );
 
@@ -72,7 +72,7 @@ describe('Player', () => {
       // Act & Assert
       expect(() =>
         Player.create(
-          { nickname, identity: `Test${nickname}Identity`, avatar: AVATAR },
+          { underEighteen: false, nickname, identity: `Test${nickname}Identity`, avatar: AVATAR },
           new FixedIdGenerator(id),
         ),
       ).toThrow(IdMissingError);
@@ -86,7 +86,7 @@ describe('Player', () => {
       // Act & Assert
       expect(() =>
         Player.create(
-          { nickname, identity: `Test${nickname}Identity`, avatar: AVATAR },
+          { underEighteen: false, nickname, identity: `Test${nickname}Identity`, avatar: AVATAR },
           new FixedIdGenerator(id),
         ),
       ).toThrow(NicknameMissingError);
@@ -97,7 +97,12 @@ describe('Player', () => {
     it('should return its id and nickname as plain data', () => {
       // Arrange
       const player = Player.create(
-        { nickname: 'TestNickName', identity: 'TestTestNickNameIdentity', avatar: AVATAR },
+        {
+          underEighteen: false,
+          nickname: 'TestNickName',
+          identity: 'TestTestNickNameIdentity',
+          avatar: AVATAR,
+        },
         new FixedIdGenerator('TestId'),
       );
 
@@ -111,6 +116,7 @@ describe('Player', () => {
         identity: 'TestTestNickNameIdentity',
         avatar: { face: 'face-01', color: 'khaki' },
         playedDilemmaIds: [],
+        underEighteen: false,
       });
     });
   });
@@ -119,7 +125,7 @@ describe('Player', () => {
     it('should change the avatar of the player', () => {
       // Arrange
       const player = Player.create(
-        { nickname: 'Luis', identity: 'TestLuisIdentity', avatar: AVATAR },
+        { underEighteen: false, nickname: 'Luis', identity: 'TestLuisIdentity', avatar: AVATAR },
         new FixedIdGenerator('TestId'),
       );
       const avatar = new AvatarVO('face-07', 'rust');
@@ -141,6 +147,7 @@ describe('Player', () => {
         identity: 'TestTestNickNameIdentity',
         avatar: { face: 'face-05', color: 'olive' },
         playedDilemmaIds: ['TestDilemma1'],
+        underEighteen: true,
       };
 
       // Act
@@ -151,6 +158,7 @@ describe('Player', () => {
       expect(player.nickname).toBe('TestNickName');
       expect(player.avatar).toEqual(new AvatarVO('face-05', 'olive'));
       expect(player.playedDilemmaIds).toEqual(['TestDilemma1']);
+      expect(player.underEighteen).toBe(true);
     });
 
     it('should throw an error for an avatar that does not exist', () => {
@@ -161,6 +169,7 @@ describe('Player', () => {
         identity: 'TestTestNickNameIdentity',
         avatar: { face: 'rocket_launch', color: 'olive' },
         playedDilemmaIds: [],
+        underEighteen: false,
       };
 
       // Act & Assert

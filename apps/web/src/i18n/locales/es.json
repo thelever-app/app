@@ -348,7 +348,9 @@
     "dilemmas-missing": "No hay dilemas para esta configuración. Prueba con otras categorías.",
     "nickname-and-avatar-taken": "Alguien que se llama como tú ya lleva ese avatar. Elige otro.",
     "round-taken": "Otro jugador acaba de elegir el dilema de esa ronda.",
-    "duplicate-dilemma": "Ese dilema ya está en otra ronda."
+    "duplicate-dilemma": "Ese dilema ya está en otra ronda.",
+    "first-access-required": "Antes de jugar, termina la primera entrada.",
+    "adults-only-room": "Esta sala es solo para mayores de 18."
   },
   "home": {
     "title": "¿Jugamos?",
@@ -404,6 +406,11 @@
     "room-not-found": {
       "title": "Esa sala ya no existe",
       "text": "Se ha cerrado. Si el grupo sigue jugando, pide que te pasen el código nuevo.",
+      "action": "Volver al inicio"
+    },
+    "adults-only-room": {
+      "title": "Esta sala tiene dilemas +18",
+      "text": "Solo pueden entrar mayores de 18.",
       "action": "Volver al inicio"
     }
   },
@@ -704,5 +711,120 @@
     "footer": "Juega en thelever.app",
     "showNames": "Mostrar los apodos de {{names}}",
     "groupNote": "Sin nombres ni votos."
+  },
+  "firstAccess": {
+    "loading": "Cargando…",
+    "retry": "Reintentar",
+    "stepOf": "Paso {{step}} de {{total}}",
+    "continue": "Continuar",
+    "decline": "No acepto",
+    "welcome": {
+      "tagline": "Dilemas morales para jugar en grupo",
+      "text": "Votas en privado, adivinas a los demás y descubrís juntos quién piensa qué.",
+      "start": "Empezar",
+      "join": "Unirme a la partida",
+      "invite": "{{host}} te invita a jugar"
+    },
+    "age": {
+      "title": "¿En qué año naciste?",
+      "lead": "Sirve para mostrarte dilemas, salas y anuncios adecuados a tu edad.",
+      "year": "Año de nacimiento",
+      "chooseYear": "Elige un año",
+      "month": "¿Y en qué mes?",
+      "chooseMonth": "Elige un mes"
+    },
+    "underage": {
+      "title": "Todavía no puedes usar TheLever",
+      "text": "Sus dilemas tratan temas pensados para personas más mayores. Aquí estaremos cuando llegue el momento."
+    },
+    "country": {
+      "title": "TheLever aún no está disponible en tu país",
+      "text": "Las normas sobre datos y juegos cambian de un país a otro, y todavía no podemos ofrecerlo donde estás.",
+      "contact": "¿Crees que es un error? Escríbenos"
+    },
+    "consent": {
+      "title": "Antes de jugar: qué pasa con tus votos",
+      "points": {
+        "play": {
+          "title": "Solo para jugar.",
+          "text": "Usamos tus votos, predicciones y reacciones para jugar, en grupo o a solas, y ver el resultado."
+        },
+        "notSold": {
+          "title": "No los vendemos ni los usamos para anuncios.",
+          "text": "Con este permiso no se los damos a nadie, ni los usamos para perfilarte ni para investigar."
+        },
+        "group": {
+          "title": "Solo los ve tu grupo,",
+          "text": "en la revelación de cada dilema. En una sala anónima, ni eso: solo el reparto, sin nombres."
+        },
+        "deleted": {
+          "title": "Se borran en 24 horas",
+          "text": "desde que se cierra la sala. Solo queda tu historial, en tu móvil, hasta que lo borres."
+        },
+        "decide": {
+          "title": "Tú decides.",
+          "text": "Para jugar no necesitas nombre ni email, y puedes retirar este permiso escribiendo a privacidad@thelever.app."
+        }
+      },
+      "privacy": "Leer la política de privacidad",
+      "funding": "Cómo se financia TheLever",
+      "why": "<strong>Por qué te lo pedimos aparte:</strong> un voto sobre un dilema puede mostrar lo que piensas o algo de tu vida privada, y la ley de protección de datos (RGPD) exige un permiso expreso para eso.",
+      "terms": "He leído y acepto las <terms>condiciones de uso</terms>.",
+      "statement": "Doy mi consentimiento explícito para que TheLever trate mis votos, predicciones y reacciones, y lo que otros predicen o reaccionan sobre mí, solo para jugar y como se explica arriba. Sé que pueden mostrar mis convicciones o algo de mi vida privada y que puedo retirar este consentimiento cuando quiera.",
+      "checkBoth": "Marca las dos casillas para continuar.",
+      "checkOne": "Marca la casilla para continuar.",
+      "declined": "<strong>Sin esto no se puede jugar:</strong> tus votos y predicciones son el juego.",
+      "changed": "<strong>Hemos cambiado el permiso del juego.</strong> Léelo y dalo de nuevo para seguir jugando."
+    },
+    "newTerms": {
+      "title": "Hemos cambiado las condiciones de uso",
+      "lead": "Para seguir jugando, léelas y acéptalas.",
+      "read": "Leer las condiciones",
+      "check": "He leído y acepto las nuevas condiciones de uso.",
+      "accept": "Acepto y sigo",
+      "declined": "<strong>Sin aceptarlas no se puede jugar.</strong> Puedes aceptarlas cuando quieras."
+    },
+    "funding": {
+      "title": "Cómo se financia",
+      "close": "Cerrar",
+      "lead": "TheLever es gratis. Se paga así:",
+      "ads": {
+        "title": "Anuncios.",
+        "text": "Nunca mientras votas, y nunca reciben nada de lo que votas."
+      },
+      "research": {
+        "title": "Más adelante, quizá investigación.",
+        "text": "Si algún día queremos usar partidas para investigar, te pediremos permiso aparte. Si dices que no, juegas igual."
+      }
+    },
+    "cookies": {
+      "title": "Cookies y anuncios",
+      "text": "Nada de lo que respondes en los dilemas se usa para anuncios.",
+      "globalPrivacyControl": "Tu navegador envía la señal Global Privacy Control, así que tus anuncios no se personalizarán."
+    }
+  },
+  "anonymousNotice": {
+    "label": "Sala anónima",
+    "title": "Nadie del grupo sabrá qué votas",
+    "hidden": {
+      "title": "El grupo no verá tus votos.",
+      "text": "Solo cuántos han respondido y, en la revelación, cuántos eligieron cada opción."
+    },
+    "deleted": {
+      "title": "Tus votos solo sirven para jugar:",
+      "text": "se borran antes de 24 horas desde que se cierra la sala, salvo tu historial."
+    },
+    "predict": {
+      "title": "Votas y predices el reparto.",
+      "text": "Sumas puntos cuanto más te acerques."
+    },
+    "start": "Entendido, empezar"
+  },
+  "installOffer": {
+    "title": "Ten TheLever a mano",
+    "android": "Añádela a tu pantalla de inicio y ábrela como una app más.",
+    "ios": "Toca Compartir y después «Añadir a pantalla de inicio».",
+    "install": "Instalar",
+    "close": "Cerrar aviso"
   }
 }

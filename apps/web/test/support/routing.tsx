@@ -4,14 +4,29 @@ import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { vi } from 'vitest';
 import { createI18n } from '../../src/i18n/i18n.ts';
+import type { FirstAccessResponseDto } from '@thelever-app/protocol';
 import type { RoomApi } from '../../src/room/room-api.ts';
 import { RoomApiProvider } from '../../src/room/room-api-context.tsx';
+
+/** Where the first access of a device that finished it is. */
+export const FIRST_ACCESS_DONE: FirstAccessResponseDto = {
+  region: 'eea',
+  step: 'done',
+  pending: [],
+  changed: [],
+  current: { 'terms-of-use': 1, 'game-consent': 1 },
+  underEighteen: false,
+};
 
 /** Routes of the room server that answer what the test says; anything else fails the test. */
 export function fakeRoomApi(overrides: Partial<RoomApi> = {}): RoomApi {
   const unexpected = (name: string) =>
     vi.fn(() => Promise.reject(new Error(`the test did not expect ${name}`)));
   return {
+    // Every device of the tests finished the first access, unless the test says otherwise.
+    openApp: vi.fn(async () => FIRST_ACCESS_DONE),
+    declareAge: unexpected('declareAge'),
+    acceptDocument: unexpected('acceptDocument'),
     createRoom: unexpected('createRoom'),
     previewRoom: unexpected('previewRoom'),
     previewDilemma: unexpected('previewDilemma'),

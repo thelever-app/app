@@ -22,8 +22,10 @@
   "dependencies": {
     "@google-cloud/cloud-sql-connector": "^1.12.1",
     "@opentelemetry/api": "^1.10.0",
+    "@thelever-app/consent": "workspace:*",
     "@thelever-app/dilemmas": "workspace:*",
     "@thelever-app/game": "workspace:*",
+    "@thelever-app/identity": "workspace:*",
     "kysely": "^0.29.7",
     "pg": "^8.23.1"
   }

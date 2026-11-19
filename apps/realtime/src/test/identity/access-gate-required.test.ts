@@ -35,7 +35,10 @@ afterEach(async () => {
  */
 async function closedServer() {
   const accessGate = await SecretFileAccessGate.open(secret, { readAgainAfterMs: 0 });
-  const server = await startRoomServer({ accessGate });
+  const server = await startRoomServer({
+    accessGate,
+    firstAccessHeaders: { 'X-Access-Code': ACCESS_CODE },
+  });
   servers.push(server);
   return server;
 }

@@ -20,6 +20,8 @@ export { PostgresWorldResultRepository } from './dilemmas/postgres-world-result-
 export { PostgresRoomRepository } from './game/postgres-room-repository.ts';
 export { PostgresGameRepository } from './game/postgres-game-repository.ts';
 export { PostgresDilemmaLikes } from './game/postgres-dilemma-likes.ts';
+export { PostgresFirstAccessRepository } from './identity/postgres-first-access-repository.ts';
+export { PostgresAcceptanceRepository } from './consent/postgres-acceptance-repository.ts';
 export { PostgresPlayerNotifier, GAME_EVENTS_CHANNEL } from './game/postgres-player-notifier.ts';
 export { GameEventsListener } from './game/game-events-listener.ts';
 export { PostgresInstances } from './game/postgres-instances.ts';
