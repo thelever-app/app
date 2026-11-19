@@ -1,5 +1,6 @@
 import type {
   LikeDilemmaUseCase,
+  UnlikeDilemmaUseCase,
   MoveOnUseCase,
   ReactUseCase,
   RevealEarlyUseCase,
@@ -16,6 +17,7 @@ export interface RoundUseCases {
   readonly moveOn: MoveOnUseCase;
   readonly react: ReactUseCase;
   readonly likeDilemma: LikeDilemmaUseCase;
+  readonly unlikeDilemma: UnlikeDilemmaUseCase;
   readonly startRematch: StartRematchUseCase;
 }
 
@@ -53,6 +55,13 @@ export function roundCommandHandlers(
       'like-dilemma',
       ({ position }, { roomId, playerId }) =>
         useCases.likeDilemma.execute({ roomId, playerId, position }),
+      roomLock,
+      runCommand,
+    ),
+    new RoomCommandHandler(
+      'unlike-dilemma',
+      ({ position }, { roomId, playerId }) =>
+        useCases.unlikeDilemma.execute({ roomId, playerId, position }),
       roomLock,
       runCommand,
     ),

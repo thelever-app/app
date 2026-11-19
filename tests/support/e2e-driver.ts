@@ -307,7 +307,7 @@ const SCREEN = {
   sendReport: 'Enviar reporte',
   skip: 'Saltar dilema',
   leave: 'Salir de la partida',
-  reveal: 'Reveal',
+  reveal: spanish('reveal.region'),
   toResults: spanish('reveal.toResults'),
   yourVote: spanish('distribution.yourVote'),
   rankingTitle: spanish('ranking.title'),
@@ -315,6 +315,7 @@ const SCREEN = {
   rankingNext: spanish('ranking.next'),
   resultsNext: spanish('results.next'),
   resultsBack: spanish('results.back'),
+  endTitles: spanish('end.titles'),
   resultsLabel: spanishPattern('results.label'),
   knownBest: spanish('results.knowsTitle'),
   like: spanish('reveal.like'),
@@ -1514,6 +1515,12 @@ export class E2eDriver implements GameDriver {
     const watcher = this.#playerCalled(viewer);
     const game = lastGameOf(watcher);
     if (game?.stage.kind !== 'results' || !game.ranking) return undefined;
+    return this.#rankingOnScreen(watcher, game);
+  }
+
+  /** The ranking the screen of `watcher` shows, in the results or at the end of the game. */
+  async #rankingOnScreen(watcher: E2ePlayer, game: GameStateDto): Promise<RankedView[]> {
+    if (!game.ranking) return [];
     const anonymous = isAnonymous(watcher);
     const list = screenOf(watcher).page.getByRole('list', {
       name: anonymous ? SCREEN.rankingTitle : SCREEN.nominalRankingTitle,
@@ -1521,7 +1528,7 @@ export class E2eDriver implements GameDriver {
     await list.waitFor();
     await waitUntil(
       async () => (await list.getByRole('listitem').count()) === game.ranking!.length || undefined,
-      `${viewer} sees every player in the ranking`,
+      `${watcher.nickname} sees every player in the ranking`,
     );
     // The rows in the order of the ranking, each with the badges of the titles it won.
     const badges = await list
@@ -1855,6 +1862,22 @@ export class E2eDriver implements GameDriver {
     );
   }
 
+  /** «Buen dilema» again, until the room server says the player took it back. */
+  async unlike(player: string, position?: number): Promise<void> {
+    if (position !== undefined) {
+      throw new Error(
+        'The screen takes back a like only in its own reveal: the scenario is not @ui',
+      );
+    }
+    const liker = this.#playerCalled(player);
+    const { page } = screenOf(liker);
+    await page.getByRole('button', { name: SCREEN.like }).click();
+    await waitUntil(
+      () => lastGameOf(liker)?.reveal?.youLiked === false || undefined,
+      `${player} gets their like taken back`,
+    );
+  }
+
   /** As it is kept in the database for the identity of the player, which outlives the room. */
   async likeRecordedFor(player: string, position: number): Promise<RecordedLike | undefined> {
     const dilemmaId = this.#dilemmaIdAt(position);
@@ -1958,9 +1981,19 @@ export class E2eDriver implements GameDriver {
     await page
       .getByRole('heading', { name: spanish('end.inRoom', { count: staying.length }) })
       .waitFor();
+    const titles = page.getByRole('list', { name: SCREEN.endTitles });
+    // Read in both rooms, so an anonymous one that showed titles would be caught.
+    const shown = await titles.getByRole('listitem').evaluateAll((items) =>
+      items.map((item) => ({
+        title: item.children[1]?.textContent ?? '',
+        winners: item.children[2]?.textContent ?? '',
+      })),
+    );
     return {
       stillInTheRoom: staying.map(({ playerId }) => this.#nameOf(playerId)),
       gone: game.players.filter(({ left }) => left).map(({ playerId }) => this.#nameOf(playerId)),
+      ranking: await this.#rankingOnScreen(watcher, game),
+      titles: shown.map(({ title, winners }) => ({ title, winners: [this.#namesIn(winners)] })),
     };
   }
 

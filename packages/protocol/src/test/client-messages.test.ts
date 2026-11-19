@@ -274,6 +274,7 @@ describe('the messages of the rounds', () => {
       }).success,
     ).toBe(true);
     expect(ClientMessageDto.safeParse({ type: 'like-dilemma', position: 1 }).success).toBe(true);
+    expect(ClientMessageDto.safeParse({ type: 'unlike-dilemma', position: 1 }).success).toBe(true);
     expect(ClientMessageDto.safeParse({ type: 'start-rematch' }).success).toBe(true);
   });
 

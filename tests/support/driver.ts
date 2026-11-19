@@ -149,6 +149,10 @@ export interface EndOfTheGameView {
   /** By their nicknames. */
   readonly stillInTheRoom: readonly string[];
   readonly gone: readonly string[];
+  /** The ranking of the game, as at the end of its results. */
+  readonly ranking: readonly RankedView[];
+  /** In a nominal room, every title of the game with who won it; none in an anonymous one. */
+  readonly titles: readonly TitleView[];
 }
 
 /** The screen of the results a player is on. */
@@ -525,6 +529,11 @@ export interface GameDriver {
   reactionsRecorded(): Promise<RecordedReaction[]>;
   /** `player` gives «Buen dilema» to the dilemma of the reveal of the round. */
   like(player: string): Promise<void>;
+  /**
+   * `player` takes back «Buen dilema»: from the reveal they are in, or, only below the application,
+   * to the dilemma in that position (from 1) once its reveal is over.
+   */
+  unlike(player: string, position?: number): Promise<void>;
   /** The like of `player` to the dilemma in that position (from 1), as it is kept. */
   likeRecordedFor(player: string, position: number): Promise<RecordedLike | undefined>;
   /** What the likes of the dilemma in that position (from 1) weigh for its rating. */

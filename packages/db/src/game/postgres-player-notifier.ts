@@ -3,6 +3,7 @@ import {
   AnsweredCountChangedEvent,
   ConnectionChangedEvent,
   DilemmaLikedEvent,
+  DilemmaUnlikedEvent,
   DilemmaRevealedEvent,
   type DomainEvent,
   type GameStage,
@@ -147,6 +148,12 @@ function decisionPhaseEventOf(event: Record<string, unknown>): DomainEvent {
       );
     case 'DilemmaLiked':
       return new DilemmaLikedEvent(
+        String(event.gameId),
+        String(event.playerId),
+        Number(event.gameVersion),
+      );
+    case 'DilemmaUnliked':
+      return new DilemmaUnlikedEvent(
         String(event.gameId),
         String(event.playerId),
         Number(event.gameVersion),

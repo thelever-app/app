@@ -7,11 +7,13 @@ import { GetRoomStateUseCase } from '../../use-cases/get-room-state.use-case.ts'
 import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
 import { LikeDilemmaUseCase } from '../../use-cases/like-dilemma.use-case.ts';
 import { MoveOnUseCase } from '../../use-cases/move-on.use-case.ts';
+import { UnlikeDilemmaUseCase } from '../../use-cases/unlike-dilemma.use-case.ts';
 import { ReactUseCase } from '../../use-cases/react.use-case.ts';
 import { RevealEarlyUseCase } from '../../use-cases/reveal-early.use-case.ts';
 import { StartRematchUseCase } from '../../use-cases/start-rematch.use-case.ts';
 import { GameNotEndedError } from '../../../domain/errors/game-not-ended.error.ts';
 import { DilemmaLikedEvent } from '../../../domain/events/dilemma-liked.event.ts';
+import { DilemmaUnlikedEvent } from '../../../domain/events/dilemma-unliked.event.ts';
 import { HostChangedEvent } from '../../../domain/events/host-changed.event.ts';
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
 import { ReactionsChangedEvent } from '../../../domain/events/reactions-changed.event.ts';
@@ -64,6 +66,7 @@ async function arrange() {
     moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock),
     react: new ReactUseCase({ ...ports, sealProvider }),
     likeDilemma: new LikeDilemmaUseCase({ ...ports, likes, sealProvider }),
+    unlikeDilemma: new UnlikeDilemmaUseCase({ ...ports, likes }),
     startRematch: new StartRematchUseCase(roomRepository, gameRepository, notifier),
     getGameState: new GetGameStateUseCase(roomRepository, gameRepository, catalog, likes),
     getRoomState: new GetRoomStateUseCase(roomRepository, catalog),
@@ -208,6 +211,45 @@ describe('The end of the game', () => {
 
       // Assert
       expect(likes.likes).toEqual([]);
+    });
+  });
+
+  describe('UnlikeDilemmaUseCase', () => {
+    it('should take back the like during the reveal of its dilemma, and tell only who took it back', async () => {
+      // Arrange
+      const arranged = await arrange();
+      const { likeDilemma, unlikeDilemma, likes, notifier, getGameState, roomId, gameId } =
+        arranged;
+      const { luisId, anaId } = arranged;
+      await playRound(arranged, 0);
+      await likeDilemma.execute({ roomId, playerId: luisId, position: 0 });
+      const before = notifier.receivedBy(anaId).length;
+
+      // Act
+      await unlikeDilemma.execute({ roomId, playerId: luisId, position: 0 });
+
+      // Assert
+      expect(likes.likes).toEqual([]);
+      expect(likes.weightOf(arranged.dilemmaIds[0]!)).toBe(0);
+      expect(notifier.receivedBy(luisId).at(-1)).toBeInstanceOf(DilemmaUnlikedEvent);
+      expect(notifier.receivedBy(anaId)).toHaveLength(before);
+      const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
+      expect(state.reveal?.youLiked).toBe(false);
+    });
+
+    it('should keep the like once the reveal of its dilemma is over', async () => {
+      // Arrange
+      const arranged = await arrange();
+      const { likeDilemma, unlikeDilemma, moveOn, likes, roomId, luisId } = arranged;
+      await playRound(arranged, 0);
+      await likeDilemma.execute({ roomId, playerId: luisId, position: 0 });
+      await moveOn.execute({ roomId, playerId: luisId, fromPosition: 0 });
+
+      // Act
+      await unlikeDilemma.execute({ roomId, playerId: luisId, position: 0 });
+
+      // Assert
+      expect(likes.weightOf(arranged.dilemmaIds[0]!)).toBe(1);
     });
   });
 

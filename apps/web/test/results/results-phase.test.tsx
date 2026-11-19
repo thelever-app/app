@@ -57,6 +57,7 @@ describe('ResultsPhase', () => {
 
     // Assert
     expect(screen.getByRole('heading', { name: t('results.introTitle') })).toBeDefined();
+    expect(screen.getByText(t('ranking.title'))).toBeDefined();
     expect(screen.queryByRole('button', { name: t('ranking.next') })).toBeNull();
   });
 
@@ -136,6 +137,21 @@ describe('ResultsPhase', () => {
         screen.getByText(t('end.place', { position: 1, players: 2, count: 300 })),
       ).toBeDefined();
       expect(screen.getByText(t('ranking.mentalist'))).toBeDefined();
+    });
+
+    it('should show the ranking of who reads the group best', async () => {
+      // Act
+      const { t } = await renderPhase(atStage('ended'));
+
+      // Assert
+      const rows = within(screen.getByRole('list', { name: t('ranking.title') })).getAllByRole(
+        'listitem',
+      );
+      expect(rows.map((row) => row.textContent)).toEqual([
+        expect.stringContaining('Luis'),
+        expect.stringContaining('Marta'),
+        expect.stringContaining('Ana'),
+      ]);
     });
 
     it('should show who is still in the room and who has left', async () => {

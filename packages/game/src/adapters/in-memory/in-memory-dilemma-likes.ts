@@ -14,6 +14,10 @@ export class InMemoryDilemmaLikes implements DilemmaLikes {
     this.#likes.set(key, { ...like, seal: { ...like.seal }, weight: GAME_LIKE_WEIGHT });
   }
 
+  async unlike(identity: string, dilemmaId: string): Promise<void> {
+    this.#likes.delete(keyOf(identity, dilemmaId));
+  }
+
   async hasLiked(identity: string, dilemmaId: string): Promise<boolean> {
     return this.#likes.has(keyOf(identity, dilemmaId));
   }

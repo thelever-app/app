@@ -113,6 +113,7 @@ export { PlayerJoinedLateEvent } from './domain/events/player-joined-late.event.
 export { GameStageChangedEvent } from './domain/events/game-stage-changed.event.ts';
 export { ReactionsChangedEvent } from './domain/events/reactions-changed.event.ts';
 export { DilemmaLikedEvent } from './domain/events/dilemma-liked.event.ts';
+export { DilemmaUnlikedEvent } from './domain/events/dilemma-unliked.event.ts';
 export type { IdGenerator } from './domain/ports/id-generator.port.ts';
 export type { Randomness } from './domain/ports/randomness.port.ts';
 export type { Clock } from './domain/ports/clock.port.ts';
@@ -262,6 +263,10 @@ export {
   LikeDilemmaUseCase,
   type LikeDilemmaInput,
 } from './application/use-cases/like-dilemma.use-case.ts';
+export {
+  UnlikeDilemmaUseCase,
+  type UnlikeDilemmaInput,
+} from './application/use-cases/unlike-dilemma.use-case.ts';
 export {
   StartRematchUseCase,
   type StartRematchInput,

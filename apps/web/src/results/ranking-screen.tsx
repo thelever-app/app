@@ -36,14 +36,9 @@ export function RankingScreen({
   onBack,
 }: RankingScreenProps) {
   const { t } = useTranslation();
-  const nameOf = usePlayerName();
   const [isGroupOpen, setIsGroupOpen] = useState(false);
   const titleId = useId();
   const nominal = !isAnonymous(game);
-  const rows = (game.ranking ?? []).flatMap((ranked) => {
-    const player = game.players.find(({ playerId }) => playerId === ranked.playerId);
-    return player ? [{ ...ranked, player }] : [];
-  });
 
   return (
     <div className={styles.screen}>
@@ -72,43 +67,7 @@ export function RankingScreen({
           </h1>
           <p className={styles.text}>{nominal ? t('ranking.nominalText') : t('ranking.text')}</p>
         </div>
-        <ol className={styles.ranking} aria-labelledby={titleId}>
-          {rows.map(({ playerId, points, position, mentalist, player }) => (
-            <li
-              key={playerId}
-              className={styles.row}
-              data-self={playerId === game.playerId ? '' : undefined}
-            >
-              <span className={styles.position}>{t('ranking.position', { position })}</span>
-              <Avatar avatar={player.avatar} size="s" />
-              <span className={styles.name}>{nameOf(player)}</span>
-              {nominal ? (
-                <span className={styles.badges}>
-                  {titlesOf(game.results, playerId).map(({ title }) => (
-                    <span
-                      key={title}
-                      className={title === 'el-mentalista' ? styles.mentalist : styles.titleBadge}
-                      role="img"
-                      aria-label={t(`results.titles.${title}`)}
-                    >
-                      <Icon name={TITLE_ICONS[title]} size={18} />
-                    </span>
-                  ))}
-                </span>
-              ) : (
-                mentalist && (
-                  <span className={styles.mentalist} role="img" aria-label={t('ranking.mentalist')}>
-                    <Icon name="psychology" size={18} />
-                  </span>
-                )
-              )}
-              <span className={styles.points}>
-                {t('ranking.points', { points })}
-                <span className={styles.hidden}> {t('ranking.pointsUnit')}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
+        <RankingList game={game} labelledBy={titleId} />
         <p className={styles.note}>{nominal ? t('ranking.nominalNote') : t('ranking.note')}</p>
       </main>
       <footer className={styles.footer}>
@@ -125,5 +84,65 @@ export function RankingScreen({
       </footer>
       <GroupProgressSheet game={game} open={isGroupOpen} onOpenChange={setIsGroupOpen} />
     </div>
+  );
+}
+
+/**
+ * The players by their points, sharing a position on a tie: in a nominal room, with the badge of
+ * each title they won; in an anonymous one, with El Mentalista marked.
+ */
+export function RankingList({
+  game,
+  labelledBy,
+}: {
+  readonly game: GameStateDto;
+  /** The id of the heading that names the list. */
+  readonly labelledBy: string;
+}) {
+  const { t } = useTranslation();
+  const nameOf = usePlayerName();
+  const nominal = !isAnonymous(game);
+  const rows = (game.ranking ?? []).flatMap((ranked) => {
+    const player = game.players.find(({ playerId }) => playerId === ranked.playerId);
+    return player ? [{ ...ranked, player }] : [];
+  });
+  return (
+    <ol className={styles.ranking} aria-labelledby={labelledBy}>
+      {rows.map(({ playerId, points, position, mentalist, player }) => (
+        <li
+          key={playerId}
+          className={styles.row}
+          data-self={playerId === game.playerId ? '' : undefined}
+        >
+          <span className={styles.position}>{t('ranking.position', { position })}</span>
+          <Avatar avatar={player.avatar} size="s" />
+          <span className={styles.name}>{nameOf(player)}</span>
+          {nominal ? (
+            <span className={styles.badges}>
+              {titlesOf(game.results, playerId).map(({ title }) => (
+                <span
+                  key={title}
+                  className={title === 'el-mentalista' ? styles.mentalist : styles.titleBadge}
+                  role="img"
+                  aria-label={t(`results.titles.${title}`)}
+                >
+                  <Icon name={TITLE_ICONS[title]} size={18} />
+                </span>
+              ))}
+            </span>
+          ) : (
+            mentalist && (
+              <span className={styles.mentalist} role="img" aria-label={t('ranking.mentalist')}>
+                <Icon name="psychology" size={18} />
+              </span>
+            )
+          )}
+          <span className={styles.points}>
+            {t('ranking.points', { points })}
+            <span className={styles.hidden}> {t('ranking.pointsUnit')}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }

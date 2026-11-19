@@ -106,12 +106,34 @@ describe('RevealPhase', () => {
     // Act
     const { t } = await renderReveal(revealed(NOMINAL_REVEAL), { pastTheIntro: false });
     const intro = screen.queryByRole('heading', { name: t('reveal.introTitle') });
+    const position = screen.queryByText(t('progressStrip.position', { position: 1, total: 3 }));
+    const answered = screen.queryByText(
+      `${t('reveal.introAnswered', { count: 3, total: 4 })} ${t('reveal.introNominal')}`,
+    );
     act(() => vi.advanceTimersByTime(REVEAL_INTRO_MS));
 
     // Assert
     expect(intro).not.toBeNull();
+    expect(position).not.toBeNull();
+    expect(answered).not.toBeNull();
     expect(screen.queryByRole('heading', { name: t('reveal.introTitle') })).toBeNull();
     expect(screen.getByRole('main', { name: t('reveal.region') })).toBeDefined();
+  });
+
+  it('should count in the passage only who was asked the dilemma, not who joined after it', async () => {
+    // Arrange: Pedro joined once the dilemma was revealed.
+    const pedro = { ...PLAYERS[0]!, playerId: 'test-pedro-id', nickname: 'Pedro' };
+
+    // Act
+    const { t } = await renderReveal(
+      revealed(NOMINAL_REVEAL, { players: [...PLAYERS, pedro], answeredCount: 1 }),
+      { pastTheIntro: false },
+    );
+
+    // Assert
+    expect(
+      screen.getByText(t('reveal.introAnswered', { count: 3, total: 4 }), { exact: false }),
+    ).toBeDefined();
   });
 
   describe('nominal room', () => {
@@ -432,6 +454,20 @@ describe('RevealPhase', () => {
   });
 
   describe('reactions and «Buen dilema»', () => {
+    it('should take back «Buen dilema» at once when tapped again, and send it', async () => {
+      // Arrange
+      const { connection, t } = await renderReveal(revealed({ ...NOMINAL_REVEAL, youLiked: true }));
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('reveal.like') }));
+
+      // Assert
+      expect(connection.send).toHaveBeenCalledWith({ type: 'unlike-dilemma', position: 0 });
+      expect(
+        screen.getByRole('button', { name: t('reveal.like') }).getAttribute('aria-pressed'),
+      ).toBe('false');
+    });
+
     it('should mark «Buen dilema» at once and send it, and keep it marked once given', async () => {
       // Arrange
       const { connection, t } = await renderReveal(revealed(NOMINAL_REVEAL));

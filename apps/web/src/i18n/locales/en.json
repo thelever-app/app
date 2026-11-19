@@ -204,7 +204,11 @@
     "reactionsToVote": "Reactions to {{name}}’s vote",
     "reactToVoteHint": "Tap someone to react to their vote.",
     "dilemmaPoints_one": "{{count}} point for you",
-    "dilemmaPoints_other": "{{count, number}} points for you"
+    "dilemmaPoints_other": "{{count, number}} points for you",
+    "introAnswered_one": "{{count}} of {{total, number}} answered.",
+    "introAnswered_other": "{{count, number}} of {{total, number}} of you answered.",
+    "introNominal": "You’re about to see what each person voted.",
+    "introAnonymous": "You’re about to see how many chose each option."
   },
   "ranking": {
     "label": "Results",
@@ -239,7 +243,8 @@
     "rematch": "Rematch with the same group",
     "rematchGuest": "{{host}} can start the rematch.",
     "shareCard": "Share my card",
-    "shareGroupCard": "Share the group card"
+    "shareGroupCard": "Share the group card",
+    "titles": "Game titles"
   },
   "notices": {
     "reconnecting": "Reconnecting… your answers are saved",
@@ -642,7 +647,8 @@
     "introTitle": "Results",
     "titleCount": "Title {{position, number}} of {{total, number}}",
     "back": "Back",
-    "runnerUpOf": "{{count, number}} of {{of, number}}"
+    "runnerUpOf": "{{count, number}} of {{of, number}}",
+    "introNominal": "Titles, who knows you best and the ranking."
   },
   "card": {
     "personalTitle": "Your card",

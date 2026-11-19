@@ -221,7 +221,12 @@
     "reactToVoteHint": "Tocca qualcuno per reagire al suo voto.",
     "dilemmaPoints_one": "{{count}} punto per te",
     "dilemmaPoints_many": "{{count, number}} punti per te",
-    "dilemmaPoints_other": "{{count, number}} punti per te"
+    "dilemmaPoints_other": "{{count, number}} punti per te",
+    "introAnswered_one": "Ha risposto {{count}} su {{total, number}}.",
+    "introAnswered_many": "Hanno risposto {{count, number}} su {{total, number}}.",
+    "introAnswered_other": "Hanno risposto {{count, number}} su {{total, number}}.",
+    "introNominal": "State per vedere cosa ha votato ciascuno.",
+    "introAnonymous": "State per vedere quanti hanno scelto ogni opzione."
   },
   "ranking": {
     "label": "Risultati",
@@ -259,7 +264,8 @@
     "rematch": "Rivincita con lo stesso gruppo",
     "rematchGuest": "{{host}} può lanciare la rivincita.",
     "shareCard": "Condividi la mia card",
-    "shareGroupCard": "Condividi la card del gruppo"
+    "shareGroupCard": "Condividi la card del gruppo",
+    "titles": "Titoli della partita"
   },
   "notices": {
     "reconnecting": "Riconnessione… le tue risposte sono salvate",
@@ -673,7 +679,8 @@
     "introTitle": "Risultati",
     "titleCount": "Titolo {{position, number}} di {{total, number}}",
     "back": "Indietro",
-    "runnerUpOf": "{{count, number}} su {{of, number}}"
+    "runnerUpOf": "{{count, number}} su {{of, number}}",
+    "introNominal": "Titoli, chi ti conosce meglio e classifica."
   },
   "card": {
     "personalTitle": "La tua card",

@@ -21,6 +21,7 @@ export {
   AnswerDilemmaDto,
   ReactDto,
   LikeDilemmaDto,
+  UnlikeDilemmaDto,
   StartRematchDto,
   EmojiDto,
   DistributionPredictionDto,

@@ -52,7 +52,7 @@ export function ResultsPhase({ onShowQr }: { readonly onShowQr: () => void }) {
       <EndScreen game={game} onLeave={leave} onRematch={() => send({ type: 'start-rematch' })} />
     );
   }
-  if (intro) return <ResultsIntro />;
+  if (intro) return <ResultsIntro game={game} />;
 
   const anonymous = isAnonymous(game);
   const total = resultsScreens(game, anonymous);

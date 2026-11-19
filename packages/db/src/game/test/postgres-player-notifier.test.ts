@@ -9,6 +9,7 @@ import {
   PlayerLeftEvent,
   AnsweredCountChangedEvent,
   DilemmaLikedEvent,
+  DilemmaUnlikedEvent,
   DilemmaRevealedEvent,
   PlayerJoinedLateEvent,
   ReactionsChangedEvent,
@@ -109,6 +110,7 @@ describe('PostgresPlayerNotifier', () => {
         new GameStageChangedEvent('TestGameId', 'results', 'TestSaraId', 12),
         new ReactionsChangedEvent('TestGameId', 2, 13),
         new DilemmaLikedEvent('TestGameId', 'TestLuisId', 13),
+        new DilemmaUnlikedEvent('TestGameId', 'TestLuisId', 14),
       ];
 
       // Act
