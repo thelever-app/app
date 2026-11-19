@@ -9,6 +9,7 @@ import type {
   RoomChoices,
   RoundSetting,
   SettingsView,
+  MarkedDilemma,
 } from './driver.ts';
 import { E2eDriver } from './e2e-driver.ts';
 import { e2eStack } from './e2e-stack.ts';
@@ -77,6 +78,8 @@ export class GameWorld extends World {
 
   /** The dilemma a visitor chose to play with the group from its public page, by its name. */
   dilemmaToPlayWithTheGroup: string | undefined;
+  /** What the last search with marks showed. */
+  marked: readonly MarkedDilemma[] | undefined;
 
   /** The game in progress before a step tried to start one. */
   gameBefore: string | undefined;

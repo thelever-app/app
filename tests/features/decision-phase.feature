@@ -21,11 +21,11 @@ Feature: Decision phase
       And each new dilemma is of the categories of its round
       And the rest come from the catalog
 
-    Scenario: Game theory dilemmas are never in consecutive rounds
+    Scenario: At most one game theory dilemma in any five rounds
       Given a game of 10 random rounds from every category
       And there are enough suitable dilemmas that are not game theory dilemmas
       When the game is put together
-      Then no two game theory dilemmas are in consecutive rounds
+      Then no five consecutive rounds have more than one game theory dilemma
 
     Scenario: Would-you-rather dilemmas are never in consecutive rounds
       Given a game of 10 random rounds from every category
@@ -39,11 +39,21 @@ Feature: Decision phase
       When the game is put together
       Then no five consecutive rounds have more than one extreme dilemma
 
-    Scenario: An adults-only room gets adults-only dilemmas
-      Given an adults-only room with a game of 10 random rounds from every category
-      And there are enough adults-only dilemmas
+    Scenario: An adults-only round plays an adults-only dilemma
+      Given an adults-only room whose round 2 is random with adults-only content
       When the game is put together
-      Then every five consecutive rounds include at least one adults-only dilemma
+      Then the dilemma of round 2 is adults only
+
+    Scenario: A compromising round plays a compromising dilemma
+      Given an anonymous room with compromising dilemmas turned on whose round 2 is random with compromising content
+      When the game is put together
+      Then the dilemma of round 2 is compromising
+
+    Scenario: A round without dilemmas of its content plays any content
+      Given an adults-only room whose round 2 is random from "honesty" with adults-only content
+      And there are no adults-only dilemmas of "honesty" left to play
+      When the game is put together
+      Then the dilemma of round 2 is a "honesty" dilemma of any content
 
     Scenario: Dilemmas nobody in the room has played come first
       Given "Luis" has 3 catalog dilemmas in his history and "Marta" has 2

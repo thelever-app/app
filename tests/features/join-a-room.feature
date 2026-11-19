@@ -31,6 +31,12 @@ Feature: Join a room
     Then the player sees that the room belongs to "Ana" and is nominal before entering
 
   @ui
+  Scenario: The player sees the ambience of the room before joining
+    Given a room created with the ambience "No filter"
+    When a player opens its invitation link
+    Then the player sees that the room is "No filter", anonymous, with adults-only dilemmas and with compromising dilemmas before entering
+
+  @ui
   Scenario: The player sees who is in an adults-only room before joining
     Given a room marked as adults only with 4 players
     When a player opens its invitation link
@@ -227,3 +233,31 @@ Feature: Join a room
     Given a game on the decision phase of its second round
     Then any player can share the invitation link of the room
     And any player can show the QR and the code of the room
+
+  @ui
+  Scenario: A player joining a room with compromising dilemmas is warned
+    Given an anonymous room with compromising dilemmas turned on
+    When "Luis" joins the room
+    Then "Luis" is warned that the game includes compromising dilemmas before playing
+    And "Luis" can stay in the room or leave it
+
+  @ui
+  Scenario: Players in the lobby are warned when the host turns on compromising dilemmas
+    Given an anonymous room with "Ana" as host and "Luis" and "Marta" in the lobby
+    When "Ana" turns on compromising dilemmas
+    Then "Luis" and "Marta" are warned that the game includes compromising dilemmas
+    And "Ana" is not warned
+
+  @ui
+  Scenario: A player who leaves from the warning is out of the room
+    Given "Luis" sees the warning about compromising dilemmas
+    When "Luis" leaves the room from the warning
+    Then nobody in the lobby sees "Luis"
+
+  @ui
+  Scenario: A compromising dilemma cannot be chosen while they are off
+    Given round 3 is chosen by the players and is empty
+    And compromising dilemmas are turned off
+    When "Luis" tries to choose a compromising catalog dilemma for round 3
+    Then round 3 does not get it
+    And "Luis" is told why

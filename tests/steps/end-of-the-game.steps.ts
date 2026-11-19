@@ -1053,8 +1053,8 @@ When('the players are in the lobby of the rematch', async function (this: GameWo
 
 When('{string} changes the rounds', async function (this: GameWorld, host: string) {
   this.rounds = [
-    { origin: 'random', categories: ['honesty'] },
-    { origin: 'random', categories: ['life-and-death'] },
+    { origin: 'random', categories: ['honesty'], content: 'any' },
+    { origin: 'random', categories: ['life-and-death'], content: 'any' },
   ];
   await this.driver.setRounds(host, this.rounds);
 });
@@ -1074,7 +1074,7 @@ Given(
         ? ({ origin: 'specific', dilemmaId: first } as const)
         : index + 1 === players
           ? ({ origin: 'players' } as const)
-          : ({ origin: 'random', categories: null } as const),
+          : ({ origin: 'random', categories: null, content: 'any' } as const),
     );
     await this.driver.setRounds(host, rounds);
     const [guest] = await this.guests();
@@ -1112,8 +1112,8 @@ Given(
     // Justice has two dilemmas in Spanish: the two rounds of justice play both.
     const rounds = Array.from({ length: round + 1 }, (_, index) =>
       index + 1 < round
-        ? ({ origin: 'random', categories: null } as const)
-        : ({ origin: 'random', categories: ['justice'] } as const),
+        ? ({ origin: 'random', categories: null, content: 'any' } as const)
+        : ({ origin: 'random', categories: ['justice'], content: 'any' } as const),
     );
     await this.driver.setRounds(await this.host(), rounds);
     this.dilemmaCount = undefined;
@@ -1131,7 +1131,11 @@ Then(
 Then('{string} can change its categories', async function (this: GameWorld, host: string) {
   const round = this.round!;
   assert.equal(
-    await this.driver.tryToSetRound(host, round, { origin: 'random', categories: ['honesty'] }),
+    await this.driver.tryToSetRound(host, round, {
+      origin: 'random',
+      categories: ['honesty'],
+      content: 'any',
+    }),
     true,
   );
   assert.ok(!(await this.driver.roundsWithoutNewDilemmasSeenBy(host)).includes(round));
