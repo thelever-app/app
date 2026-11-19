@@ -47,7 +47,7 @@ async function arrange() {
         playerId: lobby.anaId,
         changes: {
           rounds: [
-            { id: 1, origin: 'random', categories: null },
+            { id: 1, origin: 'random', categories: null, content: 'any' },
             { id: 2, origin: 'players' },
           ],
         },
@@ -78,9 +78,11 @@ describe('GetRoomPreviewUseCase', () => {
     // Assert
     expect(preview).toMatchObject({
       roomId,
+      ambience: 'classic',
       hostNickname: 'Ana',
       variant: 'nominal',
       adultsOnly: false,
+      compromisingDilemmas: false,
     });
   });
 
@@ -197,7 +199,7 @@ describe('ChangeRoomSettingsUseCase', () => {
       changes: {
         timePerDilemmaSeconds: 90,
         rounds: [
-          { origin: 'random', categories: ['honesty', 'loyalty'] },
+          { origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
           { origin: 'specific', dilemmaId: 'TestCatalog4' },
         ],
       },
@@ -207,7 +209,7 @@ describe('ChangeRoomSettingsUseCase', () => {
     const { settings } = (await roomRepository.findById(roomId))!;
     expect(settings.timePerDilemmaSeconds).toBe(90);
     expect(settings.rounds).toEqual([
-      { id: 9, origin: 'random', categories: ['honesty', 'loyalty'] },
+      { id: 9, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
       {
         id: 10,
         origin: 'specific',
@@ -270,7 +272,7 @@ describe('ChangeRoomSettingsUseCase', () => {
 
     // Assert
     expect((await roomRepository.findById(roomId))?.settings.rounds).toEqual([
-      { id: 1, origin: 'random', categories: null },
+      { id: 1, origin: 'random', categories: null, content: 'any' },
     ]);
   });
 
@@ -531,8 +533,8 @@ describe('GetRoomStateUseCase', () => {
       playerId: anaId,
       changes: {
         rounds: [
-          { origin: 'random', categories: ['honesty'] },
-          { origin: 'random', categories: ['honesty'] },
+          { origin: 'random', categories: ['honesty'], content: 'any' },
+          { origin: 'random', categories: ['honesty'], content: 'any' },
         ],
         newDilemmas: false,
       },
@@ -562,7 +564,7 @@ describe('GetRoomStateUseCase', () => {
       playerId: anaId,
       changes: {
         rounds: [
-          { id: 1, origin: 'random', categories: ['honesty'] },
+          { id: 1, origin: 'random', categories: ['honesty'], content: 'any' },
           { id: 2, origin: 'specific', dilemmaId: 'TestCatalog4' },
           { id: 3, origin: 'players' },
           { id: 4, origin: 'players' },
@@ -592,12 +594,20 @@ describe('GetRoomStateUseCase', () => {
       groupNature: 'friends',
       place: 'together',
       settings,
+      ambience: 'custom',
+      hasPlayerUnderEighteen: false,
       minimumPlayers: 2,
       minimumPlayersForTheGap: 3,
       currentGameId: null,
     });
     expect(forAna.rounds).toEqual([
-      { roundId: 1, origin: 'random', categories: ['honesty'], withoutNewDilemmas: false },
+      {
+        roundId: 1,
+        origin: 'random',
+        categories: ['honesty'],
+        withoutNewDilemmas: false,
+        content: 'any',
+      },
       {
         roundId: 2,
         origin: 'specific',

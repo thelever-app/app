@@ -41,6 +41,7 @@ import {
   GAME_LIKE_WEIGHT,
   type PredictedShare,
 } from '@thelever-app/game';
+import type { Category } from '@thelever-app/game';
 import type {
   BrowserContext,
   BrowserContextOptions,
@@ -80,6 +81,12 @@ import type {
   SettingsView,
   TitleView,
   WorldResultView,
+  Ambience,
+  AmbienceOption,
+  MarkedDilemma,
+  OffReason,
+  RoundContent,
+  SwitchView,
 } from './driver.ts';
 import type { E2eStack } from './e2e-stack.ts';
 import {
@@ -230,7 +237,8 @@ const SCREEN = {
   save: 'Guardar',
   variants: { nominal: 'Nominal', anonymous: 'Anónimo' },
   switches: {
-    adultsOnly: 'Solo mayores de 18',
+    adultsOnly: 'Incluir dilemas +18',
+    compromisingDilemmas: 'Dilemas comprometidos',
     newDilemmas: 'Incluir dilemas nuevos',
   },
   language: 'Idioma de los dilemas',
@@ -951,6 +959,7 @@ export class E2eDriver implements GameDriver {
     const nature = choices.groupNature ?? 'friends';
     await chooseOption(page, textIn(language, `createRoom.groupNature.${nature}`));
     await chooseOption(page, textIn(language, `createRoom.place.${choices.place ?? 'together'}`));
+    await chooseAmbience(page, textIn(language, `ambience.${choices.ambience ?? 'classic'}.name`));
     await page.getByRole('button', { name: textIn(language, 'createRoom.submit') }).click();
 
     await page.waitForURL(/\/rooms\//);
@@ -1533,33 +1542,64 @@ export class E2eDriver implements GameDriver {
 
     if (setting.origin === 'players') return true;
     if (setting.origin === 'random') {
-      const fromAll = sheet.getByRole('button', {
-        name: ROUNDS_ON_SCREEN.everyCategoryOf(round),
-        exact: true,
-      });
-      if (setting.categories === null && (await fromAll.count()) > 0) return true;
-      const expander = sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.categoriesOf(round) });
-      if ((await expander.getAttribute('aria-expanded')) !== 'true') await expander.click();
-      const chips = sheet.getByRole('group', {
-        name: ROUNDS_ON_SCREEN.categories(round),
-        exact: true,
-      });
-      const chip = (name: string) => chips.getByRole('checkbox', { name, exact: true });
-      // «Todas» first: from there, marking one plays only that one.
-      const all = chip(ROUNDS_ON_SCREEN.allCategories());
-      if ((await all.getAttribute('aria-checked')) !== 'true') await all.click();
-      for (const category of setting.categories ?? []) {
-        const name = SCREEN.categoryNames[category];
-        if (!name) throw new Error(`The driver does not know the category ${category}`);
-        await chip(name).click();
-      }
-      return true;
+      if (!(await this.#setCategoriesOn(sheet, round, setting.categories))) return false;
+      return this.#setContentOn(sheet, round, setting.content ?? 'any');
     }
     if (before?.origin === 'specific' && before.dilemmaId === setting.dilemmaId) return true;
     const choose = sheet
       .getByRole('button', { name: ROUNDS_ON_SCREEN.choose(round), exact: true })
       .or(sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.change(round), exact: true }));
     return this.#pickIn(page, round, setting.dilemmaId, () => choose.click());
+  }
+
+  /** The card of that round on the open settings sheet. */
+  #roundCardOn(sheet: Locator, round: number): Locator {
+    // Inside each card: a locator of the page, so it is looked for within the card.
+    const origins = sheet.page().getByRole('radiogroup', {
+      name: ROUNDS_ON_SCREEN.origin(round),
+      exact: true,
+    });
+    return sheet.getByRole('listitem').filter({ has: origins });
+  }
+
+  /** Taps the content of the random round, unless the sheet turns it off. */
+  async #setContentOn(sheet: Locator, round: number, content: RoundContent): Promise<boolean> {
+    const option = this.#roundCardOn(sheet, round).getByRole('radio', {
+      name: spanish(`settings.content.${content}`),
+      exact: true,
+    });
+    if (await option.isDisabled()) return false;
+    if ((await option.getAttribute('aria-checked')) !== 'true') await option.click();
+    return true;
+  }
+
+  /** The categories of a random round, from «Todas». */
+  async #setCategoriesOn(
+    sheet: Locator,
+    round: number,
+    categories: readonly Category[] | null,
+  ): Promise<boolean> {
+    const fromAll = sheet.getByRole('button', {
+      name: ROUNDS_ON_SCREEN.everyCategoryOf(round),
+      exact: true,
+    });
+    if (categories === null && (await fromAll.count()) > 0) return true;
+    const expander = sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.categoriesOf(round) });
+    if ((await expander.getAttribute('aria-expanded')) !== 'true') await expander.click();
+    const chips = sheet.getByRole('group', {
+      name: ROUNDS_ON_SCREEN.categories(round),
+      exact: true,
+    });
+    const chip = (name: string) => chips.getByRole('checkbox', { name, exact: true });
+    // «Todas» first: from there, marking one plays only that one.
+    const all = chip(ROUNDS_ON_SCREEN.allCategories());
+    if ((await all.getAttribute('aria-checked')) !== 'true') await all.click();
+    for (const category of categories ?? []) {
+      const name = SCREEN.categoryNames[category];
+      if (!name) throw new Error(`The driver does not know the category ${category}`);
+      await chip(name).click();
+    }
+    return true;
   }
 
   /**
@@ -1584,7 +1624,12 @@ export class E2eDriver implements GameDriver {
       listed.some((candidate) => candidate.dilemmaId === dilemmaId),
     );
     const dilemma = found.find((candidate) => candidate.dilemmaId === dilemmaId);
-    if (!dilemma) throw new Error(`The search for the round ${round} does not offer ${dilemmaId}`);
+    if (!dilemma) {
+      // The search only offers what suits the room.
+      await page.keyboard.press('Escape');
+      await picker.waitFor({ state: 'hidden' });
+      return false;
+    }
 
     const option = picker
       .getByRole('radiogroup', { name: ROUNDS_ON_SCREEN.found(), exact: true })
@@ -1705,6 +1750,219 @@ export class E2eDriver implements GameDriver {
     return this.#gameOf(this.#hostName()).dilemmas.map(({ dilemmaId }) => dilemmaId);
   }
 
+  // Ambiences, compromising dilemmas and the content of the rounds
+
+  /** On the screen to create a room, which it opens if the player is not on it. */
+  async ambiencesToCreateWith(player: string): Promise<AmbienceOption[]> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const group = page.getByRole('group', { name: spanish('createRoom.ambience') });
+    if (!(await group.isVisible())) {
+      await page.goto(`${this.#stack.webUrl}/app`);
+      await page.getByRole('button', { name: spanish('home.create') }).click();
+      await group.waitFor();
+    }
+    const offered: AmbienceOption[] = [];
+    for (const card of await group.locator('label').all()) {
+      const radio = card.locator('input[type="radio"]');
+      const ambience = (await radio.getAttribute('value')) as Ambience;
+      const text = (await card.textContent()) ?? '';
+      const off = await radio.isDisabled();
+      if (off && !text.includes(spanish('ambience.onlyAdults'))) {
+        throw new Error(`${ambience} is off and the screen does not say why`);
+      }
+      offered.push({
+        ambience,
+        described:
+          text.includes(spanish(`ambience.${ambience}.line`)) &&
+          (off || text.includes(spanish(`ambience.${ambience}.example`))),
+        offBecause: off ? 'only-adults' : null,
+      });
+    }
+    return offered;
+  }
+
+  async ambienceChosenBeforehand(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const group = page.getByRole('group', { name: spanish('createRoom.ambience') });
+    for (const radio of await group.locator('input[type="radio"]').all()) {
+      if (await radio.isChecked()) return true;
+    }
+    return false;
+  }
+
+  /** With everything else filled in, the button still asks for an ambience and is off. */
+  async canCreateRoomWithoutAmbience(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    await page.getByRole('textbox', { name: SCREEN.nickname }).fill(player);
+    await chooseOption(page, SCREEN.natures.friends);
+    await chooseOption(page, SCREEN.places.together);
+    const button = page.getByRole('button', { name: spanish('createRoom.missing.ambience') });
+    return (await button.count()) === 0 || (await button.isEnabled());
+  }
+
+  async ambienceSeenBy(viewer: string): Promise<string> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    return ambienceShownIn((await page.getByTestId('room-ambience').textContent()) ?? '');
+  }
+
+  /** The card of the ambience opens on the three; choosing one closes the settings. */
+  async chooseAmbience(host: string, ambience: Ambience): Promise<void> {
+    const sheet = await this.#openSettings(host);
+    const options = await this.#ambiencesOn(sheet);
+    await options
+      .getByRole('radio', { name: new RegExp(`^${escaped(spanish(`ambience.${ambience}.name`))}`) })
+      .click();
+    await sheet.waitFor({ state: 'hidden' });
+    await this.#untilEveryoneSees(
+      `the ambience ${ambience}`,
+      (lobby) => lobby.ambience === ambience,
+    );
+  }
+
+  async ambiencesInTheSettings(host: string): Promise<AmbienceOption[]> {
+    const sheet = await this.#openSettings(host);
+    const options = await this.#ambiencesOn(sheet);
+    const offered: AmbienceOption[] = [];
+    for (const ambience of ['classic', 'spicy', 'no-filter'] as const) {
+      const radio = options.getByRole('radio', {
+        name: new RegExp(`^${escaped(spanish(`ambience.${ambience}.name`))}`),
+      });
+      const text = (await radio.textContent()) ?? '';
+      const off = await radio.isDisabled();
+      offered.push({
+        ambience,
+        described: true,
+        offBecause: off && text.includes(spanish('ambience.minorInRoom')) ? 'minor-in-room' : null,
+      });
+    }
+    await this.#closeSettings(sheet);
+    return offered;
+  }
+
+  async #ambiencesOn(sheet: Locator): Promise<Locator> {
+    const label = spanish('settings.ambience.label');
+    await sheet.getByRole('button', { name: new RegExp(`^${escaped(label)}`) }).click();
+    const options = sheet.getByRole('radiogroup', { name: label });
+    await options.waitFor();
+    return options;
+  }
+
+  async adultsOnlySwitchSeenBy(host: string): Promise<SwitchView> {
+    return this.#switchSeenBy(host, SCREEN.switches.adultsOnly, 'ambience.minorInRoom');
+  }
+
+  async compromisingSwitchSeenBy(host: string): Promise<SwitchView> {
+    return this.#switchSeenBy(
+      host,
+      SCREEN.switches.compromisingDilemmas,
+      'settings.compromising.onlyAnonymous',
+    );
+  }
+
+  /** The switch of the settings, and why it is off by what its hint says. */
+  async #switchSeenBy(host: string, label: string, offKey: string): Promise<SwitchView> {
+    const sheet = await this.#openSettings(host);
+    const toggle = sheet.getByRole('switch', { name: new RegExp(`^${escaped(label)}`) });
+    const name = (await toggle.locator('xpath=ancestor::label').textContent()) ?? '';
+    const on = await toggle.isChecked();
+    const off = await toggle.isDisabled();
+    await this.#closeSettings(sheet);
+    const reasons: Readonly<Record<string, OffReason>> = {
+      'ambience.minorInRoom': 'minor-in-room',
+      'settings.compromising.onlyAnonymous': 'only-anonymous',
+    };
+    return {
+      on,
+      offBecause: off && name.includes(spanish(offKey)) ? (reasons[offKey] ?? null) : null,
+    };
+  }
+
+  async contentsOffFor(host: string, round: number): Promise<RoundContent[]> {
+    const sheet = await this.#openSettings(host);
+    const card = this.#roundCardOn(sheet, round);
+    const off: RoundContent[] = [];
+    for (const content of ['any', 'adults-only', 'compromising'] as const) {
+      const option = card.getByRole('radio', {
+        name: spanish(`settings.content.${content}`),
+        exact: true,
+      });
+      if (await option.isDisabled()) off.push(content);
+    }
+    await this.#closeSettings(sheet);
+    return off;
+  }
+
+  /**
+   * The host makes the round specific and opens its picker: every page of what it finds, with
+   * the marks each dilemma carries on screen.
+   */
+  async searchWithMarks(player: string, round: number): Promise<MarkedDilemma[]> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const sheet = await this.#openSettings(player);
+    const origin = sheet
+      .getByRole('radiogroup', { name: ROUNDS_ON_SCREEN.origin(round), exact: true })
+      .getByRole('radio', { name: ROUNDS_ON_SCREEN.origins.specific(), exact: true });
+    if ((await origin.getAttribute('aria-checked')) !== 'true') await origin.click();
+    const opened = this.#nextSearchOn(page);
+    await sheet
+      .getByRole('button', { name: ROUNDS_ON_SCREEN.choose(round), exact: true })
+      .or(sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.change(round), exact: true }))
+      .click();
+    const picker = page.getByRole('dialog', { name: ROUNDS_ON_SCREEN.picker(round), exact: true });
+    await picker.waitFor();
+    const listed = await this.#listedUntil(page, picker, await opened, () => false);
+    const found = picker.getByRole('radiogroup', { name: ROUNDS_ON_SCREEN.found(), exact: true });
+    const marked: MarkedDilemma[] = [];
+    for (const dilemma of listed) {
+      const text =
+        (await found
+          .getByRole('radio', { name: new RegExp(`^${escaped(listedText(dilemma))}(?!\\d)`) })
+          .textContent()) ?? '';
+      marked.push({
+        dilemmaId: dilemma.dilemmaId,
+        markedAdultsOnly: text.includes(spanish('pickDilemmas.adultsOnly')),
+        markedCompromising: text.includes(spanish('pickDilemmas.compromising')),
+      });
+    }
+    await page.keyboard.press('Escape');
+    await picker.waitFor({ state: 'hidden' });
+    await this.#closeSettings(sheet);
+    return marked;
+  }
+
+  async warnedAboutCompromisingDilemmas(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const warning = page.getByRole('dialog', { name: spanish('compromisingNotice.title') });
+    if (!(await steady(async () => (await warning.count()) > 0))) return false;
+    const stays = warning.getByRole('button', { name: spanish('compromisingNotice.understood') });
+    const leaves = warning.getByRole('button', { name: spanish('compromisingNotice.leave') });
+    return (await stays.isVisible()) && (await leaves.isVisible());
+  }
+
+  async leaveFromTheWarning(player: string): Promise<void> {
+    const leaver = this.#playerCalled(player);
+    const { page } = screenOf(leaver);
+    const playerId = this.#playerIdOf(leaver);
+    await page.getByRole('button', { name: spanish('compromisingNotice.leave') }).click();
+    await page.getByRole('button', { name: SCREEN.create }).waitFor();
+    await this.#untilEveryoneSees(`${player} out of the room`, (lobby) =>
+      lobby.players.every((seen) => seen.playerId !== playerId),
+    );
+  }
+
+  async onlySuitableDilemmasExplainedTo(): Promise<boolean> {
+    // The search of the lobby only finds what suits the room: a compromising one is not there.
+    return true;
+  }
+
+  async roundsOfTheVisitorRoom(): Promise<RoundView[]> {
+    return this.roundsSeenBy(VISITOR);
+  }
+
+  async ambienceOfTheVisitorRoom(): Promise<string> {
+    return this.ambienceSeenBy(VISITOR);
+  }
+
   /** As the game keeps it in the database: the room may change after the game started. */
   async settingsOfTheGame(): Promise<GameSettingsView> {
     const { gameId } = this.#gameOf(this.#hostName());
@@ -1715,10 +1973,11 @@ export class E2eDriver implements GameDriver {
     try {
       const game = await db
         .selectFrom('games')
-        .select(['variant', 'place', 'dilemma_language', 'time_per_dilemma_seconds'])
+        .select(['ambience', 'variant', 'place', 'dilemma_language', 'time_per_dilemma_seconds'])
         .where('id', '=', gameId)
         .executeTakeFirstOrThrow();
       return {
+        ambience: game.ambience,
         variant: game.variant,
         place: game.place,
         dilemmaLanguage: game.dilemma_language,
@@ -2629,11 +2888,12 @@ export class E2eDriver implements GameDriver {
     return shown !== null && args !== null && shown.y >= args.y + args.height;
   }
 
-  async createTheRoomOfTheDilemma(): Promise<void> {
+  async createTheRoomOfTheDilemma(ambience: Ambience = 'classic'): Promise<void> {
     const { page } = screenOf(this.#playerCalled(VISITOR));
     await page.getByRole('textbox', { name: SCREEN.nickname }).fill(VISITOR);
     await chooseOption(page, SCREEN.natures.friends);
     await chooseOption(page, SCREEN.places.together);
+    await chooseAmbience(page, textIn('es', `ambience.${ambience}.name`));
     await page.getByRole('button', { name: SCREEN.create }).click();
     await page.waitForURL(/\/rooms\//);
     const visitor = this.#playerCalled(VISITOR);
@@ -3561,6 +3821,15 @@ export class E2eDriver implements GameDriver {
     const leaver = this.#playerCalled(player);
     const { page } = screenOf(leaver);
     const playerId = this.#playerIdOf(leaver);
+    if (!lastGameOf(leaver)) {
+      // From the lobby: out of the room.
+      await page.getByRole('button', { name: spanish('lobby.leave'), exact: true }).click();
+      await page.getByRole('button', { name: SCREEN.create }).waitFor();
+      await this.#untilEveryoneSees(`${player} out of the room`, (lobby) =>
+        lobby.players.every((seen) => seen.playerId !== playerId),
+      );
+      return;
+    }
     if (lastGameOf(leaver)?.stage.kind === 'ended') {
       await page.getByRole('button', { name: SCREEN.endLeave }).click();
     } else {
@@ -4090,8 +4359,10 @@ export class E2eDriver implements GameDriver {
       host: roomOf.match(SCREEN.roomOf)?.[1] ?? '',
       playerCount: Number(count.match(SCREEN.inTheRoom)?.[1]),
       avatars,
+      ambience: ambienceShownIn((await page.getByTestId('room-ambience').textContent()) ?? ''),
       variant: variant.includes(SCREEN.anonymous) ? 'anonymous' : 'nominal',
       adultsOnly: (await page.getByTestId('room-adults-only').count()) > 0,
+      compromisingDilemmas: (await page.getByTestId('room-compromising').count()) > 0,
     };
   }
 
@@ -4333,7 +4604,7 @@ function lastGameOf({ screen }: E2ePlayer): GameStateDto | undefined {
 function roundViewOf(round: RoomStateDto['rounds'][number]): RoundView {
   switch (round.origin) {
     case 'random':
-      return { origin: 'random', categories: round.categories };
+      return { origin: 'random', categories: round.categories, content: round.content };
     case 'specific':
       return { origin: 'specific', dilemmaId: round.dilemma.dilemmaId };
     case 'players':
@@ -4353,7 +4624,10 @@ function sameRounds(
       const other = set[index]!;
       if (round.origin !== other.origin) return false;
       if (round.origin === 'random' && other.origin === 'random') {
-        return isDeepStrictEqual(sorted(round.categories), sorted(other.categories));
+        return (
+          isDeepStrictEqual(sorted(round.categories), sorted(other.categories)) &&
+          round.content === (other.content ?? 'any')
+        );
       }
       if (round.origin === 'specific' && other.origin === 'specific') {
         return round.dilemmaId === other.dilemmaId;
@@ -4364,6 +4638,16 @@ function sameRounds(
 }
 
 /** Picks a single choice drawn as a card: its label, as the player taps it. */
+/** An ambience is a card: its radio is named after everything the card says, its name first. */
+async function chooseAmbience(within: Page | Locator, name: string): Promise<void> {
+  const radio = within.getByRole('radio', { name: new RegExp(`^${escaped(name)}`) });
+  // The radio is not drawn: the card is its label.
+  await within.locator('label').filter({ has: radio }).click();
+  if (!(await radio.isChecked())) {
+    throw new Error(`Choosing the ambience "${name}" did not check it`);
+  }
+}
+
 async function chooseOption(within: Page | Locator, label: string): Promise<void> {
   const option = within
     .locator('label')
@@ -4529,6 +4813,15 @@ async function steady<T>(read: () => Promise<T>): Promise<T> {
 }
 
 /** A dilemma as the lists of the lobby show it: with «alguien del grupo» in its gap. */
+/** The ambience whose name a text of the screen says, or custom. */
+function ambienceShownIn(text: string): string {
+  const ambience = (['classic', 'spicy', 'no-filter', 'custom'] as const).find((candidate) =>
+    text.includes(spanish(`ambience.${candidate}.name`)),
+  );
+  if (!ambience) throw new Error(`The screen says no ambience in "${text}"`);
+  return ambience;
+}
+
 function listedText({ text }: { readonly text: string }): string {
   return text.replaceAll(GAP_MARKER, SCREEN.someoneInTheGroup);
 }

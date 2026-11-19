@@ -16,6 +16,14 @@ export type DilemmaOrigin = 'random' | 'specific' | 'players';
 export const DILEMMA_ORIGINS = ['random', 'specific', 'players'] as const;
 
 /**
+ * What a random round draws (glossary, «Contenido de la ronda»): any dilemma that suits the room,
+ * only dilemmas for adults, in an adults-only room, or only compromising ones, where they are on.
+ */
+export const ROUND_CONTENTS = ['any', 'adults-only', 'compromising'] as const;
+
+export type RoundContent = (typeof ROUND_CONTENTS)[number];
+
+/**
  * A round of the settings of the room, with an id of its own in the room, so a player choosing its
  * dilemma keeps it when the host adds or removes other rounds.
  */
@@ -25,13 +33,17 @@ export type RoundSnapshot =
       readonly id: number;
       readonly origin: 'random';
       readonly categories: readonly Category[] | null;
+      readonly content: RoundContent;
     }
   /** The dilemma the host chose. */
   | { readonly id: number; readonly origin: 'specific'; readonly dilemma: LobbyDilemma }
   /** The dilemma a player chooses in the lobby, which the room keeps apart: who chose it is secret. */
   | { readonly id: number; readonly origin: 'players' };
 
-/** A random round from every category, what a new room has and what a round left out goes back to. */
-export function randomRound(id: number): RoundSnapshot {
-  return { id, origin: 'random', categories: null };
+/**
+ * A random round from every category, of any content unless given another: what a round left out
+ * goes back to.
+ */
+export function randomRound(id: number, content: RoundContent = 'any'): RoundSnapshot {
+  return { id, origin: 'random', categories: null, content };
 }

@@ -7,6 +7,8 @@ import {
   PlaceDto,
   RoomSettingsDto,
   RoundCategoriesDto,
+  RoundContentDto,
+  AmbienceOrCustomDto,
   DistributionPredictionDto,
   EmojiDto,
   RoundIdDto,
@@ -280,6 +282,7 @@ export const LobbyRoundDto = z.discriminatedUnion('origin', [
     roundId: RoundIdDto,
     origin: z.literal('random'),
     categories: RoundCategoriesDto,
+    content: RoundContentDto,
     /**
      * In the lobby of a rematch, whether its categories have nothing left the room has not played:
      * if the game starts like that, the round plays from every category.
@@ -312,6 +315,13 @@ export const RoomStateDto = z.strictObject({
   groupNature: GroupNatureDto,
   place: PlaceDto,
   settings: RoomSettingsDto,
+  /** The ambience whose configuration the room has, or custom. */
+  ambience: AmbienceOrCustomDto,
+  /**
+   * For the host, whether someone in the room said they are under 18: nothing for adults can be
+   * turned on. False for the others, so nobody can tell who it is.
+   */
+  hasPlayerUnderEighteen: z.boolean(),
   rounds: z.array(LobbyRoundDto).min(1).max(MAXIMUM_ROUNDS),
   /** The fewest players a game of the room starts with, by its variant: 2 nominal, 3 anonymous. */
   minimumPlayers: z.number().int().positive(),
@@ -427,6 +437,7 @@ export const ErrorCodeDto = z.enum([
   'blocked-country',
   'not-current-version',
   'adults-only-room',
+  'minor-in-room',
 ]);
 
 /** The answer to a rejected message, on the same connection. */

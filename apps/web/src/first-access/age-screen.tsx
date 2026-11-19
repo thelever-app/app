@@ -1,6 +1,7 @@
 import type { FirstAccessResponseDto } from '@thelever-app/protocol';
 import { useActionState, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../components/icon.tsx';
 import { useRoomApi } from '../room/room-api-context.tsx';
 import { RoomApiError } from '../room/room-api.ts';
 import screen from '../screens/screen.module.css';
@@ -67,39 +68,49 @@ export function AgeScreen({ onDeclared }: AgeScreenProps) {
         <p className={styles.lead}>{t('firstAccess.age.lead')}</p>
         <label className={styles.field} htmlFor={yearId}>
           {t('firstAccess.age.year')}
-          <select
-            id={yearId}
-            className={styles.select}
-            value={year}
-            onChange={(event) => {
-              setYear(event.target.value);
-              setMonth('');
-            }}
-          >
-            <option value="">{t('firstAccess.age.chooseYear')}</option>
-            {years.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          <span className={styles.selectField}>
+            <select
+              id={yearId}
+              className={styles.select}
+              value={year}
+              onChange={(event) => {
+                setYear(event.target.value);
+                setMonth('');
+              }}
+            >
+              <option value="">{t('firstAccess.age.chooseYear')}</option>
+              {years.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <span className={styles.selectArrow}>
+              <Icon name="expandMore" size={22} />
+            </span>
+          </span>
         </label>
         {asksMonth && (
           <label className={styles.field} htmlFor={monthId}>
             {t('firstAccess.age.month')}
-            <select
-              id={monthId}
-              className={styles.select}
-              value={month}
-              onChange={(event) => setMonth(event.target.value)}
-            >
-              <option value="">{t('firstAccess.age.chooseMonth')}</option>
-              {Array.from({ length: 12 }, (_, index) => (
-                <option key={index} value={index + 1}>
-                  {monthName.format(new Date(2000, index, 15))}
-                </option>
-              ))}
-            </select>
+            <span className={styles.selectField}>
+              <select
+                id={monthId}
+                className={styles.select}
+                value={month}
+                onChange={(event) => setMonth(event.target.value)}
+              >
+                <option value="">{t('firstAccess.age.chooseMonth')}</option>
+                {Array.from({ length: 12 }, (_, index) => (
+                  <option key={index} value={index + 1}>
+                    {monthName.format(new Date(2000, index, 15))}
+                  </option>
+                ))}
+              </select>
+              <span className={styles.selectArrow}>
+                <Icon name="expandMore" size={22} />
+              </span>
+            </span>
           </label>
         )}
         {outcome === 'failed' && (

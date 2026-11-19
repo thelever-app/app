@@ -302,6 +302,7 @@ describe('Closing the room', () => {
         arranged.clock,
         new InMemorySealProvider(),
       ).execute({
+        ambience: 'classic',
         hostNickname: 'Pedro',
         hostIdentity: 'TestPedroIdentity',
         hostAvatar: { face: 'face-04', color: 'teal' },

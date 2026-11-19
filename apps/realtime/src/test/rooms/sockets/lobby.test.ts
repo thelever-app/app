@@ -117,7 +117,10 @@ describe('the lobby over the room sockets', () => {
     // Act
     ana.send({
       type: 'change-settings',
-      changes: { variant: 'anonymous', rounds: [{ origin: 'random', categories: ['honesty'] }] },
+      changes: {
+        variant: 'anonymous',
+        rounds: [{ origin: 'random', categories: ['honesty'], content: 'any' }],
+      },
     });
 
     // Assert
@@ -125,9 +128,42 @@ describe('the lobby over the room sockets', () => {
       const { settings, rounds } = await client.next('room-state');
       expect(settings).toMatchObject({ variant: 'anonymous' });
       expect(rounds).toEqual([
-        { roundId: 9, origin: 'random', categories: ['honesty'], withoutNewDilemmas: false },
+        {
+          roundId: 9,
+          origin: 'random',
+          categories: ['honesty'],
+          withoutNewDilemmas: false,
+          content: 'any',
+        },
       ]);
     }
+  });
+
+  it('should show everyone the ambience the host chooses', async () => {
+    // Arrange
+    const { ana, luis } = await connectedLobby();
+
+    // Act
+    ana.send({ type: 'choose-ambience', ambience: 'no-filter' });
+
+    // Assert
+    for (const client of [ana, luis]) {
+      const { ambience, settings } = await client.next('room-state');
+      expect(ambience).toBe('no-filter');
+      expect(settings).toMatchObject({ variant: 'anonymous', compromisingDilemmas: true });
+    }
+  });
+
+  it('should take who leaves the lobby out of the room for everyone', async () => {
+    // Arrange
+    const { ana, luis } = await connectedLobby();
+
+    // Act
+    luis.send({ type: 'leave-room' });
+
+    // Assert
+    const { players } = await ana.next('room-state');
+    expect(players.map(({ nickname }) => nickname)).toEqual(['Ana', 'Marta']);
   });
 
   it('should answer not-host to a player who is not the host and tries to configure', async () => {
@@ -166,7 +202,7 @@ describe('the lobby over the room sockets', () => {
       type: 'change-settings',
       changes: {
         rounds: [
-          { id: 1, origin: 'random', categories: null },
+          { id: 1, origin: 'random', categories: null, content: 'any' },
           { id: 2, origin: 'players' },
         ],
       },
@@ -277,7 +313,7 @@ describe('the lobby over the room sockets', () => {
     const { ana } = await connectedLobby();
     ana.send({
       type: 'change-settings',
-      changes: { rounds: [{ origin: 'random', categories: ['justice'] }] },
+      changes: { rounds: [{ origin: 'random', categories: ['justice'], content: 'any' }] },
     });
     await ana.next('room-state');
 

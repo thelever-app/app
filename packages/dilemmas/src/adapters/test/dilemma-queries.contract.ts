@@ -55,7 +55,7 @@ const A_GAME = {
   count: 100,
   includeGap: true,
   excludedIds: [],
-  onlyForAdults: false,
+  content: 'any',
   playedBy: [],
 } as const;
 
@@ -660,11 +660,29 @@ export function describeDilemmaQueriesContract(
         const found = await idsOf(queries, {
           ...EVERYONE,
           maximumMinimumAge: 18,
-          onlyForAdults: true,
+          content: 'adults-only',
         });
 
         // Assert
         expect(found).toEqual(['TestAdultDilemma']);
+      });
+
+      it('should draw only the compromising dilemmas when asked for those', async () => {
+        // Arrange
+        const queries = await saved(
+          catalogDilemma('TestDilemma'),
+          catalogDilemma('TestCompromisingDilemma', { compromising: true }),
+        );
+
+        // Act
+        const found = await idsOf(queries, {
+          ...EVERYONE,
+          includeCompromising: true,
+          content: 'compromising',
+        });
+
+        // Assert
+        expect(found).toEqual(['TestCompromisingDilemma']);
       });
 
       it('should never draw a dilemma excluded', async () => {

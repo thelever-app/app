@@ -154,7 +154,7 @@ describe('StartGameUseCase', () => {
       expect(ids).toEqual(expect.arrayContaining(['TestHonesty1', 'TestHonesty2', 'TestGap1']));
     });
 
-    it('should copy the settings of the room into the game', async () => {
+    it('should copy the settings of the room into the game, and the ambience it has', async () => {
       // Arrange
       const { startGame, changeSettings, gameRepository, roomId, anaId } = await arrange();
       await changeSettings.execute({
@@ -167,7 +167,9 @@ describe('StartGameUseCase', () => {
       const { gameId } = await startGame.execute({ roomId, playerId: anaId });
 
       // Assert
+      // Anonymous, the room is no longer classic.
       expect((await gameRepository.findById(gameId))?.settings).toEqual({
+        ambience: 'custom',
         variant: 'anonymous',
         groupNature: 'friends',
         place: 'together',
@@ -392,20 +394,24 @@ describe('StartGameUseCase', () => {
           excludedIds: ['TestCatalog3'],
           playedBy: [],
           includeGap: true,
-          onlyForAdults: false,
+          content: 'any',
         }),
       );
     });
 
-    it('should draw a few dilemmas for adults apart in an adults-only room', async () => {
-      // Arrange: life-and-death has two dilemmas for adults among ten.
+    it('should draw the candidates of each content apart, and those of any content for them too', async () => {
+      // Arrange
       const { startGame, changeSettings, catalog, roomId, anaId } = await arrange();
       await changeSettings.execute({
         roomId,
         playerId: anaId,
         changes: {
           adultsOnly: true,
-          rounds: randomRounds(6, ['life-and-death']),
+          rounds: [
+            ...randomRounds(4, ['life-and-death']),
+            { id: 5, origin: 'random', categories: ['life-and-death'], content: 'adults-only' },
+            { id: 6, origin: 'random', categories: ['life-and-death'], content: 'adults-only' },
+          ],
           newDilemmas: false,
         },
       });
@@ -414,12 +420,12 @@ describe('StartGameUseCase', () => {
       // Act
       await startGame.execute({ roomId, playerId: anaId });
 
-      // Assert: one for adults in every five rounds, and their candidates.
+      // Assert
       expect(findCandidates).toHaveBeenCalledWith(
-        expect.objectContaining({ count: 6 * CANDIDATES_PER_ROUND, onlyForAdults: false }),
+        expect.objectContaining({ count: 6 * CANDIDATES_PER_ROUND, content: 'any' }),
       );
       expect(findCandidates).toHaveBeenCalledWith(
-        expect.objectContaining({ count: 2 * CANDIDATES_PER_ROUND, onlyForAdults: true }),
+        expect.objectContaining({ count: 2 * CANDIDATES_PER_ROUND, content: 'adults-only' }),
       );
     });
 

@@ -18,6 +18,7 @@ function roomOfTwo(): Room {
   const room = Room.create(
     {
       hostUnderEighteen: false,
+      ambience: 'classic',
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),

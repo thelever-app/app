@@ -8,6 +8,10 @@ export interface RoundRow {
   /** The number of its last round; the same as `from` for a row of one round. */
   readonly to: number;
   readonly round: LobbyRoundDto;
+  /** Of its random rounds, how many only play dilemmas for adults. */
+  readonly adultsOnly: number;
+  /** Of its random rounds, how many only play compromising dilemmas. */
+  readonly compromising: number;
 }
 
 /** The same key for the same categories in any order; every category, for null. */
@@ -15,10 +19,18 @@ function categoriesKey(categories: readonly Category[] | null): string {
   return categories === null ? '*' : [...new Set(categories)].sort().join(',');
 }
 
-/** The rounds in the order they play, with each run of random rounds of the same categories in one row. */
+/**
+ * The rounds in the order they play, with each run of random rounds of the same categories in one
+ * row, whatever their content, counting those only for adults and those only compromising.
+ */
 export function roundRows(rounds: readonly LobbyRoundDto[]): RoundRow[] {
   const rows: RoundRow[] = [];
   rounds.forEach((round, index) => {
+    const content = round.origin === 'random' ? round.content : 'any';
+    const counts = {
+      adultsOnly: content === 'adults-only' ? 1 : 0,
+      compromising: content === 'compromising' ? 1 : 0,
+    };
     const last = rows.at(-1);
     if (
       last &&
@@ -26,10 +38,15 @@ export function roundRows(rounds: readonly LobbyRoundDto[]): RoundRow[] {
       round.origin === 'random' &&
       categoriesKey(last.round.categories) === categoriesKey(round.categories)
     ) {
-      rows[rows.length - 1] = { ...last, to: index + 1 };
+      rows[rows.length - 1] = {
+        ...last,
+        to: index + 1,
+        adultsOnly: last.adultsOnly + counts.adultsOnly,
+        compromising: last.compromising + counts.compromising,
+      };
       return;
     }
-    rows.push({ from: index + 1, to: index + 1, round });
+    rows.push({ from: index + 1, to: index + 1, round, ...counts });
   });
   return rows;
 }

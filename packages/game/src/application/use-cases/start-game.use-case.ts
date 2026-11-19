@@ -3,16 +3,17 @@ import type { Clock } from '../../domain/ports/clock.port.ts';
 import type { IdGenerator } from '../../domain/ports/id-generator.port.ts';
 import type { Randomness } from '../../domain/ports/randomness.port.ts';
 import {
-  categoriesKey,
+  drawKey,
   categoriesToDraw,
   composeGame,
   fixedDilemmaIds,
-  SPACING_ROUNDS,
   type Candidates,
   type ExplorationSlots,
 } from '../../domain/services/compose-game.ts';
+import { ambienceOf } from '../../domain/vos/ambience.vo.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
 import type { CandidateDilemma } from '../../domain/vos/classification.vo.ts';
+import type { RoundContent } from '../../domain/vos/round.vo.ts';
 import type { DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
@@ -91,44 +92,34 @@ export class StartGameUseCase {
     const playedBy = [...room.playedBy].map(([dilemmaId, players]) => ({ dilemmaId, players }));
     const candidatesOf = async (
       categories: readonly Category[] | null,
+      content: RoundContent,
       rounds: number,
       status: 'in-catalog' | 'in-exploration',
-    ): Promise<CandidateDilemma[]> => {
-      const draw = (count: number, onlyForAdults: boolean) =>
-        this.#dilemmaCatalog.findCandidates({
-          // Null plays every category: the search then looks at all of them.
-          ...(categories && { categories }),
-          maximumMinimumAge: settings.maximumMinimumAge,
-          status,
-          language: settings.dilemmaLanguage,
-          includeCompromising: settings.includesCompromisingDilemmas,
-          count,
-          includeGap: playsTheGap,
-          excludedIds,
-          onlyForAdults,
-          playedBy,
-        });
-      const drawn = await draw(rounds * this.#candidatesPerRound, false);
-      if (!settings.adultsOnly) return [...drawn];
-      // An adults-only room plays one for adults in every few rounds: those are drawn apart too, so
-      // a draw at random does not leave them out.
-      const forAdults = await draw(
-        Math.ceil(rounds / SPACING_ROUNDS) * this.#candidatesPerRound,
-        true,
-      );
-      const ids = new Set(drawn.map(({ dilemmaId }) => dilemmaId));
-      return [...drawn, ...forAdults.filter(({ dilemmaId }) => !ids.has(dilemmaId))];
-    };
+    ): Promise<CandidateDilemma[]> => [
+      ...(await this.#dilemmaCatalog.findCandidates({
+        // Null plays every category: the search then looks at all of them.
+        ...(categories && { categories }),
+        maximumMinimumAge: settings.maximumMinimumAge,
+        status,
+        language: settings.dilemmaLanguage,
+        includeCompromising: settings.compromisingDilemmas,
+        count: rounds * this.#candidatesPerRound,
+        includeGap: playsTheGap,
+        excludedIds,
+        content,
+        playedBy,
+      })),
+    ];
     const candidatesFor = async (rounds: typeof settings.rounds) =>
       new Map<string, Candidates>(
         await Promise.all(
           categoriesToDraw(rounds, room.chosenDilemmas, playsTheGap).map(
-            async ({ categories, rounds }): Promise<[string, Candidates]> => [
-              categoriesKey(categories),
+            async ({ categories, content, rounds }): Promise<[string, Candidates]> => [
+              drawKey(categories, content),
               {
-                inCatalog: await candidatesOf(categories, rounds, 'in-catalog'),
+                inCatalog: await candidatesOf(categories, content, rounds, 'in-catalog'),
                 inExploration: settings.newDilemmas
-                  ? await candidatesOf(categories, rounds, 'in-exploration')
+                  ? await candidatesOf(categories, content, rounds, 'in-exploration')
                   : [],
               },
             ],
@@ -139,7 +130,7 @@ export class StartGameUseCase {
     // has not played play from every category, as its lobby warned the host.
     const firstDraw = await candidatesFor(settings.rounds);
     const left = (categories: readonly Category[]) => {
-      const drawn = firstDraw.get(categoriesKey(categories));
+      const drawn = firstDraw.get(drawKey(categories, 'any'));
       return new Set(
         [...(drawn?.inCatalog ?? []), ...(drawn?.inExploration ?? [])].map(
           ({ dilemmaId }) => dilemmaId,
@@ -151,7 +142,7 @@ export class StartGameUseCase {
     const rounds = settings.rounds.map((round) => {
       if (round.origin !== 'random' || round.categories === null) return round;
       if (room.playedDilemmaIds.length === 0) return round;
-      const key = categoriesKey(round.categories);
+      const key = drawKey(round.categories, 'any');
       const before = played.get(key) ?? 0;
       played.set(key, before + 1);
       if (before < left(round.categories)) return round;
@@ -167,7 +158,6 @@ export class StartGameUseCase {
         candidates,
         explorationSlots: this.#explorationSlots,
         playsTheGap,
-        adultsOnly: settings.adultsOnly,
         playedBy: room.playedBy,
       },
       this.#randomness,
@@ -186,6 +176,7 @@ export class StartGameUseCase {
           chosenBy: composed[index]!.chosenBy,
         })),
         settings: {
+          ambience: ambienceOf(settings),
           variant: settings.variant,
           groupNature: room.groupNature,
           place: room.place,

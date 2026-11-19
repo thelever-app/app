@@ -2,16 +2,52 @@ import type { Category, DilemmaType, Scale } from '@thelever-app/game';
 
 /** What the host chooses on the screen to create a room; the driver picks test data for the rest. */
 export interface RoomChoices {
+  /** The ambience the room is created with; Classic unless the scenario says. */
+  readonly ambience?: 'classic' | 'spicy' | 'no-filter';
   readonly groupNature?: string;
   readonly place?: string;
   /** The language of the device, which the room takes for its dilemmas. */
   readonly deviceLanguage?: string;
 }
 
+/** The presets of a room. */
+export type Ambience = 'classic' | 'spicy' | 'no-filter';
+
+/** What a random round draws. */
+export type RoundContent = 'any' | 'adults-only' | 'compromising';
+
+/**
+ * Why something for adults or compromising is off: a player under 18, someone under 18 in the
+ * room, or a room that is not anonymous.
+ */
+export type OffReason = 'only-adults' | 'minor-in-room' | 'only-anonymous';
+
+/** An ambience as a screen offers it: with its description and example, or off and why. */
+export interface AmbienceOption {
+  readonly ambience: Ambience;
+  /** Whether it shows a line that describes it and an example dilemma. */
+  readonly described: boolean;
+  readonly offBecause: OffReason | null;
+}
+
+/** A switch of the settings: whether it is on, and whether it is off for the host and why. */
+export interface SwitchView {
+  readonly on: boolean;
+  readonly offBecause: OffReason | null;
+}
+
+/** A dilemma the search shows, with the marks it carries. */
+export interface MarkedDilemma {
+  readonly dilemmaId: string;
+  readonly markedAdultsOnly: boolean;
+  readonly markedCompromising: boolean;
+}
+
 /** The configuration of the room apart from its rounds, as a player of the lobby sees it. */
 export interface SettingsView {
   readonly variant: string;
   readonly adultsOnly: boolean;
+  readonly compromisingDilemmas: boolean;
   readonly dilemmaLanguage: string;
   readonly timePerDilemmaSeconds: number;
   readonly newDilemmas: boolean;
@@ -19,23 +55,34 @@ export interface SettingsView {
 
 /** A round as the host sets it, by where its dilemma comes from. */
 export type RoundSetting =
-  /** A dilemma of those categories at random; null, of every one. */
-  | { readonly origin: 'random'; readonly categories: readonly Category[] | null }
+  /** A dilemma of those categories at random, of any content unless given; null, of every one. */
+  | {
+      readonly origin: 'random';
+      readonly categories: readonly Category[] | null;
+      readonly content?: RoundContent;
+    }
   | { readonly origin: 'specific'; readonly dilemmaId: string }
   /** A player chooses it in the lobby. */
   | { readonly origin: 'players' };
 
 /** A round as a player of the lobby sees it; of the players, with the dilemma someone chose, if any. */
 export type RoundView =
-  | { readonly origin: 'random'; readonly categories: readonly Category[] | null }
+  | {
+      readonly origin: 'random';
+      readonly categories: readonly Category[] | null;
+      readonly content: RoundContent;
+    }
   | { readonly origin: 'specific'; readonly dilemmaId: string }
   | { readonly origin: 'players'; readonly dilemmaId: string | null };
 
 /** What a player sees of a room before entering it. */
 export interface RoomPreview {
   readonly host: string;
+  /** The ambience whose configuration the room has, or custom. */
+  readonly ambience: string;
   readonly variant: string;
   readonly adultsOnly: boolean;
+  readonly compromisingDilemmas: boolean;
   readonly playerCount: number;
   /** The avatars of who is inside, in the order they came in, as `PlayerView` writes them. */
   readonly avatars: readonly string[];
@@ -50,6 +97,8 @@ export interface PlayerView {
 
 /** What the game copied from the room when it started. */
 export interface GameSettingsView {
+  /** The ambience whose configuration the room had when the game started, or custom. */
+  readonly ambience: string;
   readonly variant: string;
   readonly place: string;
   readonly dilemmaLanguage: string;
@@ -66,6 +115,8 @@ export interface CatalogEntry {
   readonly scale: Scale;
   /** Whether its text or an option has the gap "someone in the group". */
   readonly hasGap: boolean;
+  /** Whether an honest answer can show a player up before someone in the room. */
+  readonly compromising: boolean;
 }
 
 /** The share of an option in a distribution prediction, by the text of the option. */
@@ -481,6 +532,35 @@ export interface GameDriver {
   currentGameSeenBy(player: string): Promise<string | undefined>;
   /** The ids of the dilemmas of the game in progress, in the order every player gets them. */
   dilemmasOfTheGame(): Promise<string[]>;
+
+  // Ambiences, compromising dilemmas and the content of the rounds.
+  /** The ambiences the screen to create a room offers the player, in order. */
+  ambiencesToCreateWith(player: string): Promise<AmbienceOption[]>;
+  /** Whether one of them is chosen before the player chooses. */
+  ambienceChosenBeforehand(player: string): Promise<boolean>;
+  /** Whether the room can be created with everything else filled in and no ambience. */
+  canCreateRoomWithoutAmbience(player: string): Promise<boolean>;
+  /** The ambience of the room the lobby says, or custom. */
+  ambienceSeenBy(viewer: string): Promise<string>;
+  /** In the settings of the lobby. */
+  chooseAmbience(host: string, ambience: Ambience): Promise<void>;
+  /** The ambiences the settings of the lobby offer the host. */
+  ambiencesInTheSettings(host: string): Promise<AmbienceOption[]>;
+  adultsOnlySwitchSeenBy(host: string): Promise<SwitchView>;
+  compromisingSwitchSeenBy(host: string): Promise<SwitchView>;
+  /** Of the contents of that random round, those the host cannot choose. */
+  contentsOffFor(host: string, round: number): Promise<RoundContent[]>;
+  /** What the search for the dilemma of that round shows, with its marks. */
+  searchWithMarks(player: string, round: number): Promise<MarkedDilemma[]>;
+  /** Whether the player is told the game includes compromising dilemmas, and can stay or leave. */
+  warnedAboutCompromisingDilemmas(player: string): Promise<boolean>;
+  leaveFromTheWarning(player: string): Promise<void>;
+  /** Whether the search of the lobby tells the player it only shows dilemmas that suit the room. */
+  onlySuitableDilemmasExplainedTo(player: string): Promise<boolean>;
+  /** The rounds of the room the visitor created from a public page, as its host sees them. */
+  roundsOfTheVisitorRoom(): Promise<RoundView[]>;
+  /** The ambience the lobby of the room of the visitor says, or custom. */
+  ambienceOfTheVisitorRoom(): Promise<string>;
   settingsOfTheGame(): Promise<GameSettingsView>;
 
   /** How many new dilemmas the room server is configured to reserve in a game with that many random rounds. */
@@ -758,7 +838,7 @@ export interface GameDriver {
   /** What the visitor sees of the world result after voting alone. */
   worldResultSeen(): Promise<WorldResultView>;
   /** The visitor creates the room the screen offers to play the dilemma with the group. */
-  createTheRoomOfTheDilemma(): Promise<void>;
+  createTheRoomOfTheDilemma(ambience?: Ambience): Promise<void>;
   /** The name of the dilemma the screen to create the room says the game starts with, before creating it. */
   startingDilemmaShownToTheVisitor(): Promise<string | undefined>;
   /** The name of the specific dilemma of round 1 of the room the visitor created; none if it is not specific. */

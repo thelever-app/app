@@ -6,9 +6,12 @@ import { fakeRoomApi, renderAtRoute } from '../support/routing.tsx';
 
 const PREVIEW = {
   roomId: 'test-room-id',
+  ambience: 'classic' as const,
   hostNickname: 'Ana',
+  hostAvatar: { face: 'face-01', color: 'teal' } as const,
   variant: 'anonymous' as const,
   adultsOnly: true,
+  compromisingDilemmas: false,
   players: [
     { nickname: 'Ana', avatar: { face: 'face-01' as const, color: 'teal' as const } },
     { nickname: 'Luis', avatar: { face: 'face-02' as const, color: 'khaki' as const } },
@@ -53,7 +56,9 @@ describe('JoinScreen', () => {
       'face-04',
     ]);
     expect(screen.getByTestId('room-variant').textContent).toContain(t('variant.anonymous.name'));
-    expect(screen.getByTestId('room-adults-only').textContent).toBe(t('joinRoom.adultsOnly'));
+    expect(screen.getByTestId('room-adults-only').textContent).toBe(
+      `${t('lobby.adults.name')} ${t('lobby.adults.text')}`,
+    );
     expect(screen.getByRole('textbox', { name: t('joinRoom.nickname') })).toBeDefined();
   });
 

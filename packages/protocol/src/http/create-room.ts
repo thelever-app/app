@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  AmbienceDto,
   AvatarDto,
   GroupNatureDto,
   LanguageDto,
@@ -10,6 +11,8 @@ import {
 /** POST /rooms: whoever calls creates a room and becomes its host. Who calls comes from their token. */
 export const CreateRoomRequestDto = z.strictObject({
   nickname: z.string().min(1),
+  /** The ambience the host chose, which sets up the room. */
+  ambience: AmbienceDto,
   /** The avatar the host chose before creating the room. */
   avatar: AvatarDto,
   groupNature: GroupNatureDto,

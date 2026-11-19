@@ -3,6 +3,7 @@ import { SequentialRandomness } from '@thelever-app/game/in-memory';
 
 /** What a test game copies from its room. */
 export const TEST_GAME_SETTINGS: GameSettings = {
+  ambience: 'classic',
   variant: 'nominal',
   groupNature: 'friends',
   place: 'together',
@@ -24,6 +25,7 @@ export function roomOf(
   const room = Room.create(
     {
       hostUnderEighteen: false,
+      ambience: 'classic',
       hostNickname: host,
       hostIdentity: `Test${host}Identity`,
       hostAvatar: new AvatarVO('face-01', 'khaki'),

@@ -2,7 +2,7 @@ import type { ChosenDilemma } from '../entities/room.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
 import type { Category } from '../vos/category.vo.ts';
 import type { CandidateDilemma } from '../vos/classification.vo.ts';
-import type { DilemmaOrigin, LobbyDilemma, RoundSnapshot } from '../vos/round.vo.ts';
+import type { DilemmaOrigin, LobbyDilemma, RoundContent, RoundSnapshot } from '../vos/round.vo.ts';
 import { shuffle } from './random-choice.ts';
 
 export type { DilemmaOrigin } from '../vos/round.vo.ts';
@@ -25,7 +25,10 @@ export type ExplorationSlots = readonly {
   readonly slots: number;
 }[];
 
-/** The dilemmas that suit the room for a set of categories, in the general catalog and in exploration. */
+/**
+ * The dilemmas that suit the room for a set of categories and a content, in the general catalog
+ * and in exploration.
+ */
 export interface Candidates {
   readonly inCatalog: readonly CandidateDilemma[];
   readonly inExploration: readonly CandidateDilemma[];
@@ -35,37 +38,38 @@ export interface ComposeGameInput {
   readonly rounds: readonly RoundSnapshot[];
   readonly chosenDilemmas: readonly ChosenDilemma[];
   readonly newDilemmas: boolean;
-  /** The candidates of each set of categories the random rounds draw from, by `categoriesKey`. */
+  /** The candidates of each set of categories and content the rounds draw from, by `drawKey`. */
   readonly candidates: ReadonlyMap<string, Candidates>;
   readonly explorationSlots: ExplorationSlots;
   /** Whether the room has the players a dilemma with the gap needs. */
   readonly playsTheGap: boolean;
-  /** An adults-only room plays a dilemma for adults in every five rounds. */
-  readonly adultsOnly: boolean;
   /** How many players of the room have each dilemma among those they played, by its id. */
   readonly playedBy: ReadonlyMap<string, number>;
 }
 
-/** The rounds within which at most one extreme dilemma is played, and an adults-only room plays one for adults. */
+/** The rounds within which at most one extreme and one game theory dilemma are played. */
 export const SPACING_ROUNDS = 5;
 
-/** The same key for the same categories in any order; every category, for null. */
-export function categoriesKey(categories: readonly Category[] | null): string {
-  return categories === null ? '*' : [...new Set(categories)].sort().join(',');
+/** The same key for the same categories in any order and the same content; null is every category. */
+export function drawKey(categories: readonly Category[] | null, content: RoundContent): string {
+  const key = categories === null ? '*' : [...new Set(categories)].sort().join(',');
+  return `${key}|${content}`;
 }
 
-/** A set of categories the system draws dilemmas from, and how many rounds draw from it. */
+/** A set of categories and a content the system draws dilemmas from, and how many rounds draw from it. */
 export interface CategoriesDraw {
   /** Null for every category. */
   readonly categories: readonly Category[] | null;
+  readonly content: RoundContent;
   readonly rounds: number;
 }
 
 /**
- * The categories each round the system draws a dilemma for takes it from, each set once with how
- * many rounds draw from it: a random round's own, and every category for a round of the players
- * nobody chose a dilemma for and for a round whose dilemma has the gap in a room without the
- * players it needs.
+ * The categories and content each round the system draws a dilemma for takes it from, each once
+ * with how many rounds draw from it: a random round's own, and every category of any content for a
+ * round of the players nobody chose a dilemma for and for a round whose dilemma has the gap in a
+ * room without the players it needs. A round of a content counts for any content of its categories
+ * too, which it plays when its content has nothing left.
  */
 export function categoriesToDraw(
   rounds: readonly RoundSnapshot[],
@@ -73,11 +77,15 @@ export function categoriesToDraw(
   playsTheGap: boolean,
 ): CategoriesDraw[] {
   const drawn = new Map<string, CategoriesDraw>();
+  const count = (categories: readonly Category[] | null, content: RoundContent) => {
+    const key = drawKey(categories, content);
+    drawn.set(key, { categories, content, rounds: (drawn.get(key)?.rounds ?? 0) + 1 });
+  };
   for (const round of rounds) {
-    const categories = drawFrom(fixedDilemmaOf(round, chosenDilemmas, playsTheGap), round);
-    if (categories === undefined) continue;
-    const key = categoriesKey(categories);
-    drawn.set(key, { categories, rounds: (drawn.get(key)?.rounds ?? 0) + 1 });
+    const draw = drawFrom(fixedDilemmaOf(round, chosenDilemmas, playsTheGap), round);
+    if (draw === undefined) continue;
+    count(draw.categories, 'any');
+    if (draw.content !== 'any') count(draw.categories, draw.content);
   }
   return [...drawn.values()];
 }
@@ -98,7 +106,8 @@ export function fixedDilemmaIds(
  * Puts the dilemmas of a game together, one per round and in their order. A specific round plays
  * its dilemma, and a round of the players the one a player chose, unless it has the gap and the
  * room has not the players it needs: then the round is random from every category. For the others
- * the system draws from their categories: if the room includes new dilemmas, the exploration slots
+ * the system draws from their categories and content, or any content of their categories when that
+ * content has nothing left: if the room includes new dilemmas, the exploration slots
  * go to random rounds at random, then the rest come from the catalog and, when it runs short, from
  * exploration, the rounds with fewest candidates first. Each round takes, of what it can draw, the
  * dilemma that breaks fewest spacing rules with the rounds around it, then the one fewest players
@@ -119,9 +128,7 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
 
   // Each pool is shuffled once, the first time a round needs it, which orders the dilemmas that tie.
   const pools = new Map<string, Record<Pool, CandidateDilemma[]>>();
-  const poolAt = (position: number): Record<Pool, CandidateDilemma[]> => {
-    const categories = drawFrom(fixed[position] ?? null, rounds[position]!);
-    const key = categoriesKey(categories ?? null);
+  const poolOf = (key: string): Record<Pool, CandidateDilemma[]> => {
     let pool = pools.get(key);
     if (!pool) {
       const candidates = input.candidates.get(key) ?? { inCatalog: [], inExploration: [] };
@@ -138,16 +145,29 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
     }
     return pool;
   };
-  const draw = (position: number, from: Pool): void => {
+  const drawOf = (position: number) =>
+    drawFrom(fixed[position] ?? null, rounds[position]!) ?? { categories: null, content: 'any' };
+  const poolAt = (position: number): Record<Pool, CandidateDilemma[]> => {
+    const { categories, content } = drawOf(position);
+    return poolOf(drawKey(categories, content));
+  };
+  const bestIn = (position: number, pool: readonly CandidateDilemma[]) => {
     let best: { readonly dilemma: CandidateDilemma; readonly rank: readonly number[] } | undefined;
-    for (const dilemma of poolAt(position)[from]) {
+    for (const dilemma of pool) {
       if (used.has(dilemma.dilemmaId)) continue;
       const rank = [
-        brokenSpacingRules(placed, position, dilemma, input.adultsOnly),
+        brokenSpacingRules(placed, position, dilemma),
         input.playedBy.get(dilemma.dilemmaId) ?? 0,
       ];
       if (!best || isLower(rank, best.rank)) best = { dilemma, rank };
     }
+    return best;
+  };
+  /** Of its content, or of any content of its categories once its content has nothing left. */
+  const draw = (position: number, from: Pool, anyContent = false): void => {
+    const { categories } = drawOf(position);
+    const pool = anyContent ? poolOf(drawKey(categories, 'any')) : poolAt(position);
+    const best = bestIn(position, pool[from]);
     if (!best) return;
     used.add(best.dilemma.dilemmaId);
     placed[position] = best.dilemma;
@@ -172,6 +192,11 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
     for (const position of fewestFirst('inExploration')) {
       if (!composed[position]) draw(position, 'inExploration');
     }
+  }
+  // A round whose content has nothing left in the catalog nor in exploration plays any content.
+  for (const position of toDraw) {
+    if (!composed[position]) draw(position, 'inCatalog', true);
+    if (!composed[position] && input.newDilemmas) draw(position, 'inExploration', true);
   }
   return composed.filter((dilemma): dilemma is ComposedDilemma => dilemma !== null);
 }
@@ -221,53 +246,44 @@ function chosenFor(roundId: number, chosenDilemmas: readonly ChosenDilemma[]): F
 }
 
 /**
- * The categories the system draws the dilemma of the round from: its own for a random round, and
- * every category for any other round without a fixed dilemma; undefined if it is not drawn.
+ * The categories and content the system draws the dilemma of the round from: its own for a random
+ * round, and every category of any content for any other round without a fixed dilemma; undefined
+ * if it is not drawn.
  */
 function drawFrom(
   fixed: FixedDilemma | null,
   round: RoundSnapshot,
-): readonly Category[] | null | undefined {
+): { readonly categories: readonly Category[] | null; readonly content: RoundContent } | undefined {
   if (fixed) return undefined;
-  return round.origin === 'random' ? round.categories : null;
+  return round.origin === 'random'
+    ? { categories: round.categories, content: round.content }
+    : { categories: null, content: 'any' };
 }
 
 /**
  * How many spacing rules the dilemma breaks in that position with the rounds already placed: two
- * game theory or two would-you-rather dilemmas in a row, two extreme ones within five rounds and, in
- * an adults-only room, five rounds in a row without one for adults.
+ * would-you-rather dilemmas in a row, and two game theory or two extreme ones within five rounds.
  */
 function brokenSpacingRules(
   placed: readonly (CandidateDilemma | null)[],
   position: number,
   dilemma: CandidateDilemma,
-  adultsOnly: boolean,
 ): number {
   let broken = 0;
   for (const neighbour of [placed[position - 1], placed[position + 1]]) {
-    if (!neighbour) continue;
-    if (dilemma.type !== 'standard' && neighbour.type === dilemma.type) broken += 1;
+    if (dilemma.type === 'would-you-rather' && neighbour?.type === dilemma.type) broken += 1;
   }
-  if (dilemma.scale === 'extreme') {
+  const within = (same: (other: CandidateDilemma) => boolean): number => {
+    let found = 0;
     for (let distance = 1; distance < SPACING_ROUNDS; distance += 1) {
       for (const other of [placed[position - distance], placed[position + distance]]) {
-        if (other?.scale === 'extreme') broken += 1;
+        if (other && same(other)) found += 1;
       }
     }
-  }
-  if (adultsOnly && dilemma.minimumAge < 18) {
-    const last = placed.length - SPACING_ROUNDS;
-    for (
-      let start = Math.max(0, position - SPACING_ROUNDS + 1);
-      start <= Math.min(position, last);
-      start += 1
-    ) {
-      const others = placed
-        .slice(start, start + SPACING_ROUNDS)
-        .filter((_, index) => start + index !== position);
-      if (others.every((other) => other !== null && other.minimumAge < 18)) broken += 1;
-    }
-  }
+    return found;
+  };
+  if (dilemma.type === 'game-theory') broken += within((other) => other.type === 'game-theory');
+  if (dilemma.scale === 'extreme') broken += within((other) => other.scale === 'extreme');
   return broken;
 }
 

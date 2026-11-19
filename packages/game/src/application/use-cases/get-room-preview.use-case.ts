@@ -1,5 +1,6 @@
 import type { Clock } from '../../domain/ports/clock.port.ts';
 import type { Randomness } from '../../domain/ports/randomness.port.ts';
+import { type AmbienceOrCustom, ambienceOf } from '../../domain/vos/ambience.vo.ts';
 import type { RoomVariant } from '../../domain/vos/room-settings.vo.ts';
 import { RoomCodeNotFoundError } from '../errors/room-code-not-found.error.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
@@ -17,9 +18,14 @@ interface PreviewAvatar {
 
 export interface GetRoomPreviewOutput {
   readonly roomId: string;
+  /** The ambience whose configuration the room has, or custom. */
+  readonly ambience: AmbienceOrCustom;
   readonly hostNickname: string;
+  /** Who invites, as the welcome of a new device shows them. */
+  readonly hostAvatar: PreviewAvatar;
   readonly variant: RoomVariant;
   readonly adultsOnly: boolean;
+  readonly compromisingDilemmas: boolean;
   /** Who else is inside, in the order they came in, without their ids or identities. */
   readonly players: readonly { readonly nickname: string; readonly avatar: PreviewAvatar }[];
   /** An avatar nobody inside has, for whoever is about to join. */
@@ -46,9 +52,12 @@ export class GetRoomPreviewUseCase {
     const { face, color } = room.suggestAvatar(this.#randomness);
     return {
       roomId: room.id,
+      ambience: ambienceOf(room.settings),
       hostNickname: room.host.nickname,
+      hostAvatar: { face: room.host.avatar.face, color: room.host.avatar.color },
       variant: room.settings.variant,
       adultsOnly: room.settings.adultsOnly,
+      compromisingDilemmas: room.settings.compromisingDilemmas,
       players: room.players
         .filter((player) => player.identity !== identity)
         .map(({ nickname, avatar }) => ({

@@ -35,6 +35,7 @@ const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId
   chosenBy: null,
 }));
 const SETTINGS = {
+  ambience: 'classic',
   variant: 'anonymous',
   groupNature: 'friends',
   place: 'remote',

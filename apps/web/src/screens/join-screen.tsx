@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
+import { AMBIENCE_ICONS } from '../lobby/ambiences.ts';
 import { RoomApiError } from '../room/room-api.ts';
 import { useRoomApi } from '../room/room-api-context.tsx';
 import { isJoinRefusal, JoinRefusal, type JoinRefusalCode } from './join-refusal.tsx';
@@ -102,6 +103,13 @@ export function JoinScreen() {
                   {t('joinRoom.inTheRoom', { count: preview.room.players.length })}
                 </span>
               </div>
+              <p className={styles.ambience} data-testid="room-ambience">
+                <Icon name={AMBIENCE_ICONS[preview.room.ambience]} size={20} />
+                <span className={styles.ambienceName}>
+                  {t(`ambience.${preview.room.ambience}.name`)}
+                </span>
+                <span className={styles.signage}>{t('lobby.ambience')}</span>
+              </p>
               <p className={styles.line} data-testid="room-variant">
                 <Icon
                   name={preview.room.variant === 'nominal' ? 'visibility' : 'visibilityOff'}
@@ -114,7 +122,18 @@ export function JoinScreen() {
               </p>
               {preview.room.adultsOnly && (
                 <p className={styles.line} data-testid="room-adults-only">
-                  {t('joinRoom.adultsOnly')}
+                  <Icon name="adultsOnly" size={20} />
+                  <span>
+                    <strong>{t('lobby.adults.name')}</strong> {t('lobby.adults.text')}
+                  </span>
+                </p>
+              )}
+              {preview.room.compromisingDilemmas && (
+                <p className={styles.line} data-testid="room-compromising">
+                  <Icon name="heartBroken" size={20} />
+                  <span>
+                    <strong>{t('lobby.compromising.name')}</strong> {t('lobby.compromising.text')}
+                  </span>
                 </p>
               )}
             </section>

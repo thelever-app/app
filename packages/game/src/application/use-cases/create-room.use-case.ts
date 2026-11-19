@@ -17,6 +17,8 @@ export interface CreateRoomInput {
   readonly hostNickname: string;
   /** Who creates the room, from their verified token. */
   readonly hostIdentity: string;
+  /** The ambience the host chose, which sets up the room. */
+  readonly ambience: string;
   /** The avatar the host chose before creating the room. */
   readonly hostAvatar: { readonly face: string; readonly color: string };
   readonly groupNature: string;

@@ -20,6 +20,7 @@ export const WEB_ORIGIN = 'http://localhost:5173';
 
 /** What a test room is created with when the test does not say. */
 export const ROOM_CHOICES = {
+  ambience: 'classic',
   avatar: { face: 'face-01', color: 'khaki' },
   groupNature: 'friends',
   place: 'together',

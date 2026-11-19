@@ -320,8 +320,10 @@
     "missing": {
       "nickname": "Écris ton pseudo",
       "groupNature": "Choisis avec qui tu joues",
-      "place": "Choisis où vous êtes"
-    }
+      "place": "Choisis où vous êtes",
+      "ambience": "Choisis une ambiance"
+    },
+    "ambience": "Quelle ambiance voulez-vous ?"
   },
   "joinRoom": {
     "roomOf": "Salle de {{host}} · {{code}}",
@@ -350,7 +352,8 @@
     "round-taken": "Un autre joueur vient de choisir le dilemme de cette manche.",
     "duplicate-dilemma": "Ce dilemme est déjà dans une autre manche.",
     "first-access-required": "Avant de jouer, termine la première entrée.",
-    "adults-only-room": "Cette salle est réservée aux personnes de 18 ans ou plus."
+    "adults-only-room": "Cette salle est réservée aux personnes de 18 ans ou plus.",
+    "minor-in-room": "Quelqu’un dans la salle a moins de 18 ans."
   },
   "home": {
     "title": "On joue ?",
@@ -448,7 +451,13 @@
       "playersEmptyMeta": "Si personne ne la choisit, elle sera au hasard",
       "choose": "Choisir",
       "chooseLabel": "Choisir le dilemme de la manche {{number}}",
-      "clearLabel": "Retirer ton dilemme de la manche {{number}}"
+      "clearLabel": "Retirer ton dilemme de la manche {{number}}",
+      "onlyCompromising_one": "{{count}} compromettant seulement",
+      "onlyCompromising_other": "{{count}} compromettants seulement",
+      "onlyAdults_one": "{{count}} +18 seulement",
+      "onlyAdults_other": "{{count}} +18 seulement",
+      "onlyCompromising_many": "{{count}} compromettants seulement",
+      "onlyAdults_many": "{{count}} +18 seulement"
     },
     "players": "Dans la salle · {{count}}",
     "you": "{{name}} (toi)",
@@ -465,7 +474,16 @@
     "noNewDilemmas": "Plus aucun dilemme non joué",
     "noNewDilemmasNotice": "La manche {{round, number}} n’a plus de dilemmes non joués : elle puisera dans toutes les catégories.",
     "changeCategories": "Changer les catégories",
-    "gapWarning": "Il faut au moins {{minimum, number}} joueurs ; avec moins, la manche sera aléatoire."
+    "gapWarning": "Il faut au moins {{minimum, number}} joueurs ; avec moins, la manche sera aléatoire.",
+    "ambience": "Ambiance",
+    "compromising": {
+      "name": "Avec des dilemmes compromettants :",
+      "text": "certains peuvent te mettre en porte-à-faux devant quelqu’un de la salle."
+    },
+    "adults": {
+      "name": "Avec des dilemmes +18 :",
+      "text": "seuls les plus de 18 ans peuvent entrer."
+    }
   },
   "languages": {
     "es": "Español",
@@ -494,8 +512,8 @@
     "nominalHint": "On voit ce que chacun a voté.",
     "anonymousHint": "Personne ne verra qui a voté quoi.",
     "adultsOnly": {
-      "label": "Réservé aux plus de 18 ans",
-      "hint": "Autorise les dilemmes pour adultes. Seuls les plus de 18 ans pourront entrer."
+      "label": "Inclure des dilemmes +18",
+      "hint": "Seuls les plus de 18 ans pourront entrer."
     },
     "language": "Langue des dilemmes",
     "timePerDilemma": "Temps par dilemme",
@@ -532,7 +550,26 @@
       "label": "Inclure de nouveaux dilemmes",
       "hint": "Des dilemmes tout juste ajoutés au catalogue peuvent sortir."
     },
-    "save": "Enregistrer"
+    "save": "Enregistrer",
+    "ambience": {
+      "label": "Ambiance :",
+      "change": "Changer",
+      "hint": "Retour à 8 manches aléatoires ; la langue, le temps et les nouveaux dilemmes restent."
+    },
+    "compromising": {
+      "label": "Dilemmes compromettants",
+      "hint": "Ils peuvent te mettre en porte-à-faux devant quelqu’un de la salle.",
+      "onlyAnonymous": "Seulement dans une salle anonyme"
+    },
+    "content": {
+      "label": "Contenu",
+      "any": "N’importe lequel",
+      "adults-only": "+18 seulement",
+      "compromising": "Compromettants seulement",
+      "needsAdults": "« +18 seulement » a besoin des dilemmes +18.",
+      "needsCompromising": "« Compromettants seulement » a besoin des dilemmes compromettants.",
+      "needsBoth": "« +18 seulement » a besoin des dilemmes +18, et « Compromettants seulement », des dilemmes compromettants."
+    }
   },
   "pickDilemmas": {
     "title": "Dilemme de la manche {{number}}",
@@ -552,7 +589,9 @@
     "options_other": "{{count, number}} options",
     "someone": "quelqu’un de ton groupe",
     "more": "Voir plus",
-    "moreFailed": "Impossible de charger plus de dilemmes. Réessaie."
+    "moreFailed": "Impossible de charger plus de dilemmes. Réessaie.",
+    "adultsOnly": "+18",
+    "compromising": "Compromettant"
   },
   "expel": {
     "title": "Exclure {{name}} ?",
@@ -594,7 +633,7 @@
   "playDilemma": {
     "title": "Nouvelle salle",
     "firstDilemma": "Vous commencez par ce dilemme",
-    "about": "{{category}} · Les 7 autres manches, aléatoires.",
+    "about": "{{category}} · Les 7 autres manches suivent l’ambiance que vous choisirez.",
     "loading": "Recherche du dilemme…",
     "notFound": "Ce dilemme n’est plus sur TheLever. Tu peux créer une salle avec d’autres dilemmes du catalogue.",
     "home": "Aller à l’accueil"
@@ -719,11 +758,13 @@
     "continue": "Continuer",
     "decline": "Je n’accepte pas",
     "welcome": {
-      "tagline": "Des dilemmes moraux à jouer en groupe",
+      "title": "Dilemmes moraux",
+      "subtitle": "à jouer en groupe",
       "text": "Tu votes en privé, tu devines les autres et vous découvrez ensemble qui pense quoi.",
       "start": "Commencer",
       "join": "Rejoindre la partie",
-      "invite": "{{host}} t’invite à jouer"
+      "invite": "{{host}} t’invite à jouer",
+      "art": "La Palanca, près d’un aiguillage"
     },
     "age": {
       "title": "En quelle année es-tu né·e ?",
@@ -826,5 +867,34 @@
     "ios": "Touche Partager puis « Sur l’écran d’accueil ».",
     "install": "Installer",
     "close": "Fermer l’avis"
+  },
+  "ambience": {
+    "classic": {
+      "name": "Classique",
+      "line": "Des dilemmes pour tous les groupes",
+      "example": "Par exemple : « Le levier »"
+    },
+    "spicy": {
+      "name": "Épicée",
+      "line": "Thèmes pour adultes. +18 seulement.",
+      "example": "Par exemple : « Plus d’années ou plus de plaisir »"
+    },
+    "no-filter": {
+      "name": "Sans filtre",
+      "line": "Anonyme, +18 et avec des questions compromettantes",
+      "example": "Par exemple : « La question de ton partenaire » · Dès 3 joueurs"
+    },
+    "custom": {
+      "name": "Personnalisée"
+    },
+    "onlyAdults": "Réservé aux plus de 18 ans",
+    "minorInRoom": "Quelqu’un dans la salle a moins de 18 ans"
+  },
+  "compromisingNotice": {
+    "title": "Cette partie inclut des dilemmes compromettants",
+    "text": "Ce sont des dilemmes dont la réponse sincère pourrait te mettre en porte-à-faux devant quelqu’un de la salle, comme ton ou ta partenaire, ta famille ou tes amis.",
+    "anonymous": "C’est pourquoi la salle est anonyme : personne ne verra ce que tu votes, seulement combien choisissent chaque option. Dans les petits groupes, la répartition peut laisser deviner un vote.",
+    "understood": "Compris",
+    "leave": "Quitter la salle"
   }
 }

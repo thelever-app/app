@@ -4,7 +4,7 @@ import type { DilemmaType } from '../../domain/vos/dilemma-type.vo.ts';
 import { LanguageVO } from '../../domain/vos/language.vo.ts';
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import type { Scale } from '../../domain/vos/scale.vo.ts';
-import type { DilemmaQueries, PlayedBy } from '../ports/dilemma-queries.port.ts';
+import type { CandidateContent, DilemmaQueries, PlayedBy } from '../ports/dilemma-queries.port.ts';
 
 export interface FindCandidatesInput {
   /** Any of them; an empty list finds nothing, and without it every category is searched. */
@@ -22,8 +22,8 @@ export interface FindCandidatesInput {
   readonly includeGap: boolean;
   /** Never drawn: the dilemmas the game already plays. */
   readonly excludedIds: readonly string[];
-  /** Only the dilemmas for adults. */
-  readonly onlyForAdults: boolean;
+  /** Any of those found, only the dilemmas for adults or only the compromising ones. */
+  readonly content: CandidateContent;
   /** How many players of the room played each dilemma: those played by fewer are drawn first. */
   readonly playedBy: readonly PlayedBy[];
 }

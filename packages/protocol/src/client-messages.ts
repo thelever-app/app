@@ -13,9 +13,12 @@ import { z } from 'zod';
  * how many votes they guessed. 11 since the end of the game: the results of a nominal room screen
  * by screen with their titles, reactions, likes, the cards and the rematch. 12 since taking back
  * a like: `unlike-dilemma`. 13 since the first access: nobody creates or joins a room before it,
- * and nobody under 18 joins a room for adults (`adults-only-room`).
+ * and nobody under 18 joins a room for adults (`adults-only-room`). 14 since the ambiences: a
+ * room is created with one, the host chooses another (`choose-ambience`), compromising dilemmas
+ * and the content of each random round, nothing for adults with a minor in the room
+ * (`minor-in-room`), and leaving the lobby.
  */
-export const CONTRACT_VERSION = 13;
+export const CONTRACT_VERSION = 14;
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a
@@ -83,10 +86,18 @@ export const GroupNatureDto = z.enum(['family', 'friends', 'work', 'mixed']);
 /** Whether the group plays in the same place or remotely. */
 export const PlaceDto = z.enum(['together', 'remote']);
 
+/** The presets of a room: Classic, Spicy and No filter. */
+export const AmbienceDto = z.enum(['classic', 'spicy', 'no-filter']);
+
+/** The ambience whose configuration a room has, or custom. */
+export const AmbienceOrCustomDto = z.enum([...AmbienceDto.options, 'custom']);
+
 /** The configuration of a room apart from its rounds, which the game copies when it starts. */
 export const RoomSettingsDto = z.strictObject({
   variant: z.enum(['nominal', 'anonymous']),
   adultsOnly: z.boolean(),
+  /** Whether the games may include compromising dilemmas: only in an anonymous room. */
+  compromisingDilemmas: z.boolean(),
   dilemmaLanguage: LanguageDto,
   timePerDilemmaSeconds: z.union([z.literal(30), z.literal(45), z.literal(60), z.literal(90)]),
   /** Whether the random rounds keep room for dilemmas in exploration. */
@@ -106,12 +117,16 @@ export const RoundCategoriesDto = z
   .max(CategoryDto.options.length)
   .nullable();
 
+/** What a random round draws: any dilemma, only those for adults or only compromising ones. */
+export const RoundContentDto = z.enum(['any', 'adults-only', 'compromising']);
+
 /** A round as the host sets it, with where its dilemma comes from; one without an id is a new one. */
 export const RoundSettingsDto = z.discriminatedUnion('origin', [
   z.strictObject({
     id: RoundIdDto.optional(),
     origin: z.literal('random'),
     categories: RoundCategoriesDto,
+    content: RoundContentDto,
   }),
   z.strictObject({
     id: RoundIdDto.optional(),
@@ -235,7 +250,10 @@ export const StartRematchDto = z.strictObject({
   traceparent: TraceparentDto.optional(),
 });
 
-/** The player leaves the game in progress on purpose; they can join the room again. */
+/**
+ * The player leaves the room on purpose: from the game in progress, keeping their place, or from
+ * the lobby, out of the room. Either way they can join it again.
+ */
 export const LeaveRoomDto = z.strictObject({
   type: z.literal('leave-room'),
   traceparent: TraceparentDto.optional(),
@@ -278,6 +296,13 @@ export const ChangeSettingsDto = z.strictObject({
   traceparent: TraceparentDto.optional(),
 });
 
+/** The host chooses an ambience, which sets up the room again, before the game starts. */
+export const ChooseAmbienceDto = z.strictObject({
+  type: z.literal('choose-ambience'),
+  ambience: AmbienceDto,
+  traceparent: TraceparentDto.optional(),
+});
+
 /** A player, the host too, chooses a dilemma of the catalog for an empty round of the players. */
 export const ChooseRoundDilemmaDto = z.strictObject({
   type: z.literal('choose-round-dilemma'),
@@ -312,6 +337,7 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   AnswerDilemmaDto,
   ChangeAvatarDto,
   ChangeSettingsDto,
+  ChooseAmbienceDto,
   ChooseRoundDilemmaDto,
   ClearRoundDilemmaDto,
   ExpelPlayerDto,
@@ -333,6 +359,7 @@ export const ClientMessageTypeDto = z.enum([
   'answer-dilemma',
   'change-avatar',
   'change-settings',
+  'choose-ambience',
   'choose-round-dilemma',
   'clear-round-dilemma',
   'expel-player',
@@ -356,6 +383,10 @@ export type AvatarDto = z.infer<typeof AvatarDto>;
 export type GroupNatureDto = z.infer<typeof GroupNatureDto>;
 export type PlaceDto = z.infer<typeof PlaceDto>;
 export type RoomSettingsDto = z.infer<typeof RoomSettingsDto>;
+export type AmbienceDto = z.infer<typeof AmbienceDto>;
+export type AmbienceOrCustomDto = z.infer<typeof AmbienceOrCustomDto>;
+export type RoundContentDto = z.infer<typeof RoundContentDto>;
+export type ChooseAmbienceDto = z.infer<typeof ChooseAmbienceDto>;
 export type ChangeAvatarDto = z.infer<typeof ChangeAvatarDto>;
 export type ChangeSettingsDto = z.infer<typeof ChangeSettingsDto>;
 export type RoundSettingsDto = z.infer<typeof RoundSettingsDto>;

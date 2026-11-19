@@ -13,7 +13,7 @@ const MIXED_ROUNDS: LobbyRoundDto[] = [
     origin: 'specific',
     dilemma: { dilemmaId: 'test-dilemma-9', text: 'La palanca', hasGap: false },
   },
-  { roundId: 2, origin: 'random', categories: null, withoutNewDilemmas: false },
+  { roundId: 2, origin: 'random', categories: null, content: 'any', withoutNewDilemmas: false },
   { roundId: 3, origin: 'players', dilemma: null, chosenByYou: false },
 ];
 
@@ -26,6 +26,57 @@ function roundRowsShown(t: Awaited<ReturnType<typeof renderLobby>>['t'], count: 
 }
 
 describe('LobbyScreen', () => {
+  describe('compromising dilemmas', () => {
+    const anonymousWith = (compromisingDilemmas: boolean) => ({
+      ...aRoom().settings,
+      variant: 'anonymous' as const,
+      compromisingDilemmas,
+    });
+
+    it('should warn a player who enters a room with compromising dilemmas, and let them stay', async () => {
+      // Arrange
+      const { t } = await renderLobby(aRoom({ ...AS_LUIS, settings: anonymousWith(true) }));
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('compromisingNotice.understood') }));
+
+      // Assert
+      expect(screen.queryByRole('dialog', { name: t('compromisingNotice.title') })).toBeNull();
+      expect(screen.getByText(t('lobby.compromising.name'))).toBeDefined();
+    });
+
+    it('should warn the players, not the host, when the host turns them on', async () => {
+      // Arrange
+      const asLuis = await renderLobby(aRoom({ ...AS_LUIS, settings: anonymousWith(false) }));
+
+      // Act
+      act(() => asLuis.deliver(aRoom({ ...AS_LUIS, settings: anonymousWith(true) })));
+
+      // Assert
+      expect(
+        screen.getByRole('dialog', { name: asLuis.t('compromisingNotice.title') }),
+      ).toBeDefined();
+    });
+
+    it('should never warn the host', async () => {
+      // Act
+      const { t } = await renderLobby(aRoom({ settings: anonymousWith(true) }));
+
+      // Assert
+      expect(screen.queryByRole('dialog', { name: t('compromisingNotice.title') })).toBeNull();
+    });
+
+    it('should take who leaves from the warning out of the room', async () => {
+      // Arrange
+      const { t, send } = await renderLobby(aRoom({ ...AS_LUIS, settings: anonymousWith(true) }));
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: t('compromisingNotice.leave') }));
+
+      // Assert
+      expect(send).toHaveBeenCalledWith({ type: 'leave-room' });
+    });
+  });
   afterEach(() => {
     vi.unstubAllGlobals();
     localStorage.clear();
@@ -137,27 +188,48 @@ describe('LobbyScreen', () => {
     it('should show each round in its order, grouping only random rounds of the same categories', async () => {
       // Arrange
       const rounds: LobbyRoundDto[] = [
-        { roundId: 1, origin: 'random', categories: ['honesty'], withoutNewDilemmas: false },
-        { roundId: 2, origin: 'random', categories: ['honesty'], withoutNewDilemmas: false },
+        {
+          roundId: 1,
+          origin: 'random',
+          categories: ['honesty'],
+          content: 'any',
+          withoutNewDilemmas: false,
+        },
+        {
+          roundId: 2,
+          origin: 'random',
+          categories: ['honesty'],
+          content: 'any',
+          withoutNewDilemmas: false,
+        },
         {
           roundId: 3,
           origin: 'random',
           categories: ['loyalty', 'honesty'],
+          content: 'any',
           withoutNewDilemmas: false,
         },
         {
           roundId: 4,
           origin: 'random',
           categories: ['honesty', 'loyalty'],
+          content: 'any',
           withoutNewDilemmas: false,
         },
         {
           roundId: 5,
           origin: 'random',
           categories: ['honesty', 'loyalty', 'justice'],
+          content: 'any',
           withoutNewDilemmas: false,
         },
-        { roundId: 6, origin: 'random', categories: null, withoutNewDilemmas: false },
+        {
+          roundId: 6,
+          origin: 'random',
+          categories: null,
+          content: 'any',
+          withoutNewDilemmas: false,
+        },
       ];
 
       // Act
@@ -713,8 +785,20 @@ describe('LobbyScreen', () => {
     it('should tell the host which random round has no dilemmas left to play, and let them change it', async () => {
       // Arrange
       const rounds: LobbyRoundDto[] = [
-        { roundId: 1, origin: 'random', categories: null, withoutNewDilemmas: false },
-        { roundId: 2, origin: 'random', categories: ['honesty'], withoutNewDilemmas: true },
+        {
+          roundId: 1,
+          origin: 'random',
+          categories: null,
+          content: 'any',
+          withoutNewDilemmas: false,
+        },
+        {
+          roundId: 2,
+          origin: 'random',
+          categories: ['honesty'],
+          content: 'any',
+          withoutNewDilemmas: true,
+        },
       ];
 
       // Act

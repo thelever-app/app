@@ -4,6 +4,7 @@ import { CreateRoomRequestDto, CreateRoomResponseDto } from '../../http/create-r
 describe('CreateRoomRequestDto', () => {
   const request = {
     nickname: 'Ana',
+    ambience: 'classic',
     avatar: { face: 'face-01', color: 'khaki' },
     groupNature: 'friends',
     place: 'remote',

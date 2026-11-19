@@ -8,7 +8,12 @@ import {
   ClearRoundDilemmaUseCase,
   ConnectionChangedEvent,
   ConnectPlayerUseCase,
+  AMBIENCES,
+  ChooseAmbienceUseCase,
+  Room,
+  type RoomSettingsChanges,
   CreateRoomUseCase,
+  MinorInRoomError,
   DeleteClosedRoomsUseCase,
   DisconnectPlayerUseCase,
   ExpelPlayerUseCase,
@@ -122,9 +127,14 @@ import {
 } from '@thelever-app/dilemmas/in-memory';
 import type { TitleDto } from '@thelever-app/protocol';
 import type {
+  Ambience,
+  AmbienceOption,
   AnswerPlan,
   CardView,
   CatalogEntry,
+  MarkedDilemma,
+  RoundContent,
+  SwitchView,
   Declaration,
   DeviceOptions,
   FirstAccessScreen,
@@ -178,7 +188,12 @@ const TITLE_NAMES: Readonly<Record<TitleDto, string>> = {
 const OTHER_VOTE = 'option-2';
 
 /** Test data: what the creation screen gets when a step does not choose. */
-const DEFAULT_CHOICES = { groupNature: 'friends', place: 'together', deviceLanguage: 'es' };
+const DEFAULT_CHOICES = {
+  ambience: 'classic',
+  groupNature: 'friends',
+  place: 'together',
+  deviceLanguage: 'es',
+} as const;
 
 /** Test data: where the public web is, for its canonical addresses and its sitemap. */
 const SITE_ORIGIN = 'https://thelever.test';
@@ -218,8 +233,10 @@ const DILEMMAS: readonly InMemoryDilemma[] = TEST_DILEMMAS.map(
     type,
     scale,
     fixedOrder,
+    compromising,
   }) => ({
     dilemmaId,
+    compromising,
     language,
     translations,
     text,
@@ -274,7 +291,7 @@ function optionTextOf(dilemmaId: string, optionId: string): string {
 function roundViewOf(round: LobbyRound): RoundView {
   switch (round.origin) {
     case 'random':
-      return { origin: 'random', categories: round.categories };
+      return { origin: 'random', categories: round.categories, content: round.content };
     case 'specific':
       return { origin: 'specific', dilemmaId: round.dilemma.dilemmaId };
     case 'players':
@@ -286,7 +303,12 @@ function roundViewOf(round: LobbyRound): RoundView {
 function roundChangeOf(round: LobbyRound): RoundChange {
   switch (round.origin) {
     case 'random':
-      return { id: round.roundId, origin: 'random', categories: round.categories };
+      return {
+        id: round.roundId,
+        origin: 'random',
+        categories: round.categories,
+        content: round.content,
+      };
     case 'specific':
       return { id: round.roundId, origin: 'specific', dilemmaId: round.dilemma.dilemmaId };
     case 'players':
@@ -379,6 +401,8 @@ export class AcceptanceDriver implements GameDriver {
   };
   /** What each identity declared and consented to, which the seal provider hands out. */
   readonly #seals = new Map<string, Seal>();
+  /** The player of the visitor in the room they created from a public page. */
+  #visitorHostId: string | undefined;
   readonly #reports = new InMemoryDilemmaReports();
   readonly #likes = new InMemoryDilemmaLikes();
   /** Whether each player turned on the nicknames of the others on the card they have open. */
@@ -793,10 +817,11 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async createRoom(host: string, choices: RoomChoices = {}): Promise<void> {
-    const { groupNature, place, deviceLanguage } = { ...DEFAULT_CHOICES, ...choices };
+    const { ambience, groupNature, place, deviceLanguage } = { ...DEFAULT_CHOICES, ...choices };
     await this.openRoomCreation(host);
     const player = this.#playerCalled(host);
     const { roomId, hostId } = await this.#createRoom.execute({
+      ambience,
       hostNickname: host,
       hostIdentity: player.identity,
       hostAvatar: this.#avatarOnScreen(host),
@@ -886,8 +911,10 @@ export class AcceptanceDriver implements GameDriver {
       opener.roomId = preview.roomId;
       opener.preview = {
         host: preview.hostNickname,
+        ambience: preview.ambience,
         variant: preview.variant,
         adultsOnly: preview.adultsOnly,
+        compromisingDilemmas: preview.compromisingDilemmas,
         playerCount: preview.players.length,
         avatars: preview.players.map(({ avatar }) => avatarText(avatar)),
       };
@@ -1075,7 +1102,11 @@ export class AcceptanceDriver implements GameDriver {
   async tryToAddRound(host: string): Promise<boolean> {
     const rounds = (await this.#roomStateOf(host)).rounds.map(roundChangeOf);
     return this.#accepts(
-      () => this.#changeRounds(host, [...rounds, { origin: 'random', categories: null }]),
+      () =>
+        this.#changeRounds(host, [
+          ...rounds,
+          { origin: 'random', categories: null, content: 'any' },
+        ]),
       InvalidRoomSettingError,
     );
   }
@@ -1212,6 +1243,185 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   /** As the game keeps it: the room may change after the game started. */
+  // Ambiences, compromising dilemmas and the content of the rounds
+
+  /** Whether the application creates a room of each ambience for the player, in a room of its own. */
+  async ambiencesToCreateWith(player: string): Promise<AmbienceOption[]> {
+    return Promise.all(
+      AMBIENCES.map(async (ambience) => ({
+        ambience,
+        described: true,
+        offBecause: (await this.#createsARoomOf(player, ambience))
+          ? null
+          : ('only-adults' as const),
+      })),
+    );
+  }
+
+  /** The application has no ambience it takes unless one is chosen. */
+  async ambienceChosenBeforehand(): Promise<boolean> {
+    return false;
+  }
+
+  async canCreateRoomWithoutAmbience(player: string): Promise<boolean> {
+    return this.#createsARoomOf(player, '');
+  }
+
+  /** A room of its own, so the room of the scenario stays the only one it has. */
+  async #createsARoomOf(player: string, ambience: string): Promise<boolean> {
+    const { identity } = this.#playerCalled(player);
+    return this.#accepts(
+      () =>
+        new CreateRoomUseCase(
+          new InMemoryRoomRepository(),
+          this.#catalog,
+          new SequentialIdGenerator(),
+          new SequentialRandomness(),
+          this.#clock,
+          this.#sealProvider,
+        ).execute({
+          ambience,
+          hostNickname: player,
+          hostIdentity: identity,
+          hostAvatar: { face: 'face-01', color: 'khaki' },
+          groupNature: DEFAULT_CHOICES.groupNature,
+          place: DEFAULT_CHOICES.place,
+          dilemmaLanguage: DEFAULT_CHOICES.deviceLanguage,
+        }),
+      MinorInRoomError,
+      InvalidRoomSettingError,
+    );
+  }
+
+  async ambienceSeenBy(viewer: string): Promise<string> {
+    return (await this.#screenOf(viewer)).ambience;
+  }
+
+  async chooseAmbience(host: string, ambience: Ambience): Promise<void> {
+    await new ChooseAmbienceUseCase(this.#roomRepository, this.#notifier).execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(host),
+      ambience,
+    });
+  }
+
+  /** Whether the application takes the choice: tried on a copy of the room, which stays as it is. */
+  async ambiencesInTheSettings(host: string): Promise<AmbienceOption[]> {
+    return Promise.all(
+      AMBIENCES.map(async (ambience) => ({
+        ambience,
+        described: true,
+        offBecause: (await this.#onACopyOfTheRoom(host, (rooms, playerId) =>
+          new ChooseAmbienceUseCase(rooms, new InMemoryPlayerNotifier()).execute({
+            roomId: this.#currentRoomId(),
+            playerId,
+            ambience,
+          }),
+        ))
+          ? null
+          : ('minor-in-room' as const),
+      })),
+    );
+  }
+
+  async adultsOnlySwitchSeenBy(host: string): Promise<SwitchView> {
+    const on = (await this.#screenOf(host)).settings.adultsOnly;
+    const takes = await this.#onACopyOfTheRoom(host, (rooms, playerId) =>
+      this.#changeSettingsOn(rooms, playerId, { adultsOnly: true }),
+    );
+    return { on, offBecause: on || takes ? null : 'minor-in-room' };
+  }
+
+  /** The application turns compromising dilemmas off in a room that is not anonymous. */
+  async compromisingSwitchSeenBy(host: string): Promise<SwitchView> {
+    const on = (await this.#screenOf(host)).settings.compromisingDilemmas;
+    const turnedOn = await this.#settingsOnACopy(host, { compromisingDilemmas: true });
+    return { on, offBecause: turnedOn.compromisingDilemmas ? null : 'only-anonymous' };
+  }
+
+  /** The contents the application turns back to any for that round. */
+  async contentsOffFor(host: string, round: number): Promise<RoundContent[]> {
+    const off: RoundContent[] = [];
+    for (const content of ['adults-only', 'compromising'] as const) {
+      const rounds = (await this.#roomStateOf(host)).rounds.map(roundChangeOf);
+      const changed = rounds.map((other, index) =>
+        index === round - 1 && other.origin === 'random' ? { ...other, content } : other,
+      );
+      const after = await this.#settingsOnACopy(host, { rounds: changed });
+      const set = after.rounds[round - 1];
+      if (set?.origin !== 'random' || set.content !== content) off.push(content);
+    }
+    return off;
+  }
+
+  /** The settings a copy of the room takes with the change. */
+  async #settingsOnACopy(host: string, changes: RoomSettingsChanges) {
+    const rooms = await this.#copyOfTheRoom();
+    await this.#changeSettingsOn(rooms, this.#playerIdOf(host), changes);
+    const room = await rooms.findById(this.#currentRoomId());
+    if (!room) throw new Error('The copy of the room is lost');
+    return room.settings.toSnapshot();
+  }
+
+  /** Whether the command goes through on a copy of the room, or the application refuses it. */
+  async #onACopyOfTheRoom(
+    host: string,
+    command: (rooms: InMemoryRoomRepository, playerId: string) => Promise<unknown>,
+  ): Promise<boolean> {
+    const rooms = await this.#copyOfTheRoom();
+    return this.#accepts(() => command(rooms, this.#playerIdOf(host)), MinorInRoomError);
+  }
+
+  async #copyOfTheRoom(): Promise<InMemoryRoomRepository> {
+    const room = await this.#roomRepository.findById(this.#currentRoomId());
+    if (!room) throw new Error('The scenario has no room');
+    const rooms = new InMemoryRoomRepository();
+    await rooms.save(Room.restore(room.toSnapshot()));
+    return rooms;
+  }
+
+  #changeSettingsOn(rooms: InMemoryRoomRepository, playerId: string, changes: RoomSettingsChanges) {
+    return new ChangeRoomSettingsUseCase(
+      rooms,
+      this.#catalog,
+      new InMemoryPlayerNotifier(),
+    ).execute({ roomId: this.#currentRoomId(), playerId, changes });
+  }
+
+  async searchWithMarks(player: string): Promise<MarkedDilemma[]> {
+    const dilemmas = [];
+    let after: string | undefined;
+    do {
+      const page = await this.#searchDilemmas.execute({
+        roomId: this.#currentRoomId(),
+        identity: this.#playerCalled(player).identity,
+        ...(after !== undefined && { after }),
+      });
+      dilemmas.push(...page.dilemmas);
+      after = page.next;
+    } while (after !== undefined);
+    return dilemmas.map(({ dilemmaId, minimumAge, compromising }) => ({
+      dilemmaId,
+      markedAdultsOnly: minimumAge === 18,
+      markedCompromising: compromising,
+    }));
+  }
+
+  /** Who is not the host is told, in a room that includes them. */
+  async warnedAboutCompromisingDilemmas(player: string): Promise<boolean> {
+    const { settings, hostId, playerId } = await this.#screenOf(player);
+    return settings.compromisingDilemmas && hostId !== playerId;
+  }
+
+  async leaveFromTheWarning(player: string): Promise<void> {
+    await this.leave(player);
+  }
+
+  /** The search only finds what suits the room. */
+  async onlySuitableDilemmasExplainedTo(): Promise<boolean> {
+    return true;
+  }
+
   async settingsOfTheGame(): Promise<GameSettingsView> {
     const game = await this.#gameRepository.findById(this.#currentGameId());
     if (!game) throw new Error('The game of the room is not saved');
@@ -1938,7 +2148,7 @@ export class AcceptanceDriver implements GameDriver {
     return dilemma.publicId;
   }
 
-  async createTheRoomOfTheDilemma(): Promise<void> {
+  async createTheRoomOfTheDilemma(ambience: Ambience = 'classic'): Promise<void> {
     const preview = this.#dilemmaToPlay;
     if (!preview) throw new Error('The visitor chose no dilemma to play with the group');
     const catalog = new PublishedDilemmasCatalog(
@@ -1946,7 +2156,7 @@ export class AcceptanceDriver implements GameDriver {
       new SearchCatalogUseCase(this.#dilemmaRepository),
       new FindCandidatesUseCase(this.#dilemmaRepository),
     );
-    const { roomId } = await new CreateRoomUseCase(
+    const { roomId, hostId } = await new CreateRoomUseCase(
       this.#roomRepository,
       catalog,
       new SequentialIdGenerator(),
@@ -1954,6 +2164,7 @@ export class AcceptanceDriver implements GameDriver {
       this.#clock,
       this.#sealProvider,
     ).execute({
+      ambience,
       hostNickname: 'Visitor',
       hostIdentity: 'TestVisitorIdentity',
       hostAvatar: { face: 'face-01', color: 'khaki' },
@@ -1963,6 +2174,22 @@ export class AcceptanceDriver implements GameDriver {
       firstRoundDilemmaId: preview.dilemmaId,
     });
     this.#visitorRoomId = roomId;
+    this.#visitorHostId = hostId;
+  }
+
+  async roundsOfTheVisitorRoom(): Promise<RoundView[]> {
+    return (await this.#stateOfTheVisitorRoom()).rounds.map(roundViewOf);
+  }
+
+  async ambienceOfTheVisitorRoom(): Promise<string> {
+    return (await this.#stateOfTheVisitorRoom()).ambience;
+  }
+
+  async #stateOfTheVisitorRoom() {
+    const roomId = this.#visitorRoomId;
+    const playerId = this.#visitorHostId;
+    if (!roomId || !playerId) throw new Error('The visitor created no room');
+    return this.#getRoomState.execute({ roomId, playerId });
   }
 
   /** What the screen gets of the dilemma the visitor came from, before the room exists. */

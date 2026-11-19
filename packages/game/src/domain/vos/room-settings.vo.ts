@@ -1,13 +1,13 @@
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { InvalidRoomSettingError } from '../errors/invalid-room-setting.error.ts';
 import { isCategory } from './category.vo.ts';
-import { DILEMMA_ORIGINS, randomRound, type RoundSnapshot } from './round.vo.ts';
+import { DILEMMA_ORIGINS, ROUND_CONTENTS, type RoundSnapshot } from './round.vo.ts';
 
 /** The languages of the app, in which a room can play its dilemmas. */
 export const DILEMMA_LANGUAGES = ['es', 'en', 'fr', 'de', 'it', 'pt', 'ca'] as const;
 /** How long each round gives to answer its dilemma; when it runs out, the dilemma is revealed. */
 export const TIMES_PER_DILEMMA_IN_SECONDS = [30, 45, 60, 90] as const;
-/** A game plays from 1 to 12 rounds; a new room has 8 random ones from every category. */
+/** A game plays from 1 to 12 rounds; the ambiences set 8 random ones from every category. */
 export const MINIMUM_ROUNDS = 1;
 /** The highest id a round may have: what the protocol and the database keep. */
 export const MAXIMUM_ROUND_ID = 32_767;
@@ -22,6 +22,8 @@ export type TimePerDilemmaSeconds = (typeof TIMES_PER_DILEMMA_IN_SECONDS)[number
 export interface RoomSettingsSnapshot {
   readonly variant: RoomVariant;
   readonly adultsOnly: boolean;
+  /** Whether the games may include compromising dilemmas: only in an anonymous room. */
+  readonly compromisingDilemmas: boolean;
   readonly dilemmaLanguage: DilemmaLanguage;
   /** The rounds of the game, in the order it plays them. */
   readonly rounds: readonly RoundSnapshot[];
@@ -46,19 +48,10 @@ export class RoomSettingsVO {
     ) {
       throw new InvalidRoomSettingError('time per dilemma', settings.timePerDilemmaSeconds);
     }
-    this.#settings = { ...settings, rounds: checkedRounds(settings.rounds) };
-  }
-
-  /** A nominal room for everyone, with new dilemmas and 8 random rounds from every category. */
-  static defaults(dilemmaLanguage: string): RoomSettingsVO {
-    return new RoomSettingsVO({
-      variant: 'nominal',
-      adultsOnly: false,
-      dilemmaLanguage: dilemmaLanguage as DilemmaLanguage,
-      rounds: Array.from({ length: DEFAULT_ROUNDS }, (_, index) => randomRound(index + 1)),
-      timePerDilemmaSeconds: 60,
-      newDilemmas: true,
-    });
+    if (settings.compromisingDilemmas && settings.variant !== 'anonymous') {
+      throw new InvalidRoomSettingError('compromising dilemmas', settings.variant);
+    }
+    this.#settings = { ...settings, rounds: checkedRounds(settings.rounds, settings) };
   }
 
   get variant(): RoomVariant {
@@ -90,12 +83,8 @@ export class RoomSettingsVO {
     return this.#settings.adultsOnly ? 18 : 16;
   }
 
-  /**
-   * Whether the dilemmas of the room may be compromising: never, until a room can include them
-   * (anonymous, and only if the host turns them on).
-   */
-  get includesCompromisingDilemmas(): boolean {
-    return false;
+  get compromisingDilemmas(): boolean {
+    return this.#settings.compromisingDilemmas;
   }
 
   /** New settings with the changes; what is not changed stays. */
@@ -110,9 +99,12 @@ export class RoomSettingsVO {
 
 /**
  * From 1 to 12 rounds, each with an id of its own and a known origin; a random one, with known
- * categories, and a dilemma in one round only.
+ * categories and a content the room allows, and a dilemma in one round only.
  */
-function checkedRounds(rounds: readonly RoundSnapshot[]): RoundSnapshot[] {
+function checkedRounds(
+  rounds: readonly RoundSnapshot[],
+  { adultsOnly, compromisingDilemmas }: RoomSettingsSnapshot,
+): RoundSnapshot[] {
   if (rounds.length < MINIMUM_ROUNDS || rounds.length > MAXIMUM_ROUNDS) {
     throw new InvalidRoomSettingError('number of rounds', rounds.length);
   }
@@ -139,6 +131,11 @@ function checkedRounds(rounds: readonly RoundSnapshot[]): RoundSnapshot[] {
           throw new InvalidRoomSettingError('category', unknown ?? 'none');
         }
       }
+      const allowed =
+        (ROUND_CONTENTS as readonly string[]).includes(round.content) &&
+        (round.content !== 'adults-only' || adultsOnly) &&
+        (round.content !== 'compromising' || compromisingDilemmas);
+      if (!allowed) throw new InvalidRoomSettingError('content of a round', round.content);
     }
     if (round.origin === 'specific') {
       const { dilemmaId } = round.dilemma ?? {};
@@ -159,6 +156,7 @@ function copyRound(round: RoundSnapshot): RoundSnapshot {
         id: round.id,
         origin: 'random',
         categories: round.categories && [...new Set(round.categories)],
+        content: round.content,
       };
     case 'specific':
       return { id: round.id, origin: 'specific', dilemma: { ...round.dilemma } };

@@ -56,6 +56,7 @@ function dilemmas(
     type = 'standard',
     scale = 'everyday',
     fixedOrder = false,
+    compromising = false,
   }: Partial<Omit<TestDilemma, 'dilemmaId' | 'text' | 'hasGap'>> & { readonly gap?: boolean },
 ): TestDilemma[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -72,6 +73,7 @@ function dilemmas(
     scale,
     fixedOrder,
     hasGap: gap,
+    compromising,
   }));
 }
 
@@ -94,7 +96,10 @@ export const SPANISH_OPTION_TEXTS = ['Tirar de la palanca', 'No hacer nada'] as 
  *   ones, so a game of every category would play two of a kind in a row unless it spaces them;
  * - all of them in Spanish but 6 of honesty in French, for a room that changes its language;
  * - in justice, one with its texts in Spanish and a translation into English, and one only in
- *   Spanish, for the language each player reads in.
+ *   Spanish, for the language each player reads in;
+ * - in justice too, 2 written in English, for a room that plays in English;
+ * - in love and relationships, 12 compromising dilemmas and 4 compromising ones for adults, for
+ *   the rooms that include them.
  */
 export const TEST_DILEMMAS: readonly TestDilemma[] = [
   ...dilemmas('life-and-death', 8, { tags: ['family'] }),
@@ -126,6 +131,13 @@ export const TEST_DILEMMAS: readonly TestDilemma[] = [
     ],
   }),
   ...dilemmas('spanish-only', 1, { category: 'justice' }),
+  ...dilemmas('in-english', 2, { category: 'justice', language: 'en' }),
+  ...dilemmas('compromising', 12, { category: 'love-and-relationships', compromising: true }),
+  ...dilemmas('compromising-for-adults', 4, {
+    category: 'love-and-relationships',
+    minimumAge: 18,
+    compromising: true,
+  }),
 ];
 
 /** The ids of the dilemmas of the test data in the general catalog that a room in that language, for that age, plays. */
@@ -150,14 +162,16 @@ export function testTextIn(dilemmaId: string, language: string): string {
 
 /**
  * The ids of the dilemmas of the test data with the two usual options and no gap, suitable from
- * 16, enough for the largest game: those a game plays when its scenario names those options.
+ * 16 and not compromising, enough for the largest game: those a game plays when its scenario names
+ * those options.
  */
 export const TWO_OPTION_DILEMMA_IDS = TEST_DILEMMAS.filter(
-  ({ text, minimumAge, status, options, language }) =>
+  ({ text, minimumAge, status, options, language, compromising }) =>
     language === 'es' &&
     options === OPTION_TEXTS &&
     !text.includes(GAP_MARKER) &&
     minimumAge === 16 &&
+    !compromising &&
     status === 'in-catalog',
 ).map(({ dilemmaId }) => dilemmaId);
 
@@ -227,16 +241,16 @@ export function roundsForAGameOf(
 export function catalogEntryOf(dilemmaId: string): CatalogEntry {
   const test = TEST_DILEMMAS.find((dilemma) => dilemma.dilemmaId === dilemmaId);
   if (test) {
-    const { text, minimumAge, category, status, type, scale, hasGap } = test;
-    return { text, minimumAge, category, status, type, scale, hasGap };
+    const { text, minimumAge, category, status, type, scale, hasGap, compromising } = test;
+    return { text, minimumAge, category, status, type, scale, hasGap, compromising };
   }
   const seed = SEED_DILEMMAS.find(({ id }) => id === dilemmaId);
   if (seed) {
-    const { text, minimumAge, category, type, scale, options } = seed;
+    const { text, minimumAge, category, type, scale, options, compromising } = seed;
     const hasGap = [text, ...options.map((option) => option.text)].some((written) =>
       written.includes(GAP_MARKER),
     );
-    return { text, minimumAge, category, status: 'in-catalog', type, scale, hasGap };
+    return { text, minimumAge, category, status: 'in-catalog', type, scale, hasGap, compromising };
   }
   throw new Error(`The test data has no dilemma ${dilemmaId}`);
 }
@@ -260,7 +274,7 @@ class FixedIds implements IdGenerator {
 export async function loadTestDilemmas(repository: DilemmaRepository): Promise<void> {
   for (const test of TEST_DILEMMAS) {
     const { dilemmaId, text, minimumAge, category, tags, status, options, language } = test;
-    const { type, scale, fixedOrder } = test;
+    const { type, scale, fixedOrder, compromising } = test;
     const ids = new FixedIds([
       dilemmaId,
       ...options.map((_, n) => `${dilemmaId}-option-${n + 1}`),
@@ -275,7 +289,7 @@ export async function loadTestDilemmas(repository: DilemmaRepository): Promise<v
         tags,
         minimumAge,
         type,
-        compromising: false,
+        compromising,
         scale,
         fixedOrder,
       },

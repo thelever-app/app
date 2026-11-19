@@ -42,6 +42,7 @@ describe('InstanceKeeper', () => {
       const room = Room.create(
         {
           hostUnderEighteen: false,
+          ambience: 'classic',
           hostNickname: 'Ana',
           hostIdentity: 'TestAna',
           hostAvatar: new AvatarVO('face-01', 'khaki'),

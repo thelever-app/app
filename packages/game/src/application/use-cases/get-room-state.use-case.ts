@@ -1,6 +1,8 @@
 import type { Room } from '../../domain/entities/room.ts';
 import { PlayerNotInRoomError } from '../../domain/errors/player-not-in-room.error.ts';
-import { categoriesKey } from '../../domain/services/compose-game.ts';
+import { drawKey } from '../../domain/services/compose-game.ts';
+import { type AmbienceOrCustom, ambienceOf } from '../../domain/vos/ambience.vo.ts';
+import type { RoundContent } from '../../domain/vos/round.vo.ts';
 import type { GroupNature, Place } from '../../domain/vos/group.vo.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
 import type { RoomSettingsSnapshot } from '../../domain/vos/room-settings.vo.ts';
@@ -29,6 +31,7 @@ export type LobbyRound =
       readonly roundId: number;
       readonly origin: 'random';
       readonly categories: readonly Category[] | null;
+      readonly content: RoundContent;
       /**
        * In the lobby of a rematch, whether its categories have nothing left the room has not
        * played: if the game starts like that, the round plays from every category.
@@ -54,6 +57,13 @@ export interface GetRoomStateOutput {
   readonly groupNature: GroupNature;
   readonly place: Place;
   readonly settings: Omit<RoomSettingsSnapshot, 'rounds'>;
+  /** The ambience whose configuration the room has, or custom. */
+  readonly ambience: AmbienceOrCustom;
+  /**
+   * For the host, whether someone in the room said they are under 18, which keeps out everything
+   * for adults; false for the others, who need not know, so nobody can tell who it is.
+   */
+  readonly hasPlayerUnderEighteen: boolean;
   /** The rounds of the game in the order it plays them. */
   readonly rounds: readonly LobbyRound[];
   /** The fewest players a game of the room starts with, by its variant: the screen counts what is missing. */
@@ -94,7 +104,7 @@ export class GetRoomStateUseCase {
     // The rounds of the same categories take what is left in turn: the ones beyond it have none.
     const taken = new Map<string, number>();
     const withoutNewDilemmas = (categories: readonly Category[] | null): boolean => {
-      const key = categoriesKey(categories);
+      const key = drawKey(categories, 'any');
       const available = left.get(key);
       if (available === undefined) return false;
       const before = taken.get(key) ?? 0;
@@ -111,12 +121,15 @@ export class GetRoomStateUseCase {
       groupNature: room.groupNature,
       place: room.place,
       settings,
+      ambience: ambienceOf(room.settings),
+      hasPlayerUnderEighteen: playerId === room.host.id && room.hasPlayerUnderEighteen,
       rounds: rounds.map((round): LobbyRound => {
         if (round.origin === 'random') {
           return {
             roundId: round.id,
             origin: 'random',
             categories: round.categories,
+            content: round.content,
             withoutNewDilemmas: withoutNewDilemmas(round.categories),
           };
         }
@@ -161,7 +174,7 @@ export class GetRoomStateUseCase {
     >();
     for (const round of settings.rounds) {
       if (round.origin !== 'random') continue;
-      const key = categoriesKey(round.categories);
+      const key = drawKey(round.categories, 'any');
       const rounds = (categorySets.get(key)?.rounds ?? 0) + 1;
       categorySets.set(key, { categories: round.categories, rounds });
     }
@@ -177,11 +190,11 @@ export class GetRoomStateUseCase {
               maximumMinimumAge: settings.maximumMinimumAge,
               status,
               language: settings.dilemmaLanguage,
-              includeCompromising: settings.includesCompromisingDilemmas,
+              includeCompromising: settings.compromisingDilemmas,
               count: rounds,
               includeGap: room.playsTheGap,
               excludedIds: [...room.playedDilemmaIds, ...room.roundDilemmaIds],
-              onlyForAdults: false,
+              content: 'any',
               playedBy: [],
             }),
           ),

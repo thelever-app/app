@@ -35,6 +35,7 @@ describe('SearchDilemmasResponseDto', () => {
           dilemmaId: 'dilemma-1',
           text: 'Text of the first dilemma',
           minimumAge: 16,
+          compromising: false,
           category: 'honesty',
           tags: ['family'],
           optionCount: 2,

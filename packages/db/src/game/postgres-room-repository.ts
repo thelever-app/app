@@ -188,6 +188,7 @@ export class PostgresRoomRepository implements RoomRepository {
             origin: round.origin,
             categories:
               round.origin === 'random' && round.categories ? [...round.categories] : null,
+            content: round.origin === 'random' ? round.content : null,
             dilemma_id: dilemma?.dilemmaId ?? null,
             minimum_age: dilemma?.minimumAge ?? null,
             compromising: dilemma?.compromising ?? null,
@@ -213,6 +214,7 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     place: snapshot.place,
     variant: settings.variant,
     adults_only: settings.adultsOnly,
+    compromising_dilemmas: settings.compromisingDilemmas,
     dilemma_language: settings.dilemmaLanguage,
     time_per_dilemma_seconds: settings.timePerDilemmaSeconds,
     new_dilemmas: settings.newDilemmas,
@@ -268,6 +270,7 @@ function readRoom(db: Kysely<GameTables>, id: string) {
             'room_rounds.round_id as roundId',
             'room_rounds.origin',
             'room_rounds.categories',
+            'room_rounds.content',
             'room_rounds.dilemma_id as dilemmaId',
             'room_rounds.minimum_age as minimumAge',
             'room_rounds.compromising',
@@ -303,6 +306,7 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
     settings: {
       variant: row.variant,
       adultsOnly: row.adults_only,
+      compromisingDilemmas: row.compromising_dilemmas,
       dilemmaLanguage: row.dilemma_language,
       rounds: row.rounds.map(roundOf),
       timePerDilemmaSeconds: row.time_per_dilemma_seconds,
@@ -345,7 +349,9 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
 /** A round as the settings keep it; the dilemma a player chose stays apart, in the room. */
 function roundOf(row: RoomRow['rounds'][number]): RoundSnapshot {
   const { roundId: id } = row;
-  if (row.origin === 'random') return { id, origin: 'random', categories: row.categories };
+  if (row.origin === 'random') {
+    return { id, origin: 'random', categories: row.categories, content: row.content ?? 'any' };
+  }
   if (row.origin === 'players') return { id, origin: 'players' };
   const dilemma = lobbyDilemmaOf(row);
   if (!dilemma) throw new Error(`round ${id} of a room is specific and has no dilemma`);

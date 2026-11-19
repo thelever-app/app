@@ -299,8 +299,10 @@
     "missing": {
       "nickname": "Type your nickname",
       "groupNature": "Pick who you're playing with",
-      "place": "Choose where you are"
-    }
+      "place": "Choose where you are",
+      "ambience": "Choose an ambience"
+    },
+    "ambience": "What ambience do you want?"
   },
   "joinRoom": {
     "roomOf": "{{host}}'s room · {{code}}",
@@ -328,7 +330,8 @@
     "round-taken": "Another player has just chosen the dilemma of that round.",
     "duplicate-dilemma": "That dilemma is already in another round.",
     "first-access-required": "Before playing, finish setting up the app.",
-    "adults-only-room": "This room is only for people 18 or over."
+    "adults-only-room": "This room is only for people 18 or over.",
+    "minor-in-room": "Someone in the room is under 18."
   },
   "home": {
     "title": "Shall we play?",
@@ -424,7 +427,11 @@
       "playersEmptyMeta": "If nobody does, it will be random",
       "choose": "Choose",
       "chooseLabel": "Choose the dilemma of round {{number}}",
-      "clearLabel": "Remove your dilemma from round {{number}}"
+      "clearLabel": "Remove your dilemma from round {{number}}",
+      "onlyCompromising_one": "{{count}} compromising only",
+      "onlyCompromising_other": "{{count}} compromising only",
+      "onlyAdults_one": "{{count}} 18+ only",
+      "onlyAdults_other": "{{count}} 18+ only"
     },
     "players": "In the room · {{count}}",
     "you": "{{name}} (you)",
@@ -440,7 +447,16 @@
     "noNewDilemmas": "No unplayed dilemmas left",
     "noNewDilemmasNotice": "Round {{round, number}} has no unplayed dilemmas: it will draw from all categories.",
     "changeCategories": "Change categories",
-    "gapWarning": "It needs at least {{minimum, number}} players; with fewer, the round will be random."
+    "gapWarning": "It needs at least {{minimum, number}} players; with fewer, the round will be random.",
+    "ambience": "Ambience",
+    "compromising": {
+      "name": "With compromising dilemmas:",
+      "text": "some can show you up before someone in the room."
+    },
+    "adults": {
+      "name": "With 18+ dilemmas:",
+      "text": "only people 18 or over can join."
+    }
   },
   "languages": {
     "es": "Español",
@@ -469,8 +485,8 @@
     "nominalHint": "Everyone sees what each person voted.",
     "anonymousHint": "No one will see who voted what.",
     "adultsOnly": {
-      "label": "Over-18s only",
-      "hint": "Allows adult dilemmas. Only over-18s will be able to join."
+      "label": "Include 18+ dilemmas",
+      "hint": "Only people 18 or over can join."
     },
     "language": "Dilemma language",
     "timePerDilemma": "Time per dilemma",
@@ -507,7 +523,26 @@
       "label": "Include new dilemmas",
       "hint": "Dilemmas just added to the catalog may come up."
     },
-    "save": "Save"
+    "save": "Save",
+    "ambience": {
+      "label": "Ambience:",
+      "change": "Change",
+      "hint": "Back to 8 random rounds; the language, the time and new dilemmas stay."
+    },
+    "compromising": {
+      "label": "Compromising dilemmas",
+      "hint": "They can show you up before someone in the room.",
+      "onlyAnonymous": "Only in an anonymous room"
+    },
+    "content": {
+      "label": "Content",
+      "any": "Any",
+      "adults-only": "18+ only",
+      "compromising": "Compromising only",
+      "needsAdults": "“18+ only” needs 18+ dilemmas.",
+      "needsCompromising": "“Compromising only” needs compromising dilemmas.",
+      "needsBoth": "“18+ only” needs 18+ dilemmas, and “Compromising only”, compromising dilemmas."
+    }
   },
   "pickDilemmas": {
     "title": "Dilemma of round {{number}}",
@@ -526,7 +561,9 @@
     "options_other": "{{count, number}} options",
     "someone": "someone in your group",
     "more": "Show more",
-    "moreFailed": "Couldn't load more dilemmas. Try again."
+    "moreFailed": "Couldn't load more dilemmas. Try again.",
+    "adultsOnly": "18+",
+    "compromising": "Compromising"
   },
   "expel": {
     "title": "Remove {{name}}?",
@@ -568,7 +605,7 @@
   "playDilemma": {
     "title": "New room",
     "firstDilemma": "You start with this dilemma",
-    "about": "{{category}} · The other 7 rounds, random.",
+    "about": "{{category}} · The other 7 rounds follow the ambience you choose.",
     "loading": "Finding the dilemma…",
     "notFound": "This dilemma is no longer on TheLever. You can create a room with others from the catalog.",
     "home": "Go home"
@@ -685,11 +722,13 @@
     "continue": "Continue",
     "decline": "I do not accept",
     "welcome": {
-      "tagline": "Moral dilemmas to play with your group",
+      "title": "Moral dilemmas",
+      "subtitle": "to play with your group",
       "text": "You vote in private, guess what the others chose and find out together who thinks what.",
       "start": "Start",
       "join": "Join the game",
-      "invite": "{{host}} invites you to play"
+      "invite": "{{host}} invites you to play",
+      "art": "La Palanca, by a junction of the tracks"
     },
     "age": {
       "title": "What year were you born?",
@@ -792,5 +831,34 @@
     "ios": "Tap Share and then “Add to Home Screen”.",
     "install": "Install",
     "close": "Close notice"
+  },
+  "ambience": {
+    "classic": {
+      "name": "Classic",
+      "line": "Dilemmas for any group",
+      "example": "For example: “The lever”"
+    },
+    "spicy": {
+      "name": "Spicy",
+      "line": "Adult topics. 18+ only.",
+      "example": "For example: “More years or better sex”"
+    },
+    "no-filter": {
+      "name": "No filter",
+      "line": "Anonymous, 18+ and with compromising questions",
+      "example": "For example: “Your partner’s question” · From 3 players"
+    },
+    "custom": {
+      "name": "Custom"
+    },
+    "onlyAdults": "Only for people 18 or over",
+    "minorInRoom": "Someone in the room is under 18"
+  },
+  "compromisingNotice": {
+    "title": "This game includes compromising dilemmas",
+    "text": "These are dilemmas whose honest answer could show you up before someone in the room, like your partner, your family or your friends.",
+    "anonymous": "That is why the room is anonymous: nobody will see what you vote, only how many choose each option. In small groups, the split may give a vote away.",
+    "understood": "Got it",
+    "leave": "Leave the room"
   }
 }

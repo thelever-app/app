@@ -43,6 +43,10 @@ import sync from '@material-symbols/svg-500/rounded/sync.svg?url';
 import videocam from '@material-symbols/svg-500/rounded/videocam.svg?url';
 import visibility from '@material-symbols/svg-500/rounded/visibility-fill.svg?url';
 import visibilityOff from '@material-symbols/svg-500/rounded/visibility_off-fill.svg?url';
+import adultsOnly from '@material-symbols/svg-500/rounded/18_up_rating-fill.svg?url';
+import info from '@material-symbols/svg-500/rounded/info-fill.svg?url';
+import heartBroken from '@material-symbols/svg-500/rounded/heart_broken-fill.svg?url';
+import localFireDepartment from '@material-symbols/svg-500/rounded/local_fire_department-fill.svg?url';
 import volumeOff from '@material-symbols/svg-500/rounded/volume_off-fill.svg?url';
 import volumeUp from '@material-symbols/svg-500/rounded/volume_up-fill.svg?url';
 import work from '@material-symbols/svg-500/rounded/work-fill.svg?url';
@@ -78,6 +82,7 @@ const ICONS = {
   tune,
   add,
   addCircle,
+  adultsOnly,
   addReaction,
   callSplit,
   campaign,
@@ -106,9 +111,12 @@ const ICONS = {
   flag,
   groups,
   groupsOutline,
+  heartBroken,
+  info,
   hourglass,
   howToVote,
   iosShare,
+  localFireDepartment,
   lock,
   logout,
   moreVert,

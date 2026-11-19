@@ -13,6 +13,7 @@ import { ExpelledDto, RoomStateDto, ServerMessageDto } from '../server-messages.
 const settings = {
   variant: 'nominal',
   adultsOnly: false,
+  compromisingDilemmas: false,
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
   newDilemmas: true,
@@ -28,9 +29,10 @@ const rounds = [
     roundId: 2,
     origin: 'random',
     categories: ['life-and-death', 'honesty'],
+    content: 'adults-only',
     withoutNewDilemmas: false,
   },
-  { roundId: 5, origin: 'random', categories: null, withoutNewDilemmas: true },
+  { roundId: 5, origin: 'random', categories: null, content: 'any', withoutNewDilemmas: true },
   {
     roundId: 3,
     origin: 'players',
@@ -50,6 +52,8 @@ const roomState = {
   groupNature: 'friends',
   place: 'together',
   settings,
+  ambience: 'custom',
+  hasPlayerUnderEighteen: false,
   rounds,
   minimumPlayers: 2,
   minimumPlayersForTheGap: 3,
@@ -159,7 +163,7 @@ describe('the commands of the lobby', () => {
           variant: 'anonymous',
           rounds: [
             { id: 1, origin: 'specific', dilemmaId: 'dilemma-1' },
-            { origin: 'random', categories: ['honesty'] },
+            { origin: 'random', categories: ['honesty'], content: 'compromising' },
             { id: 3, origin: 'players' },
           ],
         },
@@ -168,6 +172,7 @@ describe('the commands of the lobby', () => {
       { type: 'clear-round-dilemma', roundId: 3 },
       { type: 'expel-player', playerId: 'player-3' },
       { type: 'start-game' },
+      { type: 'choose-ambience', ambience: 'no-filter' },
     ];
 
     // Act
@@ -207,7 +212,7 @@ describe('the commands of the lobby', () => {
   it('should reject no rounds, more than 12, or a round without its dilemma', () => {
     // Arrange
     const withRounds = (rounds: unknown[]) => ({ type: 'change-settings', changes: { rounds } });
-    const random = { origin: 'random', categories: null };
+    const random = { origin: 'random', categories: null, content: 'any' };
 
     // Act & Assert
     expect(ChangeSettingsDto.safeParse(withRounds([])).success).toBe(false);

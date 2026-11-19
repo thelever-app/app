@@ -48,6 +48,7 @@ import {
   RoomCodeNotFoundError,
   RoomFullError,
   AdultsOnlyRoomError,
+  MinorInRoomError,
   RoomNotFoundError,
 } from '@thelever-app/game';
 import {
@@ -86,6 +87,7 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [GameInProgressError, 'game-in-progress'],
   [RoomFullError, 'room-full'],
   [AdultsOnlyRoomError, 'adults-only-room'],
+  [MinorInRoomError, 'minor-in-room'],
   [PlayerExpelledError, 'player-expelled'],
   [HostCannotBeExpelledError, 'host-cannot-be-expelled'],
   [NicknameAndAvatarTakenError, 'nickname-and-avatar-taken'],

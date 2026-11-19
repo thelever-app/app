@@ -1,10 +1,17 @@
-import { GroupNatureDto, type LanguageDto, PlaceDto } from '@thelever-app/protocol';
+import {
+  type AmbienceDto,
+  GroupNatureDto,
+  type LanguageDto,
+  PlaceDto,
+} from '@thelever-app/protocol';
 import { useActionState, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { AvatarButton } from '../avatar/avatar-button.tsx';
 import { randomAvatar } from '../avatar/random-avatar.ts';
 import { Icon, type IconName } from '../components/icon.tsx';
+import { useUnderEighteen } from '../first-access/device-age.tsx';
+import { AMBIENCE_ICONS, AMBIENCES, isForAdults } from '../lobby/ambiences.ts';
 import { AvatarPickerSheet } from '../lobby/avatar-picker-sheet.tsx';
 import { SubmitButton } from '../components/submit-button.tsx';
 import { playedDilemmas } from '../game/played-dilemmas.ts';
@@ -20,13 +27,15 @@ interface CreateRoomChoices {
   readonly nickname: string;
   readonly groupNature: GroupNatureDto | undefined;
   readonly place: PlaceDto | undefined;
+  readonly ambience: AmbienceDto | undefined;
 }
 
 /** The first thing still to fill in, which the button asks for instead of creating the room. */
-function missingOf({ nickname, groupNature, place }: CreateRoomChoices) {
+function missingOf({ nickname, groupNature, place, ambience }: CreateRoomChoices) {
   if (nickname.trim() === '') return 'nickname';
   if (groupNature === undefined) return 'groupNature';
   if (place === undefined) return 'place';
+  if (ambience === undefined) return 'ambience';
   return undefined;
 }
 
@@ -48,8 +57,9 @@ const PLACES: readonly (readonly [PlaceDto, IconName])[] = [
 ];
 
 /**
- * Creating a room: the avatar, the nickname, the nature of the group and the place, each one a
- * single choice, on the same screen. The avatar starts at random and may be any: nobody is in the
+ * Creating a room: the avatar, the nickname, the nature of the group, the place and the ambience,
+ * each one a single choice, on the same screen; who declared they are under 18 cannot choose an
+ * ambience for adults. The avatar starts at random and may be any: nobody is in the
  * room yet. The dilemmas take the language of the device, or that of the dilemma of its first
  * round; the host changes it in the lobby. The button says what is still missing, and creates the
  * room once nothing is. Once created, the host enters its lobby.
@@ -59,11 +69,13 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
   const navigate = useNavigate();
   const api = useRoomApi();
   const { withAccess, accessCodeScreen } = useAccessGate();
+  const underEighteen = useUnderEighteen();
 
   const [choices, setChoices] = useState<CreateRoomChoices>(() => ({
     nickname: lastNickname(),
     groupNature: undefined,
     place: undefined,
+    ambience: undefined,
   }));
   const [avatar, setAvatar] = useState(() => randomAvatar());
   const [pickingAvatar, setPickingAvatar] = useState(false);
@@ -73,12 +85,15 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
 
   // Why the last attempt failed; what the player chose stays in the fields.
   const [error, formAction, isPending] = useActionState(async (): Promise<string | undefined> => {
-    const { nickname, groupNature, place } = choices;
-    if (groupNature === undefined || place === undefined) return undefined;
+    const { nickname, groupNature, place, ambience } = choices;
+    if (groupNature === undefined || place === undefined || ambience === undefined) {
+      return undefined;
+    }
     try {
       const created = await withAccess(() =>
         api.createRoom({
           nickname,
+          ambience,
           avatar,
           groupNature,
           place,
@@ -157,6 +172,46 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
                 {t(`createRoom.place.${place}`)}
               </label>
             ))}
+          </div>
+        </fieldset>
+
+        <fieldset className={styles.choice}>
+          <legend className={styles.legend}>{t('createRoom.ambience')}</legend>
+          <div className={styles.ambiences}>
+            {AMBIENCES.map((ambience) => {
+              const locked = underEighteen && isForAdults(ambience);
+              return (
+                <label key={ambience} className={styles.ambience} data-locked={locked || undefined}>
+                  <input
+                    className={styles.radio}
+                    type="radio"
+                    name="ambience"
+                    value={ambience}
+                    required
+                    disabled={locked}
+                    defaultChecked={choices.ambience === ambience}
+                    onChange={() => setChoices({ ...choices, ambience })}
+                  />
+                  <span className={styles.ambienceIcon}>
+                    <Icon name={locked ? 'lock' : AMBIENCE_ICONS[ambience]} size={22} />
+                  </span>
+                  <span className={styles.ambienceText}>
+                    <span className={styles.ambienceName}>{t(`ambience.${ambience}.name`)}</span>
+                    <span>{t(`ambience.${ambience}.line`)}</span>
+                    <span className={styles.ambienceNote}>
+                      {locked ? t('ambience.onlyAdults') : t(`ambience.${ambience}.example`)}
+                    </span>
+                  </span>
+                  {!locked && (
+                    <span className={styles.ambienceMark}>
+                      <Icon
+                        name={choices.ambience === ambience ? 'checkCircle' : 'radioUnchecked'}
+                      />
+                    </span>
+                  )}
+                </label>
+              );
+            })}
           </div>
         </fieldset>
 

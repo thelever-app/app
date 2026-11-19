@@ -25,6 +25,7 @@ function roomAndGame(): { room: Room; game: Game } {
   const room = Room.create(
     {
       hostUnderEighteen: false,
+      ambience: 'classic',
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -65,6 +66,7 @@ function roomAndGame(): { room: Room; game: Game } {
         chosenBy: null,
       })),
       settings: {
+        ambience: 'classic',
         variant: 'anonymous',
         groupNature: 'friends',
         place: 'together',

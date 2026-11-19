@@ -27,6 +27,10 @@ function originOf(t: Translate, number: number, origin: 'random' | 'specific' | 
   return within(origins).getByRole('radio', { name: t(`settings.rounds.origins.${origin}`) });
 }
 
+/** The switch whose label starts with that text. */
+const switchCalled = (label: string) =>
+  screen.getByRole('switch', { name: (name) => name.startsWith(label) });
+
 const save = (t: Translate) =>
   fireEvent.click(screen.getByRole('button', { name: t('settings.save') }));
 
@@ -41,12 +45,8 @@ describe('RoomSettingsSheet', () => {
 
     // Act
     fireEvent.click(screen.getByRole('radio', { name: t('settings.anonymous') }));
-    fireEvent.click(
-      screen.getByRole('switch', { name: new RegExp(t('settings.adultsOnly.label')) }),
-    );
-    fireEvent.click(
-      screen.getByRole('switch', { name: new RegExp(t('settings.newDilemmas.label')) }),
-    );
+    fireEvent.click(switchCalled(t('settings.adultsOnly.label')));
+    fireEvent.click(switchCalled(t('settings.newDilemmas.label')));
     save(t);
 
     // Assert
@@ -54,6 +54,65 @@ describe('RoomSettingsSheet', () => {
       type: 'change-settings',
       changes: { variant: 'anonymous', adultsOnly: true, newDilemmas: false },
     });
+  });
+
+  it('should turn compromising dilemmas off in a nominal room, and the rounds that need them to any', async () => {
+    // Arrange
+    const { t, send } = await openSettings(
+      aRoom({
+        settings: { ...aRoom().settings, variant: 'anonymous', compromisingDilemmas: true },
+        rounds: [{ ...DEFAULT_ROUNDS[0]!, content: 'compromising' } as LobbyRoundDto],
+      }),
+    );
+
+    // Act
+    fireEvent.click(screen.getByRole('radio', { name: t('settings.nominal') }));
+    save(t);
+
+    // Assert
+    expect(send).toHaveBeenCalledWith({
+      type: 'change-settings',
+      changes: {
+        variant: 'nominal',
+        compromisingDilemmas: false,
+        rounds: [{ id: 1, origin: 'random', categories: null, content: 'any' }],
+      },
+    });
+  });
+
+  it('should not let adults-only rounds be chosen in a room not for adults only', async () => {
+    // Arrange
+    const { t } = await openSettings();
+
+    // Assert
+    const [card] = roundCards(t, 8);
+    expect(
+      within(card!).getByRole('radio', { name: t('settings.content.adults-only') }),
+    ).toHaveProperty('disabled', true);
+    expect(screen.getByText(t('settings.content.needsBoth'))).toBeDefined();
+  });
+
+  it('should choose an ambience at once, but not one for adults with a minor in the room', async () => {
+    // Arrange
+    const { t, send } = await openSettings(aRoom({ hasPlayerUnderEighteen: true }));
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(t('settings.ambience.change')) }),
+    );
+    const ambiences = screen.getByRole('radiogroup', { name: t('settings.ambience.label') });
+
+    // Act
+    const spicy = within(ambiences).getByRole('radio', {
+      name: new RegExp(t('ambience.spicy.name')),
+    });
+    const adultsOnly = switchCalled(t('settings.adultsOnly.label'));
+    fireEvent.click(
+      within(ambiences).getByRole('radio', { name: new RegExp(t('ambience.classic.name')) }),
+    );
+
+    // Assert
+    expect(spicy).toHaveProperty('disabled', true);
+    expect(adultsOnly).toHaveProperty('disabled', true);
+    expect(send).toHaveBeenCalledWith({ type: 'choose-ambience', ambience: 'classic' });
   });
 
   it('should send nothing when the configuration did not change', async () => {
@@ -108,8 +167,13 @@ describe('RoomSettingsSheet', () => {
             id: roundId,
             origin: 'random',
             categories: null,
+            content: 'any',
           })),
-          ...Array.from({ length: 4 }, () => ({ origin: 'random', categories: null })),
+          ...Array.from({ length: 4 }, () => ({
+            origin: 'random',
+            categories: null,
+            content: 'any',
+          })),
         ],
       },
     });
@@ -131,7 +195,7 @@ describe('RoomSettingsSheet', () => {
     expect(last).toHaveProperty('disabled', true);
     expect(send).toHaveBeenCalledWith({
       type: 'change-settings',
-      changes: { rounds: [{ id: 2, origin: 'random', categories: null }] },
+      changes: { rounds: [{ id: 2, origin: 'random', categories: null, content: 'any' }] },
     });
   });
 
@@ -188,7 +252,9 @@ describe('RoomSettingsSheet', () => {
     expect([noneLeft, everyOne, backToAll]).toEqual(['true', 'true', 'true']);
     expect(send).toHaveBeenCalledWith({
       type: 'change-settings',
-      changes: { rounds: [{ id: 1, origin: 'random', categories: ['honesty', 'loyalty'] }] },
+      changes: {
+        rounds: [{ id: 1, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' }],
+      },
     });
   });
 
@@ -282,7 +348,7 @@ describe('RoomSettingsSheet', () => {
       type: 'change-settings',
       changes: {
         rounds: [
-          { id: 1, origin: 'random', categories: null },
+          { id: 1, origin: 'random', categories: null, content: 'any' },
           { id: 2, origin: 'specific', dilemmaId: 'test-dilemma-2' },
           { id: 3, origin: 'players' },
         ],

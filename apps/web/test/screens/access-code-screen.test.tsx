@@ -15,9 +15,12 @@ const CREATED = { roomId: 'test-room-id', code: 'K7M2Q', playerId: 'test-ana-id'
 
 const PREVIEW = {
   roomId: 'test-room-id',
+  ambience: 'classic' as const,
   hostNickname: 'Ana',
+  hostAvatar: { face: 'face-01', color: 'teal' } as const,
   variant: 'anonymous' as const,
   adultsOnly: false,
+  compromisingDilemmas: false,
   players: [{ nickname: 'Ana', avatar: { face: 'face-01' as const, color: 'teal' as const } }],
   suggestedAvatar: { face: 'face-05' as const, color: 'cyan' as const },
 };
@@ -56,6 +59,7 @@ async function renderCreateRoom() {
   });
   fireEvent.click(screen.getByRole('radio', { name: t('createRoom.groupNature.friends') }));
   fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.remote') }));
+  fireEvent.click(screen.getByRole('radio', { name: new RegExp(t('ambience.classic.name')) }));
   fireEvent.click(screen.getByRole('button', { name: t('createRoom.submit') }));
   return { ...rendered, createRoom: call, enterAccessCode };
 }
@@ -146,6 +150,7 @@ describe('AccessCodeScreen', () => {
     });
     fireEvent.click(screen.getByRole('radio', { name: t('createRoom.groupNature.friends') }));
     fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.remote') }));
+    fireEvent.click(screen.getByRole('radio', { name: new RegExp(t('ambience.classic.name')) }));
     fireEvent.click(screen.getByRole('button', { name: t('createRoom.submit') }));
     await screen.findByRole('dialog', { name: t('accessCode.title') });
 

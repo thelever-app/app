@@ -38,9 +38,85 @@ Feature: Create a room
     Then every player in the lobby can choose the dilemma of round 3
 
   @ui
-  Scenario: Rooms are nominal by default
-    When a player creates a room without changing the reveal setting
-    Then the room is nominal
+  Scenario: The player chooses an ambience to create a room
+    Given a player creating a room
+    Then the player sees the ambiences "Classic", "Spicy" and "No filter", each with a description and an example dilemma
+    And no ambience is selected
+    And the player cannot create the room without choosing one
+
+  Scenario Outline: Each ambience sets up the room
+    When a player creates a room with the ambience "<ambience>"
+    Then the room is <variant> and <age>, with compromising dilemmas <compromising>
+    And it has 8 random rounds from every category with the contents <contents>
+
+    Examples:
+      | ambience  | variant   | age         | compromising | contents                                                                          |
+      | Classic   | nominal   | from 16     | off          | any, any, any, any, any, any, any, any                                            |
+      | Spicy     | nominal   | adults only | off          | any, adults only, any, adults only, any, adults only, any, adults only            |
+      | No filter | anonymous | adults only | on           | any, compromising, adults only, any, compromising, adults only, any, compromising |
+
+  @ui
+  Scenario: Spicy and No filter are off for a player under 18
+    Given a player who declared a birth year that makes them 17
+    When the player creates a room
+    Then "Spicy" and "No filter" are turned off with the reason "Only for people 18 or over"
+
+  @ui
+  Scenario: The lobby shows the ambience while its configuration is unchanged
+    Given a host who created a room with the ambience "Spicy"
+    When the host changes the time per dilemma
+    Then everyone in the lobby sees that the room is "Spicy"
+
+  @ui
+  Scenario: Everything an ambience sets can be changed in the settings
+    Given a host who created a room with the ambience "No filter"
+    When the host sets round 2 to any content
+    Then round 2 is random with any content
+    And the room keeps every other setting of "No filter"
+    And everyone in the lobby sees that the room is "Custom"
+
+  @ui
+  Scenario: Nothing adults-only can be turned on with a minor in the room
+    Given a room with the ambience "Classic"
+    And "Luis" declared a birth year that makes him 17 and is in the lobby
+    Then the host sees adults-only dilemmas, "Spicy" and "No filter" turned off with the reason "Someone in the room is under 18"
+    When "Luis" leaves the room
+    Then the host can turn on adults-only dilemmas
+
+  @ui
+  Scenario: A room from the web keeps its ambience
+    Given a player who comes from the public page of "La palanca"
+    When the player creates a room with the ambience "Spicy"
+    Then round 1 is "La palanca" and rounds 2 to 8 follow "Spicy"
+    And everyone in the lobby sees that the room is "Spicy"
+
+  @ui
+  Scenario: The dilemma picker marks adults-only and compromising dilemmas
+    Given an anonymous adults-only room with compromising dilemmas turned on
+    When the host searches for the dilemma of round 3
+    Then the adults-only dilemmas are marked "+18"
+    And the compromising dilemmas are marked "Compromising"
+
+  @ui
+  Scenario: The host chooses an ambience in the settings
+    Given a host who created a room with the ambience "Classic"
+    And has set the dilemma language to English and the time per dilemma to 45 seconds
+    And has chosen a specific dilemma for round 3
+    When the host chooses the ambience "No filter" in the settings
+    Then the room has the configuration of "No filter"
+    And round 3 is random
+    And the dilemma language is English and the time per dilemma is 45 seconds
+
+  Scenario Outline: The game records the ambience
+    Given a host who created a room with the ambience "Spicy"
+    And <change>
+    When the game starts
+    Then the game context records the ambience "<recorded>"
+
+    Examples:
+      | change                                    | recorded |
+      | the host changed nothing                  | Spicy    |
+      | the host set round 2 to any content       | Custom   |
 
   @ui
   Scenario: The host creates an anonymous room
@@ -51,7 +127,7 @@ Feature: Create a room
   @ui
   Scenario: The room starts with a default configuration
     Given a host whose device is in English
-    When the host creates a room
+    When the host creates a room with the ambience "Classic"
     Then the dilemmas of the room are in English
     And the room has 8 random rounds of every category and the default time per dilemma
 
@@ -196,3 +272,68 @@ Feature: Create a room
     Given an adults-only room whose round 2 has an adults-only dilemma
     When the host turns off adults only
     Then round 2 is random from every category
+
+  @ui
+  Scenario: Compromising dilemmas are off by default
+    Given a host who has just created a room with the ambience "Classic"
+    And has made the room anonymous
+    Then compromising dilemmas are turned off
+
+  @ui
+  Scenario: The host turns on compromising dilemmas in an anonymous room
+    Given a host in the lobby of an anonymous room
+    When the host turns on compromising dilemmas
+    Then the game can include compromising dilemmas
+    And everyone in the lobby sees that the room includes compromising dilemmas
+
+  @ui
+  Scenario: Compromising dilemmas cannot be turned on in a nominal room
+    Given a host in the lobby of a nominal room
+    Then the host sees compromising dilemmas turned off with the reason "only in anonymous rooms"
+    And the host cannot turn them on
+
+  Scenario: Making the room nominal turns off compromising dilemmas
+    Given an anonymous room with compromising dilemmas turned on
+    When the host makes the room nominal
+    Then compromising dilemmas are turned off
+    And they stay off if the host makes the room anonymous again
+
+  Scenario: With compromising dilemmas off, no game includes them
+    Given a room with compromising dilemmas turned off
+    When a game of 10 random rounds is put together
+    Then none of its dilemmas is compromising
+
+  @ui
+  Scenario: With compromising dilemmas off, the host cannot pick them
+    Given a room with compromising dilemmas turned off
+    When the host searches for the dilemma of a round
+    Then no compromising dilemma is shown
+
+  @ui
+  Scenario: A random round can be only for adults-only dilemmas
+    Given a host in the lobby of an adults-only room
+    When the host sets round 2 to adults-only content
+    Then round 2 plays an adults-only dilemma
+
+  @ui
+  Scenario: Adults-only rounds need an adults-only room
+    Given a host in the lobby of a room not marked as adults only
+    Then the host sees the adults-only content of a random round turned off
+
+  @ui
+  Scenario: A random round can be only for compromising dilemmas
+    Given a host in the lobby of an anonymous room with compromising dilemmas turned on
+    When the host sets round 2 to compromising content
+    Then round 2 plays a compromising dilemma
+
+  Scenario Outline: A change that rules out the content of a round makes it any content
+    Given an adults-only anonymous room with compromising dilemmas turned on
+    And round 2 is random with <content> content
+    When the host <change>
+    Then round 2 is random with any content
+
+    Examples:
+      | content      | change                          |
+      | adults-only  | turns off adults only           |
+      | compromising | turns off compromising dilemmas |
+      | compromising | makes the room nominal          |

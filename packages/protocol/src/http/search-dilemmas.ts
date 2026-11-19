@@ -18,6 +18,8 @@ export const SearchDilemmasResponseDto = z.strictObject({
       dilemmaId: z.string().min(1),
       text: z.string().min(1),
       minimumAge: z.union([z.literal(16), z.literal(18)]),
+      /** Only found in a room that includes compromising dilemmas, which the picker marks. */
+      compromising: z.boolean(),
       category: CategoryDto,
       tags: z.array(z.string().min(1)),
       optionCount: z.number().int().min(2).max(4),

@@ -26,13 +26,16 @@ const NEW_CONFIGURATION: Partial<SettingsView> = {
 const NEW_ROUNDS: readonly RoundSetting[] = Array.from({ length: 6 }, () => ({
   origin: 'random',
   categories: ['honesty'],
+  content: 'any',
 }));
 
 /** How a player of the lobby sees the rounds the host set: no round of the players chosen yet. */
 function viewsOf(rounds: readonly RoundSetting[]): RoundView[] {
-  return rounds.map((round) =>
-    round.origin === 'players' ? { origin: 'players', dilemmaId: null } : round,
-  );
+  return rounds.map((round): RoundView => {
+    if (round.origin === 'players') return { origin: 'players', dilemmaId: null };
+    if (round.origin === 'specific') return round;
+    return { origin: 'random', categories: round.categories, content: round.content ?? 'any' };
+  });
 }
 
 /** The categories of the round as the host set it, or every one. */
@@ -192,7 +195,7 @@ Then(
   'the room has {int} random rounds of every category and the default time per dilemma',
   async function (this: GameWorld, count: number) {
     const host = await this.host();
-    const random: RoundView = { origin: 'random', categories: null };
+    const random: RoundView = { origin: 'random', categories: null, content: 'any' };
     assert.deepEqual(await this.driver.roundsSeenBy(host), Array(count).fill(random));
     const settings = await this.driver.settingsSeenBy(host);
     assert.ok(settings.timePerDilemmaSeconds > 0, 'the room has no time per dilemma');
@@ -240,9 +243,9 @@ When('{string} changes the configuration', async function (this: GameWorld, host
   await this.hostIs(host);
   this.changes = { variant: 'anonymous', timePerDilemmaSeconds: 90 };
   this.rounds = [
-    { origin: 'random', categories: ['honesty'] },
+    { origin: 'random', categories: ['honesty'], content: 'any' },
     { origin: 'players' },
-    { origin: 'random', categories: null },
+    { origin: 'random', categories: null, content: 'any' },
   ];
   await this.driver.changeSettings(host, this.changes);
   await this.driver.setRounds(host, this.rounds);
@@ -355,11 +358,14 @@ When('the host expels {string}', async function (this: GameWorld, player: string
   this.inRoom.delete(player);
 });
 
-/** Once the game has ended, the player leaves it; in the lobby, after being expelled, they are out. */
+/**
+ * Once the game has ended, or from the lobby, the player leaves it; after being expelled, they are
+ * out already.
+ */
 Then('{string} leaves the room', async function (this: GameWorld, player: string) {
-  if (this.ended) {
+  if (this.ended || this.inRoom.has(player)) {
     await this.driver.leave(player);
-    this.away.add(player);
+    if (this.ended) this.away.add(player);
     this.inRoom.delete(player);
     return;
   }
@@ -483,7 +489,7 @@ When(
   'the host sets round {int} as random from {string} and {string}',
   async function (this: GameWorld, round: number, first: string, second: string) {
     this.categories = [categoryNamed(first), categoryNamed(second)];
-    await setRound(this, round, { origin: 'random', categories: this.categories });
+    await setRound(this, round, { origin: 'random', categories: this.categories, content: 'any' });
   },
 );
 
@@ -502,7 +508,7 @@ Given('round {int} has a specific dilemma', async function (this: GameWorld, rou
 });
 
 When('the host sets round {int} as random', async function (this: GameWorld, round: number) {
-  await setRound(this, round, { origin: 'random', categories: null });
+  await setRound(this, round, { origin: 'random', categories: null, content: 'any' });
 });
 
 Then('round {int} has no dilemma chosen', async function (this: GameWorld, round: number) {
@@ -562,7 +568,7 @@ Then('the first round plays {string}', async function (this: GameWorld, name: st
 });
 
 Given('a room with {int} rounds', async function (this: GameWorld, count: number) {
-  const random: RoundSetting = { origin: 'random', categories: null };
+  const random: RoundSetting = { origin: 'random', categories: null, content: 'any' };
   await this.driver.setRounds(await this.host(), Array(count).fill(random));
   assert.equal((await this.driver.roundsSeenBy(await this.host())).length, count);
 });
@@ -630,7 +636,7 @@ Then('round {int} is random from every category', async function (this: GameWorl
   for (const viewer of this.inRoom) {
     assert.deepEqual(
       await roundSeenBy(this, viewer, round),
-      { origin: 'random', categories: null },
+      { origin: 'random', categories: null, content: 'any' },
       viewer,
     );
   }

@@ -16,9 +16,12 @@ describe('App', () => {
     // Arrange
     const previewRoom = vi.fn(async () => ({
       roomId: 'test-room-id',
+      ambience: 'classic' as const,
       hostNickname: 'Ana',
+      hostAvatar: { face: 'face-01', color: 'teal' } as const,
       variant: 'nominal' as const,
       adultsOnly: false,
+      compromisingDilemmas: false,
       players: [{ nickname: 'Ana', avatar: { face: 'face-01' as const, color: 'teal' as const } }],
       suggestedAvatar: { face: 'face-02' as const, color: 'teal' as const },
     }));

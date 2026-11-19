@@ -57,6 +57,7 @@ describe('httpRoomApi', () => {
       // Act
       const created = await apiWith(fetch, 'app-check-token').createRoom({
         nickname: 'Ana',
+        ambience: 'classic' as const,
         avatar: { face: 'face-01', color: 'teal' },
         groupNature: 'friends',
         place: 'remote',
@@ -72,6 +73,7 @@ describe('httpRoomApi', () => {
       expect(new Headers(call?.init.headers).get('X-Firebase-AppCheck')).toBe('app-check-token');
       expect(JSON.parse(String(call?.init.body))).toEqual({
         nickname: 'Ana',
+        ambience: 'classic',
         avatar: { face: 'face-01', color: 'teal' },
         groupNature: 'friends',
         place: 'remote',
@@ -86,6 +88,7 @@ describe('httpRoomApi', () => {
       // Act
       await apiWith(fetch).createRoom({
         nickname: 'Ana',
+        ambience: 'classic' as const,
         avatar: { face: 'face-01', color: 'teal' },
         groupNature: 'friends',
         place: 'together',
@@ -103,6 +106,7 @@ describe('httpRoomApi', () => {
       // Act
       const creating = apiWith(fetch).createRoom({
         nickname: ' ',
+        ambience: 'classic',
         avatar: { face: 'face-01', color: 'teal' },
         groupNature: 'friends',
         place: 'together',
@@ -119,9 +123,12 @@ describe('httpRoomApi', () => {
       // Arrange
       const preview = {
         roomId: 'room-1',
+        ambience: 'classic' as const,
         hostNickname: 'Ana',
+        hostAvatar: { face: 'face-01', color: 'teal' } as const,
         variant: 'nominal',
         adultsOnly: false,
+        compromisingDilemmas: false,
         players: [{ nickname: 'Ana', avatar: { face: 'face-01', color: 'teal' } }],
         suggestedAvatar: { face: 'face-02', color: 'teal' },
       };

@@ -21,8 +21,10 @@ export {
 } from './domain/entities/room.ts';
 export {
   DILEMMA_ORIGINS,
+  ROUND_CONTENTS,
   randomRound,
   type DilemmaOrigin,
+  type RoundContent,
   type RoundSnapshot,
 } from './domain/vos/round.vo.ts';
 export {
@@ -81,6 +83,15 @@ export {
 } from './domain/vos/room-settings.vo.ts';
 export { CATEGORIES, isCategory, type Category } from './domain/vos/category.vo.ts';
 export {
+  AMBIENCES,
+  ambienceOf,
+  keptForANewRoom,
+  settingsOf,
+  type Ambience,
+  type AmbienceOrCustom,
+  type KeptSettings,
+} from './domain/vos/ambience.vo.ts';
+export {
   DILEMMA_TYPES,
   SCALES,
   type DilemmaType,
@@ -90,7 +101,7 @@ export {
 export { GROUP_NATURES, PLACES, type GroupNature, type Place } from './domain/vos/group.vo.ts';
 export {
   composeGame,
-  categoriesKey,
+  drawKey,
   categoriesToDraw,
   fixedDilemmaIds,
   type CategoriesDraw,
@@ -143,6 +154,7 @@ export { NotHostError } from './domain/errors/not-host.error.ts';
 export { GameInProgressError } from './domain/errors/game-in-progress.error.ts';
 export { RoomFullError } from './domain/errors/room-full.error.ts';
 export { AdultsOnlyRoomError } from './domain/errors/adults-only-room.error.ts';
+export { MinorInRoomError } from './domain/errors/minor-in-room.error.ts';
 export { RoomClosedError } from './domain/errors/room-closed.error.ts';
 export { PlayerExpelledError } from './domain/errors/player-expelled.error.ts';
 export { NicknameAndAvatarTakenError } from './domain/errors/nickname-and-avatar-taken.error.ts';
@@ -234,6 +246,10 @@ export {
   ChangeRoomSettingsUseCase,
   type ChangeRoomSettingsInput,
 } from './application/use-cases/change-room-settings.use-case.ts';
+export {
+  ChooseAmbienceUseCase,
+  type ChooseAmbienceInput,
+} from './application/use-cases/choose-ambience.use-case.ts';
 export {
   ChooseRoundDilemmaUseCase,
   type ChooseRoundDilemmaInput,

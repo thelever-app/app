@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { Room } from '../../entities/room.ts';
-import { GameNotInProgressError } from '../../errors/game-not-in-progress.error.ts';
 import { HostChangedEvent } from '../../events/host-changed.event.ts';
 import { PlayerLeftEvent } from '../../events/player-left.event.ts';
 import { FixedRandomness } from '../support/fixed-randomness.ts';
@@ -15,6 +14,7 @@ function roomInGame(): Room {
   const room = Room.create(
     {
       hostUnderEighteen: false,
+      ambience: 'classic',
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -130,11 +130,12 @@ describe('Room, host and leaving', () => {
       ]);
     });
 
-    it('should only be possible with a game in progress', () => {
+    it('should take who leaves the lobby out of the room, passing the host on', () => {
       // Arrange
       const room = Room.create(
         {
           hostUnderEighteen: false,
+          ambience: 'classic',
           hostNickname: 'Ana',
           hostIdentity: 'TestAnaIdentity',
           hostAvatar: new AvatarVO('face-01', 'khaki'),
@@ -146,9 +147,24 @@ describe('Room, host and leaving', () => {
         },
         new FixedIdGenerator('TestRoomId', 'Ana'),
       );
+      room.join(
+        {
+          underEighteen: false,
+          nickname: 'Luis',
+          identity: 'TestLuisIdentity',
+          avatar: new AvatarVO('face-02', 'rust'),
+        },
+        new FixedIdGenerator('Luis'),
+        NOW,
+      );
 
-      // Act & Assert
-      expect(() => room.leave('Ana', PLAYERS, NOW)).toThrow(GameNotInProgressError);
+      // Act
+      room.leave('Ana', PLAYERS, NOW);
+
+      // Assert
+      expect(room.hasPlayer('Ana')).toBe(false);
+      expect(room.host.id).toBe('Luis');
+      expect(room.isOpenAt(NOW)).toBe(true);
     });
   });
 

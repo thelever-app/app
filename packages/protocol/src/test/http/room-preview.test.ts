@@ -4,9 +4,12 @@ import { RoomPreviewResponseDto } from '../../http/room-preview.ts';
 describe('RoomPreviewResponseDto', () => {
   const preview = {
     roomId: 'room-1',
+    ambience: 'spicy',
     hostNickname: 'Ana',
+    hostAvatar: { face: 'face-01', color: 'khaki' },
     variant: 'nominal',
     adultsOnly: true,
+    compromisingDilemmas: false,
     players: [
       { nickname: 'Ana', avatar: { face: 'face-01', color: 'khaki' } },
       { nickname: 'Luis', avatar: { face: 'face-02', color: 'teal' } },

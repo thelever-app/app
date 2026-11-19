@@ -21,6 +21,7 @@ const STATUS: Partial<Record<ErrorCodeDto, number>> = {
   'first-access-required': 403,
   'blocked-country': 403,
   'adults-only-room': 403,
+  'minor-in-room': 403,
   'invalid-declared-age': 400,
   'month-of-birth-needed': 422,
 };
