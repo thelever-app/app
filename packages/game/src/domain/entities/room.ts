@@ -678,7 +678,7 @@ export class Room {
     const successor = this.#players.find(({ id }) => id !== player.id);
     if (!successor) {
       this.#closedAt = new Date(at);
-      this.#changeLobby('player-left');
+      this.#playerLeft(player.id);
       return;
     }
     this.#players.splice(this.#players.indexOf(player), 1);
@@ -687,7 +687,13 @@ export class Room {
     );
     if (player.id === this.#hostId) this.#changeHost(successor.id);
     if (player.id === this.#absentHostId) this.#absentHostId = null;
-    this.#changeLobby('player-left');
+    this.#playerLeft(player.id);
+  }
+
+  /** Who left on purpose: their connections close, and the others see the room without them. */
+  #playerLeft(playerId: string): void {
+    this.#version += 1;
+    this.#events.push(new PlayerLeftEvent(this.id, playerId, true, this.#version));
   }
 
   hasLeft(playerId: string): boolean {

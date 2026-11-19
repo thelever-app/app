@@ -163,11 +163,11 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
     }
     return best;
   };
-  const draw = (position: number, from: Pool): void => {
-    const { categories, content } = drawOf(position);
-    const best =
-      bestIn(position, poolAt(position)[from]) ??
-      (content === 'any' ? undefined : bestIn(position, poolOf(drawKey(categories, 'any'))[from]));
+  /** Of its content, or of any content of its categories once its content has nothing left. */
+  const draw = (position: number, from: Pool, anyContent = false): void => {
+    const { categories } = drawOf(position);
+    const pool = anyContent ? poolOf(drawKey(categories, 'any')) : poolAt(position);
+    const best = bestIn(position, pool[from]);
     if (!best) return;
     used.add(best.dilemma.dilemmaId);
     placed[position] = best.dilemma;
@@ -192,6 +192,11 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
     for (const position of fewestFirst('inExploration')) {
       if (!composed[position]) draw(position, 'inExploration');
     }
+  }
+  // A round whose content has nothing left in the catalog nor in exploration plays any content.
+  for (const position of toDraw) {
+    if (!composed[position]) draw(position, 'inCatalog', true);
+    if (!composed[position] && input.newDilemmas) draw(position, 'inExploration', true);
   }
   return composed.filter((dilemma): dilemma is ComposedDilemma => dilemma !== null);
 }

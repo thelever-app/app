@@ -180,6 +180,46 @@ describe('composeGame', () => {
     expect(ids(composed)).toEqual(['TestHonesty1']);
   });
 
+  it('should take a dilemma of its content from the catalog before any content from exploration', () => {
+    // Arrange: one exploration slot, which only dilemmas of any content could fill.
+    const rounds: RoundSnapshot[] = [
+      { id: 1, origin: 'random', categories: null, content: 'adults-only' },
+    ];
+    const candidates = new Map([
+      ['*|any', { inCatalog: [], inExploration: candidatesCalled(['TestNewAny']) }],
+      ['*|adults-only', { inCatalog: candidatesCalled(['TestAdult']), inExploration: [] }],
+    ]);
+
+    // Act
+    const composed = composeGame(
+      input({ rounds, candidates, explorationSlots: [{ fromRandomRounds: 1, slots: 1 }] }),
+      new KeepOrderRandomness(),
+    );
+
+    // Assert
+    expect(ids(composed)).toEqual(['TestAdult']);
+  });
+
+  it('should take a dilemma of its content from exploration before any content from the catalog', () => {
+    // Arrange
+    const rounds: RoundSnapshot[] = [
+      { id: 1, origin: 'random', categories: null, content: 'compromising' },
+    ];
+    const candidates = new Map([
+      ['*|any', { inCatalog: candidatesCalled(['TestAny']), inExploration: [] }],
+      [
+        '*|compromising',
+        { inCatalog: [], inExploration: candidatesCalled(['TestNewCompromising']) },
+      ],
+    ]);
+
+    // Act
+    const composed = composeGame(input({ rounds, candidates }), new KeepOrderRandomness());
+
+    // Assert
+    expect(ids(composed)).toEqual(['TestNewCompromising']);
+  });
+
   it('should never draw a dilemma that is already in another round', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [

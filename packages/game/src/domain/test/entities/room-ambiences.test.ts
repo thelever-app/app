@@ -59,6 +59,41 @@ function joinLuis(room: Room, underEighteen: boolean): void {
   );
 }
 
+describe('Room, leaving the lobby', () => {
+  it('should close the room when the last one leaves it', () => {
+    // Arrange
+    const room = roomOfAna();
+
+    // Act
+    room.leave('TestHostId', [], NOW);
+
+    // Assert
+    expect(room.isOpenAt(NOW)).toBe(false);
+    expect(room.pullEvents().at(-1)).toMatchObject({
+      type: 'PlayerLeft',
+      playerId: 'TestHostId',
+      left: true,
+    });
+  });
+
+  it('should leave the dilemma a player chose without who chose it', () => {
+    // Arrange
+    const room = roomOfAna();
+    joinLuis(room, false);
+    room.changeSettings('TestHostId', { rounds: [{ id: 1, origin: 'players' }] });
+    room.chooseRoundDilemma('TestLuisId', 1, FOR_EVERYONE);
+
+    // Act
+    room.leave('TestLuisId', [], NOW);
+
+    // Assert
+    expect(room.hasPlayer('TestLuisId')).toBe(false);
+    expect(room.chosenDilemmas).toEqual([
+      expect.objectContaining({ dilemmaId: 'TestDilemma', roundId: 1, playerId: null }),
+    ]);
+  });
+});
+
 describe('Room with ambiences', () => {
   describe('create', () => {
     it.each(['classic', 'spicy', 'no-filter'] as const)(

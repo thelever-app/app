@@ -59,7 +59,10 @@ export interface GetRoomStateOutput {
   readonly settings: Omit<RoomSettingsSnapshot, 'rounds'>;
   /** The ambience whose configuration the room has, or custom. */
   readonly ambience: AmbienceOrCustom;
-  /** Whether someone in the room said they are under 18, which keeps out everything for adults. */
+  /**
+   * For the host, whether someone in the room said they are under 18, which keeps out everything
+   * for adults; false for the others, who need not know, so nobody can tell who it is.
+   */
   readonly hasPlayerUnderEighteen: boolean;
   /** The rounds of the game in the order it plays them. */
   readonly rounds: readonly LobbyRound[];
@@ -119,7 +122,7 @@ export class GetRoomStateUseCase {
       place: room.place,
       settings,
       ambience: ambienceOf(room.settings),
-      hasPlayerUnderEighteen: room.hasPlayerUnderEighteen,
+      hasPlayerUnderEighteen: playerId === room.host.id && room.hasPlayerUnderEighteen,
       rounds: rounds.map((round): LobbyRound => {
         if (round.origin === 'random') {
           return {

@@ -39,7 +39,7 @@ export class LeaveRoomUseCase {
   async execute({ roomId, playerId }: LeaveRoomInput): Promise<void> {
     const lobby = await findRoom(this.#roomRepository, roomId);
     if (lobby.isInLobby) {
-      // From the lobby, who leaves is out of the room; the others hear it, and so do they.
+      // From the lobby, who leaves is out of the room: their connections close, the others hear it.
       const playerIds = lobby.players.map(({ id }) => id);
       lobby.leave(playerId, [], this.#clock.now());
       const events = lobby.pullEvents();
