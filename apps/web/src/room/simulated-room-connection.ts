@@ -25,6 +25,7 @@ import {
   JoinRoomUseCase,
   LeaveRoomUseCase,
   LikeDilemmaUseCase,
+  UnlikeDilemmaUseCase,
   ReactUseCase,
   StartRematchUseCase,
   LobbyChangedEvent,
@@ -39,6 +40,7 @@ import {
   ProgressUpdatedEvent,
   ReactionsChangedEvent,
   DilemmaLikedEvent,
+  DilemmaUnlikedEvent,
   AnsweredCountChangedEvent,
   DilemmaRevealedEvent,
   RoundStartedEvent,
@@ -122,6 +124,7 @@ const SENT_AS_STATE = [
   PlayerJoinedLateEvent,
   ReactionsChangedEvent,
   DilemmaLikedEvent,
+  DilemmaUnlikedEvent,
 ] as const;
 
 /** Who uses the screen in the simulation. */
@@ -266,6 +269,12 @@ export class SimulatedRoomConnection implements RoomConnection {
         sealProvider,
         notifier,
         clock,
+      }),
+      unlikeDilemma: new UnlikeDilemmaUseCase({
+        roomRepository: rooms,
+        gameRepository: games,
+        likes,
+        notifier,
       }),
       startRematch: new StartRematchUseCase(rooms, games, notifier),
       runOutRound: new RunOutRoundUseCase(rooms, games, notifier, clock),
@@ -452,6 +461,9 @@ export class SimulatedRoomConnection implements RoomConnection {
         return;
       case 'like-dilemma':
         await useCases.likeDilemma.execute({ roomId, playerId, position: message.position });
+        return;
+      case 'unlike-dilemma':
+        await useCases.unlikeDilemma.execute({ roomId, playerId, position: message.position });
         return;
       case 'start-rematch':
         await useCases.startRematch.execute({ roomId, playerId });

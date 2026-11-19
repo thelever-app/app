@@ -53,10 +53,10 @@
     "summaryAnonymous_other": "{{count, number}} jugadores · nadie ve quién ha respondido"
   },
   "dilemma": {
-    "privacy": "Tu voto es privado hasta el reveal.",
+    "privacy": "Tu voto es privado hasta la revelación.",
     "choose": "Elige una opción",
     "continue": "Continuar",
-    "privacyAnonymous": "Nadie verá tu voto, tampoco en el reveal."
+    "privacyAnonymous": "Nadie verá tu voto, tampoco en la revelación."
   },
   "waiting": {
     "position": "Dilema {{position, number}} de {{total, number}} · Has respondido",
@@ -160,8 +160,8 @@
     "enter": "Entrar en la ronda"
   },
   "reveal": {
-    "region": "Reveal",
-    "position": "Dilema {{position, number}} de {{total, number}} · Reveal",
+    "region": "Revelación",
+    "position": "Dilema {{position, number}} de {{total, number}} · Revelación",
     "chosenBy": "Lo eligió {{name}}",
     "yourHitsRegion": "Tus aciertos",
     "hitsAll": "Acertaste a todos",
@@ -198,7 +198,7 @@
     "fewVotesDidNot_many": "y {{count, number}} no votaron",
     "fewVotesDidNot_other": "y {{count, number}} no votaron",
     "fewVotesWhy": "Con menos de 3 votos no se muestra ni puntúa.",
-    "introTitle": "Reveal",
+    "introTitle": "Revelación",
     "introMascot": "La Palanca, celebrando",
     "aboutTitle": "Iba sobre {{name}}",
     "aboutYouTitle": "Iba sobre ti",
@@ -221,7 +221,12 @@
     "reactToVoteHint": "Toca a alguien para reaccionar a su voto.",
     "dilemmaPoints_one": "{{count}} punto para ti",
     "dilemmaPoints_many": "{{count, number}} puntos para ti",
-    "dilemmaPoints_other": "{{count, number}} puntos para ti"
+    "dilemmaPoints_other": "{{count, number}} puntos para ti",
+    "introAnswered_one": "Ha respondido {{count}} de {{total, number}}.",
+    "introAnswered_many": "Habéis respondido {{count, number}} de {{total, number}}.",
+    "introAnswered_other": "Habéis respondido {{count, number}} de {{total, number}}.",
+    "introNominal": "Vais a ver qué votó cada uno.",
+    "introAnonymous": "Vais a ver cuántos eligieron cada opción."
   },
   "ranking": {
     "label": "Resultados",
@@ -259,7 +264,8 @@
     "rematch": "Revancha con el mismo grupo",
     "rematchGuest": "{{host}} puede lanzar la revancha.",
     "shareCard": "Compartir mi tarjeta",
-    "shareGroupCard": "Compartir la tarjeta del grupo"
+    "shareGroupCard": "Compartir la tarjeta del grupo",
+    "titles": "Títulos de la partida"
   },
   "notices": {
     "reconnecting": "Reconectando… tus respuestas están guardadas",
@@ -371,7 +377,7 @@
   "variant": {
     "nominal": {
       "name": "Sala nominal:",
-      "text": "en el reveal todos verán qué votó cada uno."
+      "text": "en la revelación todos verán qué votó cada uno."
     },
     "anonymous": {
       "name": "Sala anónima:",
@@ -418,7 +424,7 @@
     "rounds": {
       "title": "Rondas · {{count}}",
       "hint": "Se juegan en este orden.",
-      "secretHint": "Nadie sabrá quién eligió cada dilema hasta el reveal.",
+      "secretHint": "Nadie sabrá quién eligió cada dilema hasta la revelación.",
       "allCategories": "Todas las categorías",
       "twoCategories": "{{first}} o {{second}}",
       "someCategories": "{{count}} categorías",
@@ -475,7 +481,7 @@
   "settings": {
     "title": "Ajustes de la partida",
     "close": "Cerrar",
-    "reveal": "Reveal",
+    "reveal": "Revelación",
     "nominal": "Nominal",
     "anonymous": "Anónimo",
     "nominalHint": "Se ve qué votó cada uno.",
@@ -673,7 +679,8 @@
     "introTitle": "Resultados",
     "titleCount": "Título {{position, number}} de {{total, number}}",
     "back": "Anterior",
-    "runnerUpOf": "{{count, number}} de {{of, number}}"
+    "runnerUpOf": "{{count, number}} de {{of, number}}",
+    "introNominal": "Títulos, quién te conoce mejor y clasificación."
   },
   "card": {
     "personalTitle": "Tu tarjeta",

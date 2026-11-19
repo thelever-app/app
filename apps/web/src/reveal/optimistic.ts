@@ -7,21 +7,22 @@ export type ReactionTarget =
   { readonly kind: 'dilemma' } | { readonly kind: 'vote'; readonly playerId: string };
 
 /**
- * «Buen dilema» as the player sees it: marked as soon as they give it, while the server confirms
- * it; then, whatever the server says.
+ * «Buen dilema» as the player sees it: marked as soon as they give it, and unmarked as soon as
+ * they take it back, while the server confirms it; then, whatever the server says.
  */
 export function useOptimisticLike(
   liked: boolean,
   like: () => Promise<void>,
+  unlike: () => Promise<void>,
 ): readonly [boolean, () => void] {
   const [shown, setShown] = useOptimistic(liked);
-  const give = () => {
+  const toggle = () => {
     startTransition(async () => {
-      setShown(true);
-      await like();
+      setShown(!shown);
+      await (shown ? unlike() : like());
     });
   };
-  return [shown, give];
+  return [shown, toggle];
 }
 
 /**

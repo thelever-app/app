@@ -30,7 +30,7 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   }, [introFor]);
 
   if (!reveal) return null;
-  if (introFor === position) return <RevealIntro />;
+  if (introFor === position) return <RevealIntro game={game} reveal={reveal} />;
   const isLast = position === game.dilemmas.length - 1;
   return (
     <RevealScreen
@@ -50,6 +50,12 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
         request(
           { type: 'like-dilemma', position },
           (next) => next.reveal?.position !== position || next.reveal.youLiked,
+        )
+      }
+      onUnlike={() =>
+        request(
+          { type: 'unlike-dilemma', position },
+          (next) => next.reveal?.position !== position || !next.reveal.youLiked,
         )
       }
       onReact={(target, emoji) =>

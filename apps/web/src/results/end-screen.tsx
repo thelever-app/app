@@ -7,9 +7,11 @@ import { Icon } from '../components/icon.tsx';
 import { isAnonymous, usePlayerName } from '../components/players.ts';
 import { playedIn, rememberPlayed } from '../game/played-dilemmas.ts';
 import { groupCardOf, personalCardOf, type CardContent } from './card-content.ts';
+import { RankingList } from './ranking-screen.tsx';
 import { ShareCardSheet } from './share-card-sheet.tsx';
 import cardStyles from './share-card-sheet.module.css';
-import { soulmatesOf } from './titles.ts';
+import { TITLE_ICONS, soulmatesOf, titlesOf } from './titles.ts';
+import { TitlesSummary } from './titles-summary.tsx';
 import styles from './end-screen.module.css';
 
 interface EndScreenProps {
@@ -29,6 +31,8 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
   const nameOf = usePlayerName();
   const titleId = useId();
   const roomId = useId();
+  const rankingId = useId();
+  const titlesId = useId();
   const [sharing, setSharing] = useState(false);
   const [showNames, setShowNames] = useState(false);
   const anonymous = isAnonymous(game);
@@ -78,12 +82,23 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
             </h1>
             <img src={mascotCelebrating} alt={t('end.mascot')} width={88} height={88} />
           </div>
-          {mine?.mentalist && (
-            <span className={styles.mentalist}>
-              <Icon name="psychology" size={18} />
-              {t('ranking.mentalist')}
-            </span>
-          )}
+          {anonymous
+            ? mine?.mentalist && (
+                <span className={styles.mentalist}>
+                  <Icon name="psychology" size={18} />
+                  {t('ranking.mentalist')}
+                </span>
+              )
+            : mine && (
+                <ul className={styles.myTitles} data-testid="end-my-titles">
+                  {titlesOf(game.results, game.playerId).map(({ title }) => (
+                    <li key={title} className={styles.mentalist}>
+                      <Icon name={TITLE_ICONS[title]} size={18} />
+                      {t(`results.titles.${title}`)}
+                    </li>
+                  ))}
+                </ul>
+              )}
           {!inGame && <p className={styles.place}>{t('end.notInGame')}</p>}
           {mine && game.ranking && (
             <p className={styles.place} data-testid="end-place">
@@ -120,15 +135,31 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
             <p className={styles.rematchGuest}>{t('end.rematchGuest', { host: host.nickname })}</p>
           )}
         </div>
+        {game.ranking && (
+          <section className={styles.room} aria-labelledby={rankingId}>
+            <h2 id={rankingId} className={styles.roomTitle}>
+              {anonymous ? t('ranking.title') : t('ranking.nominalTitle')}
+            </h2>
+            <RankingList game={game} labelledBy={rankingId} />
+          </section>
+        )}
+        {!anonymous && (game.results?.titles.length ?? 0) > 0 && (
+          <section className={styles.room} aria-labelledby={titlesId}>
+            <h2 id={titlesId} className={styles.roomTitle}>
+              {t('end.titles')}
+            </h2>
+            <TitlesSummary game={game} labelledBy={titlesId} />
+          </section>
+        )}
         <section className={styles.room} aria-labelledby={roomId}>
           <h2 id={roomId} className={styles.roomTitle}>
             {t('end.inRoom', { count: staying.length })}
           </h2>
           <ul className={styles.avatars}>
             {staying.map((player) => (
-              <li key={player.playerId} title={nameOf(player)}>
+              <li key={player.playerId} className={styles.inRoom}>
                 <Avatar avatar={player.avatar} size="s" dimmed={!player.connected} />
-                <span className={styles.hidden}>{nameOf(player)}</span>
+                <span className={styles.inRoomName}>{nameOf(player)}</span>
               </li>
             ))}
           </ul>

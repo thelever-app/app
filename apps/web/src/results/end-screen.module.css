@@ -73,10 +73,83 @@
 .avatars {
   display: flex;
   flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each player still in the room, their nickname under their face. */
+.inRoom {
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.inRoomName {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The titles the player won, each one its inverted sign. */
+.myTitles {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Every title of the game: its sign, its name and who won it. */
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+}
+
+.titleSign {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.titleName {
+  flex: none;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.titleWinners {
+  flex-grow: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: right;
 }
 
 .hidden {

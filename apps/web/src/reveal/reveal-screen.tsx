@@ -36,6 +36,8 @@ interface RevealScreenProps {
   readonly onShowQr: () => void;
   /** «Buen dilema», resolved once the server answers. */
   readonly onLike: () => Promise<void>;
+  /** Takes back «Buen dilema», resolved once the server answers. */
+  readonly onUnlike: () => Promise<void>;
   /** A reaction to the dilemma or to a vote, resolved once the server answers. */
   readonly onReact: (target: ReactionTarget, emoji: string) => Promise<void>;
 }
@@ -53,13 +55,14 @@ export function RevealScreen({
   onLeave,
   onShowQr,
   onLike,
+  onUnlike,
   onReact,
 }: RevealScreenProps) {
   const { t } = useTranslation();
   const nameOf = usePlayerName();
   const [isGroupOpen, setIsGroupOpen] = useState(false);
   const [reacting, setReacting] = useState<ReactionTarget | undefined>(undefined);
-  const [liked, like] = useOptimisticLike(reveal.youLiked, onLike);
+  const [liked, toggleLike] = useOptimisticLike(reveal.youLiked, onLike, onUnlike);
   const [yours, react] = useOptimisticReactions(reveal.yourReactions, onReact);
   const dilemma = game.dilemmas.find(({ dilemmaId }) => dilemmaId === reveal.dilemmaId)!;
   const person = personInTheGapOf(game, reveal);
@@ -77,13 +80,7 @@ export function RevealScreen({
           <p className={styles.position}>
             {t('reveal.position', { position: reveal.position + 1, total: game.dilemmas.length })}
           </p>
-          <button
-            type="button"
-            className={styles.like}
-            aria-pressed={liked}
-            disabled={liked}
-            onClick={like}
-          >
+          <button type="button" className={styles.like} aria-pressed={liked} onClick={toggleLike}>
             <Icon name={liked ? 'thumbUpFilled' : 'thumbUp'} size={20} />
             {t('reveal.like')}
           </button>

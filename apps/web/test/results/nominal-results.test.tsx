@@ -93,10 +93,12 @@ describe('ResultsPhase, in a nominal room', () => {
     // Act
     const { t } = await renderFromTheStart(atStep(0));
     const intro = screen.queryByRole('heading', { name: t('results.introTitle') });
+    const body = screen.queryByText(t('results.introNominal'));
     act(() => vi.advanceTimersByTime(RESULTS_INTRO_MS));
 
     // Assert
     expect(intro).not.toBeNull();
+    expect(body).not.toBeNull();
     expect(screen.queryByRole('heading', { name: t('results.introTitle') })).toBeNull();
     expect(screen.getByRole('heading', { name: t('results.titles.almas-gemelas') })).toBeDefined();
   });
@@ -268,6 +270,44 @@ describe('EndScreen', () => {
     // Assert
     expect(screen.queryByRole('button', { name: t('end.rematch') })).toBeNull();
     expect(screen.getByText(t('end.rematchGuest', { host: 'Luis' }))).toBeDefined();
+  });
+
+  it('should sum up the results: the ranking with its badges and every title with who won it', async () => {
+    // Act
+    const { t } = await renderPhase(atStep(null));
+
+    // Assert
+    const rows = within(screen.getByRole('list', { name: t('ranking.nominalTitle') })).getAllByRole(
+      'listitem',
+    );
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining('Ana'),
+      expect.stringContaining('Luis'),
+      expect.stringContaining('Marta'),
+    ]);
+    expect(
+      within(rows[0]!)
+        .getAllByRole('img')
+        .map((badge) => badge.getAttribute('aria-label')),
+    ).toEqual([t('results.titles.almas-gemelas'), t('results.titles.el-mentalista')]);
+    const titles = within(screen.getByRole('list', { name: t('end.titles') })).getAllByRole(
+      'listitem',
+    );
+    expect(titles.map((title) => title.textContent)).toEqual([
+      expect.stringMatching(/Almas gemelas.*Ana \(tú\) y Marta/),
+      expect.stringMatching(/Verso suelto.*Marta/),
+      expect.stringMatching(/El Mentalista.*Ana \(tú\).*Luis/),
+    ]);
+  });
+
+  it('should show every title the player won, not only El Mentalista', async () => {
+    // Act
+    const { t } = await renderPhase(atStep(null));
+
+    // Assert
+    const mine = within(screen.getByTestId('end-my-titles'));
+    expect(mine.getByText(t('results.titles.almas-gemelas'))).toBeDefined();
+    expect(mine.getByText(t('results.titles.el-mentalista'))).toBeDefined();
   });
 
   it('should tell the player their place and who knows them best', async () => {

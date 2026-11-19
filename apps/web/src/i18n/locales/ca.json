@@ -221,7 +221,12 @@
     "reactToVoteHint": "Toca algú per reaccionar al seu vot.",
     "dilemmaPoints_one": "{{count}} punt per a tu",
     "dilemmaPoints_many": "{{count, number}} punts per a tu",
-    "dilemmaPoints_other": "{{count, number}} punts per a tu"
+    "dilemmaPoints_other": "{{count, number}} punts per a tu",
+    "introAnswered_one": "Ha respost {{count}} de {{total, number}}.",
+    "introAnswered_many": "Heu respost {{count, number}} de {{total, number}}.",
+    "introAnswered_other": "Heu respost {{count, number}} de {{total, number}}.",
+    "introNominal": "Veureu què ha votat cadascú.",
+    "introAnonymous": "Veureu quants han triat cada opció."
   },
   "ranking": {
     "label": "Resultats",
@@ -259,7 +264,8 @@
     "rematch": "Revenja amb el mateix grup",
     "rematchGuest": "{{host}} pot llançar la revenja.",
     "shareCard": "Compartir la meva targeta",
-    "shareGroupCard": "Compartir la targeta del grup"
+    "shareGroupCard": "Compartir la targeta del grup",
+    "titles": "Títols de la partida"
   },
   "notices": {
     "reconnecting": "Tornant a connectar… les teves respostes estan desades",
@@ -673,7 +679,8 @@
     "introTitle": "Resultats",
     "titleCount": "Títol {{position, number}} de {{total, number}}",
     "back": "Anterior",
-    "runnerUpOf": "{{count, number}} de {{of, number}}"
+    "runnerUpOf": "{{count, number}} de {{of, number}}",
+    "introNominal": "Títols, qui et coneix millor i classificació."
   },
   "card": {
     "personalTitle": "La teva targeta",
