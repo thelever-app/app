@@ -102,7 +102,7 @@ export const ca: SiteTexts = {
   gone: {
     title: 'Aquest dilema ja no és a TheLever',
     heading: 'Aquest dilema ja no és a TheLever',
-    body: 'L’hem retirat del catàleg. Si algú t’ha passat aquest enllaç, n’hi ha molts d’altres que t’esperen.',
+    body: 'L’hem retirat del catàleg.',
     moreOf: (name) => `Veure dilemes: ${name.toLowerCase()}`,
   },
   notFound: {
