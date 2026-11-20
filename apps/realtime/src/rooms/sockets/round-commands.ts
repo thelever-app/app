@@ -2,6 +2,7 @@ import type {
   LikeDilemmaUseCase,
   UnlikeDilemmaUseCase,
   MoveOnUseCase,
+  GetReadyToMoveOnUseCase,
   ReactUseCase,
   RevealEarlyUseCase,
   StartRematchUseCase,
@@ -16,6 +17,7 @@ import type { SocketMessageHandler } from './socket-message-handler.ts';
 export interface RoundUseCases {
   readonly revealEarly: RevealEarlyUseCase;
   readonly moveOn: MoveOnUseCase;
+  readonly getReadyToMoveOn: GetReadyToMoveOnUseCase;
   readonly react: ReactUseCase;
   readonly likeDilemma: LikeDilemmaUseCase;
   readonly unlikeDilemma: UnlikeDilemmaUseCase;
@@ -24,8 +26,8 @@ export interface RoundUseCases {
 }
 
 /**
- * Revealing early, moving on, reacting, liking, the rematch and restarting: every screen, the one who sent it
- * too, changes through its event; a like, only that of who gave it.
+ * Revealing early, moving on, being ready to move on, reacting, liking, the rematch and restarting:
+ * every screen, the one who sent it too, changes through its event; a like, only that of who gave it.
  */
 export function roundCommandHandlers(
   useCases: RoundUseCases,
@@ -43,6 +45,13 @@ export function roundCommandHandlers(
       'move-on',
       ({ fromPosition }, { roomId, playerId }) =>
         useCases.moveOn.execute({ roomId, playerId, fromPosition }),
+      roomLock,
+      runCommand,
+    ),
+    new RoomCommandHandler(
+      'ready-to-move-on',
+      ({ fromPosition }, { roomId, playerId }) =>
+        useCases.getReadyToMoveOn.execute({ roomId, playerId, fromPosition }),
       roomLock,
       runCommand,
     ),

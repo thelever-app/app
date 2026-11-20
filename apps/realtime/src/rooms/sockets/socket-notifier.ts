@@ -11,6 +11,7 @@ import {
   PlayerLeftEvent,
   ProgressUpdatedEvent,
   ReactionsChangedEvent,
+  ReadyToMoveOnChangedEvent,
   RoundStartedEvent,
   type DomainEvent,
   type PlayerNotifier,
@@ -55,6 +56,7 @@ const SENT_AS_STATE = [
   PlayerLeftEvent,
   PlayerJoinedLateEvent,
   ReactionsChangedEvent,
+  ReadyToMoveOnChangedEvent,
   DilemmaLikedEvent,
   DilemmaUnlikedEvent,
 ] as const;

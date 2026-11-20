@@ -212,7 +212,7 @@ describe('the rounds over the room sockets', () => {
     });
   });
 
-  it('should take everyone to the next round when any player moves on, and say who', async () => {
+  it('should tell everyone who is ready, and take everyone to the next round once all are', async () => {
     // Arrange
     server = await startRoomServer();
     const { ana, luis, marta, states } = await nominalGame(server);
@@ -220,16 +220,17 @@ describe('the rounds over the room sockets', () => {
     await Promise.all([ana, luis, marta].map((client) => client.next('game-state')));
 
     // Act
-    marta.send({ type: 'move-on', fromPosition: 0 });
+    marta.send({ type: 'ready-to-move-on', fromPosition: 0 });
+    const waiting = await luis.next('game-state');
+    ana.send({ type: 'ready-to-move-on', fromPosition: 0 });
+    luis.send({ type: 'ready-to-move-on', fromPosition: 0 });
+    const moved = await stateWhere(luis, (state) => state.round.position === 1);
 
     // Assert
-    const seen = await luis.next('game-state');
-    expect(seen.round).toMatchObject({
-      position: 1,
-      phase: 'decision',
-      movedOnBy: states[2]!.playerId,
-    });
-    expect(seen.reveal).toBeNull();
+    expect(waiting.readyToMoveOn).toEqual([states[2]!.playerId]);
+    expect(moved.round).toMatchObject({ position: 1, phase: 'decision', movedOnBy: null });
+    expect(moved.readyToMoveOn).toEqual([]);
+    expect(moved.reveal).toBeNull();
   });
 
   it('should count an anonymous answer once Ready comes, and score its distribution prediction in private', async () => {
@@ -273,7 +274,7 @@ describe('the rounds over the room sockets', () => {
     });
   });
 
-  it('should take everyone from the last round of an anonymous game to the ranking, and then to its end', async () => {
+  it('should let the host take everyone from the last round of an anonymous game to the ranking, and then to its end', async () => {
     // Arrange
     server = await startRoomServer();
     const { ana, luis, marta, states } = await anonymousGame(server);
@@ -281,17 +282,17 @@ describe('the rounds over the room sockets', () => {
     await Promise.all([ana, luis, marta].map((client) => client.next('game-state')));
 
     // Act
-    marta.send({ type: 'move-on', fromPosition: 0 });
+    ana.send({ type: 'move-on', fromPosition: 0 });
     const results = await luis.next('game-state');
-    luis.send({ type: 'move-on', fromPosition: 1 });
-    const ended = await stateWhere(ana, (state) => state.stage.kind === 'ended');
+    ana.send({ type: 'move-on', fromPosition: 1 });
+    const ended = await stateWhere(marta, (state) => state.stage.kind === 'ended');
 
     // Assert
-    expect(results.stage).toEqual({ kind: 'results', movedOnBy: states[2]!.playerId, step: 0 });
+    expect(results.stage).toEqual({ kind: 'results', movedOnBy: states[0]!.playerId, step: 0 });
     expect(results.ranking?.map(({ playerId }) => playerId).sort()).toEqual(
       states.map(({ playerId }) => playerId).sort(),
     );
-    expect(ended.stage).toEqual({ kind: 'ended', movedOnBy: states[1]!.playerId, step: null });
+    expect(ended.stage).toEqual({ kind: 'ended', movedOnBy: states[0]!.playerId, step: null });
   });
 
   it('should pass the role of a host who leaves, and close their socket', async () => {

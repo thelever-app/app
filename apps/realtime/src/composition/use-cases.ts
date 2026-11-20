@@ -28,6 +28,7 @@ import {
   LeaveRoomUseCase,
   ReportDilemmaUseCase,
   MoveOnUseCase,
+  GetReadyToMoveOnUseCase,
   ReactUseCase,
   LikeDilemmaUseCase,
   UnlikeDilemmaUseCase,
@@ -208,6 +209,7 @@ export function gameCommands({
     }),
     revealEarly: new RevealEarlyUseCase(roomRepository, gameRepository, notifier, clock),
     moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock),
+    getReadyToMoveOn: new GetReadyToMoveOnUseCase(roomRepository, gameRepository, notifier, clock),
     react: new ReactUseCase({ roomRepository, gameRepository, sealProvider, notifier }),
     likeDilemma: new LikeDilemmaUseCase({
       roomRepository,
