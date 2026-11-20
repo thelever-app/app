@@ -34,7 +34,12 @@ describe('OpenAppUseCase', () => {
     const view = await openApp.execute({ identity: 'uid-ana', country: 'ES' });
 
     // Assert
-    expect(view).toEqual({ region: 'eea', step: 'age', underEighteen: true });
+    expect(view).toEqual({
+      region: 'eea',
+      step: 'age',
+      underEighteen: true,
+      monthOfBirthAskedFrom: 2008,
+    });
   });
 
   it('should keep the region of the first time, wherever out of a blocked country it is opened after', async () => {
@@ -87,7 +92,12 @@ describe('DeclareAgeUseCase', () => {
     const view = await declareAge.execute({ identity: 'uid-ana', birthYear: 1990 });
 
     // Assert
-    expect(view).toEqual({ region: 'eea', step: 'done', underEighteen: false });
+    expect(view).toEqual({
+      region: 'eea',
+      step: 'done',
+      underEighteen: false,
+      monthOfBirthAskedFrom: 2008,
+    });
   });
 
   it('should keep the age, which cannot be declared again', async () => {

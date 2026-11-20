@@ -24,6 +24,8 @@ export const FirstAccessResponseDto = z.strictObject({
     'game-consent': z.number().int().nonnegative(),
   }),
   underEighteen: z.boolean(),
+  /** The earliest year of birth for which declaring the age also asks for the month. */
+  monthOfBirthAskedFrom: z.number().int(),
 });
 
 /** POST /first-access/age: once and for good; the month only of who may be under 18. */

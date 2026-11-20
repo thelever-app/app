@@ -55,6 +55,7 @@ describe('FirstAccessGate', () => {
       changed: [],
       current: { 'terms-of-use': 1, 'game-consent': 3 },
       underEighteen: false,
+      monthOfBirthAskedFrom: 2008,
     });
     await expect(gate.ensureDone('uid-ana')).rejects.toThrow(FirstAccessRequiredError);
   });

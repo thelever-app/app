@@ -71,6 +71,7 @@ describe('the first access', () => {
       changed: [],
       current: { 'terms-of-use': 1, 'game-consent': 1 },
       underEighteen: true,
+      monthOfBirthAskedFrom: new Date().getUTCFullYear() - 18,
     });
     // The players of the tests opened the app before, with no address of a known country.
     expect(countries.asked.at(-1)).toBe('198.51.100.10');

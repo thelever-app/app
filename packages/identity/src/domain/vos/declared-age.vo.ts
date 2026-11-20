@@ -45,5 +45,10 @@ export class DeclaredAgeVO {
  * year they reach an age, when they may reach it a month after their birthday. Adults never give it.
  */
 export function needsMonthOfBirth(birthYear: number, on: Date): boolean {
-  return on.getUTCFullYear() - birthYear <= ADULT_AGE;
+  return birthYear >= monthOfBirthAskedFrom(on);
+}
+
+/** The earliest year of birth for which the month is asked: that of whoever turns 18 this year. */
+export function monthOfBirthAskedFrom(on: Date): number {
+  return on.getUTCFullYear() - ADULT_AGE;
 }
