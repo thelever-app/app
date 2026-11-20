@@ -5,6 +5,7 @@ import type {
   ReactUseCase,
   RevealEarlyUseCase,
   StartRematchUseCase,
+  RestartGameUseCase,
 } from '@thelever-app/game';
 import type { KeyedLock } from '../../concurrency/keyed-lock.ts';
 import type { RunCommand } from '../run-command.ts';
@@ -19,10 +20,11 @@ export interface RoundUseCases {
   readonly likeDilemma: LikeDilemmaUseCase;
   readonly unlikeDilemma: UnlikeDilemmaUseCase;
   readonly startRematch: StartRematchUseCase;
+  readonly restartGame: RestartGameUseCase;
 }
 
 /**
- * Revealing early, moving on, reacting, liking and the rematch: every screen, the one who sent it
+ * Revealing early, moving on, reacting, liking, the rematch and restarting: every screen, the one who sent it
  * too, changes through its event; a like, only that of who gave it.
  */
 export function roundCommandHandlers(
@@ -68,6 +70,12 @@ export function roundCommandHandlers(
     new RoomCommandHandler(
       'start-rematch',
       (_message, { roomId, playerId }) => useCases.startRematch.execute({ roomId, playerId }),
+      roomLock,
+      runCommand,
+    ),
+    new RoomCommandHandler(
+      'restart-game',
+      (_message, { roomId, playerId }) => useCases.restartGame.execute({ roomId, playerId }),
       roomLock,
       runCommand,
     ),

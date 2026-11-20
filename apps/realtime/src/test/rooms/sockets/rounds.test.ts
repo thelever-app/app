@@ -184,6 +184,34 @@ describe('the rounds over the room sockets', () => {
     });
   });
 
+  it('should take everyone to the lobby of a new game when the host restarts the game', async () => {
+    // Arrange
+    server = await startRoomServer();
+    const { roomId, ana, luis } = await nominalGame(server);
+
+    // Act
+    ana.send({ type: 'restart-game' });
+
+    // Assert: the lobby is what the state of the room shows.
+    expect((await luis.next('room-state')).roomId).toBe(roomId);
+  });
+
+  it('should turn down a restart by anyone but the host', async () => {
+    // Arrange
+    server = await startRoomServer();
+    const { luis } = await nominalGame(server);
+
+    // Act
+    luis.send({ type: 'restart-game' });
+
+    // Assert
+    expect(await luis.next('error')).toEqual({
+      type: 'error',
+      command: 'restart-game',
+      code: 'not-host',
+    });
+  });
+
   it('should take everyone to the next round when any player moves on, and say who', async () => {
     // Arrange
     server = await startRoomServer();

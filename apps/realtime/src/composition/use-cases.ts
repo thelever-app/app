@@ -32,6 +32,7 @@ import {
   LikeDilemmaUseCase,
   UnlikeDilemmaUseCase,
   StartRematchUseCase,
+  RestartGameUseCase,
   RevealEarlyUseCase,
   RunOutRoundUseCase,
   SkipDilemmaUseCase,
@@ -202,6 +203,7 @@ export function gameCommands({
       gameRepository,
       notifier,
       sealProvider,
+      dilemmaCatalog: catalog,
       clock,
     }),
     revealEarly: new RevealEarlyUseCase(roomRepository, gameRepository, notifier, clock),
@@ -217,6 +219,7 @@ export function gameCommands({
     }),
     unlikeDilemma: new UnlikeDilemmaUseCase({ roomRepository, gameRepository, likes, notifier }),
     startRematch: new StartRematchUseCase(roomRepository, gameRepository, notifier),
+    restartGame: new RestartGameUseCase(roomRepository, gameRepository, notifier),
     runOutRound: new RunOutRoundUseCase(roomRepository, gameRepository, notifier, clock),
     leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier, clock),
     // Until Moderation keeps them, the reports stay in the memory of the instance that took them.
