@@ -23,10 +23,11 @@ const REASONS: Readonly<Record<string, OffReason>> = {
 
 /** The contents by the name the scenarios give them. */
 const CONTENTS: Readonly<Record<string, RoundContent>> = {
-  any: 'any',
-  'adults only': 'adults-only',
-  'adults-only': 'adults-only',
-  compromising: 'compromising',
+  any: [],
+  'adults only': ['adults-only'],
+  'adults-only': ['adults-only'],
+  compromising: ['compromising'],
+  'adults-only and compromising': ['adults-only', 'compromising'],
 };
 
 /**
@@ -34,8 +35,17 @@ const CONTENTS: Readonly<Record<string, RoundContent>> = {
  * random rounds of each ambience.
  */
 const CONTENTS_OF: Readonly<Record<Ambience, readonly RoundContent[]>> = {
-  classic: ['any', 'any', 'any', 'any', 'any', 'any', 'any', 'any'],
-  spicy: ['any', 'adults-only', 'any', 'adults-only', 'any', 'adults-only', 'any', 'adults-only'],
+  classic: ['any', 'any', 'any', 'any', 'any', 'any', 'any', 'any'].map(contentCalled),
+  spicy: [
+    'any',
+    'adults-only',
+    'any',
+    'adults-only',
+    'any',
+    'adults-only',
+    'any',
+    'adults-only',
+  ].map(contentCalled),
   'no-filter': [
     'any',
     'compromising',
@@ -45,7 +55,7 @@ const CONTENTS_OF: Readonly<Record<Ambience, readonly RoundContent[]>> = {
     'adults-only',
     'any',
     'compromising',
-  ],
+  ].map(contentCalled),
 };
 
 function ambienceCalled(name: string): Ambience {
@@ -210,10 +220,51 @@ Given(
   },
 );
 
-Given('a room created with the ambience {string}', async function (this: GameWorld, name: string) {
-  this.beginRoomCreation('Ana', { ambience: ambienceCalled(name) });
-  await this.host();
+Given(
+  /^(?:a room|a host in the lobby of a room) created with the ambience "([^"]*)"$/,
+  async function (this: GameWorld, name: string) {
+    this.beginRoomCreation('Ana', { ambience: ambienceCalled(name) });
+    await this.host();
+  },
+);
+
+Given(
+  'the host has chosen the ambience {string} in the settings',
+  async function (this: GameWorld, name: string) {
+    await this.driver.chooseAmbience(await this.host(), ambienceCalled(name));
+  },
+);
+
+When('the host turns on the anonymous reveal', async function (this: GameWorld) {
+  await this.driver.markAnonymousOnTheOpenSettings(await this.host());
 });
+
+/** The configuration each ambience fills the settings in with, as the outline sets them up. */
+const CONFIGURATION_OF: Readonly<
+  Record<Ambience, { variant: string; adultsOnly: boolean; compromisingDilemmas: boolean }>
+> = {
+  classic: { variant: 'nominal', adultsOnly: false, compromisingDilemmas: false },
+  spicy: { variant: 'nominal', adultsOnly: true, compromisingDilemmas: false },
+  'no-filter': { variant: 'anonymous', adultsOnly: true, compromisingDilemmas: true },
+};
+
+Then(
+  'the settings stay open with the configuration of {string}',
+  async function (this: GameWorld, name: string) {
+    const ambience = ambienceCalled(name);
+    const seen = await this.driver.openSettingsSeenBy(await this.host());
+    assert.ok(seen, 'the settings closed');
+    assert.deepEqual(seen, { ambience, ...CONFIGURATION_OF[ambience] });
+  },
+);
+
+Then(
+  'the settings show the room as {string} before saving',
+  async function (this: GameWorld, name: string) {
+    const seen = await this.driver.openSettingsSeenBy(await this.host());
+    assert.equal(seen?.ambience, name === 'Custom' ? 'custom' : ambienceCalled(name));
+  },
+);
 
 When('the host changes the time per dilemma', async function (this: GameWorld) {
   await this.driver.changeSettings(await this.host(), { timePerDilemmaSeconds: 90 });
@@ -235,11 +286,11 @@ Then(
 );
 
 When('the host sets round {int} to any content', async function (this: GameWorld, round: number) {
-  assert.ok(await setContent(this, round, 'any'), `round ${round} does not take any content`);
+  assert.ok(await setContent(this, round, []), `round ${round} does not take any content`);
 });
 
 Given('the host set round {int} to any content', async function (this: GameWorld, round: number) {
-  assert.ok(await setContent(this, round, 'any'), `round ${round} does not take any content`);
+  assert.ok(await setContent(this, round, []), `round ${round} does not take any content`);
 });
 
 Given('the host changed nothing', async function (this: GameWorld) {
@@ -249,8 +300,17 @@ Given('the host changed nothing', async function (this: GameWorld) {
 Then('round {int} is random with any content', async function (this: GameWorld, round: number) {
   const seen = await roundOf(this, round);
   assert.equal(seen.origin, 'random');
-  assert.equal(seen.origin === 'random' && seen.content, 'any');
+  assert.deepEqual(seen.origin === 'random' && seen.content, []);
 });
+
+Then(
+  /^round (\d+) is left with (any|adults-only|compromising) content$/,
+  async function (this: GameWorld, round: string, content: string) {
+    const seen = await roundOf(this, Number(round));
+    assert.equal(seen.origin, 'random');
+    assert.deepEqual(seen.origin === 'random' && seen.content, contentCalled(content));
+  },
+);
 
 Then(
   'the room keeps every other setting of {string}',
@@ -390,20 +450,17 @@ Then(
 );
 
 Given(
-  'has set the dilemma language to English and the time per dilemma to {int} seconds',
+  'has set the time per dilemma to {int} seconds',
   async function (this: GameWorld, seconds: number) {
-    await this.driver.changeSettings(await this.host(), {
-      dilemmaLanguage: 'en',
-      timePerDilemmaSeconds: seconds,
-    });
+    await this.driver.changeSettings(await this.host(), { timePerDilemmaSeconds: seconds });
   },
 );
 
 Given(
   'has chosen a specific dilemma for round {int}',
   async function (this: GameWorld, round: number) {
-    // Test data: one written in English, the language the room plays in now.
-    const dilemmaId = 'in-english-1';
+    // Test data: one in Spanish, the language the room plays in.
+    const dilemmaId = 'spanish-only-1';
     assert.ok(
       await this.driver.tryToSetRound(await this.host(), round, { origin: 'specific', dilemmaId }),
       `round ${round} does not take a specific dilemma`,
@@ -426,14 +483,10 @@ Then('round {int} is random', async function (this: GameWorld, round: number) {
   assert.equal((await roundOf(this, round)).origin, 'random');
 });
 
-Then(
-  'the dilemma language is English and the time per dilemma is {int} seconds',
-  async function (this: GameWorld, seconds: number) {
-    const settings = await this.driver.settingsSeenBy(await this.host());
-    assert.equal(settings.dilemmaLanguage, 'en');
-    assert.equal(settings.timePerDilemmaSeconds, seconds);
-  },
-);
+Then('the time per dilemma is {int} seconds', async function (this: GameWorld, seconds: number) {
+  const settings = await this.driver.settingsSeenBy(await this.host());
+  assert.equal(settings.timePerDilemmaSeconds, seconds);
+});
 
 Then(
   'the game context records the ambience {string}',
@@ -554,7 +607,7 @@ Then('no compromising dilemma is shown', async function (this: GameWorld) {
 // The content of the random rounds.
 
 When(
-  /^the host sets round (\d+) to (adults-only|compromising) content$/,
+  /^the host sets round (\d+) to (adults-only|compromising|adults-only and compromising) content$/,
   async function (this: GameWorld, round: string, content: string) {
     assert.ok(
       await setContent(this, Number(round), contentCalled(content)),
@@ -563,16 +616,15 @@ When(
   },
 );
 
+/** The dilemma of the round meets every requirement of its content. */
 Then(
-  /^round (\d+) plays (?:an adults-only|a compromising) dilemma$/,
+  /^round (\d+) plays (?:an adults-only dilemma|a compromising dilemma|a dilemma that is both adults-only and compromising)$/,
   async function (this: GameWorld, round: string) {
     const seen = await roundOf(this, Number(round));
     const entry = await dilemmaOfRound(this, Number(round));
-    if (seen.origin === 'random' && seen.content === 'adults-only') {
-      assert.equal(entry.minimumAge, 18);
-    } else {
-      assert.equal(entry.compromising, true);
-    }
+    assert.ok(seen.origin === 'random' && seen.content.length > 0, 'the round asks for nothing');
+    if (seen.content.includes('adults-only')) assert.equal(entry.minimumAge, 18);
+    if (seen.content.includes('compromising')) assert.equal(entry.compromising, true);
   },
 );
 
@@ -585,7 +637,7 @@ Then(
 );
 
 Given(
-  'an adults-only anonymous room with compromising dilemmas turned on',
+  /^(?:an adults-only anonymous room|a host in the lobby of an anonymous adults-only room) with compromising dilemmas turned on$/,
   async function (this: GameWorld) {
     const host = await this.host();
     await this.driver.changeSettings(host, { variant: 'anonymous', adultsOnly: true });
@@ -594,7 +646,7 @@ Given(
 );
 
 Given(
-  /^round (\d+) is random with (adults-only|compromising) content$/,
+  /^round (\d+) is random with (adults-only|compromising|adults-only and compromising) content$/,
   async function (this: GameWorld, round: string, content: string) {
     assert.ok(await setContent(this, Number(round), contentCalled(content)));
   },

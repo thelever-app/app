@@ -238,3 +238,35 @@ Feature: After the game
       When "Marta" sees the end of the game
       And opens the home screen
       Then she sees no invitation to donate
+
+  Rule: Restarting the game
+
+    Background:
+      Given a room with players "Ana", "Luis" and "Marta"
+      And "Ana" is the host
+
+    @ui
+    Scenario: The host restarts a game in progress
+      Given the game is on the decision phase of its third round
+      When "Ana" restarts the game
+      Then all players still in the room move to the lobby of a new game
+      And the new game keeps the configuration of the previous one
+
+    Scenario: Restarting keeps the votes given and records the game as stopped
+      Given the game is on the decision phase of its second round
+      And "Luis" has voted the second dilemma
+      When "Ana" restarts the game
+      Then the votes of the first and the second dilemmas are kept
+      And the game is recorded as stopped before its end
+
+    Scenario: Only the dilemmas revealed before restarting count as played
+      Given the game is on the decision phase of its third round
+      When "Ana" restarts the game
+      Then the first two dilemmas count as played in the room
+      And the third dilemma does not
+
+    @ui
+    Scenario: Only the host can restart the game
+      Given the game is on the decision phase of its second round
+      Then "Ana" can restart the game
+      And neither "Luis" nor "Marta" can

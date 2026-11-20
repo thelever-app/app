@@ -1,6 +1,7 @@
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import type { InvitationMethod, RoundView } from '../support/driver.ts';
+import { GAP_DILEMMA_IDS, TWO_OPTION_DILEMMA_IDS } from '../support/test-catalog.ts';
 import { SOMEONE, type GameWorld } from '../support/world.ts';
 
 /** Test data: a valid code that no room of the scenario has, since the scenario creates none. */
@@ -530,9 +531,9 @@ Then(
 
 // Joining once the game has started
 
-const ROUNDS: Record<string, number> = { first: 1, second: 2, third: 3 };
+const ROUNDS: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4 };
 
-/** The round the scenario names, which a game of three dilemmas plays. */
+/** The round the scenario names. */
 function roundCalled(ordinal: string): number {
   const position = ROUNDS[ordinal];
   assert.ok(position, `the scenario says the "${ordinal}" round`);
@@ -564,17 +565,43 @@ Given(
   },
 );
 
-Given('a nominal game that has already started', async function (this: GameWorld) {
-  await gameOfThree(this);
-  assert.equal((await this.driver.settingsSeenBy('Ana')).variant, 'nominal');
-  // With the gap in every dilemma, so the steps can look at who takes it.
-  const found = await this.driver.searchDilemmas('Ana', 'about {gap}');
-  await this.driver.setRounds(
+/**
+ * A nominal game of Ana, Luis and Marta playing those dilemmas, one per round, on the decision phase
+ * of the round in that position.
+ */
+async function nominalGameOn(world: GameWorld, position: number, dilemmaIds: readonly string[]) {
+  await gameOfThree(world);
+  assert.equal((await world.driver.settingsSeenBy('Ana')).variant, 'nominal');
+  world.dilemmaCount = dilemmaIds.length;
+  await world.driver.setRounds(
     'Ana',
-    found.map((dilemmaId) => ({ origin: 'specific', dilemmaId })),
+    dilemmaIds.map((dilemmaId) => ({ origin: 'specific', dilemmaId })),
   );
-  await this.game();
-});
+  await world.toRound(position);
+}
+
+Given(
+  'a nominal game on the decision phase of its {word} round',
+  async function (this: GameWorld, ordinal: string) {
+    // Without the gap, so whoever joins is predicted like everyone else.
+    await nominalGameOn(this, roundCalled(ordinal), TWO_OPTION_DILEMMA_IDS.slice(0, 3));
+  },
+);
+
+Given(
+  'a nominal game of {int} rounds with the gap on the decision phase of its {word} round',
+  async function (this: GameWorld, rounds: number, ordinal: string) {
+    await nominalGameOn(this, roundCalled(ordinal), GAP_DILEMMA_IDS.slice(0, rounds));
+  },
+);
+
+Given(
+  '{string} joined a nominal game on its {word} round',
+  async function (this: GameWorld, player: string, ordinal: string) {
+    await nominalGameOn(this, roundCalled(ordinal), TWO_OPTION_DILEMMA_IDS.slice(0, 3));
+    await this.isInTheRoom(player);
+  },
+);
 
 When('a player joins the room', async function (this: GameWorld) {
   this.player = SOMEONE.anotherPlayer;
@@ -602,31 +629,85 @@ Then(
 );
 
 Then(
-  'the player makes no predictions and nobody predicts their vote',
-  async function (this: GameWorld) {
-    assert.deepEqual(await this.driver.playersToPredictBy(this.player), []);
-    for (const other of this.present().filter((player) => player !== this.player)) {
+  '{string} makes no predictions in the {word} round',
+  async function (this: GameWorld, player: string, ordinal: string) {
+    assert.equal(await this.driver.dilemmaShownTo(player), roundCalled(ordinal));
+    assert.deepEqual(await this.driver.playersToPredictBy(player), []);
+  },
+);
+
+Then(
+  'nobody predicts the vote of {string} in the {word} round',
+  async function (this: GameWorld, player: string, ordinal: string) {
+    for (const other of this.present().filter((present) => present !== player)) {
+      assert.equal(await this.driver.dilemmaShownTo(other), roundCalled(ordinal));
       assert.ok(
-        !(await this.driver.playersToPredictBy(other)).includes(this.player),
-        `${other} predicts ${this.player}`,
+        !(await this.driver.playersToPredictBy(other)).includes(player),
+        `${other} predicts ${player}`,
       );
     }
   },
 );
 
-Then('the player is never the person in the gap', async function (this: GameWorld) {
-  const people = [...(await this.driver.peopleInTheGap()).values()];
-  assert.ok(people.length > 0, 'no dilemma of the game has the gap');
-  assert.ok(!people.includes(this.player), `${this.player} takes the gap`);
+Then(
+  'in the {word} round {string} predicts the votes of the others',
+  async function (this: GameWorld, ordinal: string, player: string) {
+    await this.toRound(roundCalled(ordinal));
+    const others = this.present().filter((present) => present !== player);
+    assert.deepEqual((await this.driver.playersToPredictBy(player)).sort(), others.sort());
+  },
+);
+
+Then(
+  'the others predict the vote of {string} in the {word} round',
+  async function (this: GameWorld, player: string, ordinal: string) {
+    for (const other of this.present().filter((present) => present !== player)) {
+      assert.equal(await this.driver.dilemmaShownTo(other), roundCalled(ordinal));
+      assert.ok(
+        (await this.driver.playersToPredictBy(other)).includes(player),
+        `${other} does not predict ${player}`,
+      );
+    }
+  },
+);
+
+Then(
+  '{string} is not the person in the gap of the {word} round',
+  async function (this: GameWorld, player: string, ordinal: string) {
+    const person = (await this.driver.peopleInTheGap()).get(roundCalled(ordinal));
+    assert.ok(person !== undefined, 'the round has no gap');
+    assert.notEqual(person, player);
+  },
+);
+
+Then(
+  '{string} is the person in the gap of the {word} or the {word} round',
+  async function (this: GameWorld, player: string, first: string, second: string) {
+    const people = await this.driver.peopleInTheGap();
+    const rounds = [roundCalled(first), roundCalled(second)];
+    assert.ok(
+      rounds.some((round) => people.get(round) === player),
+      `${player} takes the gap of neither round: ${JSON.stringify([...people])}`,
+    );
+  },
+);
+
+When('the game reaches the game results', async function (this: GameWorld) {
+  await this.toTheResults();
 });
 
-Then('the player has no points in the game results', async function (this: GameWorld) {
-  // The game results add up the points of each dilemma: the player votes one and it is revealed.
-  await this.toRevealOf(await this.driver.dilemmaShownTo(this.player));
-  assert.ok((await this.driver.voteRecordedFor(this.player, 1)) !== undefined);
-  assert.deepEqual(await this.driver.pointsOf(this.player), []);
-  assert.ok((await this.driver.pointsOf('Ana')).length > 0, 'nobody scored');
-});
+Then(
+  '{string} appears in the ranking with the points of the {word} round',
+  async function (this: GameWorld, player: string, ordinal: string) {
+    const ranking = (await this.driver.rankingSeenBy('Ana')) ?? [];
+    assert.ok(
+      ranking.some((ranked) => ranked.player === player),
+      `${player} is not in the ranking`,
+    );
+    const scored = (await this.driver.pointsOf(player)).map(({ position }) => position);
+    assert.deepEqual(scored, [roundCalled(ordinal)]);
+  },
+);
 
 // Inviting once the game has started
 

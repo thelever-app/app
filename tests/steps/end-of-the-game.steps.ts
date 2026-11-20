@@ -1053,8 +1053,8 @@ When('the players are in the lobby of the rematch', async function (this: GameWo
 
 When('{string} changes the rounds', async function (this: GameWorld, host: string) {
   this.rounds = [
-    { origin: 'random', categories: ['honesty'], content: 'any' },
-    { origin: 'random', categories: ['life-and-death'], content: 'any' },
+    { origin: 'random', categories: ['honesty'], content: [] },
+    { origin: 'random', categories: ['life-and-death'], content: [] },
   ];
   await this.driver.setRounds(host, this.rounds);
 });
@@ -1074,7 +1074,7 @@ Given(
         ? ({ origin: 'specific', dilemmaId: first } as const)
         : index + 1 === players
           ? ({ origin: 'players' } as const)
-          : ({ origin: 'random', categories: null, content: 'any' } as const),
+          : ({ origin: 'random', categories: null, content: [] } as const),
     );
     await this.driver.setRounds(host, rounds);
     const [guest] = await this.guests();
@@ -1112,8 +1112,8 @@ Given(
     // Justice has two dilemmas in Spanish: the two rounds of justice play both.
     const rounds = Array.from({ length: round + 1 }, (_, index) =>
       index + 1 < round
-        ? ({ origin: 'random', categories: null, content: 'any' } as const)
-        : ({ origin: 'random', categories: ['justice'], content: 'any' } as const),
+        ? ({ origin: 'random', categories: null, content: [] } as const)
+        : ({ origin: 'random', categories: ['justice'], content: [] } as const),
     );
     await this.driver.setRounds(await this.host(), rounds);
     this.dilemmaCount = undefined;
@@ -1134,7 +1134,7 @@ Then('{string} can change its categories', async function (this: GameWorld, host
     await this.driver.tryToSetRound(host, round, {
       origin: 'random',
       categories: ['honesty'],
-      content: 'any',
+      content: [],
     }),
     true,
   );
@@ -1173,3 +1173,69 @@ When('the player joins the room', async function (this: GameWorld) {
 Then('the player enters the lobby of the rematch', async function (this: GameWorld) {
   assert.equal(await this.driver.isInTheLobby(this.player), true);
 });
+
+// Restarting the game
+
+const ORDINALS: Record<string, number> = { first: 1, second: 2, third: 3 };
+
+/** The round the scenario names, in a game of three dilemmas. */
+function ordinalOf(ordinal: string): number {
+  const position = ORDINALS[ordinal];
+  assert.ok(position, `the scenario says the "${ordinal}" round`);
+  return position;
+}
+
+Given(
+  'the game is on the decision phase of its {word} round',
+  async function (this: GameWorld, ordinal: string) {
+    this.dilemmaCount = 3;
+    await this.toRound(ordinalOf(ordinal));
+  },
+);
+
+Given(
+  '{string} has voted the {word} dilemma',
+  async function (this: GameWorld, player: string, ordinal: string) {
+    assert.equal(await this.driver.dilemmaShownTo(player), ordinalOf(ordinal));
+    await this.driver.answer(player);
+  },
+);
+
+When('{string} restarts the game', async function (this: GameWorld, player: string) {
+  this.changes = await this.driver.settingsSeenBy(player);
+  await this.driver.restartGame(player);
+});
+
+Then(
+  'the votes of the {word} and the {word} dilemmas are kept',
+  async function (this: GameWorld, first: string, second: string) {
+    for (const position of [ordinalOf(first), ordinalOf(second)]) {
+      assert.notEqual(await this.driver.voteRecordedFor('Luis', position), undefined);
+    }
+  },
+);
+
+Then('the game is recorded as stopped before its end', async function (this: GameWorld) {
+  assert.equal(await this.driver.stageOfTheGame(), 'stopped');
+});
+
+Then('the first two dilemmas count as played in the room', async function (this: GameWorld) {
+  assert.deepEqual(await this.driver.playedInTheRoom(), [1, 2]);
+});
+
+Then('the third dilemma does not', async function (this: GameWorld) {
+  assert.ok(!(await this.driver.playedInTheRoom()).includes(3));
+});
+
+Then('{string} can restart the game', async function (this: GameWorld, player: string) {
+  assert.equal(await this.driver.canRestartGame(player), true);
+});
+
+Then(
+  'neither {string} nor {string} can',
+  async function (this: GameWorld, first: string, second: string) {
+    for (const player of [first, second]) {
+      assert.equal(await this.driver.canRestartGame(player), false, `${player} can restart it`);
+    }
+  },
+);

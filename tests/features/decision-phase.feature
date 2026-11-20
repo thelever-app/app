@@ -198,6 +198,18 @@ Feature: Decision phase
       When "Luis" votes "pull the lever"
       Then his vote counts for "tirar de la palanca" in the dilemma the room plays
 
+    Scenario Outline: Each answer records the language the player read the dilemma in
+      Given the room plays its dilemmas in Spanish
+      And "Luis" uses the app in English
+      And the first dilemma <translation>
+      When "Luis" answers the first dilemma
+      Then his answer records that he read it in <language>
+
+      Examples:
+        | translation                | language |
+        | has an English translation | English  |
+        | has no English translation | Spanish  |
+
     Scenario: The time to answer each dilemma is recorded
       Given "Luis" got the first dilemma 40 seconds ago
       When "Luis" answers it

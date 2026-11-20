@@ -221,12 +221,28 @@ Feature: Join a room
     When a player joins the room
     Then the player sees the reveal of the second dilemma
 
-  Scenario: A player who joins a nominal game late only votes
-    Given a nominal game that has already started
-    When a player joins the room
-    Then the player makes no predictions and nobody predicts their vote
-    And the player is never the person in the gap
-    And the player has no points in the game results
+  Scenario: A player who joins a nominal game late only votes in the round in progress
+    Given a nominal game on the decision phase of its second round
+    When "Pedro" joins the room
+    Then "Pedro" makes no predictions in the second round
+    And nobody predicts the vote of "Pedro" in the second round
+
+  Scenario: A player who joins a nominal game late plays fully from the next round
+    Given a nominal game on the decision phase of its second round
+    When "Pedro" joins the room
+    Then in the third round "Pedro" predicts the votes of the others
+    And the others predict the vote of "Pedro" in the third round
+
+  Scenario: A player who joins a nominal game late takes the gap from the next round like the others
+    Given a nominal game of 4 rounds with the gap on the decision phase of its second round
+    When "Pedro" joins the room
+    Then "Pedro" is not the person in the gap of the second round
+    And "Pedro" is the person in the gap of the third or the fourth round
+
+  Scenario: A player who joined a nominal game late is ranked with their points
+    Given "Pedro" joined a nominal game on its second round
+    When the game reaches the game results
+    Then "Pedro" appears in the ranking with the points of the third round
 
   @ui
   Scenario: Inviting once the game has started

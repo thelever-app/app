@@ -4,17 +4,28 @@ import type { Category, DilemmaType, Scale } from '@thelever-app/game';
 export interface RoomChoices {
   /** The ambience the room is created with; Classic unless the scenario says. */
   readonly ambience?: 'classic' | 'spicy' | 'no-filter';
-  readonly groupNature?: string;
   readonly place?: string;
   /** The language of the device, which the room takes for its dilemmas. */
   readonly deviceLanguage?: string;
 }
 
+/** What the open settings of the lobby show, before the host saves them. */
+export interface OpenSettingsView {
+  /** The ambience the settings name, or custom. */
+  readonly ambience: string;
+  readonly variant: 'nominal' | 'anonymous';
+  readonly adultsOnly: boolean;
+  readonly compromisingDilemmas: boolean;
+}
+
 /** The presets of a room. */
 export type Ambience = 'classic' | 'spicy' | 'no-filter';
 
-/** What a random round draws. */
-export type RoundContent = 'any' | 'adults-only' | 'compromising';
+/** What the dilemma of a random round must be besides its categories. */
+export type ContentRequirement = 'adults-only' | 'compromising';
+
+/** What a random round draws: every requirement marked, in this order; none is any content. */
+export type RoundContent = readonly ContentRequirement[];
 
 /**
  * Why something for adults or compromising is off: a player under 18, someone under 18 in the
@@ -48,7 +59,6 @@ export interface SettingsView {
   readonly variant: string;
   readonly adultsOnly: boolean;
   readonly compromisingDilemmas: boolean;
-  readonly dilemmaLanguage: string;
   readonly timePerDilemmaSeconds: number;
   readonly newDilemmas: boolean;
 }
@@ -418,8 +428,11 @@ export interface GameDriver {
    * place, and the avatar the screen shows them.
    */
   createRoom(host: string, choices?: RoomChoices): Promise<void>;
-  /** Whether `host` gave their nickname and the nature of the group on the same screen. */
-  nicknameAndGroupNatureAskedTogether(host: string): Promise<boolean>;
+  /**
+   * What `host` was asked on the single screen that created the room: their nickname, the place
+   * where the group plays and, if it were still asked, the nature of the group.
+   */
+  askedOnCreation(host: string): Promise<readonly ('nickname' | 'place' | 'nature')[]>;
   isHost(player: string): Promise<boolean>;
   /** The code of the room, as `player` sees it in the lobby or, during the game, in its menu. */
   roomCodeSeenBy(player: string): Promise<string>;
@@ -542,14 +555,18 @@ export interface GameDriver {
   canCreateRoomWithoutAmbience(player: string): Promise<boolean>;
   /** The ambience of the room the lobby says, or custom. */
   ambienceSeenBy(viewer: string): Promise<string>;
-  /** In the settings of the lobby. */
+  /** In the settings of the lobby, which stay open, filled in with its configuration. */
   chooseAmbience(host: string, ambience: Ambience): Promise<void>;
+  /** `host` turns on the anonymous reveal in the settings they have open, without saving. */
+  markAnonymousOnTheOpenSettings(host: string): Promise<void>;
+  /** What the settings `host` has open show; undefined if they are closed. */
+  openSettingsSeenBy(host: string): Promise<OpenSettingsView | undefined>;
   /** The ambiences the settings of the lobby offer the host. */
   ambiencesInTheSettings(host: string): Promise<AmbienceOption[]>;
   adultsOnlySwitchSeenBy(host: string): Promise<SwitchView>;
   compromisingSwitchSeenBy(host: string): Promise<SwitchView>;
   /** Of the contents of that random round, those the host cannot choose. */
-  contentsOffFor(host: string, round: number): Promise<RoundContent[]>;
+  contentsOffFor(host: string, round: number): Promise<ContentRequirement[]>;
   /** What the search for the dilemma of that round shows, with its marks. */
   searchWithMarks(player: string, round: number): Promise<MarkedDilemma[]>;
   /** Whether the player is told the game includes compromising dilemmas, and can stay or leave. */
@@ -596,6 +613,14 @@ export interface GameDriver {
   votesCastFor(player: string, position: number): Promise<string[]>;
   /** `player` uses the app in that language from now on, and reads the dilemmas in it. */
   usesTheAppIn(player: string, language: string): Promise<void>;
+  /** The language the room plays its dilemmas in, which nobody sees. */
+  languageOfTheRoom(): Promise<string>;
+  /** Whether the settings of the lobby offer `host` a language for the dilemmas. */
+  settingsOfferALanguage(host: string): Promise<boolean>;
+  /** The text of the dilemma of that round of the lobby as `viewer` sees it; none without one. */
+  roundTextSeenBy(viewer: string, round: number): Promise<string | undefined>;
+  /** The language the answer of `player` to the dilemma in that position says they read it in. */
+  languageReadBy(player: string, position: number): Promise<string | null>;
   /** The option of the dilemma in that position (from 1), as the room plays it, with that text in any case. */
   optionOfTheRoomCalled(position: number, text: string): Promise<string>;
   /** The vote that counts for `player` in the dilemma in that position (from 1), as the game keeps it. */
@@ -741,6 +766,14 @@ export interface GameDriver {
   startRematch(host: string): Promise<void>;
   /** Whether `player` has a way to start the rematch. */
   canStartRematch(player: string): Promise<boolean>;
+  /** `host` restarts the game in progress from the menu of the game, and confirms it. */
+  restartGame(host: string): Promise<void>;
+  /** Whether `player` is offered to restart the game in progress. */
+  canRestartGame(player: string): Promise<boolean>;
+  /** The stage the room keeps for the game of the scenario: rounds, results, ended or stopped. */
+  stageOfTheGame(): Promise<string>;
+  /** The positions (from 1) of the dilemmas of the game the room counts as played. */
+  playedInTheRoom(): Promise<number[]>;
   /** The rounds (from 1) the lobby of `viewer` says have no dilemmas left the room has not played. */
   roundsWithoutNewDilemmasSeenBy(viewer: string): Promise<number[]>;
   /** `player` opens their card, or that of the group, to share it. */

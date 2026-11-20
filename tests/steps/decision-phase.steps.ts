@@ -410,8 +410,8 @@ async function firstDilemmaIs(world: GameWorld, dilemmaId: string): Promise<void
 }
 
 Given('the room plays its dilemmas in Spanish', async function (this: GameWorld) {
-  const settings = await this.driver.settingsSeenBy(await this.host());
-  assert.equal(settings.dilemmaLanguage, 'es');
+  await this.host();
+  assert.equal(await this.driver.languageOfTheRoom(), 'es');
 });
 
 Given('{string} uses the app in English', async function (this: GameWorld, player: string) {
@@ -1391,5 +1391,13 @@ Then(
     for (const player of this.present()) {
       assert.ok((await this.driver.anonymousNoticeShownTo(player)).includes('deleted'), player);
     }
+  },
+);
+
+Then(
+  /^(?:his|her) answer records that (?:he|she) read it in (English|Spanish)$/,
+  async function (this: GameWorld, language: string) {
+    const codes: Record<string, string> = { English: 'en', Spanish: 'es' };
+    assert.equal(await this.driver.languageReadBy(this.player, 1), codes[language]);
   },
 );

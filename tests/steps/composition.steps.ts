@@ -10,14 +10,14 @@ async function randomRoundsOfEveryCategory(world: GameWorld, count: number): Pro
   world.beforeTheGame();
   await world.driver.setRounds(
     await world.host(),
-    Array.from({ length: count }, () => ({ origin: 'random', categories: null, content: 'any' })),
+    Array.from({ length: count }, () => ({ origin: 'random', categories: null, content: [] })),
   );
 }
 
 /** The dilemmas of the catalog of the test data the room plays, by its settings. */
 async function suitable(world: GameWorld): Promise<string[]> {
-  const { dilemmaLanguage, adultsOnly } = await world.driver.settingsSeenBy(await world.host());
-  return catalogDilemmasSuiting(dilemmaLanguage, adultsOnly ? 18 : 16);
+  const { adultsOnly } = await world.driver.settingsSeenBy(await world.host());
+  return catalogDilemmasSuiting(await world.driver.languageOfTheRoom(), adultsOnly ? 18 : 16);
 }
 
 function entriesOf(world: GameWorld): CatalogEntry[] {
