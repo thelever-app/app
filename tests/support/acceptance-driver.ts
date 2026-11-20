@@ -78,6 +78,7 @@ import {
 import {
   Dilemma,
   FindCandidatesUseCase,
+  DilemmaNotFoundError,
   GetDilemmaPreviewUseCase,
   type GetDilemmaPreviewOutput,
   GetDilemmasUseCase,
@@ -369,8 +370,9 @@ interface AcceptancePlayer {
  * What a player sees on screen comes from what the application gives them: the code of the room
  * stands for the link and the QR built from it, and the state of the room for the lobby.
  */
-/** Who the visitor of the public web is when they vote alone. */
-const VISITOR_IDENTITY = 'TestVisitorIdentity';
+/** The visitor of the public web, and who they are when they vote alone or create a room. */
+const VISITOR = 'Visitor';
+const VISITOR_IDENTITY = identityOf(VISITOR);
 
 export class AcceptanceDriver implements GameDriver {
   readonly #catalog = new InMemoryDilemmaCatalog(DILEMMAS);
@@ -433,6 +435,8 @@ export class AcceptanceDriver implements GameDriver {
     async (id) => (await this.#dilemmaRepository.findById(id))?.version,
   );
   #dilemmaToVote: GetDilemmaPreviewOutput | undefined;
+  /** Whether the app the visitor opened by a link said the dilemma to vote is not available. */
+  #dilemmaToVoteUnavailable = false;
   #visitorVote: string | undefined;
   #worldResultSeen: GetWorldResultOutput | undefined;
   #visitorRoomId: string | undefined;
@@ -2066,14 +2070,53 @@ export class AcceptanceDriver implements GameDriver {
     const href = page?.main.value.match(/href="([^"]*\/vote\/[^"]*)"/)?.[1];
     if (!href) throw new Error(`The public page of "${name}" offers no vote`);
     const link = new URL(href.replaceAll('&amp;', '&'), SITE_ORIGIN);
+    // The link opens the app: on a device that never used TheLever, at its first access.
+    if (this.#devices.has(VISITOR_IDENTITY)) await this.openApp(VISITOR);
     this.#dilemmaToVote = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
       publicId: link.pathname.split('/').at(-1)!,
     });
   }
 
   async dilemmaReadyToVoteAlone(): Promise<string | undefined> {
+    // The room server takes no vote alone before the first access is done.
+    if (this.#devices.has(VISITOR_IDENTITY) && !(await this.canUseTheApp(VISITOR))) {
+      return undefined;
+    }
     const preview = this.#dilemmaToVote;
     return preview && preview.options.length > 1 ? preview.name : undefined;
+  }
+
+  async openTheAppToVoteAlone(name: string): Promise<void> {
+    const publicId = await this.#publicIdOf(name);
+    try {
+      this.#dilemmaToVote = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
+        publicId,
+      });
+      this.#dilemmaToVoteUnavailable = false;
+    } catch (error) {
+      if (!(error instanceof DilemmaNotFoundError)) throw error;
+      this.#dilemmaToVote = undefined;
+      this.#dilemmaToVoteUnavailable = true;
+    }
+  }
+
+  async dilemmaToVoteIsUnavailable(): Promise<boolean> {
+    return this.#dilemmaToVoteUnavailable;
+  }
+
+  async visitorOnANewDevice(): Promise<void> {
+    await this.newDevice(VISITOR, { country: 'ES' });
+  }
+
+  async firstAccessScreenOfTheVisitor(): Promise<FirstAccessScreen> {
+    return this.firstAccessScreenOf(VISITOR);
+  }
+
+  async visitorFinishesTheFirstAccess(): Promise<void> {
+    await this.declareAge(VISITOR, 30);
+    await this.acceptTerms(VISITOR);
+    await this.giveGameConsent(VISITOR);
+    await this.answerCookieConsent(VISITOR);
   }
 
   async voteAlone(name: string): Promise<void> {
@@ -2169,8 +2212,8 @@ export class AcceptanceDriver implements GameDriver {
       this.#sealProvider,
     ).execute({
       ambience,
-      hostNickname: 'Visitor',
-      hostIdentity: 'TestVisitorIdentity',
+      hostNickname: VISITOR,
+      hostIdentity: VISITOR_IDENTITY,
       hostAvatar: { face: 'face-01', color: 'khaki' },
       groupNature: DEFAULT_CHOICES.groupNature,
       place: DEFAULT_CHOICES.place,
