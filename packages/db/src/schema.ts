@@ -186,8 +186,13 @@ export interface Database {
     round_revealed_at: Date | null;
     /** The rounds, the game results, or the end of the game. */
     stage: GameStage;
-    /** Who moved everyone to the results or to the end; null in the rounds. */
+    /**
+     * The host who moved everyone to the results or to the end, or who stopped the game; null in the
+     * rounds, and when everyone was ready to move on.
+     */
     stage_moved_on_by: string | null;
+    /** Who is ready to move on from the reveal or the screen of the results the game is on. */
+    ready_to_move_on: string[];
     /** The screen of the results everyone is on, from 0; null out of the results. */
     stage_step: number | null;
     version: number;

@@ -115,7 +115,7 @@ export class PostgresGameRepository implements GameRepository {
   /** What the game copied of its room when it started never changes either. */
   async #saveGame(
     db: Transaction<GameTables>,
-    { id, roomId, version, settings, round, stage }: GameSnapshot,
+    { id, roomId, version, settings, round, stage, readyToMoveOn }: GameSnapshot,
   ): Promise<void> {
     const changing = {
       version,
@@ -129,6 +129,7 @@ export class PostgresGameRepository implements GameRepository {
       stage: stage.kind,
       stage_moved_on_by: stage.movedOnBy,
       stage_step: stage.step,
+      ready_to_move_on: [...readyToMoveOn],
     };
     await db
       .insertInto('games')
@@ -408,6 +409,7 @@ function snapshotOf(row: GameRow): GameSnapshot {
           }
         : null,
     stage: { kind: row.stage, movedOnBy: row.stage_moved_on_by, step: row.stage_step },
+    readyToMoveOn: row.ready_to_move_on,
     dilemmas,
     peopleInTheGap,
     timesSpent,
