@@ -18,11 +18,13 @@ export interface FirstAccessStatus {
   /** The version of each document the app has to show. */
   readonly current: Readonly<Record<LegalDocument, number>>;
   readonly underEighteen: boolean;
+  /** The earliest year of birth for which declaring the age also asks for the month. */
+  readonly monthOfBirthAskedFrom: number;
 }
 
 /** The step of Identity first; past it, the documents. */
 export function statusOf(identity: FirstAccessView, consent: ConsentView): FirstAccessStatus {
-  const { region, underEighteen } = identity;
+  const { region, underEighteen, monthOfBirthAskedFrom } = identity;
   const step =
     identity.step !== 'done' ? identity.step : consent.pending.length > 0 ? 'documents' : 'done';
   return {
@@ -32,5 +34,6 @@ export function statusOf(identity: FirstAccessView, consent: ConsentView): First
     changed: consent.changed,
     current: consent.current,
     underEighteen,
+    monthOfBirthAskedFrom,
   };
 }

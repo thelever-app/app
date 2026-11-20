@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { InvalidDeclaredAgeError } from '../../errors/invalid-declared-age.error.ts';
-import { DeclaredAgeVO, needsMonthOfBirth } from '../../vos/declared-age.vo.ts';
+import {
+  DeclaredAgeVO,
+  monthOfBirthAskedFrom,
+  needsMonthOfBirth,
+} from '../../vos/declared-age.vo.ts';
 
 const ON = new Date('2026-11-19T10:00:00Z');
 
@@ -57,5 +61,13 @@ describe('needsMonthOfBirth', () => {
     expect(needsMonthOfBirth(2020, ON)).toBe(true);
     expect(needsMonthOfBirth(2007, ON)).toBe(false);
     expect(needsMonthOfBirth(1990, ON)).toBe(false);
+  });
+});
+
+describe('monthOfBirthAskedFrom', () => {
+  it('should be the year of birth of whoever turns 18 this year', () => {
+    // Act & Assert
+    expect(monthOfBirthAskedFrom(ON)).toBe(2008);
+    expect(monthOfBirthAskedFrom(new Date('2027-01-01T00:00:00Z'))).toBe(2009);
   });
 });

@@ -11,18 +11,21 @@ import styles from './first-access.module.css';
 const EARLIEST_YEAR = 1900;
 
 interface AgeScreenProps {
+  /** The earliest year of birth for which the room server asks for the month too. */
+  readonly monthOfBirthAskedFrom: number;
   /** Where the first access is once the age is declared. */
   readonly onDeclared: (status: FirstAccessResponseDto) => void;
 }
 
-/** What the form says after it is sent: nothing, the month the room server asks for, or a fault. */
+/** What the form says after it is sent: nothing, the month the room server still asks for, or a fault. */
 type Outcome = 'none' | 'month-needed' | 'failed';
 
 /**
- * The year of birth, with no year chosen and no word of the minimum age; the month only
- * when the room server asks for it, of who may be under 18. Once sent, it never changes.
+ * The year of birth, with no year chosen and no word of the minimum age; the month as soon as the
+ * year chosen is of who may be under 18, or when the room server still asks for it. Once sent, it
+ * never changes.
  */
-export function AgeScreen({ onDeclared }: AgeScreenProps) {
+export function AgeScreen({ monthOfBirthAskedFrom, onDeclared }: AgeScreenProps) {
   const { t, i18n } = useTranslation();
   const api = useRoomApi();
   const yearId = useId();
@@ -36,10 +39,9 @@ export function AgeScreen({ onDeclared }: AgeScreenProps) {
   );
   const monthName = new Intl.DateTimeFormat(i18n.language, { month: 'long' });
 
-  const [outcome, declare, pending] = useActionState<Outcome>(async (previous) => {
-    const needsMonth = previous === 'month-needed';
+  const [outcome, declare, pending] = useActionState<Outcome>(async () => {
     try {
-      onDeclared(await api.declareAge(Number(year), needsMonth ? Number(month) : undefined));
+      onDeclared(await api.declareAge(Number(year), month === '' ? undefined : Number(month)));
       return 'none';
     } catch (error) {
       if (error instanceof RoomApiError && error.code === 'month-of-birth-needed') {
@@ -57,7 +59,8 @@ export function AgeScreen({ onDeclared }: AgeScreenProps) {
       return 'failed';
     }
   }, 'none');
-  const asksMonth = outcome === 'month-needed';
+  const asksMonth =
+    (year !== '' && Number(year) >= monthOfBirthAskedFrom) || outcome === 'month-needed';
   const ready = year !== '' && (!asksMonth || month !== '');
 
   return (
@@ -74,8 +77,9 @@ export function AgeScreen({ onDeclared }: AgeScreenProps) {
               className={styles.select}
               value={year}
               onChange={(event) => {
-                setYear(event.target.value);
-                setMonth('');
+                const chosen = event.target.value;
+                setYear(chosen);
+                if (chosen === '' || Number(chosen) < monthOfBirthAskedFrom) setMonth('');
               }}
             >
               <option value="">{t('firstAccess.age.chooseYear')}</option>

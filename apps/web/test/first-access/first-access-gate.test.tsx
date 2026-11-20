@@ -55,8 +55,48 @@ describe('FirstAccessGate', () => {
     expect(page.textContent).not.toMatch(/\b1[68]\b|edad mínima/);
   });
 
-  it('should ask for the month when the room server says the year is a boundary one', async () => {
+  it('should ask for the month as soon as the year chosen is of who may be under 18', async () => {
     // Arrange
+    const declareAge = vi.fn(async () => ASKS_FOR_THE_DOCUMENTS);
+    const api = fakeRoomApi({ openApp: vi.fn(async () => ASKS_FOR_THE_AGE), declareAge });
+    const { t } = await renderAtRoute(gate(), { api });
+    fireEvent.click(await screen.findByRole('button', { name: t('firstAccess.welcome.start') }));
+
+    // Act
+    fireEvent.change(screen.getByRole('combobox', { name: t('firstAccess.age.year') }), {
+      target: { value: '2008' },
+    });
+
+    // Assert
+    const month = screen.getByRole('combobox', { name: t('firstAccess.age.month') });
+    expect((month as HTMLSelectElement).value).toBe('');
+    const next = screen.getByRole('button', { name: t('firstAccess.continue') });
+    expect((next as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(month, { target: { value: '3' } });
+    fireEvent.click(next);
+    await waitFor(() => expect(declareAge).toHaveBeenLastCalledWith(2008, 3));
+  });
+
+  it('should not ask for the month of an adult, even after choosing the year of a minor', async () => {
+    // Arrange
+    const declareAge = vi.fn(async () => ASKS_FOR_THE_DOCUMENTS);
+    const api = fakeRoomApi({ openApp: vi.fn(async () => ASKS_FOR_THE_AGE), declareAge });
+    const { t } = await renderAtRoute(gate(), { api });
+    fireEvent.click(await screen.findByRole('button', { name: t('firstAccess.welcome.start') }));
+    const year = screen.getByRole('combobox', { name: t('firstAccess.age.year') });
+    fireEvent.change(year, { target: { value: '2010' } });
+
+    // Act
+    fireEvent.change(year, { target: { value: '2007' } });
+
+    // Assert
+    expect(screen.queryByRole('combobox', { name: t('firstAccess.age.month') })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: t('firstAccess.continue') }));
+    await waitFor(() => expect(declareAge).toHaveBeenLastCalledWith(2007, undefined));
+  });
+
+  it('should ask for the month when the room server still asks for it', async () => {
+    // Arrange: the year turned between opening the app and sending the age.
     const declareAge = vi
       .fn()
       .mockRejectedValueOnce(new RoomApiError('month-of-birth-needed'))
@@ -65,7 +105,7 @@ describe('FirstAccessGate', () => {
     const { t } = await renderAtRoute(gate(), { api });
     fireEvent.click(await screen.findByRole('button', { name: t('firstAccess.welcome.start') }));
     fireEvent.change(screen.getByRole('combobox', { name: t('firstAccess.age.year') }), {
-      target: { value: '2010' },
+      target: { value: '2007' },
     });
     fireEvent.click(screen.getByRole('button', { name: t('firstAccess.continue') }));
 
@@ -75,7 +115,7 @@ describe('FirstAccessGate', () => {
     fireEvent.click(screen.getByRole('button', { name: t('firstAccess.continue') }));
 
     // Assert
-    await waitFor(() => expect(declareAge).toHaveBeenLastCalledWith(2010, 3));
+    await waitFor(() => expect(declareAge).toHaveBeenLastCalledWith(2007, 3));
     expect(
       await screen.findByRole('heading', { name: t('firstAccess.consent.title') }),
     ).toBeDefined();
