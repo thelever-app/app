@@ -788,7 +788,7 @@
       "points": {
         "play": {
           "title": "Només per jugar.",
-          "text": "Fem servir els teus vots, prediccions i reaccions per jugar, en grup o sol, i veure el resultat."
+          "text": "Fem servir els teus vots, prediccions i reaccions per jugar, en grup o sol, i veure el resultat. Un vot sol suma, sense el teu nom, al resultat mundial d’aquell dilema, i només guardem que ja l’has votat."
         },
         "notSold": {
           "title": "No els venem ni els fem servir per a anuncis.",

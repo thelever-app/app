@@ -788,7 +788,7 @@
       "points": {
         "play": {
           "title": "Seulement pour jouer.",
-          "text": "Nous utilisons tes votes, prédictions et réactions pour jouer, en groupe ou seul·e, et voir le résultat."
+          "text": "Nous utilisons tes votes, prédictions et réactions pour jouer, en groupe ou seul·e, et voir le résultat. Quand tu votes seul·e, ton vote s’ajoute, sans ton nom, au résultat mondial de ce dilemme, et nous gardons seulement que tu l’as déjà voté."
         },
         "notSold": {
           "title": "Nous ne les vendons pas et ne les utilisons pas pour la publicité.",
