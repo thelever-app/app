@@ -104,7 +104,7 @@ export function FirstAccessGate({ adsenseClient, children }: FirstAccessGateProp
       return <StopScreen reason={status.step} />;
     case 'age':
       return started ? (
-        <AgeScreen onDeclared={setStatus} />
+        <AgeScreen monthOfBirthAskedFrom={status.monthOfBirthAskedFrom} onDeclared={setStatus} />
       ) : (
         <WelcomeScreen inviter={inviter} onStart={() => setStarted(true)} />
       );

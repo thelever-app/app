@@ -16,6 +16,7 @@ export const FIRST_ACCESS_DONE: FirstAccessResponseDto = {
   changed: [],
   current: { 'terms-of-use': 1, 'game-consent': 1 },
   underEighteen: false,
+  monthOfBirthAskedFrom: 2008,
 };
 
 /** Routes of the room server that answer what the test says; anything else fails the test. */

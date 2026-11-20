@@ -320,7 +320,7 @@ function roundChangeOf(round: LobbyRound): RoundChange {
 /** A device a scenario of the first access brings in, and what its screen went through. */
 interface AcceptanceDevice {
   readonly country: string;
-  /** Whether the age screen asked for the month after the year. */
+  /** Whether the age screen asks for the month, for the year chosen or because the room server did. */
   monthAsked: boolean;
   /** Whether the cookie manager was answered. */
   cookiesAnswered: boolean;
@@ -628,7 +628,11 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async chooseBirthYear(user: string, year: number): Promise<void> {
-    await this.#declareBirth(user, year);
+    const { identity } = this.#playerCalled(user);
+    const status = await this.#firstAccessGate.statusOf(identity);
+    // The screen asks for the month as soon as the year is one the room server asks it for.
+    this.#deviceOf(identity).monthAsked =
+      status !== undefined && year >= status.monthOfBirthAskedFrom;
   }
 
   async acceptTerms(user: string): Promise<void> {

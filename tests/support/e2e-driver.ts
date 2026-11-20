@@ -622,25 +622,18 @@ export class E2eDriver implements GameDriver {
     const { page } = screenOf(this.#playerCalled(user));
     await this.chooseBirthYear(user, new Date().getUTCFullYear() - age - 1);
     const month = page.getByRole('combobox', { name: SCREEN_TEXT('firstAccess.age.month') });
-    if (await month.isVisible()) {
-      await month.selectOption('12');
-      await page.getByRole('button', { name: SCREEN_TEXT('firstAccess.continue') }).click();
-      await month.waitFor({ state: 'hidden' });
-    }
+    if (await month.isVisible()) await month.selectOption('12');
+    await page.getByRole('button', { name: SCREEN_TEXT('firstAccess.continue') }).click();
+    await page
+      .getByRole('combobox', { name: SCREEN_TEXT('firstAccess.age.year') })
+      .waitFor({ state: 'hidden' });
   }
 
   async chooseBirthYear(user: string, year: number): Promise<void> {
     const { page } = screenOf(this.#playerCalled(user));
-    const yearField = page.getByRole('combobox', { name: SCREEN_TEXT('firstAccess.age.year') });
-    await yearField.selectOption(String(year));
-    await page.getByRole('button', { name: SCREEN_TEXT('firstAccess.continue') }).click();
-    // The month, or the screen after the age.
     await page
-      .getByRole('combobox', { name: SCREEN_TEXT('firstAccess.age.month') })
-      .or(page.getByRole('checkbox').first())
-      .or(page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.underage.title') }))
-      .first()
-      .waitFor();
+      .getByRole('combobox', { name: SCREEN_TEXT('firstAccess.age.year') })
+      .selectOption(String(year));
   }
 
   async acceptTerms(user: string): Promise<void> {
