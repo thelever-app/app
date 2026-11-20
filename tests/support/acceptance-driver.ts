@@ -329,9 +329,12 @@ interface AcceptanceDevice {
   fromInvitation: boolean;
 }
 
+/** The version of the game consent a player gives in the first access today. */
+const GAME_CONSENT_VERSION = String(currentVersionOf('game-consent', PUBLISHED_VERSIONS));
+
 /** The seal of an adult who finished the first access, which every player has unless the scenario says. */
 const ADULT_SEAL: Seal = {
-  gameConsentVersion: '1',
+  gameConsentVersion: GAME_CONSENT_VERSION,
   researchConsentVersion: null,
   commercialLicenceConsentVersion: null,
   underEighteen: false,
@@ -2481,7 +2484,7 @@ export class AcceptanceDriver implements GameDriver {
   /** The seal the player gets from now on, as the first access would leave it. */
   async declare(player: string, { underEighteen, researchConsent }: Declaration): Promise<void> {
     this.#seals.set(this.#playerCalled(player).identity, {
-      gameConsentVersion: '1',
+      gameConsentVersion: GAME_CONSENT_VERSION,
       researchConsentVersion: researchConsent ? '1' : null,
       commercialLicenceConsentVersion: null,
       underEighteen,
