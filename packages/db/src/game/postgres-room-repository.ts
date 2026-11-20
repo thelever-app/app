@@ -210,7 +210,6 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     code: snapshot.code,
     host_player_id: snapshot.hostId,
     version: snapshot.version,
-    group_nature: snapshot.groupNature,
     place: snapshot.place,
     variant: settings.variant,
     adults_only: settings.adultsOnly,
@@ -301,7 +300,6 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
     id: row.id,
     code: row.code,
     hostId: row.host_player_id,
-    groupNature: row.group_nature,
     place: row.place,
     settings: {
       variant: row.variant,
@@ -350,7 +348,7 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
 function roundOf(row: RoomRow['rounds'][number]): RoundSnapshot {
   const { roundId: id } = row;
   if (row.origin === 'random') {
-    return { id, origin: 'random', categories: row.categories, content: row.content ?? 'any' };
+    return { id, origin: 'random', categories: row.categories, content: row.content ?? [] };
   }
   if (row.origin === 'players') return { id, origin: 'players' };
   const dilemma = lobbyDilemmaOf(row);
