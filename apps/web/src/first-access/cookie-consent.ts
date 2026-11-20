@@ -15,7 +15,9 @@ const PERSONALISED_AD_PURPOSES = [3, 4] as const;
 
 /** Of the TCF data the cookie manager sends, what the first access reads. */
 interface TcData {
-  readonly eventStatus?: string;
+  /** Null once the manager has loaded with no message to show, as before it is set up for the site. */
+  readonly eventStatus?: string | null;
+  readonly cmpStatus?: string;
   readonly gdprApplies?: boolean;
   readonly purpose?: { readonly consents?: Readonly<Record<string, boolean>> };
 }
@@ -57,7 +59,8 @@ export function cookieManagerUrl(adsenseClient: string): string {
  * Shows the cookie manager of Google and resolves once the person answers it, or at once if they
  * answered it before; whether they accepted personalised ads. Where the law does not ask for it,
  * there is nothing to answer, and it resolves when the manager says so. If the manager does not
- * load, the first access goes on as if personalised ads were rejected.
+ * load, or loads with no message to show, the first access goes on as if personalised ads were
+ * rejected.
  */
 export function askCookieManager(
   adsenseClient: string,
@@ -81,6 +84,7 @@ export function askCookieManager(
       win.__tcfapi('addEventListener', 2, (data, success) => {
         if (!success) return;
         if (data.gdprApplies === false) settle(true);
+        else if (data.cmpStatus === 'loaded' && !data.eventStatus) settle(false);
         else if (data.eventStatus === 'useractioncomplete' || data.eventStatus === 'tcloaded') {
           const consents = data.purpose?.consents ?? {};
           settle(PERSONALISED_AD_PURPOSES.every((purpose) => consents[purpose] === true));
