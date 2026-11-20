@@ -77,7 +77,6 @@ describe('PlayDilemmaScreen', () => {
     fireEvent.change(screen.getByRole('textbox', { name: t('createRoom.nickname') }), {
       target: { value: 'Ana' },
     });
-    fireEvent.click(screen.getByRole('radio', { name: t('createRoom.groupNature.friends') }));
     fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.together') }));
     fireEvent.click(screen.getByRole('radio', { name: new RegExp(t('ambience.classic.name')) }));
 

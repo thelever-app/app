@@ -5,7 +5,7 @@ export const DEFAULT_ROUNDS: RoomStateDto['rounds'] = Array.from({ length: 8 }, 
   roundId: index + 1,
   origin: 'random',
   categories: null,
-  content: 'any',
+  content: [],
   withoutNewDilemmas: false,
 }));
 
@@ -18,13 +18,11 @@ export function aRoom(overrides: Partial<RoomStateDto> = {}): RoomStateDto {
     code: 'K7M2Q',
     playerId: 'test-ana-id',
     hostId: 'test-ana-id',
-    groupNature: 'friends',
     place: 'together',
     settings: {
       variant: 'nominal',
       adultsOnly: false,
       compromisingDilemmas: false,
-      dilemmaLanguage: 'es',
       timePerDilemmaSeconds: 60,
       newDilemmas: true,
     },

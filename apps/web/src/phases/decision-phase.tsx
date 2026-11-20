@@ -58,6 +58,7 @@ export function DecisionPhase({ onShowQr }: { readonly onShowQr: () => void }) {
           onAnswer={answerDilemma}
           onDone={() => setIsChanging(false)}
           onRevealEarly={isHost ? openReveal : undefined}
+          onRestart={isHost ? () => send({ type: 'restart-game' }) : undefined}
           onReport={(reported, reason, comment) =>
             send({
               type: 'report-dilemma',

@@ -105,6 +105,7 @@
     "open": "Més opcions",
     "title": "Menú de la partida",
     "revealEarly": "Revelar ara",
+    "restart": "Reiniciar la partida",
     "onlyHost": "Només l’amfitrió",
     "showGroup": "Veure el grup",
     "share": "Compartir l’enllaç",
@@ -115,6 +116,12 @@
     "reportSubtitle": "Ningú del grup no ho sabrà",
     "reported": "Ja has denunciat aquest dilema",
     "leave": "Sortir de la partida"
+  },
+  "restartGame": {
+    "title": "Vols reiniciar la partida?",
+    "body": "Tothom torna al lobby amb la mateixa configuració. Els vots donats es guarden i els dilemes ja revelats no es repeteixen.",
+    "restart": "Reiniciar",
+    "keepPlaying": "Continuar jugant"
   },
   "report": {
     "title": "Què li passa a aquest dilema?",
@@ -156,7 +163,7 @@
     "room": "Sala de {{host}}",
     "title": "La partida ja ha començat",
     "round": "Entres al dilema {{position, number}} de {{total, number}}.",
-    "onlyVote": "En aquesta partida només votes.",
+    "onlyVoteThisRound": "En aquesta ronda només votes; des de la següent, jugues com tothom.",
     "enter": "Entrar a la ronda"
   },
   "reveal": {
@@ -302,14 +309,6 @@
     "title": "Sala nova",
     "nickname": "El teu sobrenom",
     "nicknamePlaceholder": "Com et veurà el grup",
-    "groupNature": {
-      "label": "Amb qui jugaràs?",
-      "family": "Família",
-      "friends": "Amics",
-      "work": "Companys",
-      "mixed": "Barreja",
-      "hint": "Serveix per entendre com canvien els vots segons amb qui jugues."
-    },
     "place": {
       "label": "On sou?",
       "together": "Al mateix lloc",
@@ -319,7 +318,6 @@
     "submitting": "Creant la sala…",
     "missing": {
       "nickname": "Escriu el teu sobrenom",
-      "groupNature": "Tria amb qui jugues",
       "place": "Tria on sou",
       "ambience": "Tria un ambient"
     },
@@ -424,7 +422,7 @@
     "shareText": "Uneix-te a la meva sala de TheLever amb el codi {{code}}",
     "copied": "Enllaç copiat",
     "showQr": "Mostrar el QR",
-    "summary": "{{seconds}} s per dilema · {{language}}",
+    "summary": "{{seconds}} s per dilema",
     "roundCount_one": "{{count}} ronda",
     "roundCount_many": "{{count}} rondes",
     "roundCount_other": "{{count}} rondes",
@@ -515,7 +513,6 @@
       "label": "Incloure dilemes +18",
       "hint": "Només hi podran entrar majors de 18."
     },
-    "language": "Idioma dels dilemes",
     "timePerDilemma": "Temps per dilema",
     "seconds": "{{count}} s",
     "timeHint": "Cada dilema es revela quan responen tots o se n’acaba el temps.",

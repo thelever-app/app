@@ -1,9 +1,4 @@
-import {
-  type AmbienceDto,
-  GroupNatureDto,
-  type LanguageDto,
-  PlaceDto,
-} from '@thelever-app/protocol';
+import { type AmbienceDto, type LanguageDto, PlaceDto } from '@thelever-app/protocol';
 import { useActionState, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -25,15 +20,13 @@ import styles from './form.module.css';
 /** What the room is created with, as the player fills it in. */
 interface CreateRoomChoices {
   readonly nickname: string;
-  readonly groupNature: GroupNatureDto | undefined;
   readonly place: PlaceDto | undefined;
   readonly ambience: AmbienceDto | undefined;
 }
 
 /** The first thing still to fill in, which the button asks for instead of creating the room. */
-function missingOf({ nickname, groupNature, place, ambience }: CreateRoomChoices) {
+function missingOf({ nickname, place, ambience }: CreateRoomChoices) {
   if (nickname.trim() === '') return 'nickname';
-  if (groupNature === undefined) return 'groupNature';
   if (place === undefined) return 'place';
   if (ambience === undefined) return 'ambience';
   return undefined;
@@ -44,21 +37,14 @@ export interface CreateRoomFormProps {
   readonly firstDilemma?: { readonly dilemmaId: string; readonly language: LanguageDto };
 }
 
-const NATURES: readonly (readonly [GroupNatureDto, IconName])[] = [
-  ['family', 'familyRestroom'],
-  ['friends', 'groups'],
-  ['work', 'work'],
-  ['mixed', 'diversity'],
-];
-
 const PLACES: readonly (readonly [PlaceDto, IconName])[] = [
   ['together', 'groups'],
   ['remote', 'videocam'],
 ];
 
 /**
- * Creating a room: the avatar, the nickname, the nature of the group, the place and the ambience,
- * each one a single choice, on the same screen; who declared they are under 18 cannot choose an
+ * Creating a room: the avatar, the nickname, the place and the ambience, each one a single choice,
+ * on the same screen; who declared they are under 18 cannot choose an
  * ambience for adults. The avatar starts at random and may be any: nobody is in the
  * room yet. The dilemmas take the language of the device, or that of the dilemma of its first
  * round; the host changes it in the lobby. The button says what is still missing, and creates the
@@ -73,7 +59,6 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
 
   const [choices, setChoices] = useState<CreateRoomChoices>(() => ({
     nickname: lastNickname(),
-    groupNature: undefined,
     place: undefined,
     ambience: undefined,
   }));
@@ -85,8 +70,8 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
 
   // Why the last attempt failed; what the player chose stays in the fields.
   const [error, formAction, isPending] = useActionState(async (): Promise<string | undefined> => {
-    const { nickname, groupNature, place, ambience } = choices;
-    if (groupNature === undefined || place === undefined || ambience === undefined) {
+    const { nickname, place, ambience } = choices;
+    if (place === undefined || ambience === undefined) {
       return undefined;
     }
     try {
@@ -95,7 +80,6 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
           nickname,
           ambience,
           avatar,
-          groupNature,
           place,
           dilemmaLanguage: firstDilemma?.language ?? deviceLanguage(i18n),
           ...(firstDilemma && { firstRoundDilemmaId: firstDilemma.dilemmaId }),
@@ -131,28 +115,6 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
             />
           </label>
         </div>
-
-        <fieldset className={styles.choice}>
-          <legend className={styles.legend}>{t('createRoom.groupNature.label')}</legend>
-          <div className={styles.natures}>
-            {NATURES.map(([nature, icon]) => (
-              <label key={nature} className={styles.nature}>
-                <input
-                  className={styles.radio}
-                  type="radio"
-                  name="groupNature"
-                  value={nature}
-                  required
-                  defaultChecked={choices.groupNature === nature}
-                  onChange={() => setChoices({ ...choices, groupNature: nature })}
-                />
-                <Icon name={icon} size={22} />
-                {t(`createRoom.groupNature.${nature}`)}
-              </label>
-            ))}
-          </div>
-          <p className={styles.hint}>{t('createRoom.groupNature.hint')}</p>
-        </fieldset>
 
         <fieldset className={styles.choice}>
           <legend className={styles.legend}>{t('createRoom.place.label')}</legend>

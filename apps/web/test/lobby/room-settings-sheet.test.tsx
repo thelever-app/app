@@ -1,5 +1,5 @@
 import type { LobbyRoundDto } from '@thelever-app/protocol';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FOUND, renderLobby } from '../support/lobby.tsx';
 import { aRoom, DEFAULT_ROUNDS } from '../support/room.ts';
@@ -61,7 +61,7 @@ describe('RoomSettingsSheet', () => {
     const { t, send } = await openSettings(
       aRoom({
         settings: { ...aRoom().settings, variant: 'anonymous', compromisingDilemmas: true },
-        rounds: [{ ...DEFAULT_ROUNDS[0]!, content: 'compromising' } as LobbyRoundDto],
+        rounds: [{ ...DEFAULT_ROUNDS[0]!, content: ['compromising'] } as LobbyRoundDto],
       }),
     );
 
@@ -75,7 +75,7 @@ describe('RoomSettingsSheet', () => {
       changes: {
         variant: 'nominal',
         compromisingDilemmas: false,
-        rounds: [{ id: 1, origin: 'random', categories: null, content: 'any' }],
+        rounds: [{ id: 1, origin: 'random', categories: null, content: [] }],
       },
     });
   });
@@ -87,9 +87,84 @@ describe('RoomSettingsSheet', () => {
     // Assert
     const [card] = roundCards(t, 8);
     expect(
-      within(card!).getByRole('radio', { name: t('settings.content.adults-only') }),
+      within(card!).getByRole('checkbox', { name: t('settings.content.adults-only') }),
     ).toHaveProperty('disabled', true);
     expect(screen.getByText(t('settings.content.needsBoth'))).toBeDefined();
+  });
+
+  it('should mark both requirements of a random round, and clear them with «Cualquiera»', async () => {
+    // Arrange
+    const { t, send } = await openSettings(
+      aRoom({
+        settings: {
+          ...aRoom().settings,
+          variant: 'anonymous',
+          adultsOnly: true,
+          compromisingDilemmas: true,
+        },
+      }),
+    );
+    const [first, second] = roundCards(t, 8);
+    const requirement = (card: HTMLElement, content: 'any' | 'adults-only' | 'compromising') =>
+      within(card).getByRole('checkbox', { name: t(`settings.content.${content}`) });
+
+    // Act
+    fireEvent.click(requirement(first!, 'compromising'));
+    fireEvent.click(requirement(first!, 'adults-only'));
+    fireEvent.click(requirement(second!, 'adults-only'));
+    fireEvent.click(requirement(second!, 'any'));
+    save(t);
+
+    // Assert
+    const [sent] = send.mock.calls.at(-1)!;
+    expect(sent.changes.rounds.slice(0, 2)).toEqual([
+      { id: 1, origin: 'random', categories: null, content: ['adults-only', 'compromising'] },
+      { id: 2, origin: 'random', categories: null, content: [] },
+    ]);
+  });
+
+  it('should keep the settings open when the host chooses an ambience, filled in with its configuration', async () => {
+    // Arrange
+    const { t, send, deliver } = await openSettings();
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(t('settings.ambience.change')) }),
+    );
+    const ambiences = screen.getByRole('radiogroup', { name: t('settings.ambience.label') });
+
+    // Act
+    fireEvent.click(
+      within(ambiences).getByRole('radio', { name: new RegExp(t('ambience.spicy.name')) }),
+    );
+    act(() =>
+      deliver(
+        aRoom({
+          roomVersion: 4,
+          ambience: 'spicy',
+          settings: { ...aRoom().settings, adultsOnly: true },
+        }),
+      ),
+    );
+
+    // Assert
+    expect(send).toHaveBeenCalledWith({ type: 'choose-ambience', ambience: 'spicy' });
+    expect(screen.getByRole('dialog', { name: t('settings.title') })).toBeDefined();
+    expect(switchCalled(t('settings.adultsOnly.label'))).toHaveProperty('checked', true);
+    const shown = screen.getByRole('button', { name: new RegExp(t('settings.ambience.change')) });
+    expect(shown.textContent).toContain(t('ambience.spicy.name'));
+  });
+
+  it('should show the settings as custom once a field moves away from the ambience', async () => {
+    // Arrange
+    const { t } = await openSettings();
+
+    // Act
+    fireEvent.click(screen.getByRole('radio', { name: t('settings.anonymous') }));
+
+    // Assert
+    const ambience = screen.getByRole('button', {
+      name: new RegExp(t('settings.ambience.change')),
+    });
+    expect(ambience.textContent).toContain(t('ambience.custom.name'));
   });
 
   it('should choose an ambience at once, but not one for adults with a minor in the room', async () => {
@@ -113,6 +188,14 @@ describe('RoomSettingsSheet', () => {
     expect(spicy).toHaveProperty('disabled', true);
     expect(adultsOnly).toHaveProperty('disabled', true);
     expect(send).toHaveBeenCalledWith({ type: 'choose-ambience', ambience: 'classic' });
+  });
+
+  it('should offer no language for the dilemmas, which each player reads in their own', async () => {
+    // Act
+    await openSettings();
+
+    // Assert
+    expect(screen.queryByRole('combobox')).toBeNull();
   });
 
   it('should send nothing when the configuration did not change', async () => {
@@ -167,12 +250,12 @@ describe('RoomSettingsSheet', () => {
             id: roundId,
             origin: 'random',
             categories: null,
-            content: 'any',
+            content: [],
           })),
           ...Array.from({ length: 4 }, () => ({
             origin: 'random',
             categories: null,
-            content: 'any',
+            content: [],
           })),
         ],
       },
@@ -195,7 +278,7 @@ describe('RoomSettingsSheet', () => {
     expect(last).toHaveProperty('disabled', true);
     expect(send).toHaveBeenCalledWith({
       type: 'change-settings',
-      changes: { rounds: [{ id: 2, origin: 'random', categories: null, content: 'any' }] },
+      changes: { rounds: [{ id: 2, origin: 'random', categories: null, content: [] }] },
     });
   });
 
@@ -253,7 +336,7 @@ describe('RoomSettingsSheet', () => {
     expect(send).toHaveBeenCalledWith({
       type: 'change-settings',
       changes: {
-        rounds: [{ id: 1, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' }],
+        rounds: [{ id: 1, origin: 'random', categories: ['honesty', 'loyalty'], content: [] }],
       },
     });
   });
@@ -348,7 +431,7 @@ describe('RoomSettingsSheet', () => {
       type: 'change-settings',
       changes: {
         rounds: [
-          { id: 1, origin: 'random', categories: null, content: 'any' },
+          { id: 1, origin: 'random', categories: null, content: [] },
           { id: 2, origin: 'specific', dilemmaId: 'test-dilemma-2' },
           { id: 3, origin: 'players' },
         ],

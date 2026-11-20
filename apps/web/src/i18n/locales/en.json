@@ -95,6 +95,7 @@
     "open": "More options",
     "title": "Game menu",
     "revealEarly": "Reveal now",
+    "restart": "Restart game",
     "onlyHost": "Host only",
     "showGroup": "See the group",
     "share": "Share link",
@@ -105,6 +106,12 @@
     "reportSubtitle": "No one in the group will know",
     "reported": "You already reported this dilemma",
     "leave": "Leave the game"
+  },
+  "restartGame": {
+    "title": "Restart the game?",
+    "body": "Everyone goes back to the lobby with the same settings. The votes given are kept and the dilemmas already revealed won’t come up again.",
+    "restart": "Restart",
+    "keepPlaying": "Keep playing"
   },
   "report": {
     "title": "What's wrong with this dilemma?",
@@ -145,7 +152,7 @@
     "room": "{{host}}'s room",
     "title": "The game has already started",
     "round": "You’re joining dilemma {{position, number}} of {{total, number}}.",
-    "onlyVote": "In this game you only vote.",
+    "onlyVoteThisRound": "This round you only vote; from the next one, you play like everyone else.",
     "enter": "Join the round"
   },
   "reveal": {
@@ -281,14 +288,6 @@
     "title": "New room",
     "nickname": "Your nickname",
     "nicknamePlaceholder": "How the group will see you",
-    "groupNature": {
-      "label": "Who are you playing with?",
-      "family": "Family",
-      "friends": "Friends",
-      "work": "Colleagues",
-      "mixed": "Mixed",
-      "hint": "It helps us understand how votes change depending on who you play with."
-    },
     "place": {
       "label": "Where are you?",
       "together": "In the same place",
@@ -298,7 +297,6 @@
     "submitting": "Creating the room…",
     "missing": {
       "nickname": "Type your nickname",
-      "groupNature": "Pick who you're playing with",
       "place": "Choose where you are",
       "ambience": "Choose an ambience"
     },
@@ -401,7 +399,7 @@
     "shareText": "Join my TheLever room with the code {{code}}",
     "copied": "Link copied",
     "showQr": "Show QR",
-    "summary": "{{seconds}} s per dilemma · {{language}}",
+    "summary": "{{seconds}} s per dilemma",
     "roundCount_one": "{{count}} round",
     "roundCount_other": "{{count}} rounds",
     "change": "Change",
@@ -488,7 +486,6 @@
       "label": "Include 18+ dilemmas",
       "hint": "Only people 18 or over can join."
     },
-    "language": "Dilemma language",
     "timePerDilemma": "Time per dilemma",
     "seconds": "{{count}} s",
     "timeHint": "Each dilemma is revealed when everyone has answered or its time runs out.",

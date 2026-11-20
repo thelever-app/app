@@ -31,7 +31,7 @@ interface LateJoinNoticeProps {
 
 /**
  * Who joins once the game started learns where they come in: the round in progress, its reveal if it
- * is already showing and, in a nominal room, that they only vote.
+ * is already showing and, in a nominal room, that they only vote in the round they join in deciding.
  */
 export function LateJoinNotice({ game, onEnter }: LateJoinNoticeProps) {
   const { t } = useTranslation();
@@ -50,7 +50,9 @@ export function LateJoinNotice({ game, onEnter }: LateJoinNoticeProps) {
               position: game.round.position + 1,
               total: game.dilemmas.length,
             })}
-            {!isAnonymous(game) && ` ${t('lateJoin.onlyVote')}`}
+            {!isAnonymous(game) &&
+              game.round.phase === 'decision' &&
+              ` ${t('lateJoin.onlyVoteThisRound')}`}
           </p>
         </div>
         <button type="button" className={styles.action} onClick={onEnter}>

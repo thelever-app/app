@@ -105,6 +105,7 @@
     "open": "Plus d’options",
     "title": "Menu de la partie",
     "revealEarly": "Révéler maintenant",
+    "restart": "Recommencer la partie",
     "onlyHost": "Réservé à l’hôte",
     "showGroup": "Voir le groupe",
     "share": "Partager le lien",
@@ -115,6 +116,12 @@
     "reportSubtitle": "Personne du groupe ne le saura",
     "reported": "Tu as déjà signalé ce dilemme",
     "leave": "Quitter la partie"
+  },
+  "restartGame": {
+    "title": "Recommencer la partie ?",
+    "body": "Tout le monde retourne au lobby avec les mêmes réglages. Les votes donnés sont conservés et les dilemmes déjà révélés ne reviendront pas.",
+    "restart": "Recommencer",
+    "keepPlaying": "Continuer à jouer"
   },
   "report": {
     "title": "Quel est le problème avec ce dilemme ?",
@@ -156,7 +163,7 @@
     "room": "Salle de {{host}}",
     "title": "La partie a déjà commencé",
     "round": "Tu rejoins le dilemme {{position, number}} sur {{total, number}}.",
-    "onlyVote": "Dans cette partie, tu votes seulement.",
+    "onlyVoteThisRound": "Dans cette manche, tu votes seulement ; dès la suivante, tu joues comme tout le monde.",
     "enter": "Rejoindre la manche"
   },
   "reveal": {
@@ -302,14 +309,6 @@
     "title": "Nouvelle salle",
     "nickname": "Ton pseudo",
     "nicknamePlaceholder": "Le nom que verra le groupe",
-    "groupNature": {
-      "label": "Avec qui vas-tu jouer ?",
-      "family": "Famille",
-      "friends": "Amis",
-      "work": "Collègues",
-      "mixed": "Mélange",
-      "hint": "Cela sert à comprendre comment les votes changent selon les personnes avec qui tu joues."
-    },
     "place": {
       "label": "Où êtes-vous ?",
       "together": "Au même endroit",
@@ -319,7 +318,6 @@
     "submitting": "Création de la salle…",
     "missing": {
       "nickname": "Écris ton pseudo",
-      "groupNature": "Choisis avec qui tu joues",
       "place": "Choisis où vous êtes",
       "ambience": "Choisis une ambiance"
     },
@@ -424,7 +422,7 @@
     "shareText": "Rejoins ma salle TheLever avec le code {{code}}",
     "copied": "Lien copié",
     "showQr": "Afficher le QR code",
-    "summary": "{{seconds}} s par dilemme · {{language}}",
+    "summary": "{{seconds}} s par dilemme",
     "roundCount_one": "{{count}} manche",
     "roundCount_many": "{{count}} manches",
     "roundCount_other": "{{count}} manches",
@@ -515,7 +513,6 @@
       "label": "Inclure des dilemmes +18",
       "hint": "Seuls les plus de 18 ans pourront entrer."
     },
-    "language": "Langue des dilemmes",
     "timePerDilemma": "Temps par dilemme",
     "seconds": "{{count}} s",
     "timeHint": "Chaque dilemme est révélé quand tout le monde a répondu ou que le temps est écoulé.",

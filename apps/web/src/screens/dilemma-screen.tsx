@@ -27,6 +27,8 @@ interface DilemmaScreenProps {
   readonly onDone: () => void;
   /** Only for the host: opens «¿Revelar el dilema ya?». */
   readonly onRevealEarly: (() => void) | undefined;
+  /** Only for the host: restarts the game, once confirmed. */
+  readonly onRestart?: (() => void) | undefined;
   readonly onReport: (dilemmaId: string, reason: ReportReasonDto, comment: string) => void;
   readonly onSkip: (dilemmaId: string) => void;
   readonly onLeave: () => void;
@@ -58,6 +60,7 @@ export function DilemmaScreen({
   onAnswer,
   onDone,
   onRevealEarly,
+  onRestart,
   onReport,
   onSkip,
   onLeave,
@@ -107,6 +110,7 @@ export function DilemmaScreen({
       code={game.code}
       onShowQr={onShowQr}
       onRevealEarly={onRevealEarly}
+      onRestart={onRestart}
       reported={reported}
       onShowGroup={() => setIsGroupOpen(true)}
       onReport={() => setIsReportOpen(true)}

@@ -105,6 +105,7 @@
     "open": "Mais opções",
     "title": "Menu da partida",
     "revealEarly": "Revelar já",
+    "restart": "Recomeçar a partida",
     "onlyHost": "Só o anfitrião",
     "showGroup": "Ver o grupo",
     "share": "Partilhar link",
@@ -115,6 +116,12 @@
     "reportSubtitle": "Ninguém do grupo vai saber",
     "reported": "Já reportaste este dilema",
     "leave": "Sair da partida"
+  },
+  "restartGame": {
+    "title": "Recomeçar a partida?",
+    "body": "Todos voltam ao lobby com a mesma configuração. Os votos dados ficam guardados e os dilemas já revelados não se repetem.",
+    "restart": "Recomeçar",
+    "keepPlaying": "Continuar a jogar"
   },
   "report": {
     "title": "O que se passa com este dilema?",
@@ -156,7 +163,7 @@
     "room": "Sala de {{host}}",
     "title": "A partida já começou",
     "round": "Entras no dilema {{position, number}} de {{total, number}}.",
-    "onlyVote": "Nesta partida só votas.",
+    "onlyVoteThisRound": "Nesta ronda só votas; a partir da próxima, jogas como todos.",
     "enter": "Entrar na ronda"
   },
   "reveal": {
@@ -302,14 +309,6 @@
     "title": "Nova sala",
     "nickname": "A tua alcunha",
     "nicknamePlaceholder": "Como o grupo te vai ver",
-    "groupNature": {
-      "label": "Com quem vais jogar?",
-      "family": "Família",
-      "friends": "Amigos",
-      "work": "Colegas",
-      "mixed": "Mistura",
-      "hint": "Serve para perceber como mudam os votos consoante com quem jogas."
-    },
     "place": {
       "label": "Onde estão?",
       "together": "No mesmo sítio",
@@ -319,7 +318,6 @@
     "submitting": "A criar a sala…",
     "missing": {
       "nickname": "Escreve a tua alcunha",
-      "groupNature": "Escolhe com quem jogas",
       "place": "Escolhe onde estão",
       "ambience": "Escolhe um ambiente"
     },
@@ -424,7 +422,7 @@
     "shareText": "Junta-te à minha sala do TheLever com o código {{code}}",
     "copied": "Link copiado",
     "showQr": "Mostrar QR",
-    "summary": "{{seconds}} s por dilema · {{language}}",
+    "summary": "{{seconds}} s por dilema",
     "roundCount_one": "{{count}} ronda",
     "roundCount_many": "{{count}} rondas",
     "roundCount_other": "{{count}} rondas",
@@ -515,7 +513,6 @@
       "label": "Incluir dilemas +18",
       "hint": "Só poderão entrar maiores de 18."
     },
-    "language": "Idioma dos dilemas",
     "timePerDilemma": "Tempo por dilema",
     "seconds": "{{count}} s",
     "timeHint": "Cada dilema é revelado quando todos respondem ou o tempo acaba.",

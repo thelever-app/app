@@ -217,6 +217,44 @@ describe('the menu of the game', () => {
     expect(screen.getByRole('button', { name: t('gameMenu.leave') })).toBeDefined();
   });
 
+  it('should let the host restart the game, after confirming it', async () => {
+    // Arrange
+    const { connection, t } = await renderPhase();
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.open') }));
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.restart') }));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('restartGame.restart') }));
+
+    // Assert
+    expect(connection.send).toHaveBeenLastCalledWith({ type: 'restart-game' });
+  });
+
+  it('should keep playing when the host does not confirm the restart', async () => {
+    // Arrange
+    const { connection, t } = await renderPhase();
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.open') }));
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.restart') }));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('restartGame.keepPlaying') }));
+
+    // Assert
+    expect(connection.send).not.toHaveBeenCalledWith({ type: 'restart-game' });
+    expect(screen.queryByRole('button', { name: t('restartGame.restart') })).toBeNull();
+  });
+
+  it('should not offer to restart the game to a guest', async () => {
+    // Arrange
+    const { t } = await renderPhase(aGame({ hostId: 'test-luis-id' }));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.open') }));
+
+    // Assert
+    expect(screen.queryByRole('button', { name: t('gameMenu.restart') })).toBeNull();
+  });
+
   it('should tell the player who becomes the host, and why', async () => {
     // Arrange
     const game = aGame({ hostId: 'test-luis-id' });

@@ -39,6 +39,7 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
       game={game}
       reveal={reveal}
       onShowQr={onShowQr}
+      onRestart={game.hostId === game.playerId ? () => send({ type: 'restart-game' }) : undefined}
       onMoveOn={() => send({ type: 'move-on', fromPosition: position })}
       isLast={isLast}
       onLeave={() => {

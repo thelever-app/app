@@ -1,4 +1,8 @@
-import type { LobbyRoundDto } from '@thelever-app/protocol';
+import {
+  ContentRequirementDto,
+  type LobbyRoundDto,
+  type RoundContentDto,
+} from '@thelever-app/protocol';
 import { CATEGORIES, type Category } from './categories.ts';
 
 /** The rounds of the lobby that follow one another as a single row: random ones of the same categories. */
@@ -21,15 +25,15 @@ function categoriesKey(categories: readonly Category[] | null): string {
 
 /**
  * The rounds in the order they play, with each run of random rounds of the same categories in one
- * row, whatever their content, counting those only for adults and those only compromising.
+ * row, whatever their content, counting those that ask for adults and those that ask for compromising.
  */
 export function roundRows(rounds: readonly LobbyRoundDto[]): RoundRow[] {
   const rows: RoundRow[] = [];
   rounds.forEach((round, index) => {
-    const content = round.origin === 'random' ? round.content : 'any';
+    const content = round.origin === 'random' ? round.content : [];
     const counts = {
-      adultsOnly: content === 'adults-only' ? 1 : 0,
-      compromising: content === 'compromising' ? 1 : 0,
+      adultsOnly: content.includes('adults-only') ? 1 : 0,
+      compromising: content.includes('compromising') ? 1 : 0,
     };
     const last = rows.at(-1);
     if (
@@ -65,6 +69,20 @@ export function roundNumbersByDilemma(
   return new Map(
     dilemmaIds.flatMap((dilemmaId, index) => (dilemmaId ? [[dilemmaId, index + 1] as const] : [])),
   );
+}
+
+/**
+ * The requirements of the content of a random round once the host taps one: marked or unmarked, in
+ * the order the room takes them. None marked is any content.
+ */
+export function toggledRequirement(
+  content: RoundContentDto,
+  requirement: ContentRequirementDto,
+): RoundContentDto {
+  const marked = content.includes(requirement)
+    ? content.filter((known) => known !== requirement)
+    : [...content, requirement];
+  return ContentRequirementDto.options.filter((known) => marked.includes(known));
 }
 
 /**

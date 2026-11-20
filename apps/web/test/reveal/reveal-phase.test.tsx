@@ -102,6 +102,19 @@ describe('RevealPhase', () => {
     vi.useRealTimers();
   });
 
+  it('should let the host restart the game from the menu of the reveal', async () => {
+    // Arrange
+    const { connection, t } = await renderReveal(revealed(NOMINAL_REVEAL));
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.open') }));
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.restart') }));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('restartGame.restart') }));
+
+    // Assert
+    expect(connection.send).toHaveBeenLastCalledWith({ type: 'restart-game' });
+  });
+
   it('should first mark the passage from the decision to the reveal, for a moment', async () => {
     // Act
     const { t } = await renderReveal(revealed(NOMINAL_REVEAL), { pastTheIntro: false });

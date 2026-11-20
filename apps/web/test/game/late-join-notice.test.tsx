@@ -19,7 +19,7 @@ const thirdRound = aGame({
 });
 
 describe('the notice of who joins once the game has started', () => {
-  it('should tell who joined late where they come in and, in a nominal room, that they only vote', async () => {
+  it('should tell who joined late where they come in and, in a nominal room, that they only vote in this round', async () => {
     // Act
     const { t } = await renderWithProviders(<RoomContent />, {
       game: thirdRound,
@@ -29,7 +29,7 @@ describe('the notice of who joins once the game has started', () => {
     // Assert
     expect(screen.getByRole('heading', { name: t('lateJoin.title') })).toBeDefined();
     expect(screen.getByText(t('lateJoin.room', { host: 'Ana' }))).toBeDefined();
-    const text = `${t('lateJoin.round', { position: 3, total: 3 })} ${t('lateJoin.onlyVote')}`;
+    const text = `${t('lateJoin.round', { position: 3, total: 3 })} ${t('lateJoin.onlyVoteThisRound')}`;
     expect(screen.getByText(text)).toBeDefined();
   });
 
@@ -45,7 +45,19 @@ describe('the notice of who joins once the game has started', () => {
 
     // Assert
     expect(screen.getByText(t('lateJoin.round', { position: 3, total: 3 }))).toBeDefined();
-    expect(screen.queryByText(t('lateJoin.onlyVote'), { exact: false })).toBeNull();
+    expect(screen.queryByText(t('lateJoin.onlyVoteThisRound'), { exact: false })).toBeNull();
+  });
+
+  it('should not tell who joins in a reveal that they only vote, since they play the next round fully', async () => {
+    // Arrange
+    const reveal = aGame({ ...thirdRound, round: { ...thirdRound.round, phase: 'reveal' } });
+
+    // Act
+    const { t } = await renderWithProviders(<RoomContent />, { game: reveal, at: JOINED_LATE });
+
+    // Assert
+    expect(screen.getByText(t('lateJoin.round', { position: 3, total: 3 }))).toBeDefined();
+    expect(screen.queryByText(t('lateJoin.onlyVoteThisRound'), { exact: false })).toBeNull();
   });
 
   it('should take the player into the round, and not show the notice again', async () => {

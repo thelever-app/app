@@ -2,8 +2,8 @@ import {
   type AmbienceDto,
   type AmbienceOrCustomDto,
   type ChangeSettingsDto,
+  type ContentRequirementDto,
   GAP_MARKER,
-  LanguageDto,
   type LobbyRoundDto,
   MAXIMUM_ROUNDS,
   type RoomSettingsDto,
@@ -18,7 +18,7 @@ import { DilemmaText } from '../game/dilemma-text.tsx';
 import { AMBIENCE_ICONS, AMBIENCES, isForAdults } from './ambiences.ts';
 import { CATEGORIES, type Category } from './categories.ts';
 import { PickRoundDilemmaSheet } from './pick-round-dilemma-sheet.tsx';
-import { roundNumbersByDilemma, toggledCategory } from './rounds.ts';
+import { roundNumbersByDilemma, toggledCategory, toggledRequirement } from './rounds.ts';
 import styles from './room-settings-sheet.module.css';
 import sheet from './sheet.module.css';
 
@@ -131,7 +131,7 @@ function withOrigin(round: DraftRound, origin: Origin): DraftRound {
   const { key, id } = round;
   switch (origin) {
     case 'random':
-      return { key, id, origin, categories: null, content: 'any' };
+      return { key, id, origin, categories: null, content: [] };
     case 'specific':
       return { key, id, origin, dilemma: undefined };
     case 'players':
@@ -139,23 +139,27 @@ function withOrigin(round: DraftRound, origin: Origin): DraftRound {
   }
 }
 
-/** The contents a random round may have, with their symbols. */
-const CONTENTS: readonly (readonly [RoundContentDto, IconName])[] = [
-  ['any', 'shuffle'],
+/** The requirements a random round may ask of its dilemma, with their symbols. */
+const REQUIREMENTS: readonly (readonly [ContentRequirementDto, IconName])[] = [
   ['adults-only', 'adultsOnly'],
   ['compromising', 'heartBroken'],
 ];
 
-/** Whether the settings allow random rounds of that content. */
-function allows(settings: RoomSettingsDto, content: RoundContentDto): boolean {
-  if (content === 'adults-only') return settings.adultsOnly;
-  if (content === 'compromising') return settings.compromisingDilemmas;
-  return true;
+/** Whether the settings allow random rounds that ask for that requirement. */
+function allows(settings: RoomSettingsDto, requirement: ContentRequirementDto): boolean {
+  return requirement === 'adults-only' ? settings.adultsOnly : settings.compromisingDilemmas;
+}
+
+/** The content without what the settings do not allow, which may leave it any. */
+function allowedIn(settings: RoomSettingsDto, content: RoundContentDto): RoundContentDto {
+  return content.filter((requirement) => allows(settings, requirement));
 }
 
 /**
  * The host changes the configuration of the room and its rounds before starting. Choosing an
- * ambience applies it at once; a change that rules out the content of a round makes it any.
+ * ambience applies it at once and fills the fields in with its configuration once the room has it,
+ * without closing; the ambience shows as custom once a field it sets moves away from it. A change
+ * that rules out part of the content of a round takes it out.
  */
 export function RoomSettingsSheet({
   roomId,
@@ -173,6 +177,15 @@ export function RoomSettingsSheet({
   // Only one round shows its categories at a time.
   const [expanded, setExpanded] = useState<number | undefined>(undefined);
   const [choosingAmbience, setChoosingAmbience] = useState(false);
+  // The ambience the host just chose, and the settings before it, until the room has its own.
+  const [chosen, setChosen] = useState<
+    { readonly ambience: AmbienceDto; readonly before: RoomSettingsDto } | undefined
+  >(undefined);
+  if (chosen && ambience === chosen.ambience && settings !== chosen.before) {
+    setChosen(undefined);
+    setDraft(settings);
+    setDraftRounds(draftOf(rounds));
+  }
   // The round whose dilemma the host is choosing, over the settings.
   const [picking, setPicking] = useState<number | undefined>(undefined);
   const change = (changes: Partial<RoomSettingsDto>) => {
@@ -182,9 +195,7 @@ export function RoomSettingsSheet({
     setDraft(next);
     setDraftRounds(
       draftRounds.map((round) =>
-        round.origin === 'random' && !allows(next, round.content)
-          ? { ...round, content: 'any' }
-          : round,
+        round.origin === 'random' ? { ...round, content: allowedIn(next, round.content) } : round,
       ),
     );
   };
@@ -221,9 +232,17 @@ export function RoomSettingsSheet({
     const key = Math.min(0, ...draftRounds.map((round) => round.key)) - 1;
     setDraftRounds([
       ...draftRounds,
-      { key, id: undefined, origin: 'random', categories: null, content: 'any' },
+      { key, id: undefined, origin: 'random', categories: null, content: [] },
     ]);
   };
+
+  // What an ambience sets: once a field of those moves away from the room's, it is custom.
+  const movedAway =
+    draft.variant !== settings.variant ||
+    draft.adultsOnly !== settings.adultsOnly ||
+    draft.compromisingDilemmas !== settings.compromisingDilemmas ||
+    JSON.stringify(settingsOf(draftRounds)) !== JSON.stringify(settingsOf(draftOf(rounds)));
+  const shownAmbience: AmbienceOrCustomDto = movedAway ? 'custom' : ambience;
 
   const pickingIndex = draftRounds.findIndex(({ key }) => key === picking);
   const pickingRound = draftRounds[pickingIndex];
@@ -250,10 +269,10 @@ export function RoomSettingsSheet({
                   aria-controls="settings-ambiences"
                   onClick={() => setChoosingAmbience(!choosingAmbience)}
                 >
-                  <Icon name={AMBIENCE_ICONS[ambience]} size={22} />
+                  <Icon name={AMBIENCE_ICONS[shownAmbience]} size={22} />
                   <span className={styles.ambienceNow}>
                     <span className={styles.ambienceLabel}>{t('settings.ambience.label')}</span>{' '}
-                    {t(`ambience.${ambience}.name`)}
+                    {t(`ambience.${shownAmbience}.name`)}
                   </span>
                   <span className={styles.ambienceChange}>
                     {t('settings.ambience.change')}
@@ -271,12 +290,12 @@ export function RoomSettingsSheet({
                             key={option}
                             type="button"
                             role="radio"
-                            aria-checked={ambience === option}
+                            aria-checked={shownAmbience === option}
                             disabled={locked}
                             className={styles.ambienceOption}
                             onClick={() => {
+                              setChosen({ ambience: option, before: settings });
                               onChooseAmbience(option);
-                              onClose();
                             }}
                           >
                             <span className={styles.ambienceOptionIcon}>
@@ -291,7 +310,9 @@ export function RoomSettingsSheet({
                               </span>
                             </span>
                             {!locked && (
-                              <Icon name={ambience === option ? 'checkCircle' : 'radioUnchecked'} />
+                              <Icon
+                                name={shownAmbience === option ? 'checkCircle' : 'radioUnchecked'}
+                              />
                             )}
                           </button>
                         );
@@ -357,27 +378,6 @@ export function RoomSettingsSheet({
                   disabled={draft.variant !== 'anonymous'}
                   onChange={(event) => change({ compromisingDilemmas: event.target.checked })}
                 />
-              </label>
-
-              <label className={styles.select}>
-                {t('settings.language')}
-                <span className={styles.selectField}>
-                  <select
-                    value={draft.dilemmaLanguage}
-                    onChange={(event) =>
-                      change({ dilemmaLanguage: LanguageDto.parse(event.target.value) })
-                    }
-                  >
-                    {LanguageDto.options.map((language) => (
-                      <option key={language} value={language}>
-                        {t(`languages.${language}`)}
-                      </option>
-                    ))}
-                  </select>
-                  <span className={styles.selectArrow}>
-                    <Icon name="expandMore" size={22} />
-                  </span>
-                </span>
               </label>
 
               <fieldset className={styles.group}>
@@ -628,19 +628,31 @@ function RoundCard({
             <span id={contentId} className={styles.contentLabel}>
               {t('settings.content.label')}
             </span>
-            <div className={styles.contents} role="radiogroup" aria-labelledby={contentId}>
-              {CONTENTS.map(([content, icon]) => (
+            <div className={styles.contents} role="group" aria-labelledby={contentId}>
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={round.content.length === 0}
+                className={styles.contentOption}
+                onClick={() => onChange({ ...round, content: [] })}
+              >
+                <Icon name="shuffle" size={18} />
+                {t('settings.content.any')}
+              </button>
+              {REQUIREMENTS.map(([requirement, icon]) => (
                 <button
-                  key={content}
+                  key={requirement}
                   type="button"
-                  role="radio"
-                  aria-checked={round.content === content}
-                  disabled={!allows(settings, content)}
+                  role="checkbox"
+                  aria-checked={round.content.includes(requirement)}
+                  disabled={!allows(settings, requirement)}
                   className={styles.contentOption}
-                  onClick={() => onChange({ ...round, content })}
+                  onClick={() =>
+                    onChange({ ...round, content: toggledRequirement(round.content, requirement) })
+                  }
                 >
                   <Icon name={icon} size={18} />
-                  {t(`settings.content.${content}`)}
+                  {t(`settings.content.${requirement}`)}
                 </button>
               ))}
             </div>

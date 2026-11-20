@@ -34,6 +34,8 @@ interface RevealScreenProps {
   readonly isLast: boolean;
   readonly onLeave: () => void;
   readonly onShowQr: () => void;
+  /** Only for the host: restarts the game, once confirmed. */
+  readonly onRestart?: (() => void) | undefined;
   /** «Buen dilema», resolved once the server answers. */
   readonly onLike: () => Promise<void>;
   /** Takes back «Buen dilema», resolved once the server answers. */
@@ -54,6 +56,7 @@ export function RevealScreen({
   isLast,
   onLeave,
   onShowQr,
+  onRestart,
   onLike,
   onUnlike,
   onReact,
@@ -87,6 +90,7 @@ export function RevealScreen({
           <GameMenu
             code={game.code}
             onShowQr={onShowQr}
+            onRestart={onRestart}
             onShowGroup={() => setIsGroupOpen(true)}
             onLeave={onLeave}
           />

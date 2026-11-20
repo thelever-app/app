@@ -399,12 +399,9 @@ export function LobbyScreen() {
 /** The translation of a key, as the helpers of the lobby use it. */
 type Translate = (key: string, options?: Readonly<Record<string, unknown>>) => string;
 
-/** «60 s por dilema · Español». */
+/** «60 s por dilema». */
 function summaryOf(settings: RoomSettingsDto, t: Translate): string {
-  return t('lobby.summary', {
-    seconds: settings.timePerDilemmaSeconds,
-    language: t(`languages.${settings.dilemmaLanguage}`),
-  });
+  return t('lobby.summary', { seconds: settings.timePerDilemmaSeconds });
 }
 
 /** «Todas las categorías», «Honestidad», «Honestidad o Lealtad» or «3 categorías». */

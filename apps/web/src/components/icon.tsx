@@ -26,7 +26,6 @@ import checkBoxBlank from '@material-symbols/svg-500/rounded/check_box_outline_b
 import chevronRight from '@material-symbols/svg-500/rounded/chevron_right.svg?url';
 import diversity from '@material-symbols/svg-500/rounded/diversity_3-fill.svg?url';
 import flag from '@material-symbols/svg-500/rounded/flag.svg?url';
-import familyRestroom from '@material-symbols/svg-500/rounded/family_restroom-fill.svg?url';
 import groups from '@material-symbols/svg-500/rounded/groups-fill.svg?url';
 import groupsOutline from '@material-symbols/svg-500/rounded/groups.svg?url';
 import iosShare from '@material-symbols/svg-500/rounded/ios_share.svg?url';
@@ -49,7 +48,6 @@ import heartBroken from '@material-symbols/svg-500/rounded/heart_broken-fill.svg
 import localFireDepartment from '@material-symbols/svg-500/rounded/local_fire_department-fill.svg?url';
 import volumeOff from '@material-symbols/svg-500/rounded/volume_off-fill.svg?url';
 import volumeUp from '@material-symbols/svg-500/rounded/volume_up-fill.svg?url';
-import work from '@material-symbols/svg-500/rounded/work-fill.svg?url';
 import addReaction from '@material-symbols/svg-500/rounded/add_reaction.svg?url';
 import callSplit from '@material-symbols/svg-500/rounded/call_split.svg?url';
 import campaign from '@material-symbols/svg-500/rounded/campaign-fill.svg?url';
@@ -107,7 +105,6 @@ const ICONS = {
   error,
   expandLess,
   expandMore,
-  familyRestroom,
   flag,
   groups,
   groupsOutline,
@@ -140,7 +137,6 @@ const ICONS = {
   visibilityOutline,
   volumeOff,
   volumeUp,
-  work,
 } as const;
 
 export type IconName = keyof typeof ICONS;
