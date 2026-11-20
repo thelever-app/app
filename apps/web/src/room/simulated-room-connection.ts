@@ -31,6 +31,7 @@ import {
   RestartGameUseCase,
   LobbyChangedEvent,
   MoveOnUseCase,
+  GetReadyToMoveOnUseCase,
   PlayerJoinedLateEvent,
   PlayerLeftEvent,
   ReportDilemmaUseCase,
@@ -40,6 +41,7 @@ import {
   type Clock,
   ProgressUpdatedEvent,
   ReactionsChangedEvent,
+  ReadyToMoveOnChangedEvent,
   DilemmaLikedEvent,
   DilemmaUnlikedEvent,
   AnsweredCountChangedEvent,
@@ -124,6 +126,7 @@ const SENT_AS_STATE = [
   PlayerLeftEvent,
   PlayerJoinedLateEvent,
   ReactionsChangedEvent,
+  ReadyToMoveOnChangedEvent,
   DilemmaLikedEvent,
   DilemmaUnlikedEvent,
 ] as const;
@@ -266,6 +269,7 @@ export class SimulatedRoomConnection implements RoomConnection {
       }),
       revealEarly: new RevealEarlyUseCase(rooms, games, notifier, clock),
       moveOn: new MoveOnUseCase(rooms, games, notifier, clock),
+      getReadyToMoveOn: new GetReadyToMoveOnUseCase(rooms, games, notifier, clock),
       react: new ReactUseCase({
         roomRepository: rooms,
         gameRepository: games,
@@ -459,6 +463,20 @@ export class SimulatedRoomConnection implements RoomConnection {
         await useCases.moveOn.execute({ roomId, playerId, fromPosition: message.fromPosition });
         await this.#playRound();
         return;
+      case 'ready-to-move-on': {
+        // The others of the simulation are ready as soon as the player is.
+        const { fromPosition } = message;
+        await useCases.getReadyToMoveOn.execute({ roomId, playerId, fromPosition });
+        for (const fake of this.#fakePlayers) {
+          await useCases.getReadyToMoveOn.execute({
+            roomId,
+            playerId: fake.playerId,
+            fromPosition,
+          });
+        }
+        await this.#playRound();
+        return;
+      }
       case 'leave-room':
         await useCases.leaveRoom.execute({ roomId, playerId });
         this.close();

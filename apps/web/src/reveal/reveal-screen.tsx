@@ -3,6 +3,7 @@ import { type CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../avatar/avatar.tsx';
 import { GroupProgressSheet } from '../components/group-progress-sheet.tsx';
+import { MoveOnButton } from '../components/move-on-button.tsx';
 import { Icon } from '../components/icon.tsx';
 import { isAnonymous, usePlayerName } from '../components/players.ts';
 import { DilemmaText, personInTheGapOf } from '../game/dilemma-text.tsx';
@@ -28,8 +29,13 @@ const VISIBLE_PLAYERS = 6;
 interface RevealScreenProps {
   readonly game: Game;
   readonly reveal: Reveal;
-  /** Takes everyone to the next round, or from the last one to the game results; none without them. */
-  readonly onMoveOn: (() => void) | undefined;
+  /**
+   * The player is ready to move on to the next round, or from the last one to the game results;
+   * none for who does not move on.
+   */
+  readonly onReady: (() => void) | undefined;
+  /** Only for the host: takes everyone on without waiting for them to be ready. */
+  readonly onMoveEveryoneOn: (() => void) | undefined;
   /** The last round, whose way on leads to the game results. */
   readonly isLast: boolean;
   readonly onLeave: () => void;
@@ -52,7 +58,8 @@ interface RevealScreenProps {
 export function RevealScreen({
   game,
   reveal,
-  onMoveOn,
+  onReady,
+  onMoveEveryoneOn,
   isLast,
   onLeave,
   onShowQr,
@@ -150,11 +157,14 @@ export function RevealScreen({
           />
         )}
       </main>
-      {onMoveOn && (
+      {onReady && (
         <footer className={styles.footer}>
-          <button type="button" className={styles.next} onClick={onMoveOn}>
-            {isLast ? t('reveal.toResults') : t('reveal.next')}
-          </button>
+          <MoveOnButton
+            game={game}
+            label={isLast ? t('reveal.toResults') : t('reveal.next')}
+            onReady={onReady}
+            onMoveEveryoneOn={onMoveEveryoneOn}
+          />
         </footer>
       )}
       <GroupProgressSheet game={game} open={isGroupOpen} onOpenChange={setIsGroupOpen} />

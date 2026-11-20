@@ -38,7 +38,7 @@
     "playerAnswered": "{{name}} · a répondu",
     "playerPending": "{{name}} · n’a pas encore répondu",
     "playerDisconnected": "{{name}} (hors ligne)",
-    "movedOn": "{{name}} a passé ce dilemme",
+    "movedOn": "{{name}} a fait passer tout le monde",
     "playerMovedOn": "{{label}} · a passé ce dilemme",
     "aboutYou": "Dilemme {{position, number}} sur {{total, number}} · C’est sur toi"
   },
@@ -100,6 +100,11 @@
     "aboutYouQuestion": "Comment les autres vont-ils se répartir ?",
     "aboutYouHint": "Sans te compter. Le total fait toujours 100 %.",
     "aboutYouHintTwo": "Sans te compter. Le total fait toujours 100 %."
+  },
+  "moveOn": {
+    "readyCount": "{{ready}} sur {{of}} prêts à continuer",
+    "waiting": "En attente des autres",
+    "everyone": "Faire passer tout le monde"
   },
   "gameMenu": {
     "open": "Plus d’options",

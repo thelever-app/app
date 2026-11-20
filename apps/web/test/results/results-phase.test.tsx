@@ -98,7 +98,7 @@ describe('ResultsPhase', () => {
       expect(screen.getAllByRole('img', { name: t('ranking.mentalist') })).toHaveLength(2);
     });
 
-    it('should take everyone from the ranking to the end of the game', async () => {
+    it('should say the player is ready to move on from the ranking to the end of the game', async () => {
       // Arrange
       const { connection, t } = await renderPhase(atStage('results'));
 
@@ -106,7 +106,7 @@ describe('ResultsPhase', () => {
       fireEvent.click(screen.getByRole('button', { name: t('ranking.next') }));
 
       // Assert
-      expect(connection.send).toHaveBeenCalledWith({ type: 'move-on', fromPosition: 3 });
+      expect(connection.send).toHaveBeenCalledWith({ type: 'ready-to-move-on', fromPosition: 3 });
     });
   });
 

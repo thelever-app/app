@@ -156,7 +156,3 @@
 .back {
   composes: back from './results.module.css';
 }
-
-.next {
-  composes: next from '../reveal/reveal-screen.module.css';
-}

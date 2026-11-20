@@ -32,7 +32,7 @@
     "playerAnswered": "{{name}} · answered",
     "playerPending": "{{name}} · hasn't answered yet",
     "playerDisconnected": "{{name}} (disconnected)",
-    "movedOn": "{{name}} moved on",
+    "movedOn": "{{name}} moved everyone on",
     "playerMovedOn": "{{label}} · moved on",
     "aboutYou": "Dilemma {{position, number}} of {{total, number}} · About you"
   },
@@ -90,6 +90,11 @@
     "aboutYouQuestion": "How will the others split?",
     "aboutYouHint": "Not counting you. They always add up to 100%.",
     "aboutYouHintTwo": "Not counting you. They always add up to 100%."
+  },
+  "moveOn": {
+    "readyCount": "{{ready}} of {{of}} ready to move on",
+    "waiting": "Waiting for the rest",
+    "everyone": "Move everyone on"
   },
   "gameMenu": {
     "open": "More options",

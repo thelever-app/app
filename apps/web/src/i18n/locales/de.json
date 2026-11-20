@@ -32,7 +32,7 @@
     "playerAnswered": "{{name}} · hat geantwortet",
     "playerPending": "{{name}} · hat noch nicht geantwortet",
     "playerDisconnected": "{{name}} (offline)",
-    "movedOn": "{{name}} ist schon beim nächsten",
+    "movedOn": "{{name}} hat alle weitergebracht",
     "playerMovedOn": "{{label}} · ist schon beim nächsten",
     "aboutYou": "Dilemma {{position, number}} von {{total, number}} · Es geht um dich"
   },
@@ -90,6 +90,11 @@
     "aboutYouQuestion": "Wie teilen sich die anderen auf?",
     "aboutYouHint": "Ohne dich. Ergibt immer 100 %.",
     "aboutYouHintTwo": "Ohne dich. Ergibt immer 100 %."
+  },
+  "moveOn": {
+    "readyCount": "{{ready}} von {{of}} bereit zum Weitermachen",
+    "waiting": "Warten auf die anderen",
+    "everyone": "Alle weiterbringen"
   },
   "gameMenu": {
     "open": "Weitere Optionen",

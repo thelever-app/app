@@ -38,7 +38,7 @@
     "playerAnswered": "{{name}} · ha respondido",
     "playerPending": "{{name}} · aún no ha respondido",
     "playerDisconnected": "{{name}} (desconectado)",
-    "movedOn": "{{name}} pasó al siguiente",
+    "movedOn": "{{name}} pasó a todos",
     "playerMovedOn": "{{label}} · pasó al siguiente",
     "aboutYou": "Dilema {{position, number}} de {{total, number}} · Va sobre ti"
   },
@@ -100,6 +100,11 @@
     "aboutYouQuestion": "¿Cómo se repartirán los demás?",
     "aboutYouHint": "Sin contarte a ti. Siempre suman 100 %.",
     "aboutYouHintTwo": "Sin contarte a ti. Siempre suman 100 %."
+  },
+  "moveOn": {
+    "readyCount": "{{ready}} de {{of}} listos para seguir",
+    "waiting": "Esperando al resto",
+    "everyone": "Pasar a todos"
   },
   "gameMenu": {
     "open": "Más opciones",

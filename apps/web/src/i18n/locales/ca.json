@@ -38,7 +38,7 @@
     "playerAnswered": "{{name}} · ha respost",
     "playerPending": "{{name}} · encara no ha respost",
     "playerDisconnected": "{{name}} (desconnectat)",
-    "movedOn": "{{name}} ha passat al següent",
+    "movedOn": "{{name}} ha passat tothom",
     "playerMovedOn": "{{label}} · ha passat al següent",
     "aboutYou": "Dilema {{position, number}} de {{total, number}} · Va sobre tu"
   },
@@ -100,6 +100,11 @@
     "aboutYouQuestion": "Com es repartiran els altres?",
     "aboutYouHint": "Sense comptar-te a tu. Sempre sumen 100 %.",
     "aboutYouHintTwo": "Sense comptar-te a tu. Sempre sumen 100 %."
+  },
+  "moveOn": {
+    "readyCount": "{{ready}} de {{of}} a punt per seguir",
+    "waiting": "Esperant la resta",
+    "everyone": "Passar tothom"
   },
   "gameMenu": {
     "open": "Més opcions",

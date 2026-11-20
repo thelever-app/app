@@ -135,7 +135,7 @@ describe('ResultsPhase, in a nominal room', () => {
     expect(connection.send).not.toHaveBeenCalled();
   });
 
-  it('should take the player back to the screen of the group, and only from it move everyone on', async () => {
+  it('should take the player back to the screen of the group, and only from it be ready to move on', async () => {
     // Arrange
     const { connection, t } = await renderPhase(atStep(2));
     fireEvent.click(screen.getByRole('button', { name: t('results.back') }));
@@ -151,7 +151,7 @@ describe('ResultsPhase, in a nominal room', () => {
     // Assert
     expect(backOnTheGroup).not.toBeNull();
     expect(sentOnReturning).toBe(0);
-    expect(connection.send).toHaveBeenCalledWith({ type: 'move-on', fromPosition: 5 });
+    expect(connection.send).toHaveBeenCalledWith({ type: 'ready-to-move-on', fromPosition: 5 });
   });
 
   it('should follow the group when it moves on while the player looks back', async () => {
@@ -203,7 +203,7 @@ describe('ResultsPhase, in a nominal room', () => {
     ]);
   });
 
-  it('should take everyone from a screen of the results to the next one', async () => {
+  it('should say the player is ready to move on from a screen of the results', async () => {
     // Arrange
     const { connection, t } = await renderPhase(atStep(1));
 
@@ -211,7 +211,7 @@ describe('ResultsPhase, in a nominal room', () => {
     fireEvent.click(screen.getByRole('button', { name: t('results.next') }));
 
     // Assert
-    expect(connection.send).toHaveBeenCalledWith({ type: 'move-on', fromPosition: 4 });
+    expect(connection.send).toHaveBeenCalledWith({ type: 'ready-to-move-on', fromPosition: 4 });
   });
 
   it('should let who only watches the results, out of the game, see them without moving anyone on', async () => {

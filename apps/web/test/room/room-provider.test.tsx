@@ -24,6 +24,7 @@ const GAME_STATE: GameStateDto = {
     movedOnBy: null,
   },
   stage: { kind: 'rounds', movedOnBy: null, step: null },
+  readyToMoveOn: [],
   results: null,
   inGame: true,
   ranking: null,

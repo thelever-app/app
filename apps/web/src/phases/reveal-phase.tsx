@@ -7,8 +7,9 @@ import { RevealScreen } from '../reveal/reveal-screen.tsx';
 import { HOME_PATH } from '../home-path.ts';
 
 /**
- * The reveal of a round, after a brief passage from its decision: any player takes everyone on to
- * the next one and, from the last one, to the game results.
+ * The reveal of a round, after a brief passage from its decision: once every player is ready, or
+ * when the host moves everyone on, everyone goes to the next one and, from the last one, to the
+ * game results.
  */
 export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   if (!reveal) return null;
   if (introFor === position) return <RevealIntro game={game} reveal={reveal} />;
   const isLast = position === game.dilemmas.length - 1;
+  const isHost = game.hostId === game.playerId;
   return (
     <RevealScreen
       // A new screen for each reveal, so nothing of the previous one stays.
@@ -39,8 +41,11 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
       game={game}
       reveal={reveal}
       onShowQr={onShowQr}
-      onRestart={game.hostId === game.playerId ? () => send({ type: 'restart-game' }) : undefined}
-      onMoveOn={() => send({ type: 'move-on', fromPosition: position })}
+      onRestart={isHost ? () => send({ type: 'restart-game' }) : undefined}
+      onReady={() => send({ type: 'ready-to-move-on', fromPosition: position })}
+      onMoveEveryoneOn={
+        isHost ? () => send({ type: 'move-on', fromPosition: position }) : undefined
+      }
       isLast={isLast}
       onLeave={() => {
         send({ type: 'leave-room' });
