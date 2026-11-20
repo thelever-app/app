@@ -267,16 +267,24 @@ export class GameWorld extends World {
     await this.game();
     const last = (await this.driver.dilemmasOfTheGame()).length;
     await this.toRevealOf(last);
-    const mover = this.present()[0];
-    if (!mover) throw new Error('Nobody is left to move on to the results');
-    if (!(await this.driver.resultsScreenSeenBy(mover))) await this.driver.moveOn(mover);
+    const viewer = this.present()[0];
+    if (!viewer) throw new Error('Nobody is left to move on to the results');
+    if (!(await this.driver.resultsScreenSeenBy(viewer))) await this.everyoneMovesOn();
   }
 
-  /** From the screen of the results everyone is on, a player present moves everyone to the end. */
+  /** From the screen of the results everyone is on, everyone moves on to the end. */
   async throughTheResults(): Promise<void> {
-    const mover = this.present()[0];
-    if (!mover) throw new Error('Nobody is left to move on to the end');
-    while (!(await this.driver.endOfTheGameSeenBy(mover))) await this.driver.moveOn(mover);
+    const viewer = this.present()[0];
+    if (!viewer) throw new Error('Nobody is left to move on to the end');
+    while (!(await this.driver.endOfTheGameSeenBy(viewer))) await this.everyoneMovesOn();
+  }
+
+  /**
+   * Every player present is ready to move on from the reveal or the screen of the results the
+   * group is on, so everyone moves on.
+   */
+  async everyoneMovesOn(): Promise<void> {
+    for (const player of this.present()) await this.driver.getReadyToMoveOn(player);
   }
 
   /** The plan of `player` for the dilemma in that position, which a later step follows. */
@@ -288,14 +296,14 @@ export class GameWorld extends World {
 
   /**
    * The game is on the decision phase of the round of the dilemma in that position (from 1): each
-   * earlier round is revealed, as its plans say, and the host moves everyone on.
+   * earlier round is revealed, as its plans say, and everyone moves on.
    */
   async toRound(position: number): Promise<void> {
     await this.game();
     const host = await this.host();
     for (let current = await this.driver.dilemmaShownTo(host); current < position; current += 1) {
       await this.toRevealOf(current);
-      await this.driver.moveOn(host);
+      await this.everyoneMovesOn();
     }
   }
 

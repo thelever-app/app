@@ -21,6 +21,7 @@ import {
   LeaveRoomUseCase,
   ReportDilemmaUseCase,
   MoveOnUseCase,
+  GetReadyToMoveOnUseCase,
   ReactUseCase,
   LikeDilemmaUseCase,
   UnlikeDilemmaUseCase,
@@ -463,6 +464,7 @@ export class AcceptanceDriver implements GameDriver {
   readonly #revealEarly: RevealEarlyUseCase;
   readonly #runOutRound: RunOutRoundUseCase;
   readonly #moveOn: MoveOnUseCase;
+  readonly #getReadyToMoveOn: GetReadyToMoveOnUseCase;
   readonly #react: ReactUseCase;
   readonly #likeDilemma: LikeDilemmaUseCase;
   readonly #unlikeDilemma: UnlikeDilemmaUseCase;
@@ -577,6 +579,7 @@ export class AcceptanceDriver implements GameDriver {
     this.#revealEarly = new RevealEarlyUseCase(rooms, games, notifier, clock);
     this.#runOutRound = new RunOutRoundUseCase(rooms, games, notifier, clock);
     this.#moveOn = new MoveOnUseCase(rooms, games, notifier, clock);
+    this.#getReadyToMoveOn = new GetReadyToMoveOnUseCase(rooms, games, notifier, clock);
     this.#leaveRoom = new LeaveRoomUseCase(rooms, games, notifier, clock);
     this.#skipDilemma = new SkipDilemmaUseCase({
       roomRepository: rooms,
@@ -2645,30 +2648,55 @@ export class AcceptanceDriver implements GameDriver {
     };
   }
 
-  /** From a round, or from a screen of the game results, which come after the last one. */
-  async moveOn(player: string): Promise<void> {
+  async getReadyToMoveOn(player: string): Promise<void> {
+    await this.#getReadyToMoveOn.execute(await this.#moveOnBy(player));
+  }
+
+  /**
+   * All tap at once, from where each of them sees the group: the room server takes the commands of
+   * a room one after another, so they arrive in some order.
+   */
+  async getReadyToMoveOnTogether(players: readonly string[]): Promise<void> {
+    const moves = await Promise.all(players.map((player) => this.#moveOnBy(player)));
+    for (const move of moves) await this.#getReadyToMoveOn.execute(move);
+  }
+
+  async moveEveryoneOn(host: string): Promise<void> {
+    await this.#moveOn.execute(await this.#moveOnBy(host));
+  }
+
+  /** Whether the room server takes everyone on when `player` asks it to. */
+  async canMoveEveryoneOn(player: string): Promise<boolean> {
+    try {
+      await this.moveEveryoneOn(player);
+      return true;
+    } catch (error) {
+      if (error instanceof NotHostError) return false;
+      throw error;
+    }
+  }
+
+  /** Of the players connected and still in the game, how many are ready to move on. */
+  async readyToMoveOnSeenBy(
+    viewer: string,
+  ): Promise<{ readonly ready: number; readonly of: number } | null> {
+    const { players, readyToMoveOn } = await this.#gameStateOf(viewer);
+    const present = players.filter(({ connected, left }) => connected && !left);
+    const ready = present.filter(({ playerId }) => readyToMoveOn.includes(playerId)).length;
+    return ready > 0 ? { ready, of: present.length } : null;
+  }
+
+  /** From the round `player` sees, or from the screen of the game results, which come after the last round. */
+  async #moveOnBy(player: string) {
     const { round, stage, dilemmas } = await this.#gameStateOf(player);
-    await this.#moveOn.execute({
+    return {
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(player),
       fromPosition: stage.kind === 'results' ? dilemmas.length + (stage.step ?? 0) : round.position,
-    });
+    };
   }
 
-  /** Both tap at once, from the round each of them sees. */
-  async moveOnTogether(players: readonly string[]): Promise<void> {
-    const moves = await Promise.all(
-      players.map(async (player) => ({
-        playerId: this.#playerIdOf(player),
-        fromPosition: (await this.#gameStateOf(player)).round.position,
-      })),
-    );
-    await Promise.all(
-      moves.map((move) => this.#moveOn.execute({ roomId: this.#currentRoomId(), ...move })),
-    );
-  }
-
-  /** Who moved everyone to the round they are on or, in the results, to the screen they are on. */
+  /** The host who moved everyone to the round they are on or, in the results, to the screen they are on. */
   async movedOnSeenBy(viewer: string): Promise<string | null> {
     const { round, stage } = await this.#gameStateOf(viewer);
     const movedOnBy = stage.kind === 'rounds' ? round.movedOnBy : stage.movedOnBy;
@@ -3006,6 +3034,10 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async goBackInTheResults(): Promise<void> {
+    throw new Error('Only the device looks back at the results: the scenario must be @screen');
+  }
+
+  async goForwardInTheResults(): Promise<void> {
     throw new Error('Only the device looks back at the results: the scenario must be @screen');
   }
 

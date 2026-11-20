@@ -301,7 +301,10 @@ const SCREEN = {
   changeAnswer: 'Cambiar mi respuesta',
   revealEarly: 'Revelar ya',
   revealEarlyTitle: '¿Revelar el dilema ya?',
-  movedOn: /(.+) pasó al siguiente/,
+  movedOn: /(.+) pasó a todos/,
+  moveEveryoneOn: spanish('moveOn.everyone'),
+  waitingForTheRest: spanish('moveOn.waiting'),
+  readyToMoveOn: /(\d+) de (\d+) listos para seguir/,
   previous: /anterior/i,
   points: /\bpuntos?\b/i,
   back: 'Volver a tu voto',
@@ -851,8 +854,8 @@ export class E2eDriver implements GameDriver {
     await this.startDecisionPhase(1);
     await this.answer(user);
     await this.answer(rival);
-    while (!(await this.resultsScreenSeenBy(user))) await this.moveOn(user);
-    while (!(await this.endOfTheGameSeenBy(user))) await this.moveOn(user);
+    while (!(await this.resultsScreenSeenBy(user))) await this.moveEveryoneOn(user);
+    while (!(await this.endOfTheGameSeenBy(user))) await this.moveEveryoneOn(user);
   }
 
   async anonymousNoticeShownTo(player: string): Promise<readonly string[]> {
@@ -3685,46 +3688,128 @@ export class E2eDriver implements GameDriver {
   }
 
   /**
-   * «Siguiente dilema» on the reveal, and every screen gets the next round; from the last one of an
-   * anonymous room, «Ver resultados», to the ranking; and from it, «Continuar», to the end.
+   * The way on, as `player` sees it: «Siguiente dilema» on the reveal, «Ver resultados» on the last
+   * one, «Siguiente» on each screen of the results and «Continuar» on the ranking.
    */
-  async moveOn(player: string): Promise<void> {
+  #wayOnOf(player: string): Locator {
     const mover = this.#playerCalled(player);
     const { page } = screenOf(mover);
     const game = this.#gameOf(player);
     if (game.stage.kind === 'results') {
-      const { step } = game.stage;
-      const footer = page.locator('footer');
-      // Looking back on their own device, the player only comes forward again: nobody else moves.
-      const behind = this.#lookingBack.get(player) ?? 0;
-      if (behind > 0) {
-        const shown = await this.resultsScreenShownTo(player);
-        await footer.getByRole('button', { name: SCREEN.resultsNext }).click();
-        await waitUntilAsync(async () => (await this.resultsScreenShownTo(player)) === shown + 1);
-        this.#lookingBack.set(player, behind - 1);
-        return;
-      }
       // By the state, not by the screen, which may still be drawing the step before: the ranking is
       // the only screen of an anonymous room, and the last of a nominal one.
-      const onRanking = isAnonymous(mover) || (step ?? 0) >= (game.results?.titles.length ?? 0) + 1;
-      await footer
-        .getByRole('button', { name: onRanking ? SCREEN.rankingNext : SCREEN.resultsNext })
-        .click();
-      await this.#untilEveryoneMovesOnFrom(step);
+      const step = game.stage.step ?? 0;
+      const onRanking = isAnonymous(mover) || step >= (game.results?.titles.length ?? 0) + 1;
+      return page
+        .locator('footer')
+        .getByRole('button', { name: onRanking ? SCREEN.rankingNext : SCREEN.resultsNext });
+    }
+    const last = game.round.position === game.dilemmas.length - 1;
+    return page.getByRole('button', { name: last ? SCREEN.toResults : SCREEN.next });
+  }
+
+  /**
+   * The state `player` has once it is on a reveal or a screen of the results: a step may have just
+   * answered the last one, and the reveal still be on its way.
+   */
+  async #whereTheGroupMovesOnFrom(player: string): Promise<GameStateDto> {
+    const mover = this.#playerCalled(player);
+    return waitUntil(() => {
+      const game = lastGameOf(mover);
+      return game && (game.stage.kind === 'results' || game.round.phase === 'reveal') && game;
+    }, `${player} gets to a reveal or a screen of the results`);
+  }
+
+  /** Until every screen has left where `player` saw the group, once it moved on. */
+  async #untilEveryoneMovesOnFrom(game: GameStateDto): Promise<void> {
+    if (game.stage.kind === 'results') {
+      await this.#untilEveryoneLeavesTheScreen(game.stage.step);
       return;
     }
-    const from = game.round.position;
-    if (from === game.dilemmas.length - 1) {
-      await page.getByRole('button', { name: SCREEN.toResults }).click();
+    if (game.round.position === game.dilemmas.length - 1) {
       await this.#untilEveryoneIsAt('results');
       return;
     }
-    await page.getByRole('button', { name: SCREEN.next }).click();
-    await this.#untilEveryoneIsOnRound(from + 1);
+    await this.#untilEveryoneIsOnRound(game.round.position + 1);
+  }
+
+  /** «Siguiente dilema», or the way on of the screen: ready, the player waits for the rest. */
+  async getReadyToMoveOn(player: string): Promise<void> {
+    const mover = this.#playerCalled(player);
+    // Brought in without a browser, the player never connects: the group does not wait for them.
+    if (!mover.screen) return;
+    const from = await this.#whereTheGroupMovesOnFrom(player);
+    await this.#wayOnOf(player).click();
+    const moved = await waitUntil(() => {
+      const game = lastGameOf(mover);
+      if (!game) return undefined;
+      if (movedOnFrom(from, game)) return 'moved';
+      return game.readyToMoveOn.includes(game.playerId) ? 'ready' : undefined;
+    }, `${player} is ready to move on`);
+    if (moved === 'moved') await this.#untilEveryoneMovesOnFrom(from);
+  }
+
+  /** All tap the way on at once. */
+  async getReadyToMoveOnTogether(players: readonly string[]): Promise<void> {
+    const from = await this.#whereTheGroupMovesOnFrom(players[0]!);
+    await Promise.all(players.map((player) => this.#wayOnOf(player).click()));
+    await waitUntil(
+      () =>
+        players.every((player) => {
+          const game = lastGameOf(this.#playerCalled(player));
+          return game && (movedOnFrom(from, game) || game.readyToMoveOn.includes(game.playerId));
+        }) || undefined,
+      `${players.join(' and ')} are ready to move on`,
+    );
+    if (movedOnFrom(from, this.#gameOf(players[0]!))) await this.#untilEveryoneMovesOnFrom(from);
+  }
+
+  /** Ready first, if not yet, then «Pasar a todos»: everyone moves on. */
+  async moveEveryoneOn(host: string): Promise<void> {
+    const from = await this.#whereTheGroupMovesOnFrom(host);
+    if (!from.readyToMoveOn.includes(from.playerId)) await this.getReadyToMoveOn(host);
+    if (movedOnFrom(from, this.#gameOf(host))) return;
+    const { page } = screenOf(this.#playerCalled(host));
+    await page.getByRole('button', { name: SCREEN.moveEveryoneOn }).click();
+    await this.#untilEveryoneMovesOnFrom(from);
+  }
+
+  /** Once ready, the player is offered «Pasar a todos», or only waits for the rest. */
+  async canMoveEveryoneOn(player: string): Promise<boolean> {
+    const game = this.#gameOf(player);
+    if (!game.readyToMoveOn.includes(game.playerId)) await this.getReadyToMoveOn(player);
+    const { page } = screenOf(this.#playerCalled(player));
+    await page
+      .getByRole('button', { name: SCREEN.waitingForTheRest })
+      .or(page.getByRole('button', { name: SCREEN.moveEveryoneOn }))
+      .waitFor();
+    return (await page.getByRole('button', { name: SCREEN.moveEveryoneOn }).count()) > 0;
+  }
+
+  /** What the foot of the screen says of how many are ready, «2 de 3 listos para seguir». */
+  async readyToMoveOnSeenBy(
+    viewer: string,
+  ): Promise<{ readonly ready: number; readonly of: number } | null> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const count = page.locator('footer').getByRole('status');
+    return steady(async () => {
+      if ((await count.count()) === 0) return null;
+      const [, ready, of] = (await count.textContent())?.match(SCREEN.readyToMoveOn) ?? [];
+      return ready && of ? { ready: Number(ready), of: Number(of) } : null;
+    });
+  }
+
+  /** Looking back on their own device, the player only comes forward again: nobody else moves. */
+  async goForwardInTheResults(player: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const shown = await this.resultsScreenShownTo(player);
+    await page.locator('footer').getByRole('button', { name: SCREEN.resultsNext }).click();
+    await waitUntilAsync(async () => (await this.resultsScreenShownTo(player)) === shown + 1);
+    this.#lookingBack.set(player, (this.#lookingBack.get(player) ?? 1) - 1);
   }
 
   /** Until no screen is on that step of the results any more. */
-  async #untilEveryoneMovesOnFrom(step: number | null): Promise<void> {
+  async #untilEveryoneLeavesTheScreen(step: number | null): Promise<void> {
     const online = this.#withScreens().filter(({ screen }) => screen?.link);
     await waitUntil(
       () =>
@@ -3742,19 +3827,6 @@ export class E2eDriver implements GameDriver {
       () => online.every((player) => lastGameOf(player)?.stage.kind === stage) || undefined,
       `everyone gets to the ${stage === 'results' ? 'game results' : 'end of the game'}`,
     );
-  }
-
-  /** Both tap «Siguiente dilema» at once. */
-  async moveOnTogether(players: readonly string[]): Promise<void> {
-    const from = this.#gameOf(players[0]!).round.position;
-    await Promise.all(
-      players.map((player) =>
-        screenOf(this.#playerCalled(player))
-          .page.getByRole('button', { name: SCREEN.next })
-          .click(),
-      ),
-    );
-    await this.#untilEveryoneIsOnRound(from + 1);
   }
 
   /** Who the notice in the strip of `viewer` says moved on, while it lasts. */
@@ -4771,6 +4843,16 @@ function isState(message: ServerMessageDto): message is RoomStateDto | GameState
 function lastLobbyOf({ screen }: E2ePlayer): RoomStateDto | undefined {
   const last = screen?.received.findLast(isState);
   return last?.type === 'room-state' ? last : undefined;
+}
+
+/** Whether the group has moved on from where `from` saw it, by what `game` says. */
+function movedOnFrom(from: GameStateDto, game: GameStateDto): boolean {
+  return (
+    game.stage.kind !== from.stage.kind ||
+    game.stage.step !== from.stage.step ||
+    game.round.position !== from.round.position ||
+    game.round.phase !== from.round.phase
+  );
 }
 
 function lastGameOf({ screen }: E2ePlayer): GameStateDto | undefined {

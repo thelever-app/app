@@ -101,10 +101,10 @@ async function toTheScreen(
   found: (screen: ResultsScreenView) => boolean,
 ): Promise<void> {
   await world.toTheResults();
-  const mover = world.present()[0]!;
-  for (let moves = 0; !found(await screenOf(world, mover)); moves += 1) {
+  const viewer = world.present()[0]!;
+  for (let moves = 0; !found(await screenOf(world, viewer)); moves += 1) {
     assert.ok(moves < 10, 'the screen never comes');
-    await world.driver.moveOn(mover);
+    await world.everyoneMovesOn();
   }
 }
 
@@ -147,10 +147,6 @@ Given(
     await this.driver.letTimePass(seconds);
   },
 );
-
-When('a player moves to the next round', async function (this: GameWorld) {
-  await this.driver.moveOn(this.present()[0]!);
-});
 
 Then(
   '{int} seconds are recorded for the first dilemma',
@@ -374,20 +370,37 @@ Then(
 
 // The results of a nominal room
 
-Then('all players see the first title of the game', async function (this: GameWorld) {
-  const [first] = await this.driver.titlesOfTheGame();
-  assert.ok(first, 'the game has no title');
-  for (const viewer of this.present()) {
-    const seen = await screenOf(this, viewer);
-    assert.equal(seen.kind === 'title' && seen.title, first.title, `${viewer} sees another screen`);
+/** Every player present is on the title of the game in that place, from 0. */
+async function everyoneSeesTitle(world: GameWorld, place: number): Promise<void> {
+  const title = (await world.driver.titlesOfTheGame())[place];
+  assert.ok(title, `the game has no title in the place ${place}`);
+  for (const viewer of world.present()) {
+    const seen = await screenOf(world, viewer);
+    assert.equal(seen.kind === 'title' && seen.title, title.title, `${viewer} sees another screen`);
   }
+}
+
+Then('all players see the first title of the game', async function (this: GameWorld) {
+  await everyoneSeesTitle(this, 0);
 });
 
-When('the players have moved through every title', async function (this: GameWorld) {
-  const titles = await this.driver.titlesOfTheGame();
-  const mover = this.present()[0]!;
-  for (let moved = 1; moved < titles.length; moved += 1) await this.driver.moveOn(mover);
+Then('all players still see the first title of the game', async function (this: GameWorld) {
+  await everyoneSeesTitle(this, 0);
 });
+
+Then('all players see the second title of the game', async function (this: GameWorld) {
+  await everyoneSeesTitle(this, 1);
+});
+
+// Every player gets ready on each screen of the results: more than a step usually takes.
+When(
+  'the players have moved through every title',
+  { timeout: 90_000 },
+  async function (this: GameWorld) {
+    const titles = await this.driver.titlesOfTheGame();
+    for (let moved = 1; moved < titles.length; moved += 1) await this.everyoneMovesOn();
+  },
+);
 
 Then('the last title they see is El Mentalista', async function (this: GameWorld) {
   for (const viewer of this.present()) {
@@ -535,8 +548,10 @@ When('the titles of the game are shown', async function (this: GameWorld) {
   await this.toTheResults();
 });
 
+// Every player gets ready on each screen of the results: more than a step usually takes.
 Then(
   'they come in this order: {string}, {string}, {string}, {string}, {string}, {string} and {string}',
+  { timeout: 90_000 },
   async function (
     this: GameWorld,
     first: string,
@@ -553,7 +568,7 @@ Then(
     const seen: string[] = [];
     for (let screen = await screenOf(this, viewer); screen.kind === 'title';) {
       seen.push(screen.title);
-      await this.driver.moveOn(viewer);
+      await this.everyoneMovesOn();
       screen = await screenOf(this, viewer);
     }
     assert.deepEqual(seen, order);
@@ -595,9 +610,14 @@ Then('the title {string} is skipped', async function (this: GameWorld, title: st
   assert.equal(await titleNamed(this, title), undefined);
 });
 
-When('the title {string} is shown', async function (this: GameWorld, title: string) {
-  await toTheScreen(this, (screen) => screen.kind === 'title' && screen.title === title);
-});
+// Every player gets ready on each screen of the results: more than a step usually takes.
+When(
+  'the title {string} is shown',
+  { timeout: 90_000 },
+  async function (this: GameWorld, title: string) {
+    await toTheScreen(this, (screen) => screen.kind === 'title' && screen.title === title);
+  },
+);
 
 Then(
   'all players see the avatar of the winner, the fact that earned it and the runner-up',
@@ -619,7 +639,8 @@ Given(
   },
 );
 
-When('the ranking is shown', async function (this: GameWorld) {
+// Every player gets ready on each screen of the results: more than a step usually takes.
+When('the ranking is shown', { timeout: 90_000 }, async function (this: GameWorld) {
   await toTheScreen(this, (screen) => screen.kind === 'ranking');
 });
 
@@ -641,14 +662,25 @@ Then(
   },
 );
 
-Given('all players see who is El Mentalista of the game', async function (this: GameWorld) {
-  everyTitle(this, [...this.inRoom][0]!);
-  await toTheScreen(this, (screen) => screen.kind === 'title' && screen.title === 'El Mentalista');
-});
+// Every player gets ready on each screen of the results: more than a step usually takes.
+Given(
+  'all players see who is El Mentalista of the game',
+  { timeout: 90_000 },
+  async function (this: GameWorld) {
+    everyTitle(this, [...this.inRoom][0]!);
+    await toTheScreen(
+      this,
+      (screen) => screen.kind === 'title' && screen.title === 'El Mentalista',
+    );
+  },
+);
 
-When('{string} moves on', async function (this: GameWorld, player: string) {
-  await this.driver.moveOn(player);
-});
+When(
+  '{string} moves forward in the game results',
+  async function (this: GameWorld, player: string) {
+    await this.driver.goForwardInTheResults(player);
+  },
+);
 
 When(
   '{string} goes back to the previous screen of the game results',
@@ -724,13 +756,14 @@ Then(
   },
 );
 
+// Every player gets ready on each screen of the results: more than a step usually takes.
 Then(
   '{string} sees that {string} and {string} know her best',
+  { timeout: 90_000 },
   async function (this: GameWorld, viewer: string, first: string, second: string) {
-    const mover = this.present()[0]!;
     for (let moves = 0; (await screenOf(this, viewer)).kind !== 'known-best'; moves += 1) {
       assert.ok(moves < 10, `${viewer} never sees who knows them best`);
-      await this.driver.moveOn(mover);
+      await this.everyoneMovesOn();
     }
     const seen = await screenOf(this, viewer);
     assert.deepEqual(seen.kind === 'known-best' && [...seen.by].sort(), [first, second].sort());

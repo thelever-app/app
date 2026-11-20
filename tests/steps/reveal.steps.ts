@@ -73,20 +73,70 @@ Given('the reveal is on the {word} dilemma', async function (this: GameWorld, or
   await this.toRevealOf(positionOf(this, ordinal));
 });
 
-When('a player moves on', async function (this: GameWorld) {
-  await this.driver.moveOn(await this.host());
+// Moving on with the group
+
+When('every player is ready to move on', async function (this: GameWorld) {
+  await this.everyoneMovesOn();
 });
 
-When('{string} moves to the next round', async function (this: GameWorld, player: string) {
-  await this.driver.moveOn(player);
+When('{string} is ready to move on', async function (this: GameWorld, player: string) {
+  await this.driver.getReadyToMoveOn(player);
 });
 
 When(
-  '{string} and {string} move to the next round at the same time',
+  '{string} and {string} are ready to move on',
   async function (this: GameWorld, first: string, second: string) {
-    await this.driver.moveOnTogether([first, second]);
+    for (const player of [first, second]) await this.driver.getReadyToMoveOn(player);
   },
 );
+
+When(
+  '{string} and {string} are ready to move on at the same time',
+  async function (this: GameWorld, first: string, second: string) {
+    await this.driver.getReadyToMoveOnTogether([first, second]);
+  },
+);
+
+When('{string} moves everyone on as the host', async function (this: GameWorld, host: string) {
+  assert.equal(await this.host(), host, `${host} is not the host`);
+  await this.driver.moveEveryoneOn(host);
+});
+
+Then('{string} cannot move everyone on', async function (this: GameWorld, player: string) {
+  assert.equal(await this.driver.canMoveEveryoneOn(player), false);
+});
+
+Then('all players still see the reveal of the first dilemma', async function (this: GameWorld) {
+  for (const player of this.present()) {
+    assert.equal(await this.driver.dilemmaShownTo(player), 1);
+    assert.ok(await this.driver.revealSeenBy(player), `${player} is not on the reveal`);
+  }
+});
+
+Then(
+  'all players see that {int} of {int} players are ready to move on',
+  async function (this: GameWorld, ready: number, of: number) {
+    for (const player of this.present()) {
+      assert.deepEqual(await this.driver.readyToMoveOnSeenBy(player), { ready, of });
+    }
+  },
+);
+
+Then(
+  '{string} and {string} get the second dilemma',
+  async function (this: GameWorld, first: string, second: string) {
+    for (const player of [first, second]) {
+      assert.equal(await this.driver.dilemmaShownTo(player), 2);
+      assert.equal(await this.driver.revealSeenBy(player), undefined, `${player} is in a reveal`);
+    }
+  },
+);
+
+Then('no player sees in the player strip that someone moved on', async function (this: GameWorld) {
+  for (const player of this.present()) {
+    assert.equal(await this.driver.movedOnSeenBy(player), null);
+  }
+});
 
 Then('all players get the second dilemma', async function (this: GameWorld) {
   for (const player of this.present()) {
@@ -425,7 +475,7 @@ async function toTheRanking(world: GameWorld): Promise<void> {
   const host = await world.host();
   if (await world.driver.rankingSeenBy(host)) return;
   await world.toRevealOf((await world.driver.dilemmasOfTheGame()).length);
-  await world.driver.moveOn(host);
+  await world.everyoneMovesOn();
 }
 
 async function rankingSeenBy(world: GameWorld, viewer: string): Promise<readonly RankedView[]> {

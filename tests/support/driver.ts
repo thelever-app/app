@@ -690,11 +690,25 @@ export interface GameDriver {
   ownPredictionsSeenBy(
     viewer: string,
   ): Promise<{ readonly about: string; readonly right: boolean }[]>;
-  /** `player` moves on from the reveal of the round to the next one. */
-  moveOn(player: string): Promise<void>;
-  /** The players move on from the reveal of the round at the same time. */
-  moveOnTogether(players: readonly string[]): Promise<void>;
-  /** Who `viewer` sees moved everyone to the round they are on; null for the first. */
+  /**
+   * `player` is ready to move on from the reveal of the round, or from the screen of the results
+   * the group is on.
+   */
+  getReadyToMoveOn(player: string): Promise<void>;
+  /** The players are ready to move on from the reveal of the round at the same time. */
+  getReadyToMoveOnTogether(players: readonly string[]): Promise<void>;
+  /** `host` moves everyone on from the reveal of the round, or from a screen of the results. */
+  moveEveryoneOn(host: string): Promise<void>;
+  /** Whether `player` has a way to move everyone on without waiting for them to be ready. */
+  canMoveEveryoneOn(player: string): Promise<boolean>;
+  /** How many of the players `viewer` sees ready to move on, and of how many; null for none. */
+  readyToMoveOnSeenBy(
+    viewer: string,
+  ): Promise<{ readonly ready: number; readonly of: number } | null>;
+  /**
+   * Who `viewer` sees moved everyone to the round or the screen of the results they are on; null
+   * when nobody did.
+   */
   movedOnSeenBy(viewer: string): Promise<string | null>;
   /** Whether the notice of who moved on leaves the dilemma uncovered on the screen of `viewer`. Only on screen. */
   moveOnNoticeCoversNothing(viewer: string): Promise<boolean>;
@@ -759,6 +773,8 @@ export interface GameDriver {
   resultsScreenShownTo(viewer: string): Promise<number>;
   /** `player` looks back, on their device alone, at the screen of the results before (@screen). */
   goBackInTheResults(player: string): Promise<void>;
+  /** Looking back at the results, `player` comes one screen forward again, on their own. Only on screen. */
+  goForwardInTheResults(player: string): Promise<void>;
   /** Every title of the game with a winner, in the order they are shown. */
   titlesOfTheGame(): Promise<TitleView[]>;
   endOfTheGameSeenBy(viewer: string): Promise<EndOfTheGameView | undefined>;

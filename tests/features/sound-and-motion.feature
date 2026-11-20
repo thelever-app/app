@@ -65,7 +65,7 @@ Feature: Sound and motion
   @ui @screen
   Scenario: A sound effect plays when the game results begin
     Given "Ana" and "Luis" see the reveal of the last dilemma
-    When a player moves on
+    When every player is ready to move on
     Then "Ana" and "Luis" hear the sound effect of the game results
 
   @ui @screen
