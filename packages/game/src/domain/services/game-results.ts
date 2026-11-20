@@ -62,11 +62,10 @@ export interface ResultsDilemma {
   readonly voteReactions: readonly { readonly playerId: string; readonly aboutId: string }[];
 }
 
-/** A player of the results: their points and whether they are ranked, which who joined late is not. */
+/** A player of the results, with their points. */
 export interface ResultsPlayer {
   readonly playerId: string;
   readonly points: number;
-  readonly ranked: boolean;
 }
 
 interface Candidate extends TitleHolder {
@@ -110,7 +109,7 @@ export function gameResults({
     );
 
   const mentalists = players
-    .filter(({ playerId, ranked }) => ranked && eligible.includes(playerId))
+    .filter(({ playerId }) => eligible.includes(playerId))
     .map(({ playerId, points }) => one(playerId, points, points, null));
   const candidatesOf: Record<Title, () => readonly Candidate[]> = {
     'almas-gemelas': () => soulmates(eligible, dilemmas, pointsAbout),
@@ -145,9 +144,9 @@ export function gameResults({
 
   return {
     titles,
-    ranking: rankByPoints(
-      players.filter(({ ranked }) => ranked).map(({ playerId, points }) => ({ playerId, points })),
-    ).map((ranked) => ({ ...ranked, mentalist: mentalistIds.includes(ranked.playerId) })),
+    ranking: rankByPoints(players.map(({ playerId, points }) => ({ playerId, points }))).map(
+      (ranked) => ({ ...ranked, mentalist: mentalistIds.includes(ranked.playerId) }),
+    ),
     knownBestBy: new Map(
       playerIds.map((aboutId) => {
         const scored = playerIds

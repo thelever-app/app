@@ -2,7 +2,6 @@ import { z } from 'zod';
 import {
   AvatarDto,
   ClientMessageTypeDto,
-  GroupNatureDto,
   MAXIMUM_ROUNDS,
   PlaceDto,
   RoomSettingsDto,
@@ -312,7 +311,6 @@ export const RoomStateDto = z.strictObject({
   /** The player who receives the message. */
   playerId: z.string().min(1),
   hostId: z.string().min(1),
-  groupNature: GroupNatureDto,
   place: PlaceDto,
   settings: RoomSettingsDto,
   /** The ambience whose configuration the room has, or custom. */
@@ -428,6 +426,7 @@ export const ErrorCodeDto = z.enum([
   'invalid-emoji',
   'no-vote-to-react-to',
   'game-not-ended',
+  'game-rounds-over',
   'dilemma-already-played',
   'first-access-required',
   'first-access-not-begun',

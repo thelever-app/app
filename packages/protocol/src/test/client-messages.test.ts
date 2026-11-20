@@ -276,6 +276,7 @@ describe('the messages of the rounds', () => {
     expect(ClientMessageDto.safeParse({ type: 'like-dilemma', position: 1 }).success).toBe(true);
     expect(ClientMessageDto.safeParse({ type: 'unlike-dilemma', position: 1 }).success).toBe(true);
     expect(ClientMessageDto.safeParse({ type: 'start-rematch' }).success).toBe(true);
+    expect(ClientMessageDto.safeParse({ type: 'restart-game' }).success).toBe(true);
   });
 
   it('should reject a reaction without a target it knows, or with too long an emoji', () => {

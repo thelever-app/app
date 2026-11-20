@@ -221,7 +221,7 @@ describe('CachedDilemmaCatalog', () => {
         count: 3,
         includeGap: true,
         excludedIds: [],
-        content: 'any' as const,
+        content: [] as const,
         playedBy: [],
       };
       await catalog.findCandidates(draw);

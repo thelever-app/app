@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ambienceOf, settingsOf } from '../../vos/ambience.vo.ts';
-import type { RoundContent, RoundSnapshot } from '../../vos/round.vo.ts';
+import type { ContentRequirement, RoundSnapshot } from '../../vos/round.vo.ts';
 
 const KEPT = { dilemmaLanguage: 'en', timePerDilemmaSeconds: 45, newDilemmas: false } as const;
 
@@ -13,12 +13,13 @@ const FOR_EVERYONE = {
   compromising: false,
 } as const;
 
-function roundsWith(contents: readonly RoundContent[]): RoundSnapshot[] {
+/** The rounds of an ambience, each with a single requirement or any content, as the table says. */
+function roundsWith(contents: readonly ('any' | ContentRequirement)[]): RoundSnapshot[] {
   return contents.map((content, index) => ({
     id: index + 1,
     origin: 'random',
     categories: null,
-    content,
+    content: content === 'any' ? [] : [content],
   }));
 }
 
@@ -115,7 +116,7 @@ describe('ambienceOf', () => {
     {
       case: 'a round with another content',
       change: (rounds: RoundSnapshot[]) =>
-        rounds.map((round) => (round.id === 2 ? { ...round, content: 'any' as const } : round)),
+        rounds.map((round) => (round.id === 2 ? { ...round, content: [] as const } : round)),
     },
     {
       case: 'a round from some categories',
@@ -126,7 +127,7 @@ describe('ambienceOf', () => {
                 id: 3,
                 origin: 'random' as const,
                 categories: ['honesty' as const],
-                content: 'any' as const,
+                content: [] as const,
               }
             : round,
         ),

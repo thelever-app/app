@@ -20,7 +20,6 @@ const AT = new Date('2026-11-18T10:00:00Z');
 const ANONYMOUS: GameSettings = {
   ambience: 'classic',
   variant: 'anonymous',
-  groupNature: 'friends',
   place: 'together',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
@@ -271,6 +270,7 @@ describe('Game, in an anonymous room', () => {
                     ready: true,
                     optionOrder: ['TestPull', 'TestWait'],
                     responseTimeMs: 1000,
+                    language: null,
                     seal: SEAL,
                     voterInTheGap: false,
                   },

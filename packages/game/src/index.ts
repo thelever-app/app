@@ -20,9 +20,11 @@ export {
   type RoomSettingsChanges,
 } from './domain/entities/room.ts';
 export {
+  ANY_CONTENT,
+  CONTENT_REQUIREMENTS,
   DILEMMA_ORIGINS,
-  ROUND_CONTENTS,
   randomRound,
+  type ContentRequirement,
   type DilemmaOrigin,
   type RoundContent,
   type RoundSnapshot,
@@ -98,7 +100,7 @@ export {
   type Scale,
   type CandidateDilemma,
 } from './domain/vos/classification.vo.ts';
-export { GROUP_NATURES, PLACES, type GroupNature, type Place } from './domain/vos/group.vo.ts';
+export { PLACES, type Place } from './domain/vos/group.vo.ts';
 export {
   composeGame,
   drawKey,
@@ -178,6 +180,7 @@ export { DilemmaAlreadyReportedError } from './domain/errors/dilemma-already-rep
 export { DilemmaNotReportedAsOffensiveError } from './domain/errors/dilemma-not-reported-as-offensive.error.ts';
 export { GameNotInProgressError } from './domain/errors/game-not-in-progress.error.ts';
 export { GameNotEndedError } from './domain/errors/game-not-ended.error.ts';
+export { GameRoundsOverError } from './domain/errors/game-rounds-over.error.ts';
 export { InvalidEmojiError } from './domain/errors/invalid-emoji.error.ts';
 export { NoVoteToReactToError } from './domain/errors/no-vote-to-react-to.error.ts';
 export { DilemmaAlreadyPlayedError } from './domain/errors/dilemma-already-played.error.ts';
@@ -288,6 +291,10 @@ export {
   StartRematchUseCase,
   type StartRematchInput,
 } from './application/use-cases/start-rematch.use-case.ts';
+export {
+  RestartGameUseCase,
+  type RestartGameInput,
+} from './application/use-cases/restart-game.use-case.ts';
 export {
   ConnectPlayerUseCase,
   type ConnectPlayerInput,

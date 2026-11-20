@@ -2,8 +2,8 @@ import type { Room } from '../../domain/entities/room.ts';
 import { PlayerNotInRoomError } from '../../domain/errors/player-not-in-room.error.ts';
 import { drawKey } from '../../domain/services/compose-game.ts';
 import { type AmbienceOrCustom, ambienceOf } from '../../domain/vos/ambience.vo.ts';
-import type { RoundContent } from '../../domain/vos/round.vo.ts';
-import type { GroupNature, Place } from '../../domain/vos/group.vo.ts';
+import { ANY_CONTENT, type RoundContent } from '../../domain/vos/round.vo.ts';
+import type { Place } from '../../domain/vos/group.vo.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
 import type { RoomSettingsSnapshot } from '../../domain/vos/room-settings.vo.ts';
 import type { LobbyDilemma } from '../../domain/vos/round.vo.ts';
@@ -15,9 +15,11 @@ export interface GetRoomStateInput {
   readonly roomId: string;
   /** The player who asks, who must be in the room. */
   readonly playerId: string;
+  /** The language of the player, whom each dilemma is shown in it if it has a translation into it. */
+  readonly language: string;
 }
 
-/** A dilemma of a round, with its text in the language of the room. */
+/** A dilemma of a round, with its text in the language of the player, if it has a translation. */
 export interface LobbyRoundDilemma {
   readonly dilemmaId: string;
   readonly text: string;
@@ -54,9 +56,9 @@ export interface GetRoomStateOutput {
   readonly code: string;
   readonly playerId: string;
   readonly hostId: string;
-  readonly groupNature: GroupNature;
   readonly place: Place;
-  readonly settings: Omit<RoomSettingsSnapshot, 'rounds'>;
+  /** Without the language, which is the room's own and nobody sees. */
+  readonly settings: Omit<RoomSettingsSnapshot, 'rounds' | 'dilemmaLanguage'>;
   /** The ambience whose configuration the room has, or custom. */
   readonly ambience: AmbienceOrCustom;
   /**
@@ -89,22 +91,40 @@ export class GetRoomStateUseCase {
     this.#dilemmaCatalog = dilemmaCatalog;
   }
 
-  async execute({ roomId, playerId }: GetRoomStateInput): Promise<GetRoomStateOutput> {
+  async execute({ roomId, playerId, language }: GetRoomStateInput): Promise<GetRoomStateOutput> {
     const room = await findRoom(this.#roomRepository, roomId);
     if (!room.hasPlayer(playerId)) throw new PlayerNotInRoomError(playerId);
 
-    const texts = await this.#textsOf(room.roundDilemmaIds, room.settings.dilemmaLanguage);
+    const texts = await this.#textsOf(
+      room.roundDilemmaIds,
+      room.settings.dilemmaLanguage,
+      language,
+    );
     const withText = ({ dilemmaId, hasGap }: LobbyDilemma): LobbyRoundDilemma => ({
       dilemmaId,
       text: texts.get(dilemmaId) ?? '',
       hasGap,
     });
-    const { rounds, ...settings } = room.settings.toSnapshot();
+    const {
+      rounds,
+      variant,
+      adultsOnly,
+      compromisingDilemmas,
+      timePerDilemmaSeconds,
+      newDilemmas,
+    } = room.settings.toSnapshot();
+    const settings = {
+      variant,
+      adultsOnly,
+      compromisingDilemmas,
+      timePerDilemmaSeconds,
+      newDilemmas,
+    };
     const left = await this.#dilemmasLeft(room);
     // The rounds of the same categories take what is left in turn: the ones beyond it have none.
     const taken = new Map<string, number>();
     const withoutNewDilemmas = (categories: readonly Category[] | null): boolean => {
-      const key = drawKey(categories, 'any');
+      const key = drawKey(categories, ANY_CONTENT);
       const available = left.get(key);
       if (available === undefined) return false;
       const before = taken.get(key) ?? 0;
@@ -118,7 +138,6 @@ export class GetRoomStateUseCase {
       code: room.code,
       playerId,
       hostId: room.host.id,
-      groupNature: room.groupNature,
       place: room.place,
       settings,
       ambience: ambienceOf(room.settings),
@@ -174,7 +193,7 @@ export class GetRoomStateUseCase {
     >();
     for (const round of settings.rounds) {
       if (round.origin !== 'random') continue;
-      const key = drawKey(round.categories, 'any');
+      const key = drawKey(round.categories, ANY_CONTENT);
       const rounds = (categorySets.get(key)?.rounds ?? 0) + 1;
       categorySets.set(key, { categories: round.categories, rounds });
     }
@@ -194,7 +213,7 @@ export class GetRoomStateUseCase {
               count: rounds,
               includeGap: room.playsTheGap,
               excludedIds: [...room.playedDilemmaIds, ...room.roundDilemmaIds],
-              content: 'any',
+              content: ANY_CONTENT,
               playedBy: [],
             }),
           ),
@@ -205,7 +224,15 @@ export class GetRoomStateUseCase {
     return new Map(counted);
   }
 
-  async #textsOf(dilemmaIds: readonly string[], language: string): Promise<Map<string, string>> {
+  /**
+   * The text of each dilemma of the rounds the catalog still has in the language of the room, in the
+   * language of the player if its current version has a translation into it.
+   */
+  async #textsOf(
+    dilemmaIds: readonly string[],
+    roomLanguage: string,
+    language: string,
+  ): Promise<Map<string, string>> {
     if (dilemmaIds.length === 0) return new Map();
     const { dilemmas: found } = await this.#dilemmaCatalog.search(
       // Whatever the room keeps, for adults and compromising ones too, which it already checked.
@@ -213,12 +240,17 @@ export class GetRoomStateUseCase {
         dilemmaIds,
         maximumMinimumAge: 18,
         status: 'in-catalog',
-        language,
+        language: roomLanguage,
         includeCompromising: true,
       },
       // One page with all of them: no more than were asked for.
       { size: dilemmaIds.length },
     );
-    return new Map(found.map(({ dilemmaId, text }) => [dilemmaId, text]));
+    if (found.length === 0) return new Map();
+    const versions = await this.#dilemmaCatalog.findOptionIds(
+      found.map(({ dilemmaId }) => dilemmaId),
+    );
+    const contents = await this.#dilemmaCatalog.findContents(versions, language);
+    return new Map(contents.map(({ dilemmaId, text }) => [dilemmaId, text]));
   }
 }

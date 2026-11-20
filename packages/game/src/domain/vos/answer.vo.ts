@@ -31,6 +31,8 @@ export interface AnswerProps {
   readonly optionOrder: readonly string[];
   /** From when the voter got the dilemma to when they first completed the answer; null until then. */
   readonly responseTimeMs: number | null;
+  /** The language the voter read the dilemma in; null for answers from before it was kept. */
+  readonly language: string | null;
   readonly seal: Seal;
 }
 
@@ -85,6 +87,10 @@ export class AnswerVO {
 
   get responseTimeMs(): number | null {
     return this.#props.responseTimeMs;
+  }
+
+  get language(): string | null {
+    return this.#props.language;
   }
 
   get seal(): Seal {

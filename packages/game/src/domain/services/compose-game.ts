@@ -2,7 +2,13 @@ import type { ChosenDilemma } from '../entities/room.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
 import type { Category } from '../vos/category.vo.ts';
 import type { CandidateDilemma } from '../vos/classification.vo.ts';
-import type { DilemmaOrigin, LobbyDilemma, RoundContent, RoundSnapshot } from '../vos/round.vo.ts';
+import {
+  ANY_CONTENT,
+  type DilemmaOrigin,
+  type LobbyDilemma,
+  type RoundContent,
+  type RoundSnapshot,
+} from '../vos/round.vo.ts';
 import { shuffle } from './random-choice.ts';
 
 export type { DilemmaOrigin } from '../vos/round.vo.ts';
@@ -53,7 +59,7 @@ export const SPACING_ROUNDS = 5;
 /** The same key for the same categories in any order and the same content; null is every category. */
 export function drawKey(categories: readonly Category[] | null, content: RoundContent): string {
   const key = categories === null ? '*' : [...new Set(categories)].sort().join(',');
-  return `${key}|${content}`;
+  return `${key}|${content.length === 0 ? 'any' : content.join('+')}`;
 }
 
 /** A set of categories and a content the system draws dilemmas from, and how many rounds draw from it. */
@@ -84,8 +90,8 @@ export function categoriesToDraw(
   for (const round of rounds) {
     const draw = drawFrom(fixedDilemmaOf(round, chosenDilemmas, playsTheGap), round);
     if (draw === undefined) continue;
-    count(draw.categories, 'any');
-    if (draw.content !== 'any') count(draw.categories, draw.content);
+    count(draw.categories, ANY_CONTENT);
+    if (draw.content.length > 0) count(draw.categories, draw.content);
   }
   return [...drawn.values()];
 }
@@ -146,7 +152,10 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
     return pool;
   };
   const drawOf = (position: number) =>
-    drawFrom(fixed[position] ?? null, rounds[position]!) ?? { categories: null, content: 'any' };
+    drawFrom(fixed[position] ?? null, rounds[position]!) ?? {
+      categories: null,
+      content: ANY_CONTENT,
+    };
   const poolAt = (position: number): Record<Pool, CandidateDilemma[]> => {
     const { categories, content } = drawOf(position);
     return poolOf(drawKey(categories, content));
@@ -166,7 +175,7 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
   /** Of its content, or of any content of its categories once its content has nothing left. */
   const draw = (position: number, from: Pool, anyContent = false): void => {
     const { categories } = drawOf(position);
-    const pool = anyContent ? poolOf(drawKey(categories, 'any')) : poolAt(position);
+    const pool = anyContent ? poolOf(drawKey(categories, ANY_CONTENT)) : poolAt(position);
     const best = bestIn(position, pool[from]);
     if (!best) return;
     used.add(best.dilemma.dilemmaId);
@@ -257,7 +266,7 @@ function drawFrom(
   if (fixed) return undefined;
   return round.origin === 'random'
     ? { categories: round.categories, content: round.content }
-    : { categories: null, content: 'any' };
+    : { categories: null, content: ANY_CONTENT };
 }
 
 /**

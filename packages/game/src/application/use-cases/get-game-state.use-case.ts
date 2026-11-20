@@ -257,7 +257,7 @@ export class GetGameStateUseCase {
   }
 
   #resultsFor(game: Game, playerId: string): GetGameStateOutput['results'] {
-    if (game.stage.kind === 'rounds') return null;
+    if (game.stage.kind === 'rounds' || game.stage.kind === 'stopped') return null;
     const results = game.results();
     const divisive = game.mostDivisiveDilemma();
     const position = game.dilemmas.findIndex(({ dilemmaId }) => dilemmaId === divisive);

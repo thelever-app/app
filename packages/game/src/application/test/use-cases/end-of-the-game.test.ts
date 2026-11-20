@@ -10,8 +10,10 @@ import { MoveOnUseCase } from '../../use-cases/move-on.use-case.ts';
 import { UnlikeDilemmaUseCase } from '../../use-cases/unlike-dilemma.use-case.ts';
 import { ReactUseCase } from '../../use-cases/react.use-case.ts';
 import { RevealEarlyUseCase } from '../../use-cases/reveal-early.use-case.ts';
+import { RestartGameUseCase } from '../../use-cases/restart-game.use-case.ts';
 import { StartRematchUseCase } from '../../use-cases/start-rematch.use-case.ts';
 import { GameNotEndedError } from '../../../domain/errors/game-not-ended.error.ts';
+import { NotHostError } from '../../../domain/errors/not-host.error.ts';
 import { DilemmaLikedEvent } from '../../../domain/events/dilemma-liked.event.ts';
 import { DilemmaUnlikedEvent } from '../../../domain/events/dilemma-unliked.event.ts';
 import { HostChangedEvent } from '../../../domain/events/host-changed.event.ts';
@@ -61,13 +63,14 @@ async function arrange() {
     notifier,
     likes,
     connections,
-    answerDilemma: new AnswerDilemmaUseCase({ ...ports, sealProvider }),
+    answerDilemma: new AnswerDilemmaUseCase({ ...ports, sealProvider, dilemmaCatalog: catalog }),
     revealEarly: new RevealEarlyUseCase(roomRepository, gameRepository, notifier, clock),
     moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock),
     react: new ReactUseCase({ ...ports, sealProvider }),
     likeDilemma: new LikeDilemmaUseCase({ ...ports, likes, sealProvider }),
     unlikeDilemma: new UnlikeDilemmaUseCase({ ...ports, likes }),
     startRematch: new StartRematchUseCase(roomRepository, gameRepository, notifier),
+    restartGame: new RestartGameUseCase(roomRepository, gameRepository, notifier),
     getGameState: new GetGameStateUseCase(roomRepository, gameRepository, catalog, likes),
     getRoomState: new GetRoomStateUseCase(roomRepository, catalog),
     disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier, clock),
@@ -91,6 +94,7 @@ async function playRound(arranged: Arranged, position: number): Promise<void> {
   const everyone = [anaId, luisId, martaId];
   for (const playerId of everyone) {
     await answerDilemma.execute({
+      language: 'es',
       roomId,
       playerId,
       dilemmaId: dilemmaIds[position]!,
@@ -315,7 +319,7 @@ describe('The end of the game', () => {
       expect(notifier.receivedBy(luisId).at(-1)).toEqual(
         new LobbyChangedEvent(roomId, 'rematch-started', room!.version),
       );
-      const lobby = await getRoomState.execute({ roomId, playerId: anaId });
+      const lobby = await getRoomState.execute({ roomId, playerId: anaId, language: 'es' });
       expect(
         lobby.rounds.every((round) => round.origin !== 'random' || round.withoutNewDilemmas),
       ).toBe(true);
@@ -330,6 +334,62 @@ describe('The end of the game', () => {
       await expect(startRematch.execute({ roomId, playerId: anaId })).rejects.toThrow(
         GameNotEndedError,
       );
+    });
+  });
+
+  describe('RestartGameUseCase', () => {
+    it('should stop the game and take everyone to the lobby of a new game, with only the dilemmas revealed as played', async () => {
+      // Arrange
+      const arranged = await arrange();
+      const { restartGame, moveOn, roomRepository, gameRepository, notifier } = arranged;
+      const { roomId, gameId, anaId, luisId, dilemmaIds } = arranged;
+      await playRound(arranged, 0);
+      await moveOn.execute({ roomId, playerId: anaId, fromPosition: 0 });
+
+      // Act
+      await restartGame.execute({ roomId, playerId: anaId });
+
+      // Assert
+      const room = await roomRepository.findById(roomId);
+      expect(room?.isInLobby).toBe(true);
+      expect(room?.playedDilemmaIds).toEqual([dilemmaIds[0]]);
+      expect((await gameRepository.findById(gameId))?.stage.kind).toBe('stopped');
+      expect(notifier.receivedBy(luisId).at(-1)).toEqual(
+        new LobbyChangedEvent(roomId, 'rematch-started', room!.version),
+      );
+    });
+
+    it('should keep the votes given before restarting', async () => {
+      // Arrange
+      const arranged = await arrange();
+      const { restartGame, answerDilemma, gameRepository, roomId, gameId, anaId, luisId } =
+        arranged;
+      await answerDilemma.execute({
+        language: 'es',
+        roomId,
+        playerId: luisId,
+        dilemmaId: arranged.dilemmaIds[0]!,
+        vote: 'TestOption',
+        votePredictions: [
+          { playerId: anaId, vote: 'TestOption' },
+          { playerId: arranged.martaId, vote: 'TestOption' },
+        ],
+      });
+
+      // Act
+      await restartGame.execute({ roomId, playerId: anaId });
+
+      // Assert
+      const game = await gameRepository.findById(gameId);
+      expect(game?.answersOf(luisId).map(({ vote }) => vote)).toEqual(['TestOption']);
+    });
+
+    it('should not let a player who is not the host restart the game', async () => {
+      // Arrange
+      const { restartGame, roomId, luisId } = await arrange();
+
+      // Act & Assert
+      await expect(restartGame.execute({ roomId, playerId: luisId })).rejects.toThrow(NotHostError);
     });
   });
 

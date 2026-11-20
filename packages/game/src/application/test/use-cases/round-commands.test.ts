@@ -58,7 +58,11 @@ async function arrange() {
     reports,
     connections,
     connectPlayer,
-    answerDilemma: new AnswerDilemmaUseCase({ ...ports, sealProvider: new InMemorySealProvider() }),
+    answerDilemma: new AnswerDilemmaUseCase({
+      ...ports,
+      sealProvider: new InMemorySealProvider(),
+      dilemmaCatalog: game.catalog,
+    }),
     revealEarly: new RevealEarlyUseCase(
       game.roomRepository,
       game.gameRepository,
@@ -98,6 +102,7 @@ async function vote(
 ): Promise<void> {
   for (const playerId of playerIds) {
     await answerDilemma.execute({
+      language: 'es',
       roomId,
       playerId,
       dilemmaId: dilemmaIds[position]!,
@@ -133,6 +138,7 @@ describe('Round commands', () => {
 
       // Act
       await answerDilemma.execute({
+        language: 'es',
         roomId,
         playerId: luisId,
         dilemmaId: dilemmaIds[0]!,

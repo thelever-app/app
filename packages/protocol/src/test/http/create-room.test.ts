@@ -6,7 +6,6 @@ describe('CreateRoomRequestDto', () => {
     nickname: 'Ana',
     ambience: 'classic',
     avatar: { face: 'face-01', color: 'khaki' },
-    groupNature: 'friends',
     place: 'remote',
     dilemmaLanguage: 'es',
   };
@@ -31,9 +30,8 @@ describe('CreateRoomRequestDto', () => {
     expect(CreateRoomRequestDto.safeParse(withoutAvatar).success).toBe(false);
   });
 
-  it('should reject a nature of the group, a place or a language it does not know', () => {
+  it('should reject a place or a language it does not know', () => {
     // Act & Assert
-    expect(CreateRoomRequestDto.safeParse({ ...request, groupNature: 'team' }).success).toBe(false);
     expect(CreateRoomRequestDto.safeParse({ ...request, place: 'remotely' }).success).toBe(false);
     expect(CreateRoomRequestDto.safeParse({ ...request, dilemmaLanguage: 'ja' }).success).toBe(
       false,

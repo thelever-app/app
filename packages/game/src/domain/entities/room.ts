@@ -29,7 +29,7 @@ import type { Randomness } from '../ports/randomness.port.ts';
 import { pickOne } from '../services/random-choice.ts';
 import { AMBIENCES, type Ambience, keptForANewRoom, settingsOf } from '../vos/ambience.vo.ts';
 import { AvatarVO } from '../vos/avatar.vo.ts';
-import { toGroupNature, toPlace, type GroupNature, type Place } from '../vos/group.vo.ts';
+import { toPlace, type Place } from '../vos/group.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { NicknameVO } from '../vos/nickname.vo.ts';
 import { RoomCodeVO } from '../vos/room-code.vo.ts';
@@ -40,6 +40,7 @@ import {
 } from '../vos/room-settings.vo.ts';
 import type { Category } from '../vos/category.vo.ts';
 import {
+  ANY_CONTENT,
   randomRound,
   type LobbyDilemma,
   type RoundContent,
@@ -95,7 +96,10 @@ export type RoundChange =
   | { readonly id?: number; readonly origin: 'players' };
 
 /** What the host changes in the settings: the rounds whole, the rest one by one. */
-export interface RoomSettingsChanges extends Partial<Omit<RoomSettingsSnapshot, 'rounds'>> {
+/** What the host may change: everything but the rounds as they are, and the language, which nobody changes. */
+export interface RoomSettingsChanges extends Partial<
+  Omit<RoomSettingsSnapshot, 'rounds' | 'dilemmaLanguage'>
+> {
   readonly rounds?: readonly RoundChange[];
 }
 
@@ -103,7 +107,6 @@ export interface RoomSnapshot {
   readonly id: string;
   readonly code: string;
   readonly hostId: string;
-  readonly groupNature: GroupNature;
   readonly place: Place;
   readonly settings: RoomSettingsSnapshot;
   readonly players: readonly PlayerSnapshot[];
@@ -133,7 +136,6 @@ export interface CreateRoomProps {
   readonly hostNickname: string;
   readonly hostIdentity: string;
   readonly hostAvatar: AvatarVO;
-  readonly groupNature: string;
   readonly place: string;
   /** The language of the device of the host, which the dilemmas use until the host changes it. */
   readonly dilemmaLanguage: string;
@@ -154,7 +156,6 @@ export class Room {
   readonly #code: RoomCodeVO;
   #hostId: string;
   #absentHostId: string | null = null;
-  readonly #groupNature: GroupNature;
   readonly #place: Place;
   #settings: RoomSettingsVO;
   /** In the order they joined, which decides who takes over as host. */
@@ -176,7 +177,6 @@ export class Room {
     snapshot: {
       readonly id: string;
       readonly code: string;
-      readonly groupNature: string;
       readonly place: string;
       readonly settings: RoomSettingsSnapshot;
       readonly lastConnectedAt: Date;
@@ -186,7 +186,6 @@ export class Room {
   ) {
     this.#id = new IdVO(snapshot.id);
     this.#code = new RoomCodeVO(snapshot.code);
-    this.#groupNature = toGroupNature(snapshot.groupNature);
     this.#place = toPlace(snapshot.place);
     this.#settings = new RoomSettingsVO(snapshot.settings);
     this.#hostId = host.id;
@@ -214,11 +213,9 @@ export class Room {
       },
       idGenerator,
     );
-    const { code, groupNature, place, createdAt } = props;
+    const { code, place, createdAt } = props;
     const lastConnectedAt = createdAt;
-    const room = new Room({ id, code, groupNature, place, settings, lastConnectedAt }, host, [
-      host,
-    ]);
+    const room = new Room({ id, code, place, settings, lastConnectedAt }, host, [host]);
     if (props.firstRoundDilemma) {
       const dilemma = lobbyDilemmaOf(props.firstRoundDilemma);
       if (!room.#suits(dilemma)) throw new DilemmaNotSuitableError(dilemma.dilemmaId);
@@ -240,10 +237,6 @@ export class Room {
 
   get host(): Player {
     return this.#player(this.#hostId);
-  }
-
-  get groupNature(): GroupNature {
-    return this.#groupNature;
   }
 
   get place(): Place {
@@ -396,23 +389,24 @@ export class Room {
     const compromisingDilemmas =
       variant === 'anonymous' && (rest.compromisingDilemmas ?? this.#settings.compromisingDilemmas);
     if (adultsOnly && !this.#settings.adultsOnly) this.#ensureNobodyUnderEighteen();
-    const allows = (content: RoundContent): boolean =>
-      (content !== 'adults-only' || adultsOnly) &&
-      (content !== 'compromising' || compromisingDilemmas);
+    // What the room no longer allows goes out of the content of each round, which may become any.
+    const allowedOf = (content: RoundContent): RoundContent =>
+      content.filter(
+        (requirement) =>
+          (requirement !== 'adults-only' || adultsOnly) &&
+          (requirement !== 'compromising' || compromisingDilemmas),
+      );
     const withoutRounds = this.#settings.with({
       ...rest,
       compromisingDilemmas,
       rounds: current.map((round) =>
-        round.origin === 'random' && !allows(round.content) ? { ...round, content: 'any' } : round,
+        round.origin === 'random' ? { ...round, content: allowedOf(round.content) } : round,
       ),
     });
-    const known =
-      withoutRounds.dilemmaLanguage === this.#settings.dilemmaLanguage
-        ? [
-            ...current.flatMap((round) => (round.origin === 'specific' ? [round.dilemma] : [])),
-            ...this.#chosenDilemmas,
-          ]
-        : [];
+    const known = [
+      ...current.flatMap((round) => (round.origin === 'specific' ? [round.dilemma] : [])),
+      ...this.#chosenDilemmas,
+    ];
     const found = (dilemmaId: string): LobbyDilemma | undefined => {
       const dilemma = [...dilemmas, ...known].find(
         (candidate) => candidate.dilemmaId === dilemmaId,
@@ -425,13 +419,11 @@ export class Room {
     const rounds = given.map((change): RoundSnapshot => {
       const id = change.id ?? (nextId += 1);
       if (change.origin === 'random') {
-        // A content the room does not allow any more goes back to any.
-        const content = change.content ?? 'any';
         return {
           id,
           origin: 'random',
           categories: change.categories,
-          content: allows(content) ? content : 'any',
+          content: allowedOf(change.content ?? ANY_CONTENT),
         };
       }
       if (change.origin === 'players') return { id, origin: 'players' };
@@ -748,7 +740,6 @@ export class Room {
       id: this.id,
       code: this.code,
       hostId: this.#hostId,
-      groupNature: this.#groupNature,
       place: this.#place,
       settings: this.#settings.toSnapshot(),
       players: this.#players.map((player) => player.toSnapshot()),

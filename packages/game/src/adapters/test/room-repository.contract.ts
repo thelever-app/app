@@ -16,7 +16,6 @@ function room(id = 'TestRoomId', hostId = 'TestAnaId', code = 'K7M2Q'): Room {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
-      groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code,
@@ -226,16 +225,15 @@ export function describeRoomRepositoryContract(
           {
             variant: 'anonymous',
             adultsOnly: true,
-            dilemmaLanguage: 'ca',
             timePerDilemmaSeconds: 60,
             newDilemmas: false,
             rounds: [
-              { id: 4, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
+              { id: 4, origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
               { id: 2, origin: 'specific', dilemmaId: 'TestSpecificDilemma' },
               { id: 7, origin: 'players' },
               { id: 1, origin: 'players' },
               { id: 3, origin: 'players' },
-              { id: 9, origin: 'random', categories: null, content: 'any' },
+              { id: 9, origin: 'random', categories: null, content: [] },
             ],
           },
           [

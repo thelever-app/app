@@ -7,6 +7,7 @@ import { revealIfEveryoneAnswered } from '../../domain/services/reveal-if-everyo
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
+import type { DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 import type { SealProvider } from '../ports/seal-provider.port.ts';
 import { findCurrentGame } from './find-current-game.ts';
 import { runOutRound } from './run-out-round.ts';
@@ -25,6 +26,8 @@ export interface AnswerDilemmaInput {
   readonly distributionPrediction?: readonly PredictedShare[];
   /** In an anonymous room, the player pressed Ready. */
   readonly ready?: boolean;
+  /** The language of the player, whom the dilemma is shown in it if it has a translation into it. */
+  readonly language: string;
 }
 
 /**
@@ -36,6 +39,7 @@ export class AnswerDilemmaUseCase {
   readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
   readonly #sealProvider: SealProvider;
+  readonly #dilemmaCatalog: DilemmaCatalog;
   readonly #clock: Clock;
 
   constructor(ports: {
@@ -43,16 +47,24 @@ export class AnswerDilemmaUseCase {
     readonly gameRepository: GameRepository;
     readonly notifier: PlayerNotifier;
     readonly sealProvider: SealProvider;
+    readonly dilemmaCatalog: DilemmaCatalog;
     readonly clock: Clock;
   }) {
     this.#roomRepository = ports.roomRepository;
     this.#gameRepository = ports.gameRepository;
     this.#notifier = ports.notifier;
     this.#sealProvider = ports.sealProvider;
+    this.#dilemmaCatalog = ports.dilemmaCatalog;
     this.#clock = ports.clock;
   }
 
-  async execute({ roomId, playerId, dilemmaId, ...draft }: AnswerDilemmaInput): Promise<void> {
+  async execute({
+    roomId,
+    playerId,
+    dilemmaId,
+    language,
+    ...draft
+  }: AnswerDilemmaInput): Promise<void> {
     // The identity, which the seal comes from, lives in the room; the game only knows who plays it.
     const { room, game } = await findCurrentGame(
       this.#roomRepository,
@@ -77,7 +89,17 @@ export class AnswerDilemmaUseCase {
     ) {
       return;
     }
-    game.answer(playerId, dilemmaId, draft, await this.#sealProvider.sealFor(player.identity), at);
+    // What the player read: their language if the version played has a translation into it.
+    const played = game.dilemmas.find((dilemma) => dilemma.dilemmaId === dilemmaId);
+    const [content] = played ? await this.#dilemmaCatalog.findContents([played], language) : [];
+    const seal = await this.#sealProvider.sealFor(player.identity);
+    game.answer(
+      playerId,
+      dilemmaId,
+      { ...draft, ...(content && { language: content.language }) },
+      seal,
+      at,
+    );
     revealIfEveryoneAnswered(room, game, at);
     handOverHostIfAway(room, game);
     const gameEvents = game.pullEvents();

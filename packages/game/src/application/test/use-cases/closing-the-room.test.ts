@@ -306,7 +306,6 @@ describe('Closing the room', () => {
         hostNickname: 'Pedro',
         hostIdentity: 'TestPedroIdentity',
         hostAvatar: { face: 'face-04', color: 'teal' },
-        groupNature: 'friends',
         place: 'together',
         dilemmaLanguage: 'es',
       });

@@ -26,6 +26,7 @@ async function gameInDecisionPhase(variant: RoomVariant = 'anonymous') {
   return {
     ...game,
     answerDilemma: new AnswerDilemmaUseCase({
+      dilemmaCatalog: game.catalog,
       roomRepository: game.roomRepository,
       gameRepository: game.gameRepository,
       notifier: new InMemoryPlayerNotifier(),
@@ -98,6 +99,7 @@ describe('GetGameStateUseCase', () => {
         return avatar && { face: avatar.face, color: avatar.color };
       };
       await answerDilemma.execute({
+        language: 'es',
         roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
@@ -173,6 +175,7 @@ describe('GetGameStateUseCase', () => {
         luisId,
       } = await gameInDecisionPhase();
       await answerDilemma.execute({
+        language: 'es',
         roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
@@ -199,6 +202,7 @@ describe('GetGameStateUseCase', () => {
       // Arrange
       const { getGameState, answerDilemma, roomId, gameId, luisId } = await gameInDecisionPhase();
       await answerDilemma.execute({
+        language: 'es',
         roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
@@ -229,6 +233,7 @@ describe('GetGameStateUseCase', () => {
       const { getGameState, answerDilemma, roomId, gameId, anaId, luisId } =
         await gameInDecisionPhase();
       await answerDilemma.execute({
+        language: 'es',
         roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',

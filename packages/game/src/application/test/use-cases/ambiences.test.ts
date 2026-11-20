@@ -70,8 +70,8 @@ describe('GetRoomStateUseCase, with a minor in the room', () => {
     const getRoomState = new GetRoomStateUseCase(roomRepository, testCatalog());
 
     // Act
-    const forAna = await getRoomState.execute({ roomId, playerId: anaId });
-    const forLuis = await getRoomState.execute({ roomId, playerId: luisId });
+    const forAna = await getRoomState.execute({ roomId, playerId: anaId, language: 'es' });
+    const forLuis = await getRoomState.execute({ roomId, playerId: luisId, language: 'es' });
 
     // Assert
     expect(forAna.hasPlayerUnderEighteen).toBe(true);

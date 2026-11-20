@@ -22,7 +22,6 @@ function roomOfTwo(): Room {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
-      groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',

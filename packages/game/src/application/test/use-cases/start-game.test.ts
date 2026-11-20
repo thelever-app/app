@@ -160,7 +160,7 @@ describe('StartGameUseCase', () => {
       await changeSettings.execute({
         roomId,
         playerId: anaId,
-        changes: { variant: 'anonymous', timePerDilemmaSeconds: 60, dilemmaLanguage: 'ca' },
+        changes: { variant: 'anonymous', timePerDilemmaSeconds: 60 },
       });
 
       // Act
@@ -171,9 +171,8 @@ describe('StartGameUseCase', () => {
       expect((await gameRepository.findById(gameId))?.settings).toEqual({
         ambience: 'custom',
         variant: 'anonymous',
-        groupNature: 'friends',
         place: 'together',
-        dilemmaLanguage: 'ca',
+        dilemmaLanguage: 'es',
         timePerDilemmaSeconds: 60,
       });
     });
@@ -394,7 +393,7 @@ describe('StartGameUseCase', () => {
           excludedIds: ['TestCatalog3'],
           playedBy: [],
           includeGap: true,
-          content: 'any',
+          content: [],
         }),
       );
     });
@@ -409,8 +408,8 @@ describe('StartGameUseCase', () => {
           adultsOnly: true,
           rounds: [
             ...randomRounds(4, ['life-and-death']),
-            { id: 5, origin: 'random', categories: ['life-and-death'], content: 'adults-only' },
-            { id: 6, origin: 'random', categories: ['life-and-death'], content: 'adults-only' },
+            { id: 5, origin: 'random', categories: ['life-and-death'], content: ['adults-only'] },
+            { id: 6, origin: 'random', categories: ['life-and-death'], content: ['adults-only'] },
           ],
           newDilemmas: false,
         },
@@ -422,10 +421,10 @@ describe('StartGameUseCase', () => {
 
       // Assert
       expect(findCandidates).toHaveBeenCalledWith(
-        expect.objectContaining({ count: 6 * CANDIDATES_PER_ROUND, content: 'any' }),
+        expect.objectContaining({ count: 6 * CANDIDATES_PER_ROUND, content: [] }),
       );
       expect(findCandidates).toHaveBeenCalledWith(
-        expect.objectContaining({ count: 2 * CANDIDATES_PER_ROUND, content: 'adults-only' }),
+        expect.objectContaining({ count: 2 * CANDIDATES_PER_ROUND, content: ['adults-only'] }),
       );
     });
 

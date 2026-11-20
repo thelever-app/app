@@ -27,7 +27,7 @@ import { FixedRandomness } from '../../../domain/test/support/fixed-randomness.t
 import { AvatarVO } from '../../../domain/vos/avatar.vo.ts';
 import { Room } from '../../../domain/entities/room.ts';
 import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
-import { lobbyCatalog } from '../support/test-catalog.ts';
+import { lobbyCatalog, testCatalogWithEnglishFor } from '../support/test-catalog.ts';
 import { InMemoryDilemmaCatalog } from '../../../adapters/in-memory/in-memory-dilemma-catalog.ts';
 
 /** The lobby of three, with a catalog to search and add from, and every lobby use case. */
@@ -47,7 +47,7 @@ async function arrange() {
         playerId: lobby.anaId,
         changes: {
           rounds: [
-            { id: 1, origin: 'random', categories: null, content: 'any' },
+            { id: 1, origin: 'random', categories: null, content: [] },
             { id: 2, origin: 'players' },
           ],
         },
@@ -199,7 +199,7 @@ describe('ChangeRoomSettingsUseCase', () => {
       changes: {
         timePerDilemmaSeconds: 90,
         rounds: [
-          { origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
+          { origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
           { origin: 'specific', dilemmaId: 'TestCatalog4' },
         ],
       },
@@ -209,7 +209,7 @@ describe('ChangeRoomSettingsUseCase', () => {
     const { settings } = (await roomRepository.findById(roomId))!;
     expect(settings.timePerDilemmaSeconds).toBe(90);
     expect(settings.rounds).toEqual([
-      { id: 9, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
+      { id: 9, origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
       {
         id: 10,
         origin: 'specific',
@@ -256,24 +256,6 @@ describe('ChangeRoomSettingsUseCase', () => {
         changes: { rounds: [{ origin: 'specific', dilemmaId }] },
       }),
     ).rejects.toThrow(error);
-  });
-
-  it('should make random the rounds whose dilemmas are not in the new language', async () => {
-    // Arrange
-    const { changeSettings, roomRepository, roomId, anaId } = await arrange();
-    await changeSettings.execute({
-      roomId,
-      playerId: anaId,
-      changes: { rounds: [{ id: 1, origin: 'specific', dilemmaId: 'TestCatalog4' }] },
-    });
-
-    // Act
-    await changeSettings.execute({ roomId, playerId: anaId, changes: { dilemmaLanguage: 'ca' } });
-
-    // Assert
-    expect((await roomRepository.findById(roomId))?.settings.rounds).toEqual([
-      { id: 1, origin: 'random', categories: null, content: 'any' },
-    ]);
   });
 
   it('should throw an error if a player who is not the host tries', async () => {
@@ -533,8 +515,8 @@ describe('GetRoomStateUseCase', () => {
       playerId: anaId,
       changes: {
         rounds: [
-          { origin: 'random', categories: ['honesty'], content: 'any' },
-          { origin: 'random', categories: ['honesty'], content: 'any' },
+          { origin: 'random', categories: ['honesty'], content: [] },
+          { origin: 'random', categories: ['honesty'], content: [] },
         ],
         newDilemmas: false,
       },
@@ -545,13 +527,42 @@ describe('GetRoomStateUseCase', () => {
     );
 
     // Act
-    const { rounds } = await getRoomState.execute({ roomId, playerId: anaId });
+    const { rounds } = await getRoomState.execute({ roomId, playerId: anaId, language: 'es' });
 
     // Assert
     expect(rounds.map((round) => round.origin === 'random' && round.withoutNewDilemmas)).toEqual([
       false,
       true,
     ]);
+  });
+
+  it('should give each player the dilemmas of the rounds in their language, if it has a translation into it', async () => {
+    // Arrange
+    const lobby = await lobbyOfThree(
+      new InMemoryPlayerNotifier(),
+      testCatalogWithEnglishFor('TestDilemma1'),
+    );
+    const { roomRepository, catalog, roomId, anaId, luisId } = lobby;
+    await new ChangeRoomSettingsUseCase(
+      roomRepository,
+      catalog,
+      new InMemoryPlayerNotifier(),
+    ).execute({
+      roomId,
+      playerId: anaId,
+      changes: { rounds: [{ origin: 'specific', dilemmaId: 'TestDilemma1' }] },
+    });
+    const getRoomState = new GetRoomStateUseCase(roomRepository, catalog);
+
+    // Act
+    const forAna = await getRoomState.execute({ roomId, playerId: anaId, language: 'es' });
+    const forLuis = await getRoomState.execute({ roomId, playerId: luisId, language: 'en' });
+
+    // Assert
+    const textOf = (rounds: typeof forAna.rounds) =>
+      rounds[0]?.origin === 'specific' ? rounds[0].dilemma.text : undefined;
+    expect(textOf(forAna.rounds)).toBe('TextOfTestDilemma1');
+    expect(textOf(forLuis.rounds)).toBe('EnglishTextOfTestDilemma1');
   });
 
   it('should give everything the lobby shows, without who chose the dilemma of each round', async () => {
@@ -564,7 +575,7 @@ describe('GetRoomStateUseCase', () => {
       playerId: anaId,
       changes: {
         rounds: [
-          { id: 1, origin: 'random', categories: ['honesty'], content: 'any' },
+          { id: 1, origin: 'random', categories: ['honesty'], content: [] },
           { id: 2, origin: 'specific', dilemmaId: 'TestCatalog4' },
           { id: 3, origin: 'players' },
           { id: 4, origin: 'players' },
@@ -580,18 +591,31 @@ describe('GetRoomStateUseCase', () => {
     const room = (await roomRepository.findById(roomId))!;
 
     // Act
-    const forAna = await getRoomState.execute({ roomId, playerId: anaId });
-    const forLuis = await getRoomState.execute({ roomId, playerId: luisId });
+    const forAna = await getRoomState.execute({ roomId, playerId: anaId, language: 'es' });
+    const forLuis = await getRoomState.execute({ roomId, playerId: luisId, language: 'es' });
 
     // Assert
-    const { rounds, ...settings } = room.settings.toSnapshot();
+    const {
+      rounds,
+      variant,
+      adultsOnly,
+      compromisingDilemmas,
+      timePerDilemmaSeconds,
+      newDilemmas,
+    } = room.settings.toSnapshot();
+    const settings = {
+      variant,
+      adultsOnly,
+      compromisingDilemmas,
+      timePerDilemmaSeconds,
+      newDilemmas,
+    };
     expect(forAna).toMatchObject({
       roomId,
       roomVersion: room.version,
       code: room.code,
       playerId: anaId,
       hostId: anaId,
-      groupNature: 'friends',
       place: 'together',
       settings,
       ambience: 'custom',
@@ -606,7 +630,7 @@ describe('GetRoomStateUseCase', () => {
         origin: 'random',
         categories: ['honesty'],
         withoutNewDilemmas: false,
-        content: 'any',
+        content: [],
       },
       {
         roundId: 2,
@@ -632,8 +656,8 @@ describe('GetRoomStateUseCase', () => {
     const { getRoomState, roomId } = await arrange();
 
     // Act & Assert
-    await expect(getRoomState.execute({ roomId, playerId: 'TestStrangerId' })).rejects.toThrow(
-      PlayerNotInRoomError,
-    );
+    await expect(
+      getRoomState.execute({ roomId, playerId: 'TestStrangerId', language: 'es' }),
+    ).rejects.toThrow(PlayerNotInRoomError);
   });
 });

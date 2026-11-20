@@ -14,6 +14,7 @@ async function arrange() {
   const notifier = new InMemoryPlayerNotifier();
   const game = await gameInDecisionPhase(notifier);
   const answerDilemma = new AnswerDilemmaUseCase({
+    dilemmaCatalog: game.catalog,
     roomRepository: game.roomRepository,
     gameRepository: game.gameRepository,
     notifier,
@@ -45,6 +46,7 @@ async function arrange() {
     for (const playerId of everyone) {
       const share = predictions[playerId] ?? 100;
       await answerDilemma.execute({
+        language: 'es',
         roomId: game.roomId,
         playerId,
         dilemmaId,

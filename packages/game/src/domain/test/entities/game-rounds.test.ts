@@ -8,6 +8,7 @@ import { DilemmaAlreadyReportedError } from '../../errors/dilemma-already-report
 import { DilemmaNotInRoundError } from '../../errors/dilemma-not-in-round.error.ts';
 import { DilemmaNotReportedAsOffensiveError } from '../../errors/dilemma-not-reported-as-offensive.error.ts';
 import { DilemmaSkippedError } from '../../errors/dilemma-skipped.error.ts';
+import { GameRoundsOverError } from '../../errors/game-rounds-over.error.ts';
 import { DuplicateVotePredictionError } from '../../errors/duplicate-vote-prediction.error.ts';
 import { PlayerLeftGameError } from '../../errors/player-left-game.error.ts';
 import { PlayerNotPredictableError } from '../../errors/player-not-predictable.error.ts';
@@ -35,7 +36,6 @@ const SECOND = 1000;
 const NOMINAL: GameSettings = {
   ambience: 'classic',
   variant: 'nominal',
-  groupNature: 'friends',
   place: 'together',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
@@ -715,7 +715,7 @@ describe('Game, by rounds', () => {
       expect(game.toSnapshot()).toEqual(snapshot);
     });
 
-    it('should leave a late player out of the predictions in a nominal room, so their vote completes their answer', () => {
+    it('should leave a late player out of the predictions of the round they join, so their vote completes their answer', () => {
       // Arrange
       const game = gameOfThree();
       game.answer('Ana', 'TestDilemma1', complete(game, 'Ana'), SEAL, AT);
@@ -740,24 +740,58 @@ describe('Game, by rounds', () => {
       expect(game.hasAnswered('Pedro')).toBe(true);
     });
 
-    it('should show the vote of a late player in the reveal, and score only among who started the game', () => {
+    it('should take a late player into the predictions from the next round, both ways', () => {
+      // Arrange
+      const game = gameOfThree();
+
+      // Act
+      game.joinLate('Pedro', new KeepOrderRandomness());
+
+      // Assert
+      expect(game.playersToPredictBy('Pedro', 'TestDilemma3')).toEqual(['Ana', 'Luis', 'Marta']);
+      expect(game.playersToPredictBy('Luis', 'TestDilemma3')).toEqual(['Ana', 'Marta', 'Pedro']);
+    });
+
+    it('should score a late player only from the next round, and rank them', () => {
       // Arrange
       const game = gameOfThree();
       game.joinLate('Pedro', new KeepOrderRandomness());
-      game.answer('Pedro', 'TestDilemma1', { vote: 'TestWait' }, SEAL, AT);
+      const all = [...EVERYONE, 'Pedro'];
 
       // Act
-      everyoneAnswers(game);
+      for (let position = 0; position < 3; position += 1) {
+        const dilemmaId = game.round?.dilemmaId as string;
+        for (const playerId of all) {
+          game.answer(playerId, dilemmaId, complete(game, playerId), SEAL, AT);
+        }
+        game.revealIfEveryoneAnswered(all, AT);
+        game.moveOn('Ana', position, AT);
+      }
 
       // Assert
-      expect(game.revealOf(0).votes).toContainEqual({ playerId: 'Pedro', vote: 'TestWait' });
-      expect(game.pointsOf('Ana')).toEqual([{ dilemmaId: 'TestDilemma1', points: 66 }]);
-      expect(game.pointsOf('Pedro')).toEqual([]);
+      expect(game.pointsOf('Pedro').map(({ dilemmaId }) => dilemmaId)).toEqual([
+        'TestDilemma2',
+        'TestDilemma3',
+      ]);
+      expect(game.results()?.ranking.map(({ playerId }) => playerId)).toContain('Pedro');
     });
 
-    it('should never make a late player the person in the gap', () => {
+    it('should draw again the person in the gap of the rounds not started, the late player among them', () => {
       // Arrange
       const game = gameOfThree();
+
+      // Act
+      game.joinLate('Pedro', new KeepOrderRandomness());
+
+      // Assert
+      expect(game.personInTheGap('TestDilemma2')).toBe('Pedro');
+    });
+
+    it('should keep the person in the gap of the round in progress', () => {
+      // Arrange
+      const game = gameOfThree();
+      everyoneAnswers(game);
+      game.moveOn('Ana', 0, AT);
       const personInTheGap = game.personInTheGap('TestDilemma2');
 
       // Act
@@ -792,6 +826,99 @@ describe('Game, by rounds', () => {
       expect(() => game.joinLate('Pedro', new KeepOrderRandomness())).toThrow(
         DecisionPhaseNotStartedError,
       );
+    });
+  });
+
+  describe('stop', () => {
+    it('should stop the game in its rounds, which then takes no more answers, reveals or steps', () => {
+      // Arrange
+      const game = gameOfThree();
+
+      // Act
+      game.stop('Ana');
+
+      // Assert
+      expect(game.stage.kind).toBe('stopped');
+      expect(game.isInDecisionPhase).toBe(false);
+      expect(() => game.answer('Ana', 'TestDilemma1', complete(game, 'Ana'), SEAL, AT)).toThrow(
+        DecisionPhaseOverError,
+      );
+      expect(game.runOutRound(after(61 * SECOND))).toBe(false);
+      expect(game.moveOn('Ana', 0, AT)).toBe(false);
+    });
+
+    it('should have no results nor ranking', () => {
+      // Arrange
+      const game = gameOfThree();
+
+      // Act
+      game.stop('Ana');
+
+      // Assert
+      expect(game.results()).toBeNull();
+      expect(game.ranking()).toBeNull();
+    });
+
+    it('should keep the answers given before it stopped', () => {
+      // Arrange
+      const game = gameOfThree();
+      game.answer('Luis', 'TestDilemma1', complete(game, 'Luis'), SEAL, AT);
+
+      // Act
+      game.stop('Ana');
+
+      // Assert
+      expect(game.answersOf('Luis')).toHaveLength(1);
+    });
+
+    it('should tell only the dilemmas revealed before it stopped', () => {
+      // Arrange
+      const game = gameOfThree();
+      everyoneAnswers(game);
+      game.moveOn('Ana', 0, AT);
+
+      // Act
+      game.stop('Ana');
+
+      // Assert
+      expect(game.revealedDilemmaIds).toEqual(['TestDilemma1']);
+    });
+
+    it('should tell the dilemma of a round in its reveal as revealed', () => {
+      // Arrange
+      const game = gameOfThree();
+      everyoneAnswers(game);
+
+      // Act
+      game.stop('Ana');
+
+      // Assert
+      expect(game.revealedDilemmaIds).toEqual(['TestDilemma1']);
+    });
+
+    it('should be rebuilt stopped', () => {
+      // Arrange
+      const game = gameOfThree();
+      game.stop('Ana');
+
+      // Act
+      const restored = Game.restore(game.toSnapshot());
+
+      // Assert
+      expect(restored.toSnapshot()).toEqual(game.toSnapshot());
+      expect(restored.stage.kind).toBe('stopped');
+    });
+
+    it('should throw an error once the rounds are over', () => {
+      // Arrange
+      const game = gameOfThree();
+      for (let position = 0; position < 3; position += 1) {
+        everyoneAnswers(game);
+        game.moveOn('Ana', position, AT);
+      }
+
+      // Act & Assert
+      expect(() => game.stop('Ana')).toThrow(GameRoundsOverError);
     });
   });
 

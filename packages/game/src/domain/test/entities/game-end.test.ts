@@ -23,7 +23,6 @@ const SECOND = 1000;
 const NOMINAL: GameSettings = {
   ambience: 'classic',
   variant: 'nominal',
-  groupNature: 'friends',
   place: 'together',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,

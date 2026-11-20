@@ -21,7 +21,6 @@ import { CANDIDATES_PER_ROUND, EXPLORATION_SLOTS, testCatalog } from './test-cat
 export const TEST_GAME_SETTINGS = {
   ambience: 'classic',
   variant: 'nominal',
-  groupNature: 'friends',
   place: 'together',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
@@ -74,7 +73,6 @@ export async function lobbyOfThree(
     hostNickname: 'Ana',
     hostIdentity: 'TestAnaIdentity',
     hostAvatar: { face: 'face-01', color: 'khaki' },
-    groupNature: 'friends',
     place: 'together',
     dilemmaLanguage: 'es',
   });
@@ -140,8 +138,9 @@ export const ROOM_VERSION_WHEN_THE_GAME_STARTS = 4;
 export async function gameInDecisionPhase(
   notifier = new InMemoryPlayerNotifier(),
   variant: RoomVariant = 'anonymous',
+  catalog: InMemoryDilemmaCatalog = testCatalog(),
 ) {
-  const lobby = await lobbyOfThree(notifier, testCatalog(), variant);
+  const lobby = await lobbyOfThree(notifier, catalog, variant);
   const { gameId } = await lobby.startGame.execute({ roomId: lobby.roomId, playerId: lobby.anaId });
   const game = await lobby.gameRepository.findById(gameId);
 

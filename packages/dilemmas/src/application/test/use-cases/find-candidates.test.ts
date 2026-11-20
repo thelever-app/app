@@ -39,7 +39,7 @@ const A_GAME = {
   count: 10,
   includeGap: true,
   excludedIds: [],
-  content: 'any' as const,
+  content: [],
   playedBy: [],
 };
 
