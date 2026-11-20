@@ -23,6 +23,7 @@ const gameState = {
     movedOnBy: null,
   },
   stage: { kind: 'rounds', movedOnBy: null, step: null },
+  readyToMoveOn: [],
   ranking: null,
   results: null,
   inGame: true,

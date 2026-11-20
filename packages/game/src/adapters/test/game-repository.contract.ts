@@ -326,6 +326,28 @@ export function describeGameRepositoryContract(
         expect(found?.stage).toEqual({ kind: 'results', movedOnBy: 'TestLuisId', step: 1 });
       });
 
+      it('should find a saved game everyone moved on by being ready, with who is ready now', async () => {
+        // Arrange
+        const { games, room, game, dilemmas } = await arrange();
+        start(game, room);
+        for (const [position] of dilemmas.entries()) {
+          game.reveal('host', STARTED_AT);
+          for (const playerId of game.playerIds) {
+            game.getReadyToMoveOn(playerId, position, game.playerIds, STARTED_AT);
+          }
+        }
+        game.getReadyToMoveOn('TestLuisId', dilemmas.length, game.playerIds, STARTED_AT);
+        await games.save(game);
+
+        // Act
+        const found = await games.findById('TestGameId');
+
+        // Assert
+        expect(found?.toSnapshot()).toEqual(game.toSnapshot());
+        expect(found?.stage).toEqual({ kind: 'results', movedOnBy: null, step: 0 });
+        expect(found?.playersReadyToMoveOn).toEqual(['TestLuisId']);
+      });
+
       it('should find a saved game with a player who joined it late', async () => {
         // Arrange
         const { games, rooms, room, game, first } = await arrange({

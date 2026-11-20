@@ -203,16 +203,29 @@ export const RevealEarlyDto = z.strictObject({
 });
 
 /**
- * From the reveal of a round, any player takes everyone to the next one; from the last one, to the
- * first screen of the game results; from each, to the next; and from the last, to the end of the game.
+ * The position of the round whose reveal the player moves on from or, from a screen of the game
+ * results, the number of rounds plus the number of that screen, so two at once move one step.
+ */
+const FromPositionDto = z.number().int().nonnegative();
+
+/**
+ * From the reveal of a round, the host takes everyone to the next one without waiting for them to
+ * be ready; from the last one, to the first screen of the game results; from each, to the next;
+ * and from the last, to the end of the game.
  */
 export const MoveOnDto = z.strictObject({
   type: z.literal('move-on'),
-  /**
-   * The position of the round whose reveal the player moves on from or, from a screen of the game
-   * results, the number of rounds plus the number of that screen, so two at once move one step.
-   */
-  fromPosition: z.number().int().nonnegative(),
+  fromPosition: FromPositionDto,
+  traceparent: TraceparentDto.optional(),
+});
+
+/**
+ * Any player is ready to move on from the reveal of a round or from a screen of the game results;
+ * once every connected player is, everyone moves on.
+ */
+export const GetReadyToMoveOnDto = z.strictObject({
+  type: z.literal('ready-to-move-on'),
+  fromPosition: FromPositionDto,
   traceparent: TraceparentDto.optional(),
 });
 
@@ -355,6 +368,7 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   StartGameDto,
   RevealEarlyDto,
   MoveOnDto,
+  GetReadyToMoveOnDto,
   LeaveRoomDto,
   ReportDilemmaDto,
   SkipDilemmaDto,
@@ -378,6 +392,7 @@ export const ClientMessageTypeDto = z.enum([
   'start-game',
   'reveal-early',
   'move-on',
+  'ready-to-move-on',
   'leave-room',
   'report-dilemma',
   'skip-dilemma',
@@ -413,6 +428,7 @@ export type DistributionPredictionDto = z.infer<typeof DistributionPredictionDto
 export type AnswerDilemmaDto = z.infer<typeof AnswerDilemmaDto>;
 export type RevealEarlyDto = z.infer<typeof RevealEarlyDto>;
 export type MoveOnDto = z.infer<typeof MoveOnDto>;
+export type GetReadyToMoveOnDto = z.infer<typeof GetReadyToMoveOnDto>;
 export type LeaveRoomDto = z.infer<typeof LeaveRoomDto>;
 export type ReportReasonDto = z.infer<typeof ReportReasonDto>;
 export type ReportDilemmaDto = z.infer<typeof ReportDilemmaDto>;

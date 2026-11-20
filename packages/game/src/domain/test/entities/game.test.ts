@@ -599,6 +599,7 @@ describe('Game', () => {
           movedOnBy: null,
         },
         stage: { kind: 'rounds', movedOnBy: null, step: null },
+        readyToMoveOn: [],
         reactions: [],
         timesSpent: [],
         peopleInTheGap: [],

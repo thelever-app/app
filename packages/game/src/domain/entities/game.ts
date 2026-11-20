@@ -31,6 +31,7 @@ import type { DomainEvent } from '../events/domain-event.ts';
 import { PlayerJoinedLateEvent } from '../events/player-joined-late.event.ts';
 import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
 import { ReactionsChangedEvent } from '../events/reactions-changed.event.ts';
+import { ReadyToMoveOnChangedEvent } from '../events/ready-to-move-on-changed.event.ts';
 import { RoundStartedEvent } from '../events/round-started.event.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
@@ -220,6 +221,8 @@ export interface GameSnapshot {
   readonly version: number;
   readonly round: Omit<Round, 'dilemmaId'> | null;
   readonly stage: GameStageState;
+  /** Who is ready to move on from the reveal or the screen of the results everyone is on. */
+  readonly readyToMoveOn: readonly string[];
   readonly reactions: readonly Reaction[];
   /** How long the group spent on the reveal of each dilemma it moved on from. */
   readonly timesSpent: readonly { readonly dilemmaId: string; readonly ms: number }[];
@@ -281,8 +284,13 @@ export class Game {
   readonly #settings: GameSettings;
   #round: RoundState | null = null;
   #stage: GameStage = 'rounds';
-  /** Who moved everyone on to the stage, or stopped the game; null for the rounds. */
+  /**
+   * The host who moved everyone on to the stage, or stopped the game; null for the rounds and when
+   * everyone was ready.
+   */
   #stageMovedOnBy: string | null = null;
+  /** Who is ready to move on from the reveal or the screen of the results everyone is on. */
+  #readyToMoveOn = new Set<string>();
   /** The screen of the results everyone is on. */
   #stageStep = 0;
   /** In the order they were made, a new one taking the place of the one it replaces. */
@@ -401,6 +409,7 @@ export class Game {
     if (this.#stage !== 'rounds') throw new GameRoundsOverError(this.id);
     this.#stage = 'stopped';
     this.#stageMovedOnBy = playerId;
+    this.#readyToMoveOn.clear();
     this.#version += 1;
   }
 
@@ -581,24 +590,87 @@ export class Game {
   }
 
   /**
-   * From the reveal of the round at that position, the player takes everyone to the next round;
-   * from the last one, to the first screen of the game results; from each screen of the results,
-   * at the positions after the last round, to the next one; and from the last, to the end of the
-   * game. The time the group spent on the reveal is recorded. Asked from where the game no longer
-   * is, it does nothing, so two players who move on at once move one step. Whether it moved on.
+   * The host takes everyone on without waiting for them to be ready: from the reveal of the round at
+   * that position to the next round; from the last one, to the first screen of the game results;
+   * from each screen of the results, at the positions after the last round, to the next one; and
+   * from the last, to the end of the game. Asked from where the game no longer is, it does nothing,
+   * so two who move on at once move one step. Whether it moved on.
    */
   moveOn(playerId: string, fromPosition: number, at: Date): boolean {
     this.#activeStateOf(playerId);
-    const round = this.#round;
-    if (!round || this.#stage === 'ended' || this.#stage === 'stopped') return false;
-    if (this.#stage === 'results') {
-      if (fromPosition !== this.#dilemmas.length + this.#stageStep) return false;
-      if (this.#stageStep < this.#resultsScreens() - 1) {
-        return this.#moveOnTo('results', playerId, this.#stageStep + 1);
-      }
-      return this.#moveOnTo('ended', playerId);
+    if (this.#movingOnFrom() !== fromPosition) return false;
+    this.#moveEveryoneOn(playerId, at);
+    return true;
+  }
+
+  /** Who is ready to move on from where the group is, in the order they got ready. */
+  get playersReadyToMoveOn(): readonly string[] {
+    return [...this.#readyToMoveOn];
+  }
+
+  /**
+   * From the reveal of the round at that position, or from the screen of the results at that
+   * position, the player is ready to move on. Once every player who is connected and has not left
+   * is, everyone moves on, as the host would take them, without anyone who took them. Asked from
+   * where the game no longer is, it does nothing. Whether everyone moved on.
+   */
+  getReadyToMoveOn(
+    playerId: string,
+    fromPosition: number,
+    connectedPlayerIds: readonly string[],
+    at: Date,
+  ): boolean {
+    this.#activeStateOf(playerId);
+    if (this.#movingOnFrom() !== fromPosition || this.#readyToMoveOn.has(playerId)) return false;
+    this.#readyToMoveOn.add(playerId);
+    if (this.moveOnIfEveryoneIsReady(connectedPlayerIds, at)) return true;
+    this.#version += 1;
+    this.#events.push(new ReadyToMoveOnChangedEvent(this.id, this.#version));
+    return false;
+  }
+
+  /**
+   * Moves everyone on once every player who is connected and has not left is ready to move on, so
+   * the group does not wait for who disconnects or leaves. With nobody connected it waits. Whether
+   * everyone moved on.
+   */
+  moveOnIfEveryoneIsReady(connectedPlayerIds: readonly string[], at: Date): boolean {
+    if (this.#movingOnFrom() === null) return false;
+    const connected = new Set(connectedPlayerIds);
+    const present = this.#activePlayerIds().filter((playerId) => connected.has(playerId));
+    if (present.length === 0 || !present.every((playerId) => this.#readyToMoveOn.has(playerId))) {
+      return false;
     }
-    if (round.position !== fromPosition || round.phase !== 'reveal') return false;
+    this.#moveEveryoneOn(null, at);
+    return true;
+  }
+
+  /**
+   * Where the group may move on from: the position of the round in its reveal or, in the results,
+   * the number of rounds plus the screen everyone is on. Null anywhere else.
+   */
+  #movingOnFrom(): number | null {
+    const round = this.#round;
+    if (!round) return null;
+    if (this.#stage === 'results') return this.#dilemmas.length + this.#stageStep;
+    return this.#stage === 'rounds' && round.phase === 'reveal' ? round.position : null;
+  }
+
+  /**
+   * Everyone moves on one step, by the host who took them or, with null, because everyone was
+   * ready. Leaving a reveal records the time the group spent on it.
+   */
+  #moveEveryoneOn(movedOnBy: string | null, at: Date): void {
+    const round = this.#round as RoundState;
+    this.#readyToMoveOn.clear();
+    if (this.#stage === 'results') {
+      if (this.#stageStep < this.#resultsScreens() - 1) {
+        this.#moveOnTo('results', movedOnBy, this.#stageStep + 1);
+      } else {
+        this.#moveOnTo('ended', movedOnBy);
+      }
+      return;
+    }
     if (round.revealedAt) {
       // The instance that moves on may run a few milliseconds behind the one that revealed.
       this.#timesSpent.set(
@@ -606,13 +678,14 @@ export class Game {
         Math.max(0, at.getTime() - round.revealedAt.getTime()),
       );
     }
-    if (round.position === this.#dilemmas.length - 1) return this.#moveOnTo('results', playerId);
-
-    const next = this.#roundAt(round.position + 1, at, playerId);
+    if (round.position === this.#dilemmas.length - 1) {
+      this.#moveOnTo('results', movedOnBy);
+      return;
+    }
+    const next = this.#roundAt(round.position + 1, at, movedOnBy);
     this.#round = next;
     this.#version += 1;
-    this.#events.push(new RoundStartedEvent(this.id, next.position, playerId, this.#version));
-    return true;
+    this.#events.push(new RoundStartedEvent(this.id, next.position, movedOnBy, this.#version));
   }
 
   /**
@@ -961,6 +1034,7 @@ export class Game {
         revealedAt: this.#round.revealedAt && new Date(this.#round.revealedAt),
       },
       stage: this.stage,
+      readyToMoveOn: this.playersReadyToMoveOn,
       reactions: this.reactions(),
       timesSpent: [...this.#timesSpent].map(([dilemmaId, ms]) => ({ dilemmaId, ms })),
       peopleInTheGap: [...this.#peopleInTheGap].map(([dilemmaId, playerId]) => ({
@@ -989,6 +1063,7 @@ export class Game {
     game.#stage = snapshot.stage.kind;
     game.#stageMovedOnBy = snapshot.stage.movedOnBy;
     game.#stageStep = snapshot.stage.step ?? 0;
+    game.#readyToMoveOn = new Set(snapshot.readyToMoveOn);
     game.#round = snapshot.round && {
       ...snapshot.round,
       startedAt: new Date(snapshot.round.startedAt),
@@ -1211,13 +1286,12 @@ export class Game {
     return [...this.#players].filter(([, state]) => !state.left).map(([playerId]) => playerId);
   }
 
-  #moveOnTo(stage: GameStage, playerId: string, step = 0): boolean {
+  #moveOnTo(stage: GameStage, movedOnBy: string | null, step = 0): void {
     this.#stage = stage;
-    this.#stageMovedOnBy = playerId;
+    this.#stageMovedOnBy = movedOnBy;
     this.#stageStep = step;
     this.#version += 1;
-    this.#events.push(new GameStageChangedEvent(this.id, stage, playerId, this.#version));
-    return true;
+    this.#events.push(new GameStageChangedEvent(this.id, stage, movedOnBy, this.#version));
   }
 
   /**

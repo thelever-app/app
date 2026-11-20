@@ -39,6 +39,8 @@ export interface GetGameStateOutput {
   readonly round: Omit<Round, 'dilemmaId' | 'startedAt' | 'revealedAt'>;
   /** Whether the game is in its rounds, which screen of its results or its end, and who moved everyone there. */
   readonly stage: GameStageState;
+  /** Who is ready to move on from the reveal or the screen of the results everyone is on. */
+  readonly readyToMoveOn: readonly string[];
   /**
    * Once the rounds are over, the ranking: in an anonymous room, who reads the group best; in a
    * nominal one, by the points of the vote predictions. Null while the rounds go on.
@@ -216,6 +218,7 @@ export class GetGameStateUseCase {
         movedOnBy: round.movedOnBy,
       },
       stage: game.stage,
+      readyToMoveOn: game.playersReadyToMoveOn,
       ranking: game.ranking(),
       results: this.#resultsFor(game, playerId),
       inGame,

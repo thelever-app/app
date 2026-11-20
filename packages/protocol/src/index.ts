@@ -54,6 +54,7 @@ export {
   StartGameDto,
   RevealEarlyDto,
   MoveOnDto,
+  GetReadyToMoveOnDto,
   LeaveRoomDto,
   ReportReasonDto,
   ReportDilemmaDto,

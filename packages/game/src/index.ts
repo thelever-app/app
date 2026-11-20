@@ -119,6 +119,7 @@ export { ConnectionChangedEvent } from './domain/events/connection-changed.event
 export { LobbyChangedEvent, type LobbyChange } from './domain/events/lobby-changed.event.ts';
 export { DilemmaRevealedEvent } from './domain/events/dilemma-revealed.event.ts';
 export { RoundStartedEvent } from './domain/events/round-started.event.ts';
+export { ReadyToMoveOnChangedEvent } from './domain/events/ready-to-move-on-changed.event.ts';
 export { AnsweredCountChangedEvent } from './domain/events/answered-count-changed.event.ts';
 export { HostChangedEvent } from './domain/events/host-changed.event.ts';
 export { PlayerLeftEvent } from './domain/events/player-left.event.ts';
@@ -322,6 +323,10 @@ export {
   type RevealEarlyInput,
 } from './application/use-cases/reveal-early.use-case.ts';
 export { MoveOnUseCase, type MoveOnInput } from './application/use-cases/move-on.use-case.ts';
+export {
+  GetReadyToMoveOnUseCase,
+  type GetReadyToMoveOnInput,
+} from './application/use-cases/get-ready-to-move-on.use-case.ts';
 export {
   RunOutRoundUseCase,
   type RunOutRoundInput,

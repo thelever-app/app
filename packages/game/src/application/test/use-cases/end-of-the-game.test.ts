@@ -6,6 +6,7 @@ import { GetGameStateUseCase } from '../../use-cases/get-game-state.use-case.ts'
 import { GetRoomStateUseCase } from '../../use-cases/get-room-state.use-case.ts';
 import { JoinRoomUseCase } from '../../use-cases/join-room.use-case.ts';
 import { LikeDilemmaUseCase } from '../../use-cases/like-dilemma.use-case.ts';
+import { GetReadyToMoveOnUseCase } from '../../use-cases/get-ready-to-move-on.use-case.ts';
 import { MoveOnUseCase } from '../../use-cases/move-on.use-case.ts';
 import { UnlikeDilemmaUseCase } from '../../use-cases/unlike-dilemma.use-case.ts';
 import { ReactUseCase } from '../../use-cases/react.use-case.ts';
@@ -66,6 +67,7 @@ async function arrange() {
     answerDilemma: new AnswerDilemmaUseCase({ ...ports, sealProvider, dilemmaCatalog: catalog }),
     revealEarly: new RevealEarlyUseCase(roomRepository, gameRepository, notifier, clock),
     moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock),
+    getReadyToMoveOn: new GetReadyToMoveOnUseCase(roomRepository, gameRepository, notifier, clock),
     react: new ReactUseCase({ ...ports, sealProvider }),
     likeDilemma: new LikeDilemmaUseCase({ ...ports, likes, sealProvider }),
     unlikeDilemma: new UnlikeDilemmaUseCase({ ...ports, likes }),
@@ -131,13 +133,21 @@ async function toTheEnd(arranged: Arranged): Promise<void> {
   await throughTheResults(arranged);
 }
 
-/** From the reveal of the last round, through every screen of the results, to the end of the game. */
-async function throughTheResults(arranged: Arranged): Promise<void> {
-  const { moveOn, getGameState, roomId, gameId, luisId } = arranged;
+/**
+ * From the reveal of the last round, through every screen of the results, to the end of the game:
+ * on each one, those players are ready to move on, everyone unless they are given.
+ */
+async function throughTheResults(
+  arranged: Arranged,
+  ready: readonly string[] = [arranged.anaId, arranged.luisId, arranged.martaId],
+): Promise<void> {
+  const { getReadyToMoveOn, getGameState, roomId, gameId, luisId } = arranged;
   let state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
   let from = arranged.dilemmaIds.length - 1;
   while (state.stage.kind !== 'ended') {
-    await moveOn.execute({ roomId, playerId: luisId, fromPosition: from });
+    for (const playerId of ready) {
+      await getReadyToMoveOn.execute({ roomId, playerId, fromPosition: from });
+    }
     state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
     from = arranged.dilemmaIds.length + (state.stage.step ?? 0);
   }
@@ -245,10 +255,10 @@ describe('The end of the game', () => {
     it('should keep the like once the reveal of its dilemma is over', async () => {
       // Arrange
       const arranged = await arrange();
-      const { likeDilemma, unlikeDilemma, moveOn, likes, roomId, luisId } = arranged;
+      const { likeDilemma, unlikeDilemma, moveOn, likes, roomId, anaId, luisId } = arranged;
       await playRound(arranged, 0);
       await likeDilemma.execute({ roomId, playerId: luisId, position: 0 });
-      await moveOn.execute({ roomId, playerId: luisId, fromPosition: 0 });
+      await moveOn.execute({ roomId, playerId: anaId, fromPosition: 0 });
 
       // Act
       await unlikeDilemma.execute({ roomId, playerId: luisId, position: 0 });
@@ -262,15 +272,15 @@ describe('The end of the game', () => {
     it('should take a nominal room through its results, showing each player only who knows them best', async () => {
       // Arrange
       const arranged = await arrange();
-      const { moveOn, getGameState, roomId, gameId, luisId, dilemmaIds } = arranged;
+      const { moveOn, getGameState, roomId, gameId, anaId, luisId, dilemmaIds } = arranged;
       await toTheLastReveal(arranged);
 
       // Act
-      await moveOn.execute({ roomId, playerId: luisId, fromPosition: dilemmaIds.length - 1 });
+      await moveOn.execute({ roomId, playerId: anaId, fromPosition: dilemmaIds.length - 1 });
 
       // Assert
       const state = await getGameState.execute({ gameId, playerId: luisId, language: 'es' });
-      expect(state.stage).toEqual({ kind: 'results', movedOnBy: luisId, step: 0 });
+      expect(state.stage).toEqual({ kind: 'results', movedOnBy: anaId, step: 0 });
       expect(state.ranking).toHaveLength(3);
       expect(state.results?.titles.at(-1)?.title).toBe('el-mentalista');
       expect(state.results?.knownBestBy?.playerIds).toEqual([arranged.anaId]);
@@ -289,7 +299,7 @@ describe('The end of the game', () => {
       });
 
       // Act
-      await throughTheResults(arranged);
+      await throughTheResults(arranged, [luisId, arranged.martaId]);
 
       // Assert
       const room = await roomRepository.findById(roomId);
