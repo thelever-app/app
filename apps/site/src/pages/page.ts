@@ -87,7 +87,7 @@ export function document(page: Page, languages: Languages, config: SiteConfig): 
         )}
         ${home ? html`<link rel="alternate" hreflang="x-default" href="${config.origin}/" />` : ''}
         ${config.adsenseClient ? html`<meta name="google-adsense-account" content="${config.adsenseClient}" />` : ''}
-        <link rel="icon" href="${assetPath('mascot-waving.svg')}" type="image/svg+xml" />
+        <link rel="icon" href="${assetPath('icon.svg')}" type="image/svg+xml" />
         <link rel="stylesheet" href="${assetPath('site.css')}" />
         ${ads ? adScripts(ads.client) : ''}
       </head>

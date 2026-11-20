@@ -548,6 +548,14 @@ describe('the public web', () => {
     expect(assetPath('site.css')).toMatch(/^\/_site\/site\.css\?v=[0-9a-f]{12}$/);
   });
 
+  it('should show the icon of the app in the tab', async () => {
+    // Act
+    const home = String((await answer('/es/', { dilemmas: [], withdrawn: [] })).body);
+
+    // Assert
+    expect(home).toContain(`<link rel="icon" href="${assetPath('icon.svg')}"`);
+  });
+
   it('should offer to play from the header of every page, next to the languages', async () => {
     // Act
     const page = String(
