@@ -788,7 +788,7 @@
       "points": {
         "play": {
           "title": "Solo per giocare.",
-          "text": "Usiamo i tuoi voti, previsioni e reazioni per giocare, in gruppo o da solo, e vedere il risultato."
+          "text": "Usiamo i tuoi voti, previsioni e reazioni per giocare, in gruppo o da solo, e vedere il risultato. Quando voti da solo, il tuo voto si somma, senza il tuo nome, al risultato mondiale di quel dilemma, e conserviamo solo il fatto che l’hai già votato."
         },
         "notSold": {
           "title": "Non li vendiamo né li usiamo per la pubblicità.",

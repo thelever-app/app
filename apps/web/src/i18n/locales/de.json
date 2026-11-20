@@ -752,7 +752,7 @@
       "points": {
         "play": {
           "title": "Nur zum Spielen.",
-          "text": "Wir nutzen deine Stimmen, Vorhersagen und Reaktionen zum Spielen, in der Gruppe oder allein, und um das Ergebnis zu zeigen."
+          "text": "Wir nutzen deine Stimmen, Vorhersagen und Reaktionen zum Spielen, in der Gruppe oder allein, und um das Ergebnis zu zeigen. Wenn du allein abstimmst, zählt deine Stimme ohne deinen Namen für das Weltergebnis dieses Dilemmas, und wir speichern nur, dass du darüber schon abgestimmt hast."
         },
         "notSold": {
           "title": "Wir verkaufen sie nicht und nutzen sie nicht für Werbung.",

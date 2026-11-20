@@ -1,3 +1,4 @@
+import { currentVersionOf, PUBLISHED_VERSIONS } from '@thelever-app/consent';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { CountryLookup } from '../../first-access/country-lookup.ts';
 import {
@@ -22,6 +23,10 @@ class FakeCountryLookup implements CountryLookup {
     return address === undefined ? undefined : COUNTRIES.get(address);
   }
 }
+
+/** The versions of the documents published now, which a newcomer accepts. */
+const TERMS = currentVersionOf('terms-of-use', PUBLISHED_VERSIONS);
+const CONSENT = currentVersionOf('game-consent', PUBLISHED_VERSIONS);
 
 const servers: Awaited<ReturnType<typeof startRoomServer>>[] = [];
 
@@ -69,7 +74,7 @@ describe('the first access', () => {
       step: 'age',
       pending: ['terms-of-use', 'game-consent'],
       changed: [],
-      current: { 'terms-of-use': 1, 'game-consent': 1 },
+      current: { 'terms-of-use': TERMS, 'game-consent': CONSENT },
       underEighteen: true,
       monthOfBirthAskedFrom: new Date().getUTCFullYear() - 18,
     });
@@ -85,10 +90,10 @@ describe('the first access', () => {
     // Act
     const afterAge = await call(http, '/first-access/age', { body: { birthYear: 1990 } });
     await call(http, '/first-access/documents', {
-      body: { document: 'terms-of-use', version: 1 },
+      body: { document: 'terms-of-use', version: TERMS },
     });
     const afterConsent = await call(http, '/first-access/documents', {
-      body: { document: 'game-consent', version: 1 },
+      body: { document: 'game-consent', version: CONSENT },
     });
     const created = await call(http, '/rooms', { body: { nickname: 'Ana', ...ROOM_CHOICES } });
 
@@ -197,7 +202,7 @@ describe('the first access', () => {
     // Act
     const age = await call(http, '/first-access/age', { body: { birthYear: 1990 } });
     const terms = await call(http, '/first-access/documents', {
-      body: { document: 'terms-of-use', version: 1 },
+      body: { document: 'terms-of-use', version: TERMS },
     });
 
     // Assert

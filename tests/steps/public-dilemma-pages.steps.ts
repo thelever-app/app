@@ -265,3 +265,28 @@ Then('the visitor sees that there are still too few answers', async function (th
 Then('sees no figures of the world result', async function (this: GameWorld) {
   assert.deepEqual((await this.driver.worldResultSeen()).figures, []);
 });
+
+When(
+  'a visitor opens the app to vote {string} alone',
+  async function (this: GameWorld, name: string) {
+    await this.driver.openTheAppToVoteAlone(name);
+  },
+);
+
+Then('the visitor sees that the dilemma is not available', async function (this: GameWorld) {
+  assert.equal(await this.driver.dilemmaToVoteIsUnavailable(), true);
+  assert.equal(await this.driver.dilemmaReadyToVoteAlone(), undefined);
+});
+
+Given('the visitor has never opened the app', async function (this: GameWorld) {
+  await this.driver.visitorOnANewDevice();
+});
+
+Then('the visitor goes through the first access', async function (this: GameWorld) {
+  assert.equal(await this.driver.firstAccessScreenOfTheVisitor(), 'age');
+  await this.driver.visitorFinishesTheFirstAccess();
+});
+
+Then('then sees {string} ready to vote alone', async function (this: GameWorld, name: string) {
+  assert.equal(await this.driver.dilemmaReadyToVoteAlone(), name);
+});

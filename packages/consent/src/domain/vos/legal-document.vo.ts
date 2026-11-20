@@ -20,10 +20,14 @@ export interface LegalDocumentVersion {
 /** Every version of the legal documents ever published, in any order. */
 export type PublishedVersions = readonly LegalDocumentVersion[];
 
-/** What has been published: the first version of each. */
+/**
+ * What has been published. The second game consent tells that a vote alone adds to the world
+ * result and that only the mark of having voted is kept: a new purpose, so it is given again.
+ */
 export const PUBLISHED_VERSIONS: PublishedVersions = [
   { document: 'terms-of-use', version: 1, asksAgain: true },
   { document: 'game-consent', version: 1, asksAgain: true },
+  { document: 'game-consent', version: 2, asksAgain: true },
 ];
 
 /** The version that is accepted now. */

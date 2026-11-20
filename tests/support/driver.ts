@@ -827,6 +827,16 @@ export interface GameDriver {
   voteFromThePublicPage(name: string): Promise<void>;
   /** The dilemma the app the visitor opened offers to vote alone, if it offers one. */
   dilemmaReadyToVoteAlone(): Promise<string | undefined>;
+  /** A visitor follows a link of the app to vote the dilemma alone, without going through its public page. */
+  openTheAppToVoteAlone(name: string): Promise<void>;
+  /** Whether the app the visitor opened says the dilemma to vote alone is not available. */
+  dilemmaToVoteIsUnavailable(): Promise<boolean>;
+  /** The visitor is on a device that has never used TheLever, in the EEA. */
+  visitorOnANewDevice(): Promise<void>;
+  /** The screen of the first access, or of the app, the visitor is on. */
+  firstAccessScreenOfTheVisitor(): Promise<FirstAccessScreen>;
+  /** The visitor finishes the first access where the app has it, as an adult of 30. */
+  visitorFinishesTheFirstAccess(): Promise<void>;
   /** The visitor votes the dilemma alone in the app: its first option, predicting that half the world voted the same. */
   voteAlone(name: string): Promise<void>;
   /** The answers the world result of the dilemma counts, once the results of the day are published. */

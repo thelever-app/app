@@ -58,14 +58,13 @@ Feature: Public dilemma pages
     Then the visitor sees that there are still too few answers
     And sees no figures of the world result
 
-  @ui @todo
-  Scenario: A visitor under 18 cannot vote a dilemma for adults
-    Given "La fiesta" has a minimum age of 18
-    And the visitor is 17
+  @ui
+  Scenario: A dilemma for adults cannot be voted alone from a link
+    Given the dilemma "La fiesta" is a dilemma for adults
     When a visitor opens the app to vote "La fiesta" alone
-    Then the visitor sees that this dilemma is not for their age
+    Then the visitor sees that the dilemma is not available
 
-  @ui @todo
+  @ui
   Scenario: A first-time visitor goes through the first access and comes back to the dilemma
     Given the visitor has never opened the app
     When a visitor chooses to vote on the public page of "El tranvía"

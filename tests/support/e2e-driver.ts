@@ -2804,16 +2804,53 @@ export class E2eDriver implements GameDriver {
     const { page } = screenOf(await this.#withScreen(VISITOR));
     await page.goto(`${this.#stack.siteUrl}${this.#publicPathIn(name, 'es')}`);
     await page.getByRole('link', { name: SITE_LANGUAGES.get('es')!.dilemma.vote }).click();
-    await page.getByTestId('vote-alone').waitFor();
+    // On a device that never used TheLever, the app opens at its first access.
+    if (this.#devices.has(VISITOR)) await this.#firstAccessScreenOn(page);
+    else await page.getByTestId('vote-alone').waitFor();
   }
 
   async dilemmaReadyToVoteAlone(): Promise<string | undefined> {
     const { page } = screenOf(this.#playerCalled(VISITOR));
     const form = page.getByTestId('vote-alone');
+    // Until the screen shows the dilemma to vote, or says why it cannot.
+    await form.or(page.getByRole('alert')).first().waitFor();
     const ready =
       (await form.getByRole('slider').isVisible()) &&
       (await form.getByRole('button', { name: textIn('es', 'voteAlone.see') }).isVisible());
     return ready ? ((await form.getByRole('heading').textContent()) ?? undefined) : undefined;
+  }
+
+  async openTheAppToVoteAlone(name: string): Promise<void> {
+    const { page } = screenOf(await this.#withScreen(VISITOR));
+    await page.goto(`${this.#stack.webUrl}/vote/${await this.#publicIdOf(name)}?lang=es`);
+    await page.getByTestId('vote-alone').or(page.getByRole('alert')).first().waitFor();
+  }
+
+  async dilemmaToVoteIsUnavailable(): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    return page
+      .getByRole('alert')
+      .filter({ hasText: textIn('es', 'voteAlone.notFound') })
+      .isVisible();
+  }
+
+  async visitorOnANewDevice(): Promise<void> {
+    await this.newDevice(VISITOR, { country: 'ES' });
+  }
+
+  async firstAccessScreenOfTheVisitor(): Promise<FirstAccessScreen> {
+    return this.firstAccessScreenOf(VISITOR);
+  }
+
+  async visitorFinishesTheFirstAccess(): Promise<void> {
+    // Where the link left the app: the welcome first, without opening the app anew.
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    const start = page.getByRole('button', { name: SCREEN_TEXT('firstAccess.welcome.start') });
+    if (await start.isVisible()) await start.click();
+    await this.declareAge(VISITOR, 30);
+    await this.acceptTerms(VISITOR);
+    await this.giveGameConsent(VISITOR);
+    await this.answerCookieConsent(VISITOR);
   }
 
   async voteAlone(name: string): Promise<void> {

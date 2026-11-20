@@ -9,6 +9,7 @@ import {
 } from '../../src/first-access/cookie-consent.ts';
 
 afterEach(() => {
+  vi.useRealTimers();
   delete window.__tcfapi;
   localStorage.clear();
   document.head.innerHTML = '';
@@ -49,6 +50,28 @@ describe('askCookieManager', () => {
 
     // Act & Assert
     await expect(askCookieManager('ca-pub-1234')).resolves.toBe(false);
+  });
+
+  it('should go on without them when the manager loads with no message to show', async () => {
+    // Arrange
+    loadsAndAnswers({ eventStatus: null, cmpStatus: 'loaded', gdprApplies: true });
+
+    // Act & Assert
+    await expect(askCookieManager('ca-pub-1234')).resolves.toBe(false);
+  });
+
+  it('should wait for the answer while the manager shows its message', async () => {
+    // Arrange
+    vi.useFakeTimers();
+    loadsAndAnswers({ eventStatus: 'cmpuishown', cmpStatus: 'loaded', gdprApplies: true });
+    let answered = false;
+
+    // Act
+    void askCookieManager('ca-pub-1234').then(() => (answered = true));
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    // Assert
+    expect(answered).toBe(false);
   });
 
   it('should go on without them when the manager does not load', async () => {
