@@ -114,6 +114,12 @@ export const de: SiteTexts = {
     body: 'Vielleicht ist die Adresse falsch geschrieben. Von der Startseite aus erreichst du alle Dilemmas.',
   },
   footer: { label: 'Rechtliche Hinweise', manageCookies: 'Cookies verwalten' },
+  support: {
+    link: 'TheLever unterstützen',
+    heading: 'TheLever ist kostenlos',
+    text: 'Eine einzige Person betreibt es. Wenn es dir gefällt, kannst du es mit einer Spende unterstützen; sie bringt dir im Spiel keinen Vorteil.',
+    line: 'Hat es dich zum Nachdenken gebracht? TheLever ist kostenlos und wird von einer einzigen Person betrieben. Eine Spende bringt dir im Spiel keinen Vorteil.',
+  },
   privacy: {
     title: 'Datenschutz',
     description:

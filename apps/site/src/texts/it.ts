@@ -114,6 +114,12 @@ export const it: SiteTexts = {
     body: 'Forse l’indirizzo è scritto male. Dalla home arrivi a tutti i dilemmi.',
   },
   footer: { label: 'Informazioni legali', manageCookies: 'Gestisci cookie' },
+  support: {
+    link: 'Sostieni TheLever',
+    heading: 'TheLever è gratis',
+    text: 'Lo porta avanti una sola persona. Se ti piace, puoi sostenerlo con una donazione; non dà nessun vantaggio nel gioco.',
+    line: 'Ti ha fatto pensare? TheLever è gratis e lo porta avanti una sola persona. Donare non dà nessun vantaggio nel gioco.',
+  },
   privacy: {
     title: 'Privacy',
     description:

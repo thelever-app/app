@@ -12,6 +12,7 @@ const CONFIG = {
   origin: 'https://thelever.test',
   appBase: '',
   owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
+  donationUrl: 'https://ko-fi.test/thelever',
 };
 const ENGLISH = {
   ...es,
@@ -262,6 +263,56 @@ describe('the public web', () => {
       new RegExp(`<button type="button" class="link" data-consent>\\s*${es.footer.manageCookies}`),
     );
     expect(home).not.toContain('data-consent');
+  });
+
+  it('should link the donation page from the footer of every page', async () => {
+    // Arrange
+    const catalog = { dilemmas: [trolley()], withdrawn: [] };
+
+    // Act
+    const pages = await Promise.all(
+      ['/es/', '/es/vida-y-muerte/', '/es/vida-y-muerte/el-tranvia-7', '/es/privacidad'].map(
+        async (path) => String((await answer(path, catalog)).body),
+      ),
+    );
+
+    // Assert
+    for (const page of pages) {
+      expect(page.match(/<footer[\s\S]*<\/footer>/)?.[0]).toContain(
+        `<a class="support-link" href="https://ko-fi.test/thelever">${es.support.link}</a>`,
+      );
+    }
+  });
+
+  it('should invite to donate in a block that closes the home, saying it gives no advantage', async () => {
+    // Act
+    const { body } = await answer('/es/', { dilemmas: [], withdrawn: [] });
+
+    // Assert
+    const block = String(body).match(
+      /<section class="support"[\s\S]*?<\/section>\s*<\/div>\s*<\/main>/,
+    )?.[0];
+    expect(block).toContain(es.support.heading);
+    expect(block).toContain(es.support.text);
+    expect(block).toContain('href="https://ko-fi.test/thelever"');
+  });
+
+  it('should invite to donate in a line after the arguments of a dilemma that says it gives no advantage, and nowhere else on it', async () => {
+    // Act
+    const { body } = await answer('/es/vida-y-muerte/el-tranvia-7', {
+      dilemmas: [trolley()],
+      withdrawn: [],
+    });
+
+    // Assert
+    const page = String(body);
+    expect(page).toMatch(
+      new RegExp(
+        `class="credit"[\\s\\S]*?<p class="support-line">\\s*${es.support.line.replace('?', '\\?')}\\s*<a href="https://ko-fi.test/thelever">${es.support.link}</a>`,
+      ),
+    );
+    expect(es.support.line).toContain('Donar no da ninguna ventaja en el juego.');
+    expect(page).not.toContain('<section class="support"');
   });
 
   it('should name the one responsible in the privacy policy without the tax id or the address', async () => {

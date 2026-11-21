@@ -112,6 +112,12 @@ export const ca: SiteTexts = {
     body: 'Potser l’adreça està mal escrita. Des de l’inici arribes a tots els dilemes.',
   },
   footer: { label: 'Informació legal', manageCookies: 'Gestionar galetes' },
+  support: {
+    link: 'Dona suport a TheLever',
+    heading: 'TheLever és gratis',
+    text: 'El manté una sola persona. Si t’agrada, pots donar-li suport amb una donació; no dóna cap avantatge en el joc.',
+    line: 'T’ha fet pensar? TheLever és gratis i el manté una sola persona. Fer una donació no dona cap avantatge en el joc.',
+  },
   privacy: {
     title: 'Privacitat',
     description:

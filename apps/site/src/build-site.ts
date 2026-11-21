@@ -85,7 +85,7 @@ export function buildSite(
       alternates: everywhere(homePath),
       indexable: true,
       home: true,
-      main: homeBody(language, texts, config.appBase),
+      main: homeBody(language, texts, config.appBase, config.donationUrl),
     });
     for (const category of CATEGORIES) {
       const { name } = texts.categories[category];
@@ -136,7 +136,7 @@ export function buildSite(
         versions.map(({ dilemma: other, path }) => [other.language, path]),
       ),
       indexable: true,
-      main: dilemmaBody(one, texts, config.appBase, adsOf(config)),
+      main: dilemmaBody(one, texts, config.appBase, config.donationUrl, adsOf(config)),
       dilemma,
     });
   }
