@@ -10,6 +10,7 @@ const DILEMMA: GameStateDto['dilemmas'][number] = {
   dilemmaId: 'test-dilemma',
   text: 'Texto del dilema',
   personInTheGap: null,
+  category: 'life-and-death',
   options: ['A', 'B', 'C', 'D'].map((letter) => ({
     optionId: `test-option-${letter}`,
     text: `Opción ${letter}`,

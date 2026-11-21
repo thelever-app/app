@@ -37,6 +37,7 @@ const GAME_STATE: GameStateDto = {
     {
       dilemmaId: 'test-dilemma-1',
       personInTheGap: null,
+      category: 'life-and-death',
       text: 'TestText1',
       options: [
         { optionId: 'test-option-a', text: 'TestOptionA' },

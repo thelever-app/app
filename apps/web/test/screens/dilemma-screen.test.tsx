@@ -40,6 +40,32 @@ describe('DilemmaScreen', () => {
     expect(screen.getByText(t('progressStrip.position', { position: 2, total: 3 }))).toBeDefined();
   });
 
+  it('should show the category of the dilemma, on the step of the vote', async () => {
+    // Act
+    const { t } = await renderScreen(
+      aGame({ dilemmas: aGame().dilemmas.map((d) => ({ ...d, category: 'loyalty' as const })) }),
+    );
+
+    // Assert
+    expect(screen.getByText(t('categories.loyalty'))).toBeDefined();
+    const [vote] = screen.getAllByRole('listitem').filter((item) => item.closest('ol'));
+    expect(vote?.getAttribute('aria-current')).toBe('step');
+  });
+
+  it('should keep the menu and the group on the step of the prediction', async () => {
+    // Arrange
+    const { t } = await renderScreen(aGame({ playersToPredict: ['test-luis-id'] }));
+    fireEvent.click(option('Opción 1A'));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('dilemma.continue') }));
+
+    // Assert
+    expect(screen.getByRole('heading', { name: t('predict.voteQuestion') })).toBeDefined();
+    expect(screen.getByRole('button', { name: t('gameMenu.open') })).toBeDefined();
+    expect(screen.getByRole('region', { name: t('progressStrip.group') })).toBeDefined();
+  });
+
   it('should not let the player continue until they choose an option', async () => {
     // Act
     const { t } = await renderScreen();

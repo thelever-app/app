@@ -81,7 +81,6 @@ export function DilemmaScreen({
   // What the predictions go with: the vote, or none for the person in the gap.
   const answerVote = aboutYou ? null : (vote ?? '');
   const backToTheVote = aboutYou ? undefined : () => setStep('vote');
-  const withTheGroup = step === 'vote' || aboutYou;
   const [predictions, setPredictions] = useState<Predictions>(saved ?? NO_PREDICTIONS);
   // Where the room starts it too: the even split, in the order the player sees the options.
   const [distribution, setDistribution] = useState<readonly PredictedShare[]>(
@@ -132,8 +131,8 @@ export function DilemmaScreen({
                 : 'progressStrip.predicting',
           { position: position + 1, total },
         )}
-        menu={withTheGroup ? menu : undefined}
-        showGroup={withTheGroup}
+        menu={menu}
+        showGroup
       />
       {step === 'vote' ? (
         <DilemmaCard

@@ -3,7 +3,35 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  padding: var(--space-8) var(--space-4) var(--space-4);
+  /* As the screens of the prediction, so the steps stay where they are from one to the other. */
+  padding: 20px var(--space-4) var(--space-4);
+}
+
+/* The category, just over the text it introduces. */
+.category {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 calc(var(--space-3) * -1);
+  padding: var(--space-1) 10px var(--space-1) 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}
+
+.categoryIcon {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-ink);
+  color: var(--color-primary);
 }
 
 .text {

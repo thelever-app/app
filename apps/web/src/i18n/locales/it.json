@@ -78,10 +78,15 @@
     "nominal": "Non voti: indovina cosa sceglierà ciascuno.",
     "anonymous": "Non voti: indovina come si divideranno gli altri."
   },
+  "answerSteps": {
+    "label": "Passi della tua risposta",
+    "vote": "Il tuo voto",
+    "prediction": "La tua previsione"
+  },
   "predict": {
     "voted": "Hai votato «",
     "votedEnd": "»",
-    "voteQuestion": "Cosa ha votato ciascuno?",
+    "voteQuestion": "Cosa pensi abbia votato ciascuno?",
     "voteOf": "Il voto di {{name}}",
     "back": "Torna al tuo voto",
     "missing_one": "Manca {{count}} risposta",
@@ -91,9 +96,9 @@
     "aboutYouQuestion": "Cosa sceglierà ciascuno?"
   },
   "distribution": {
-    "question": "Come si dividerà il gruppo?",
-    "hint": "Contando te. Fanno sempre 100%.",
-    "hintTwo": "Contando te. Fanno sempre 100%.",
+    "question": "Come pensi si dividerà il gruppo?",
+    "hint": "Prevedi i voti del gruppo contando anche te.",
+    "hintTwo": "Prevedi i voti del gruppo contando anche te.",
     "yourVote": "il tuo voto",
     "shareOf": "Percentuale che prevedi per {{option}}",
     "percent": "{{value, number}}%",

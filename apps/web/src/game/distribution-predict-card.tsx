@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
 import { AboutYou } from './about-you.tsx';
 import { DilemmaText } from './dilemma-text.tsx';
+import { AnswerSteps } from './answer-steps.tsx';
 import styles from './distribution-predict-card.module.css';
 
 type Dilemma = GameStateDto['dilemmas'][number];
@@ -94,6 +95,7 @@ export function DistributionPredictCard({
   return (
     <>
       <main className={styles.main} tabIndex={0}>
+        <AnswerSteps current="prediction" withVote={vote !== null} />
         {vote === null ? (
           <AboutYou
             dilemma={dilemma}

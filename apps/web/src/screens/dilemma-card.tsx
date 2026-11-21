@@ -3,6 +3,8 @@ import { RadioGroup } from 'radix-ui';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
+import { AnswerSteps } from '../game/answer-steps.tsx';
+import { CATEGORY_ICONS } from '../game/category-icon.ts';
 import { DilemmaText } from '../game/dilemma-text.tsx';
 import styles from './dilemma-card.module.css';
 
@@ -18,9 +20,9 @@ interface DilemmaCardProps {
 }
 
 /**
- * The dilemma of the round: its text, its options and the way on to the predictions, of each vote
- * in a nominal room and of the distribution in an anonymous one. Its choice starts from the saved
- * vote; there is no going back to a past round.
+ * The dilemma of the round, the first step of the answer: its category, its text, its options and
+ * the way on to the predictions, of each vote in a nominal room and of the distribution in an
+ * anonymous one. Its choice starts from the saved vote; there is no going back to a past round.
  */
 export function DilemmaCard({
   dilemma,
@@ -36,6 +38,13 @@ export function DilemmaCard({
   return (
     <>
       <main className={styles.main} tabIndex={0}>
+        <AnswerSteps current="vote" withVote />
+        <p className={styles.category}>
+          <span className={styles.categoryIcon}>
+            <Icon name={CATEGORY_ICONS[dilemma.category]} size={16} />
+          </span>
+          {t(`categories.${dilemma.category}`)}
+        </p>
         <h1 id={textId} className={styles.text}>
           <DilemmaText text={dilemma.text} personInTheGap={personInTheGap} />
         </h1>

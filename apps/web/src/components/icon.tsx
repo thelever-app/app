@@ -52,6 +52,12 @@ import addReaction from '@material-symbols/svg-500/rounded/add_reaction.svg?url'
 import callSplit from '@material-symbols/svg-500/rounded/call_split.svg?url';
 import campaign from '@material-symbols/svg-500/rounded/campaign-fill.svg?url';
 import favorite from '@material-symbols/svg-500/rounded/favorite-fill.svg?url';
+import balance from '@material-symbols/svg-500/rounded/balance-fill.svg?url';
+import ecgHeart from '@material-symbols/svg-500/rounded/ecg_heart-fill.svg?url';
+import handshake from '@material-symbols/svg-500/rounded/handshake-fill.svg?url';
+import payments from '@material-symbols/svg-500/rounded/payments-fill.svg?url';
+import smartToy from '@material-symbols/svg-500/rounded/smart_toy-fill.svg?url';
+import verified from '@material-symbols/svg-500/rounded/verified-fill.svg?url';
 import help from '@material-symbols/svg-500/rounded/help-fill.svg?url';
 import menuBook from '@material-symbols/svg-500/rounded/menu_book-fill.svg?url';
 import replay from '@material-symbols/svg-500/rounded/replay.svg?url';
@@ -85,6 +91,12 @@ const ICONS = {
   callSplit,
   campaign,
   favorite,
+  balance,
+  ecgHeart,
+  handshake,
+  payments,
+  smartToy,
+  verified,
   help,
   menuBook,
   replay,

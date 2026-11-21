@@ -78,10 +78,15 @@
     "nominal": "No votes: endevina què triarà cadascú.",
     "anonymous": "No votes: endevina com es repartiran els altres."
   },
+  "answerSteps": {
+    "label": "Passos de la teva resposta",
+    "vote": "El teu vot",
+    "prediction": "La teva predicció"
+  },
   "predict": {
     "voted": "Has votat «",
     "votedEnd": "»",
-    "voteQuestion": "Què ha votat cadascú?",
+    "voteQuestion": "Què creus que ha votat cadascú?",
     "voteOf": "El vot de {{name}}",
     "back": "Tornar al teu vot",
     "missing_one": "Falta {{count}} resposta",
@@ -91,9 +96,9 @@
     "aboutYouQuestion": "Què triarà cadascú?"
   },
   "distribution": {
-    "question": "Com es repartirà el grup?",
-    "hint": "Comptant-te a tu. Sempre sumen 100 %.",
-    "hintTwo": "Comptant-te a tu. Sempre sumen 100 %.",
+    "question": "Com creus que es repartirà el grup?",
+    "hint": "Prediu els vots del grup comptant-te a tu.",
+    "hintTwo": "Prediu els vots del grup comptant-te a tu.",
     "yourVote": "el teu vot",
     "shareOf": "Percentatge que predius per a {{option}}",
     "percent": "{{value, number}} %",

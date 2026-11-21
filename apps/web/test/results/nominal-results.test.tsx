@@ -445,6 +445,7 @@ describe('the cards', () => {
         {
           dilemmaId: 'test-dilemma-1',
           personInTheGap: 'test-luis-id',
+          category: 'life-and-death',
           text: 'Si {gap} miente, ¿qué haces?',
           options: [
             { optionId: 'test-option-a', text: 'Decírselo a {gap}' },

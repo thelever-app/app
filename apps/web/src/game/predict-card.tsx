@@ -6,6 +6,7 @@ import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
 import { AboutYou } from './about-you.tsx';
 import { DilemmaText } from './dilemma-text.tsx';
+import { AnswerSteps } from './answer-steps.tsx';
 import styles from './predict-card.module.css';
 
 type Dilemma = GameStateDto['dilemmas'][number];
@@ -80,6 +81,7 @@ export function PredictCard({
   return (
     <>
       <main className={styles.main} tabIndex={0}>
+        <AnswerSteps current="prediction" withVote={vote !== null} />
         {voted ? (
           <p className={styles.voted} style={{ '--option': votedColor } as CSSProperties}>
             <Icon name="checkCircle" size={18} />

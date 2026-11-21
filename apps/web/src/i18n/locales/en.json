@@ -69,10 +69,15 @@
     "nominal": "You don’t vote: guess what each person will choose.",
     "anonymous": "You don’t vote: guess how the others will split."
   },
+  "answerSteps": {
+    "label": "Steps of your answer",
+    "vote": "Your vote",
+    "prediction": "Your prediction"
+  },
   "predict": {
     "voted": "You voted “",
     "votedEnd": "”",
-    "voteQuestion": "What did each person vote?",
+    "voteQuestion": "What do you think each person voted?",
     "voteOf": "{{name}}'s vote",
     "back": "Back to your vote",
     "missing_one": "{{count}} answer to go",
@@ -81,9 +86,9 @@
     "aboutYouQuestion": "What will each person choose?"
   },
   "distribution": {
-    "question": "How will the group split?",
-    "hint": "Counting you. They always add up to 100%.",
-    "hintTwo": "Counting you. They always add up to 100%.",
+    "question": "How do you think the group will split?",
+    "hint": "Predict the votes of the group, counting you.",
+    "hintTwo": "Predict the votes of the group, counting you.",
     "yourVote": "your vote",
     "shareOf": "Share you predict for {{option}}",
     "percent": "{{value, number}}%",

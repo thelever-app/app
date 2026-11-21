@@ -78,10 +78,15 @@
     "nominal": "Tu ne votes pas : devine ce que chacun choisira.",
     "anonymous": "Tu ne votes pas : devine comment les autres se répartiront."
   },
+  "answerSteps": {
+    "label": "Étapes de ta réponse",
+    "vote": "Ton vote",
+    "prediction": "Ta prédiction"
+  },
   "predict": {
     "voted": "Tu as voté « ",
     "votedEnd": " »",
-    "voteQuestion": "Qu’a voté chacun ?",
+    "voteQuestion": "Qu’a voté chacun, à ton avis ?",
     "voteOf": "Le vote de {{name}}",
     "back": "Revenir à ton vote",
     "missing_one": "Il manque {{count}} réponse",
@@ -91,9 +96,9 @@
     "aboutYouQuestion": "Que va choisir chacun ?"
   },
   "distribution": {
-    "question": "Comment le groupe va-t-il se répartir ?",
-    "hint": "En te comptant. Le total fait toujours 100 %.",
-    "hintTwo": "En te comptant. Le total fait toujours 100 %.",
+    "question": "Comment le groupe va-t-il se répartir, à ton avis ?",
+    "hint": "Prédis les votes du groupe en te comptant.",
+    "hintTwo": "Prédis les votes du groupe en te comptant.",
     "yourVote": "ton vote",
     "shareOf": "Pourcentage que tu prédis pour {{option}}",
     "percent": "{{value, number}} %",

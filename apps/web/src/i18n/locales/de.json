@@ -69,10 +69,15 @@
     "nominal": "Du stimmst nicht ab: Rate, was jede Person wählt.",
     "anonymous": "Du stimmst nicht ab: Rate, wie sich die anderen verteilen."
   },
+  "answerSteps": {
+    "label": "Schritte deiner Antwort",
+    "vote": "Deine Stimme",
+    "prediction": "Deine Vorhersage"
+  },
   "predict": {
     "voted": "Deine Stimme: „",
     "votedEnd": "“",
-    "voteQuestion": "Wer hat was gewählt?",
+    "voteQuestion": "Was hat wohl jede Person gewählt?",
     "voteOf": "Stimme von {{name}}",
     "back": "Zurück zu deiner Stimme",
     "missing_one": "Noch {{count}} Antwort offen",
@@ -81,9 +86,9 @@
     "aboutYouQuestion": "Was wählt jede Person?"
   },
   "distribution": {
-    "question": "Wie wird sich die Gruppe aufteilen?",
-    "hint": "Mit dir. Ergibt immer 100 %.",
-    "hintTwo": "Mit dir. Ergibt immer 100 %.",
+    "question": "Wie wird sich die Gruppe wohl aufteilen?",
+    "hint": "Sag die Stimmen der Gruppe voraus, dich mitgezählt.",
+    "hintTwo": "Sag die Stimmen der Gruppe voraus, dich mitgezählt.",
     "yourVote": "deine Stimme",
     "shareOf": "Anteil, den du für {{option}} vorhersagst",
     "percent": "{{value, number}} %",
