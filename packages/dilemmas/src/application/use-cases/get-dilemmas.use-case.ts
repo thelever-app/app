@@ -1,5 +1,6 @@
 import { DilemmaNotFoundError } from '../errors/dilemma-not-found.error.ts';
 import type { Dilemma } from '../../domain/entities/dilemma.ts';
+import type { Category } from '../../domain/vos/category.vo.ts';
 import { hasGap } from '../../domain/vos/gap.ts';
 import { LanguageVO } from '../../domain/vos/language.vo.ts';
 import type { DilemmaRepository } from '../ports/dilemma-repository.port.ts';
@@ -24,6 +25,8 @@ export interface GetDilemmasOutput {
     readonly hasGap: boolean;
     /** Whether every player sees its options in this order, without shuffling them. */
     readonly fixedOrder: boolean;
+    /** The category of the dilemma played, whatever the language it is read in. */
+    readonly category: Category;
     /** The language of the text and the options returned. */
     readonly language: string;
   }[];
@@ -68,6 +71,7 @@ export class GetDilemmasUseCase implements GetDilemmas {
           })),
           hasGap: hasGap([played.text, ...played.options.map((option) => option.text)]),
           fixedOrder: played.fixedOrder,
+          category: played.category,
           language: read.language,
         };
       }),

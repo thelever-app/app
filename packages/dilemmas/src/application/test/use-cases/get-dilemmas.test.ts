@@ -116,6 +116,7 @@ describe('GetDilemmasUseCase', () => {
           ],
           hasGap: false,
           fixedOrder: false,
+          category: 'honesty',
           language: 'es',
         },
         {
@@ -128,6 +129,7 @@ describe('GetDilemmasUseCase', () => {
           ],
           hasGap: false,
           fixedOrder: false,
+          category: 'honesty',
           language: 'es',
         },
       ]);
@@ -220,6 +222,7 @@ describe('GetDilemmasUseCase', () => {
           ],
           hasGap: false,
           fixedOrder: false,
+          category: 'honesty',
           language: 'en',
         });
       });
