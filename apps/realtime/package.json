@@ -30,6 +30,7 @@
     "@thelever-app/game": "workspace:*",
     "@thelever-app/identity": "workspace:*",
     "@thelever-app/integrations": "workspace:*",
+    "@thelever-app/moderation": "workspace:*",
     "@thelever-app/protocol": "workspace:*",
     "express": "^5.2.1",
     "firebase-admin": "^14.5.0",

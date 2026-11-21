@@ -56,6 +56,7 @@ import { lobbyCommandHandlers } from '../rooms/sockets/lobby-commands.ts';
 import { RoomSocketServer } from '../rooms/sockets/room-socket-server.ts';
 import { SocketNotifier } from '../rooms/sockets/socket-notifier.ts';
 import { StateSender } from '../rooms/sockets/state-sender.ts';
+import { LoggedDilemmaReports } from '../telemetry/logged-dilemma-reports.ts';
 import { type Lifecycle, sharedLifecycle, type StopServing } from './shared-lifecycle.ts';
 import { adaptersFor, type Storage } from './storage.ts';
 import {
@@ -136,6 +137,7 @@ export async function composeRealtimeServer(
   // 3. The commands, which notify the players of what changed.
   const commands = gameCommands({
     ...repositories,
+    dilemmaReports: new LoggedDilemmaReports(repositories.dilemmaReports, logger),
     catalog,
     notifier: notifierFor(socketNotifier),
     idGenerator: new RandomIdGenerator(),

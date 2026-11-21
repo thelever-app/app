@@ -47,8 +47,14 @@ import {
   StartGameUseCase,
 } from '@thelever-app/game';
 import { CachedDilemmaCatalog } from '@thelever-app/game/cache';
-import { InMemoryDilemmaReports } from '@thelever-app/game/in-memory';
-import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
+import {
+  ModerationDilemmaReports,
+  PublishedDilemmasCatalog,
+} from '@thelever-app/integrations/game';
+import {
+  type DilemmaReportRepository,
+  ReceiveDilemmaReportUseCase,
+} from '@thelever-app/moderation';
 import type { RoundUseCases } from '../rooms/sockets/round-commands.ts';
 import type { LobbyUseCases } from '../rooms/sockets/lobby-commands.ts';
 
@@ -110,6 +116,8 @@ export interface GameCommandsDependencies extends GameQueriesDependencies {
   readonly idGenerator: IdGenerator;
   /** The seal of each player, from their first access: whether they are under 18 and their consent. */
   readonly sealProvider: SealProvider;
+  /** Where Moderation keeps the reports the players make. */
+  readonly dilemmaReports: DilemmaReportRepository;
 }
 
 /**
@@ -152,6 +160,7 @@ export function gameCommands({
   randomness,
   clock,
   sealProvider,
+  dilemmaReports,
 }: GameCommandsDependencies): GameCommands {
   return {
     createRoom: new CreateRoomUseCase(
@@ -224,12 +233,13 @@ export function gameCommands({
     restartGame: new RestartGameUseCase(roomRepository, gameRepository, notifier),
     runOutRound: new RunOutRoundUseCase(roomRepository, gameRepository, notifier, clock),
     leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier, clock),
-    // Until Moderation keeps them, the reports stay in the memory of the instance that took them.
     skipDilemma: new SkipDilemmaUseCase({ roomRepository, gameRepository, notifier, clock }),
     reportDilemma: new ReportDilemmaUseCase({
       roomRepository,
       gameRepository,
-      reports: new InMemoryDilemmaReports(),
+      reports: new ModerationDilemmaReports(
+        new ReceiveDilemmaReportUseCase(dilemmaReports, idGenerator),
+      ),
       notifier,
       clock,
     }),
