@@ -46,7 +46,13 @@ export function SettingsScreen() {
   const legal = legalPathsIn(i18n.resolvedLanguage ?? 'es');
   const language = LANGUAGE_NAMES[(i18n.resolvedLanguage ?? 'es') as LanguageDto];
   const page = (icon: IconName, title: string, href: string) => (
-    <a className={styles.row} href={href} target="_blank" rel="noopener">
+    <a
+      className={styles.row}
+      href={href}
+      target="_blank"
+      rel="noopener"
+      aria-label={t('appSettings.outside', { name: title })}
+    >
       <Icon name={icon} size={22} />
       <RowText title={title} />
       <Icon name="openInNew" size={20} />

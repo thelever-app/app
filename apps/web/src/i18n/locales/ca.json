@@ -920,7 +920,8 @@
     "about": "Quant a",
     "funding": "Com es finança TheLever",
     "credits": "Crèdits i llicències",
-    "legalNotice": "Avís legal"
+    "legalNotice": "Avís legal",
+    "outside": "{{name}} (s’obre al navegador)"
   },
   "credits": {
     "title": "Crèdits i llicències",

@@ -3016,7 +3016,7 @@ export class E2eDriver implements GameDriver {
 
   async settingsOfferTheAge(user: string): Promise<boolean> {
     const { page } = screenOf(this.#playerCalled(user));
-    return (await page.getByText(/edad|año de nacimiento/i).count()) > 0;
+    return (await page.getByText(/\bedad\b|\baño de nacimiento\b/i).count()) > 0;
   }
 
   async fundingSeenInTheSettings(user: string): Promise<FundingView> {
@@ -3053,8 +3053,11 @@ export class E2eDriver implements GameDriver {
     await page.getByRole('heading', { name: spanish('credits.title') }).waitFor();
     const creditsDiceBear = await page.getByText(/DiceBear/).isVisible();
     const sourceCode =
-      (await page.getByRole('link', { name: spanish('credits.code.link') }).getAttribute('href')) ??
-      undefined;
+      (await page
+        .getByRole('link', {
+          name: spanish('appSettings.outside', { name: spanish('credits.code.link') }),
+        })
+        .getAttribute('href')) ?? undefined;
     await page.getByRole('link', { name: spanish('credits.libraries.link') }).click();
     await page.getByRole('heading', { name: spanish('credits.notices.title') }).waitFor();
     // They load once the screen opens: the first notice says they are there.

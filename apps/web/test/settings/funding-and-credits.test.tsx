@@ -28,7 +28,9 @@ describe('CreditsScreen', () => {
     const { t, location } = await renderAtRoute(<CreditsScreen />);
 
     // Act
-    const code = screen.getByRole('link', { name: t('credits.code.link') });
+    const code = screen.getByRole('link', {
+      name: t('appSettings.outside', { name: t('credits.code.link') }),
+    });
     fireEvent.click(screen.getByRole('link', { name: t('credits.libraries.link') }));
 
     // Assert
@@ -43,10 +45,23 @@ describe('NoticesScreen', () => {
   it('should show each library with its licence and the text it ships', async () => {
     // Arrange
     const notices = [
-      { name: 'test-library', version: '1.0.0', licence: 'MIT', text: 'TestLicenceText' },
-      { name: 'test-icons', version: '0.1.0', licence: 'Apache-2.0', text: null },
+      {
+        name: 'test-library',
+        version: '1.0.0',
+        licence: 'MIT',
+        author: null,
+        text: 'TestLicenceText',
+      },
+      {
+        name: 'test-icons',
+        version: '0.1.0',
+        licence: 'Apache-2.0',
+        author: 'TestAuthor',
+        text: null,
+      },
     ];
-    const fetchNotices = (async () => Response.json(notices)) as typeof fetch;
+    const licences = { 'Apache-2.0': 'TestApacheText' };
+    const fetchNotices = (async () => Response.json({ notices, licences })) as typeof fetch;
 
     // Act
     const { t } = await renderAtRoute(<NoticesScreen fetchNotices={fetchNotices} />);
@@ -55,6 +70,8 @@ describe('NoticesScreen', () => {
     expect(await screen.findByRole('heading', { name: 'test-library 1.0.0' })).toBeDefined();
     expect(screen.getByText('TestLicenceText')).toBeDefined();
     expect(screen.getByText(t('credits.notices.licence', { licence: 'Apache-2.0' }))).toBeDefined();
+    expect(screen.getByText('Copyright (c) TestAuthor')).toBeDefined();
+    expect(screen.getByText('TestApacheText')).toBeDefined();
   });
 
   it('should offer to try again when the notices do not load', async () => {
@@ -62,7 +79,20 @@ describe('NoticesScreen', () => {
     let attempts = 0;
     const fetchNotices = (async () => {
       attempts += 1;
-      return attempts === 1 ? new Response(null, { status: 503 }) : Response.json([]);
+      return attempts === 1
+        ? new Response(null, { status: 503 })
+        : Response.json({
+            notices: [
+              {
+                name: 'test-library',
+                version: '1.0.0',
+                licence: 'MIT',
+                author: null,
+                text: 'TestText',
+              },
+            ],
+            licences: {},
+          });
     }) as typeof fetch;
     const { t } = await renderAtRoute(<NoticesScreen fetchNotices={fetchNotices} />);
 
@@ -70,8 +100,7 @@ describe('NoticesScreen', () => {
     fireEvent.click(await screen.findByRole('button', { name: t('credits.notices.retry') }));
 
     // Assert
-    await screen.findByRole('heading', { name: t('credits.notices.title') });
+    expect(await screen.findByRole('heading', { name: 'test-library 1.0.0' })).toBeDefined();
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(attempts).toBe(2);
   });
 });

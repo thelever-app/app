@@ -31,7 +31,13 @@ export function CreditsScreen() {
         <section className={styles.card}>
           <h2 className={styles.cardTitle}>{t('credits.code.title')}</h2>
           <p className={styles.cardText}>{t('credits.code.text')}</p>
-          <a className={styles.cardLink} href={SOURCE_CODE_URL} target="_blank" rel="noopener">
+          <a
+            className={styles.cardLink}
+            href={SOURCE_CODE_URL}
+            target="_blank"
+            rel="noopener"
+            aria-label={t('appSettings.outside', { name: t('credits.code.link') })}
+          >
             {t('credits.code.link')}
           </a>
         </section>

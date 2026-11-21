@@ -26,6 +26,8 @@ export interface LicensedPackage {
   readonly versions: readonly string[];
   readonly paths: readonly string[];
   readonly license: string;
+  /** Who it names as its author, if it names one. */
+  readonly author?: string;
 }
 
 /** What `pnpm licenses list --json` answers: the dependencies by the licence they declare. */

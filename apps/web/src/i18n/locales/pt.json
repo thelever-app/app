@@ -920,7 +920,8 @@
     "about": "Sobre",
     "funding": "Como o TheLever é financiado",
     "credits": "Créditos e licenças",
-    "legalNotice": "Aviso legal"
+    "legalNotice": "Aviso legal",
+    "outside": "{{name}} (abre no navegador)"
   },
   "credits": {
     "title": "Créditos e licenças",

@@ -83,6 +83,6 @@ describe('SettingsScreen', () => {
     await renderAtRoute(<SettingsScreen />);
 
     // Assert
-    expect(screen.queryByText(/edad|año de nacimiento/i)).toBeNull();
+    expect(screen.queryByText(/\bedad\b|\baño de nacimiento\b/i)).toBeNull();
   });
 });

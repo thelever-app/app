@@ -13,13 +13,20 @@ interface LicenceNotice {
   readonly name: string;
   readonly version: string;
   readonly licence: string;
+  readonly author: string | null;
   readonly text: string | null;
+}
+
+/** What the build writes: the notices, and once each the text of the licences some ship without. */
+interface NoticesFile {
+  readonly notices: readonly LicenceNotice[];
+  readonly licences: Readonly<Record<string, string>>;
 }
 
 type Notices =
   | { readonly state: 'loading' }
   | { readonly state: 'failed' }
-  | { readonly state: 'loaded'; readonly notices: readonly LicenceNotice[] };
+  | ({ readonly state: 'loaded' } & NoticesFile);
 
 /**
  * /settings/credits/notices: each library of the app with its licence and the text it ships, as
@@ -35,10 +42,10 @@ export function NoticesScreen({ fetchNotices = fetch }: { readonly fetchNotices?
     fetchNotices(NOTICES_FILE)
       .then((response) => {
         if (!response.ok) throw new Error(`${NOTICES_FILE} answered ${response.status}`);
-        return response.json() as Promise<LicenceNotice[]>;
+        return response.json() as Promise<NoticesFile>;
       })
       .then(
-        (loaded) => active && setNotices({ state: 'loaded', notices: loaded }),
+        (loaded) => active && setNotices({ state: 'loaded', ...loaded }),
         () => active && setNotices({ state: 'failed' }),
       );
     return () => {
@@ -71,13 +78,15 @@ export function NoticesScreen({ fetchNotices = fetch }: { readonly fetchNotices?
           </div>
         )}
         {notices.state === 'loaded' &&
-          notices.notices.map(({ name, version, licence, text }) => (
+          notices.notices.map(({ name, version, licence, author, text }) => (
             <section key={`${name}@${version}`} className={styles.card}>
               <h2 className={styles.cardTitle}>
                 {name} {version}
               </h2>
               <p className={styles.cardText}>{t('credits.notices.licence', { licence })}</p>
-              {text && <pre className={styles.licence}>{text}</pre>}
+              {/* A package without a text of its own: its author and the licence as published. */}
+              {!text && author && <p className={styles.cardText}>Copyright (c) {author}</p>}
+              <pre className={styles.licence}>{text ?? notices.licences[licence]}</pre>
             </section>
           ))}
       </main>

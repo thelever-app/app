@@ -884,7 +884,8 @@
     "about": "Über",
     "funding": "Wie TheLever finanziert wird",
     "credits": "Danksagungen und Lizenzen",
-    "legalNotice": "Impressum"
+    "legalNotice": "Impressum",
+    "outside": "{{name}} (öffnet sich im Browser)"
   },
   "credits": {
     "title": "Danksagungen und Lizenzen",

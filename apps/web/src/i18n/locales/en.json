@@ -884,7 +884,8 @@
     "about": "About",
     "funding": "How TheLever is funded",
     "credits": "Credits and licences",
-    "legalNotice": "Legal notice"
+    "legalNotice": "Legal notice",
+    "outside": "{{name}} (opens in the browser)"
   },
   "credits": {
     "title": "Credits and licences",

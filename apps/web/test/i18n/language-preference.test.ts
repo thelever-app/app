@@ -39,6 +39,19 @@ describe('language preference', () => {
     expect(startingLanguage('')).toBeUndefined();
   });
 
+  it('should open in the language of the link, and choose without failing, where the browser blocks the storage', () => {
+    // Arrange
+    const blocked = () => {
+      throw new DOMException('The storage is blocked', 'SecurityError');
+    };
+
+    // Act
+    chooseLanguage('fr', blocked);
+
+    // Assert
+    expect(startingLanguage('?lang=en', blocked)).toBe('en');
+  });
+
   it('should ignore a kept language the app does not have', () => {
     // Arrange
     localStorage.setItem('thelever.language', 'xx');

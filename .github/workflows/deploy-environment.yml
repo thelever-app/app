@@ -134,6 +134,7 @@ jobs:
           ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
           DONATION_URL: ${{ vars.DONATION_URL }}
         run: |
+          : "${DONATION_URL:?DONATION_URL is not set for this environment}"
           jq --arg client "$ADSENSE_CLIENT" --arg donation "$DONATION_URL" \
             '(if $client == "" then . else . + {adsenseClient: $client} end) + {donationUrl: $donation}' \
             "apps/web/config/${{ inputs.environment }}.json" > apps/web/dist/config.json

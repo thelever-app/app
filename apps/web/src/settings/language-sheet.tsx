@@ -27,10 +27,10 @@ interface LanguageSheetProps {
 export function LanguageSheet({ open, onOpenChange }: LanguageSheetProps) {
   const { t, i18n } = useTranslation();
   const current = i18n.resolvedLanguage;
+  // The sheet closes once the screen behind it reads in the language chosen, never before.
   const choose = (language: LanguageDto) => {
     chooseLanguage(language);
-    void i18n.changeLanguage(language);
-    onOpenChange(false);
+    void i18n.changeLanguage(language).finally(() => onOpenChange(false));
   };
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
