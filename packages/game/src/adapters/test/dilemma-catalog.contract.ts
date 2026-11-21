@@ -223,6 +223,7 @@ export function describeDilemmaCatalogContract(
             { optionId: first.options[0]?.optionId, text: 'TestTranslatedOptionA' },
             { optionId: first.options[1]?.optionId, text: 'TestTranslatedOptionB' },
           ],
+          category: CONTRACT_DILEMMAS[0].category,
           language: 'en',
         });
       });

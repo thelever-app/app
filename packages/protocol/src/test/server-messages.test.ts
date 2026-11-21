@@ -63,6 +63,7 @@ const gameState = {
         { optionId: 'option-1', text: 'Pull the lever' },
         { optionId: 'option-2', text: 'Do nothing' },
       ],
+      category: 'honesty',
       personInTheGap: null,
     },
     {
@@ -73,6 +74,7 @@ const gameState = {
         { optionId: 'option-4', text: 'Save the doctor' },
         { optionId: 'option-5', text: 'Save the athlete' },
       ],
+      category: 'loyalty',
       personInTheGap: 'player-1',
     },
   ],

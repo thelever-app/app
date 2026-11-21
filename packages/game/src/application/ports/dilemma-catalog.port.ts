@@ -14,6 +14,8 @@ export interface DilemmaContent {
   readonly dilemmaId: string;
   readonly text: string;
   readonly options: readonly { readonly optionId: string; readonly text: string }[];
+  /** That of the dilemma played, whatever the language it is read in. */
+  readonly category: Category;
   /** The one asked for if the version played has a translation into it; if not, that of the dilemma played. */
   readonly language: string;
 }

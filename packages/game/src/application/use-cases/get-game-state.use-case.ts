@@ -200,6 +200,7 @@ export class GetGameStateUseCase {
         dilemmaId: content.dilemmaId,
         text: content.text,
         options,
+        category: content.category,
         personInTheGap: game.personInTheGap(content.dilemmaId),
       };
     });

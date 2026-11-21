@@ -52,6 +52,7 @@ describeDilemmaCatalogContract('PublishedDilemmasCatalog on PostgreSQL', async (
       dilemmaId: original.id,
       text: original.text,
       options: original.options.map(({ id, text }) => ({ optionId: id, text })),
+      category: original.category,
       language: original.language,
     });
   }

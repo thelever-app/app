@@ -61,6 +61,7 @@ describe('GetGameStateUseCase', () => {
           dilemmaId,
           text: `TextOf${dilemmaId}`,
           options: TEST_OPTION_IDS.map((optionId) => ({ optionId, text: `TextOf${optionId}` })),
+          category: 'life-and-death',
           personInTheGap: null,
         })),
       );

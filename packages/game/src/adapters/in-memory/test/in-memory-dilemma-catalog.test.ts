@@ -14,10 +14,11 @@ describeDilemmaCatalogContract('InMemoryDilemmaCatalog', async () => {
       text: option,
     })),
   }));
-  const stored = dilemmas.map(({ dilemmaId, text, options }) => ({
+  const stored = dilemmas.map(({ dilemmaId, text, options, category }) => ({
     dilemmaId,
     text,
     options,
+    category,
     language: 'es',
   }));
   return { catalog: new InMemoryDilemmaCatalog(dilemmas), stored };

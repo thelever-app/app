@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   AvatarDto,
+  CategoryDto,
   ClientMessageTypeDto,
   MAXIMUM_ROUNDS,
   PlaceDto,
@@ -220,6 +221,8 @@ export const GameStateDto = z.strictObject({
         options: z
           .array(z.strictObject({ optionId: z.string().min(1), text: z.string().min(1) }))
           .min(1),
+        /** Shown with its icon on the dilemma. */
+        category: CategoryDto,
         /** Who takes the gap "someone in the group", the same for everyone; null without it. */
         personInTheGap: z.string().min(1).nullable(),
       }),
