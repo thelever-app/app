@@ -32,7 +32,7 @@ For logs: JSON on `stdout`, which Cloud Run collects for free, against the OpenT
 - **Sampling:** a sampler that decides by the hash of `game.id`, inside a parent-based sampler, so a game is kept whole or not at all. The ratio is `OTEL_TRACES_SAMPLER_ARG`, 1.0 until there is traffic.
 - **RES-70:** the request log of Cloud Run (`run.googleapis.com/requests`, which holds the client IP) is excluded from the `_Default` sink; the http server span drops `client.address`, `network.peer.address`, `network.peer.port` and `user_agent.original`. A test fails if they come back.
 - **Location:** a log bucket in `europe-southwest1` with 30 days in each project, with `_Default` routed to it; the observability location of each project is `europe-southwest1`. `_Required` (audit, 400 days) stays in `global`: it cannot move and holds no player IPs.
-- **Dashboard, alerts and log-based metrics:** in `ops/monitoring/`, applied with `node ops/monitoring/apply.ts dev|prod` with the credentials of whoever runs it; the deployment does not touch them.
+- **Dashboards, alerts and log-based metrics:** in `ops/monitoring/`, applied with `node ops/monitoring/apply.ts dev|prod` with the credentials of whoever runs it; the deployment does not touch them.
 
 ## Consequences
 

@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 
 /**
- * Applies the log-based metrics, the dashboard and the alert policies of the room server to one
+ * Applies the log-based metrics, the dashboards and the alert policies of the room server to one
  * environment, with the credentials of whoever runs it: `node ops/monitoring/apply.ts dev`. Each
  * one is found by its name, or its display name, and updated, or created if it does not exist
  * yet, so running it again changes only what changed here. The log-based metrics go first, so
@@ -82,24 +82,29 @@ async function applyMetrics(): Promise<void> {
   }
 }
 
-async function applyDashboard(): Promise<void> {
-  const dashboard = read('./dashboard.json');
+async function applyDashboards(): Promise<void> {
   const { dashboards = [] } = await call<{ dashboards?: (Named & { etag: string })[] }>(
     'GET',
     `${MONITORING}/v1/projects/${project}/dashboards`,
   );
-  const existing = dashboards.find(({ displayName }) => displayName === dashboard.displayName);
-  if (existing) {
-    // The etag of the version it replaces, so an edit made meanwhile is not lost without a word.
-    await call('PATCH', `${MONITORING}/v1/${existing.name}`, {
-      ...dashboard,
-      name: existing.name,
-      etag: existing.etag,
-    });
-    console.log(`updated dashboard "${dashboard.displayName}"`);
-  } else {
-    await call('POST', `${MONITORING}/v1/projects/${project}/dashboards`, dashboard);
-    console.log(`created dashboard "${dashboard.displayName}"`);
+  const files = readdirSync(new URL('./dashboards/', import.meta.url)).filter((file) =>
+    file.endsWith('.json'),
+  );
+  for (const file of files.sort()) {
+    const dashboard = read(`./dashboards/${file}`);
+    const existing = dashboards.find(({ displayName }) => displayName === dashboard.displayName);
+    if (existing) {
+      // The etag of the version it replaces, so an edit made meanwhile is not lost without a word.
+      await call('PATCH', `${MONITORING}/v1/${existing.name}`, {
+        ...dashboard,
+        name: existing.name,
+        etag: existing.etag,
+      });
+      console.log(`updated dashboard "${dashboard.displayName}"`);
+    } else {
+      await call('POST', `${MONITORING}/v1/projects/${project}/dashboards`, dashboard);
+      console.log(`created dashboard "${dashboard.displayName}"`);
+    }
   }
 }
 
@@ -165,5 +170,5 @@ function isMissingMetric(error: unknown): boolean {
 
 const channel = await emailChannel();
 await applyMetrics();
-await applyDashboard();
+await applyDashboards();
 await applyAlerts(channel);

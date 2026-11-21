@@ -1,0 +1,217 @@
+{
+  "displayName": "Usage",
+  "mosaicLayout": {
+    "columns": 48,
+    "tiles": [
+      {
+        "xPos": 0,
+        "yPos": 0,
+        "width": 48,
+        "height": 8,
+        "widget": {
+          "title": "What this counts",
+          "text": {
+            "format": "MARKDOWN",
+            "content": "Each figure counts the messages of players that the room server accepted, from the metric `thelever.ws.message.duration`: a rejected one counts only in *Rejected messages*. Each bar is the interval of the chart, which changes with the time range chosen above. One answer sends several *answer messages*: the vote, each prediction released and Ready, and again on each change before the reveal. *Connections to a room* takes reconnections in. Players are not counted: no metric tells one player from another."
+          }
+        }
+      },
+      {
+        "xPos": 0,
+        "yPos": 8,
+        "width": 12,
+        "height": 8,
+        "widget": {
+          "title": "Games started, last 7 days",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"start-game\"}[7d])) or vector(0)"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 12,
+        "yPos": 8,
+        "width": 12,
+        "height": 8,
+        "widget": {
+          "title": "Rematches, last 7 days",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"start-rematch\"}[7d])) or vector(0)"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 24,
+        "yPos": 8,
+        "width": 12,
+        "height": 8,
+        "widget": {
+          "title": "Answer messages, last 7 days",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"answer-dilemma\"}[7d])) or vector(0)"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 36,
+        "yPos": 8,
+        "width": 12,
+        "height": 8,
+        "widget": {
+          "title": "Connections to a room, last 7 days",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"connect\"}[7d])) or vector(0)"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 0,
+        "yPos": 16,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Games started and rematches",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "STACKED_BAR",
+                "minAlignmentPeriod": "3600s",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (\"message.type\") (increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"start-game|start-rematch\"}[${__interval}]))"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 24,
+        "yPos": 16,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Answer messages: vote, predictions and Ready",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "STACKED_BAR",
+                "minAlignmentPeriod": "3600s",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum (increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"answer-dilemma\"}[${__interval}]))"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 0,
+        "yPos": 32,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Connections to a room",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "STACKED_BAR",
+                "minAlignmentPeriod": "3600s",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum (increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"connect\"}[${__interval}]))"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 24,
+        "yPos": 32,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "What players do in a game, by message",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "STACKED_BAR",
+                "minAlignmentPeriod": "3600s",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (\"message.type\") (increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"like-dilemma|unlike-dilemma|react|skip-dilemma|report-dilemma|reveal-early|move-on|ready-to-move-on|choose-ambience|choose-round-dilemma|clear-round-dilemma|restart-game\"}[${__interval}]))"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 0,
+        "yPos": 48,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Rejected messages, by message",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "STACKED_BAR",
+                "minAlignmentPeriod": "3600s",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (\"message.type\") (increase({\"thelever.ws.message.duration_count\", outcome=\"rejected\"}[${__interval}]))"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 24,
+        "yPos": 48,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Dilemmas reported, by reason",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "STACKED_BAR",
+                "minAlignmentPeriod": "3600s",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (reason) (increase(logging_googleapis_com:user_dilemma_reports[${__interval}]))"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 0,
+        "yPos": 64,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Requests to the public web, by status",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "STACKED_BAR",
+                "minAlignmentPeriod": "3600s",
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (response_code_class) (increase(run_googleapis_com:request_count{monitored_resource=\"cloud_run_revision\", service_name=\"site\"}[${__interval}]))"
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
