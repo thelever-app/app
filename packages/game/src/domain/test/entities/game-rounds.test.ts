@@ -956,6 +956,18 @@ describe('Game, by rounds', () => {
       expect(game.personInTheGap('TestDilemma2')).toBe('Pedro');
     });
 
+    it('should draw again the person in the gap of the rounds not started without who left', () => {
+      // Arrange
+      const game = gameOfThree();
+      game.leave('Ana');
+
+      // Act
+      game.joinLate('Pedro', new FixedRandomness());
+
+      // Assert
+      expect(game.personInTheGap('TestDilemma2')).not.toBe('Ana');
+    });
+
     it('should keep the person in the gap of the round in progress', () => {
       // Arrange
       const game = gameOfThree();

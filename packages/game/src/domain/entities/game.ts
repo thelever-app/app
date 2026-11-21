@@ -1263,8 +1263,8 @@ export class Game {
   }
 
   /**
-   * The person in the gap of each round after the position, drawn again among every player, those
-   * who already took the gap in a round up to it going last.
+   * The person in the gap of each round after the position, drawn again among the players who have
+   * not left, those who already took the gap in a round up to it going last.
    */
   #drawPeopleInTheGapAfter(position: number, randomness: Randomness): void {
     const alreadyChosen = this.#dilemmas
@@ -1275,7 +1275,7 @@ export class Game {
         .slice(position + 1)
         .filter(({ hasGap }) => hasGap)
         .map(({ dilemmaId }) => dilemmaId),
-      [...this.#players.keys()],
+      this.#activePlayerIds(),
       randomness,
       alreadyChosen,
     );

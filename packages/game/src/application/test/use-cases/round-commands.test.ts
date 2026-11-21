@@ -230,6 +230,29 @@ describe('Round commands', () => {
         movedOnBy: null,
       });
     });
+
+    it('should pass the role of a host who disconnects from the reveal as the last one not ready', async () => {
+      // Arrange
+      const arranged = await arrange();
+      const { disconnectPlayer, getReadyToMoveOn, gameRepository, roomRepository, connections } =
+        arranged;
+      const { roomId, gameId, anaId, luisId, martaId } = arranged;
+      await vote(arranged, 0, anaId, luisId, martaId);
+      for (const playerId of [luisId, martaId]) {
+        await getReadyToMoveOn.execute({ roomId, playerId, fromPosition: 0 });
+      }
+
+      // Act
+      await disconnectPlayer.execute({
+        roomId,
+        playerId: anaId,
+        connectionId: connections.get(anaId)!,
+      });
+
+      // Assert
+      expect((await gameRepository.findById(gameId))?.round?.position).toBe(1);
+      expect((await roomRepository.findById(roomId))?.host.id).toBe(luisId);
+    });
   });
 
   describe('RunOutRoundUseCase', () => {

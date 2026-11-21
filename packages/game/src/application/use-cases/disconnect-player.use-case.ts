@@ -45,15 +45,14 @@ export class DisconnectPlayerUseCase {
     room.disconnect(playerId, connectionId, this.#clock.now());
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
-    if (game?.playerIds.includes(playerId)) {
-      // Neither the round nor its reveal waits for who disconnects; past its time, the round is
-      // revealed by time.
-      if (!game.runOutRound(this.#clock.now())) {
-        revealIfEveryoneAnswered(room, game, this.#clock.now());
-        moveOnIfEveryoneIsReady(room, game, this.#clock.now());
-      }
-    }
+    // Neither the round nor its reveal waits for who disconnects; past its time, the round is
+    // revealed by time.
+    const notRevealedByTime =
+      game?.playerIds.includes(playerId) && !game.runOutRound(this.#clock.now());
+    if (game && notRevealedByTime) revealIfEveryoneAnswered(room, game, this.#clock.now());
+    // Before moving on: the next round needs a host who can reveal it early.
     if (game) handOverHostIfAway(room, game);
+    if (game && notRevealedByTime) moveOnIfEveryoneIsReady(room, game, this.#clock.now());
     const roomEvents = room.pullEvents();
     const gameEvents = game?.pullEvents() ?? [];
     await this.#roomRepository.save(room);
