@@ -111,3 +111,18 @@ Feature: Public dilemma pages
   Scenario: The page shows a banner ad below the content
     When a visitor opens the public page of "El tranvía"
     Then a banner ad appears below the arguments
+
+  @ui
+  Scenario: Every public page links to the donation page
+    When a visitor opens any public page
+    Then the footer has a link to support TheLever with a donation
+
+  @ui
+  Scenario: The home page invites visitors to support TheLever
+    When a visitor opens the home page
+    Then a block before the footer invites them to support TheLever with a donation
+
+  @ui
+  Scenario: A dilemma page invites visitors to support TheLever after the arguments
+    When a visitor opens the public page of "El tranvía"
+    Then a line after the arguments invites them to support TheLever with a donation

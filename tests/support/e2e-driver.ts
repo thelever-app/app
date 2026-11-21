@@ -57,6 +57,9 @@ import type {
   CardView,
   CatalogEntry,
   DeviceOptions,
+  CreditsView,
+  DonationLinks,
+  FundingView,
   FirstAccessScreen,
   LegalDocument,
   DistributionPredictionView,
@@ -469,6 +472,20 @@ const TEST_ADS = {
   client: 'ca-pub-0000000000000000',
   slots: { phone: '1000000001', top: '1000000002', side: '1000000003' },
 } as const;
+
+/** Each language of the app by its own name, as the settings offer it (settings/language-sheet.tsx). */
+const LANGUAGE_NAMES: Readonly<Record<string, string>> = {
+  es: 'Español',
+  en: 'English',
+  fr: 'Français',
+  de: 'Deutsch',
+  it: 'Italiano',
+  pt: 'Português',
+  ca: 'Català',
+};
+
+/** Test data: the donation page the public web and the app of the run link to. */
+const DONATION_URL = 'https://ko-fi.test/thelever';
 
 /** Where the pages load AdSense from, which the browsers of the run answer with TEST_ADSENSE. */
 const ADSENSE_SCRIPT = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
@@ -2890,9 +2907,34 @@ export class E2eDriver implements GameDriver {
         owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
         adsenseClient: TEST_ADS.client,
         adSlots: TEST_ADS.slots,
+        donationUrl: DONATION_URL,
       });
       await publishSite(this.#site, this.#stack.siteFiles);
     });
+  }
+
+  async donationLinksOn(
+    which: 'home' | 'category' | { readonly dilemma: string },
+  ): Promise<DonationLinks> {
+    const path =
+      which === 'home'
+        ? '/es/'
+        : which === 'category'
+          ? this.#site?.pages.find(
+              (page) => page.language === 'es' && page.indexable && !page.home && !page.dilemma,
+            )?.path
+          : this.#publicPathIn(which.dilemma, 'es');
+    if (!path) throw new Error('The public web has no such page');
+    const { page } = screenOf(await this.#withScreen(VISITOR));
+    await page.goto(`${this.#stack.siteUrl}${path}`);
+    const link = `a[href="${DONATION_URL}"]`;
+    const shown = async (selector: string) => page.locator(selector).first().isVisible();
+    return {
+      inTheFooter: await shown(`footer ${link}`),
+      // The last thing of the page before its footer.
+      beforeTheFooter: await shown(`main > .home > section.support:last-child ${link}`),
+      afterTheArguments: await shown(`.dilemma-arguments .support-line ${link}`),
+    };
   }
 
   async publicPageOf(name: string, language: string): Promise<PublicPageView | undefined> {
@@ -2941,6 +2983,88 @@ export class E2eDriver implements GameDriver {
   async languageOfTheApp(): Promise<string | undefined> {
     const { page } = screenOf(this.#playerCalled(VISITOR));
     return page.evaluate('document.documentElement.lang');
+  }
+
+  // Settings
+
+  async openSettings(user: string): Promise<void> {
+    const { page } = screenOf(await this.#withScreen(user));
+    await page.goto(`${this.#stack.webUrl}/app`);
+    await page.getByRole('link', { name: spanish('appSettings.open') }).click();
+    await page.getByRole('heading', { name: spanish('appSettings.title') }).waitFor();
+  }
+
+  async chooseTheLanguageOfTheApp(user: string, language: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('button', { name: new RegExp(spanish('appSettings.language')) }).click();
+    const name = LANGUAGE_NAMES[language];
+    if (!name) throw new Error(`The app has no language ${language}`);
+    await page.getByRole('radio', { name }).click();
+    // The sheet closes once chosen, and the screen behind it reads again.
+    await page.getByRole('radiogroup').waitFor({ state: 'hidden' });
+  }
+
+  async languageShownTo(user: string): Promise<string | undefined> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const language = await page.evaluate('document.documentElement.lang');
+    // The screen itself says it, not only the page: the heading of the settings in that language.
+    await page
+      .getByRole('heading', { name: textIn(String(language), 'appSettings.title') })
+      .waitFor();
+    return String(language);
+  }
+
+  async settingsOfferTheAge(user: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    return (await page.getByText(/edad|año de nacimiento/i).count()) > 0;
+  }
+
+  async fundingSeenInTheSettings(user: string): Promise<FundingView> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('link', { name: spanish('appSettings.funding') }).click();
+    await page.getByRole('heading', { name: spanish('firstAccess.funding.title') }).waitFor();
+    const shown = async (key: string) => page.getByText(spanish(key)).isVisible();
+    return {
+      ads: await shown('firstAccess.funding.ads.title'),
+      researchLater: await shown('firstAccess.funding.research.text'),
+      donationWithoutAdvantage: await shown('firstAccess.funding.donations.text'),
+      donationPage:
+        (await page
+          .getByRole('link', { name: spanish('firstAccess.funding.donations.label') })
+          .getAttribute('href')) ?? undefined,
+    };
+  }
+
+  async firstRowOfTheSettings(
+    user: string,
+  ): Promise<{ readonly donation: boolean; readonly href?: string }> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const first = page.locator('main').getByRole('link').first();
+    const href = (await first.getAttribute('href')) ?? undefined;
+    return {
+      donation: (await first.getAttribute('aria-label')) === spanish('appSettings.support.label'),
+      ...(href && { href }),
+    };
+  }
+
+  async creditsSeenInTheSettings(user: string): Promise<CreditsView> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('link', { name: spanish('appSettings.credits') }).click();
+    await page.getByRole('heading', { name: spanish('credits.title') }).waitFor();
+    const creditsDiceBear = await page.getByText(/DiceBear/).isVisible();
+    const sourceCode =
+      (await page.getByRole('link', { name: spanish('credits.code.link') }).getAttribute('href')) ??
+      undefined;
+    await page.getByRole('link', { name: spanish('credits.libraries.link') }).click();
+    await page.getByRole('heading', { name: spanish('credits.notices.title') }).waitFor();
+    // They load once the screen opens: the first notice says they are there.
+    const notices = page.getByRole('heading', { level: 2 });
+    await notices.first().waitFor();
+    return { notices: await notices.allTextContents(), creditsDiceBear, sourceCode };
+  }
+
+  donationPage(): string {
+    return DONATION_URL;
   }
 
   async voteFromThePublicPage(name: string): Promise<void> {
@@ -4054,6 +4178,14 @@ export class E2eDriver implements GameDriver {
     return checked === 'false';
   }
 
+  async muteInTheSettings(player: string): Promise<void> {
+    await this.openSettings(player);
+    const { page } = screenOf(this.#playerCalled(player));
+    const sound = page.getByRole('switch', { name: new RegExp(spanish('appSettings.sound')) });
+    await sound.click();
+    await waitUntilAsync(async () => (await sound.getAttribute('aria-checked')) === 'false');
+  }
+
   /** The same browser, so the same device: it opens the page again, as the app would. */
   async reopenApp(player: string): Promise<void> {
     const reopened = this.#playerCalled(player);
@@ -4531,6 +4663,7 @@ export class E2eDriver implements GameDriver {
           ...config,
           realtimeUrl: realtime.origin.replace(/^http/, 'ws'),
           adsenseClient: TEST_ADS.client,
+          donationUrl: DONATION_URL,
         },
       });
     });

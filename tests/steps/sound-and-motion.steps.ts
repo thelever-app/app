@@ -185,6 +185,18 @@ Then('the game is not muted', async function (this: GameWorld) {
   assert.equal(await this.driver.isMuted(this.player), false);
 });
 
+When('the player mutes the game in the settings', async function (this: GameWorld) {
+  await this.driver.muteInTheSettings(this.player);
+});
+
+When('joins a room', async function (this: GameWorld) {
+  await this.isInTheRoom(this.player);
+});
+
+Then('the game is muted', async function (this: GameWorld) {
+  assert.equal(await this.driver.isMuted(this.player), true);
+});
+
 Given('{string} has muted the game', async function (this: GameWorld, player: string) {
   await this.hostIs(player);
   await this.driver.mute(player);

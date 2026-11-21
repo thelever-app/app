@@ -290,3 +290,38 @@ Then('the visitor goes through the first access', async function (this: GameWorl
 Then('then sees {string} ready to vote alone', async function (this: GameWorld, name: string) {
   assert.equal(await this.driver.dilemmaReadyToVoteAlone(), name);
 });
+
+When('a visitor opens any public page', async function (this: GameWorld) {
+  await this.driver.generatePublicPages();
+  // One of each kind the web has, as the requirement checks it: the home, a category and a dilemma.
+  this.donationLinks = [
+    await this.driver.donationLinksOn('home'),
+    await this.driver.donationLinksOn('category'),
+    await this.driver.donationLinksOn({ dilemma: this.dilemmaName }),
+  ];
+});
+
+When('a visitor opens the home page', async function (this: GameWorld) {
+  await this.driver.generatePublicPages();
+  this.donationLinks = [await this.driver.donationLinksOn('home')];
+});
+
+Then('the footer has a link to support TheLever with a donation', function (this: GameWorld) {
+  assert.ok(this.donationLinks.length > 0, 'No page of the public web was opened');
+  assert.ok(this.donationLinks.every(({ inTheFooter }) => inTheFooter));
+});
+
+Then(
+  'a block before the footer invites them to support TheLever with a donation',
+  function (this: GameWorld) {
+    assert.equal(this.donationLinks.at(-1)?.beforeTheFooter, true);
+  },
+);
+
+Then(
+  'a line after the arguments invites them to support TheLever with a donation',
+  async function (this: GameWorld) {
+    const links = await this.driver.donationLinksOn({ dilemma: this.dilemmaName });
+    assert.equal(links.afterTheArguments, true);
+  },
+);

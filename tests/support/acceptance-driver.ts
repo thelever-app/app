@@ -142,6 +142,9 @@ import type {
   SwitchView,
   Declaration,
   DeviceOptions,
+  CreditsView,
+  DonationLinks,
+  FundingView,
   FirstAccessScreen,
   GameDriver,
   GameSettingsView,
@@ -201,6 +204,8 @@ const DEFAULT_CHOICES = {
 
 /** Test data: where the public web is, for its canonical addresses and its sitemap. */
 const SITE_ORIGIN = 'https://thelever.test';
+/** Test data: the donation page the public web of the scenarios links to. */
+const DONATION_URL = 'https://ko-fi.test/thelever';
 
 /** What a visitor sees on a page of a dilemma, as the job generated it. */
 function publicPageViewOf(page: Page): PublicPageView {
@@ -2072,8 +2077,37 @@ export class AcceptanceDriver implements GameDriver {
       origin: SITE_ORIGIN,
       appBase: '',
       owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
+      donationUrl: DONATION_URL,
     });
     await publishSite(this.#site, this.#siteFiles);
+  }
+
+  async donationLinksOn(
+    which: 'home' | 'category' | { readonly dilemma: string },
+  ): Promise<DonationLinks> {
+    const path =
+      which === 'home'
+        ? '/es/'
+        : which === 'category'
+          ? this.#site?.pages.find(
+              (page) => page.language === 'es' && page.indexable && !page.home && !page.dilemma,
+            )?.path
+          : this.#publicPathOf(which.dilemma);
+    if (!path) throw new Error('The public web has no such page');
+    const { body = '' } = await this.#answerOfThePublicWeb(path);
+    // The link, as the page writes it: to the donation page of the environment.
+    const link = `href="${DONATION_URL}"`;
+    const footer = body.match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? '';
+    const beforeTheFooter =
+      body.match(/<section class="support"[\s\S]*?<\/section>\s*<\/div>\s*<\/main>/)?.[0] ?? '';
+    const afterTheArguments =
+      body.match(/class="dilemma-arguments"[\s\S]*?<p class="support-line">[\s\S]*?<\/p>/)?.[0] ??
+      '';
+    return {
+      inTheFooter: footer.includes(link),
+      beforeTheFooter: beforeTheFooter.includes(link),
+      afterTheArguments: afterTheArguments.includes(link),
+    };
   }
 
   async publicPageOf(name: string, language: string): Promise<PublicPageView | undefined> {
@@ -2111,6 +2145,42 @@ export class AcceptanceDriver implements GameDriver {
 
   async visitorWithoutAChosenLanguage(): Promise<void> {
     // The application keeps no language of the player yet: the app takes the one of the link.
+  }
+
+  async openSettings(): Promise<void> {
+    throw new Error('Only the device shows the settings: the scenario must be @screen');
+  }
+
+  async chooseTheLanguageOfTheApp(): Promise<void> {
+    throw new Error('Only the device shows the settings: the scenario must be @screen');
+  }
+
+  async languageShownTo(): Promise<string | undefined> {
+    throw new Error('Only the device shows the settings: the scenario must be @screen');
+  }
+
+  async settingsOfferTheAge(): Promise<boolean> {
+    throw new Error('Only the device shows the settings: the scenario must be @screen');
+  }
+
+  async fundingSeenInTheSettings(): Promise<FundingView> {
+    throw new Error('Only the device shows the settings: the scenario must be @screen');
+  }
+
+  async firstRowOfTheSettings(): Promise<{ readonly donation: boolean; readonly href?: string }> {
+    throw new Error('Only the device shows the settings: the scenario must be @screen');
+  }
+
+  async creditsSeenInTheSettings(): Promise<CreditsView> {
+    throw new Error('Only the device shows the settings: the scenario must be @screen');
+  }
+
+  async muteInTheSettings(): Promise<void> {
+    throw new Error('Only the device shows the settings: the scenario must be @screen');
+  }
+
+  donationPage(): string {
+    return DONATION_URL;
   }
 
   async languageOfTheApp(): Promise<string | undefined> {
