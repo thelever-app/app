@@ -12,7 +12,7 @@ export class InMemoryDilemmaReportRepository implements DilemmaReportRepository 
   async reportsOf(dilemmaId: string): Promise<DilemmaReport[]> {
     return [...this.#snapshots.values()]
       .filter((snapshot) => snapshot.dilemmaId === dilemmaId)
-      .sort((a, b) => a.reportedAt.getTime() - b.reportedAt.getTime())
+      .sort((a, b) => a.reportedAt.getTime() - b.reportedAt.getTime() || a.id.localeCompare(b.id))
       .map((snapshot) => DilemmaReport.fromSnapshot(snapshot));
   }
 }

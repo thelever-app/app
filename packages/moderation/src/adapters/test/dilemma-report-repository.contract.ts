@@ -100,6 +100,22 @@ export function describeDilemmaReportRepositoryContract(
       expect(reports.map((saved) => saved.id)).toEqual(['TestReport1', 'TestReport2']);
     });
 
+    it('should give the reports made at the same time in the order of their ids', async () => {
+      // Arrange
+      const {
+        repository,
+        dilemmas: [dilemma],
+      } = await create();
+
+      // Act
+      await repository.save(reportOf(dilemma, { id: 'TestReport2' }));
+      await repository.save(reportOf(dilemma, { id: 'TestReport1' }));
+
+      // Assert
+      const reports = await repository.reportsOf(dilemma.dilemmaId);
+      expect(reports.map((saved) => saved.id)).toEqual(['TestReport1', 'TestReport2']);
+    });
+
     it('should keep the reports of each dilemma apart', async () => {
       // Arrange
       const {
