@@ -493,15 +493,6 @@
       "text": "seuls les plus de 18 ans peuvent entrer."
     }
   },
-  "languages": {
-    "es": "Español",
-    "en": "English",
-    "fr": "Français",
-    "de": "Deutsch",
-    "it": "Italiano",
-    "pt": "Português",
-    "ca": "Català"
-  },
   "categories": {
     "life-and-death": "Vie et mort",
     "honesty": "Honnêteté",
