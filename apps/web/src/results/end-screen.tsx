@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import mascotCelebrating from '../assets/brand/mascot-celebrating.svg';
 import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
+import { SupportLine } from '../donations/support-line.tsx';
 import { isAnonymous, usePlayerName } from '../components/players.ts';
 import { playedIn, rememberPlayed } from '../game/played-dilemmas.ts';
 import { groupCardOf, personalCardOf, type CardContent } from './card-content.ts';
@@ -140,6 +141,7 @@ export function EndScreen({ game, onLeave, onRematch }: EndScreenProps) {
           {!isHost && host && (
             <p className={styles.rematchGuest}>{t('end.rematchGuest', { host: host.nickname })}</p>
           )}
+          <SupportLine />
         </div>
         {game.ranking && (
           <section className={styles.room} aria-labelledby={rankingId}>

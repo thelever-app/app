@@ -166,3 +166,83 @@ Then(
     }
   },
 );
+
+// The invitations to donate
+
+/** An age that is 18 or older whatever the day of the year. */
+const ADULT_AGE = 30;
+
+Given('{string} is 18 or older', async function (this: GameWorld, player: string) {
+  await this.driver.declaredAgeOnTheDevice(player, ADULT_AGE);
+});
+
+Given('{string} is {int}', async function (this: GameWorld, player: string, age: number) {
+  await this.driver.declaredAgeOnTheDevice(player, age);
+});
+
+Given(
+  'chance picks this game to invite {string} to donate',
+  async function (this: GameWorld, player: string) {
+    await this.driver.chanceInvitesToDonate(player, true);
+  },
+);
+
+Given(
+  'chance does not pick this game to invite {string} to donate',
+  async function (this: GameWorld, player: string) {
+    await this.driver.chanceInvitesToDonate(player, false);
+  },
+);
+
+/** What the end of the game invites the player to stays for the steps after, which may leave it. */
+When('{string} sees the end of the game', async function (this: GameWorld, player: string) {
+  await endSeenBy(this, player);
+  this.player = player;
+  this.supportLine = await this.driver.supportLineSeenBy(player);
+});
+
+Then(
+  'the end of the game shows one line to support TheLever with a donation',
+  function (this: GameWorld) {
+    assert.equal(this.supportLine?.takesToTheDonationPage, true, 'no line to the donation page');
+  },
+);
+
+Then('it does not cover the main actions', function (this: GameWorld) {
+  assert.equal(this.supportLine?.coversTheMainActions, false);
+});
+
+Then('the end of the game shows no invitation to donate', function (this: GameWorld) {
+  assert.equal(this.supportLine, undefined);
+});
+
+When('{string} opens the home screen', async function (this: GameWorld, player: string) {
+  await this.driver.reachHome(player);
+  this.player = player;
+});
+
+When('opens the home screen', async function (this: GameWorld) {
+  await this.driver.reachHome(this.player);
+});
+
+Then(
+  'the home screen shows a card to support TheLever with a donation',
+  async function (this: GameWorld) {
+    const card = await this.driver.supportCardSeenBy(this.player);
+    assert.equal(card?.takesToTheDonationPage, true, 'no card to the donation page');
+  },
+);
+
+When('{string} closes the card', async function (this: GameWorld, player: string) {
+  await this.driver.closeSupportCard(player);
+});
+
+Then('it is not shown again on this device', async function (this: GameWorld) {
+  await this.driver.reachHome(this.player);
+  assert.equal(await this.driver.supportCardSeenBy(this.player), undefined);
+});
+
+Then('she sees no invitation to donate', async function (this: GameWorld) {
+  assert.equal(this.supportLine, undefined, 'the end of the game invites her to donate');
+  assert.equal(await this.driver.supportCardSeenBy(this.player), undefined);
+});

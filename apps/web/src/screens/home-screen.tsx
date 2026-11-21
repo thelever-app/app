@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import mascotWaving from '../assets/brand/mascot-waving.svg';
 import { Icon } from '../components/icon.tsx';
+import { SupportCard } from '../donations/support-card.tsx';
 import { InstallOffer } from '../install/install-offer.tsx';
 import { SETTINGS_PATH } from '../settings/settings-paths.ts';
 import { CreateRoomForm } from './create-room-form.tsx';
@@ -65,6 +66,7 @@ export function HomeScreen() {
           <Icon name="pin" />
           {t('home.joinWithCode')}
         </button>
+        <SupportCard />
         <InstallOffer />
       </main>
     </div>
