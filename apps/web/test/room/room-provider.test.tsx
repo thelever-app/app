@@ -24,6 +24,7 @@ const GAME_STATE: GameStateDto = {
     movedOnBy: null,
   },
   stage: { kind: 'rounds', movedOnBy: null, step: null },
+  readyToMoveOn: [],
   results: null,
   inGame: true,
   ranking: null,
@@ -35,6 +36,7 @@ const GAME_STATE: GameStateDto = {
     {
       dilemmaId: 'test-dilemma-id',
       personInTheGap: null,
+      category: 'life-and-death',
       text: 'TestText1',
       options: [
         { optionId: 'TestOptionA', text: 'TestOptionTextA' },

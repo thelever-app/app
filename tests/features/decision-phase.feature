@@ -96,6 +96,11 @@ Feature: Decision phase
       Given the first dilemma started 20 seconds ago with a time per dilemma of 60 seconds
       Then every player sees that 40 seconds are left for the first dilemma
 
+    @ui
+    Scenario: Each player sees the category of the dilemma
+      Given the first dilemma is of the category "Lealtad"
+      Then every player sees that the first dilemma is of the category "Lealtad"
+
     @ui @screen @todo
     Scenario: No ad is shown while waiting for the others
       Given "Luis" has answered the first dilemma and "Marta" has not
@@ -198,6 +203,18 @@ Feature: Decision phase
       When "Luis" votes "pull the lever"
       Then his vote counts for "tirar de la palanca" in the dilemma the room plays
 
+    Scenario Outline: Each answer records the language the player read the dilemma in
+      Given the room plays its dilemmas in Spanish
+      And "Luis" uses the app in English
+      And the first dilemma <translation>
+      When "Luis" answers the first dilemma
+      Then his answer records that he read it in <language>
+
+      Examples:
+        | translation                | language |
+        | has an English translation | English  |
+        | has no English translation | Spanish  |
+
     Scenario: The time to answer each dilemma is recorded
       Given "Luis" got the first dilemma 40 seconds ago
       When "Luis" answers it
@@ -289,6 +306,13 @@ Feature: Decision phase
       Given "Ana" hosts a nominal room with "Luis" and "Marta"
       And the game has started
 
+    @ui @screen
+    Scenario: A player answers in two steps, the vote and then the prediction
+      Given "Luis" is on the first dilemma
+      Then "Luis" sees that he is on the step of his vote, before the one of his prediction
+      When "Luis" votes
+      Then "Luis" sees that he is on the step of his prediction, with the one of his vote done
+
     @ui
     Scenario: A player has answered only after voting and predicting
       Given "Luis" is on the first dilemma
@@ -350,6 +374,13 @@ Feature: Decision phase
       Then each player is told that nobody in the group will see their votes
       And that the group sees how many chose each option of each dilemma
       And that their answers are only used to play and are deleted within 24 hours of the room closing, except their history
+
+    @ui @screen
+    Scenario: A player answers in two steps in an anonymous room too
+      Given "Luis" is on the first dilemma
+      Then "Luis" sees that he is on the step of his vote, before the one of his prediction
+      When "Luis" votes
+      Then "Luis" sees that he is on the step of his prediction, with the one of his vote done
 
     @ui
     Scenario: A player has answered only after voting and pressing Ready

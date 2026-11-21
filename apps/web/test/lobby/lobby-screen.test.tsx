@@ -13,7 +13,7 @@ const MIXED_ROUNDS: LobbyRoundDto[] = [
     origin: 'specific',
     dilemma: { dilemmaId: 'test-dilemma-9', text: 'La palanca', hasGap: false },
   },
-  { roundId: 2, origin: 'random', categories: null, content: 'any', withoutNewDilemmas: false },
+  { roundId: 2, origin: 'random', categories: null, content: [], withoutNewDilemmas: false },
   { roundId: 3, origin: 'players', dilemma: null, chosenByYou: false },
 ];
 
@@ -171,7 +171,7 @@ describe('LobbyScreen', () => {
       // Assert
       expect(screen.getByText(t('variant.anonymous.name'))).toBeDefined();
       expect(screen.getByTestId('room-dilemmas').textContent).toBe('8 rondas');
-      expect(screen.getByTestId('room-settings').textContent).toBe('60 s por dilema · Español');
+      expect(screen.getByTestId('room-settings').textContent).toBe('60 s por dilema');
     });
 
     it('should show consecutive random rounds of the same categories in one row', async () => {
@@ -192,42 +192,42 @@ describe('LobbyScreen', () => {
           roundId: 1,
           origin: 'random',
           categories: ['honesty'],
-          content: 'any',
+          content: [],
           withoutNewDilemmas: false,
         },
         {
           roundId: 2,
           origin: 'random',
           categories: ['honesty'],
-          content: 'any',
+          content: [],
           withoutNewDilemmas: false,
         },
         {
           roundId: 3,
           origin: 'random',
           categories: ['loyalty', 'honesty'],
-          content: 'any',
+          content: [],
           withoutNewDilemmas: false,
         },
         {
           roundId: 4,
           origin: 'random',
           categories: ['honesty', 'loyalty'],
-          content: 'any',
+          content: [],
           withoutNewDilemmas: false,
         },
         {
           roundId: 5,
           origin: 'random',
           categories: ['honesty', 'loyalty', 'justice'],
-          content: 'any',
+          content: [],
           withoutNewDilemmas: false,
         },
         {
           roundId: 6,
           origin: 'random',
           categories: null,
-          content: 'any',
+          content: [],
           withoutNewDilemmas: false,
         },
       ];
@@ -789,14 +789,14 @@ describe('LobbyScreen', () => {
           roundId: 1,
           origin: 'random',
           categories: null,
-          content: 'any',
+          content: [],
           withoutNewDilemmas: false,
         },
         {
           roundId: 2,
           origin: 'random',
           categories: ['honesty'],
-          content: 'any',
+          content: [],
           withoutNewDilemmas: true,
         },
       ];

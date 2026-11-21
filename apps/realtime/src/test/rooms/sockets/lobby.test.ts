@@ -11,7 +11,7 @@ import {
 } from '../../support/room-server.ts';
 
 /** What the room shows of the choices it was created with. */
-const ROOM_CHOICES_SEEN = { groupNature: ROOM_CHOICES.groupNature, place: ROOM_CHOICES.place };
+const ROOM_CHOICES_SEEN = { place: ROOM_CHOICES.place };
 
 let server: Awaited<ReturnType<typeof startRoomServer>> | undefined;
 
@@ -119,7 +119,7 @@ describe('the lobby over the room sockets', () => {
       type: 'change-settings',
       changes: {
         variant: 'anonymous',
-        rounds: [{ origin: 'random', categories: ['honesty'], content: 'any' }],
+        rounds: [{ origin: 'random', categories: ['honesty'], content: [] }],
       },
     });
 
@@ -133,7 +133,7 @@ describe('the lobby over the room sockets', () => {
           origin: 'random',
           categories: ['honesty'],
           withoutNewDilemmas: false,
-          content: 'any',
+          content: [],
         },
       ]);
     }
@@ -202,7 +202,7 @@ describe('the lobby over the room sockets', () => {
       type: 'change-settings',
       changes: {
         rounds: [
-          { id: 1, origin: 'random', categories: null, content: 'any' },
+          { id: 1, origin: 'random', categories: null, content: [] },
           { id: 2, origin: 'players' },
         ],
       },
@@ -313,7 +313,7 @@ describe('the lobby over the room sockets', () => {
     const { ana } = await connectedLobby();
     ana.send({
       type: 'change-settings',
-      changes: { rounds: [{ origin: 'random', categories: ['justice'], content: 'any' }] },
+      changes: { rounds: [{ origin: 'random', categories: ['justice'], content: [] }] },
     });
     await ana.next('room-state');
 

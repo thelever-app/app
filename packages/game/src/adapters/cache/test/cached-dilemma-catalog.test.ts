@@ -25,10 +25,11 @@ describeDilemmaCatalogContract('CachedDilemmaCatalog', async () => {
       text: option,
     })),
   }));
-  const stored = dilemmas.map(({ dilemmaId, text, options }) => ({
+  const stored = dilemmas.map(({ dilemmaId, text, options, category }) => ({
     dilemmaId,
     text,
     options,
+    category,
     language: 'es',
   }));
   return { catalog: new CachedDilemmaCatalog(new InMemoryDilemmaCatalog(dilemmas)), stored };
@@ -62,6 +63,7 @@ class CountingCatalog implements DilemmaCatalog {
       dilemmaId,
       text: `TestText ${dilemmaId}@${version} ${language}`,
       options: [],
+      category: 'honesty' as const,
       language: this.untranslated.has(dilemmaId) ? 'es' : language,
     }));
   }
@@ -221,7 +223,7 @@ describe('CachedDilemmaCatalog', () => {
         count: 3,
         includeGap: true,
         excludedIds: [],
-        content: 'any' as const,
+        content: [] as const,
         playedBy: [],
       };
       await catalog.findCandidates(draw);

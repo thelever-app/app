@@ -1,6 +1,6 @@
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
-import { testTextIn } from '../support/test-catalog.ts';
+import { TEST_DILEMMAS, testTextIn } from '../support/test-catalog.ts';
 import type { GameWorld } from '../support/world.ts';
 
 /** The host sets one specific round for each of those dilemmas, in their order, and no more. */
@@ -409,9 +409,79 @@ async function firstDilemmaIs(world: GameWorld, dilemmaId: string): Promise<void
   world.dilemmaId = dilemmaId;
 }
 
+/** The categories by the name the screen gives them in Spanish. */
+const CATEGORY_NAMES: Readonly<Record<string, string>> = {
+  'Vida y muerte': 'life-and-death',
+  Honestidad: 'honesty',
+  Lealtad: 'loyalty',
+  Justicia: 'justice',
+  'Amor y relaciones': 'love-and-relationships',
+  'Trabajo y dinero': 'work-and-money',
+  'Tecnología y futuro': 'technology-and-the-future',
+};
+
+function categoryCalled(name: string): string {
+  const category = CATEGORY_NAMES[name];
+  assert.ok(category, `There is no category called ${name}`);
+  return category;
+}
+
+Given(
+  'the first dilemma is of the category {string}',
+  async function (this: GameWorld, name: string) {
+    const category = categoryCalled(name);
+    const dilemma = TEST_DILEMMAS.find(
+      (candidate) =>
+        candidate.category === category &&
+        candidate.status === 'in-catalog' &&
+        candidate.language === 'es' &&
+        candidate.minimumAge === 16 &&
+        !candidate.hasGap &&
+        !candidate.compromising,
+    );
+    assert.ok(dilemma, `The test data has no dilemma of ${category} for everyone`);
+    await firstDilemmaIs(this, dilemma.dilemmaId);
+  },
+);
+
+Then(
+  'every player sees that the first dilemma is of the category {string}',
+  async function (this: GameWorld, name: string) {
+    await this.game();
+    for (const player of this.present()) {
+      assert.equal(await this.driver.dilemmaShownTo(player), 1);
+      assert.equal(await this.driver.categorySeenBy(player), categoryCalled(name));
+    }
+  },
+);
+
+// The steps of an answer
+
+Then(
+  '{string} sees that he is on the step of his vote, before the one of his prediction',
+  async function (this: GameWorld, player: string) {
+    assert.deepEqual(await this.driver.answerStepsSeenBy(player), {
+      steps: ['vote', 'prediction'],
+      current: 'vote',
+      done: [],
+    });
+  },
+);
+
+Then(
+  '{string} sees that he is on the step of his prediction, with the one of his vote done',
+  async function (this: GameWorld, player: string) {
+    assert.deepEqual(await this.driver.answerStepsSeenBy(player), {
+      steps: ['vote', 'prediction'],
+      current: 'prediction',
+      done: ['vote'],
+    });
+  },
+);
+
 Given('the room plays its dilemmas in Spanish', async function (this: GameWorld) {
-  const settings = await this.driver.settingsSeenBy(await this.host());
-  assert.equal(settings.dilemmaLanguage, 'es');
+  await this.host();
+  assert.equal(await this.driver.languageOfTheRoom(), 'es');
 });
 
 Given('{string} uses the app in English', async function (this: GameWorld, player: string) {
@@ -1391,5 +1461,13 @@ Then(
     for (const player of this.present()) {
       assert.ok((await this.driver.anonymousNoticeShownTo(player)).includes('deleted'), player);
     }
+  },
+);
+
+Then(
+  /^(?:his|her) answer records that (?:he|she) read it in (English|Spanish)$/,
+  async function (this: GameWorld, language: string) {
+    const codes: Record<string, string> = { English: 'en', Spanish: 'es' };
+    assert.equal(await this.driver.languageReadBy(this.player, 1), codes[language]);
   },
 );

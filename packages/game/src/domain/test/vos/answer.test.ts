@@ -16,6 +16,7 @@ const PROPS: AnswerProps = {
   ready: false,
   optionOrder: ['TestOtherOption', 'TestOption'],
   responseTimeMs: null,
+  language: null,
   seal: SEAL,
 };
 

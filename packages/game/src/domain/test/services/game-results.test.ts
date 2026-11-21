@@ -27,7 +27,7 @@ function dilemma(
 }
 
 function players(points: Record<string, number> = {}) {
-  return EVERYONE.map((playerId) => ({ playerId, points: points[playerId] ?? 0, ranked: true }));
+  return EVERYONE.map((playerId) => ({ playerId, points: points[playerId] ?? 0 }));
 }
 
 /**
@@ -268,16 +268,5 @@ describe('gameResults', () => {
       points: 40,
     });
     expect(results.knownBestBy.get('TestAna')).toEqual({ playerIds: [], points: 0 });
-  });
-
-  it('should leave out of the ranking and of El Mentalista who is not ranked', () => {
-    // Act
-    const results = gameResults({
-      players: [...players({ TestAna: 10 }), { playerId: 'TestPedro', points: 0, ranked: false }],
-      dilemmas: threeVoted(),
-    });
-
-    // Assert
-    expect(results.ranking.map(({ playerId }) => playerId)).not.toContain('TestPedro');
   });
 });

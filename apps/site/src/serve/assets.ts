@@ -19,14 +19,19 @@ interface Asset {
 const FACES_SHOWN: readonly Face[] = ['face-01', 'face-02', 'face-03', 'face-04', 'face-05'];
 
 /**
- * The files the pages load from /_site/, by name: the stylesheet, the fonts of the app and the
- * illustrations of La Palanca, which the web of the app keeps and the image copies next to it.
+ * The files the pages load from /_site/, by name: the stylesheet, the fonts of the app, its icon
+ * and the illustrations of La Palanca, which the web of the app keeps and the image copies next to
+ * it.
  */
 const FILES: ReadonlyMap<string, { readonly file: string; readonly type: string }> = new Map(
   Object.entries({
     'site.css': {
       file: fileURLToPath(new URL('../../assets/site.css', import.meta.url)),
       type: 'text/css; charset=utf-8',
+    },
+    'icon.svg': {
+      file: fileURLToPath(new URL('icon.svg', BRAND)),
+      type: 'image/svg+xml',
     },
     'mascot-waving.svg': {
       file: fileURLToPath(new URL('mascot-waving.svg', BRAND)),

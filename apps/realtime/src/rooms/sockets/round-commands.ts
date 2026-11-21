@@ -2,9 +2,11 @@ import type {
   LikeDilemmaUseCase,
   UnlikeDilemmaUseCase,
   MoveOnUseCase,
+  GetReadyToMoveOnUseCase,
   ReactUseCase,
   RevealEarlyUseCase,
   StartRematchUseCase,
+  RestartGameUseCase,
 } from '@thelever-app/game';
 import type { KeyedLock } from '../../concurrency/keyed-lock.ts';
 import type { RunCommand } from '../run-command.ts';
@@ -15,15 +17,17 @@ import type { SocketMessageHandler } from './socket-message-handler.ts';
 export interface RoundUseCases {
   readonly revealEarly: RevealEarlyUseCase;
   readonly moveOn: MoveOnUseCase;
+  readonly getReadyToMoveOn: GetReadyToMoveOnUseCase;
   readonly react: ReactUseCase;
   readonly likeDilemma: LikeDilemmaUseCase;
   readonly unlikeDilemma: UnlikeDilemmaUseCase;
   readonly startRematch: StartRematchUseCase;
+  readonly restartGame: RestartGameUseCase;
 }
 
 /**
- * Revealing early, moving on, reacting, liking and the rematch: every screen, the one who sent it
- * too, changes through its event; a like, only that of who gave it.
+ * Revealing early, moving on, being ready to move on, reacting, liking, the rematch and restarting:
+ * every screen, the one who sent it too, changes through its event; a like, only that of who gave it.
  */
 export function roundCommandHandlers(
   useCases: RoundUseCases,
@@ -41,6 +45,13 @@ export function roundCommandHandlers(
       'move-on',
       ({ fromPosition }, { roomId, playerId }) =>
         useCases.moveOn.execute({ roomId, playerId, fromPosition }),
+      roomLock,
+      runCommand,
+    ),
+    new RoomCommandHandler(
+      'ready-to-move-on',
+      ({ fromPosition }, { roomId, playerId }) =>
+        useCases.getReadyToMoveOn.execute({ roomId, playerId, fromPosition }),
       roomLock,
       runCommand,
     ),
@@ -68,6 +79,12 @@ export function roundCommandHandlers(
     new RoomCommandHandler(
       'start-rematch',
       (_message, { roomId, playerId }) => useCases.startRematch.execute({ roomId, playerId }),
+      roomLock,
+      runCommand,
+    ),
+    new RoomCommandHandler(
+      'restart-game',
+      (_message, { roomId, playerId }) => useCases.restartGame.execute({ roomId, playerId }),
       roomLock,
       runCommand,
     ),

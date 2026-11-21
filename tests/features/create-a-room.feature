@@ -9,7 +9,8 @@ Feature: Create a room
     When the player creates a room
     Then the player becomes the host of that room
     And the host plays with the random avatar shown before creating the room
-    And the host is asked for a nickname and the nature of the group on the same screen
+    And the host is asked for a nickname and whether the group plays together or remotely on the same screen
+    And the host is not asked for the nature of the group
 
   @ui
   Scenario: The host changes the avatar before creating the room
@@ -17,12 +18,6 @@ Feature: Create a room
     When the player chooses another avatar
     And creates the room
     Then the host enters the lobby with that avatar
-
-  @ui
-  Scenario: The host declares the nature of the group with a single choice
-    Given a host who has just created a room
-    When the host chooses "friends" as the nature of the group
-    Then the room gets an invitation link, a code and a QR
 
   @ui
   Scenario: The host says whether the group plays together or remotely
@@ -100,12 +95,12 @@ Feature: Create a room
   @ui
   Scenario: The host chooses an ambience in the settings
     Given a host who created a room with the ambience "Classic"
-    And has set the dilemma language to English and the time per dilemma to 45 seconds
+    And has set the time per dilemma to 45 seconds
     And has chosen a specific dilemma for round 3
     When the host chooses the ambience "No filter" in the settings
     Then the room has the configuration of "No filter"
     And round 3 is random
-    And the dilemma language is English and the time per dilemma is 45 seconds
+    And the time per dilemma is 45 seconds
 
   Scenario Outline: The game records the ambience
     Given a host who created a room with the ambience "Spicy"
@@ -134,8 +129,20 @@ Feature: Create a room
   @ui
   Scenario: The host changes the configuration before starting
     Given a host in the lobby
-    When the host changes the dilemma language, the rounds or the time per dilemma
+    When the host changes the rounds or the time per dilemma
     Then the game uses the new configuration
+
+  @ui
+  Scenario: The settings offer no language for the dilemmas
+    Given a host in the lobby
+    Then the settings offer no language for the dilemmas
+
+  @ui
+  Scenario: Each player sees the rounds of the lobby in their language
+    Given round 1 has a specific dilemma with an English translation
+    And "Luis" joins the room
+    When "Luis" uses the app in English
+    Then "Luis" sees round 1 in English
 
   @ui
   Scenario: The host shares the room from the lobby
@@ -326,14 +333,33 @@ Feature: Create a room
     When the host sets round 2 to compromising content
     Then round 2 plays a compromising dilemma
 
-  Scenario Outline: A change that rules out the content of a round makes it any content
+  Scenario Outline: A change that rules out part of the content of a round takes it out
     Given an adults-only anonymous room with compromising dilemmas turned on
     And round 2 is random with <content> content
     When the host <change>
-    Then round 2 is random with any content
+    Then round 2 is left with <left> content
 
     Examples:
-      | content      | change                          |
-      | adults-only  | turns off adults only           |
-      | compromising | turns off compromising dilemmas |
-      | compromising | makes the room nominal          |
+      | content                      | change                          | left        |
+      | adults-only                  | turns off adults only           | any         |
+      | compromising                 | turns off compromising dilemmas | any         |
+      | compromising                 | makes the room nominal          | any         |
+      | adults-only and compromising | turns off compromising dilemmas | adults-only |
+
+  @ui
+  Scenario: A random round can draw only dilemmas both for adults and compromising
+    Given a host in the lobby of an anonymous adults-only room with compromising dilemmas turned on
+    When the host sets round 2 to adults-only and compromising content
+    Then round 2 plays a dilemma that is both adults-only and compromising
+
+  @ui @screen
+  Scenario: Choosing an ambience in the settings keeps them open with its configuration
+    Given a host in the lobby of a room created with the ambience "Classic"
+    When the host chooses the ambience "Spicy" in the settings
+    Then the settings stay open with the configuration of "Spicy"
+
+  @ui @screen
+  Scenario: Changing a setting after choosing an ambience shows the settings as custom
+    Given the host has chosen the ambience "Spicy" in the settings
+    When the host turns on the anonymous reveal
+    Then the settings show the room as "Custom" before saving

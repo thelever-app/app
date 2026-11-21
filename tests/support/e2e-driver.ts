@@ -23,6 +23,7 @@ import {
   publishSite,
 } from '@thelever-app/site';
 import {
+  CategoryDto,
   ClientMessageDto,
   GAP_MARKER,
   JoinRoomResponseDto,
@@ -51,6 +52,7 @@ import type {
   WebSocketRoute,
 } from 'playwright';
 import type {
+  AnswerStepsView,
   AnswerPlan,
   CardView,
   CatalogEntry,
@@ -86,6 +88,8 @@ import type {
   MarkedDilemma,
   OffReason,
   RoundContent,
+  ContentRequirement,
+  OpenSettingsView,
   SwitchView,
 } from './driver.ts';
 import type { E2eStack } from './e2e-stack.ts';
@@ -211,7 +215,6 @@ const SCREEN = {
   joinWithCode: 'Unirme con un código',
   nickname: 'Tu apodo',
   natureGroup: '¿Con quién vas a jugar?',
-  natures: { family: 'Familia', friends: 'Amigos', work: 'Compañeros', mixed: 'Mezcla' },
   places: { together: 'En el mismo sitio', remote: 'A distancia' },
   code: 'Código de la sala',
   enter: 'Entrar en la sala',
@@ -241,7 +244,6 @@ const SCREEN = {
     compromisingDilemmas: 'Dilemas comprometidos',
     newDilemmas: 'Incluir dilemas nuevos',
   },
-  language: 'Idioma de los dilemas',
   allCategories: 'Todas',
   categoryNames: {
     'life-and-death': 'Vida y muerte',
@@ -301,13 +303,18 @@ const SCREEN = {
   changeAnswer: 'Cambiar mi respuesta',
   revealEarly: 'Revelar ya',
   revealEarlyTitle: '¿Revelar el dilema ya?',
-  movedOn: /(.+) pasó al siguiente/,
+  movedOn: /(.+) pasó a todos/,
+  moveEveryoneOn: spanish('moveOn.everyone'),
+  waitingForTheRest: spanish('moveOn.waiting'),
+  readyToMoveOn: /(\d+) de (\d+) listos para seguir/,
   previous: /anterior/i,
   points: /\bpuntos?\b/i,
   back: 'Volver a tu voto',
   continue: 'Continuar',
   choose: 'Elige una opción',
-  predictQuestion: '¿Qué votó cada uno?',
+  predictQuestion: spanish('predict.voteQuestion'),
+  answerSteps: spanish('answerSteps.label'),
+  voteStep: spanish('answerSteps.vote'),
   aboutYou: spanish('aboutYou.title'),
   aboutYouQuestion: spanish('predict.aboutYouQuestion'),
   gapWarning: spanish('lobby.gapWarningTitle'),
@@ -339,6 +346,9 @@ const SCREEN = {
   anyEmoji: spanish('react.anyEmoji'),
   sendEmoji: spanish('react.send'),
   rematch: spanish('end.rematch'),
+  restart: spanish('gameMenu.restart'),
+  restartTitle: spanish('restartGame.title'),
+  restartConfirm: spanish('restartGame.restart'),
   shareCard: spanish('end.shareCard'),
   shareGroupCard: spanish('end.shareGroupCard'),
   cardShare: spanish('card.share'),
@@ -542,7 +552,7 @@ export class E2eDriver implements GameDriver {
   /** When a step last set the time of the round, by the clock of the test. */
   #timeSetAt: number | undefined;
   /** Whether the host gave the nickname and the nature of the group on the same screen. */
-  #askedTogether = false;
+  #askedOnCreation: readonly ('nickname' | 'place' | 'nature')[] = [];
   #fillers = 0;
   /** The players whose device asks for reduced motion, set before their screen opens. */
   readonly #reducedMotion = new Set<string>();
@@ -848,8 +858,8 @@ export class E2eDriver implements GameDriver {
     await this.startDecisionPhase(1);
     await this.answer(user);
     await this.answer(rival);
-    while (!(await this.resultsScreenSeenBy(user))) await this.moveOn(user);
-    while (!(await this.endOfTheGameSeenBy(user))) await this.moveOn(user);
+    while (!(await this.resultsScreenSeenBy(user))) await this.moveEveryoneOn(user);
+    while (!(await this.endOfTheGameSeenBy(user))) await this.moveEveryoneOn(user);
   }
 
   async anonymousNoticeShownTo(player: string): Promise<readonly string[]> {
@@ -944,13 +954,15 @@ export class E2eDriver implements GameDriver {
     // The screen to create it, in the language of the device of the host.
     const language = choices.deviceLanguage ?? 'es';
     const nickname = page.getByRole('textbox', { name: textIn(language, 'createRoom.nickname') });
-    const natures = page.getByRole('group', {
-      name: textIn(language, 'createRoom.groupNature.label'),
-    });
-    this.#askedTogether = (await nickname.isVisible()) && (await natures.isVisible());
+    const places = page.getByRole('group', { name: textIn(language, 'createRoom.place.label') });
+    this.#askedOnCreation = [
+      ...((await nickname.isVisible()) ? (['nickname'] as const) : []),
+      ...((await places.isVisible()) ? (['place'] as const) : []),
+      ...((await page.locator('input[name="groupNature"]').count()) > 0
+        ? (['nature'] as const)
+        : []),
+    ];
     await nickname.fill(host);
-    const nature = choices.groupNature ?? 'friends';
-    await chooseOption(page, textIn(language, `createRoom.groupNature.${nature}`));
     await chooseOption(page, textIn(language, `createRoom.place.${choices.place ?? 'together'}`));
     await chooseAmbience(page, textIn(language, `ambience.${choices.ambience ?? 'classic'}.name`));
     await page.getByRole('button', { name: textIn(language, 'createRoom.submit') }).click();
@@ -962,8 +974,8 @@ export class E2eDriver implements GameDriver {
     this.#host = host;
   }
 
-  async nicknameAndGroupNatureAskedTogether(): Promise<boolean> {
-    return this.#askedTogether;
+  async askedOnCreation(): Promise<readonly ('nickname' | 'place' | 'nature')[]> {
+    return this.#askedOnCreation;
   }
 
   /** The screen marks the host next to their own row. */
@@ -1276,8 +1288,6 @@ export class E2eDriver implements GameDriver {
         await sheet
           .getByRole('switch', { name: new RegExp(`^${escaped(name)}`) })
           .setChecked(Boolean(value));
-      } else if (setting === 'dilemmaLanguage') {
-        await sheet.getByLabel(SCREEN.language).selectOption(String(value));
       } else if (setting === 'timePerDilemmaSeconds') {
         const group = sheet.getByRole('group', { name: SCREEN.timePerDilemma });
         await chooseOption(group, `${value} s`);
@@ -1480,10 +1490,12 @@ export class E2eDriver implements GameDriver {
   }
 
   /** «Cambiar» in the lobby opens the settings sheet. */
+  /** The settings of the lobby, as the host left them open, or opened now. */
   async #openSettings(host: string): Promise<Locator> {
     const { page } = screenOf(this.#playerCalled(host));
-    await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
     const sheet = page.getByRole('dialog', { name: SCREEN.settingsTitle });
+    if (await sheet.isVisible()) return sheet;
+    await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
     await sheet.waitFor();
     return sheet;
   }
@@ -1536,7 +1548,7 @@ export class E2eDriver implements GameDriver {
     if (setting.origin === 'players') return true;
     if (setting.origin === 'random') {
       if (!(await this.#setCategoriesOn(sheet, round, setting.categories))) return false;
-      return this.#setContentOn(sheet, round, setting.content ?? 'any');
+      return this.#setContentOn(sheet, round, setting.content ?? []);
     }
     if (before?.origin === 'specific' && before.dilemmaId === setting.dilemmaId) return true;
     const choose = sheet
@@ -1555,14 +1567,21 @@ export class E2eDriver implements GameDriver {
     return sheet.getByRole('listitem').filter({ has: origins });
   }
 
-  /** Taps the content of the random round, unless the sheet turns it off. */
+  /**
+   * Marks the content of the random round from «Cualquiera», each requirement it asks for, unless
+   * the sheet turns one off.
+   */
   async #setContentOn(sheet: Locator, round: number, content: RoundContent): Promise<boolean> {
-    const option = this.#roundCardOn(sheet, round).getByRole('radio', {
-      name: spanish(`settings.content.${content}`),
-      exact: true,
-    });
-    if (await option.isDisabled()) return false;
-    if ((await option.getAttribute('aria-checked')) !== 'true') await option.click();
+    const card = this.#roundCardOn(sheet, round);
+    const chip = (name: string) =>
+      card.getByRole('checkbox', { name: spanish(`settings.content.${name}`), exact: true });
+    const any = chip('any');
+    if ((await any.getAttribute('aria-checked')) !== 'true') await any.click();
+    for (const requirement of content) {
+      const option = chip(requirement);
+      if (await option.isDisabled()) return false;
+      await option.click();
+    }
     return true;
   }
 
@@ -1787,7 +1806,6 @@ export class E2eDriver implements GameDriver {
   async canCreateRoomWithoutAmbience(player: string): Promise<boolean> {
     const { page } = screenOf(this.#playerCalled(player));
     await page.getByRole('textbox', { name: SCREEN.nickname }).fill(player);
-    await chooseOption(page, SCREEN.natures.friends);
     await chooseOption(page, SCREEN.places.together);
     const button = page.getByRole('button', { name: spanish('createRoom.missing.ambience') });
     return (await button.count()) === 0 || (await button.isEnabled());
@@ -1798,18 +1816,49 @@ export class E2eDriver implements GameDriver {
     return ambienceShownIn((await page.getByTestId('room-ambience').textContent()) ?? '');
   }
 
-  /** The card of the ambience opens on the three; choosing one closes the settings. */
+  /** The card of the ambience opens on the three; choosing one leaves the settings open. */
   async chooseAmbience(host: string, ambience: Ambience): Promise<void> {
     const sheet = await this.#openSettings(host);
     const options = await this.#ambiencesOn(sheet);
     await options
       .getByRole('radio', { name: new RegExp(`^${escaped(spanish(`ambience.${ambience}.name`))}`) })
       .click();
-    await sheet.waitFor({ state: 'hidden' });
     await this.#untilEveryoneSees(
       `the ambience ${ambience}`,
       (lobby) => lobby.ambience === ambience,
     );
+  }
+
+  async markAnonymousOnTheOpenSettings(host: string): Promise<void> {
+    const sheet = await this.#openSettings(host);
+    await chooseOption(sheet, SCREEN.variants.anonymous);
+  }
+
+  async openSettingsSeenBy(host: string): Promise<OpenSettingsView | undefined> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const sheet = page.getByRole('dialog', { name: SCREEN.settingsTitle });
+    if (!(await sheet.isVisible())) return undefined;
+    const card = sheet.getByRole('button', {
+      name: new RegExp(spanish('settings.ambience.change')),
+    });
+    const named = (await card.textContent()) ?? '';
+    const ambience =
+      (['custom', 'classic', 'spicy', 'no-filter'] as const).find((known) =>
+        named.includes(spanish(`ambience.${known}.name`)),
+      ) ?? named;
+    const anonymous = sheet.getByRole('radio', { name: SCREEN.variants.anonymous, exact: true });
+    return {
+      ambience,
+      variant: (await anonymous.isChecked()) ? 'anonymous' : 'nominal',
+      adultsOnly: await sheet
+        .getByRole('switch', { name: new RegExp(`^${escaped(SCREEN.switches.adultsOnly)}`) })
+        .isChecked(),
+      compromisingDilemmas: await sheet
+        .getByRole('switch', {
+          name: new RegExp(`^${escaped(SCREEN.switches.compromisingDilemmas)}`),
+        })
+        .isChecked(),
+    };
   }
 
   async ambiencesInTheSettings(host: string): Promise<AmbienceOption[]> {
@@ -1870,16 +1919,16 @@ export class E2eDriver implements GameDriver {
     };
   }
 
-  async contentsOffFor(host: string, round: number): Promise<RoundContent[]> {
+  async contentsOffFor(host: string, round: number): Promise<ContentRequirement[]> {
     const sheet = await this.#openSettings(host);
     const card = this.#roundCardOn(sheet, round);
-    const off: RoundContent[] = [];
-    for (const content of ['any', 'adults-only', 'compromising'] as const) {
-      const option = card.getByRole('radio', {
-        name: spanish(`settings.content.${content}`),
+    const off: ContentRequirement[] = [];
+    for (const requirement of ['adults-only', 'compromising'] as const) {
+      const option = card.getByRole('checkbox', {
+        name: spanish(`settings.content.${requirement}`),
         exact: true,
       });
-      if (await option.isDisabled()) off.push(content);
+      if (await option.isDisabled()) off.push(requirement);
     }
     await this.#closeSettings(sheet);
     return off;
@@ -2072,6 +2121,43 @@ export class E2eDriver implements GameDriver {
     const dilemma = await this.#roundDilemmaOn(voter);
     const chosen = option ? optionCalled(dilemma, option) : firstOptionOf(dilemma);
     await this.#chooseAndContinue(voter, dilemma, chosen.optionId);
+  }
+
+  /** The category on the dilemma of the round, by its name on screen. */
+  async categorySeenBy(viewer: string): Promise<string> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const main = page.getByRole('main');
+    await main.waitFor();
+    for (const id of CategoryDto.options) {
+      if ((await main.getByText(spanish(`categories.${id}`), { exact: true }).count()) > 0) {
+        return id;
+      }
+    }
+    throw new Error(`${viewer} sees no category on the dilemma`);
+  }
+
+  /** «Tu voto» and «Tu predicción» at the top of the answer, the one marked as current and the done ones. */
+  async answerStepsSeenBy(viewer: string): Promise<AnswerStepsView> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const list = page.getByRole('list', { name: SCREEN.answerSteps });
+    await list.waitFor();
+    return steady(async () => {
+      const items = await list.getByRole('listitem').all();
+      const seen = await Promise.all(
+        items.map(async (item) => ({
+          step: (await item.textContent())?.includes(SCREEN.voteStep)
+            ? ('vote' as const)
+            : ('prediction' as const),
+          current: (await item.getAttribute('aria-current')) === 'step',
+          done: (await item.getAttribute('data-done')) !== null,
+        })),
+      );
+      return {
+        steps: seen.map(({ step }) => step),
+        current: seen.find(({ current }) => current)?.step ?? 'vote',
+        done: seen.filter(({ done }) => done).map(({ step }) => step),
+      };
+    });
   }
 
   /**
@@ -2314,6 +2400,63 @@ export class E2eDriver implements GameDriver {
       () => staying.every((player) => lastLobbyOf(player)) || undefined,
       'everyone still in the room gets the lobby of the rematch',
     );
+  }
+
+  /** «Reiniciar partida» from the menu, confirmed, and everyone still in the room gets the lobby. */
+  async restartGame(host: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(host));
+    const inTheRoom = this.#gameOf(host)
+      .players.filter(({ left }) => !left)
+      .map(({ playerId }) => playerId);
+    await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+    await page.getByRole('dialog').getByRole('button', { name: SCREEN.restart }).click();
+    await page
+      .getByRole('dialog', { name: SCREEN.restartTitle })
+      .getByRole('button', { name: SCREEN.restartConfirm, exact: true })
+      .click();
+    const staying = this.#withScreens().filter(
+      (player) =>
+        player.screen?.link && player.playerId !== undefined && inTheRoom.includes(player.playerId),
+    );
+    await waitUntil(
+      () => staying.every((player) => lastLobbyOf(player)) || undefined,
+      'everyone still in the room gets the lobby of the new game',
+    );
+  }
+
+  async canRestartGame(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+    const menu = page.getByRole('dialog');
+    await menu.getByRole('button', { name: SCREEN.leave }).waitFor();
+    const offered = (await menu.getByRole('button', { name: SCREEN.restart }).count()) > 0;
+    await page.keyboard.press('Escape');
+    await menu.waitFor({ state: 'hidden' });
+    return offered;
+  }
+
+  async stageOfTheGame(): Promise<string> {
+    const { gameId } = this.#gameOf(this.#hostName());
+    const { stage } = await this.#withDatabase((db) =>
+      db.selectFrom('games').select('stage').where('id', '=', gameId).executeTakeFirstOrThrow(),
+    );
+    return stage;
+  }
+
+  async playedInTheRoom(): Promise<number[]> {
+    const { roomId } = this.#lobbyOf(this.#hostName());
+    const { played_dilemma_ids } = await this.#withDatabase((db) =>
+      db
+        .selectFrom('rooms')
+        .select('played_dilemma_ids')
+        .where('id', '=', roomId)
+        .executeTakeFirstOrThrow(),
+    );
+    const order = this.#gameOf(this.#hostName()).dilemmas.map(({ dilemmaId }) => dilemmaId);
+    return played_dilemma_ids
+      .map((dilemmaId) => order.indexOf(dilemmaId) + 1)
+      .filter((position) => position > 0)
+      .toSorted((a, b) => a - b);
   }
 
   async canStartRematch(player: string): Promise<boolean> {
@@ -2921,7 +3064,6 @@ export class E2eDriver implements GameDriver {
   async createTheRoomOfTheDilemma(ambience: Ambience = 'classic'): Promise<void> {
     const { page } = screenOf(this.#playerCalled(VISITOR));
     await page.getByRole('textbox', { name: SCREEN.nickname }).fill(VISITOR);
-    await chooseOption(page, SCREEN.natures.friends);
     await chooseOption(page, SCREEN.places.together);
     await chooseAmbience(page, textIn('es', `ambience.${ambience}.name`));
     await page.getByRole('button', { name: SCREEN.create }).click();
@@ -2978,10 +3120,59 @@ export class E2eDriver implements GameDriver {
    * The browser of the player says that language from now on: the app reads it when it opens,
    * so an open screen opens again, as the same device.
    */
+  /** The room keeps it, and nobody sees it: read where the room server keeps it. */
+  async languageOfTheRoom(): Promise<string> {
+    const { roomId } = this.#lobbyOf(this.#hostName());
+    const { dilemma_language } = await this.#withDatabase((db) =>
+      db
+        .selectFrom('rooms')
+        .select('dilemma_language')
+        .where('id', '=', roomId)
+        .executeTakeFirstOrThrow(),
+    );
+    return dilemma_language;
+  }
+
+  /** The settings of the lobby have no list to choose a language from. */
+  async settingsOfferALanguage(host: string): Promise<boolean> {
+    const sheet = await this.#openSettings(host);
+    const offered = (await sheet.getByRole('combobox').count()) > 0;
+    await this.#closeSettings(sheet);
+    return offered;
+  }
+
+  /** As the room server sent the lobby to the device of `viewer`, which draws it. */
+  async roundTextSeenBy(viewer: string, round: number): Promise<string | undefined> {
+    const lobby = await waitUntil(
+      () => lastLobbyOf(this.#playerCalled(viewer)),
+      `${viewer} gets the lobby`,
+    );
+    const seen = lobby.rounds[round - 1];
+    if (seen?.origin === 'specific') return seen.dilemma.text;
+    if (seen?.origin === 'players') return seen.dilemma?.text;
+    return undefined;
+  }
+
+  async languageReadBy(player: string, position: number): Promise<string | null> {
+    const playerId = this.#playerIdOf(this.#playerCalled(player));
+    const { gameId } = this.#gameOf(this.#hostName());
+    const dilemmaId = this.#dilemmaIdAt(position);
+    const answer = await this.#withDatabase((db) =>
+      db
+        .selectFrom('answers')
+        .select('language')
+        .where('game_id', '=', gameId)
+        .where('player_id', '=', playerId)
+        .where('dilemma_id', '=', dilemmaId)
+        .executeTakeFirst(),
+    );
+    return answer?.language ?? null;
+  }
+
   async usesTheAppIn(player: string, language: string): Promise<void> {
     const locale = LOCALES[language];
     if (!locale) throw new Error(`The e2e driver has no locale for "${language}"`);
-    const { context } = screenOf(await this.#withScreen(player));
+    const { context, received } = screenOf(await this.#withScreen(player));
     await context.addInitScript(
       (languages: readonly string[]) => {
         Object.defineProperty(Navigator.prototype, 'language', { get: () => languages[0] });
@@ -2989,7 +3180,8 @@ export class E2eDriver implements GameDriver {
       },
       [locale, language],
     );
-    await this.reopenApp(player);
+    // In a room, the app opens again in it; before joining one, the next page it opens takes it.
+    if (received.length > 0) await this.reopenApp(player);
   }
 
   /** The test data saves option n of each dilemma with an id that says its position. */
@@ -3537,46 +3729,128 @@ export class E2eDriver implements GameDriver {
   }
 
   /**
-   * «Siguiente dilema» on the reveal, and every screen gets the next round; from the last one of an
-   * anonymous room, «Ver resultados», to the ranking; and from it, «Continuar», to the end.
+   * The way on, as `player` sees it: «Siguiente dilema» on the reveal, «Ver resultados» on the last
+   * one, «Siguiente» on each screen of the results and «Continuar» on the ranking.
    */
-  async moveOn(player: string): Promise<void> {
+  #wayOnOf(player: string): Locator {
     const mover = this.#playerCalled(player);
     const { page } = screenOf(mover);
     const game = this.#gameOf(player);
     if (game.stage.kind === 'results') {
-      const { step } = game.stage;
-      const footer = page.locator('footer');
-      // Looking back on their own device, the player only comes forward again: nobody else moves.
-      const behind = this.#lookingBack.get(player) ?? 0;
-      if (behind > 0) {
-        const shown = await this.resultsScreenShownTo(player);
-        await footer.getByRole('button', { name: SCREEN.resultsNext }).click();
-        await waitUntilAsync(async () => (await this.resultsScreenShownTo(player)) === shown + 1);
-        this.#lookingBack.set(player, behind - 1);
-        return;
-      }
       // By the state, not by the screen, which may still be drawing the step before: the ranking is
       // the only screen of an anonymous room, and the last of a nominal one.
-      const onRanking = isAnonymous(mover) || (step ?? 0) >= (game.results?.titles.length ?? 0) + 1;
-      await footer
-        .getByRole('button', { name: onRanking ? SCREEN.rankingNext : SCREEN.resultsNext })
-        .click();
-      await this.#untilEveryoneMovesOnFrom(step);
+      const step = game.stage.step ?? 0;
+      const onRanking = isAnonymous(mover) || step >= (game.results?.titles.length ?? 0) + 1;
+      return page
+        .locator('footer')
+        .getByRole('button', { name: onRanking ? SCREEN.rankingNext : SCREEN.resultsNext });
+    }
+    const last = game.round.position === game.dilemmas.length - 1;
+    return page.getByRole('button', { name: last ? SCREEN.toResults : SCREEN.next });
+  }
+
+  /**
+   * The state `player` has once it is on a reveal or a screen of the results: a step may have just
+   * answered the last one, and the reveal still be on its way.
+   */
+  async #whereTheGroupMovesOnFrom(player: string): Promise<GameStateDto> {
+    const mover = this.#playerCalled(player);
+    return waitUntil(() => {
+      const game = lastGameOf(mover);
+      return game && (game.stage.kind === 'results' || game.round.phase === 'reveal') && game;
+    }, `${player} gets to a reveal or a screen of the results`);
+  }
+
+  /** Until every screen has left where `player` saw the group, once it moved on. */
+  async #untilEveryoneMovesOnFrom(game: GameStateDto): Promise<void> {
+    if (game.stage.kind === 'results') {
+      await this.#untilEveryoneLeavesTheScreen(game.stage.step);
       return;
     }
-    const from = game.round.position;
-    if (from === game.dilemmas.length - 1) {
-      await page.getByRole('button', { name: SCREEN.toResults }).click();
+    if (game.round.position === game.dilemmas.length - 1) {
       await this.#untilEveryoneIsAt('results');
       return;
     }
-    await page.getByRole('button', { name: SCREEN.next }).click();
-    await this.#untilEveryoneIsOnRound(from + 1);
+    await this.#untilEveryoneIsOnRound(game.round.position + 1);
+  }
+
+  /** «Siguiente dilema», or the way on of the screen: ready, the player waits for the rest. */
+  async getReadyToMoveOn(player: string): Promise<void> {
+    const mover = this.#playerCalled(player);
+    // Brought in without a browser, the player never connects: the group does not wait for them.
+    if (!mover.screen) return;
+    const from = await this.#whereTheGroupMovesOnFrom(player);
+    await this.#wayOnOf(player).click();
+    const moved = await waitUntil(() => {
+      const game = lastGameOf(mover);
+      if (!game) return undefined;
+      if (movedOnFrom(from, game)) return 'moved';
+      return game.readyToMoveOn.includes(game.playerId) ? 'ready' : undefined;
+    }, `${player} is ready to move on`);
+    if (moved === 'moved') await this.#untilEveryoneMovesOnFrom(from);
+  }
+
+  /** All tap the way on at once. */
+  async getReadyToMoveOnTogether(players: readonly string[]): Promise<void> {
+    const from = await this.#whereTheGroupMovesOnFrom(players[0]!);
+    await Promise.all(players.map((player) => this.#wayOnOf(player).click()));
+    await waitUntil(
+      () =>
+        players.every((player) => {
+          const game = lastGameOf(this.#playerCalled(player));
+          return game && (movedOnFrom(from, game) || game.readyToMoveOn.includes(game.playerId));
+        }) || undefined,
+      `${players.join(' and ')} are ready to move on`,
+    );
+    if (movedOnFrom(from, this.#gameOf(players[0]!))) await this.#untilEveryoneMovesOnFrom(from);
+  }
+
+  /** Ready first, if not yet, then «Pasar a todos»: everyone moves on. */
+  async moveEveryoneOn(host: string): Promise<void> {
+    const from = await this.#whereTheGroupMovesOnFrom(host);
+    if (!from.readyToMoveOn.includes(from.playerId)) await this.getReadyToMoveOn(host);
+    if (movedOnFrom(from, this.#gameOf(host))) return;
+    const { page } = screenOf(this.#playerCalled(host));
+    await page.getByRole('button', { name: SCREEN.moveEveryoneOn }).click();
+    await this.#untilEveryoneMovesOnFrom(from);
+  }
+
+  /** Once ready, the player is offered «Pasar a todos», or only waits for the rest. */
+  async canMoveEveryoneOn(player: string): Promise<boolean> {
+    const game = this.#gameOf(player);
+    if (!game.readyToMoveOn.includes(game.playerId)) await this.getReadyToMoveOn(player);
+    const { page } = screenOf(this.#playerCalled(player));
+    await page
+      .getByRole('button', { name: SCREEN.waitingForTheRest })
+      .or(page.getByRole('button', { name: SCREEN.moveEveryoneOn }))
+      .waitFor();
+    return (await page.getByRole('button', { name: SCREEN.moveEveryoneOn }).count()) > 0;
+  }
+
+  /** What the foot of the screen says of how many are ready, «2 de 3 listos para seguir». */
+  async readyToMoveOnSeenBy(
+    viewer: string,
+  ): Promise<{ readonly ready: number; readonly of: number } | null> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const count = page.locator('footer').getByRole('status');
+    return steady(async () => {
+      if ((await count.count()) === 0) return null;
+      const [, ready, of] = (await count.textContent())?.match(SCREEN.readyToMoveOn) ?? [];
+      return ready && of ? { ready: Number(ready), of: Number(of) } : null;
+    });
+  }
+
+  /** Looking back on their own device, the player only comes forward again: nobody else moves. */
+  async goForwardInTheResults(player: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const shown = await this.resultsScreenShownTo(player);
+    await page.locator('footer').getByRole('button', { name: SCREEN.resultsNext }).click();
+    await waitUntilAsync(async () => (await this.resultsScreenShownTo(player)) === shown + 1);
+    this.#lookingBack.set(player, (this.#lookingBack.get(player) ?? 1) - 1);
   }
 
   /** Until no screen is on that step of the results any more. */
-  async #untilEveryoneMovesOnFrom(step: number | null): Promise<void> {
+  async #untilEveryoneLeavesTheScreen(step: number | null): Promise<void> {
     const online = this.#withScreens().filter(({ screen }) => screen?.link);
     await waitUntil(
       () =>
@@ -3594,19 +3868,6 @@ export class E2eDriver implements GameDriver {
       () => online.every((player) => lastGameOf(player)?.stage.kind === stage) || undefined,
       `everyone gets to the ${stage === 'results' ? 'game results' : 'end of the game'}`,
     );
-  }
-
-  /** Both tap «Siguiente dilema» at once. */
-  async moveOnTogether(players: readonly string[]): Promise<void> {
-    const from = this.#gameOf(players[0]!).round.position;
-    await Promise.all(
-      players.map((player) =>
-        screenOf(this.#playerCalled(player))
-          .page.getByRole('button', { name: SCREEN.next })
-          .click(),
-      ),
-    );
-    await this.#untilEveryoneIsOnRound(from + 1);
   }
 
   /** Who the notice in the strip of `viewer` says moved on, while it lasts. */
@@ -4625,6 +4886,16 @@ function lastLobbyOf({ screen }: E2ePlayer): RoomStateDto | undefined {
   return last?.type === 'room-state' ? last : undefined;
 }
 
+/** Whether the group has moved on from where `from` saw it, by what `game` says. */
+function movedOnFrom(from: GameStateDto, game: GameStateDto): boolean {
+  return (
+    game.stage.kind !== from.stage.kind ||
+    game.stage.step !== from.stage.step ||
+    game.round.position !== from.round.position ||
+    game.round.phase !== from.round.phase
+  );
+}
+
 function lastGameOf({ screen }: E2ePlayer): GameStateDto | undefined {
   return screen?.received.findLast(
     (message): message is GameStateDto => message.type === 'game-state',
@@ -4656,7 +4927,7 @@ function sameRounds(
       if (round.origin === 'random' && other.origin === 'random') {
         return (
           isDeepStrictEqual(sorted(round.categories), sorted(other.categories)) &&
-          round.content === (other.content ?? 'any')
+          round.content.join() === (other.content ?? []).join()
         );
       }
       if (round.origin === 'specific' && other.origin === 'specific') {

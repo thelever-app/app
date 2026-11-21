@@ -9,28 +9,56 @@ Feature: Reveal
       Given a room with players "Ana", "Luis" and "Marta" and 3 dilemmas
 
     @ui
-    Scenario: Any player moves to the next round
+    Scenario: The next round starts once every player is ready to move on
       Given the reveal is on the first dilemma
-      When "Marta" moves to the next round
+      When "Ana" and "Luis" are ready to move on
+      Then all players still see the reveal of the first dilemma
+      And all players see that 2 of 3 players are ready to move on
+      When "Marta" is ready to move on
       Then all players get the second dilemma
 
     @ui
-    Scenario: Players see who moved on
+    Scenario: The host moves everyone on without waiting
       Given the reveal is on the first dilemma
-      When "Marta" moves to the next round
-      Then "Ana" and "Luis" see in the player strip that "Marta" moved on
+      When "Ana" moves everyone on as the host
+      Then all players get the second dilemma
+
+    @ui
+    Scenario: Only the host can move everyone on
+      Given the reveal is on the first dilemma
+      Then "Luis" cannot move everyone on
+
+    @ui
+    Scenario: Nobody waits for a disconnected player
+      Given the reveal is on the first dilemma
+      And "Ana" and "Luis" are ready to move on
+      When "Marta" disconnects
+      Then "Ana" and "Luis" get the second dilemma
+
+    @ui
+    Scenario: Players see that the host moved everyone on
+      Given the reveal is on the first dilemma
+      When "Ana" moves everyone on as the host
+      Then "Luis" and "Marta" see in the player strip that "Ana" moved on
+
+    @ui
+    Scenario: Nobody is named when every player was ready
+      Given the reveal is on the first dilemma
+      When every player is ready to move on
+      Then no player sees in the player strip that someone moved on
 
     @ui @screen
     Scenario: The notice of who moved on covers nothing
       Given the reveal is on the first dilemma
-      When "Marta" moves to the next round
-      Then the notice in the player strip of "Ana" covers nothing of the dilemma
+      When "Ana" moves everyone on as the host
+      Then the notice in the player strip of "Luis" covers nothing of the dilemma
       And it disappears by itself
 
     @ui
-    Scenario: Two players move on at the same time
+    Scenario: The last two players get ready at the same time
       Given the reveal is on the first dilemma
-      When "Ana" and "Luis" move to the next round at the same time
+      And "Ana" is ready to move on
+      When "Luis" and "Marta" are ready to move on at the same time
       Then all players get the second dilemma
 
     @ui
@@ -40,7 +68,7 @@ Feature: Reveal
 
     Scenario: The time spent on each dilemma is recorded
       Given the reveal was on the first dilemma for 90 seconds
-      When a player moves to the next round
+      When every player is ready to move on
       Then 90 seconds are recorded for the first dilemma
       And no player sees that time
 
@@ -213,13 +241,13 @@ Feature: Reveal
     @ui
     Scenario: The last round leads to the game results
       Given the reveal is on the last dilemma
-      When a player moves on
+      When every player is ready to move on
       Then all players see the first title of the game
       When the players have moved through every title
       Then the last title they see is El Mentalista
-      When a player moves on
+      When every player is ready to move on
       Then each player sees who knows them best
-      When a player moves on
+      When every player is ready to move on
       Then all players see the ranking
 
     @ui
@@ -276,10 +304,18 @@ Feature: Reveal
       Then the title "Imán de reacciones" is skipped
 
     @ui
-    Scenario: Players see who moved on in the game results
+    Scenario: The titles wait for every player too
+      Given the titles of the game are shown
+      When "Ana" and "Luis" are ready to move on
+      Then all players still see the first title of the game
+      When "Marta" is ready to move on
+      Then all players see the second title of the game
+
+    @ui
+    Scenario: Players see that the host moved everyone on in the game results
       Given all players see who is El Mentalista of the game
-      When "Marta" moves on
-      Then "Ana" and "Luis" see in the player strip that "Marta" moved on
+      When "Ana" moves everyone on as the host
+      Then "Luis" and "Marta" see in the player strip that "Ana" moved on
 
     @ui @screen
     Scenario: A player looks back at the game results without moving the others
@@ -287,7 +323,7 @@ Feature: Reveal
       When "Ana" goes back to the previous screen of the game results
       Then "Ana" sees the previous screen of the game results
       And "Luis" and "Marta" still see who is El Mentalista of the game
-      When "Ana" moves on
+      When "Ana" moves forward in the game results
       Then "Ana" sees who is El Mentalista of the game again
       And "Luis" and "Marta" still see who is El Mentalista of the game
 
@@ -326,7 +362,7 @@ Feature: Reveal
     @ui
     Scenario: The game results end the game
       Given the ranking is shown
-      When a player moves on
+      When every player is ready to move on
       Then the game ends
 
   Rule: Anonymous room
@@ -370,7 +406,7 @@ Feature: Reveal
     @ui
     Scenario: The last round leads to the ranking of who reads the group best
       Given the reveal is on the last dilemma
-      When a player moves on
+      When every player is ready to move on
       Then all players see the ranking of who reads the group best
       And nobody sees the titles of the game or who knows them best
 
@@ -400,7 +436,7 @@ Feature: Reveal
     @ui
     Scenario: The ranking of an anonymous room ends the game
       Given the ranking of who reads the group best is shown
-      When a player moves on
+      When every player is ready to move on
       Then the game ends
 
     @ui @screen @todo

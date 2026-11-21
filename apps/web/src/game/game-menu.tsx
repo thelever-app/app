@@ -5,6 +5,7 @@ import { Icon, type IconName } from '../components/icon.tsx';
 import { shareInvitation } from '../lobby/invitation.ts';
 import { useMuted } from '../sound/sound-context.tsx';
 import styles from './game-menu.module.css';
+import { RestartGameDialog } from './restart-game-dialog.tsx';
 
 interface GameMenuProps {
   /** The code of the room, to invite others during the game. */
@@ -13,6 +14,8 @@ interface GameMenuProps {
   readonly onShowQr: () => void;
   /** Only for the host, in the decision of a round: reveals its dilemma without waiting. */
   readonly onRevealEarly?: (() => void) | undefined;
+  /** Only for the host, in the rounds: takes everyone back to the lobby, once confirmed. */
+  readonly onRestart?: (() => void) | undefined;
   /** Whether the player already reported the dilemma on screen. */
   readonly reported?: boolean;
   readonly onShowGroup: () => void;
@@ -26,62 +29,81 @@ export function GameMenu({
   code,
   onShowQr,
   onRevealEarly,
+  onRestart,
   reported,
   onShowGroup,
   onReport,
   onLeave,
 }: GameMenuProps) {
   const { t } = useTranslation();
+  const [isRestartOpen, setIsRestartOpen] = useState(false);
 
   return (
-    <Dialog.Root>
-      <Dialog.Trigger asChild>
-        <button type="button" className={styles.trigger} aria-label={t('gameMenu.open')}>
-          <Icon name="moreVert" size={22} />
-        </button>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className={styles.overlay} />
-        <Dialog.Content className={styles.sheet} aria-describedby={undefined}>
-          <div aria-hidden="true" className={styles.handle} />
-          <Dialog.Title className={styles.hidden}>{t('gameMenu.title')}</Dialog.Title>
-          <ul className={styles.items}>
-            {onRevealEarly && (
-              <MenuItem
-                icon="visibilityOutline"
-                title={t('gameMenu.revealEarly')}
-                subtitle={t('gameMenu.onlyHost')}
-                onSelect={onRevealEarly}
-              />
-            )}
-            <MenuItem icon="groups" title={t('gameMenu.showGroup')} onSelect={onShowGroup} />
-            <ShareRow code={code} />
-            <MenuItem icon="qrCode" title={t('gameMenu.showQr')} onSelect={onShowQr} />
-            {onReport && !reported && (
-              <MenuItem
-                icon="flag"
-                title={t('gameMenu.report')}
-                subtitle={t('gameMenu.reportSubtitle')}
-                onSelect={onReport}
-              />
-            )}
-            {onReport && reported && (
-              <li>
-                <span className={styles.done} aria-disabled="true">
-                  <Icon name="checkCircle" size={22} />
-                  <span className={styles.itemTitle}>{t('gameMenu.reported')}</span>
-                </span>
-              </li>
-            )}
-            <SoundRow />
-          </ul>
-          <hr className={styles.divider} />
-          <ul className={styles.items}>
-            <MenuItem icon="logout" title={t('gameMenu.leave')} onSelect={onLeave} />
-          </ul>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <>
+      <Dialog.Root>
+        <Dialog.Trigger asChild>
+          <button type="button" className={styles.trigger} aria-label={t('gameMenu.open')}>
+            <Icon name="moreVert" size={22} />
+          </button>
+        </Dialog.Trigger>
+        <Dialog.Portal>
+          <Dialog.Overlay className={styles.overlay} />
+          <Dialog.Content className={styles.sheet} aria-describedby={undefined}>
+            <div aria-hidden="true" className={styles.handle} />
+            <Dialog.Title className={styles.hidden}>{t('gameMenu.title')}</Dialog.Title>
+            <ul className={styles.items}>
+              {onRevealEarly && (
+                <MenuItem
+                  icon="visibilityOutline"
+                  title={t('gameMenu.revealEarly')}
+                  subtitle={t('gameMenu.onlyHost')}
+                  onSelect={onRevealEarly}
+                />
+              )}
+              {onRestart && (
+                <MenuItem
+                  icon="replay"
+                  title={t('gameMenu.restart')}
+                  subtitle={t('gameMenu.onlyHost')}
+                  onSelect={() => setIsRestartOpen(true)}
+                />
+              )}
+              <MenuItem icon="groups" title={t('gameMenu.showGroup')} onSelect={onShowGroup} />
+              <ShareRow code={code} />
+              <MenuItem icon="qrCode" title={t('gameMenu.showQr')} onSelect={onShowQr} />
+              {onReport && !reported && (
+                <MenuItem
+                  icon="flag"
+                  title={t('gameMenu.report')}
+                  subtitle={t('gameMenu.reportSubtitle')}
+                  onSelect={onReport}
+                />
+              )}
+              {onReport && reported && (
+                <li>
+                  <span className={styles.done} aria-disabled="true">
+                    <Icon name="checkCircle" size={22} />
+                    <span className={styles.itemTitle}>{t('gameMenu.reported')}</span>
+                  </span>
+                </li>
+              )}
+              <SoundRow />
+            </ul>
+            <hr className={styles.divider} />
+            <ul className={styles.items}>
+              <MenuItem icon="logout" title={t('gameMenu.leave')} onSelect={onLeave} />
+            </ul>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+      {onRestart && (
+        <RestartGameDialog
+          open={isRestartOpen}
+          onOpenChange={setIsRestartOpen}
+          onRestart={onRestart}
+        />
+      )}
+    </>
   );
 }
 

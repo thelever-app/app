@@ -19,7 +19,7 @@ function randomRounds(count: number): RoundSnapshot[] {
     id: index + 1,
     origin: 'random',
     categories: null,
-    content: 'any',
+    content: [],
   }));
 }
 
@@ -71,7 +71,7 @@ describe('RoomSettingsVO', () => {
       // Arrange
       const rounds: RoundSnapshot[] = [
         { id: 1, origin: 'specific', dilemma: FOR_EVERYONE },
-        { id: 2, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
+        { id: 2, origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
         { id: 5, origin: 'players' },
       ];
 
@@ -90,14 +90,14 @@ describe('RoomSettingsVO', () => {
             id: 1,
             origin: 'random',
             categories: ['honesty', 'loyalty', 'honesty'],
-            content: 'any',
+            content: [],
           },
         ],
       });
 
       // Assert
       expect(settings.rounds).toEqual([
-        { id: 1, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
+        { id: 1, origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
       ]);
     });
 
@@ -119,10 +119,10 @@ describe('RoomSettingsVO', () => {
           id: 2,
           origin: 'random',
           categories: ['TestNoCategory' as Category],
-          content: 'any',
+          content: [],
         },
       },
-      { case: 'no categories', round: { id: 2, origin: 'random', categories: [], content: 'any' } },
+      { case: 'no categories', round: { id: 2, origin: 'random', categories: [], content: [] } },
       {
         case: 'an unknown content',
         round: { id: 2, origin: 'random', categories: null, content: 'TestNoContent' },
@@ -180,8 +180,14 @@ describe('RoomSettingsVO', () => {
     it('should keep adults-only rounds in an adults-only room and compromising ones where they are on', () => {
       // Arrange
       const rounds: RoundSnapshot[] = [
-        { id: 1, origin: 'random', categories: null, content: 'adults-only' },
-        { id: 2, origin: 'random', categories: ['honesty'], content: 'compromising' },
+        { id: 1, origin: 'random', categories: null, content: ['adults-only'] },
+        { id: 2, origin: 'random', categories: ['honesty'], content: ['compromising'] },
+        {
+          id: 3,
+          origin: 'random',
+          categories: null,
+          content: ['adults-only', 'compromising'],
+        },
       ];
 
       // Act
@@ -200,14 +206,39 @@ describe('RoomSettingsVO', () => {
       {
         case: 'an adults-only round in a room not for adults only',
         changes: {
-          rounds: [{ id: 1, origin: 'random', categories: null, content: 'adults-only' }],
+          rounds: [{ id: 1, origin: 'random', categories: null, content: ['adults-only'] }],
         },
       },
       {
         case: 'a compromising round with compromising dilemmas off',
         changes: {
           variant: 'anonymous',
-          rounds: [{ id: 1, origin: 'random', categories: null, content: 'compromising' }],
+          rounds: [{ id: 1, origin: 'random', categories: null, content: ['compromising'] }],
+        },
+      },
+      {
+        case: 'a content out of order',
+        changes: {
+          variant: 'anonymous',
+          adultsOnly: true,
+          compromisingDilemmas: true,
+          rounds: [
+            {
+              id: 1,
+              origin: 'random',
+              categories: null,
+              content: ['compromising', 'adults-only'],
+            },
+          ],
+        },
+      },
+      {
+        case: 'a requirement twice',
+        changes: {
+          adultsOnly: true,
+          rounds: [
+            { id: 1, origin: 'random', categories: null, content: ['adults-only', 'adults-only'] },
+          ],
         },
       },
     ])('should throw an error for $case', ({ changes }) => {

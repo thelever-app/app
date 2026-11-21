@@ -43,19 +43,23 @@ interface Preset {
   readonly contents: readonly RoundContent[];
 }
 
+const ANY: RoundContent = [];
+const ADULTS: RoundContent = ['adults-only'];
+const COMPROMISING: RoundContent = ['compromising'];
+
 const PRESETS: Readonly<Record<Ambience, Preset>> = {
   classic: {
     variant: 'nominal',
     adultsOnly: false,
     compromisingDilemmas: false,
-    contents: Array.from({ length: DEFAULT_ROUNDS }, () => 'any'),
+    contents: Array.from({ length: DEFAULT_ROUNDS }, () => ANY),
   },
   spicy: {
     variant: 'nominal',
     adultsOnly: true,
     compromisingDilemmas: false,
     contents: Array.from({ length: DEFAULT_ROUNDS }, (_, index) =>
-      index % 2 === 1 ? 'adults-only' : 'any',
+      index % 2 === 1 ? ADULTS : ANY,
     ),
   },
   'no-filter': {
@@ -64,7 +68,7 @@ const PRESETS: Readonly<Record<Ambience, Preset>> = {
     compromisingDilemmas: true,
     contents: Array.from(
       { length: DEFAULT_ROUNDS },
-      (_, index) => (['any', 'compromising', 'adults-only'] as const)[index % 3]!,
+      (_, index) => [ANY, COMPROMISING, ADULTS][index % 3]!,
     ),
   },
 };
@@ -101,5 +105,9 @@ function matches(settings: RoomSettingsSnapshot, preset: Preset): boolean {
 
 function follows(round: RoundSnapshot, content: RoundContent, index: number): boolean {
   if (round.origin === 'specific') return index === 0;
-  return round.origin === 'random' && round.categories === null && round.content === content;
+  return (
+    round.origin === 'random' &&
+    round.categories === null &&
+    round.content.join() === content.join()
+  );
 }

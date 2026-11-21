@@ -26,6 +26,25 @@ export function testCatalog(): InMemoryDilemmaCatalog {
   return new InMemoryDilemmaCatalog(TEST_DILEMMA_IDS.map(dilemma));
 }
 
+/** The three test dilemmas in Spanish, the one given translated into English too. */
+export function testCatalogWithEnglishFor(translatedId: string): InMemoryDilemmaCatalog {
+  return new InMemoryDilemmaCatalog(
+    TEST_DILEMMA_IDS.map((dilemmaId) => ({
+      ...dilemma(dilemmaId),
+      translations:
+        dilemmaId === translatedId
+          ? [
+              {
+                language: 'en',
+                text: `EnglishTextOf${dilemmaId}`,
+                options: TEST_OPTION_IDS.map((optionId) => `EnglishTextOf${optionId}`),
+              },
+            ]
+          : [],
+    })),
+  );
+}
+
 /**
  * Enough to put a game together and search, in Spanish: ten dilemmas of the catalog in
  * life-and-death, two of them for adults and three tagged "family", three in exploration, two

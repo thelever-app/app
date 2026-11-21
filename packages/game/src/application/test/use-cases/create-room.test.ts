@@ -18,7 +18,6 @@ const ANA = {
   hostNickname: 'Ana',
   hostIdentity: 'TestAnaIdentity',
   hostAvatar: { face: 'face-05', color: 'cyan' },
-  groupNature: 'friends',
   place: 'remote',
   dilemmaLanguage: 'en',
 };
@@ -46,7 +45,6 @@ describe('CreateRoomUseCase', () => {
       expect(room?.host.nickname).toBe('Ana');
       expect(room?.host.avatar).toMatchObject({ face: 'face-05', color: 'cyan' });
       expect(room?.code).toBe(code);
-      expect(room?.groupNature).toBe('friends');
       expect(room?.place).toBe('remote');
       expect(room?.settings.dilemmaLanguage).toBe('en');
       expect(room?.settings.variant).toBe('nominal');

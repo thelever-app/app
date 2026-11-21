@@ -23,7 +23,6 @@ const SECOND = 1000;
 const NOMINAL: GameSettings = {
   ambience: 'classic',
   variant: 'nominal',
-  groupNature: 'friends',
   place: 'together',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
@@ -183,6 +182,28 @@ describe('Game, at the end', () => {
       expect(game.stage).toEqual({ kind: 'results', movedOnBy: 'Ana', step: 1 });
       expect(game.pullEvents()).toEqual([
         new GameStageChangedEvent('TestGameId', 'results', 'Ana', game.version),
+      ]);
+    });
+
+    it('should move everyone to the next screen once all are ready, forgetting who was', () => {
+      // Arrange
+      const players = ['Ana', 'Luis', 'Marta'];
+      const game = gameOf(players);
+      playAll(game);
+      game.moveOn('Luis', 2, AT);
+      game.getReadyToMoveOn('Ana', 3, players, AT);
+      game.getReadyToMoveOn('Luis', 3, players, AT);
+      game.pullEvents();
+
+      // Act
+      const moved = game.getReadyToMoveOn('Marta', 3, players, AT);
+
+      // Assert
+      expect(moved).toBe(true);
+      expect(game.stage).toEqual({ kind: 'results', movedOnBy: null, step: 1 });
+      expect(game.playersReadyToMoveOn).toEqual([]);
+      expect(game.pullEvents()).toEqual([
+        new GameStageChangedEvent('TestGameId', 'results', null, game.version),
       ]);
     });
 
@@ -399,6 +420,7 @@ describe('Game, at the end', () => {
       game.react('Luis', 2, { kind: 'vote', playerId: 'Ana' }, '😮', SEAL);
       game.moveOn('Ana', 2, after(5 * SECOND));
       game.moveOn('Ana', 3, AT);
+      game.getReadyToMoveOn('Luis', 4, ['Ana', 'Luis', 'Marta'], AT);
 
       // Act
       const restored = Game.restore(game.toSnapshot());
@@ -406,6 +428,7 @@ describe('Game, at the end', () => {
       // Assert
       expect(restored.toSnapshot()).toEqual(game.toSnapshot());
       expect(restored.stage).toEqual({ kind: 'results', movedOnBy: 'Ana', step: 1 });
+      expect(restored.playersReadyToMoveOn).toEqual(['Luis']);
       expect(restored.timeSpentOn('TestDilemma3')).toBe(5 * SECOND);
       expect(restored.reactions()).toHaveLength(1);
     });

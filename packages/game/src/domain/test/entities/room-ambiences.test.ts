@@ -35,7 +35,6 @@ function roomOfAna({
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
-      groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
@@ -145,11 +144,10 @@ describe('Room with ambiences', () => {
       room.changeSettings(
         'TestHostId',
         {
-          dilemmaLanguage: 'en',
           timePerDilemmaSeconds: 45,
           rounds: [
-            { id: 1, origin: 'random', categories: null, content: 'any' },
-            { id: 2, origin: 'random', categories: null, content: 'any' },
+            { id: 1, origin: 'random', categories: null, content: [] },
+            { id: 2, origin: 'random', categories: null, content: [] },
             { id: 3, origin: 'specific', dilemmaId: 'TestDilemma' },
           ],
         },
@@ -163,7 +161,7 @@ describe('Room with ambiences', () => {
       // Assert
       expect(ambienceOf(room.settings)).toBe('no-filter');
       expect(room.settings.rounds[2]).toMatchObject({ id: 3, origin: 'random' });
-      expect(room.settings.dilemmaLanguage).toBe('en');
+      expect(room.settings.dilemmaLanguage).toBe('es');
       expect(room.settings.timePerDilemmaSeconds).toBe(45);
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'settings-changed', 2)]);
     });
@@ -226,17 +224,22 @@ describe('Room with ambiences', () => {
     });
 
     it.each([
-      { content: 'adults-only', change: { adultsOnly: false } },
-      { content: 'compromising', change: { compromisingDilemmas: false } },
-      { content: 'compromising', change: { variant: 'nominal' } },
+      { content: ['adults-only'], change: { adultsOnly: false }, left: [] },
+      { content: ['compromising'], change: { compromisingDilemmas: false }, left: [] },
+      { content: ['compromising'], change: { variant: 'nominal' }, left: [] },
+      {
+        content: ['adults-only', 'compromising'],
+        change: { compromisingDilemmas: false },
+        left: ['adults-only'],
+      },
     ] as const)(
-      'should make a round of $content any content when $change rules it out',
-      ({ content, change }) => {
+      'should take out of a round of $content what $change rules out',
+      ({ content, change, left }) => {
         // Arrange
         const room = roomOfAna({ ambience: 'no-filter' });
         room.changeSettings('TestHostId', {
           rounds: [
-            { id: 1, origin: 'random', categories: null, content: 'any' },
+            { id: 1, origin: 'random', categories: null, content: [] },
             { id: 2, origin: 'random', categories: ['honesty'], content },
           ],
         });
@@ -249,7 +252,7 @@ describe('Room with ambiences', () => {
           id: 2,
           origin: 'random',
           categories: ['honesty'],
-          content: 'any',
+          content: left,
         });
       },
     );

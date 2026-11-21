@@ -45,7 +45,6 @@ function roomAfterAGame(): Room {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
-      groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
@@ -111,7 +110,7 @@ describe('Room, rematch', () => {
     const room = roomAfterAGame();
     room.startRematch('Ana', PLAYED);
     room.changeSettings('Ana', {
-      rounds: [{ origin: 'players' }, { origin: 'random', categories: null, content: 'any' }],
+      rounds: [{ origin: 'players' }, { origin: 'random', categories: null, content: [] }],
     });
     const [playersRound] = room.settings.rounds;
 

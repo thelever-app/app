@@ -28,8 +28,10 @@ import {
   UnlikeDilemmaUseCase,
   ReactUseCase,
   StartRematchUseCase,
+  RestartGameUseCase,
   LobbyChangedEvent,
   MoveOnUseCase,
+  GetReadyToMoveOnUseCase,
   PlayerJoinedLateEvent,
   PlayerLeftEvent,
   ReportDilemmaUseCase,
@@ -39,6 +41,7 @@ import {
   type Clock,
   ProgressUpdatedEvent,
   ReactionsChangedEvent,
+  ReadyToMoveOnChangedEvent,
   DilemmaLikedEvent,
   DilemmaUnlikedEvent,
   AnsweredCountChangedEvent,
@@ -123,6 +126,7 @@ const SENT_AS_STATE = [
   PlayerLeftEvent,
   PlayerJoinedLateEvent,
   ReactionsChangedEvent,
+  ReadyToMoveOnChangedEvent,
   DilemmaLikedEvent,
   DilemmaUnlikedEvent,
 ] as const;
@@ -260,10 +264,12 @@ export class SimulatedRoomConnection implements RoomConnection {
         gameRepository: games,
         notifier,
         sealProvider,
+        dilemmaCatalog: catalog,
         clock,
       }),
       revealEarly: new RevealEarlyUseCase(rooms, games, notifier, clock),
       moveOn: new MoveOnUseCase(rooms, games, notifier, clock),
+      getReadyToMoveOn: new GetReadyToMoveOnUseCase(rooms, games, notifier, clock),
       react: new ReactUseCase({
         roomRepository: rooms,
         gameRepository: games,
@@ -285,6 +291,7 @@ export class SimulatedRoomConnection implements RoomConnection {
         notifier,
       }),
       startRematch: new StartRematchUseCase(rooms, games, notifier),
+      restartGame: new RestartGameUseCase(rooms, games, notifier),
       runOutRound: new RunOutRoundUseCase(rooms, games, notifier, clock),
       leaveRoom: new LeaveRoomUseCase(rooms, games, notifier, clock),
       skipDilemma: new SkipDilemmaUseCase({
@@ -387,7 +394,6 @@ export class SimulatedRoomConnection implements RoomConnection {
       hostNickname: this.#options.nickname,
       hostIdentity: SELF_IDENTITY,
       hostAvatar: avatarNumber(0),
-      groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: this.#options.language,
     });
@@ -425,6 +431,7 @@ export class SimulatedRoomConnection implements RoomConnection {
           playerId,
           dilemmaId,
           vote,
+          language: this.#options.language,
           ...(votePredictions && { votePredictions }),
           ...(distributionPrediction && { distributionPrediction }),
           ...(ready !== undefined && { ready }),
@@ -456,6 +463,20 @@ export class SimulatedRoomConnection implements RoomConnection {
         await useCases.moveOn.execute({ roomId, playerId, fromPosition: message.fromPosition });
         await this.#playRound();
         return;
+      case 'ready-to-move-on': {
+        // The others of the simulation are ready as soon as the player is.
+        const { fromPosition } = message;
+        await useCases.getReadyToMoveOn.execute({ roomId, playerId, fromPosition });
+        for (const fake of this.#fakePlayers) {
+          await useCases.getReadyToMoveOn.execute({
+            roomId,
+            playerId: fake.playerId,
+            fromPosition,
+          });
+        }
+        await this.#playRound();
+        return;
+      }
       case 'leave-room':
         await useCases.leaveRoom.execute({ roomId, playerId });
         this.close();
@@ -477,6 +498,9 @@ export class SimulatedRoomConnection implements RoomConnection {
         return;
       case 'start-rematch':
         await useCases.startRematch.execute({ roomId, playerId });
+        return;
+      case 'restart-game':
+        await useCases.restartGame.execute({ roomId, playerId });
         return;
       case 'change-avatar':
         await useCases.changeAvatar.execute({
@@ -537,6 +561,7 @@ export class SimulatedRoomConnection implements RoomConnection {
           roomId: this.#roomId,
           playerId,
           dilemmaId: dilemma.dilemmaId,
+          language: this.#options.language,
           // The person in the gap does not vote: they only predict.
           vote: dilemma.personInTheGap === playerId ? null : vote,
           votePredictions: seen.playersToPredict.map((predicted) => ({
@@ -556,7 +581,11 @@ export class SimulatedRoomConnection implements RoomConnection {
 
   /** The game a player plays now, if any. */
   async #gameOf(playerId: string) {
-    const room = await this.#useCases.getRoomState.execute({ roomId: this.#roomId, playerId });
+    const room = await this.#useCases.getRoomState.execute({
+      roomId: this.#roomId,
+      playerId,
+      language: this.#options.language,
+    });
     if (!room.currentGameId) return { game: undefined };
     const game = await this.#useCases.getGameState.execute({
       gameId: room.currentGameId,
@@ -590,6 +619,7 @@ export class SimulatedRoomConnection implements RoomConnection {
     const room = await this.#useCases.getRoomState.execute({
       roomId: this.#roomId,
       playerId: this.#playerId,
+      language: this.#options.language,
     });
     this.#emit(ServerMessageDto.parse({ type: 'room-state', ...room }), listener);
   }

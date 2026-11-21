@@ -27,6 +27,8 @@ interface DilemmaScreenProps {
   readonly onDone: () => void;
   /** Only for the host: opens «¿Revelar el dilema ya?». */
   readonly onRevealEarly: (() => void) | undefined;
+  /** Only for the host: restarts the game, once confirmed. */
+  readonly onRestart?: (() => void) | undefined;
   readonly onReport: (dilemmaId: string, reason: ReportReasonDto, comment: string) => void;
   readonly onSkip: (dilemmaId: string) => void;
   readonly onLeave: () => void;
@@ -58,6 +60,7 @@ export function DilemmaScreen({
   onAnswer,
   onDone,
   onRevealEarly,
+  onRestart,
   onReport,
   onSkip,
   onLeave,
@@ -78,7 +81,6 @@ export function DilemmaScreen({
   // What the predictions go with: the vote, or none for the person in the gap.
   const answerVote = aboutYou ? null : (vote ?? '');
   const backToTheVote = aboutYou ? undefined : () => setStep('vote');
-  const withTheGroup = step === 'vote' || aboutYou;
   const [predictions, setPredictions] = useState<Predictions>(saved ?? NO_PREDICTIONS);
   // Where the room starts it too: the even split, in the order the player sees the options.
   const [distribution, setDistribution] = useState<readonly PredictedShare[]>(
@@ -107,6 +109,7 @@ export function DilemmaScreen({
       code={game.code}
       onShowQr={onShowQr}
       onRevealEarly={onRevealEarly}
+      onRestart={onRestart}
       reported={reported}
       onShowGroup={() => setIsGroupOpen(true)}
       onReport={() => setIsReportOpen(true)}
@@ -128,8 +131,8 @@ export function DilemmaScreen({
                 : 'progressStrip.predicting',
           { position: position + 1, total },
         )}
-        menu={withTheGroup ? menu : undefined}
-        showGroup={withTheGroup}
+        menu={menu}
+        showGroup
       />
       {step === 'vote' ? (
         <DilemmaCard

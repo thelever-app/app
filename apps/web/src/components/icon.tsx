@@ -26,7 +26,6 @@ import checkBoxBlank from '@material-symbols/svg-500/rounded/check_box_outline_b
 import chevronRight from '@material-symbols/svg-500/rounded/chevron_right.svg?url';
 import diversity from '@material-symbols/svg-500/rounded/diversity_3-fill.svg?url';
 import flag from '@material-symbols/svg-500/rounded/flag.svg?url';
-import familyRestroom from '@material-symbols/svg-500/rounded/family_restroom-fill.svg?url';
 import groups from '@material-symbols/svg-500/rounded/groups-fill.svg?url';
 import groupsOutline from '@material-symbols/svg-500/rounded/groups.svg?url';
 import iosShare from '@material-symbols/svg-500/rounded/ios_share.svg?url';
@@ -49,11 +48,16 @@ import heartBroken from '@material-symbols/svg-500/rounded/heart_broken-fill.svg
 import localFireDepartment from '@material-symbols/svg-500/rounded/local_fire_department-fill.svg?url';
 import volumeOff from '@material-symbols/svg-500/rounded/volume_off-fill.svg?url';
 import volumeUp from '@material-symbols/svg-500/rounded/volume_up-fill.svg?url';
-import work from '@material-symbols/svg-500/rounded/work-fill.svg?url';
 import addReaction from '@material-symbols/svg-500/rounded/add_reaction.svg?url';
 import callSplit from '@material-symbols/svg-500/rounded/call_split.svg?url';
 import campaign from '@material-symbols/svg-500/rounded/campaign-fill.svg?url';
 import favorite from '@material-symbols/svg-500/rounded/favorite-fill.svg?url';
+import balance from '@material-symbols/svg-500/rounded/balance-fill.svg?url';
+import ecgHeart from '@material-symbols/svg-500/rounded/ecg_heart-fill.svg?url';
+import handshake from '@material-symbols/svg-500/rounded/handshake-fill.svg?url';
+import payments from '@material-symbols/svg-500/rounded/payments-fill.svg?url';
+import smartToy from '@material-symbols/svg-500/rounded/smart_toy-fill.svg?url';
+import verified from '@material-symbols/svg-500/rounded/verified-fill.svg?url';
 import help from '@material-symbols/svg-500/rounded/help-fill.svg?url';
 import menuBook from '@material-symbols/svg-500/rounded/menu_book-fill.svg?url';
 import replay from '@material-symbols/svg-500/rounded/replay.svg?url';
@@ -87,6 +91,12 @@ const ICONS = {
   callSplit,
   campaign,
   favorite,
+  balance,
+  ecgHeart,
+  handshake,
+  payments,
+  smartToy,
+  verified,
   help,
   menuBook,
   replay,
@@ -107,7 +117,6 @@ const ICONS = {
   error,
   expandLess,
   expandMore,
-  familyRestroom,
   flag,
   groups,
   groupsOutline,
@@ -140,7 +149,6 @@ const ICONS = {
   visibilityOutline,
   volumeOff,
   volumeUp,
-  work,
 } as const;
 
 export type IconName = keyof typeof ICONS;

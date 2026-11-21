@@ -227,11 +227,17 @@ describe('the messages of the rounds', () => {
     );
   });
 
-  it('should accept starting the reveal, leaving and reporting a dilemma', () => {
+  it('should accept starting the reveal, moving on, leaving and reporting a dilemma', () => {
     // Act & Assert
     expect(ClientMessageDto.safeParse({ type: 'reveal-early' }).success).toBe(true);
     expect(ClientMessageDto.safeParse({ type: 'move-on', fromPosition: 0 }).success).toBe(true);
     expect(ClientMessageDto.safeParse({ type: 'move-on', fromPosition: -1 }).success).toBe(false);
+    expect(ClientMessageDto.safeParse({ type: 'ready-to-move-on', fromPosition: 3 }).success).toBe(
+      true,
+    );
+    expect(ClientMessageDto.safeParse({ type: 'ready-to-move-on', fromPosition: -1 }).success).toBe(
+      false,
+    );
     expect(ClientMessageDto.safeParse({ type: 'leave-room' }).success).toBe(true);
     expect(
       ClientMessageDto.safeParse({ type: 'skip-dilemma', dilemmaId: 'dilemma-1' }).success,
@@ -276,6 +282,7 @@ describe('the messages of the rounds', () => {
     expect(ClientMessageDto.safeParse({ type: 'like-dilemma', position: 1 }).success).toBe(true);
     expect(ClientMessageDto.safeParse({ type: 'unlike-dilemma', position: 1 }).success).toBe(true);
     expect(ClientMessageDto.safeParse({ type: 'start-rematch' }).success).toBe(true);
+    expect(ClientMessageDto.safeParse({ type: 'restart-game' }).success).toBe(true);
   });
 
   it('should reject a reaction without a target it knows, or with too long an emoji', () => {

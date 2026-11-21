@@ -31,4 +31,15 @@ describe('peopleInTheGap', () => {
     // Assert
     expect([...chosen.values()]).toEqual(['TestPlayer2', 'TestPlayer1', 'TestPlayer2']);
   });
+
+  it('should choose first among those not chosen yet in the rounds already played', () => {
+    // Act
+    const chosen = peopleInTheGap(['TestD2', 'TestD3'], players(3), new KeepOrderRandomness(), [
+      'TestPlayer3',
+      'TestPlayer2',
+    ]);
+
+    // Assert
+    expect([...chosen.values()]).toEqual(['TestPlayer1', 'TestPlayer3']);
+  });
 });

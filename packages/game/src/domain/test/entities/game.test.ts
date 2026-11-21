@@ -37,7 +37,6 @@ const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId
 const SETTINGS = {
   ambience: 'classic',
   variant: 'anonymous',
-  groupNature: 'friends',
   place: 'remote',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
@@ -201,6 +200,35 @@ describe('Game', () => {
   });
 
   describe('answer', () => {
+    it('should keep the language the player read the dilemma in, also when they change the answer', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+      game.answer(
+        luis.id,
+        'TestDilemma1',
+        { vote: 'TestOption', ready: true, language: 'en' },
+        SEAL,
+        AT,
+      );
+
+      // Act
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOtherOption', ready: true }, SEAL, AT);
+
+      // Assert
+      expect(game.answersOf(luis.id)[0]?.language).toBe('en');
+    });
+
+    it('should leave the language unknown when nobody says it', () => {
+      // Arrange
+      const { game, luis } = gameInDecisionPhase();
+
+      // Act
+      game.answer(luis.id, 'TestDilemma1', { vote: 'TestOption', ready: true }, SEAL, AT);
+
+      // Assert
+      expect(game.answersOf(luis.id)[0]?.language).toBeNull();
+    });
+
     it('should increase the progress of the player', () => {
       // Arrange
       const { game, luis } = gameInDecisionPhase();
@@ -571,6 +599,7 @@ describe('Game', () => {
           movedOnBy: null,
         },
         stage: { kind: 'rounds', movedOnBy: null, step: null },
+        readyToMoveOn: [],
         reactions: [],
         timesSpent: [],
         peopleInTheGap: [],
@@ -578,7 +607,7 @@ describe('Game', () => {
           {
             id: 'TestAnaId',
             left: false,
-            joinedLate: false,
+            joinedAtPosition: null,
             optionOrders,
             answers: [],
             didNotVote: [],
@@ -588,7 +617,7 @@ describe('Game', () => {
           {
             id: 'TestLuisId',
             left: false,
-            joinedLate: false,
+            joinedAtPosition: null,
             optionOrders,
             answers: [
               {
@@ -603,6 +632,7 @@ describe('Game', () => {
                 ready: true,
                 optionOrder: OPTION_IDS,
                 responseTimeMs: 40_000,
+                language: null,
                 seal: SEAL,
               },
             ],

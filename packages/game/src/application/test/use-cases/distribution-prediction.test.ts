@@ -14,6 +14,7 @@ async function arrange() {
   const notifier = new InMemoryPlayerNotifier();
   const game = await gameInDecisionPhase(notifier);
   const answerDilemma = new AnswerDilemmaUseCase({
+    dilemmaCatalog: game.catalog,
     roomRepository: game.roomRepository,
     gameRepository: game.gameRepository,
     notifier,
@@ -45,6 +46,7 @@ async function arrange() {
     for (const playerId of everyone) {
       const share = predictions[playerId] ?? 100;
       await answerDilemma.execute({
+        language: 'es',
         roomId: game.roomId,
         playerId,
         dilemmaId,
@@ -66,7 +68,7 @@ async function arrange() {
   async function toTheResults(predictions: Record<string, number> = {}) {
     for (const [position] of game.dilemmaIds.entries()) {
       await playRound(position === 0 ? predictions : {});
-      await moveOn.execute({ roomId: game.roomId, playerId: game.luisId, fromPosition: position });
+      await moveOn.execute({ roomId: game.roomId, playerId: game.anaId, fromPosition: position });
     }
   }
 
@@ -114,37 +116,38 @@ describe('The distribution prediction, in an anonymous room', () => {
     // Assert
     const state = await stateOf(martaId);
     const rounds = state.dilemmas.length;
-    expect(state.stage).toEqual({ kind: 'results', movedOnBy: luisId, step: 0 });
+    expect(state.stage).toEqual({ kind: 'results', movedOnBy: anaId, step: 0 });
     expect(state.ranking).toEqual([
       { playerId: anaId, points: 100 * rounds, position: 1, mentalist: true },
       { playerId: luisId, points: 100 * rounds - 40, position: 2, mentalist: false },
       { playerId: martaId, points: 100 * rounds - 40, position: 2, mentalist: false },
     ]);
     expect(notifier.receivedBy(anaId).at(-1)).toEqual(
-      new GameStageChangedEvent(gameId, 'results', luisId, state.gameVersion),
+      new GameStageChangedEvent(gameId, 'results', anaId, state.gameVersion),
     );
   });
 
-  it('should end the game when a player moves on from the ranking', async () => {
+  it('should end the game when the host moves everyone on from the ranking', async () => {
     // Arrange
-    const { roomId, martaId, gameId, notifier, moveOn, stateOf, toTheResults } = await arrange();
+    const { roomId, anaId, martaId, gameId, notifier, moveOn, stateOf, toTheResults } =
+      await arrange();
     await toTheResults();
     const rounds = (await stateOf(martaId)).dilemmas.length;
 
     // Act
-    await moveOn.execute({ roomId, playerId: martaId, fromPosition: rounds });
-    await moveOn.execute({ roomId, playerId: martaId, fromPosition: rounds });
+    await moveOn.execute({ roomId, playerId: anaId, fromPosition: rounds });
+    await moveOn.execute({ roomId, playerId: anaId, fromPosition: rounds });
 
     // Assert
     const state = await stateOf(martaId);
-    expect(state.stage).toEqual({ kind: 'ended', movedOnBy: martaId, step: null });
+    expect(state.stage).toEqual({ kind: 'ended', movedOnBy: anaId, step: null });
     expect(state.ranking).not.toBeNull();
     const stages = notifier
       .receivedBy(martaId)
       .filter((event) => event instanceof GameStageChangedEvent);
     expect(stages.map(({ stage }) => stage)).toEqual(['results', 'ended']);
     expect(stages.at(-1)).toEqual(
-      new GameStageChangedEvent(gameId, 'ended', martaId, state.gameVersion),
+      new GameStageChangedEvent(gameId, 'ended', anaId, state.gameVersion),
     );
   });
 });

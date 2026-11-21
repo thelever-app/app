@@ -9,6 +9,7 @@ import { DilemmaNotInRoundError } from '../errors/dilemma-not-in-round.error.ts'
 import { DilemmaNotReportedAsOffensiveError } from '../errors/dilemma-not-reported-as-offensive.error.ts';
 import { DilemmaNotRevealedError } from '../errors/dilemma-not-revealed.error.ts';
 import { DilemmaSkippedError } from '../errors/dilemma-skipped.error.ts';
+import { GameRoundsOverError } from '../errors/game-rounds-over.error.ts';
 import { DistributionPredictionNotAllowedError } from '../errors/distribution-prediction-not-allowed.error.ts';
 import { DilemmasMissingError } from '../errors/dilemmas-missing.error.ts';
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
@@ -30,6 +31,7 @@ import type { DomainEvent } from '../events/domain-event.ts';
 import { PlayerJoinedLateEvent } from '../events/player-joined-late.event.ts';
 import { ProgressUpdatedEvent } from '../events/progress-updated.event.ts';
 import { ReactionsChangedEvent } from '../events/reactions-changed.event.ts';
+import { ReadyToMoveOnChangedEvent } from '../events/ready-to-move-on-changed.event.ts';
 import { RoundStartedEvent } from '../events/round-started.event.ts';
 import type { IdGenerator } from '../ports/id-generator.port.ts';
 import type { Randomness } from '../ports/randomness.port.ts';
@@ -48,7 +50,7 @@ import {
   DistributionPredictionVO,
   type PredictedShare,
 } from '../vos/distribution-prediction.vo.ts';
-import type { GroupNature, Place } from '../vos/group.vo.ts';
+import type { Place } from '../vos/group.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { VoteVO } from '../vos/vote.vo.ts';
 import { MINIMUM_VOTES_TO_SHOW } from '../vos/votes-to-show.ts';
@@ -83,7 +85,6 @@ export interface GameSettings {
   /** The ambience whose configuration the room had when the game started, or custom. */
   readonly ambience: AmbienceOrCustom;
   readonly variant: RoomVariant;
-  readonly groupNature: GroupNature;
   readonly place: Place;
   readonly dilemmaLanguage: DilemmaLanguage;
   readonly timePerDilemmaSeconds: TimePerDilemmaSeconds;
@@ -96,7 +97,8 @@ export type RoundPhase = 'decision' | 'reveal';
  * The rounds, one after another; then the game results, screen by screen; then the end of the
  * game, where nothing is played any more.
  */
-export type GameStage = 'rounds' | 'results' | 'ended';
+/** Stopped: the host restarted it in its rounds, so it has no results and no end. */
+export type GameStage = 'rounds' | 'results' | 'ended' | 'stopped';
 
 /** What revealed the dilemma of a round: everyone answered, its time ran out, or the host. */
 export type RevealedBy = 'everyone' | 'time' | 'host';
@@ -135,6 +137,8 @@ export interface AnswerDraft {
   readonly distributionPrediction?: readonly PredictedShare[];
   /** In an anonymous room, the player pressed Ready: once given, it stays. */
   readonly ready?: boolean;
+  /** The language the player read the dilemma in; without it, the one they read it in before. */
+  readonly language?: string;
 }
 
 export { MINIMUM_VOTES_TO_SHOW };
@@ -217,6 +221,8 @@ export interface GameSnapshot {
   readonly version: number;
   readonly round: Omit<Round, 'dilemmaId'> | null;
   readonly stage: GameStageState;
+  /** Who is ready to move on from the reveal or the screen of the results everyone is on. */
+  readonly readyToMoveOn: readonly string[];
   readonly reactions: readonly Reaction[];
   /** How long the group spent on the reveal of each dilemma it moved on from. */
   readonly timesSpent: readonly { readonly dilemmaId: string; readonly ms: number }[];
@@ -224,8 +230,8 @@ export interface GameSnapshot {
   readonly players: readonly {
     readonly id: string;
     readonly left: boolean;
-    /** Whether the player joined once the game had started. */
-    readonly joinedLate: boolean;
+    /** The position of the round in which the player joined the game once started; null from the start. */
+    readonly joinedAtPosition: number | null;
     /** The options of each dilemma in the order the player sees them. */
     readonly optionOrders: readonly {
       readonly dilemmaId: string;
@@ -251,7 +257,8 @@ interface PlayerState {
   /** Whether each dilemma the player reported was offensive. */
   readonly reports: Map<string, boolean>;
   left: boolean;
-  readonly joinedLate: boolean;
+  /** The position of the round in which the player joined the game once started; null from the start. */
+  readonly joinedAtPosition: number | null;
 }
 
 interface RoundState {
@@ -277,8 +284,13 @@ export class Game {
   readonly #settings: GameSettings;
   #round: RoundState | null = null;
   #stage: GameStage = 'rounds';
-  /** Who moved everyone on to the stage; null for the rounds. */
+  /**
+   * The host who moved everyone on to the stage, or stopped the game; null for the rounds and when
+   * everyone was ready.
+   */
   #stageMovedOnBy: string | null = null;
+  /** Who is ready to move on from the reveal or the screen of the results everyone is on. */
+  #readyToMoveOn = new Set<string>();
   /** The screen of the results everyone is on. */
   #stageStep = 0;
   /** In the order they were made, a new one taking the place of the one it replaces. */
@@ -374,7 +386,31 @@ export class Game {
   }
 
   get isInDecisionPhase(): boolean {
-    return this.#round?.phase === 'decision';
+    return this.#stage === 'rounds' && this.#round?.phase === 'decision';
+  }
+
+  /** The dilemmas the group has seen revealed, in their order: every one once the rounds are over. */
+  get revealedDilemmaIds(): readonly string[] {
+    const round = this.#round;
+    if (!round) return [];
+    const revealed =
+      this.#stage === 'rounds' || this.#stage === 'stopped'
+        ? round.position + (round.phase === 'reveal' ? 1 : 0)
+        : this.#dilemmas.length;
+    return this.#dilemmas.slice(0, revealed).map(({ dilemmaId }) => dilemmaId);
+  }
+
+  /**
+   * The host stops the game in its rounds to restart it: it keeps the answers given, takes no more
+   * answers, reveals or steps, and has no results. It keeps who stopped it.
+   */
+  stop(playerId: string): void {
+    if (!this.#round) throw new DecisionPhaseNotStartedError();
+    if (this.#stage !== 'rounds') throw new GameRoundsOverError(this.id);
+    this.#stage = 'stopped';
+    this.#stageMovedOnBy = playerId;
+    this.#readyToMoveOn.clear();
+    this.#version += 1;
   }
 
   get version(): number {
@@ -401,7 +437,7 @@ export class Game {
 
     const playerIds = players.map(({ id }) => id);
     for (const playerId of playerIds) {
-      this.#players.set(playerId, this.#newPlayerState(randomness, false));
+      this.#players.set(playerId, this.#newPlayerState(randomness, null));
     }
     this.#peopleInTheGap = peopleInTheGap(
       this.#dilemmas.filter(({ hasGap }) => hasGap).map(({ dilemmaId }) => dilemmaId),
@@ -446,6 +482,7 @@ export class Game {
       ready: anonymous && (draft.ready === true || previous?.ready === true),
       optionOrder: this.optionOrderOf(playerId, dilemmaId),
       responseTimeMs: previous?.responseTimeMs ?? null,
+      language: draft.language ?? previous?.language ?? null,
       seal,
     });
     const isComplete = this.#isComplete(playerId, dilemmaId, answer);
@@ -522,7 +559,7 @@ export class Game {
    * once revealed, so anyone may call it whenever they find the time over. Whether it revealed it.
    */
   runOutRound(at: Date): boolean {
-    if (!this.#round || this.#round.phase !== 'decision') return false;
+    if (!this.#round || !this.isInDecisionPhase) return false;
     if (at.getTime() < this.#round.endsAt.getTime()) return false;
     this.reveal('time', at);
     return true;
@@ -553,24 +590,87 @@ export class Game {
   }
 
   /**
-   * From the reveal of the round at that position, the player takes everyone to the next round;
-   * from the last one, to the first screen of the game results; from each screen of the results,
-   * at the positions after the last round, to the next one; and from the last, to the end of the
-   * game. The time the group spent on the reveal is recorded. Asked from where the game no longer
-   * is, it does nothing, so two players who move on at once move one step. Whether it moved on.
+   * The host takes everyone on without waiting for them to be ready: from the reveal of the round at
+   * that position to the next round; from the last one, to the first screen of the game results;
+   * from each screen of the results, at the positions after the last round, to the next one; and
+   * from the last, to the end of the game. Asked from where the game no longer is, it does nothing,
+   * so two who move on at once move one step. Whether it moved on.
    */
   moveOn(playerId: string, fromPosition: number, at: Date): boolean {
     this.#activeStateOf(playerId);
-    const round = this.#round;
-    if (!round || this.#stage === 'ended') return false;
-    if (this.#stage === 'results') {
-      if (fromPosition !== this.#dilemmas.length + this.#stageStep) return false;
-      if (this.#stageStep < this.#resultsScreens() - 1) {
-        return this.#moveOnTo('results', playerId, this.#stageStep + 1);
-      }
-      return this.#moveOnTo('ended', playerId);
+    if (this.#movingOnFrom() !== fromPosition) return false;
+    this.#moveEveryoneOn(playerId, at);
+    return true;
+  }
+
+  /** Who is ready to move on from where the group is, in the order they got ready. */
+  get playersReadyToMoveOn(): readonly string[] {
+    return [...this.#readyToMoveOn];
+  }
+
+  /**
+   * From the reveal of the round at that position, or from the screen of the results at that
+   * position, the player is ready to move on. Once every player who is connected and has not left
+   * is, everyone moves on, as the host would take them, without anyone who took them. Asked from
+   * where the game no longer is, it does nothing. Whether everyone moved on.
+   */
+  getReadyToMoveOn(
+    playerId: string,
+    fromPosition: number,
+    connectedPlayerIds: readonly string[],
+    at: Date,
+  ): boolean {
+    this.#activeStateOf(playerId);
+    if (this.#movingOnFrom() !== fromPosition || this.#readyToMoveOn.has(playerId)) return false;
+    this.#readyToMoveOn.add(playerId);
+    if (this.moveOnIfEveryoneIsReady(connectedPlayerIds, at)) return true;
+    this.#version += 1;
+    this.#events.push(new ReadyToMoveOnChangedEvent(this.id, this.#version));
+    return false;
+  }
+
+  /**
+   * Moves everyone on once every player who is connected and has not left is ready to move on, so
+   * the group does not wait for who disconnects or leaves. With nobody connected it waits. Whether
+   * everyone moved on.
+   */
+  moveOnIfEveryoneIsReady(connectedPlayerIds: readonly string[], at: Date): boolean {
+    if (this.#movingOnFrom() === null) return false;
+    const connected = new Set(connectedPlayerIds);
+    const present = this.#activePlayerIds().filter((playerId) => connected.has(playerId));
+    if (present.length === 0 || !present.every((playerId) => this.#readyToMoveOn.has(playerId))) {
+      return false;
     }
-    if (round.position !== fromPosition || round.phase !== 'reveal') return false;
+    this.#moveEveryoneOn(null, at);
+    return true;
+  }
+
+  /**
+   * Where the group may move on from: the position of the round in its reveal or, in the results,
+   * the number of rounds plus the screen everyone is on. Null anywhere else.
+   */
+  #movingOnFrom(): number | null {
+    const round = this.#round;
+    if (!round) return null;
+    if (this.#stage === 'results') return this.#dilemmas.length + this.#stageStep;
+    return this.#stage === 'rounds' && round.phase === 'reveal' ? round.position : null;
+  }
+
+  /**
+   * Everyone moves on one step, by the host who took them or, with null, because everyone was
+   * ready. Leaving a reveal records the time the group spent on it.
+   */
+  #moveEveryoneOn(movedOnBy: string | null, at: Date): void {
+    const round = this.#round as RoundState;
+    this.#readyToMoveOn.clear();
+    if (this.#stage === 'results') {
+      if (this.#stageStep < this.#resultsScreens() - 1) {
+        this.#moveOnTo('results', movedOnBy, this.#stageStep + 1);
+      } else {
+        this.#moveOnTo('ended', movedOnBy);
+      }
+      return;
+    }
     if (round.revealedAt) {
       // The instance that moves on may run a few milliseconds behind the one that revealed.
       this.#timesSpent.set(
@@ -578,13 +678,14 @@ export class Game {
         Math.max(0, at.getTime() - round.revealedAt.getTime()),
       );
     }
-    if (round.position === this.#dilemmas.length - 1) return this.#moveOnTo('results', playerId);
-
-    const next = this.#roundAt(round.position + 1, at, playerId);
+    if (round.position === this.#dilemmas.length - 1) {
+      this.#moveOnTo('results', movedOnBy);
+      return;
+    }
+    const next = this.#roundAt(round.position + 1, at, movedOnBy);
     this.#round = next;
     this.#version += 1;
-    this.#events.push(new RoundStartedEvent(this.id, next.position, playerId, this.#version));
-    return true;
+    this.#events.push(new RoundStartedEvent(this.id, next.position, movedOnBy, this.#version));
   }
 
   /**
@@ -672,21 +773,23 @@ export class Game {
 
   /**
    * A player of the room who was not in the game joins it in the round in progress: the dilemmas
-   * already revealed are recorded as "did not vote". In a nominal room they only vote: nobody
-   * predicts them, they predict nobody and they score no points. A player already in the game stays
-   * as they are.
+   * already revealed are recorded as "did not vote". In a nominal room they only vote in that round,
+   * whose predictions the others have made; from the next one they play fully. The person in the
+   * gap of the rounds not started is drawn again with them. A player already in the game stays as
+   * they are.
    */
   joinLate(playerId: string, randomness: Randomness): void {
     const round = this.#round;
     if (!round) throw new DecisionPhaseNotStartedError();
     if (this.#players.has(playerId)) return;
 
-    const state = this.#newPlayerState(randomness, true);
+    const state = this.#newPlayerState(randomness, round.position);
     const revealed = round.phase === 'reveal' ? round.position + 1 : round.position;
     for (const { dilemmaId } of this.#dilemmas.slice(0, revealed)) {
       state.didNotVote.set(dilemmaId, 'joined-late');
     }
     this.#players.set(playerId, state);
+    this.#drawPeopleInTheGapAfter(round.position, randomness);
     this.#version += 1;
     this.#events.push(new PlayerJoinedLateEvent(this.id, playerId, this.#version));
   }
@@ -735,15 +838,17 @@ export class Game {
 
   /**
    * The players whose vote the player predicts in the dilemma: in a nominal room, all the others
-   * who started the game but the person in the gap, whom nobody predicts; none in an anonymous
-   * one, nor for who joined late.
+   * who play its round fully but the person in the gap, whom nobody predicts; none in an anonymous
+   * one, nor in the round a player joined late.
    */
   playersToPredictBy(playerId: string, dilemmaId: string): readonly string[] {
     this.#dilemmaOf(dilemmaId);
-    const { joinedLate } = this.#stateOf(playerId);
-    if (this.#settings.variant === 'anonymous' || joinedLate) return [];
+    const position = this.#positionOf(dilemmaId);
+    if (this.#settings.variant === 'anonymous' || !this.#playsFully(playerId, position)) return [];
     const person = this.#peopleInTheGap.get(dilemmaId);
-    return this.#startingPlayerIds().filter((other) => other !== playerId && other !== person);
+    return this.#playerIdsPlayingFully(position).filter(
+      (other) => other !== playerId && other !== person,
+    );
   }
 
   /** The player whose nickname takes the gap of the dilemma, the same for everyone; null without a gap. */
@@ -783,12 +888,12 @@ export class Game {
   }
 
   /**
-   * Once the rounds are over, the players by their points, without who left the game: in an
-   * anonymous room, who reads the group best, also who joined late; in a nominal one, who started
-   * the game, El Mentalista being whoever holds that title. Null while the rounds go on.
+   * Once the rounds are over, the players by their points, without who left the game, also who
+   * joined late: in an anonymous room, who reads the group best; in a nominal one, El Mentalista
+   * being whoever holds that title. Null while the rounds go on, and in a stopped game.
    */
   ranking(): readonly RankedPlayer[] | null {
-    if (this.#stage === 'rounds') return null;
+    if (!this.#hasResults()) return null;
     if (this.#settings.variant === 'nominal') return (this.results() as GameResults).ranking;
     return rankByPoints(
       this.#activePlayerIds().map((playerId) => ({ playerId, points: this.#totalOf(playerId) })),
@@ -797,16 +902,15 @@ export class Game {
 
   /**
    * In a nominal room, once the rounds are over: the titles of the game, who knows each player
-   * best and the ranking, among the players who did not leave it. Null while the rounds go on, and
-   * in an anonymous room, whose results are the ranking alone.
+   * best and the ranking, among the players who did not leave it. Null while the rounds go on, in a
+   * stopped game, and in an anonymous room, whose results are the ranking alone.
    */
   results(): GameResults | null {
-    if (this.#settings.variant !== 'nominal' || this.#stage === 'rounds') return null;
+    if (this.#settings.variant !== 'nominal' || !this.#hasResults()) return null;
     return gameResults({
       players: this.#activePlayerIds().map((playerId) => ({
         playerId,
         points: this.#totalOf(playerId),
-        ranked: !this.#stateOf(playerId).joinedLate,
       })),
       dilemmas: this.#dilemmas.map(({ dilemmaId }) => {
         const answers = [...this.#players].flatMap(([playerId, state]) => {
@@ -930,6 +1034,7 @@ export class Game {
         revealedAt: this.#round.revealedAt && new Date(this.#round.revealedAt),
       },
       stage: this.stage,
+      readyToMoveOn: this.playersReadyToMoveOn,
       reactions: this.reactions(),
       timesSpent: [...this.#timesSpent].map(([dilemmaId, ms]) => ({ dilemmaId, ms })),
       peopleInTheGap: [...this.#peopleInTheGap].map(([dilemmaId, playerId]) => ({
@@ -939,7 +1044,7 @@ export class Game {
       players: [...this.#players].map(([playerId, state]) => ({
         id: playerId,
         left: state.left,
-        joinedLate: state.joinedLate,
+        joinedAtPosition: state.joinedAtPosition,
         optionOrders: [...state.optionOrders].map(([dilemmaId, optionOrder]) => ({
           dilemmaId,
           optionOrder: [...optionOrder],
@@ -958,6 +1063,7 @@ export class Game {
     game.#stage = snapshot.stage.kind;
     game.#stageMovedOnBy = snapshot.stage.movedOnBy;
     game.#stageStep = snapshot.stage.step ?? 0;
+    game.#readyToMoveOn = new Set(snapshot.readyToMoveOn);
     game.#round = snapshot.round && {
       ...snapshot.round,
       startedAt: new Date(snapshot.round.startedAt),
@@ -984,14 +1090,14 @@ export class Game {
         points: new Map(player.points.map(({ dilemmaId, points }) => [dilemmaId, points])),
         reports: new Map(player.reports.map(({ dilemmaId, offensive }) => [dilemmaId, offensive])),
         left: player.left,
-        joinedLate: player.joinedLate,
+        joinedAtPosition: player.joinedAtPosition,
       });
     }
     return game;
   }
 
   /** Each player gets the options of each dilemma in an order of their own, but for a fixed order. */
-  #newPlayerState(randomness: Randomness, joinedLate: boolean): PlayerState {
+  #newPlayerState(randomness: Randomness, joinedAtPosition: number | null): PlayerState {
     return {
       optionOrders: new Map(
         this.#dilemmas.map((dilemma) => [
@@ -1004,7 +1110,7 @@ export class Game {
       points: new Map(),
       reports: new Map(),
       left: false,
-      joinedLate,
+      joinedAtPosition,
     };
   }
 
@@ -1030,7 +1136,7 @@ export class Game {
     const dilemma = this.#dilemmaOf(dilemmaId);
     if (!this.#round) throw new DecisionPhaseNotStartedError();
     if (dilemma !== this.#roundDilemma()) throw new DilemmaNotInRoundError(dilemmaId);
-    if (this.#round.phase === 'reveal') throw new DecisionPhaseOverError();
+    if (!this.isInDecisionPhase) throw new DecisionPhaseOverError();
     return dilemma;
   }
 
@@ -1136,24 +1242,56 @@ export class Game {
     );
   }
 
-  /** Who started the game: the only ones predicted and scored in a nominal room. */
-  #startingPlayerIds(): string[] {
-    return [...this.#players]
-      .filter(([, state]) => !state.joinedLate)
-      .map(([playerId]) => playerId);
+  /** Whether the rounds were played to their end: a stopped game has no results. */
+  #hasResults(): boolean {
+    return this.#stage === 'results' || this.#stage === 'ended';
+  }
+
+  /** Whether the player plays the round fully: from the start, or from the round after they joined. */
+  #playsFully(playerId: string, position: number): boolean {
+    const { joinedAtPosition } = this.#stateOf(playerId);
+    return joinedAtPosition === null || position > joinedAtPosition;
+  }
+
+  /** Who plays the round fully: the only ones predicted and scored in it in a nominal room. */
+  #playerIdsPlayingFully(position: number): string[] {
+    return [...this.#players.keys()].filter((playerId) => this.#playsFully(playerId, position));
+  }
+
+  #positionOf(dilemmaId: string): number {
+    return this.#dilemmas.findIndex((dilemma) => dilemma.dilemmaId === dilemmaId);
+  }
+
+  /**
+   * The person in the gap of each round after the position, drawn again among the players who have
+   * not left, those who already took the gap in a round up to it going last.
+   */
+  #drawPeopleInTheGapAfter(position: number, randomness: Randomness): void {
+    const alreadyChosen = this.#dilemmas
+      .slice(0, position + 1)
+      .flatMap(({ dilemmaId }) => this.#peopleInTheGap.get(dilemmaId) ?? []);
+    const drawn = peopleInTheGap(
+      this.#dilemmas
+        .slice(position + 1)
+        .filter(({ hasGap }) => hasGap)
+        .map(({ dilemmaId }) => dilemmaId),
+      this.#activePlayerIds(),
+      randomness,
+      alreadyChosen,
+    );
+    for (const [dilemmaId, playerId] of drawn) this.#peopleInTheGap.set(dilemmaId, playerId);
   }
 
   #activePlayerIds(): string[] {
     return [...this.#players].filter(([, state]) => !state.left).map(([playerId]) => playerId);
   }
 
-  #moveOnTo(stage: GameStage, playerId: string, step = 0): boolean {
+  #moveOnTo(stage: GameStage, movedOnBy: string | null, step = 0): void {
     this.#stage = stage;
-    this.#stageMovedOnBy = playerId;
+    this.#stageMovedOnBy = movedOnBy;
     this.#stageStep = step;
     this.#version += 1;
-    this.#events.push(new GameStageChangedEvent(this.id, stage, playerId, this.#version));
-    return true;
+    this.#events.push(new GameStageChangedEvent(this.id, stage, movedOnBy, this.#version));
   }
 
   /**
@@ -1187,7 +1325,7 @@ export class Game {
    */
   #score(dilemmaId: string): void {
     const points = scoreVotePredictions({
-      predictorIds: this.#startingPlayerIds(),
+      predictorIds: this.#playerIdsPlayingFully(this.#positionOf(dilemmaId)),
       votes: this.#votesOf(dilemmaId),
       predictionsOf: (playerId) =>
         this.#stateOf(playerId).answers.get(dilemmaId)?.votePredictions ?? [],

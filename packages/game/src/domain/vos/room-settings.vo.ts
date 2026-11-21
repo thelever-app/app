@@ -1,7 +1,7 @@
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { InvalidRoomSettingError } from '../errors/invalid-room-setting.error.ts';
 import { isCategory } from './category.vo.ts';
-import { DILEMMA_ORIGINS, ROUND_CONTENTS, type RoundSnapshot } from './round.vo.ts';
+import { CONTENT_REQUIREMENTS, DILEMMA_ORIGINS, type RoundSnapshot } from './round.vo.ts';
 
 /** The languages of the app, in which a room can play its dilemmas. */
 export const DILEMMA_LANGUAGES = ['es', 'en', 'fr', 'de', 'it', 'pt', 'ca'] as const;
@@ -131,11 +131,19 @@ function checkedRounds(
           throw new InvalidRoomSettingError('category', unknown ?? 'none');
         }
       }
+      // Each requirement once, in their order, and only those the room allows.
+      const inOrder = CONTENT_REQUIREMENTS.filter((requirement) =>
+        round.content.includes(requirement),
+      );
       const allowed =
-        (ROUND_CONTENTS as readonly string[]).includes(round.content) &&
-        (round.content !== 'adults-only' || adultsOnly) &&
-        (round.content !== 'compromising' || compromisingDilemmas);
-      if (!allowed) throw new InvalidRoomSettingError('content of a round', round.content);
+        Array.isArray(round.content) &&
+        round.content.length === inOrder.length &&
+        round.content.every((requirement, index) => requirement === inOrder[index]) &&
+        (!round.content.includes('adults-only') || adultsOnly) &&
+        (!round.content.includes('compromising') || compromisingDilemmas);
+      if (!allowed) {
+        throw new InvalidRoomSettingError('content of a round', String(round.content));
+      }
     }
     if (round.origin === 'specific') {
       const { dilemmaId } = round.dilemma ?? {};

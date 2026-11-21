@@ -21,10 +21,12 @@ import {
   LeaveRoomUseCase,
   ReportDilemmaUseCase,
   MoveOnUseCase,
+  GetReadyToMoveOnUseCase,
   ReactUseCase,
   LikeDilemmaUseCase,
   UnlikeDilemmaUseCase,
   StartRematchUseCase,
+  RestartGameUseCase,
   RevealEarlyUseCase,
   RunOutRoundUseCase,
   SkipDilemmaUseCase,
@@ -126,15 +128,17 @@ import {
   LanguageTagTranslator,
   SequentialIdGenerator as SequentialDilemmaIds,
 } from '@thelever-app/dilemmas/in-memory';
-import type { TitleDto } from '@thelever-app/protocol';
+import { ClientMessageDto, type TitleDto } from '@thelever-app/protocol';
 import type {
+  AnswerStepsView,
   Ambience,
   AmbienceOption,
   AnswerPlan,
   CardView,
   CatalogEntry,
   MarkedDilemma,
-  RoundContent,
+  ContentRequirement,
+  OpenSettingsView,
   SwitchView,
   Declaration,
   DeviceOptions,
@@ -191,7 +195,6 @@ const OTHER_VOTE = 'option-2';
 /** Test data: what the creation screen gets when a step does not choose. */
 const DEFAULT_CHOICES = {
   ambience: 'classic',
-  groupNature: 'friends',
   place: 'together',
   deviceLanguage: 'es',
 } as const;
@@ -462,10 +465,12 @@ export class AcceptanceDriver implements GameDriver {
   readonly #revealEarly: RevealEarlyUseCase;
   readonly #runOutRound: RunOutRoundUseCase;
   readonly #moveOn: MoveOnUseCase;
+  readonly #getReadyToMoveOn: GetReadyToMoveOnUseCase;
   readonly #react: ReactUseCase;
   readonly #likeDilemma: LikeDilemmaUseCase;
   readonly #unlikeDilemma: UnlikeDilemmaUseCase;
   readonly #startRematch: StartRematchUseCase;
+  readonly #restartGame: RestartGameUseCase;
   readonly #leaveRoom: LeaveRoomUseCase;
   readonly #reportDilemma: ReportDilemmaUseCase;
   readonly #skipDilemma: SkipDilemmaUseCase;
@@ -544,6 +549,7 @@ export class AcceptanceDriver implements GameDriver {
       gameRepository: games,
       notifier,
       sealProvider: this.#sealProvider,
+      dilemmaCatalog: this.#catalog,
       clock,
     });
     this.#getGameState = new GetGameStateUseCase(rooms, this.#gameRepository, catalog, this.#likes);
@@ -568,11 +574,13 @@ export class AcceptanceDriver implements GameDriver {
       notifier,
     });
     this.#startRematch = new StartRematchUseCase(rooms, games, notifier);
+    this.#restartGame = new RestartGameUseCase(rooms, games, notifier);
     this.#connectPlayer = new ConnectPlayerUseCase(rooms, games, notifier, idGenerator, clock);
     this.#disconnectPlayer = new DisconnectPlayerUseCase(rooms, games, notifier, clock);
     this.#revealEarly = new RevealEarlyUseCase(rooms, games, notifier, clock);
     this.#runOutRound = new RunOutRoundUseCase(rooms, games, notifier, clock);
     this.#moveOn = new MoveOnUseCase(rooms, games, notifier, clock);
+    this.#getReadyToMoveOn = new GetReadyToMoveOnUseCase(rooms, games, notifier, clock);
     this.#leaveRoom = new LeaveRoomUseCase(rooms, games, notifier, clock);
     this.#skipDilemma = new SkipDilemmaUseCase({
       roomRepository: rooms,
@@ -828,7 +836,7 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async createRoom(host: string, choices: RoomChoices = {}): Promise<void> {
-    const { ambience, groupNature, place, deviceLanguage } = { ...DEFAULT_CHOICES, ...choices };
+    const { ambience, place, deviceLanguage } = { ...DEFAULT_CHOICES, ...choices };
     await this.openRoomCreation(host);
     const player = this.#playerCalled(host);
     const { roomId, hostId } = await this.#createRoom.execute({
@@ -836,7 +844,6 @@ export class AcceptanceDriver implements GameDriver {
       hostNickname: host,
       hostIdentity: player.identity,
       hostAvatar: this.#avatarOnScreen(host),
-      groupNature,
       place,
       dilemmaLanguage: deviceLanguage,
       hostPlayedDilemmaIds: player.played,
@@ -848,11 +855,14 @@ export class AcceptanceDriver implements GameDriver {
     await this.#screenOf(host);
   }
 
-  /** The application takes both in the single command that creates the room. */
-  async nicknameAndGroupNatureAskedTogether(host: string): Promise<boolean> {
+  /** What the single command that creates the room took, as the room keeps it. */
+  async askedOnCreation(host: string): Promise<readonly ('nickname' | 'place' | 'nature')[]> {
     const state = await this.#roomStateOf(host);
     const nickname = state.players.find(({ playerId }) => playerId === state.playerId)?.nickname;
-    return nickname === host && state.groupNature !== undefined;
+    return [
+      ...(nickname === host ? (['nickname'] as const) : []),
+      ...(state.place ? (['place'] as const) : []),
+    ];
   }
 
   async isHost(player: string): Promise<boolean> {
@@ -1114,10 +1124,7 @@ export class AcceptanceDriver implements GameDriver {
     const rounds = (await this.#roomStateOf(host)).rounds.map(roundChangeOf);
     return this.#accepts(
       () =>
-        this.#changeRounds(host, [
-          ...rounds,
-          { origin: 'random', categories: null, content: 'any' },
-        ]),
+        this.#changeRounds(host, [...rounds, { origin: 'random', categories: null, content: [] }]),
       InvalidRoomSettingError,
     );
   }
@@ -1295,7 +1302,6 @@ export class AcceptanceDriver implements GameDriver {
           hostNickname: player,
           hostIdentity: identity,
           hostAvatar: { face: 'face-01', color: 'khaki' },
-          groupNature: DEFAULT_CHOICES.groupNature,
           place: DEFAULT_CHOICES.place,
           dilemmaLanguage: DEFAULT_CHOICES.deviceLanguage,
         }),
@@ -1306,6 +1312,14 @@ export class AcceptanceDriver implements GameDriver {
 
   async ambienceSeenBy(viewer: string): Promise<string> {
     return (await this.#screenOf(viewer)).ambience;
+  }
+
+  markAnonymousOnTheOpenSettings(): Promise<void> {
+    throw new Error('Only the device keeps settings unsaved: the scenario must be @screen');
+  }
+
+  openSettingsSeenBy(): Promise<OpenSettingsView | undefined> {
+    throw new Error('Only the device has the settings open: the scenario must be @screen');
   }
 
   async chooseAmbience(host: string, ambience: Ambience): Promise<void> {
@@ -1350,17 +1364,19 @@ export class AcceptanceDriver implements GameDriver {
     return { on, offBecause: turnedOn.compromisingDilemmas ? null : 'only-anonymous' };
   }
 
-  /** The contents the application turns back to any for that round. */
-  async contentsOffFor(host: string, round: number): Promise<RoundContent[]> {
-    const off: RoundContent[] = [];
-    for (const content of ['adults-only', 'compromising'] as const) {
+  /** The requirements the application takes out of the content of that round. */
+  async contentsOffFor(host: string, round: number): Promise<ContentRequirement[]> {
+    const off: ContentRequirement[] = [];
+    for (const requirement of ['adults-only', 'compromising'] as const) {
       const rounds = (await this.#roomStateOf(host)).rounds.map(roundChangeOf);
       const changed = rounds.map((other, index) =>
-        index === round - 1 && other.origin === 'random' ? { ...other, content } : other,
+        index === round - 1 && other.origin === 'random'
+          ? { ...other, content: [requirement] }
+          : other,
       );
       const after = await this.#settingsOnACopy(host, { rounds: changed });
       const set = after.rounds[round - 1];
-      if (set?.origin !== 'random' || set.content !== content) off.push(content);
+      if (set?.origin !== 'random' || !set.content.includes(requirement)) off.push(requirement);
     }
     return off;
   }
@@ -1556,6 +1572,7 @@ export class AcceptanceDriver implements GameDriver {
         this.#answerDilemma.execute({
           roomId: this.#currentRoomId(),
           playerId: this.#playerIdOf(player),
+          language: this.#languageOf(player),
           dilemmaId,
           vote: '',
           distributionPrediction: [
@@ -1651,6 +1668,32 @@ export class AcceptanceDriver implements GameDriver {
   async canStartRematch(player: string): Promise<boolean> {
     const { stage, hostId } = await this.#gameStateOf(player);
     return stage.kind === 'ended' && hostId === this.#playerIdOf(player);
+  }
+
+  async restartGame(host: string): Promise<void> {
+    await this.#restartGame.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(host),
+    });
+  }
+
+  /** The menu of the game offers the host alone to restart it, while its rounds go on. */
+  async canRestartGame(player: string): Promise<boolean> {
+    const { stage, hostId } = await this.#gameStateOf(player);
+    return stage.kind === 'rounds' && hostId === this.#playerIdOf(player);
+  }
+
+  async stageOfTheGame(): Promise<string> {
+    return (await this.#currentGame()).stage.kind;
+  }
+
+  async playedInTheRoom(): Promise<number[]> {
+    const room = await this.#roomRepository.findById(this.#currentRoomId());
+    const order = (await this.#currentGame()).dilemmas.map(({ dilemmaId }) => dilemmaId);
+    return (room?.playedDilemmaIds ?? [])
+      .map((dilemmaId) => order.indexOf(dilemmaId) + 1)
+      .filter((position) => position > 0)
+      .toSorted((a, b) => a - b);
   }
 
   async roundsWithoutNewDilemmasSeenBy(viewer: string): Promise<number[]> {
@@ -1839,6 +1882,7 @@ export class AcceptanceDriver implements GameDriver {
         this.#answerDilemma.execute({
           roomId: this.#currentRoomId(),
           playerId: this.#playerIdOf(player),
+          language: this.#languageOf(player),
           dilemmaId,
           vote: VOTE,
         }),
@@ -1857,6 +1901,16 @@ export class AcceptanceDriver implements GameDriver {
     };
     this.#drafts.set(player, draft);
     await this.#send(player, draft);
+  }
+
+  /** As the room server sends the dilemma of the round to `viewer`. */
+  async categorySeenBy(viewer: string): Promise<string> {
+    const { round, dilemmas } = await this.#gameStateOf(viewer);
+    return dilemmas[round.position]!.category;
+  }
+
+  async answerStepsSeenBy(): Promise<AnswerStepsView> {
+    throw new Error('Only the device shows the steps of an answer: the scenario must be @screen');
   }
 
   /** The screen keeps the predictions made and sends them again with the new vote. */
@@ -2218,7 +2272,6 @@ export class AcceptanceDriver implements GameDriver {
       hostNickname: VISITOR,
       hostIdentity: VISITOR_IDENTITY,
       hostAvatar: { face: 'face-01', color: 'khaki' },
-      groupNature: DEFAULT_CHOICES.groupNature,
       place: DEFAULT_CHOICES.place,
       dilemmaLanguage: preview.language,
       firstRoundDilemmaId: preview.dilemmaId,
@@ -2239,7 +2292,11 @@ export class AcceptanceDriver implements GameDriver {
     const roomId = this.#visitorRoomId;
     const playerId = this.#visitorHostId;
     if (!roomId || !playerId) throw new Error('The visitor created no room');
-    return this.#getRoomState.execute({ roomId, playerId });
+    return this.#getRoomState.execute({
+      roomId,
+      playerId,
+      language: DEFAULT_CHOICES.deviceLanguage,
+    });
   }
 
   /** What the screen gets of the dilemma the visitor came from, before the room exists. */
@@ -2279,6 +2336,35 @@ export class AcceptanceDriver implements GameDriver {
     });
   }
 
+  async languageOfTheRoom(): Promise<string> {
+    const room = await this.#roomRepository.findById(this.#currentRoomId());
+    if (!room) throw new Error('The room of the scenario is not saved');
+    return room.settings.dilemmaLanguage;
+  }
+
+  /** What the room server takes to change the settings: the language never goes through. */
+  async settingsOfferALanguage(): Promise<boolean> {
+    return ClientMessageDto.safeParse({
+      type: 'change-settings',
+      changes: { dilemmaLanguage: 'en' },
+    }).success;
+  }
+
+  async roundTextSeenBy(viewer: string, round: number): Promise<string | undefined> {
+    const seen = (await this.#roomStateOf(viewer)).rounds[round - 1];
+    if (seen?.origin === 'specific') return seen.dilemma.text;
+    if (seen?.origin === 'players') return seen.dilemma?.text;
+    return undefined;
+  }
+
+  async languageReadBy(player: string, position: number): Promise<string | null> {
+    const dilemmaId = await this.#dilemmaIdAt(position);
+    const answer = (await this.#currentGame())
+      .answersOf(this.#playerIdOf(player))
+      .find((candidate) => candidate.dilemmaId === dilemmaId);
+    return answer?.language ?? null;
+  }
+
   usesTheAppIn(player: string, language: string): Promise<void> {
     this.#languages.set(player, language);
     return Promise.resolve();
@@ -2302,6 +2388,7 @@ export class AcceptanceDriver implements GameDriver {
         this.#answerDilemma.execute({
           roomId: this.#currentRoomId(),
           playerId: this.#playerIdOf(player),
+          language: this.#languageOf(player),
           dilemmaId,
           vote: VOTE,
         }),
@@ -2572,30 +2659,55 @@ export class AcceptanceDriver implements GameDriver {
     };
   }
 
-  /** From a round, or from a screen of the game results, which come after the last one. */
-  async moveOn(player: string): Promise<void> {
+  async getReadyToMoveOn(player: string): Promise<void> {
+    await this.#getReadyToMoveOn.execute(await this.#moveOnBy(player));
+  }
+
+  /**
+   * All tap at once, from where each of them sees the group: the room server takes the commands of
+   * a room one after another, so they arrive in some order.
+   */
+  async getReadyToMoveOnTogether(players: readonly string[]): Promise<void> {
+    const moves = await Promise.all(players.map((player) => this.#moveOnBy(player)));
+    for (const move of moves) await this.#getReadyToMoveOn.execute(move);
+  }
+
+  async moveEveryoneOn(host: string): Promise<void> {
+    await this.#moveOn.execute(await this.#moveOnBy(host));
+  }
+
+  /** Whether the room server takes everyone on when `player` asks it to. */
+  async canMoveEveryoneOn(player: string): Promise<boolean> {
+    try {
+      await this.moveEveryoneOn(player);
+      return true;
+    } catch (error) {
+      if (error instanceof NotHostError) return false;
+      throw error;
+    }
+  }
+
+  /** Of the players connected and still in the game, how many are ready to move on. */
+  async readyToMoveOnSeenBy(
+    viewer: string,
+  ): Promise<{ readonly ready: number; readonly of: number } | null> {
+    const { players, readyToMoveOn } = await this.#gameStateOf(viewer);
+    const present = players.filter(({ connected, left }) => connected && !left);
+    const ready = present.filter(({ playerId }) => readyToMoveOn.includes(playerId)).length;
+    return ready > 0 ? { ready, of: present.length } : null;
+  }
+
+  /** From the round `player` sees, or from the screen of the game results, which come after the last round. */
+  async #moveOnBy(player: string) {
     const { round, stage, dilemmas } = await this.#gameStateOf(player);
-    await this.#moveOn.execute({
+    return {
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(player),
       fromPosition: stage.kind === 'results' ? dilemmas.length + (stage.step ?? 0) : round.position,
-    });
+    };
   }
 
-  /** Both tap at once, from the round each of them sees. */
-  async moveOnTogether(players: readonly string[]): Promise<void> {
-    const moves = await Promise.all(
-      players.map(async (player) => ({
-        playerId: this.#playerIdOf(player),
-        fromPosition: (await this.#gameStateOf(player)).round.position,
-      })),
-    );
-    await Promise.all(
-      moves.map((move) => this.#moveOn.execute({ roomId: this.#currentRoomId(), ...move })),
-    );
-  }
-
-  /** Who moved everyone to the round they are on or, in the results, to the screen they are on. */
+  /** The host who moved everyone to the round they are on or, in the results, to the screen they are on. */
   async movedOnSeenBy(viewer: string): Promise<string | null> {
     const { round, stage } = await this.#gameStateOf(viewer);
     const movedOnBy = stage.kind === 'rounds' ? round.movedOnBy : stage.movedOnBy;
@@ -2624,6 +2736,7 @@ export class AcceptanceDriver implements GameDriver {
         this.#answerDilemma.execute({
           roomId: this.#currentRoomId(),
           playerId: this.#playerIdOf(player),
+          language: this.#languageOf(player),
           dilemmaId,
           vote: '',
           votePredictions: playersToPredict.map((playerId) => ({ playerId, vote: VOTE })),
@@ -2738,7 +2851,12 @@ export class AcceptanceDriver implements GameDriver {
     },
   ): Promise<void> {
     const playerId = this.#playerIdOf(player);
-    await this.#answerDilemma.execute({ roomId: this.#currentRoomId(), playerId, ...draft });
+    await this.#answerDilemma.execute({
+      roomId: this.#currentRoomId(),
+      playerId,
+      language: this.#languageOf(player),
+      ...draft,
+    });
     const { dilemmaId, vote } = draft;
     if (vote === null) return;
     this.#votes.set(player, [...(this.#votes.get(player) ?? []), { dilemmaId, vote }]);
@@ -2842,6 +2960,7 @@ export class AcceptanceDriver implements GameDriver {
     return this.#getRoomState.execute({
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(player),
+      language: this.#languageOf(player),
     });
   }
 
@@ -2926,6 +3045,10 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async goBackInTheResults(): Promise<void> {
+    throw new Error('Only the device looks back at the results: the scenario must be @screen');
+  }
+
+  async goForwardInTheResults(): Promise<void> {
     throw new Error('Only the device looks back at the results: the scenario must be @screen');
   }
 

@@ -29,7 +29,7 @@ export interface InMemoryTranslation {
  * translations, in the general catalog for everyone, standard, everyday and with its options in any
  * order.
  */
-export interface InMemoryDilemma extends Omit<DilemmaContent, 'language'> {
+export interface InMemoryDilemma extends Omit<DilemmaContent, 'language' | 'category'> {
   readonly language?: string;
   readonly translations?: readonly InMemoryTranslation[];
   readonly minimumAge?: 16 | 18;
@@ -89,8 +89,8 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
       const dilemma = this.#dilemmaOf(dilemmaId);
       const translation = dilemma.translations.find((candidate) => candidate.language === language);
       if (!translation) {
-        const { text, options } = dilemma;
-        return { dilemmaId, text, options, language: dilemma.language };
+        const { text, options, category } = dilemma;
+        return { dilemmaId, text, options, category, language: dilemma.language };
       }
       return {
         dilemmaId,
@@ -99,6 +99,7 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
           optionId,
           text: translation.options[index]!,
         })),
+        category: dilemma.category,
         language,
       };
     });
@@ -115,8 +116,8 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
         .filter(
           ({ dilemmaId, hasGap, minimumAge, compromising }) =>
             (criteria.includeGap || !hasGap) &&
-            (criteria.content !== 'adults-only' || minimumAge === 18) &&
-            (criteria.content !== 'compromising' || compromising === true) &&
+            (!criteria.content.includes('adults-only') || minimumAge === 18) &&
+            (!criteria.content.includes('compromising') || compromising === true) &&
             !criteria.excludedIds.includes(dilemmaId),
         )
         // A stable sort: the same players keep the order they were given.

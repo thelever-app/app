@@ -16,6 +16,7 @@ import {
   type PlayerNotifier,
   ProgressUpdatedEvent,
   ReactionsChangedEvent,
+  ReadyToMoveOnChangedEvent,
   RoundStartedEvent,
 } from '@thelever-app/game';
 import { type Kysely, sql } from 'kysely';
@@ -93,6 +94,11 @@ export function readNotification(payload: string): Notification {
 }
 
 /** The events of the rounds, rebuilt from their plain fields. */
+/** The host who moved everyone on, or null when everyone was ready. */
+function moverOf(event: Record<string, unknown>): string | null {
+  return event.movedOnBy === null ? null : String(event.movedOnBy);
+}
+
 function decisionPhaseEventOf(event: Record<string, unknown>): DomainEvent {
   switch (event.type) {
     case 'AnsweredCountChanged':
@@ -111,14 +117,14 @@ function decisionPhaseEventOf(event: Record<string, unknown>): DomainEvent {
       return new RoundStartedEvent(
         String(event.gameId),
         Number(event.position),
-        String(event.movedOnBy),
+        moverOf(event),
         Number(event.gameVersion),
       );
     case 'GameStageChanged':
       return new GameStageChangedEvent(
         String(event.gameId),
         String(event.stage) as GameStage,
-        String(event.movedOnBy),
+        moverOf(event),
         Number(event.gameVersion),
       );
     case 'HostChanged':
@@ -146,6 +152,8 @@ function decisionPhaseEventOf(event: Record<string, unknown>): DomainEvent {
         Number(event.position),
         Number(event.gameVersion),
       );
+    case 'ReadyToMoveOnChanged':
+      return new ReadyToMoveOnChangedEvent(String(event.gameId), Number(event.gameVersion));
     case 'DilemmaLiked':
       return new DilemmaLikedEvent(
         String(event.gameId),

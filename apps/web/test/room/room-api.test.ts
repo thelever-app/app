@@ -59,7 +59,6 @@ describe('httpRoomApi', () => {
         nickname: 'Ana',
         ambience: 'classic' as const,
         avatar: { face: 'face-01', color: 'teal' },
-        groupNature: 'friends',
         place: 'remote',
         dilemmaLanguage: 'es',
       });
@@ -75,7 +74,6 @@ describe('httpRoomApi', () => {
         nickname: 'Ana',
         ambience: 'classic',
         avatar: { face: 'face-01', color: 'teal' },
-        groupNature: 'friends',
         place: 'remote',
         dilemmaLanguage: 'es',
       });
@@ -90,7 +88,6 @@ describe('httpRoomApi', () => {
         nickname: 'Ana',
         ambience: 'classic' as const,
         avatar: { face: 'face-01', color: 'teal' },
-        groupNature: 'friends',
         place: 'together',
         dilemmaLanguage: 'es',
       });
@@ -108,7 +105,6 @@ describe('httpRoomApi', () => {
         nickname: ' ',
         ambience: 'classic',
         avatar: { face: 'face-01', color: 'teal' },
-        groupNature: 'friends',
         place: 'together',
         dilemmaLanguage: 'es',
       });

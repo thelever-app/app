@@ -5,7 +5,6 @@ import { SequentialRandomness } from '@thelever-app/game/in-memory';
 export const TEST_GAME_SETTINGS: GameSettings = {
   ambience: 'classic',
   variant: 'nominal',
-  groupNature: 'friends',
   place: 'together',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
@@ -29,7 +28,6 @@ export function roomOf(
       hostNickname: host,
       hostIdentity: `Test${host}Identity`,
       hostAvatar: new AvatarVO('face-01', 'khaki'),
-      groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code,

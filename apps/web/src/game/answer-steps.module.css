@@ -1,0 +1,55 @@
+/* The two steps of an answer, side by side at the top of the screen. */
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 10px;
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  color: var(--color-ink-muted);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+/* Where the player is: in ink, with its number in signal yellow, as the station of the round. */
+.step[aria-current='step'] {
+  background: var(--color-ink);
+  box-shadow: none;
+  color: var(--color-bg);
+}
+
+.mark {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-border-strong);
+  font-weight: 700;
+}
+
+.step[aria-current='step'] .mark {
+  border: 0;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* Done: the same ink check as who has answered in the strip. */
+.step[data-done] .mark {
+  border: 0;
+  background: var(--color-ink);
+  color: var(--color-surface);
+}

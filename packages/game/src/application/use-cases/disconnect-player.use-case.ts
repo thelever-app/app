@@ -1,5 +1,6 @@
 import type { Clock } from '../../domain/ports/clock.port.ts';
 import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
+import { moveOnIfEveryoneIsReady } from '../../domain/services/move-on-if-everyone-is-ready.ts';
 import { revealIfEveryoneAnswered } from '../../domain/services/reveal-if-everyone-answered.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
@@ -16,7 +17,8 @@ export interface DisconnectPlayerInput {
 
 /**
  * A connection of a player closes; if it was the last one they had open, the others see them
- * disconnected. A host who disconnects when the game needs one loses the role.
+ * disconnected, and the game stops waiting for them to answer or to be ready to move on. A host who
+ * disconnects when the game needs one loses the role.
  */
 export class DisconnectPlayerUseCase {
   readonly #roomRepository: RoomRepository;
@@ -43,13 +45,14 @@ export class DisconnectPlayerUseCase {
     room.disconnect(playerId, connectionId, this.#clock.now());
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
-    if (game?.playerIds.includes(playerId) && game.isInDecisionPhase) {
-      // The round does not wait for who disconnects; past its time, it is revealed by time.
-      if (!game.runOutRound(this.#clock.now())) {
-        revealIfEveryoneAnswered(room, game, this.#clock.now());
-      }
-    }
+    // Neither the round nor its reveal waits for who disconnects; past its time, the round is
+    // revealed by time.
+    const notRevealedByTime =
+      game?.playerIds.includes(playerId) && !game.runOutRound(this.#clock.now());
+    if (game && notRevealedByTime) revealIfEveryoneAnswered(room, game, this.#clock.now());
+    // Before moving on: the next round needs a host who can reveal it early.
     if (game) handOverHostIfAway(room, game);
+    if (game && notRevealedByTime) moveOnIfEveryoneIsReady(room, game, this.#clock.now());
     const roomEvents = room.pullEvents();
     const gameEvents = game?.pullEvents() ?? [];
     await this.#roomRepository.save(room);

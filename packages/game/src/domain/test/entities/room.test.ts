@@ -40,7 +40,6 @@ function roomHostedByAna(): Room {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: ANA_AVATAR,
-      groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
@@ -119,7 +118,7 @@ function lobbyWithAPlayersRound(): Room {
     'TestHostId',
     {
       rounds: [
-        { id: 1, origin: 'random', categories: null, content: 'any' },
+        { id: 1, origin: 'random', categories: null, content: [] },
         { id: 2, origin: 'players' },
         { id: 3, origin: 'specific', dilemmaId: FOR_EVERYONE.dilemmaId },
       ],
@@ -146,7 +145,6 @@ function roomStartingWith(firstRoundDilemma: {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: ANA_AVATAR,
-      groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
@@ -178,12 +176,11 @@ describe('Room', () => {
       expect(room.host.avatar).toEqual(ANA_AVATAR);
     });
 
-    it('should keep the nature of the group and where it plays', () => {
+    it('should keep where the group plays', () => {
       // Act
       const room = roomHostedByAna();
 
       // Assert
-      expect(room.groupNature).toBe('friends');
       expect(room.place).toBe('together');
     });
 
@@ -199,7 +196,6 @@ describe('Room', () => {
     });
 
     it.each([
-      [{ groupNature: 'neighbours' }, InvalidRoomSettingError],
       [{ place: 'moon' }, InvalidRoomSettingError],
       [{ code: 'K7M20' }, InvalidRoomCodeError],
       [{ hostNickname: '' }, NicknameMissingError],
@@ -213,7 +209,6 @@ describe('Room', () => {
             hostNickname: 'Ana',
             hostIdentity: 'TestAnaIdentity',
             hostAvatar: ANA_AVATAR,
-            groupNature: 'friends',
             place: 'together',
             dilemmaLanguage: 'es',
             code: 'K7M2Q',
@@ -235,7 +230,6 @@ describe('Room', () => {
             hostNickname: 'Ana',
             hostIdentity: 'TestAnaIdentity',
             hostAvatar: ANA_AVATAR,
-            groupNature: 'friends',
             place: 'together',
             dilemmaLanguage: 'es',
             code: 'K7M2Q',
@@ -267,7 +261,7 @@ describe('Room', () => {
           id: index + 1,
           origin: 'random',
           categories: null,
-          content: 'any',
+          content: [],
         })),
       );
       expect(room.chosenDilemmas).toEqual([]);
@@ -424,7 +418,6 @@ describe('Room', () => {
           hostNickname: 'Ana',
           hostIdentity: 'TestAnaIdentity',
           hostAvatar: AvatarVO.all()[0] as AvatarVO,
-          groupNature: 'friends',
           place: 'together',
           dilemmaLanguage: 'es',
           code: 'K7M2Q',
@@ -535,16 +528,16 @@ describe('Room', () => {
       room.changeSettings('TestHostId', {
         rounds: [
           { id: 3, origin: 'players' },
-          { origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
-          { id: 1, origin: 'random', categories: null, content: 'any' },
+          { origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
+          { id: 1, origin: 'random', categories: null, content: [] },
         ],
       });
 
       // Assert
       expect(room.settings.rounds).toEqual([
         { id: 3, origin: 'players' },
-        { id: 9, origin: 'random', categories: ['honesty', 'loyalty'], content: 'any' },
-        { id: 1, origin: 'random', categories: null, content: 'any' },
+        { id: 9, origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
+        { id: 1, origin: 'random', categories: null, content: [] },
       ]);
     });
 
@@ -612,7 +605,7 @@ describe('Room', () => {
         {
           adultsOnly: true,
           rounds: [
-            { id: 1, origin: 'random', categories: ['honesty'], content: 'any' },
+            { id: 1, origin: 'random', categories: ['honesty'], content: [] },
             { id: 2, origin: 'specific', dilemmaId: FOR_ADULTS.dilemmaId },
           ],
         },
@@ -624,8 +617,8 @@ describe('Room', () => {
 
       // Assert
       expect(room.settings.rounds).toEqual([
-        { id: 1, origin: 'random', categories: ['honesty'], content: 'any' },
-        { id: 2, origin: 'random', categories: null, content: 'any' },
+        { id: 1, origin: 'random', categories: ['honesty'], content: [] },
+        { id: 2, origin: 'random', categories: null, content: [] },
       ]);
     });
 
@@ -644,26 +637,7 @@ describe('Room', () => {
         id: 2,
         origin: 'random',
         categories: null,
-        content: 'any',
-      });
-    });
-
-    it('should keep the dilemmas of the rounds that are still in the new language', () => {
-      // Arrange
-      const room = lobbyWithAPlayersRound();
-      room.chooseRoundDilemma('TestLuisId', 2, ANOTHER);
-      const inEnglish = { ...ANOTHER, minimumAge: 16 as const };
-
-      // Act
-      room.changeSettings('TestHostId', { dilemmaLanguage: 'en' }, [inEnglish]);
-
-      // Assert
-      expect(room.chosenDilemmas).toEqual([{ ...inEnglish, roundId: 2, playerId: 'TestLuisId' }]);
-      expect(room.settings.rounds[2]).toEqual({
-        id: 3,
-        origin: 'random',
-        categories: null,
-        content: 'any',
+        content: [],
       });
     });
 
@@ -682,7 +656,7 @@ describe('Room', () => {
       // Act
       room.changeSettings('TestHostId', {
         rounds: [
-          { id: 2, origin: 'random', categories: null, content: 'any' },
+          { id: 2, origin: 'random', categories: null, content: [] },
           { id: 4, origin: 'players' },
         ],
       });
@@ -1012,9 +986,9 @@ describe('Room', () => {
 
       // Assert
       expect(room.settings.rounds).toEqual([
-        { id: 1, origin: 'random', categories: null, content: 'any' },
+        { id: 1, origin: 'random', categories: null, content: [] },
         { id: 2, origin: 'players' },
-        { id: 3, origin: 'random', categories: null, content: 'any' },
+        { id: 3, origin: 'random', categories: null, content: [] },
       ]);
       expect(room.chosenDilemmas).toEqual([]);
     });
@@ -1280,7 +1254,6 @@ describe('Room', () => {
         id: 'TestId',
         code: 'K7M2Q',
         hostId: 'TestHostId',
-        groupNature: 'friends',
         place: 'together',
         settings: room.settings.toSnapshot(),
         players: room.players.map((player) => player.toSnapshot()),

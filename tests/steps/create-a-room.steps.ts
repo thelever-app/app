@@ -2,7 +2,7 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { type Category, isCategory } from '@thelever-app/game';
 import type { RoundSetting, RoundView, SettingsView } from '../support/driver.ts';
-import { catalogDilemmasSuiting, TEST_DILEMMAS } from '../support/test-catalog.ts';
+import { catalogDilemmasSuiting, TEST_DILEMMAS, testTextIn } from '../support/test-catalog.ts';
 import { SOMEONE, type GameWorld } from '../support/world.ts';
 
 /** A category as a scenario writes it: its id. */
@@ -18,15 +18,12 @@ const PLACES: Readonly<Record<string, string>> = { together: 'together', remotel
 const LANGUAGES: Readonly<Record<string, string>> = { English: 'en', Spanish: 'es', French: 'fr' };
 
 /** Test data: a new value for each part of the configuration the host can change before starting. */
-const NEW_CONFIGURATION: Partial<SettingsView> = {
-  dilemmaLanguage: 'fr',
-  timePerDilemmaSeconds: 30,
-};
-/** Test data: new rounds for that configuration, as many as the test data has in French. */
+const NEW_CONFIGURATION: Partial<SettingsView> = { timePerDilemmaSeconds: 30 };
+/** Test data: new rounds for that configuration, all of them of honesty. */
 const NEW_ROUNDS: readonly RoundSetting[] = Array.from({ length: 6 }, () => ({
   origin: 'random',
   categories: ['honesty'],
-  content: 'any',
+  content: [],
 }));
 
 /** How a player of the lobby sees the rounds the host set: no round of the players chosen yet. */
@@ -34,7 +31,7 @@ function viewsOf(rounds: readonly RoundSetting[]): RoundView[] {
   return rounds.map((round): RoundView => {
     if (round.origin === 'players') return { origin: 'players', dilemmaId: null };
     if (round.origin === 'specific') return round;
-    return { origin: 'random', categories: round.categories, content: round.content ?? 'any' };
+    return { origin: 'random', categories: round.categories, content: round.content ?? [] };
   });
 }
 
@@ -121,34 +118,25 @@ When('creates the room', async function (this: GameWorld) {
 });
 
 Then(
-  'the host is asked for a nickname and the nature of the group on the same screen',
+  'the host is asked for a nickname and whether the group plays together or remotely on the same screen',
   async function (this: GameWorld) {
-    assert.ok(await this.driver.nicknameAndGroupNatureAskedTogether(await this.host()));
+    const asked = await this.driver.askedOnCreation(await this.host());
+    assert.ok(asked.includes('nickname') && asked.includes('place'), `asked ${asked.join(', ')}`);
   },
 );
+
+Then('the host is not asked for the nature of the group', async function (this: GameWorld) {
+  assert.ok(!(await this.driver.askedOnCreation(await this.host())).includes('nature'));
+});
 
 Given('a host who has just created a room', function (this: GameWorld) {
   this.beginRoomCreation(SOMEONE.host);
 });
 
-When(
-  'the host chooses {string} as the nature of the group',
-  function (this: GameWorld, groupNature: string) {
-    this.chooseOnCreation({ groupNature });
-  },
-);
-
 When('the host chooses {string}', function (this: GameWorld, place: string) {
   const chosen = PLACES[place];
   if (!chosen) throw new Error(`The steps do not know the place "${place}"`);
   this.chooseOnCreation({ place: chosen });
-});
-
-Then('the room gets an invitation link, a code and a QR', async function (this: GameWorld) {
-  const host = await this.host();
-  assert.match(await this.driver.roomCodeSeenBy(host), /^[A-Z0-9]{5}$/);
-  assert.ok(await this.driver.canShareInvitationLink(host), 'the invitation link does not work');
-  assert.ok(await this.driver.canShowQrFullScreen(host), 'the QR does not work');
 });
 
 Then('the game is recorded as played remotely', async function (this: GameWorld) {
@@ -187,15 +175,14 @@ Then(/^the room is (nominal|anonymous)$/, async function (this: GameWorld, varia
 });
 
 Then('the dilemmas of the room are in {word}', async function (this: GameWorld, language: string) {
-  const settings = await this.driver.settingsSeenBy(await this.host());
-  assert.equal(settings.dilemmaLanguage, codeOf(language));
+  assert.equal(await this.driver.languageOfTheRoom(), codeOf(language));
 });
 
 Then(
   'the room has {int} random rounds of every category and the default time per dilemma',
   async function (this: GameWorld, count: number) {
     const host = await this.host();
-    const random: RoundView = { origin: 'random', categories: null, content: 'any' };
+    const random: RoundView = { origin: 'random', categories: null, content: [] };
     assert.deepEqual(await this.driver.roundsSeenBy(host), Array(count).fill(random));
     const settings = await this.driver.settingsSeenBy(host);
     assert.ok(settings.timePerDilemmaSeconds > 0, 'the room has no time per dilemma');
@@ -206,22 +193,18 @@ Given('a host in the lobby', async function (this: GameWorld) {
   await this.host();
 });
 
-When(
-  'the host changes the dilemma language, the rounds or the time per dilemma',
-  async function (this: GameWorld) {
-    const host = await this.host();
-    this.changes = NEW_CONFIGURATION;
-    this.rounds = NEW_ROUNDS;
-    await this.driver.changeSettings(host, this.changes);
-    await this.driver.setRounds(host, this.rounds);
-  },
-);
+When('the host changes the rounds or the time per dilemma', async function (this: GameWorld) {
+  const host = await this.host();
+  this.changes = NEW_CONFIGURATION;
+  this.rounds = NEW_ROUNDS;
+  await this.driver.changeSettings(host, this.changes);
+  await this.driver.setRounds(host, this.rounds);
+});
 
 Then('the game uses the new configuration', async function (this: GameWorld) {
   const dilemmas = await dilemmasOfTheGame(this);
   const settings = await this.driver.settingsOfTheGame();
 
-  assert.equal(settings.dilemmaLanguage, this.changes.dilemmaLanguage);
   assert.equal(settings.timePerDilemmaSeconds, this.changes.timePerDilemmaSeconds);
   assert.equal(dilemmas.length, this.rounds.length);
   dilemmas.forEach((dilemmaId, index) => {
@@ -243,9 +226,9 @@ When('{string} changes the configuration', async function (this: GameWorld, host
   await this.hostIs(host);
   this.changes = { variant: 'anonymous', timePerDilemmaSeconds: 90 };
   this.rounds = [
-    { origin: 'random', categories: ['honesty'], content: 'any' },
+    { origin: 'random', categories: ['honesty'], content: [] },
     { origin: 'players' },
-    { origin: 'random', categories: null, content: 'any' },
+    { origin: 'random', categories: null, content: [] },
   ];
   await this.driver.changeSettings(host, this.changes);
   await this.driver.setRounds(host, this.rounds);
@@ -459,8 +442,9 @@ When(
 Given(
   'more than {int} dilemmas of the catalog suit the room',
   async function (this: GameWorld, count: number) {
-    const { dilemmaLanguage, adultsOnly } = await this.driver.settingsSeenBy(await this.host());
-    const suiting = catalogDilemmasSuiting(dilemmaLanguage, adultsOnly ? 18 : 16);
+    const { adultsOnly } = await this.driver.settingsSeenBy(await this.host());
+    const language = await this.driver.languageOfTheRoom();
+    const suiting = catalogDilemmasSuiting(language, adultsOnly ? 18 : 16);
     assert.ok(suiting.length > count, `the test data has only ${suiting.length} for the room`);
   },
 );
@@ -489,7 +473,7 @@ When(
   'the host sets round {int} as random from {string} and {string}',
   async function (this: GameWorld, round: number, first: string, second: string) {
     this.categories = [categoryNamed(first), categoryNamed(second)];
-    await setRound(this, round, { origin: 'random', categories: this.categories, content: 'any' });
+    await setRound(this, round, { origin: 'random', categories: this.categories, content: [] });
   },
 );
 
@@ -508,7 +492,7 @@ Given('round {int} has a specific dilemma', async function (this: GameWorld, rou
 });
 
 When('the host sets round {int} as random', async function (this: GameWorld, round: number) {
-  await setRound(this, round, { origin: 'random', categories: null, content: 'any' });
+  await setRound(this, round, { origin: 'random', categories: null, content: [] });
 });
 
 Then('round {int} has no dilemma chosen', async function (this: GameWorld, round: number) {
@@ -568,7 +552,7 @@ Then('the first round plays {string}', async function (this: GameWorld, name: st
 });
 
 Given('a room with {int} rounds', async function (this: GameWorld, count: number) {
-  const random: RoundSetting = { origin: 'random', categories: null, content: 'any' };
+  const random: RoundSetting = { origin: 'random', categories: null, content: [] };
   await this.driver.setRounds(await this.host(), Array(count).fill(random));
   assert.equal((await this.driver.roundsSeenBy(await this.host())).length, count);
 });
@@ -636,8 +620,40 @@ Then('round {int} is random from every category', async function (this: GameWorl
   for (const viewer of this.inRoom) {
     assert.deepEqual(
       await roundSeenBy(this, viewer, round),
-      { origin: 'random', categories: null, content: 'any' },
+      { origin: 'random', categories: null, content: [] },
       viewer,
     );
   }
 });
+
+// The language of the dilemmas
+
+/** Test data: a dilemma of the catalog in Spanish with an English translation. */
+const TRANSLATED_INTO_ENGLISH = 'english-version-1';
+
+Then('the settings offer no language for the dilemmas', async function (this: GameWorld) {
+  assert.equal(await this.driver.settingsOfferALanguage(await this.host()), false);
+});
+
+Given(
+  'round {int} has a specific dilemma with an English translation',
+  async function (this: GameWorld, round: number) {
+    assert.ok(
+      await this.driver.tryToSetRound(await this.host(), round, {
+        origin: 'specific',
+        dilemmaId: TRANSLATED_INTO_ENGLISH,
+      }),
+      `round ${round} does not take it`,
+    );
+  },
+);
+
+Then(
+  '{string} sees round {int} in {word}',
+  async function (this: GameWorld, player: string, round: number, language: string) {
+    assert.equal(
+      await this.driver.roundTextSeenBy(player, round),
+      testTextIn(TRANSLATED_INTO_ENGLISH, codeOf(language)),
+    );
+  },
+);

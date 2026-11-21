@@ -102,6 +102,19 @@ describe('RevealPhase', () => {
     vi.useRealTimers();
   });
 
+  it('should let the host restart the game from the menu of the reveal', async () => {
+    // Arrange
+    const { connection, t } = await renderReveal(revealed(NOMINAL_REVEAL));
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.open') }));
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.restart') }));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('restartGame.restart') }));
+
+    // Assert
+    expect(connection.send).toHaveBeenLastCalledWith({ type: 'restart-game' });
+  });
+
   it('should first mark the passage from the decision to the reveal, for a moment', async () => {
     // Act
     const { t } = await renderReveal(revealed(NOMINAL_REVEAL), { pastTheIntro: false });
@@ -419,11 +432,11 @@ describe('RevealPhase', () => {
       fireEvent.click(screen.getByRole('button', { name: t('reveal.toResults') }));
 
       // Assert
-      expect(connection.send).toHaveBeenCalledWith({ type: 'move-on', fromPosition: 2 });
+      expect(connection.send).toHaveBeenCalledWith({ type: 'ready-to-move-on', fromPosition: 2 });
     });
   });
 
-  it('should take everyone to the next round from this one', async () => {
+  it('should say the player is ready to move on to the next round', async () => {
     // Arrange
     const { connection, t } = await renderReveal(revealed(NOMINAL_REVEAL));
 
@@ -431,7 +444,33 @@ describe('RevealPhase', () => {
     fireEvent.click(screen.getByRole('button', { name: t('reveal.next') }));
 
     // Assert
+    expect(connection.send).toHaveBeenCalledWith({ type: 'ready-to-move-on', fromPosition: 0 });
+  });
+
+  it('should let the host who is ready take everyone to the next round', async () => {
+    // Arrange
+    const { connection, t } = await renderReveal(
+      revealed(NOMINAL_REVEAL, { readyToMoveOn: ['test-ana-id'] }),
+    );
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('moveOn.everyone') }));
+
+    // Assert
     expect(connection.send).toHaveBeenCalledWith({ type: 'move-on', fromPosition: 0 });
+  });
+
+  it('should make a guest who is ready wait for the rest', async () => {
+    // Act
+    const { t } = await renderReveal(
+      revealed(NOMINAL_REVEAL, { hostId: 'test-luis-id', readyToMoveOn: ['test-ana-id'] }),
+    );
+
+    // Assert
+    expect(screen.queryByRole('button', { name: t('moveOn.everyone') })).toBeNull();
+    expect(
+      (screen.getByRole('button', { name: t('moveOn.waiting') }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   it('should take everyone from the last one of a nominal room to its results', async () => {

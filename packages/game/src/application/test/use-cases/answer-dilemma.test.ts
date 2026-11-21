@@ -11,6 +11,7 @@ import {
   gameInDecisionPhase as sharedGameInDecisionPhase,
   lobbyOfThree,
 } from '../support/game-in-decision-phase.ts';
+import { testCatalog, testCatalogWithEnglishFor } from '../support/test-catalog.ts';
 
 /** Fails to deliver anything, as a notifier that lost its connection would. */
 class UnreachablePlayerNotifier extends InMemoryPlayerNotifier {
@@ -28,8 +29,12 @@ const LUIS_SEAL = {
 };
 
 /** Ana hosts a room with Luis and Marta, and the game is in the decision phase. */
-async function gameInDecisionPhase(notifier: PlayerNotifier = new InMemoryPlayerNotifier()) {
-  const game = await sharedGameInDecisionPhase();
+async function gameInDecisionPhase(
+  notifier: PlayerNotifier = new InMemoryPlayerNotifier(),
+  catalog = testCatalog(),
+) {
+  // Its own notifier for the lobby: the one given only hears the answers.
+  const game = await sharedGameInDecisionPhase(new InMemoryPlayerNotifier(), 'anonymous', catalog);
   return {
     ...game,
     notifier: notifier as InMemoryPlayerNotifier,
@@ -38,6 +43,7 @@ async function gameInDecisionPhase(notifier: PlayerNotifier = new InMemoryPlayer
       gameRepository: game.gameRepository,
       notifier,
       sealProvider: new InMemorySealProvider(new Map([['TestLuisIdentity', LUIS_SEAL]])),
+      dilemmaCatalog: catalog,
       clock: game.clock,
     }),
   };
@@ -45,12 +51,45 @@ async function gameInDecisionPhase(notifier: PlayerNotifier = new InMemoryPlayer
 
 describe('AnswerDilemmaUseCase', () => {
   describe('execute', () => {
+    it.each([
+      {
+        case: 'a translation into it',
+        catalog: testCatalogWithEnglishFor('TestDilemma1'),
+        read: 'en',
+      },
+      { case: 'no translation into it', catalog: testCatalog(), read: 'es' },
+    ])(
+      'should keep the language the player read the dilemma in, with $case',
+      async ({ catalog, read }) => {
+        // Arrange
+        const { gameRepository, answerDilemma, roomId, gameId, luisId } = await gameInDecisionPhase(
+          new InMemoryPlayerNotifier(),
+          catalog,
+        );
+
+        // Act
+        await answerDilemma.execute({
+          roomId,
+          playerId: luisId,
+          dilemmaId: 'TestDilemma1',
+          vote: 'TestOption',
+          ready: true,
+          language: 'en',
+        });
+
+        // Assert
+        const game = await gameRepository.findById(gameId);
+        expect(game?.answersOf(luisId)[0]?.language).toBe(read);
+      },
+    );
+
     it('should save the answer', async () => {
       // Arrange
       const { gameRepository, answerDilemma, roomId, gameId, luisId } = await gameInDecisionPhase();
 
       // Act
       await answerDilemma.execute({
+        language: 'es',
         roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
@@ -70,6 +109,7 @@ describe('AnswerDilemmaUseCase', () => {
 
       // Act
       await answerDilemma.execute({
+        language: 'es',
         roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
@@ -92,6 +132,7 @@ describe('AnswerDilemmaUseCase', () => {
 
       // Act
       const answering = answerDilemma.execute({
+        language: 'es',
         roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
@@ -110,6 +151,7 @@ describe('AnswerDilemmaUseCase', () => {
 
       // Act
       await answerDilemma.execute({
+        language: 'es',
         roomId,
         playerId: luisId,
         dilemmaId: 'TestDilemma1',
@@ -131,6 +173,7 @@ describe('AnswerDilemmaUseCase', () => {
       // Act & Assert
       await expect(
         answerDilemma.execute({
+          language: 'es',
           roomId,
           playerId: 'TestStrangerId',
           dilemmaId: 'TestDilemma1',
@@ -147,6 +190,7 @@ describe('AnswerDilemmaUseCase', () => {
       // Act & Assert
       await expect(
         answerDilemma.execute({
+          language: 'es',
           roomId: 'TestUnknownRoomId',
           playerId: luisId,
           dilemmaId: 'TestDilemma1',
@@ -160,6 +204,7 @@ describe('AnswerDilemmaUseCase', () => {
       // Arrange
       const lobby = await lobbyOfThree();
       const answerDilemma = new AnswerDilemmaUseCase({
+        dilemmaCatalog: lobby.catalog,
         roomRepository: lobby.roomRepository,
         gameRepository: lobby.gameRepository,
         notifier: lobby.notifier,
@@ -170,6 +215,7 @@ describe('AnswerDilemmaUseCase', () => {
       // Act & Assert
       await expect(
         answerDilemma.execute({
+          language: 'es',
           roomId: lobby.roomId,
           playerId: lobby.luisId,
           dilemmaId: 'TestDilemma1',

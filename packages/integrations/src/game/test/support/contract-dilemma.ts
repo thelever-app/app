@@ -60,6 +60,7 @@ export async function saveContractDilemmas(
     dilemmaId: dilemma.id,
     text: dilemma.text,
     options: dilemma.options.map(({ id, text }) => ({ optionId: id, text })),
+    category: dilemma.category,
     language: dilemma.language,
   }));
   return { dilemmas, stored };

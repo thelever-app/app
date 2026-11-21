@@ -46,6 +46,7 @@ describe('the service of the public web', () => {
     const css = await request(app).get(assetPath('site.css'));
     const font = await request(app).get('/_site/fonts/barlow-400.woff2');
     const mascot = await request(app).get('/_site/mascot-waving.svg');
+    const icon = await request(app).get('/_site/icon.svg');
     const scene = await request(app).get('/_site/waving-at-junction.svg');
     const face = await request(app).get(assetPath('faces/face-01.svg'));
 
@@ -55,6 +56,7 @@ describe('the service of the public web', () => {
     expect(String(face.body)).toContain('<svg');
     expect(font.headers['content-type']).toBe('font/woff2');
     expect(mascot.headers['content-type']).toBe('image/svg+xml');
+    expect(icon.headers['content-type']).toBe('image/svg+xml');
     expect(scene.headers['content-type']).toBe('image/svg+xml');
   });
 

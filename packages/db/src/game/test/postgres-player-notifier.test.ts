@@ -13,6 +13,7 @@ import {
   DilemmaRevealedEvent,
   PlayerJoinedLateEvent,
   ReactionsChangedEvent,
+  ReadyToMoveOnChangedEvent,
   RoundStartedEvent,
   GameStageChangedEvent,
   ProgressUpdatedEvent,
@@ -109,6 +110,9 @@ describe('PostgresPlayerNotifier', () => {
         new PlayerJoinedLateEvent('TestGameId', 'TestPedroId', 11),
         new GameStageChangedEvent('TestGameId', 'results', 'TestSaraId', 12),
         new ReactionsChangedEvent('TestGameId', 2, 13),
+        new ReadyToMoveOnChangedEvent('TestGameId', 13),
+        new RoundStartedEvent('TestGameId', 2, null, 14),
+        new GameStageChangedEvent('TestGameId', 'ended', null, 15),
         new DilemmaLikedEvent('TestGameId', 'TestLuisId', 13),
         new DilemmaUnlikedEvent('TestGameId', 'TestLuisId', 14),
       ];

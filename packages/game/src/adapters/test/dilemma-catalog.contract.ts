@@ -111,7 +111,7 @@ const A_GAME = {
   count: 100,
   includeGap: true,
   excludedIds: [],
-  content: 'any',
+  content: [],
   playedBy: [],
 } as const;
 
@@ -223,6 +223,7 @@ export function describeDilemmaCatalogContract(
             { optionId: first.options[0]?.optionId, text: 'TestTranslatedOptionA' },
             { optionId: first.options[1]?.optionId, text: 'TestTranslatedOptionB' },
           ],
+          category: CONTRACT_DILEMMAS[0].category,
           language: 'en',
         });
       });
@@ -521,7 +522,7 @@ export function describeDilemmaCatalogContract(
           ...FOR_EVERYONE,
           ...A_GAME,
           maximumMinimumAge: 18,
-          content: 'adults-only',
+          content: ['adults-only'],
         });
 
         // Assert
@@ -538,7 +539,7 @@ export function describeDilemmaCatalogContract(
           ...FOR_EVERYONE,
           ...A_GAME,
           includeCompromising: true,
-          content: 'compromising',
+          content: ['compromising'],
         });
 
         // Assert

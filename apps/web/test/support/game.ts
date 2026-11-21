@@ -17,6 +17,7 @@ export function aGame(overrides: Partial<GameStateDto> = {}): GameStateDto {
       movedOnBy: null,
     },
     stage: { kind: 'rounds', movedOnBy: null, step: null },
+    readyToMoveOn: [],
     ranking: null,
     results: null,
     inGame: true,
@@ -27,6 +28,7 @@ export function aGame(overrides: Partial<GameStateDto> = {}): GameStateDto {
     dilemmas: [1, 2, 3].map((n) => ({
       dilemmaId: `test-dilemma-${n}`,
       personInTheGap: null,
+      category: 'life-and-death',
       text: `Texto del dilema ${n}`,
       options: [
         { optionId: `test-option-${n}a`, text: `Opción ${n}A` },

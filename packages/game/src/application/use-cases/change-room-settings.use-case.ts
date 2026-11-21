@@ -34,16 +34,15 @@ export class ChangeRoomSettingsUseCase {
 
   async execute({ roomId, playerId, changes }: ChangeRoomSettingsInput): Promise<void> {
     const room = await findRoom(this.#roomRepository, roomId);
-    const language = changes.dilemmaLanguage ?? room.settings.dilemmaLanguage;
     const known = room.roundDilemmaIds;
-    const specific = (changes.rounds ?? []).flatMap((round) =>
-      round.origin === 'specific' ? [round.dilemmaId] : [],
+    const dilemmaIds = (changes.rounds ?? []).flatMap((round) =>
+      round.origin === 'specific' && !known.includes(round.dilemmaId) ? [round.dilemmaId] : [],
     );
-    const dilemmaIds =
-      language === room.settings.dilemmaLanguage
-        ? specific.filter((dilemmaId) => !known.includes(dilemmaId))
-        : [...new Set([...specific, ...known])];
-    const dilemmas = await findRoundDilemmas(this.#dilemmaCatalog, language, dilemmaIds);
+    const dilemmas = await findRoundDilemmas(
+      this.#dilemmaCatalog,
+      room.settings.dilemmaLanguage,
+      dilemmaIds,
+    );
 
     room.changeSettings(playerId, changes, dilemmas);
     const events = room.pullEvents();

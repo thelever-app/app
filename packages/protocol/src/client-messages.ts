@@ -80,9 +80,6 @@ export const PlayerColorDto = z.enum([
 /** A face and a colour: no two players of a room share both. */
 export const AvatarDto = z.strictObject({ face: AvatarFaceDto, color: PlayerColorDto });
 
-/** What relation the group has, chosen once when the room is created. */
-export const GroupNatureDto = z.enum(['family', 'friends', 'work', 'mixed']);
-
 /** Whether the group plays in the same place or remotely. */
 export const PlaceDto = z.enum(['together', 'remote']);
 
@@ -98,7 +95,6 @@ export const RoomSettingsDto = z.strictObject({
   adultsOnly: z.boolean(),
   /** Whether the games may include compromising dilemmas: only in an anonymous room. */
   compromisingDilemmas: z.boolean(),
-  dilemmaLanguage: LanguageDto,
   timePerDilemmaSeconds: z.union([z.literal(30), z.literal(45), z.literal(60), z.literal(90)]),
   /** Whether the random rounds keep room for dilemmas in exploration. */
   newDilemmas: z.boolean(),
@@ -117,8 +113,17 @@ export const RoundCategoriesDto = z
   .max(CategoryDto.options.length)
   .nullable();
 
-/** What a random round draws: any dilemma, only those for adults or only compromising ones. */
-export const RoundContentDto = z.enum(['any', 'adults-only', 'compromising']);
+/** What a requirement of the content of a round asks of its dilemma. */
+export const ContentRequirementDto = z.enum(['adults-only', 'compromising']);
+
+/**
+ * What the dilemma of a random round must be: each requirement once, in this order, and all of
+ * them; none is any content.
+ */
+export const RoundContentDto = z
+  .array(ContentRequirementDto)
+  .max(ContentRequirementDto.options.length)
+  .refine((content) => new Set(content).size === content.length, 'a requirement twice');
 
 /** A round as the host sets it, with where its dilemma comes from; one without an id is a new one. */
 export const RoundSettingsDto = z.discriminatedUnion('origin', [
@@ -198,16 +203,29 @@ export const RevealEarlyDto = z.strictObject({
 });
 
 /**
- * From the reveal of a round, any player takes everyone to the next one; from the last one, to the
- * first screen of the game results; from each, to the next; and from the last, to the end of the game.
+ * The position of the round whose reveal the player moves on from or, from a screen of the game
+ * results, the number of rounds plus the number of that screen, so two at once move one step.
+ */
+const FromPositionDto = z.number().int().nonnegative();
+
+/**
+ * From the reveal of a round, the host takes everyone to the next one without waiting for them to
+ * be ready; from the last one, to the first screen of the game results; from each, to the next;
+ * and from the last, to the end of the game.
  */
 export const MoveOnDto = z.strictObject({
   type: z.literal('move-on'),
-  /**
-   * The position of the round whose reveal the player moves on from or, from a screen of the game
-   * results, the number of rounds plus the number of that screen, so two at once move one step.
-   */
-  fromPosition: z.number().int().nonnegative(),
+  fromPosition: FromPositionDto,
+  traceparent: TraceparentDto.optional(),
+});
+
+/**
+ * Any player is ready to move on from the reveal of a round or from a screen of the game results;
+ * once every connected player is, everyone moves on.
+ */
+export const GetReadyToMoveOnDto = z.strictObject({
+  type: z.literal('ready-to-move-on'),
+  fromPosition: FromPositionDto,
   traceparent: TraceparentDto.optional(),
 });
 
@@ -247,6 +265,12 @@ export const UnlikeDilemmaDto = z.strictObject({
 /** Once the game has ended, the host takes who is still in the room to the lobby of a new one. */
 export const StartRematchDto = z.strictObject({
   type: z.literal('start-rematch'),
+  traceparent: TraceparentDto.optional(),
+});
+
+/** The host restarts the game in its rounds, taking who is still in the room to a new lobby. */
+export const RestartGameDto = z.strictObject({
+  type: z.literal('restart-game'),
   traceparent: TraceparentDto.optional(),
 });
 
@@ -344,6 +368,7 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   StartGameDto,
   RevealEarlyDto,
   MoveOnDto,
+  GetReadyToMoveOnDto,
   LeaveRoomDto,
   ReportDilemmaDto,
   SkipDilemmaDto,
@@ -351,6 +376,7 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   LikeDilemmaDto,
   UnlikeDilemmaDto,
   StartRematchDto,
+  RestartGameDto,
 ]);
 
 /** The type of every message a player sends, so the server can say which one it rejected. */
@@ -366,6 +392,7 @@ export const ClientMessageTypeDto = z.enum([
   'start-game',
   'reveal-early',
   'move-on',
+  'ready-to-move-on',
   'leave-room',
   'report-dilemma',
   'skip-dilemma',
@@ -373,6 +400,7 @@ export const ClientMessageTypeDto = z.enum([
   'like-dilemma',
   'unlike-dilemma',
   'start-rematch',
+  'restart-game',
 ]);
 
 export type LanguageDto = z.infer<typeof LanguageDto>;
@@ -380,11 +408,11 @@ export type CategoryDto = z.infer<typeof CategoryDto>;
 export type AvatarFaceDto = z.infer<typeof AvatarFaceDto>;
 export type PlayerColorDto = z.infer<typeof PlayerColorDto>;
 export type AvatarDto = z.infer<typeof AvatarDto>;
-export type GroupNatureDto = z.infer<typeof GroupNatureDto>;
 export type PlaceDto = z.infer<typeof PlaceDto>;
 export type RoomSettingsDto = z.infer<typeof RoomSettingsDto>;
 export type AmbienceDto = z.infer<typeof AmbienceDto>;
 export type AmbienceOrCustomDto = z.infer<typeof AmbienceOrCustomDto>;
+export type ContentRequirementDto = z.infer<typeof ContentRequirementDto>;
 export type RoundContentDto = z.infer<typeof RoundContentDto>;
 export type ChooseAmbienceDto = z.infer<typeof ChooseAmbienceDto>;
 export type ChangeAvatarDto = z.infer<typeof ChangeAvatarDto>;
@@ -400,6 +428,7 @@ export type DistributionPredictionDto = z.infer<typeof DistributionPredictionDto
 export type AnswerDilemmaDto = z.infer<typeof AnswerDilemmaDto>;
 export type RevealEarlyDto = z.infer<typeof RevealEarlyDto>;
 export type MoveOnDto = z.infer<typeof MoveOnDto>;
+export type GetReadyToMoveOnDto = z.infer<typeof GetReadyToMoveOnDto>;
 export type LeaveRoomDto = z.infer<typeof LeaveRoomDto>;
 export type ReportReasonDto = z.infer<typeof ReportReasonDto>;
 export type ReportDilemmaDto = z.infer<typeof ReportDilemmaDto>;
@@ -408,5 +437,6 @@ export type ReactDto = z.infer<typeof ReactDto>;
 export type LikeDilemmaDto = z.infer<typeof LikeDilemmaDto>;
 export type UnlikeDilemmaDto = z.infer<typeof UnlikeDilemmaDto>;
 export type StartRematchDto = z.infer<typeof StartRematchDto>;
+export type RestartGameDto = z.infer<typeof RestartGameDto>;
 export type ClientMessageDto = z.infer<typeof ClientMessageDto>;
 export type ClientMessageTypeDto = z.infer<typeof ClientMessageTypeDto>;

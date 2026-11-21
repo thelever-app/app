@@ -38,7 +38,7 @@
     "playerAnswered": "{{name}} · a répondu",
     "playerPending": "{{name}} · n’a pas encore répondu",
     "playerDisconnected": "{{name}} (hors ligne)",
-    "movedOn": "{{name}} a passé ce dilemme",
+    "movedOn": "{{name}} a fait passer tout le monde",
     "playerMovedOn": "{{label}} · a passé ce dilemme",
     "aboutYou": "Dilemme {{position, number}} sur {{total, number}} · C’est sur toi"
   },
@@ -78,10 +78,15 @@
     "nominal": "Tu ne votes pas : devine ce que chacun choisira.",
     "anonymous": "Tu ne votes pas : devine comment les autres se répartiront."
   },
+  "answerSteps": {
+    "label": "Étapes de ta réponse",
+    "vote": "Ton vote",
+    "prediction": "Ta prédiction"
+  },
   "predict": {
     "voted": "Tu as voté « ",
     "votedEnd": " »",
-    "voteQuestion": "Qu’a voté chacun ?",
+    "voteQuestion": "Qu’a voté chacun, à ton avis ?",
     "voteOf": "Le vote de {{name}}",
     "back": "Revenir à ton vote",
     "missing_one": "Il manque {{count}} réponse",
@@ -91,9 +96,9 @@
     "aboutYouQuestion": "Que va choisir chacun ?"
   },
   "distribution": {
-    "question": "Comment le groupe va-t-il se répartir ?",
-    "hint": "En te comptant. Le total fait toujours 100 %.",
-    "hintTwo": "En te comptant. Le total fait toujours 100 %.",
+    "question": "Comment le groupe va-t-il se répartir, à ton avis ?",
+    "hint": "Prédis les votes du groupe en te comptant.",
+    "hintTwo": "Prédis les votes du groupe en te comptant.",
     "yourVote": "ton vote",
     "shareOf": "Pourcentage que tu prédis pour {{option}}",
     "percent": "{{value, number}} %",
@@ -101,10 +106,16 @@
     "aboutYouHint": "Sans te compter. Le total fait toujours 100 %.",
     "aboutYouHintTwo": "Sans te compter. Le total fait toujours 100 %."
   },
+  "moveOn": {
+    "readyCount": "{{ready}} sur {{of}} prêts à continuer",
+    "waiting": "En attente des autres",
+    "everyone": "Faire passer tout le monde"
+  },
   "gameMenu": {
     "open": "Plus d’options",
     "title": "Menu de la partie",
     "revealEarly": "Révéler maintenant",
+    "restart": "Recommencer la partie",
     "onlyHost": "Réservé à l’hôte",
     "showGroup": "Voir le groupe",
     "share": "Partager le lien",
@@ -115,6 +126,12 @@
     "reportSubtitle": "Personne du groupe ne le saura",
     "reported": "Tu as déjà signalé ce dilemme",
     "leave": "Quitter la partie"
+  },
+  "restartGame": {
+    "title": "Recommencer la partie ?",
+    "body": "Tout le monde retourne au lobby avec les mêmes réglages. Les votes donnés sont conservés et les dilemmes déjà révélés ne reviendront pas.",
+    "restart": "Recommencer",
+    "keepPlaying": "Continuer à jouer"
   },
   "report": {
     "title": "Quel est le problème avec ce dilemme ?",
@@ -156,7 +173,7 @@
     "room": "Salle de {{host}}",
     "title": "La partie a déjà commencé",
     "round": "Tu rejoins le dilemme {{position, number}} sur {{total, number}}.",
-    "onlyVote": "Dans cette partie, tu votes seulement.",
+    "onlyVoteThisRound": "Dans cette manche, tu votes seulement ; dès la suivante, tu joues comme tout le monde.",
     "enter": "Rejoindre la manche"
   },
   "reveal": {
@@ -302,14 +319,6 @@
     "title": "Nouvelle salle",
     "nickname": "Ton pseudo",
     "nicknamePlaceholder": "Le nom que verra le groupe",
-    "groupNature": {
-      "label": "Avec qui vas-tu jouer ?",
-      "family": "Famille",
-      "friends": "Amis",
-      "work": "Collègues",
-      "mixed": "Mélange",
-      "hint": "Cela sert à comprendre comment les votes changent selon les personnes avec qui tu joues."
-    },
     "place": {
       "label": "Où êtes-vous ?",
       "together": "Au même endroit",
@@ -319,7 +328,6 @@
     "submitting": "Création de la salle…",
     "missing": {
       "nickname": "Écris ton pseudo",
-      "groupNature": "Choisis avec qui tu joues",
       "place": "Choisis où vous êtes",
       "ambience": "Choisis une ambiance"
     },
@@ -424,7 +432,7 @@
     "shareText": "Rejoins ma salle TheLever avec le code {{code}}",
     "copied": "Lien copié",
     "showQr": "Afficher le QR code",
-    "summary": "{{seconds}} s par dilemme · {{language}}",
+    "summary": "{{seconds}} s par dilemme",
     "roundCount_one": "{{count}} manche",
     "roundCount_many": "{{count}} manches",
     "roundCount_other": "{{count}} manches",
@@ -485,15 +493,6 @@
       "text": "seuls les plus de 18 ans peuvent entrer."
     }
   },
-  "languages": {
-    "es": "Español",
-    "en": "English",
-    "fr": "Français",
-    "de": "Deutsch",
-    "it": "Italiano",
-    "pt": "Português",
-    "ca": "Català"
-  },
   "categories": {
     "life-and-death": "Vie et mort",
     "honesty": "Honnêteté",
@@ -515,7 +514,6 @@
       "label": "Inclure des dilemmes +18",
       "hint": "Seuls les plus de 18 ans pourront entrer."
     },
-    "language": "Langue des dilemmes",
     "timePerDilemma": "Temps par dilemme",
     "seconds": "{{count}} s",
     "timeHint": "Chaque dilemme est révélé quand tout le monde a répondu ou que le temps est écoulé.",

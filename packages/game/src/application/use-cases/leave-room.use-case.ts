@@ -1,5 +1,6 @@
 import type { Clock } from '../../domain/ports/clock.port.ts';
 import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
+import { moveOnIfEveryoneIsReady } from '../../domain/services/move-on-if-everyone-is-ready.ts';
 import { revealIfEveryoneAnswered } from '../../domain/services/reveal-if-everyone-answered.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
@@ -56,9 +57,11 @@ export class LeaveRoomUseCase {
     room.leave(playerId, game.playerIds, this.#clock.now());
     if (game.playerIds.includes(playerId)) {
       game.leave(playerId);
-      // The round does not wait for who leaves; past its time, it is revealed by time.
+      // Neither the round nor its reveal waits for who leaves; past its time, the round is
+      // revealed by time.
       if (!game.runOutRound(this.#clock.now())) {
         revealIfEveryoneAnswered(room, game, this.#clock.now());
+        moveOnIfEveryoneIsReady(room, game, this.#clock.now());
       }
     }
     handOverHostIfAway(room, game);

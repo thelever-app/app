@@ -38,7 +38,7 @@
     "playerAnswered": "{{name}} · ha risposto",
     "playerPending": "{{name}} · non ha ancora risposto",
     "playerDisconnected": "{{name}} (disconnesso)",
-    "movedOn": "{{name}} è già al dilemma successivo",
+    "movedOn": "{{name}} ha fatto passare tutti",
     "playerMovedOn": "{{label}} · è già al successivo",
     "aboutYou": "Dilemma {{position, number}} di {{total, number}} · Parla di te"
   },
@@ -78,10 +78,15 @@
     "nominal": "Non voti: indovina cosa sceglierà ciascuno.",
     "anonymous": "Non voti: indovina come si divideranno gli altri."
   },
+  "answerSteps": {
+    "label": "Passi della tua risposta",
+    "vote": "Il tuo voto",
+    "prediction": "La tua previsione"
+  },
   "predict": {
     "voted": "Hai votato «",
     "votedEnd": "»",
-    "voteQuestion": "Cosa ha votato ciascuno?",
+    "voteQuestion": "Cosa pensi abbia votato ciascuno?",
     "voteOf": "Il voto di {{name}}",
     "back": "Torna al tuo voto",
     "missing_one": "Manca {{count}} risposta",
@@ -91,9 +96,9 @@
     "aboutYouQuestion": "Cosa sceglierà ciascuno?"
   },
   "distribution": {
-    "question": "Come si dividerà il gruppo?",
-    "hint": "Contando te. Fanno sempre 100%.",
-    "hintTwo": "Contando te. Fanno sempre 100%.",
+    "question": "Come pensi si dividerà il gruppo?",
+    "hint": "Prevedi i voti del gruppo contando anche te.",
+    "hintTwo": "Prevedi i voti del gruppo contando anche te.",
     "yourVote": "il tuo voto",
     "shareOf": "Percentuale che prevedi per {{option}}",
     "percent": "{{value, number}}%",
@@ -101,10 +106,16 @@
     "aboutYouHint": "Senza contare te. Fanno sempre 100%.",
     "aboutYouHintTwo": "Senza contare te. Fanno sempre 100%."
   },
+  "moveOn": {
+    "readyCount": "{{ready}} su {{of}} pronti a proseguire",
+    "waiting": "In attesa degli altri",
+    "everyone": "Fai passare tutti"
+  },
   "gameMenu": {
     "open": "Altre opzioni",
     "title": "Menu della partita",
     "revealEarly": "Svela ora",
+    "restart": "Ricomincia la partita",
     "onlyHost": "Solo l’host",
     "showGroup": "Vedi il gruppo",
     "share": "Condividi link",
@@ -115,6 +126,12 @@
     "reportSubtitle": "Nessuno del gruppo lo saprà",
     "reported": "Hai già segnalato questo dilemma",
     "leave": "Esci dalla partita"
+  },
+  "restartGame": {
+    "title": "Ricominciare la partita?",
+    "body": "Tutti tornano alla lobby con le stesse impostazioni. I voti dati restano salvati e i dilemmi già rivelati non si ripetono.",
+    "restart": "Ricomincia",
+    "keepPlaying": "Continua a giocare"
   },
   "report": {
     "title": "Cosa non va in questo dilemma?",
@@ -156,7 +173,7 @@
     "room": "Stanza di {{host}}",
     "title": "La partita è già iniziata",
     "round": "Entri nel dilemma {{position, number}} di {{total, number}}.",
-    "onlyVote": "In questa partita voti e basta.",
+    "onlyVoteThisRound": "In questo turno voti e basta; dal prossimo giochi come tutti.",
     "enter": "Entra nel turno"
   },
   "reveal": {
@@ -302,14 +319,6 @@
     "title": "Nuova stanza",
     "nickname": "Il tuo nickname",
     "nicknamePlaceholder": "Come ti vedrà il gruppo",
-    "groupNature": {
-      "label": "Con chi giocherai?",
-      "family": "Famiglia",
-      "friends": "Amici",
-      "work": "Colleghi",
-      "mixed": "Misto",
-      "hint": "Serve a capire come cambiano i voti a seconda di con chi giochi."
-    },
     "place": {
       "label": "Dove siete?",
       "together": "Nello stesso posto",
@@ -319,7 +328,6 @@
     "submitting": "Creazione della stanza…",
     "missing": {
       "nickname": "Scrivi il tuo nickname",
-      "groupNature": "Scegli con chi giochi",
       "place": "Scegli dove siete",
       "ambience": "Scegli un’atmosfera"
     },
@@ -424,7 +432,7 @@
     "shareText": "Entra nella mia stanza di TheLever con il codice {{code}}",
     "copied": "Link copiato",
     "showQr": "Mostra QR",
-    "summary": "{{seconds}} s per dilemma · {{language}}",
+    "summary": "{{seconds}} s per dilemma",
     "roundCount_one": "{{count}} turno",
     "roundCount_many": "{{count}} turni",
     "roundCount_other": "{{count}} turni",
@@ -485,15 +493,6 @@
       "text": "possono entrare solo i maggiori di 18 anni."
     }
   },
-  "languages": {
-    "es": "Español",
-    "en": "English",
-    "fr": "Français",
-    "de": "Deutsch",
-    "it": "Italiano",
-    "pt": "Português",
-    "ca": "Català"
-  },
   "categories": {
     "life-and-death": "Vita e morte",
     "honesty": "Onestà",
@@ -515,7 +514,6 @@
       "label": "Includi dilemmi +18",
       "hint": "Potranno entrare solo i maggiori di 18 anni."
     },
-    "language": "Lingua dei dilemmi",
     "timePerDilemma": "Tempo per dilemma",
     "seconds": "{{count}} s",
     "timeHint": "Ogni dilemma si svela quando rispondono tutti o quando finisce il tempo.",

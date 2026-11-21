@@ -38,7 +38,7 @@ export class StateSender {
     const { roomId, playerId, language } = session;
     let room;
     try {
-      room = await this.#getRoomState.execute({ roomId, playerId });
+      room = await this.#getRoomState.execute({ roomId, playerId, language });
     } catch (error) {
       if (!(error instanceof PlayerNotInRoomError)) throw error;
       connection.session = undefined;

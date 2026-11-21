@@ -57,7 +57,6 @@ async function renderCreateRoom() {
   fireEvent.change(screen.getByRole('textbox', { name: t('createRoom.nickname') }), {
     target: { value: 'Ana' },
   });
-  fireEvent.click(screen.getByRole('radio', { name: t('createRoom.groupNature.friends') }));
   fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.remote') }));
   fireEvent.click(screen.getByRole('radio', { name: new RegExp(t('ambience.classic.name')) }));
   fireEvent.click(screen.getByRole('button', { name: t('createRoom.submit') }));
@@ -148,7 +147,6 @@ describe('AccessCodeScreen', () => {
     fireEvent.change(screen.getByRole('textbox', { name: t('createRoom.nickname') }), {
       target: { value: 'Ana' },
     });
-    fireEvent.click(screen.getByRole('radio', { name: t('createRoom.groupNature.friends') }));
     fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.remote') }));
     fireEvent.click(screen.getByRole('radio', { name: new RegExp(t('ambience.classic.name')) }));
     fireEvent.click(screen.getByRole('button', { name: t('createRoom.submit') }));

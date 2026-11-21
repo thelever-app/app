@@ -1,5 +1,5 @@
 import type { GameStateDto } from '@thelever-app/protocol';
-import { useId, useState } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../avatar/avatar.tsx';
 import { GroupProgressSheet } from '../components/group-progress-sheet.tsx';
@@ -12,8 +12,8 @@ import styles from './ranking-screen.module.css';
 
 interface RankingScreenProps {
   readonly game: GameStateDto;
-  /** Any player takes everyone from the ranking to the end of the game; who only watches, nobody. */
-  readonly onMoveOn: (() => void) | undefined;
+  /** The way on: with the group, to the end of the game, or back to its screen; none for who only watches. */
+  readonly next: ReactNode | undefined;
   readonly onLeave: () => void;
   readonly onShowQr: () => void;
   /** Where the ranking is among the screens of the results, for the label of a nominal room. */
@@ -29,7 +29,7 @@ interface RankingScreenProps {
  */
 export function RankingScreen({
   game,
-  onMoveOn,
+  next,
   onLeave,
   onShowQr,
   label,
@@ -76,11 +76,7 @@ export function RankingScreen({
             {t('results.back')}
           </button>
         )}
-        {onMoveOn && (
-          <button type="button" className={styles.next} onClick={onMoveOn}>
-            {t('ranking.next')}
-          </button>
-        )}
+        {next}
       </footer>
       <GroupProgressSheet game={game} open={isGroupOpen} onOpenChange={setIsGroupOpen} />
     </div>

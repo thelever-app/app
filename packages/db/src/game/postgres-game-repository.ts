@@ -115,7 +115,7 @@ export class PostgresGameRepository implements GameRepository {
   /** What the game copied of its room when it started never changes either. */
   async #saveGame(
     db: Transaction<GameTables>,
-    { id, roomId, version, settings, round, stage }: GameSnapshot,
+    { id, roomId, version, settings, round, stage, readyToMoveOn }: GameSnapshot,
   ): Promise<void> {
     const changing = {
       version,
@@ -129,6 +129,7 @@ export class PostgresGameRepository implements GameRepository {
       stage: stage.kind,
       stage_moved_on_by: stage.movedOnBy,
       stage_step: stage.step,
+      ready_to_move_on: [...readyToMoveOn],
     };
     await db
       .insertInto('games')
@@ -138,7 +139,6 @@ export class PostgresGameRepository implements GameRepository {
         ...changing,
         ambience: settings.ambience,
         variant: settings.variant,
-        group_nature: settings.groupNature,
         place: settings.place,
         dilemma_language: settings.dilemmaLanguage,
         time_per_dilemma_seconds: settings.timePerDilemmaSeconds,
@@ -275,6 +275,7 @@ export class PostgresGameRepository implements GameRepository {
           ready: eb.ref('excluded.ready'),
           option_order: eb.ref('excluded.option_order'),
           response_time_ms: eb.ref('excluded.response_time_ms'),
+          language: eb.ref('excluded.language'),
           game_consent_version: eb.ref('excluded.game_consent_version'),
           research_consent_version: eb.ref('excluded.research_consent_version'),
           commercial_licence_consent_version: eb.ref('excluded.commercial_licence_consent_version'),
@@ -333,7 +334,11 @@ function readGame(db: Kysely<GameTables>, id: string) {
       jsonArrayFrom(
         eb
           .selectFrom('game_players')
-          .select(['game_players.player_id', 'game_players.has_left', 'game_players.joined_late'])
+          .select([
+            'game_players.player_id',
+            'game_players.has_left',
+            'game_players.joined_at_position',
+          ])
           .whereRef('game_players.game_id', '=', 'games.id')
           .orderBy('game_players.position'),
       ).as('players'),
@@ -384,7 +389,6 @@ function snapshotOf(row: GameRow): GameSnapshot {
     settings: {
       ambience: row.ambience,
       variant: row.variant,
-      groupNature: row.group_nature,
       place: row.place,
       dilemmaLanguage: row.dilemma_language,
       timePerDilemmaSeconds: row.time_per_dilemma_seconds,
@@ -405,6 +409,7 @@ function snapshotOf(row: GameRow): GameSnapshot {
           }
         : null,
     stage: { kind: row.stage, movedOnBy: row.stage_moved_on_by, step: row.stage_step },
+    readyToMoveOn: row.ready_to_move_on,
     dilemmas,
     peopleInTheGap,
     timesSpent,
@@ -420,12 +425,12 @@ function snapshotOf(row: GameRow): GameSnapshot {
         underEighteen: reaction.under_eighteen,
       },
     })),
-    players: row.players.map(({ player_id, has_left, joined_late }) => {
+    players: row.players.map(({ player_id, has_left, joined_at_position }) => {
       const ofPlayer = row.playerDilemmas.filter((dilemma) => dilemma.player_id === player_id);
       return {
         id: player_id,
         left: has_left,
-        joinedLate: joined_late,
+        joinedAtPosition: joined_at_position,
         optionOrders: ofPlayer.map(({ dilemma_id, option_order }) => ({
           dilemmaId: dilemma_id,
           optionOrder: option_order,
@@ -440,6 +445,7 @@ function snapshotOf(row: GameRow): GameSnapshot {
             ready: answer.ready,
             optionOrder: answer.option_order,
             responseTimeMs: answer.response_time_ms,
+            language: answer.language,
             seal: {
               gameConsentVersion: answer.game_consent_version,
               researchConsentVersion: answer.research_consent_version,
@@ -543,7 +549,7 @@ function playerRowsOf({ id, players }: GameSnapshot): PlayerRow[] {
     player_id: player.id,
     position,
     has_left: player.left,
-    joined_late: player.joinedLate,
+    joined_at_position: player.joinedAtPosition,
   }));
 }
 
@@ -588,6 +594,7 @@ function answerRowsOf({ id, dilemmas, players }: GameSnapshot): AnswerRow[] {
       ready: answer.ready,
       option_order: [...answer.optionOrder],
       response_time_ms: answer.responseTimeMs,
+      language: answer.language,
       game_consent_version: answer.seal.gameConsentVersion,
       research_consent_version: answer.seal.researchConsentVersion,
       commercial_licence_consent_version: answer.seal.commercialLicenceConsentVersion,

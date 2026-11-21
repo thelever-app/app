@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { GroupProgressSheet } from '../components/group-progress-sheet.tsx';
+import { MoveOnButton } from '../components/move-on-button.tsx';
 import { isAnonymous } from '../components/players.ts';
 import { HOME_PATH } from '../home-path.ts';
 import { EndScreen } from '../results/end-screen.tsx';
@@ -17,8 +18,9 @@ import { useGame } from '../room/room-provider.tsx';
 /**
  * After the last round, a brief passage and the game results screen by screen, and then the end of
  * the game. In a nominal room, each title won, who knows the player best and the ranking; in an
- * anonymous one, the ranking of who reads the group best. Any player takes everyone on to the next
- * screen; on their own device, each one can look back at the screens before, without moving anyone.
+ * anonymous one, the ranking of who reads the group best. Everyone goes to the next screen once they
+ * are all ready, or when the host moves everyone on; on their own device, each one can look back at
+ * the screens before, without moving anyone.
  */
 export function ResultsPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   const { t } = useTranslation();
@@ -59,21 +61,45 @@ export function ResultsPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   const shown = step - behind;
   // The screens of the results come after the last round, at the positions that follow it. Who
   // joined once the rounds were over only watches them.
-  const moveOn = game.inGame
-    ? () => send({ type: 'move-on', fromPosition: game.dilemmas.length + step })
-    : undefined;
-  const next = behind > 0 ? () => setBehind(behind - 1) : moveOn;
+  const fromPosition = game.dilemmas.length + step;
+  const withTheGroup = (label: string) =>
+    game.inGame ? (
+      <MoveOnButton
+        game={game}
+        label={label}
+        onReady={() => send({ type: 'ready-to-move-on', fromPosition })}
+        onMoveEveryoneOn={
+          game.hostId === game.playerId ? () => send({ type: 'move-on', fromPosition }) : undefined
+        }
+      />
+    ) : undefined;
+  // Looking back, the way on only comes back towards the screen of the group.
+  const next = (label: string) =>
+    behind > 0 ? (
+      <button type="button" className={styles.next} onClick={() => setBehind(behind - 1)}>
+        {label}
+      </button>
+    ) : (
+      withTheGroup(label)
+    );
   const back = shown > 0 ? () => setBehind(behind + 1) : undefined;
   const label = t('results.label', { step: shown + 1, total });
   if (anonymous) {
-    return <RankingScreen game={game} onMoveOn={moveOn} onLeave={leave} onShowQr={onShowQr} />;
+    return (
+      <RankingScreen
+        game={game}
+        next={withTheGroup(t('ranking.next'))}
+        onLeave={leave}
+        onShowQr={onShowQr}
+      />
+    );
   }
   if (shown >= total - 1) {
     return (
       <RankingScreen
         game={game}
         label={label}
-        onMoveOn={next}
+        next={next(t('ranking.next'))}
         onBack={back}
         onLeave={leave}
         onShowQr={onShowQr}
@@ -94,7 +120,7 @@ export function ResultsPhase({ onShowQr }: { readonly onShowQr: () => void }) {
           onLeave={leave}
         />
       }
-      onMoveOn={next}
+      next={next(t('results.next'))}
       onBack={back}
     >
       {title ? (
@@ -109,12 +135,13 @@ export function ResultsPhase({ onShowQr }: { readonly onShowQr: () => void }) {
 
 function ResultsStep({
   header,
-  onMoveOn,
+  next,
   onBack,
   children,
 }: {
   readonly header: ReactNode;
-  readonly onMoveOn: (() => void) | undefined;
+  /** The way on: with the group, or back to its screen; none for who only watches. */
+  readonly next: ReactNode | undefined;
   readonly onBack: (() => void) | undefined;
   readonly children: ReactNode;
 }) {
@@ -131,11 +158,7 @@ function ResultsStep({
             {t('results.back')}
           </button>
         )}
-        {onMoveOn && (
-          <button type="button" className={styles.next} onClick={onMoveOn}>
-            {t('results.next')}
-          </button>
-        )}
+        {next}
       </footer>
     </div>
   );

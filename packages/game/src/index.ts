@@ -20,9 +20,11 @@ export {
   type RoomSettingsChanges,
 } from './domain/entities/room.ts';
 export {
+  ANY_CONTENT,
+  CONTENT_REQUIREMENTS,
   DILEMMA_ORIGINS,
-  ROUND_CONTENTS,
   randomRound,
+  type ContentRequirement,
   type DilemmaOrigin,
   type RoundContent,
   type RoundSnapshot,
@@ -98,7 +100,7 @@ export {
   type Scale,
   type CandidateDilemma,
 } from './domain/vos/classification.vo.ts';
-export { GROUP_NATURES, PLACES, type GroupNature, type Place } from './domain/vos/group.vo.ts';
+export { PLACES, type Place } from './domain/vos/group.vo.ts';
 export {
   composeGame,
   drawKey,
@@ -117,6 +119,7 @@ export { ConnectionChangedEvent } from './domain/events/connection-changed.event
 export { LobbyChangedEvent, type LobbyChange } from './domain/events/lobby-changed.event.ts';
 export { DilemmaRevealedEvent } from './domain/events/dilemma-revealed.event.ts';
 export { RoundStartedEvent } from './domain/events/round-started.event.ts';
+export { ReadyToMoveOnChangedEvent } from './domain/events/ready-to-move-on-changed.event.ts';
 export { AnsweredCountChangedEvent } from './domain/events/answered-count-changed.event.ts';
 export { HostChangedEvent } from './domain/events/host-changed.event.ts';
 export { PlayerLeftEvent } from './domain/events/player-left.event.ts';
@@ -178,6 +181,7 @@ export { DilemmaAlreadyReportedError } from './domain/errors/dilemma-already-rep
 export { DilemmaNotReportedAsOffensiveError } from './domain/errors/dilemma-not-reported-as-offensive.error.ts';
 export { GameNotInProgressError } from './domain/errors/game-not-in-progress.error.ts';
 export { GameNotEndedError } from './domain/errors/game-not-ended.error.ts';
+export { GameRoundsOverError } from './domain/errors/game-rounds-over.error.ts';
 export { InvalidEmojiError } from './domain/errors/invalid-emoji.error.ts';
 export { NoVoteToReactToError } from './domain/errors/no-vote-to-react-to.error.ts';
 export { DilemmaAlreadyPlayedError } from './domain/errors/dilemma-already-played.error.ts';
@@ -289,6 +293,10 @@ export {
   type StartRematchInput,
 } from './application/use-cases/start-rematch.use-case.ts';
 export {
+  RestartGameUseCase,
+  type RestartGameInput,
+} from './application/use-cases/restart-game.use-case.ts';
+export {
   ConnectPlayerUseCase,
   type ConnectPlayerInput,
   type ConnectPlayerOutput,
@@ -315,6 +323,10 @@ export {
   type RevealEarlyInput,
 } from './application/use-cases/reveal-early.use-case.ts';
 export { MoveOnUseCase, type MoveOnInput } from './application/use-cases/move-on.use-case.ts';
+export {
+  GetReadyToMoveOnUseCase,
+  type GetReadyToMoveOnInput,
+} from './application/use-cases/get-ready-to-move-on.use-case.ts';
 export {
   RunOutRoundUseCase,
   type RunOutRoundInput,

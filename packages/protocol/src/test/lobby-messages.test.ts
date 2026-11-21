@@ -14,7 +14,6 @@ const settings = {
   variant: 'nominal',
   adultsOnly: false,
   compromisingDilemmas: false,
-  dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
   newDilemmas: true,
 };
@@ -29,10 +28,10 @@ const rounds = [
     roundId: 2,
     origin: 'random',
     categories: ['life-and-death', 'honesty'],
-    content: 'adults-only',
+    content: ['adults-only'],
     withoutNewDilemmas: false,
   },
-  { roundId: 5, origin: 'random', categories: null, content: 'any', withoutNewDilemmas: true },
+  { roundId: 5, origin: 'random', categories: null, content: [], withoutNewDilemmas: true },
   {
     roundId: 3,
     origin: 'players',
@@ -49,7 +48,6 @@ const roomState = {
   code: 'K7M2Q',
   playerId: 'player-2',
   hostId: 'player-1',
-  groupNature: 'friends',
   place: 'together',
   settings,
   ambience: 'custom',
@@ -153,6 +151,14 @@ describe('ExpelledDto', () => {
 });
 
 describe('the commands of the lobby', () => {
+  it('should reject a change of the language of the dilemmas, which nobody sets', () => {
+    // Act & Assert
+    expect(
+      ClientMessageDto.safeParse({ type: 'change-settings', changes: { dilemmaLanguage: 'en' } })
+        .success,
+    ).toBe(false);
+  });
+
   it('should accept each well-formed command and tell them apart by their type', () => {
     // Arrange
     const commands = [
@@ -163,7 +169,7 @@ describe('the commands of the lobby', () => {
           variant: 'anonymous',
           rounds: [
             { id: 1, origin: 'specific', dilemmaId: 'dilemma-1' },
-            { origin: 'random', categories: ['honesty'], content: 'compromising' },
+            { origin: 'random', categories: ['honesty'], content: ['compromising'] },
             { id: 3, origin: 'players' },
           ],
         },
@@ -212,7 +218,7 @@ describe('the commands of the lobby', () => {
   it('should reject no rounds, more than 12, or a round without its dilemma', () => {
     // Arrange
     const withRounds = (rounds: unknown[]) => ({ type: 'change-settings', changes: { rounds } });
-    const random = { origin: 'random', categories: null, content: 'any' };
+    const random = { origin: 'random', categories: null, content: [] };
 
     // Act & Assert
     expect(ChangeSettingsDto.safeParse(withRounds([])).success).toBe(false);

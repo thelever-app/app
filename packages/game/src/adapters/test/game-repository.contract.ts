@@ -33,7 +33,6 @@ const MINUTE = 60 * SECOND;
 const ANONYMOUS: GameSettings = {
   ambience: 'no-filter',
   variant: 'anonymous',
-  groupNature: 'family',
   place: 'remote',
   dilemmaLanguage: 'ca',
   timePerDilemmaSeconds: 60,
@@ -63,7 +62,6 @@ export function describeGameRepositoryContract(
         hostNickname: 'Ana',
         hostIdentity: 'TestAnaIdentity',
         hostAvatar: new AvatarVO('face-01', 'khaki'),
-        groupNature: 'family',
         place: 'remote',
         dilemmaLanguage: 'es',
         code: 'K7M2Q',
@@ -137,7 +135,6 @@ export function describeGameRepositoryContract(
             hostNickname: 'Eva',
             hostIdentity: 'TestEvaIdentity',
             hostAvatar: new AvatarVO('face-02', 'teal'),
-            groupNature: 'friends',
             place: 'together',
             dilemmaLanguage: 'es',
             code: 'P3X8W',
@@ -185,7 +182,8 @@ export function describeGameRepositoryContract(
         game.answer(
           'TestLuisId',
           first.dilemmaId,
-          { vote: first.optionIds[1] },
+          // Read in English: the answer keeps it.
+          { vote: first.optionIds[1], language: 'en' },
           LUIS_SEAL,
           answeredAt,
         );
@@ -328,6 +326,28 @@ export function describeGameRepositoryContract(
         expect(found?.stage).toEqual({ kind: 'results', movedOnBy: 'TestLuisId', step: 1 });
       });
 
+      it('should find a saved game everyone moved on by being ready, with who is ready now', async () => {
+        // Arrange
+        const { games, room, game, dilemmas } = await arrange();
+        start(game, room);
+        for (const [position] of dilemmas.entries()) {
+          game.reveal('host', STARTED_AT);
+          for (const playerId of game.playerIds) {
+            game.getReadyToMoveOn(playerId, position, game.playerIds, STARTED_AT);
+          }
+        }
+        game.getReadyToMoveOn('TestLuisId', dilemmas.length, game.playerIds, STARTED_AT);
+        await games.save(game);
+
+        // Act
+        const found = await games.findById('TestGameId');
+
+        // Assert
+        expect(found?.toSnapshot()).toEqual(game.toSnapshot());
+        expect(found?.stage).toEqual({ kind: 'results', movedOnBy: null, step: 0 });
+        expect(found?.playersReadyToMoveOn).toEqual(['TestLuisId']);
+      });
+
       it('should find a saved game with a player who joined it late', async () => {
         // Arrange
         const { games, rooms, room, game, first } = await arrange({
@@ -359,6 +379,21 @@ export function describeGameRepositoryContract(
           { dilemmaId: first.dilemmaId, reason: 'joined-late' },
         ]);
         expect(found?.playersToPredictBy('TestMartaId', first.dilemmaId)).toEqual([]);
+      });
+
+      it('should find a saved game the host stopped to restart it', async () => {
+        // Arrange
+        const { games, room, game } = await arrange();
+        start(game, room);
+        game.stop('TestAnaId');
+        await games.save(game);
+
+        // Act
+        const found = await games.findById('TestGameId');
+
+        // Assert
+        expect(found?.toSnapshot()).toEqual(game.toSnapshot());
+        expect(found?.stage).toEqual({ kind: 'stopped', movedOnBy: 'TestAnaId', step: null });
       });
 
       it('should find a saved game that has not started', async () => {

@@ -14,7 +14,6 @@ import type {
   AvatarFace,
   DilemmaLanguage,
   DilemmaOrigin,
-  GroupNature,
   Place,
   PlayerColor,
   RoomVariant,
@@ -105,7 +104,6 @@ export interface Database {
     code: string;
     host_player_id: string;
     version: number;
-    group_nature: GroupNature;
     place: Place;
     variant: RoomVariant;
     adults_only: boolean;
@@ -188,15 +186,19 @@ export interface Database {
     round_revealed_at: Date | null;
     /** The rounds, the game results, or the end of the game. */
     stage: GameStage;
-    /** Who moved everyone to the results or to the end; null in the rounds. */
+    /**
+     * The host who moved everyone to the results or to the end, or who stopped the game; null in the
+     * rounds, and when everyone was ready to move on.
+     */
     stage_moved_on_by: string | null;
+    /** Who is ready to move on from the reveal or the screen of the results the game is on. */
+    ready_to_move_on: string[];
     /** The screen of the results everyone is on, from 0; null out of the results. */
     stage_step: number | null;
     version: number;
     /** The ambience whose configuration the room had when the game started, or custom. */
     ambience: AmbienceOrCustom;
     variant: RoomVariant;
-    group_nature: GroupNature;
     place: Place;
     dilemma_language: DilemmaLanguage;
     time_per_dilemma_seconds: TimePerDilemmaSeconds;
@@ -227,7 +229,8 @@ export interface Database {
     player_id: string;
     position: number;
     has_left: boolean;
-    joined_late: boolean;
+    /** The position of the round in which the player joined the game once started; null from the start. */
+    joined_at_position: number | null;
   };
   /**
    * Each dilemma as each player plays it: the order of its options, given when the game starts,
@@ -265,6 +268,8 @@ export interface Database {
     ready: boolean;
     option_order: string[];
     response_time_ms: number | null;
+    /** The language the player read the dilemma in; null for answers from before it was kept. */
+    language: string | null;
   };
   /** The reactions in the reveal of each dilemma, in the order they were made, each with its seal. */
   reactions: {

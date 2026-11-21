@@ -13,7 +13,7 @@ import {
 import { ambienceOf } from '../../domain/vos/ambience.vo.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
 import type { CandidateDilemma } from '../../domain/vos/classification.vo.ts';
-import type { RoundContent } from '../../domain/vos/round.vo.ts';
+import { ANY_CONTENT, type RoundContent } from '../../domain/vos/round.vo.ts';
 import type { DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 import type { GameRepository } from '../ports/game-repository.port.ts';
 import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
@@ -130,7 +130,7 @@ export class StartGameUseCase {
     // has not played play from every category, as its lobby warned the host.
     const firstDraw = await candidatesFor(settings.rounds);
     const left = (categories: readonly Category[]) => {
-      const drawn = firstDraw.get(drawKey(categories, 'any'));
+      const drawn = firstDraw.get(drawKey(categories, ANY_CONTENT));
       return new Set(
         [...(drawn?.inCatalog ?? []), ...(drawn?.inExploration ?? [])].map(
           ({ dilemmaId }) => dilemmaId,
@@ -142,7 +142,7 @@ export class StartGameUseCase {
     const rounds = settings.rounds.map((round) => {
       if (round.origin !== 'random' || round.categories === null) return round;
       if (room.playedDilemmaIds.length === 0) return round;
-      const key = drawKey(round.categories, 'any');
+      const key = drawKey(round.categories, ANY_CONTENT);
       const before = played.get(key) ?? 0;
       played.set(key, before + 1);
       if (before < left(round.categories)) return round;
@@ -178,7 +178,6 @@ export class StartGameUseCase {
         settings: {
           ambience: ambienceOf(settings),
           variant: settings.variant,
-          groupNature: room.groupNature,
           place: room.place,
           dilemmaLanguage: settings.dilemmaLanguage,
           timePerDilemmaSeconds: settings.timePerDilemmaSeconds,

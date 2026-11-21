@@ -29,7 +29,6 @@ function roomAndGame(): { room: Room; game: Game } {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
-      groupNature: 'friends',
       place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
@@ -68,7 +67,6 @@ function roomAndGame(): { room: Room; game: Game } {
       settings: {
         ambience: 'classic',
         variant: 'anonymous',
-        groupNature: 'friends',
         place: 'together',
         dilemmaLanguage: 'es',
         timePerDilemmaSeconds: 60,

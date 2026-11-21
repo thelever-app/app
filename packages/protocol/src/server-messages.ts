@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import {
   AvatarDto,
+  CategoryDto,
   ClientMessageTypeDto,
-  GroupNatureDto,
   MAXIMUM_ROUNDS,
   PlaceDto,
   RoomSettingsDto,
@@ -67,12 +67,16 @@ export const GameStateDto = z.strictObject({
     endsAt: z.iso.datetime(),
     /** What revealed the dilemma; null in its decision phase. */
     revealedBy: z.enum(['everyone', 'time', 'host']).nullable(),
-    /** Who moved everyone on to this round from the reveal of the previous one; null for the first. */
+    /**
+     * The host who moved everyone on to this round from the reveal of the previous one; null for
+     * the first, and when everyone was ready to move on.
+     */
     movedOnBy: z.string().min(1).nullable(),
   }),
   /**
    * The rounds, one after another; then the game results, screen by screen; then the end of the
-   * game. Who moved everyone to the results or to the end; null in the rounds.
+   * game. The host who moved everyone to the results or to the end; null in the rounds, and when
+   * everyone was ready to move on.
    */
   stage: z.strictObject({
     kind: z.enum(['rounds', 'results', 'ended']),
@@ -80,6 +84,8 @@ export const GameStateDto = z.strictObject({
     /** In the results, the screen everyone is on, from 0; null otherwise. */
     step: z.number().int().nonnegative().nullable(),
   }),
+  /** Who is ready to move on from the reveal or the screen of the results everyone is on. */
+  readyToMoveOn: z.array(z.string().min(1)),
   /**
    * Once the rounds are over, the ranking of every player still in the game, the most points
    * first, sharing a position on a tie: in an anonymous room, who reads the group best; in a
@@ -215,6 +221,8 @@ export const GameStateDto = z.strictObject({
         options: z
           .array(z.strictObject({ optionId: z.string().min(1), text: z.string().min(1) }))
           .min(1),
+        /** Shown with its icon on the dilemma. */
+        category: CategoryDto,
         /** Who takes the gap "someone in the group", the same for everyone; null without it. */
         personInTheGap: z.string().min(1).nullable(),
       }),
@@ -312,7 +320,6 @@ export const RoomStateDto = z.strictObject({
   /** The player who receives the message. */
   playerId: z.string().min(1),
   hostId: z.string().min(1),
-  groupNature: GroupNatureDto,
   place: PlaceDto,
   settings: RoomSettingsDto,
   /** The ambience whose configuration the room has, or custom. */
@@ -428,6 +435,7 @@ export const ErrorCodeDto = z.enum([
   'invalid-emoji',
   'no-vote-to-react-to',
   'game-not-ended',
+  'game-rounds-over',
   'dilemma-already-played',
   'first-access-required',
   'first-access-not-begun',

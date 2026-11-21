@@ -47,6 +47,7 @@ export class AnswerDilemmaHandler implements SocketMessageHandler<'answer-dilemm
           playerId: session.playerId,
           dilemmaId,
           vote,
+          language: session.language,
           ...(votePredictions && { votePredictions }),
           ...(distributionPrediction && { distributionPrediction }),
           ...(ready !== undefined && { ready }),
