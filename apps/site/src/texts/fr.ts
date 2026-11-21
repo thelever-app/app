@@ -112,6 +112,12 @@ export const fr: SiteTexts = {
     body: 'L’adresse est peut-être mal écrite. Depuis l’accueil, tu accèdes à tous les dilemmes.',
   },
   footer: { label: 'Informations légales', manageCookies: 'Gérer les cookies' },
+  support: {
+    link: 'Soutenir TheLever',
+    heading: 'TheLever est gratuit',
+    text: 'Une seule personne le fait vivre. S’il te plaît, tu peux le soutenir par un don ; cela ne donne aucun avantage dans le jeu.',
+    line: 'Ça t’a fait réfléchir ? TheLever est gratuit et une seule personne le fait vivre. Faire un don ne donne aucun avantage dans le jeu.',
+  },
   privacy: {
     title: 'Confidentialité',
     description:

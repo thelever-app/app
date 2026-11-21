@@ -6,5 +6,6 @@
     "projectId": "demo-thelever",
     "appId": "demo-app-id"
   },
-  "authEmulatorUrl": "http://127.0.0.1:9099"
+  "authEmulatorUrl": "http://127.0.0.1:9099",
+  "donationUrl": "https://ko-fi.com/thelever"
 }

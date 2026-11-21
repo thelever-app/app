@@ -14,6 +14,7 @@ async function appWithASite() {
     buildSite({ dilemmas: [], withdrawn: [] }, LANGUAGES, {
       origin: 'https://thelever.test',
       appBase: '',
+      donationUrl: 'https://ko-fi.test/thelever',
       owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
     }),
     files,
@@ -90,6 +91,7 @@ describe('the service of the public web', () => {
     const config = {
       origin: 'https://thelever.test',
       appBase: '',
+      donationUrl: 'https://ko-fi.test/thelever',
       owner: { name: 'TestOwner', taxId: 'TestTaxId', address: 'TestAddress' },
     };
     await publishSite(buildSite({ dilemmas: [], withdrawn: [] }, LANGUAGES, config), files);

@@ -13,6 +13,8 @@ export interface SiteConfig {
   readonly appBase: string;
   /** Who is behind TheLever, as the legal notice and the privacy policy name them. */
   readonly owner: Owner;
+  /** The donation page of TheLever, which every page links to: outside the web, on Ko-fi. */
+  readonly donationUrl: string;
   /** The publisher id of AdSense, whose meta tag lets Google verify the site; none until there is an account. */
   readonly adsenseClient?: string;
   /** The ad units of AdSense for the pages of the dilemmas; no ad at all until there are. */
@@ -114,6 +116,7 @@ export function document(page: Page, languages: Languages, config: SiteConfig): 
           <a href="${pagePath(page.language, texts.legalNotice.title)}"
             >${texts.legalNotice.title}</a
           >
+          <a class="support-link" href="${config.donationUrl}">${texts.support.link}</a>
           ${
             ads
               ? html`<button type="button" class="link" data-consent>

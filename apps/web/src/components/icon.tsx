@@ -72,6 +72,11 @@ import publicOff from '@material-symbols/svg-500/rounded/public_off-fill.svg?url
 import science from '@material-symbols/svg-500/rounded/science-fill.svg?url';
 import sportsEsports from '@material-symbols/svg-500/rounded/sports_esports-fill.svg?url';
 import tune from '@material-symbols/svg-500/rounded/tune-fill.svg?url';
+import description from '@material-symbols/svg-500/rounded/description.svg?url';
+import gavel from '@material-symbols/svg-500/rounded/gavel.svg?url';
+import policy from '@material-symbols/svg-500/rounded/policy.svg?url';
+import settings from '@material-symbols/svg-500/rounded/settings.svg?url';
+import translate from '@material-symbols/svg-500/rounded/translate.svg?url';
 import styles from './icon.module.css';
 
 /** The Material Symbols the screens use, hosted with the app: never loaded from Google. */
@@ -84,6 +89,11 @@ const ICONS = {
   science,
   sportsEsports,
   tune,
+  description,
+  gavel,
+  policy,
+  settings,
+  translate,
   add,
   addCircle,
   adultsOnly,

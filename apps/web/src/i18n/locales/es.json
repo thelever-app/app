@@ -834,6 +834,12 @@
       "research": {
         "title": "Más adelante, quizá investigación.",
         "text": "Si algún día queremos usar partidas para investigar, te pediremos permiso aparte. Si dices que no, juegas igual."
+      },
+      "donations": {
+        "title": "Donaciones.",
+        "text": "Si te gusta, puedes ayudar a mantenerlo con una donación. Donar no te da ninguna ventaja en el juego: todos jugáis igual.",
+        "link": "Apoya TheLever",
+        "label": "Apoya TheLever (se abre en el navegador)"
       }
     },
     "cookies": {
@@ -894,5 +900,67 @@
     "anonymous": "Por eso la sala es anónima: nadie verá qué votas, solo cuántos eligen cada opción. En grupos pequeños, el reparto puede dejar adivinar algún voto.",
     "understood": "Entendido",
     "leave": "Salir de la sala"
+  },
+  "appSettings": {
+    "open": "Ajustes",
+    "title": "Ajustes",
+    "back": "Volver",
+    "support": {
+      "title": "Apoya TheLever",
+      "text": "Es gratis y lo mantiene una persona. Donar no da ninguna ventaja en el juego.",
+      "label": "Apoya TheLever (se abre en el navegador)"
+    },
+    "game": "Juego",
+    "language": "Idioma de la app",
+    "sound": "Sonido",
+    "soundText": "Efectos de sonido y vibración",
+    "privacy": "Privacidad y datos",
+    "privacyPolicy": "Política de privacidad",
+    "terms": "Condiciones de uso",
+    "about": "Acerca de",
+    "funding": "Cómo se financia TheLever",
+    "credits": "Créditos y licencias",
+    "legalNotice": "Aviso legal",
+    "outside": "{{name}} (se abre en el navegador)"
+  },
+  "credits": {
+    "title": "Créditos y licencias",
+    "fonts": {
+      "title": "Tipografías",
+      "text": "Barlow y Barlow Condensed (Jeremy Tribby), con licencia SIL Open Font License."
+    },
+    "icons": {
+      "title": "Iconos",
+      "text": "Material Symbols (Google), con licencia Apache 2.0."
+    },
+    "avatars": {
+      "title": "Avatares",
+      "text": "Caras «Notionists» de Zoish, con licencia CC0, generadas con DiceBear."
+    },
+    "mascot": {
+      "title": "Mascota",
+      "text": "La Palanca, creada para TheLever."
+    },
+    "country": {
+      "title": "País por IP",
+      "text": "IP to Country Lite de DB-IP (db-ip.com), con licencia CC BY 4.0. Solo se usa para saber tu región; tu IP no se guarda."
+    },
+    "libraries": {
+      "title": "Otras librerías",
+      "text": "TheLever usa librerías de código abierto de terceros, cada una con su licencia.",
+      "link": "Ver los avisos de licencia"
+    },
+    "code": {
+      "title": "Código",
+      "text": "TheLever es software libre con licencia AGPL-3.0.",
+      "link": "Ver el código fuente"
+    },
+    "notices": {
+      "title": "Avisos de licencia",
+      "loading": "Cargando los avisos…",
+      "failed": "No se han podido cargar los avisos.",
+      "retry": "Reintentar",
+      "licence": "Licencia {{licence}}"
+    }
   }
 }

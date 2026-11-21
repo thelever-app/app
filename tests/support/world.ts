@@ -5,6 +5,9 @@ import type {
   AnswerPlan,
   CardView,
   GameDriver,
+  CreditsView,
+  DonationLinks,
+  FundingView,
   PublicPageView,
   RoomChoices,
   RoundSetting,
@@ -75,6 +78,15 @@ export class GameWorld extends World {
 
   /** The public page a visitor has open. */
   publicPage: PublicPageView | undefined;
+
+  /** Where the pages of the public web a visitor opened link to the donation page, in the order opened. */
+  donationLinks: readonly DonationLinks[] = [];
+
+  /** How TheLever is funded, as the settings of the app told the player. */
+  funding: FundingView | undefined;
+
+  /** What the credits of the settings showed the player. */
+  credits: CreditsView | undefined;
 
   /** The dilemma a visitor chose to play with the group from its public page, by its name. */
   dilemmaToPlayWithTheGroup: string | undefined;

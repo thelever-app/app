@@ -10,6 +10,7 @@ const SOURCES = {
   groups: '@material-symbols/svg-500/rounded/groups-fill.svg',
   lock: '@material-symbols/svg-500/rounded/lock-fill.svg',
   add: '@material-symbols/svg-500/rounded/add.svg',
+  favorite: '@material-symbols/svg-500/rounded/favorite-fill.svg',
 } as const;
 
 export type IconName = keyof typeof SOURCES;

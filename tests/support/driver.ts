@@ -833,6 +833,8 @@ export interface GameDriver {
   mute(player: string): Promise<void>;
   /** Whether the screen of `player` shows the game muted. */
   isMuted(player: string): Promise<boolean>;
+  /** `player` mutes the game in the settings, from the start of the app. */
+  muteInTheSettings(player: string): Promise<void>;
   /** `player` closes the app and opens it again on the same device, and touches the screen. */
   reopenApp(player: string): Promise<void>;
   /** The device of `player` asks for reduced motion; before their screen first opens. */
@@ -867,6 +869,11 @@ export interface GameDriver {
   removeFromTheCatalog(name: string): Promise<void>;
   /** The job generates the public web from the catalog, as every day. */
   generatePublicPages(): Promise<void>;
+  /**
+   * Where the page of the public web in Spanish links to the donation page: the home, the first
+   * category or the page of the dilemma with that name.
+   */
+  donationLinksOn(page: 'home' | 'category' | { readonly dilemma: string }): Promise<DonationLinks>;
   /** The public page of the dilemma in that language as a visitor opens it; none if it has none. */
   publicPageOf(name: string, language: string): Promise<PublicPageView | undefined>;
   /** A visitor on the public page of the dilemma in Spanish chooses that language in its menu. */
@@ -877,6 +884,27 @@ export interface GameDriver {
   sitemapIncludes(name: string): Promise<boolean>;
   /** A visitor chooses to play the dilemma with the group on its public page, in Spanish unless said. */
   playWithTheGroupFromThePublicPage(name: string, language?: string): Promise<void>;
+  // Settings: only on the device (@screen).
+
+  /** `user` opens the settings from the start of the app. */
+  openSettings(user: string): Promise<void>;
+  /** `user`, in the settings, chooses that language for the app. */
+  chooseTheLanguageOfTheApp(user: string, language: string): Promise<void>;
+  /** The language the screen of `user` is in, if it changed without opening the app again. */
+  languageShownTo(user: string): Promise<string | undefined>;
+  /** Whether the settings `user` has open offer anything about the declared age. */
+  settingsOfferTheAge(user: string): Promise<boolean>;
+  /** `user` opens How TheLever is funded from the settings and reads it. */
+  fundingSeenInTheSettings(user: string): Promise<FundingView>;
+  /** Where the first row of the settings `user` has open leads, if it is the way to donate. */
+  firstRowOfTheSettings(
+    user: string,
+  ): Promise<{ readonly donation: boolean; readonly href?: string }>;
+  /** `user` opens Credits and licences from the settings, and its licence notices. */
+  creditsSeenInTheSettings(user: string): Promise<CreditsView>;
+  /** The donation page of the environment the app and the web link to. */
+  donationPage(): string;
+
   /** A visitor with a device in Spanish who never chose a language in the app. */
   visitorWithoutAChosenLanguage(): Promise<void>;
   /** The language the app the visitor opened from the public web is in. */
@@ -924,6 +952,35 @@ export interface WorldResultView {
 }
 
 /** What a visitor sees on the public page of a dilemma. */
+/** How TheLever is funded, as the settings of the app tell it. */
+export interface FundingView {
+  readonly ads: boolean;
+  /** That permission to use the games for research may be asked later, optionally and explicitly. */
+  readonly researchLater: boolean;
+  /** That one can donate, and that it gives no advantage in the game. */
+  readonly donationWithoutAdvantage: boolean;
+  /** Where the way to donate leads, outside the app. */
+  readonly donationPage: string | undefined;
+}
+
+/** What the credits of the settings show and link to. */
+export interface CreditsView {
+  /** The licence notices of the third-party libraries, by the name of each one. */
+  readonly notices: readonly string[];
+  readonly creditsDiceBear: boolean;
+  /** Where its link to the source code leads. */
+  readonly sourceCode: string | undefined;
+}
+
+/** Where a page of the public web links to the donation page. */
+export interface DonationLinks {
+  readonly inTheFooter: boolean;
+  /** In a block of its own just before the footer, as the home has it. */
+  readonly beforeTheFooter: boolean;
+  /** In a line after the arguments, as the page of a dilemma has it. */
+  readonly afterTheArguments: boolean;
+}
+
 export interface PublicPageView {
   readonly language: string;
   readonly text: string;

@@ -50,6 +50,7 @@ try {
       taxId: required('LEGAL_OWNER_TAX_ID'),
       address: required('LEGAL_OWNER_ADDRESS'),
     },
+    donationUrl: required('DONATION_URL'),
     ...(adsenseClient && { adsenseClient }),
     ...(phone && top && side && { adSlots: { phone, top, side } }),
   });

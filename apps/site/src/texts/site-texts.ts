@@ -100,6 +100,16 @@ export interface SiteTexts {
     /** What opens again the cookie manager of Google, on the pages that load it. */
     readonly manageCookies: string;
   };
+  /** The invitation to support TheLever with a donation, which always says it gives no advantage. */
+  readonly support: {
+    /** The link to the donation page, in the footer of every page and after each invitation. */
+    readonly link: string;
+    /** The block that closes the home. */
+    readonly heading: string;
+    readonly text: string;
+    /** The line after the arguments of a dilemma, before its link. */
+    readonly line: string;
+  };
   readonly privacy: OwnPage;
   readonly cookies: OwnPage;
   readonly legalNotice: OwnPage;

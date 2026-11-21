@@ -57,6 +57,13 @@ Feature: Sound and motion
     Then the game is still muted for "Ana"
 
   @ui @screen
+  Scenario: The player mutes the game from the settings
+    Given a device where the player has never muted the game
+    When the player mutes the game in the settings
+    And joins a room
+    Then the game is muted
+
+  @ui @screen
   Scenario: With reduced motion nothing moves or changes size
     Given a device with reduced motion
     When the player goes through the lobby and a round

@@ -18,7 +18,12 @@ export function readable(text: string, texts: SiteTexts): string {
   return text.replaceAll(GAP_MARKER, texts.someoneInYourGroup);
 }
 
-export function homeBody(language: string, texts: SiteTexts, appBase: string): Html {
+export function homeBody(
+  language: string,
+  texts: SiteTexts,
+  appBase: string,
+  donationUrl: string,
+): Html {
   return html`<div class="home">
     <div class="hero">
       <div class="hero-text">
@@ -48,6 +53,11 @@ export function homeBody(language: string, texts: SiteTexts, appBase: string): H
             html`<li><a class="chip" href="${categoryPath(language, name)}">${name}</a></li>`,
         )}
       </ul>
+    </section>
+    <section class="support" aria-label="${texts.support.link}">
+      <h2>${texts.support.heading}</h2>
+      <p>${texts.support.text}</p>
+      <a class="button" href="${donationUrl}">${icon('favorite')}${texts.support.link}</a>
     </section>
   </div>`;
 }
@@ -190,6 +200,7 @@ export function dilemmaBody(
   { dilemma, path }: ShownDilemma,
   texts: SiteTexts,
   appBase: string,
+  donationUrl: string,
   ads?: Ads,
 ): Html {
   const { name } = texts.categories[dilemma.category];
@@ -234,6 +245,9 @@ export function dilemmaBody(
         })}
         <p class="credit">
           ${texts.dilemma.byTheTeam}${args.context ? html` ${readable(args.context, texts)}` : ''}
+        </p>
+        <p class="support-line">
+          ${texts.support.line} <a href="${donationUrl}">${texts.support.link}</a>
         </p>
         ${ads ? adUnit('side', ads, texts) : ''}
       </section>`}

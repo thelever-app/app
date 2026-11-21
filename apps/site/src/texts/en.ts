@@ -111,6 +111,12 @@ export const en: SiteTexts = {
     body: 'The address may be mistyped. From the home page you reach every dilemma.',
   },
   footer: { label: 'Legal information', manageCookies: 'Manage cookies' },
+  support: {
+    link: 'Support TheLever',
+    heading: 'TheLever is free',
+    text: 'It is run by one person. If you like it, you can support it with a donation; it gives no advantage in the game.',
+    line: 'Did it make you think? TheLever is free and run by one person. Donating gives no advantage in the game.',
+  },
   privacy: {
     title: 'Privacy',
     description: 'What data the public web of TheLever processes, what for, and your rights.',

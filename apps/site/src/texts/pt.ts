@@ -112,6 +112,12 @@ export const pt: SiteTexts = {
     body: 'Talvez o endereço esteja mal escrito. A partir do início chegas a todos os dilemas.',
   },
   footer: { label: 'Informação legal', manageCookies: 'Gerir cookies' },
+  support: {
+    link: 'Apoia o TheLever',
+    heading: 'O TheLever é grátis',
+    text: 'É mantido por uma só pessoa. Se gostares, podes apoiá-lo com um donativo; não dá nenhuma vantagem no jogo.',
+    line: 'Fez-te pensar? O TheLever é grátis e é mantido por uma só pessoa. Fazer um donativo não dá nenhuma vantagem no jogo.',
+  },
   privacy: {
     title: 'Privacidade',
     description:
