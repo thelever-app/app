@@ -7,6 +7,16 @@ import { JoinScreen } from './screens/join-screen.tsx';
 import { PlayDilemmaScreen } from './screens/play-dilemma-screen.tsx';
 import { VoteAloneScreen } from './vote-alone/vote-alone-screen.tsx';
 import { RoomScreen } from './screens/room-screen.tsx';
+import { CreditsScreen } from './settings/credits-screen.tsx';
+import { FundingScreen } from './settings/funding-screen.tsx';
+import { NoticesScreen } from './settings/notices-screen.tsx';
+import { SettingsScreen } from './settings/settings-screen.tsx';
+import {
+  CREDITS_PATH,
+  FUNDING_PATH,
+  NOTICES_PATH,
+  SETTINGS_PATH,
+} from './settings/settings-paths.ts';
 
 /**
  * The addresses of the web. The room, not its game, has the address: it outlives the rematch,
@@ -25,6 +35,10 @@ export function App({ adsenseClient }: { readonly adsenseClient?: string | undef
         <Route path="/new/:publicId" element={<PlayDilemmaScreen />} />
         <Route path="/vote/:publicId" element={<VoteAloneScreen />} />
         <Route path="/rooms/:roomId" element={<RoomScreen />} />
+        <Route path={SETTINGS_PATH} element={<SettingsScreen />} />
+        <Route path={FUNDING_PATH} element={<FundingScreen />} />
+        <Route path={CREDITS_PATH} element={<CreditsScreen />} />
+        <Route path={NOTICES_PATH} element={<NoticesScreen />} />
         <Route path="*" element={<Navigate to={HOME_PATH} replace />} />
       </Routes>
     </FirstAccessGate>

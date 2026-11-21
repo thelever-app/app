@@ -13,10 +13,14 @@ const FIREBASE = {
   appId: 'test-app-id',
 };
 
-const CONFIG = { realtimeUrl: 'wss://realtime.thelever.app', firebase: FIREBASE };
+const CONFIG = {
+  realtimeUrl: 'wss://realtime.thelever.app',
+  firebase: FIREBASE,
+  donationUrl: 'https://ko-fi.test/thelever',
+};
 
 describe('loadWebConfig', () => {
-  it('should read the room server and the Firebase project of this environment', async () => {
+  it('should read the room server, the Firebase project and the donation page of this environment', async () => {
     // Act
     const config = await loadWebConfig(answering(CONFIG));
 
@@ -57,6 +61,11 @@ describe('loadWebConfig', () => {
       answering({ ...CONFIG, firebase: { ...FIREBASE, projectId: '' } }),
     ],
     ['an emulator that is not a URL', answering({ ...CONFIG, authEmulatorUrl: 'localhost' })],
+    ['a config without the donation page', answering({ ...CONFIG, donationUrl: undefined })],
+    [
+      'a donation page that is not https',
+      answering({ ...CONFIG, donationUrl: 'http://ko-fi.test/thelever' }),
+    ],
   ])('should reject %s', async (_case, fetchConfig) => {
     // Act & Assert
     await expect(loadWebConfig(fetchConfig)).rejects.toThrow();

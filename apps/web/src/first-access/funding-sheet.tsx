@@ -1,12 +1,8 @@
 import { Dialog } from 'radix-ui';
 import { useTranslation } from 'react-i18next';
-import { Icon, type IconName } from '../components/icon.tsx';
+import { Icon } from '../components/icon.tsx';
+import { FundingPoints } from './funding-points.tsx';
 import styles from './first-access.module.css';
-
-const WAYS: readonly (readonly ['ads' | 'research', IconName])[] = [
-  ['ads', 'ad'],
-  ['research', 'science'],
-];
 
 interface FundingSheetProps {
   readonly open: boolean;
@@ -29,20 +25,7 @@ export function FundingSheet({ open, onOpenChange }: FundingSheetProps) {
               <Icon name="close" />
             </Dialog.Close>
           </div>
-          <p className={styles.title}>{t('firstAccess.funding.lead')}</p>
-          <ul className={styles.points}>
-            {WAYS.map(([way, icon]) => (
-              <li key={way} className={styles.point}>
-                <span className={styles.pointIcon}>
-                  <Icon name={icon} size={20} />
-                </span>
-                <p className={styles.pointText}>
-                  <strong>{t(`firstAccess.funding.${way}.title`)}</strong>{' '}
-                  {t(`firstAccess.funding.${way}.text`)}
-                </p>
-              </li>
-            ))}
-          </ul>
+          <FundingPoints />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

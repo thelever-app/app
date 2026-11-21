@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import mascotWaving from '../assets/brand/mascot-waving.svg';
 import { Icon } from '../components/icon.tsx';
 import { InstallOffer } from '../install/install-offer.tsx';
+import { SETTINGS_PATH } from '../settings/settings-paths.ts';
 import { CreateRoomForm } from './create-room-form.tsx';
 import screen from './screen.module.css';
 import styles from './home-screen.module.css';
@@ -49,6 +50,9 @@ export function HomeScreen() {
           <img src={mascotWaving} alt="" width={32} height={32} />
           TheLever.app
         </a>
+        <Link className={styles.settings} to={SETTINGS_PATH} aria-label={t('appSettings.open')}>
+          <Icon name="settings" />
+        </Link>
       </header>
       <div aria-hidden="true" className={styles.stripe} />
       <main className={styles.main} data-column>

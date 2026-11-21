@@ -19,6 +19,18 @@
   text-decoration: none;
 }
 
+/* The way to the settings, at the end of the header. */
+.settings {
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-ink);
+}
+
 /* The level-crossing stripe of the brand. */
 .stripe {
   height: 8px;

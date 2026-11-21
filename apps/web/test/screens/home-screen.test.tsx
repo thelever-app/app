@@ -30,6 +30,17 @@ describe('HomeScreen', () => {
     expect(location()).toBe('/join');
   });
 
+  it('should take the player to the settings from the header', async () => {
+    // Arrange
+    const { t, location } = await renderAtRoute(<HomeScreen />);
+
+    // Act
+    fireEvent.click(screen.getByRole('link', { name: t('appSettings.open') }));
+
+    // Assert
+    expect(location()).toBe('/settings');
+  });
+
   it('should show La Palanca in the logo, which takes to the home of the public web', async () => {
     // Act
     await renderAtRoute(<HomeScreen />);

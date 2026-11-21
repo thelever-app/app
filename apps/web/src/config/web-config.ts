@@ -11,6 +11,8 @@ export interface WebConfig {
   /** The room server, on its own domain because Firebase Hosting does not proxy WebSockets. */
   readonly realtimeUrl: string;
   readonly firebase: FirebaseWebConfig;
+  /** The donation page of TheLever, on Ko-fi, which the app opens in the browser. */
+  readonly donationUrl: string;
   /** Only in local development: the Auth emulator the player signs in against. */
   readonly authEmulatorUrl?: string;
   /** The reCAPTCHA key App Check proves the app with, in dev and prod; none locally. */
@@ -35,9 +37,11 @@ export async function loadWebConfig(fetchConfig: typeof fetch = fetch): Promise<
   const raw = (await response.json()) as Record<string, unknown>;
   const realtimeUrl = urlWithProtocol(raw.realtimeUrl, ['ws:', 'wss:'], 'realtimeUrl');
   const firebase = firebaseConfig(raw.firebase);
+  const donationUrl = urlWithProtocol(raw.donationUrl, ['https:'], 'donationUrl');
   return {
     realtimeUrl,
     firebase,
+    donationUrl,
     ...(raw.authEmulatorUrl === undefined
       ? {}
       : { authEmulatorUrl: urlWithProtocol(raw.authEmulatorUrl, ['http:'], 'authEmulatorUrl') }),

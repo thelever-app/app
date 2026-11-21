@@ -798,6 +798,12 @@
       "research": {
         "title": "Later on, maybe research.",
         "text": "If we ever want to use games for research, we will ask for your consent separately. If you say no, you play the same."
+      },
+      "donations": {
+        "title": "Donations.",
+        "text": "If you like it, you can help keep it going with a donation. Donating gives you no advantage in the game: everyone plays the same.",
+        "link": "Support TheLever",
+        "label": "Support TheLever (opens in the browser)"
       }
     },
     "cookies": {
@@ -858,5 +864,66 @@
     "anonymous": "That is why the room is anonymous: nobody will see what you vote, only how many choose each option. In small groups, the split may give a vote away.",
     "understood": "Got it",
     "leave": "Leave the room"
+  },
+  "appSettings": {
+    "open": "Settings",
+    "title": "Settings",
+    "back": "Back",
+    "support": {
+      "title": "Support TheLever",
+      "text": "It is free and run by one person. Donating gives no advantage in the game.",
+      "label": "Support TheLever (opens in the browser)"
+    },
+    "game": "Game",
+    "language": "App language",
+    "sound": "Sound",
+    "soundText": "Sound effects and vibration",
+    "privacy": "Privacy and data",
+    "privacyPolicy": "Privacy policy",
+    "terms": "Terms of use",
+    "about": "About",
+    "funding": "How TheLever is funded",
+    "credits": "Credits and licences",
+    "legalNotice": "Legal notice"
+  },
+  "credits": {
+    "title": "Credits and licences",
+    "fonts": {
+      "title": "Fonts",
+      "text": "Barlow and Barlow Condensed (Jeremy Tribby), under the SIL Open Font License."
+    },
+    "icons": {
+      "title": "Icons",
+      "text": "Material Symbols (Google), under the Apache 2.0 licence."
+    },
+    "avatars": {
+      "title": "Avatars",
+      "text": "“Notionists” faces by Zoish, under CC0, generated with DiceBear."
+    },
+    "mascot": {
+      "title": "Mascot",
+      "text": "La Palanca, made for TheLever."
+    },
+    "country": {
+      "title": "Country by IP",
+      "text": "IP to Country Lite by DB-IP (db-ip.com), under CC BY 4.0. It is only used to know your region; your IP is not kept."
+    },
+    "libraries": {
+      "title": "Other libraries",
+      "text": "TheLever uses third-party open-source libraries, each under its own licence.",
+      "link": "See the licence notices"
+    },
+    "code": {
+      "title": "Code",
+      "text": "TheLever is free software under the AGPL-3.0 licence.",
+      "link": "See the source code"
+    },
+    "notices": {
+      "title": "Licence notices",
+      "loading": "Loading the notices…",
+      "failed": "The notices could not be loaded.",
+      "retry": "Try again",
+      "licence": "{{licence}} licence"
+    }
   }
 }

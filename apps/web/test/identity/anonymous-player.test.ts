@@ -38,6 +38,7 @@ vi.mock('firebase/auth', () => ({
 
 const CONFIG: WebConfig = {
   realtimeUrl: 'wss://realtime.test',
+  donationUrl: 'https://ko-fi.test/thelever',
   firebase: {
     apiKey: 'test-api-key',
     authDomain: 'test.firebaseapp.com',

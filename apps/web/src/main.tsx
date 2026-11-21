@@ -5,11 +5,13 @@ import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter } from 'react-router';
 import { App } from './App.tsx';
 import { keepInstallPrompt } from './install/install-prompt.ts';
+import { DonationUrlProvider } from './config/donation-url.tsx';
 import { loadWebConfig } from './config/web-config.ts';
 import { deviceAccessCode } from './identity/access-code.ts';
 import { signInAnonymousPlayer } from './identity/anonymous-player.ts';
 import { lazyPlayer } from './identity/lazy-player.ts';
-import { createI18n, deviceLanguage, languageOfTheLink } from './i18n/i18n.ts';
+import { createI18n, deviceLanguage } from './i18n/i18n.ts';
+import { startingLanguage } from './i18n/language-preference.ts';
 import source from './i18n/locales/es.json';
 import { connectRoom } from './room/connect-room.ts';
 import { documentActivity } from './room/document-activity.ts';
@@ -40,10 +42,9 @@ const root = createRoot(container);
  * of the game.
  */
 async function start(): Promise<void> {
-  // A link from the public web opens the app in the language of its page; otherwise, the device's.
-  const i18n = await createI18n(languageOfTheLink(window.location.search));
+  // The language the player chose, else the one of the link from the public web, else the device's.
+  const i18n = await createI18n(startingLanguage(window.location.search));
   try {
-    const language = deviceLanguage(i18n);
     const config = await loadWebConfig();
     const player = lazyPlayer(() => signInAnonymousPlayer(config));
     const api = httpRoomApi({
@@ -55,7 +56,8 @@ async function start(): Promise<void> {
     const openRoom: OpenRoom = (roomId) =>
       connectRoom({
         roomId,
-        language,
+        // Read when the room opens: the player may have changed it in the settings since the start.
+        language: deviceLanguage(i18n),
         development: import.meta.env.DEV,
         realtimeUrl: config.realtimeUrl,
         player,
@@ -82,9 +84,11 @@ async function start(): Promise<void> {
           <RoomApiProvider api={api}>
             <OpenRoomProvider openRoom={openRoom}>
               <SoundProvider effects={effects} preference={preference}>
-                <BrowserRouter>
-                  <App adsenseClient={config.adsenseClient} />
-                </BrowserRouter>
+                <DonationUrlProvider donationUrl={config.donationUrl}>
+                  <BrowserRouter>
+                    <App adsenseClient={config.adsenseClient} />
+                  </BrowserRouter>
+                </DonationUrlProvider>
               </SoundProvider>
             </OpenRoomProvider>
           </RoomApiProvider>
