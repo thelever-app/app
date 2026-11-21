@@ -380,10 +380,6 @@ Given(
   },
 );
 
-Given('a host who marks the room as adults only', async function (this: GameWorld) {
-  await this.driver.changeSettings(await this.host(), { adultsOnly: true });
-});
-
 Given('a room not marked as adults only', async function (this: GameWorld) {
   const settings = await this.driver.settingsSeenBy(await this.host());
   assert.equal(settings.adultsOnly, false);
@@ -395,11 +391,6 @@ Then('every dilemma of the game is suitable from age 16', async function (this: 
     ages.every((age) => age === 16),
     `the game plays dilemmas for ages ${ages.join(', ')}`,
   );
-});
-
-Then('the game can include dilemmas for adults', async function (this: GameWorld) {
-  const ages = minimumAgesOf(this, await dilemmasOfTheGame(this));
-  assert.ok(ages.includes(18), 'the game plays no dilemma for adults');
 });
 
 When(
