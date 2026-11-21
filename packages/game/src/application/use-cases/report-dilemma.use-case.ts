@@ -95,6 +95,7 @@ export class ReportDilemmaUseCase {
       reason: reason as ReportReason,
       comment: comment?.trim() || null,
       identity: player.identity,
+      at,
     });
 
     await notifyGame({ room, game }, { roomEvents, gameEvents }, this.#notifier);
