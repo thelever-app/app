@@ -166,6 +166,8 @@ import type {
   RoundSetting,
   RoundView,
   SettingsView,
+  SupportInvitationView,
+  SupportLineView,
   TitleView,
   WorldResultView,
 } from './driver.ts';
@@ -806,6 +808,26 @@ export class AcceptanceDriver implements GameDriver {
 
   async anonymousNoticeShownTo(): Promise<readonly string[]> {
     throw new Error('Only the device tells what anonymous means: the scenario must be @screen');
+  }
+
+  async declaredAgeOnTheDevice(): Promise<void> {
+    throw new Error('Only the device invites to donate: the scenario must be @screen');
+  }
+
+  async chanceInvitesToDonate(): Promise<void> {
+    throw new Error('Only the device draws the invitation to donate: the scenario must be @screen');
+  }
+
+  async supportLineSeenBy(): Promise<SupportLineView | undefined> {
+    throw new Error('Only the device invites to donate: the scenario must be @screen');
+  }
+
+  async supportCardSeenBy(): Promise<SupportInvitationView | undefined> {
+    throw new Error('Only the device invites to donate: the scenario must be @screen');
+  }
+
+  async closeSupportCard(): Promise<void> {
+    throw new Error('Only the device invites to donate: the scenario must be @screen');
   }
 
   #deviceOf(identity: string): AcceptanceDevice {

@@ -29,9 +29,12 @@ describe('SettingsScreen', () => {
 
     // Act
     fireEvent.click(screen.getByRole('button', { name: new RegExp(t('appSettings.language')) }));
-    fireEvent.click(screen.getByRole('radio', { name: 'English' }));
+    const current = screen.getByRole('button', { name: 'Español' });
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
 
     // Assert
+    expect(current.getAttribute('aria-current')).toBe('true');
+    expect(screen.queryByRole('radio')).toBeNull();
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeDefined();
     expect(i18n.language).toBe('en');
     expect(localStorage.getItem('thelever.language')).toBe('en');

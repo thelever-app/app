@@ -39,13 +39,13 @@ export function LanguageSheet({ open, onOpenChange }: LanguageSheetProps) {
         <Dialog.Content className={sheet.sheet} aria-describedby={undefined}>
           <div aria-hidden="true" className={sheet.handle} />
           <Dialog.Title className={styles.sheetTitle}>{t('appSettings.language')}</Dialog.Title>
-          <div role="radiogroup" aria-label={t('appSettings.language')} className={styles.choices}>
+          {/* Choosing a language shows it and closes the sheet: a list of buttons, not of options. */}
+          <div role="group" aria-label={t('appSettings.language')} className={styles.choices}>
             {SUPPORTED_LANGUAGES.map((language) => (
               <button
                 key={language}
                 type="button"
-                role="radio"
-                aria-checked={language === current}
+                aria-current={language === current ? 'true' : undefined}
                 lang={language}
                 className={styles.choice}
                 onClick={() => choose(language)}

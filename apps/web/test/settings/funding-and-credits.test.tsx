@@ -39,6 +39,17 @@ describe('CreditsScreen', () => {
     expect(code.getAttribute('href')).toBe('https://github.com/thelever-app/app');
     expect(location()).toBe('/settings/credits/notices');
   });
+
+  it('should link DB-IP, as the licence of its countries asks', async () => {
+    // Act
+    const { t } = await renderAtRoute(<CreditsScreen />);
+
+    // Assert
+    const credit = screen.getByRole('link', {
+      name: t('appSettings.outside', { name: t('credits.country.link') }),
+    });
+    expect(credit.getAttribute('href')).toBe('https://db-ip.com');
+  });
 });
 
 describe('NoticesScreen', () => {

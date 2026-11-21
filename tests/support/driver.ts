@@ -223,6 +223,18 @@ export interface EndOfTheGameView {
   readonly titles: readonly TitleView[];
 }
 
+/** An invitation to support TheLever with a donation, on the start or at the end of the game. */
+export interface SupportInvitationView {
+  /** Whether it takes to the donation page of TheLever. */
+  readonly takesToTheDonationPage: boolean;
+}
+
+/** The line of the end of the game that invites to support TheLever. */
+export interface SupportLineView extends SupportInvitationView {
+  /** Whether it covers any of the main actions: the rematch or sharing the card. */
+  readonly coversTheMainActions: boolean;
+}
+
 /** The screen of the results a player is on. */
 export type ResultsScreenView =
   | {
@@ -420,6 +432,19 @@ export interface GameDriver {
   finishAGame(user: string): Promise<void>;
   /** The points the notice of an anonymous room tells `player` before the first dilemma. */
   anonymousNoticeShownTo(player: string): Promise<readonly string[]>;
+
+  // The invitations to donate, on the device only (@screen).
+
+  /** The first access of `user` says that age, and their device opens the app again to learn it. */
+  declaredAgeOnTheDevice(user: string, age: number): Promise<void>;
+  /** The draw of the end of the game on the device of `user` invites to donate, or not. */
+  chanceInvitesToDonate(user: string, invites: boolean): Promise<void>;
+  /** The line of the end of the game of `viewer` to support TheLever; none if it shows none. */
+  supportLineSeenBy(viewer: string): Promise<SupportLineView | undefined>;
+  /** The card of the start of `user` to support TheLever; none if it shows none. */
+  supportCardSeenBy(user: string): Promise<SupportInvitationView | undefined>;
+  /** `user` closes the card of the start to support TheLever. */
+  closeSupportCard(user: string): Promise<void>;
 
   /** Prepares whatever the driver needs before a scenario. */
   start(): Promise<void>;

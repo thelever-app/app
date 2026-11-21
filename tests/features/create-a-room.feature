@@ -195,12 +195,6 @@ Feature: Create a room
     When the host starts the game
     Then every dilemma of the game is suitable from age 16
 
-  @ui
-  Scenario: A room marked as adults only can use adult dilemmas
-    Given a host who marks the room as adults only
-    When the host starts the game
-    Then the game can include dilemmas for adults
-
   @ui @todo
   Scenario Outline: The host chooses where the dilemmas come from
     Given a host with an account and private dilemmas

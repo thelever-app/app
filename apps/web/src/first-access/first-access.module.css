@@ -394,3 +394,15 @@
   color: var(--color-ink);
   cursor: pointer;
 }
+
+/* The link back to DB-IP that its licence asks for, discreet, where its countries are used. */
+.attribution {
+  align-self: center;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-ink-muted);
+  text-underline-offset: 3px;
+}

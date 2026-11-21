@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
 import screen from '../screens/screen.module.css';
+import { IpGeolocationCredit } from './ip-geolocation-credit.tsx';
 import styles from './first-access.module.css';
 
 interface StopScreenProps {
@@ -25,6 +26,8 @@ export function StopScreen({ reason }: StopScreenProps) {
             {t('firstAccess.country.contact')}
           </a>
         )}
+        {/* Both stops come from the region of the device: its country, or its minimum age. */}
+        <IpGeolocationCredit className={styles.attribution} />
       </main>
     </div>
   );

@@ -3,12 +3,14 @@ import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
+import { DonationUrlProvider } from '../../src/config/donation-url.tsx';
 import { createI18n } from '../../src/i18n/i18n.ts';
 import type { RoomConnection } from '../../src/room/room-connection.ts';
 import { RoomProvider } from '../../src/room/room-provider.tsx';
 import { SoundProvider } from '../../src/sound/sound-context.tsx';
 import { SILENT } from '../../src/sound/sound-effects.ts';
 import { soundPreference } from '../../src/sound/sound-preference.ts';
+import { TEST_DONATION_URL } from './routing.tsx';
 
 interface ProvidersOptions {
   readonly connection?: RoomConnection;
@@ -50,7 +52,7 @@ export async function providersFor({ game, at, ...options }: ProvidersOptions = 
       <MemoryRouter initialEntries={at ? [at] : ['/']}>
         <I18nextProvider i18n={i18n}>
           <SoundProvider effects={SILENT} preference={soundPreference()}>
-            {content}
+            <DonationUrlProvider donationUrl={TEST_DONATION_URL}>{content}</DonationUrlProvider>
           </SoundProvider>
         </I18nextProvider>
       </MemoryRouter>

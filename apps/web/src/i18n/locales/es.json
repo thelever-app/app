@@ -943,7 +943,8 @@
     },
     "country": {
       "title": "País por IP",
-      "text": "IP to Country Lite de DB-IP (db-ip.com), con licencia CC BY 4.0. Solo se usa para saber tu región; tu IP no se guarda."
+      "text": "IP to Country Lite de DB-IP (db-ip.com), con licencia CC BY 4.0. Solo se usa para saber tu región; tu IP no se guarda.",
+      "link": "IP Geolocation by DB-IP"
     },
     "libraries": {
       "title": "Otras librerías",
@@ -962,5 +963,14 @@
       "retry": "Reintentar",
       "licence": "Licencia {{licence}}"
     }
+  },
+  "donations": {
+    "card": {
+      "title": "¿Os lo estáis pasando bien?",
+      "text": "TheLever es gratis y lo mantiene una persona. Si quieres, apóyalo con una donación: no da ninguna ventaja en el juego.",
+      "link": "Apoya TheLever",
+      "close": "No, gracias"
+    },
+    "line": "¿Os ha gustado? Apoya TheLever"
   }
 }

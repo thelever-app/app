@@ -212,29 +212,33 @@ Feature: After the game
       Then a 320 x 100 banner ad appears below the main actions
       And it does not cover any of them
 
-    @ui @todo
-    Scenario: An adult player is invited to support TheLever at the end of every third game
+    @ui @screen
+    Scenario: An adult player is invited to support TheLever when chance picks the game
       Given "Luis" is 18 or older
-      And "Luis" had finished 2 games on this device before this one
+      And chance picks this game to invite "Luis" to donate
       When "Luis" sees the end of the game
       Then the end of the game shows one line to support TheLever with a donation
       And it does not cover the main actions
-      When "Luis" sees the end of his next game
+
+    @ui @screen
+    Scenario: The end of the game shows no invitation when chance does not pick it
+      Given "Luis" is 18 or older
+      And chance does not pick this game to invite "Luis" to donate
+      When "Luis" sees the end of the game
       Then the end of the game shows no invitation to donate
 
-    @ui @todo
-    Scenario: The home screen invites an adult player to support TheLever once
+    @ui @screen
+    Scenario: The home screen invites an adult player to support TheLever until they close the card
       Given "Luis" is 18 or older
-      And "Luis" has finished 3 games on this device
       When "Luis" opens the home screen
       Then the home screen shows a card to support TheLever with a donation
       When "Luis" closes the card
       Then it is not shown again on this device
 
-    @ui @todo
+    @ui @screen
     Scenario: A player under 18 is not invited to donate
       Given "Marta" is 17
-      And "Marta" has finished 3 games on this device
+      And chance picks this game to invite "Marta" to donate
       When "Marta" sees the end of the game
       And opens the home screen
       Then she sees no invitation to donate

@@ -118,6 +118,9 @@ export async function startE2eStack(): Promise<void> {
   const realtimeUrl = `http://localhost:${REALTIME_PORT}`;
   const webUrl = `http://localhost:${WEB_PORT}`;
   const siteUrl = `http://localhost:${SITE_PORT}`;
+  // A server an earlier run left behind would answer in place of this run's, with other code and
+  // another database: the run stops instead of playing against it.
+  for (const url of [`${realtimeUrl}/health`, webUrl, siteUrl]) await free(url);
   const database = await createE2eDatabase();
   if (!existsSync(COUNTRIES_FILE)) {
     const download = spawnSync(
@@ -143,7 +146,7 @@ export async function startE2eStack(): Promise<void> {
       languages: [...SITE_LANGUAGES.keys()],
     }).listen(SITE_PORT, () => resolve(server));
   });
-  const processes = [
+  const [realtime, web] = [
     start('node', ['apps/realtime/src/server.ts'], {
       PORT: String(REALTIME_PORT),
       FIREBASE_PROJECT_ID: 'demo-thelever',
@@ -164,8 +167,9 @@ export async function startE2eStack(): Promise<void> {
       '--strictPort',
     ]),
   ];
+  const processes = [realtime, web];
   try {
-    await Promise.all([ready(`${realtimeUrl}/health`), ready(webUrl)]);
+    await Promise.all([ready(`${realtimeUrl}/health`, realtime), ready(webUrl, web)]);
     // As a phone after the player touched it: the web may play sound without waiting for a gesture.
     const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
     running = {
@@ -228,9 +232,25 @@ async function stop(child: ChildProcess): Promise<void> {
   await exited;
 }
 
-async function ready(url: string): Promise<void> {
+/** Nothing answers at the address yet: no server of an earlier run is still on its port. */
+async function free(url: string): Promise<void> {
+  // A process that takes the connection and never answers holds the port all the same.
+  const answered = await fetch(url, { signal: AbortSignal.timeout(2000) }).then(
+    () => true,
+    (error: unknown) => error instanceof DOMException && error.name === 'TimeoutError',
+  );
+  if (answered) {
+    throw new Error(`${url} already answers: stop the servers an earlier run left on its port`);
+  }
+}
+
+/** The process serves the address; it fails as soon as the process ends before it does. */
+async function ready(url: string, child: ChildProcess): Promise<void> {
   const deadline = Date.now() + READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
+    if (child.exitCode !== null || child.signalCode !== null) {
+      throw new Error(`What should serve ${url} ended before it did`);
+    }
     try {
       if ((await fetch(url)).ok) return;
     } catch {

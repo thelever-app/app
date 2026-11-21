@@ -93,6 +93,8 @@ import type {
   RoundContent,
   ContentRequirement,
   OpenSettingsView,
+  SupportInvitationView,
+  SupportLineView,
   SwitchView,
 } from './driver.ts';
 import type { E2eStack } from './e2e-stack.ts';
@@ -883,6 +885,73 @@ export class E2eDriver implements GameDriver {
     const told = this.#anonymousNotices.get(player);
     if (!told) throw new Error(`${player} was told nothing before the first dilemma`);
     return told;
+  }
+
+  // The invitations to donate
+
+  async declaredAgeOnTheDevice(user: string, age: number): Promise<void> {
+    // Born in December of the year before they turned it, as when they declare it on the screen,
+    // and in Spain, where any age the app takes can play.
+    this.#devices.set(user, { ...this.#devices.get(user), country: 'ES' });
+    const identity = await this.#identityOfDevice(user);
+    await this.#withDatabase((db) =>
+      db
+        .updateTable('first_accesses')
+        .set({ region: 'eea', birth_year: new Date().getUTCFullYear() - age - 1, birth_month: 12 })
+        .where('identity', '=', identity)
+        .execute(),
+    );
+    const screen = screenOf(this.#playerCalled(user));
+    const before = screen.received.length;
+    await screen.page.reload();
+    await waitUntil(
+      () => screen.received.length > before || undefined,
+      `the device of ${user} opens the room again`,
+      RECONNECTION_TIMEOUT_MS,
+    );
+  }
+
+  async chanceInvitesToDonate(user: string, invites: boolean): Promise<void> {
+    // Chance on the device falls one way, now and after any reload: below the odds or above them.
+    const { context, page } = screenOf(this.#playerCalled(user));
+    const draw = invites ? 0 : 0.99;
+    const fix = (value: number) => {
+      Math.random = () => value;
+    };
+    await context.addInitScript(fix, draw);
+    await page.evaluate(fix, draw);
+  }
+
+  async supportLineSeenBy(viewer: string): Promise<SupportLineView | undefined> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const end = page.getByRole('main', { name: SCREEN_TEXT('end.title') });
+    await end.waitFor();
+    const line = end.getByRole('link').filter({ hasText: SCREEN_TEXT('donations.line') });
+    if (!(await steady(async () => (await line.count()) > 0))) return undefined;
+    const box = await line.boundingBox();
+    if (!box) throw new Error(`The line to support TheLever of ${viewer} is not on the screen`);
+    const actions = await end.getByRole('button').all();
+    const boxes = await Promise.all(actions.map((action) => action.boundingBox()));
+    return {
+      takesToTheDonationPage: (await line.getAttribute('href')) === DONATION_URL,
+      coversTheMainActions: boxes.some((other) => other !== null && overlap(box, other)),
+    };
+  }
+
+  async supportCardSeenBy(user: string): Promise<SupportInvitationView | undefined> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const card = page.getByRole('complementary', { name: SCREEN_TEXT('donations.card.link') });
+    if (!(await steady(async () => (await card.count()) > 0))) return undefined;
+    const link = card.getByRole('link');
+    return { takesToTheDonationPage: (await link.getAttribute('href')) === DONATION_URL };
+  }
+
+  async closeSupportCard(user: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('button', { name: SCREEN_TEXT('donations.card.close') }).click();
+    await page
+      .getByRole('complementary', { name: SCREEN_TEXT('donations.card.link') })
+      .waitFor({ state: 'hidden' });
   }
 
   /** Where the first access of the page is, once it shows any of its screens. */
@@ -2999,9 +3068,10 @@ export class E2eDriver implements GameDriver {
     await page.getByRole('button', { name: new RegExp(spanish('appSettings.language')) }).click();
     const name = LANGUAGE_NAMES[language];
     if (!name) throw new Error(`The app has no language ${language}`);
-    await page.getByRole('radio', { name }).click();
+    const languages = page.getByRole('group', { name: spanish('appSettings.language') });
+    await languages.getByRole('button', { name, exact: true }).click();
     // The sheet closes once chosen, and the screen behind it reads again.
-    await page.getByRole('radiogroup').waitFor({ state: 'hidden' });
+    await languages.waitFor({ state: 'hidden' });
   }
 
   async languageShownTo(user: string): Promise<string | undefined> {
@@ -3685,20 +3755,43 @@ export class E2eDriver implements GameDriver {
     await tab.close();
   }
 
-  /** From the waiting screen, or from the menu of the dilemma, and confirmed. */
+  /**
+   * From the waiting screen, or from the menu of the dilemma, and confirmed. The last answer may
+   * still be on its way and reveal the round while the host reaches for the button: then the reveal
+   * is already there and the button is gone, which is no failure of the host. Each press is awaited
+   * before the next one, so nothing is left pressing once the reveal is on the screen.
+   */
   async revealEarly(host: string): Promise<void> {
-    const { page } = screenOf(this.#playerCalled(host));
+    const revealer = this.#playerCalled(host);
+    const { page } = screenOf(revealer);
+    const reveal = page.getByRole('main', { name: SCREEN.reveal });
+    const revealed = async () =>
+      lastGameOf(revealer)?.round.phase === 'reveal' || (await reveal.count()) > 0;
+    /** Presses the button once it or the reveal shows; whether the reveal came first. */
+    const press = async (button: Locator): Promise<boolean> => {
+      await button.or(reveal).first().waitFor();
+      if (await revealed()) return true;
+      try {
+        await button.click();
+      } catch (error) {
+        if (await revealed()) return true;
+        throw error;
+      }
+      return false;
+    };
     const fromWaiting = page.locator('footer').getByRole('button', { name: SCREEN.revealEarly });
-    if ((await fromWaiting.count()) > 0) {
-      await fromWaiting.click();
-    } else {
-      await page.getByRole('button', { name: SCREEN.moreOptions }).click();
-      await page.getByRole('dialog').getByRole('button', { name: SCREEN.revealEarly }).click();
+    const done =
+      (await fromWaiting.count()) > 0
+        ? await press(fromWaiting)
+        : (await press(page.getByRole('button', { name: SCREEN.moreOptions }))) ||
+          (await press(page.getByRole('dialog').getByRole('button', { name: SCREEN.revealEarly })));
+    if (!done) {
+      await press(
+        page
+          .getByRole('dialog', { name: SCREEN.revealEarlyTitle })
+          .getByRole('button', { name: SCREEN.revealEarly, exact: true }),
+      );
     }
-    await page
-      .getByRole('dialog', { name: SCREEN.revealEarlyTitle })
-      .getByRole('button', { name: SCREEN.revealEarly, exact: true })
-      .click();
     await this.#untilEveryoneGetsTheReveal();
   }
 
