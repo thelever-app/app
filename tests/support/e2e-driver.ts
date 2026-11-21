@@ -3758,34 +3758,40 @@ export class E2eDriver implements GameDriver {
   /**
    * From the waiting screen, or from the menu of the dilemma, and confirmed. The last answer may
    * still be on its way and reveal the round while the host reaches for the button: then the reveal
-   * is already there and the button is gone, which is no failure of the host.
+   * is already there and the button is gone, which is no failure of the host. Each press is awaited
+   * before the next one, so nothing is left pressing once the reveal is on the screen.
    */
   async revealEarly(host: string): Promise<void> {
     const revealer = this.#playerCalled(host);
     const { page } = screenOf(revealer);
-    const revealed = () => lastGameOf(revealer)?.round.phase === 'reveal';
-    const clicking = (async () => {
-      const fromWaiting = page.locator('footer').getByRole('button', { name: SCREEN.revealEarly });
-      if ((await fromWaiting.count()) > 0) {
-        await fromWaiting.click();
-      } else {
-        await page.getByRole('button', { name: SCREEN.moreOptions }).click();
-        await page.getByRole('dialog').getByRole('button', { name: SCREEN.revealEarly }).click();
+    const reveal = page.getByRole('main', { name: SCREEN.reveal });
+    const revealed = async () =>
+      lastGameOf(revealer)?.round.phase === 'reveal' || (await reveal.count()) > 0;
+    /** Presses the button once it or the reveal shows; whether the reveal came first. */
+    const press = async (button: Locator): Promise<boolean> => {
+      await button.or(reveal).first().waitFor();
+      if (await revealed()) return true;
+      try {
+        await button.click();
+      } catch (error) {
+        if (await revealed()) return true;
+        throw error;
       }
-      await page
-        .getByRole('dialog', { name: SCREEN.revealEarlyTitle })
-        .getByRole('button', { name: SCREEN.revealEarly, exact: true })
-        .click();
-    })();
-    const arrived = waitUntil(() => revealed() || undefined, `${host} gets the reveal`);
-    try {
-      await Promise.race([clicking, arrived]);
-    } catch (error) {
-      if (!revealed()) throw error;
+      return false;
+    };
+    const fromWaiting = page.locator('footer').getByRole('button', { name: SCREEN.revealEarly });
+    const done =
+      (await fromWaiting.count()) > 0
+        ? await press(fromWaiting)
+        : (await press(page.getByRole('button', { name: SCREEN.moreOptions }))) ||
+          (await press(page.getByRole('dialog').getByRole('button', { name: SCREEN.revealEarly })));
+    if (!done) {
+      await press(
+        page
+          .getByRole('dialog', { name: SCREEN.revealEarlyTitle })
+          .getByRole('button', { name: SCREEN.revealEarly, exact: true }),
+      );
     }
-    // Whichever came first, the other is let go: a click on a button the reveal took away fails.
-    clicking.catch(() => undefined);
-    arrived.catch(() => undefined);
     await this.#untilEveryoneGetsTheReveal();
   }
 

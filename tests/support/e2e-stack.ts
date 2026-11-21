@@ -234,9 +234,10 @@ async function stop(child: ChildProcess): Promise<void> {
 
 /** Nothing answers at the address yet: no server of an earlier run is still on its port. */
 async function free(url: string): Promise<void> {
-  const answered = await fetch(url).then(
+  // A process that takes the connection and never answers holds the port all the same.
+  const answered = await fetch(url, { signal: AbortSignal.timeout(2000) }).then(
     () => true,
-    () => false,
+    (error: unknown) => error instanceof DOMException && error.name === 'TimeoutError',
   );
   if (answered) {
     throw new Error(`${url} already answers: stop the servers an earlier run left on its port`);
