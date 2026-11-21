@@ -26,6 +26,7 @@
     "@thelever-app/dilemmas": "workspace:*",
     "@thelever-app/game": "workspace:*",
     "@thelever-app/identity": "workspace:*",
+    "@thelever-app/moderation": "workspace:*",
     "kysely": "^0.29.7",
     "pg": "^8.23.1"
   }

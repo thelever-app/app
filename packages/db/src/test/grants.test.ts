@@ -77,6 +77,31 @@ describe('grantDilemmaAccess', () => {
     expect(await privilegeOf('rooms', 'SELECT', CATALOG_USER)).toBe(false);
     expect(await privilegeOf('game_dilemmas', 'SELECT', CATALOG_USER)).toBe(false);
     expect(await privilegeOf('room_rounds', 'SELECT', CATALOG_USER)).toBe(false);
+    expect(await privilegeOf('dilemma_likes', 'SELECT', CATALOG_USER)).toBe(false);
+    expect(await privilegeOf('dilemma_reports', 'SELECT', CATALOG_USER)).toBe(false);
+  });
+
+  it('should take away from the user what it had of the tables of the other contexts', async () => {
+    // Arrange: what the catalog job got when every table named dilemma_ was granted to it.
+    await sql`
+      do $$ begin
+        if not exists (select from pg_roles where rolname = 'thelever_test_catalog_user') then
+          create role thelever_test_catalog_user;
+        end if;
+      end $$
+    `.execute(database.db());
+    await sql`grant select, insert, update, delete on table dilemma_likes to ${sql.id(CATALOG_USER)}`.execute(
+      database.db(),
+    );
+
+    // Act
+    await grantDilemmaAccess(database.db(), CATALOG_USER);
+
+    // Assert
+    for (const privilege of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
+      expect(await privilegeOf('dilemma_likes', privilege, CATALOG_USER)).toBe(false);
+    }
+    expect(await privilegeOf('dilemmas', 'INSERT', CATALOG_USER)).toBe(true);
   });
 });
 
