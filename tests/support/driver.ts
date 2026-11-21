@@ -1,6 +1,13 @@
 import type { Category, DilemmaType, Scale } from '@thelever-app/game';
 
 /** What the host chooses on the screen to create a room; the driver picks test data for the rest. */
+/** The steps of an answer as the screen shows them: «Tu voto» and «Tu predicción». */
+export interface AnswerStepsView {
+  readonly steps: readonly ('vote' | 'prediction')[];
+  readonly current: 'vote' | 'prediction';
+  readonly done: readonly ('vote' | 'prediction')[];
+}
+
 export interface RoomChoices {
   /** The ambience the room is created with; Classic unless the scenario says. */
   readonly ambience?: 'classic' | 'spicy' | 'no-filter';
@@ -607,6 +614,10 @@ export interface GameDriver {
   canVote(player: string): Promise<boolean>;
   /** `player` votes the dilemma of the round, with the option given or the first one. */
   vote(player: string, option?: string): Promise<void>;
+  /** The id of the category `viewer` sees the dilemma of the round is of. */
+  categorySeenBy(viewer: string): Promise<string>;
+  /** The steps of the answer `viewer` sees, the one they are on and those done. Only on screen. */
+  answerStepsSeenBy(viewer: string): Promise<AnswerStepsView>;
   /** `player` changes the vote of the dilemma of the round to the option given or another one. */
   changeVote(player: string, option?: string): Promise<void>;
   /** Every vote the driver cast for `player` in the dilemma in that position (from 1), in order. */

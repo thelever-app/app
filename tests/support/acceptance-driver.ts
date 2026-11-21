@@ -130,6 +130,7 @@ import {
 } from '@thelever-app/dilemmas/in-memory';
 import { ClientMessageDto, type TitleDto } from '@thelever-app/protocol';
 import type {
+  AnswerStepsView,
   Ambience,
   AmbienceOption,
   AnswerPlan,
@@ -1900,6 +1901,16 @@ export class AcceptanceDriver implements GameDriver {
     };
     this.#drafts.set(player, draft);
     await this.#send(player, draft);
+  }
+
+  /** As the room server sends the dilemma of the round to `viewer`. */
+  async categorySeenBy(viewer: string): Promise<string> {
+    const { round, dilemmas } = await this.#gameStateOf(viewer);
+    return dilemmas[round.position]!.category;
+  }
+
+  async answerStepsSeenBy(): Promise<AnswerStepsView> {
+    throw new Error('Only the device shows the steps of an answer: the scenario must be @screen');
   }
 
   /** The screen keeps the predictions made and sends them again with the new vote. */

@@ -23,6 +23,7 @@ import {
   publishSite,
 } from '@thelever-app/site';
 import {
+  CategoryDto,
   ClientMessageDto,
   GAP_MARKER,
   JoinRoomResponseDto,
@@ -51,6 +52,7 @@ import type {
   WebSocketRoute,
 } from 'playwright';
 import type {
+  AnswerStepsView,
   AnswerPlan,
   CardView,
   CatalogEntry,
@@ -310,7 +312,9 @@ const SCREEN = {
   back: 'Volver a tu voto',
   continue: 'Continuar',
   choose: 'Elige una opción',
-  predictQuestion: '¿Qué votó cada uno?',
+  predictQuestion: spanish('predict.voteQuestion'),
+  answerSteps: spanish('answerSteps.label'),
+  voteStep: spanish('answerSteps.vote'),
   aboutYou: spanish('aboutYou.title'),
   aboutYouQuestion: spanish('predict.aboutYouQuestion'),
   gapWarning: spanish('lobby.gapWarningTitle'),
@@ -2117,6 +2121,43 @@ export class E2eDriver implements GameDriver {
     const dilemma = await this.#roundDilemmaOn(voter);
     const chosen = option ? optionCalled(dilemma, option) : firstOptionOf(dilemma);
     await this.#chooseAndContinue(voter, dilemma, chosen.optionId);
+  }
+
+  /** The category on the dilemma of the round, by its name on screen. */
+  async categorySeenBy(viewer: string): Promise<string> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const main = page.getByRole('main');
+    await main.waitFor();
+    for (const id of CategoryDto.options) {
+      if ((await main.getByText(spanish(`categories.${id}`), { exact: true }).count()) > 0) {
+        return id;
+      }
+    }
+    throw new Error(`${viewer} sees no category on the dilemma`);
+  }
+
+  /** «Tu voto» and «Tu predicción» at the top of the answer, the one marked as current and the done ones. */
+  async answerStepsSeenBy(viewer: string): Promise<AnswerStepsView> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const list = page.getByRole('list', { name: SCREEN.answerSteps });
+    await list.waitFor();
+    return steady(async () => {
+      const items = await list.getByRole('listitem').all();
+      const seen = await Promise.all(
+        items.map(async (item) => ({
+          step: (await item.textContent())?.includes(SCREEN.voteStep)
+            ? ('vote' as const)
+            : ('prediction' as const),
+          current: (await item.getAttribute('aria-current')) === 'step',
+          done: (await item.getAttribute('data-done')) !== null,
+        })),
+      );
+      return {
+        steps: seen.map(({ step }) => step),
+        current: seen.find(({ current }) => current)?.step ?? 'vote',
+        done: seen.filter(({ done }) => done).map(({ step }) => step),
+      };
+    });
   }
 
   /**
