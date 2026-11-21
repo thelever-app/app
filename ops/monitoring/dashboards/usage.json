@@ -12,7 +12,7 @@
           "title": "What this counts",
           "text": {
             "format": "MARKDOWN",
-            "content": "Each figure counts the messages of players that the room server accepted, from the metric `thelever.ws.message.duration`: a rejected one counts only in *Rejected messages*. Each bar is the interval of the chart, which changes with the time range chosen above. *Connections to a room* takes reconnections in. Players are not counted: no metric tells one player from another."
+            "content": "Each figure counts the messages of players that the room server accepted, from the metric `thelever.ws.message.duration`: a rejected one counts only in *Rejected messages*. Each bar is the interval of the chart, which changes with the time range chosen above. One answer sends several *answer messages*: the vote, each prediction released and Ready, and again on each change before the reveal. *Connections to a room* takes reconnections in. Players are not counted: no metric tells one player from another."
           }
         }
       },
@@ -25,7 +25,7 @@
           "title": "Games started, last 7 days",
           "scorecard": {
             "timeSeriesQuery": {
-              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"start-game\"}[7d]))"
+              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"start-game\"}[7d])) or vector(0)"
             }
           }
         }
@@ -39,7 +39,7 @@
           "title": "Rematches, last 7 days",
           "scorecard": {
             "timeSeriesQuery": {
-              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"start-rematch\"}[7d]))"
+              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"start-rematch\"}[7d])) or vector(0)"
             }
           }
         }
@@ -50,10 +50,10 @@
         "width": 12,
         "height": 8,
         "widget": {
-          "title": "Answers, last 7 days",
+          "title": "Answer messages, last 7 days",
           "scorecard": {
             "timeSeriesQuery": {
-              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"answer-dilemma\"}[7d]))"
+              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"answer-dilemma\"}[7d])) or vector(0)"
             }
           }
         }
@@ -67,7 +67,7 @@
           "title": "Connections to a room, last 7 days",
           "scorecard": {
             "timeSeriesQuery": {
-              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"connect\"}[7d]))"
+              "prometheusQuery": "sum(increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"connect\"}[7d])) or vector(0)"
             }
           }
         }
@@ -98,7 +98,7 @@
         "width": 24,
         "height": 16,
         "widget": {
-          "title": "Answers to dilemmas",
+          "title": "Answer messages: vote, predictions and Ready",
           "xyChart": {
             "dataSets": [
               {
@@ -145,7 +145,7 @@
                 "plotType": "STACKED_BAR",
                 "minAlignmentPeriod": "3600s",
                 "timeSeriesQuery": {
-                  "prometheusQuery": "sum by (\"message.type\") (increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"like-dilemma|react|add-dilemma|pick-dilemmas|choose-ambience|reveal-early\"}[${__interval}]))"
+                  "prometheusQuery": "sum by (\"message.type\") (increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"like-dilemma|unlike-dilemma|react|skip-dilemma|report-dilemma|reveal-early|move-on|ready-to-move-on|choose-ambience|choose-round-dilemma|clear-round-dilemma|restart-game\"}[${__interval}]))"
                 }
               }
             ]
