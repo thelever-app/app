@@ -55,6 +55,21 @@ describe('FirstAccessGate', () => {
     expect(page.textContent).not.toMatch(/\b1[68]\b|edad mínima/);
   });
 
+  it('should credit DB-IP, whose countries tell the region the age is asked for', async () => {
+    // Arrange
+    const api = fakeRoomApi({ openApp: vi.fn(async () => ASKS_FOR_THE_AGE) });
+    const { t } = await renderAtRoute(gate(), { api });
+
+    // Act
+    fireEvent.click(await screen.findByRole('button', { name: t('firstAccess.welcome.start') }));
+
+    // Assert
+    const credit = screen.getByRole('link', {
+      name: t('appSettings.outside', { name: t('credits.country.link') }),
+    });
+    expect(credit.getAttribute('href')).toBe('https://db-ip.com');
+  });
+
   it('should ask for the month as soon as the year chosen is of who may be under 18', async () => {
     // Arrange
     const declareAge = vi.fn(async () => ASKS_FOR_THE_DOCUMENTS);
@@ -225,9 +240,14 @@ describe('FirstAccessGate', () => {
     });
     const { t } = await renderAtRoute(gate(), { api });
 
-    // Act & Assert
-    expect(
-      await screen.findByRole('heading', { name: t('firstAccess.country.title') }),
-    ).toBeDefined();
+    // Act
+    const title = await screen.findByRole('heading', { name: t('firstAccess.country.title') });
+
+    // Assert
+    expect(title).toBeDefined();
+    const credit = screen.getByRole('link', {
+      name: t('appSettings.outside', { name: t('credits.country.link') }),
+    });
+    expect(credit.getAttribute('href')).toBe('https://db-ip.com');
   });
 });

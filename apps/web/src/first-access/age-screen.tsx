@@ -5,6 +5,7 @@ import { Icon } from '../components/icon.tsx';
 import { useRoomApi } from '../room/room-api-context.tsx';
 import { RoomApiError } from '../room/room-api.ts';
 import screen from '../screens/screen.module.css';
+import { IpGeolocationCredit } from './ip-geolocation-credit.tsx';
 import styles from './first-access.module.css';
 
 /** The oldest year of birth on the list, as the room server accepts. */
@@ -123,6 +124,7 @@ export function AgeScreen({ monthOfBirthAskedFrom, onDeclared }: AgeScreenProps)
           </p>
         )}
         <div className={styles.grow} />
+        <IpGeolocationCredit className={styles.attribution} />
         <button type="submit" className={styles.primary} disabled={!ready || pending}>
           {t('firstAccess.continue')}
         </button>

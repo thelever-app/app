@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/icon.tsx';
 import screen from '../screens/screen.module.css';
+import { IpGeolocationCredit } from './ip-geolocation-credit.tsx';
 import styles from './first-access.module.css';
 
 interface StopScreenProps {
@@ -21,9 +22,12 @@ export function StopScreen({ reason }: StopScreenProps) {
         <h1 className={styles.title}>{t(`${key}.title`)}</h1>
         <p className={styles.muted}>{t(`${key}.text`)}</p>
         {reason === 'blocked-country' && (
-          <a className={styles.link} href={`mailto:privacidad@thelever.app`}>
-            {t('firstAccess.country.contact')}
-          </a>
+          <>
+            <a className={styles.link} href={`mailto:privacidad@thelever.app`}>
+              {t('firstAccess.country.contact')}
+            </a>
+            <IpGeolocationCredit className={styles.attribution} />
+          </>
         )}
       </main>
     </div>

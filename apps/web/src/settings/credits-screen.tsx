@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
+import { IpGeolocationCredit } from '../first-access/ip-geolocation-credit.tsx';
 import screen from '../screens/screen.module.css';
 import { SettingsHeader } from './settings-header.tsx';
 import { NOTICES_PATH, SETTINGS_PATH, SOURCE_CODE_URL } from './settings-paths.ts';
@@ -19,6 +20,7 @@ export function CreditsScreen() {
           <section key={credit} className={styles.card}>
             <h2 className={styles.cardTitle}>{t(`credits.${credit}.title`)}</h2>
             <p className={styles.cardText}>{t(`credits.${credit}.text`)}</p>
+            {credit === 'country' && <IpGeolocationCredit className={styles.cardLink} />}
           </section>
         ))}
         <section className={styles.card}>
