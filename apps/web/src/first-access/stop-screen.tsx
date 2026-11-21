@@ -22,13 +22,12 @@ export function StopScreen({ reason }: StopScreenProps) {
         <h1 className={styles.title}>{t(`${key}.title`)}</h1>
         <p className={styles.muted}>{t(`${key}.text`)}</p>
         {reason === 'blocked-country' && (
-          <>
-            <a className={styles.link} href={`mailto:privacidad@thelever.app`}>
-              {t('firstAccess.country.contact')}
-            </a>
-            <IpGeolocationCredit className={styles.attribution} />
-          </>
+          <a className={styles.link} href={`mailto:privacidad@thelever.app`}>
+            {t('firstAccess.country.contact')}
+          </a>
         )}
+        {/* Both stops come from the region of the device: its country, or its minimum age. */}
+        <IpGeolocationCredit className={styles.attribution} />
       </main>
     </div>
   );

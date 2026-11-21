@@ -222,11 +222,17 @@ describe('FirstAccessGate', () => {
     });
     const { t } = await renderAtRoute(gate(), { api });
 
-    // Act & Assert
-    expect(
-      await screen.findByRole('heading', { name: t('firstAccess.underage.title') }),
-    ).toBeDefined();
+    // Act
+    const title = await screen.findByRole('heading', { name: t('firstAccess.underage.title') });
+
+    // Assert
+    expect(title).toBeDefined();
     expect(screen.queryByRole('button')).toBeNull();
+    // The minimum age is the one of the region DB-IP tells.
+    const credit = screen.getByRole('link', {
+      name: t('appSettings.outside', { name: t('credits.country.link') }),
+    });
+    expect(credit.getAttribute('href')).toBe('https://db-ip.com');
   });
 
   it('should say that TheLever is not available in a blocked country', async () => {

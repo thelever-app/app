@@ -18,7 +18,8 @@ export function IpGeolocationCredit({ className }: { readonly className: string 
       rel="noopener"
       aria-label={t('appSettings.outside', { name })}
     >
-      {name}
+      {/* The attribution DB-IP gives, in English in every language of the app. */}
+      <span lang="en">{name}</span>
     </a>
   );
 }

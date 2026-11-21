@@ -1,4 +1,5 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 import { SupportLine } from '../../src/donations/support-line.tsx';
 import { UnderEighteenProvider } from '../../src/first-access/device-age.tsx';
@@ -54,12 +55,31 @@ describe('SupportLine', () => {
       draws += 1;
       return 0;
     };
+    /** Test data: a screen that draws the line again each time its button is pressed. */
+    function Rerendering() {
+      const [renders, setRenders] = useState(0);
+      return (
+        <>
+          <button type="button" onClick={() => setRenders(renders + 1)}>
+            {`TestRender ${renders}`}
+          </button>
+          <SupportLine random={random} />
+        </>
+      );
+    }
+    const { t } = await renderAtRoute(
+      <UnderEighteenProvider underEighteen={false}>
+        <Rerendering />
+      </UnderEighteenProvider>,
+    );
 
     // Act
-    const { t } = await renderFor(false, random);
-    await screen.findByText(t('donations.line'));
+    fireEvent.click(screen.getByRole('button', { name: 'TestRender 0' }));
+    fireEvent.click(screen.getByRole('button', { name: 'TestRender 1' }));
 
     // Assert
+    expect(screen.getByRole('button', { name: 'TestRender 2' })).toBeDefined();
+    expect(screen.getByText(t('donations.line'))).toBeDefined();
     expect(draws).toBe(1);
   });
 });
