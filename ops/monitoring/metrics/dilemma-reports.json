@@ -1,0 +1,26 @@
+{
+  "name": "dilemma_reports",
+  "description": "The reports of dilemmas the room server kept, by dilemma and reason. Its lines carry neither who reported nor the comment.",
+  "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"realtime\" AND jsonPayload.message=\"dilemma reported\"",
+  "metricDescriptor": {
+    "metricKind": "DELTA",
+    "valueType": "INT64",
+    "unit": "1",
+    "labels": [
+      {
+        "key": "dilemma_id",
+        "valueType": "STRING",
+        "description": "The dilemma reported: only reported dilemmas make a series."
+      },
+      {
+        "key": "reason",
+        "valueType": "STRING",
+        "description": "offensive, confusing, mistranslated or other."
+      }
+    ]
+  },
+  "labelExtractors": {
+    "dilemma_id": "EXTRACT(jsonPayload.dilemmaId)",
+    "reason": "EXTRACT(jsonPayload.reason)"
+  }
+}

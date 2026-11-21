@@ -297,6 +297,18 @@ export interface Database {
     commercial_licence_consent_version: string | null;
     under_eighteen: boolean;
   };
+  /** The reports players make of dilemmas, kept 3 years from each one. */
+  dilemma_reports: {
+    id: string;
+    dilemma_id: string;
+    /** The version the player saw. */
+    version: number;
+    reason: 'offensive' | 'confusing' | 'mistranslated' | 'other';
+    comment: string | null;
+    /** Who reports: the report threshold counts different players. */
+    identity: string;
+    reported_at: Date;
+  };
   /** The first access of each identity: the region of its device, never its address, and its age. */
   first_accesses: {
     identity: string;
@@ -329,6 +341,9 @@ export type IdentityTables = Pick<Database, 'first_accesses'>;
 
 /** The tables of Consent: only its adapters read or write them. */
 export type ConsentTables = Pick<Database, 'legal_acceptances'>;
+
+/** The tables of Moderation: only its adapters read or write them. */
+export type ModerationTables = Pick<Database, 'dilemma_reports'>;
 
 /** The tables of Dilemmas: only its adapters read or write them. */
 export type DilemmasTables = Pick<

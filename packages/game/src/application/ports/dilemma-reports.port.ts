@@ -14,6 +14,8 @@ export interface DilemmaReport {
    * it is up to Moderation.
    */
   readonly identity: string;
+  /** When the player reported it. */
+  readonly at: Date;
 }
 
 /** How the Game context hands the reports of its players to the Moderation context. */

@@ -22,7 +22,7 @@ group, debate the reveal. PWA.
 | `packages/ui`           | Design system                                                              |
 | `packages/config`       | Shared TypeScript, ESLint and Prettier config                              |
 | `tests`                 | Gherkin features with their acceptance and e2e runs (Cucumber)             |
-| `ops/monitoring`        | Alerts and dashboard of the deployed environments                          |
+| `ops/monitoring`        | Alerts, log-based metrics and dashboard of the deployed environments       |
 | `docs/adr`              | Architecture decision records                                              |
 
 ## Getting started

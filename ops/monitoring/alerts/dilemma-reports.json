@@ -1,0 +1,35 @@
+{
+  "displayName": "Moderation: a dilemma reported",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "subject": "Dilemma reported: ${metric.label.dilemma_id}",
+    "content": "Players reported the dilemma `${metric.label.dilemma_id}` in the last hour, for one reason or more. This email repeats every hour while it keeps getting reports. Read the reports in Cloud SQL Studio:\n\n```sql\nselect r.reported_at, r.version, r.reason, r.comment, v.text\nfrom dilemma_reports r\njoin dilemma_versions v on v.dilemma_id = r.dilemma_id and v.number = r.version\nwhere r.dilemma_id = '${metric.label.dilemma_id}'\norder by r.reported_at desc;\n```\n\nIf a comment suggests a threat to the life or safety of someone, tell the police without delay (article 18 of the Digital Services Act)."
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "A report of the dilemma in the last hour",
+      "conditionThreshold": {
+        "filter": "metric.type=\"logging.googleapis.com/user/dilemma_reports\" AND resource.type=\"cloud_run_revision\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "3600s",
+            "perSeriesAligner": "ALIGN_SUM",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "groupByFields": ["metric.label.dilemma_id"]
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "60s",
+        "trigger": { "count": 1 },
+        "evaluationMissingData": "EVALUATION_MISSING_DATA_INACTIVE"
+      }
+    }
+  ],
+  "alertStrategy": {
+    "autoClose": "3600s",
+    "notificationPrompts": ["OPENED"],
+    "notificationChannelStrategy": [{ "renotifyInterval": "3600s" }]
+  }
+}

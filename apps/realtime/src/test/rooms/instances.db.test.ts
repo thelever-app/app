@@ -158,6 +158,39 @@ describe('the room server on several instances', () => {
       .toContain(pedro.playerId);
   });
 
+  it('should keep a report in the database after the instance that took it stops', async () => {
+    // Arrange
+    const a = await instance();
+    const { roomId, dilemmas } = await gameInDecisionPhase(a);
+    const luis = await connect(a.url, 'luis', roomId);
+    const [first] = dilemmas;
+    luis.client.send({
+      type: 'report-dilemma',
+      dilemmaId: first!.dilemmaId,
+      reason: 'mistranslated',
+      comment: 'TestComment',
+    });
+    await luis.client.next('game-state');
+
+    // Act
+    await a.close();
+
+    // Assert
+    const reports = await database
+      .db()
+      .selectFrom('dilemma_reports')
+      .select(['dilemma_id', 'reason', 'comment', 'identity'])
+      .execute();
+    expect(reports).toEqual([
+      {
+        dilemma_id: first!.dilemmaId,
+        reason: 'mistranslated',
+        comment: 'TestComment',
+        identity: 'luis',
+      },
+    ]);
+  });
+
   it('should show the players of an instance that dies as disconnected', async () => {
     // Arrange
     const a = await instance();

@@ -437,6 +437,7 @@ describe('Round commands', () => {
         skipDilemma,
         reports,
         gameRepository,
+        clock,
         roomId,
         gameId,
         luisId,
@@ -460,6 +461,7 @@ describe('Round commands', () => {
           reason: 'offensive',
           comment: null,
           identity: 'TestLuisIdentity',
+          at: clock.now(),
         },
       ]);
       await skipDilemma.execute({ roomId, playerId: luisId, dilemmaId: dilemmaIds[0]! });

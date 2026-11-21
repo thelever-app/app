@@ -14,7 +14,8 @@
     "@thelever-app/consent": "workspace:*",
     "@thelever-app/dilemmas": "workspace:*",
     "@thelever-app/game": "workspace:*",
-    "@thelever-app/identity": "workspace:*"
+    "@thelever-app/identity": "workspace:*",
+    "@thelever-app/moderation": "workspace:*"
   },
   "devDependencies": {
     "@thelever-app/config": "workspace:*"
