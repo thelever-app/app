@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./in-memory": "./src/adapters/in-memory/index.ts",
+    "./contracts": "./src/adapters/test/index.ts",
+    "./published": "./src/published.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."
