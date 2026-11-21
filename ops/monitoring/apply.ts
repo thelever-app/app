@@ -68,11 +68,8 @@ async function emailChannel(): Promise<string> {
   return created.name;
 }
 
+/** Each log-based metric is created, or updated if it exists: PUT does both. */
 async function applyMetrics(): Promise<void> {
-  const { metrics = [] } = await call<{ metrics?: { name: string }[] }>(
-    'GET',
-    `${LOGGING}/v2/projects/${project}/metrics`,
-  );
   const files = readdirSync(new URL('./metrics/', import.meta.url)).filter((file) =>
     file.endsWith('.json'),
   );
@@ -80,13 +77,8 @@ async function applyMetrics(): Promise<void> {
     const metric = JSON.parse(
       readFileSync(new URL(`./metrics/${file}`, import.meta.url), 'utf8'),
     ) as Record<string, unknown> & { readonly name: string };
-    if (metrics.some(({ name }) => name === metric.name)) {
-      await call('PUT', `${LOGGING}/v2/projects/${project}/metrics/${metric.name}`, metric);
-      console.log(`updated log-based metric "${metric.name}"`);
-    } else {
-      await call('POST', `${LOGGING}/v2/projects/${project}/metrics`, metric);
-      console.log(`created log-based metric "${metric.name}"`);
-    }
+    await call('PUT', `${LOGGING}/v2/projects/${project}/metrics/${metric.name}`, metric);
+    console.log(`applied log-based metric "${metric.name}"`);
   }
 }
 

@@ -4,7 +4,9 @@ import type { DilemmaReport, DilemmaReportRepository } from '@thelever-app/moder
 /**
  * Logs each report it keeps, which the alert of the reported dilemmas counts: the dilemma, its
  * version and the reason, never who made it nor what they wrote, so neither reaches the logs nor
- * the email of the alert.
+ * the email of the alert. The line is written before the command commits: a command that fails
+ * after the report is saved leaves a line for a report that is not there, which costs one email
+ * whose query finds nothing.
  */
 export class LoggedDilemmaReports implements DilemmaReportRepository {
   readonly #reports: DilemmaReportRepository;
