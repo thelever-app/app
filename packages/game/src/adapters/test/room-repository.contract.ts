@@ -87,13 +87,25 @@ export function describeRoomRepositoryContract(
       });
 
       it('should keep compromising dilemmas and the content of each random round', async () => {
-        // Arrange: No filter turns compromising dilemmas on and gives every round a content.
+        // Arrange: No filter turns compromising dilemmas on and gives every round a content; the
+        // last one asks for a mild dilemma, from 16 and not compromising.
         const repository = await create();
         const saved = room();
         const { contents, ...noFilter } = configurationOf('no-filter');
         saved.changeSettings('TestAnaId', {
           ...noFilter,
-          rounds: contents.map((content) => ({ origin: 'random', categories: null, content })),
+          rounds: [
+            ...contents.map((content) => ({
+              origin: 'random' as const,
+              categories: null,
+              content,
+            })),
+            {
+              origin: 'random',
+              categories: ['honesty'],
+              content: { age: 'from-16', compromising: 'no' },
+            },
+          ],
         });
         await repository.save(saved);
 

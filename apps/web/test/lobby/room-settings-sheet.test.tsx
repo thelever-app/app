@@ -95,7 +95,12 @@ describe('RoomSettingsSheet', () => {
 
     // Assert
     const [card] = roundCards(t, 8);
-    expect(within(card!).queryAllByRole('radiogroup')).toHaveLength(1);
+    expect(
+      within(card!).queryByRole('radiogroup', { name: t('settings.content.age.label') }),
+    ).toBeNull();
+    expect(
+      within(card!).queryByRole('radiogroup', { name: t('settings.content.compromising.label') }),
+    ).toBeNull();
     expect(screen.queryByText(t('settings.content.needsAdults'))).toBeNull();
     expect(screen.queryByText(t('settings.content.needsCompromising'))).toBeNull();
   });
@@ -226,9 +231,15 @@ describe('RoomSettingsSheet', () => {
     expect(ambience.textContent).toContain(t('ambience.custom.name'));
   });
 
-  it('should not choose an ambience for adults with a minor in the room', async () => {
-    // Arrange
-    const { t, send } = await openSettings(aRoom({ hasPlayerUnderEighteen: true }));
+  it('should not choose an ambience for adults with a minor in the room, but fill in Classic', async () => {
+    // Arrange: an anonymous room, which is of no ambience.
+    const { t, send } = await openSettings(
+      aRoom({
+        hasPlayerUnderEighteen: true,
+        ambience: 'custom',
+        settings: { ...aRoom().settings, variant: 'anonymous' },
+      }),
+    );
     fireEvent.click(
       screen.getByRole('button', { name: new RegExp(t('settings.ambience.change')) }),
     );
@@ -246,6 +257,12 @@ describe('RoomSettingsSheet', () => {
     // Assert
     expect(spicy).toHaveProperty('disabled', true);
     expect(adultsOnly).toHaveProperty('disabled', true);
+    expect(screen.getByRole('radio', { name: t('settings.nominal') })).toHaveProperty(
+      'checked',
+      true,
+    );
+    const shown = screen.getByRole('button', { name: new RegExp(t('settings.ambience.change')) });
+    expect(shown.textContent).toContain(t('ambience.classic.name'));
     expect(send).not.toHaveBeenCalled();
   });
 

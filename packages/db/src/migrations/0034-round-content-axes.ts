@@ -3,8 +3,8 @@ import { type Kysely, sql } from 'kysely';
 // The content of a random round becomes two columns, the age and whether compromising, each of
 // them any unless asked: a round asking for adults-only dilemmas asks for that age, and one asking
 // for compromising ones, for those. Null in the rounds that are not random; dropping the column
-// of the requirements drops its checks. A direct migration,
-// with no expand and contract, until real players arrive.
+// of the requirements drops its checks. A direct migration, with no expand and contract, until
+// real players arrive.
 export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`set local lock_timeout = '5s'`.execute(db);
   await sql`
