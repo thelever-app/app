@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   drawKey,
+  drawsOf,
   categoriesToDraw,
   fixedDilemmaIds,
   composeGame,
@@ -8,7 +9,8 @@ import {
   type ComposeGameInput,
 } from '../../services/compose-game.ts';
 import type { CandidateDilemma } from '../../vos/classification.vo.ts';
-import type { LobbyDilemma, RoundSnapshot } from '../../vos/round.vo.ts';
+import type { Category } from '../../vos/category.vo.ts';
+import type { LobbyDilemma, RoundContent, RoundSnapshot } from '../../vos/round.vo.ts';
 import { FixedRandomness } from '../support/fixed-randomness.ts';
 import { KeepOrderRandomness } from '../support/keep-order-randomness.ts';
 
@@ -195,6 +197,98 @@ describe('composeGame', () => {
 
     // Assert
     expect(ids(composed)).toEqual(['TestHonesty1']);
+  });
+
+  it('should keep a «no» of its content in a round whose content has nothing left, relaxing the age', () => {
+    // Arrange: honesty has nothing from 16 that is not compromising, but has one for adults.
+    const rounds: RoundSnapshot[] = [
+      {
+        id: 1,
+        origin: 'random',
+        categories: ['honesty'],
+        content: { age: 'from-16', compromising: 'no' },
+      },
+    ];
+    const candidates = new Map([
+      [
+        'honesty|any',
+        { inCatalog: candidatesCalled(['TestHonestyCompromising']), inExploration: [] },
+      ],
+      ['honesty|from-16+not-compromising', { inCatalog: [], inExploration: [] }],
+      [
+        'honesty|not-compromising',
+        { inCatalog: candidatesCalled(['TestHonestyAdult']), inExploration: [] },
+      ],
+    ]);
+
+    // Act
+    const composed = composeGame(
+      input({ rounds, candidates, newDilemmas: false }),
+      new KeepOrderRandomness(),
+    );
+
+    // Assert
+    expect(ids(composed)).toEqual(['TestHonestyAdult']);
+  });
+
+  it('should play a round from every category before its categories play something it ruled out', () => {
+    // Arrange: love has only compromising dilemmas.
+    const rounds: RoundSnapshot[] = [
+      {
+        id: 1,
+        origin: 'random',
+        categories: ['love-and-relationships'],
+        content: { age: 'from-16', compromising: 'no' },
+      },
+    ];
+    const candidates = new Map([
+      [
+        'love-and-relationships|any',
+        { inCatalog: candidatesCalled(['TestLoveCompromising']), inExploration: [] },
+      ],
+      ['love-and-relationships|from-16+not-compromising', { inCatalog: [], inExploration: [] }],
+      ['love-and-relationships|not-compromising', { inCatalog: [], inExploration: [] }],
+      [
+        '*|from-16+not-compromising',
+        { inCatalog: candidatesCalled(['TestMild']), inExploration: [] },
+      ],
+    ]);
+
+    // Act
+    const composed = composeGame(
+      input({ rounds, candidates, newDilemmas: false }),
+      new KeepOrderRandomness(),
+    );
+
+    // Assert
+    expect(ids(composed)).toEqual(['TestMild']);
+  });
+
+  it('should leave out a round that rules out compromising dilemmas when nothing else is left', () => {
+    // Arrange
+    const rounds: RoundSnapshot[] = [
+      {
+        id: 1,
+        origin: 'random',
+        categories: ['love-and-relationships'],
+        content: { age: 'any', compromising: 'no' },
+      },
+    ];
+    const candidates = new Map([
+      [
+        'love-and-relationships|any',
+        { inCatalog: candidatesCalled(['TestLoveCompromising']), inExploration: [] },
+      ],
+    ]);
+
+    // Act
+    const composed = composeGame(
+      input({ rounds, candidates, newDilemmas: false }),
+      new KeepOrderRandomness(),
+    );
+
+    // Assert
+    expect(composed).toEqual([]);
   });
 
   it('should take a dilemma of its content from the catalog before any content from exploration', () => {
@@ -673,6 +767,32 @@ describe('categoriesToDraw', () => {
       ['*|adults-only+compromising', 1],
     ]);
   });
+
+  it('should draw for a round that rules out compromising dilemmas what it falls back on too', () => {
+    // Arrange
+    const rounds: RoundSnapshot[] = [
+      {
+        id: 1,
+        origin: 'random',
+        categories: ['honesty'],
+        content: { age: 'from-16', compromising: 'no' },
+      },
+    ];
+
+    // Act
+    const draws = categoriesToDraw(rounds, [], true);
+
+    // Assert
+    expect(
+      draws.map(({ categories, content, rounds }) => [drawKey(categories, content), rounds]),
+    ).toEqual([
+      ['honesty|any', 1],
+      ['honesty|from-16+not-compromising', 1],
+      ['honesty|not-compromising', 1],
+      ['*|from-16+not-compromising', 1],
+      ['*|not-compromising', 1],
+    ]);
+  });
 });
 
 describe('fixedDilemmaIds', () => {
@@ -694,5 +814,30 @@ describe('fixedDilemmaIds', () => {
 
     // Assert
     expect(ids).toEqual(['TestChosen', SPECIFIC.dilemmaId]);
+  });
+});
+
+describe('drawsOf', () => {
+  const keysOf = (categories: readonly Category[] | null, content: RoundContent) =>
+    drawsOf(categories, content).map((draw) => drawKey(draw.categories, draw.content));
+
+  it('should fall back on any content of its categories for a round that rules nothing out', () => {
+    // Act & Assert
+    expect(keysOf(['honesty'], { age: 'adults-only', compromising: 'yes' })).toEqual([
+      'honesty|adults-only+compromising',
+      'honesty|any',
+    ]);
+    expect(keysOf(['honesty'], { age: 'any', compromising: 'any' })).toEqual(['honesty|any']);
+  });
+
+  it('should keep a «no», and then try every category, for a round that rules out compromising dilemmas', () => {
+    // Act & Assert
+    expect(keysOf(['honesty'], { age: 'from-16', compromising: 'no' })).toEqual([
+      'honesty|from-16+not-compromising',
+      'honesty|not-compromising',
+      '*|from-16+not-compromising',
+      '*|not-compromising',
+    ]);
+    expect(keysOf(null, { age: 'any', compromising: 'no' })).toEqual(['*|not-compromising']);
   });
 });

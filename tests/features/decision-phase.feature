@@ -55,6 +55,12 @@ Feature: Decision phase
       When the game is put together
       Then the dilemma of round 2 is a "honesty" dilemma of any content
 
+    Scenario: A round that rules out compromising dilemmas never plays one
+      Given an anonymous room with compromising dilemmas turned on whose round 2 is random from "love-and-relationships" with not compromising content
+      And there are no dilemmas of "love-and-relationships" that are not compromising
+      When the game is put together
+      Then the dilemma of round 2 is not compromising
+
     Scenario: Dilemmas nobody in the room has played come first
       Given "Luis" has 3 catalog dilemmas in his history and "Marta" has 2
       And there are enough suitable dilemmas that nobody in the room has played

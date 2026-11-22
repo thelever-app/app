@@ -30,6 +30,7 @@ const CONTENTS: Readonly<Record<string, RoundContent>> = {
   'adults only and compromising': { age: 'adults-only', compromising: 'yes' },
   'adults-only and compromising': { age: 'adults-only', compromising: 'yes' },
   'from 16 and not compromising': { age: 'from-16', compromising: 'no' },
+  'not compromising': { age: 'any', compromising: 'no' },
 };
 
 /**
@@ -681,7 +682,7 @@ When('the host turns off compromising dilemmas', async function (this: GameWorld
 // The content of the rounds when the game is put together.
 
 Given(
-  /^an (adults-only|anonymous) room (?:with compromising dilemmas turned on )?whose round (\d+) is random(?: from "([^"]*)")? with (adults-only|compromising) content$/,
+  /^an (adults-only|anonymous) room (?:with compromising dilemmas turned on )?whose round (\d+) is random(?: from "([^"]*)")? with (adults-only|compromising|not compromising) content$/,
   async function (
     this: GameWorld,
     kind: string,
@@ -713,12 +714,20 @@ Given(
   },
 );
 
+Given(
+  'there are no dilemmas of {string} that are not compromising',
+  function (this: GameWorld, category: string) {
+    // Test data: every dilemma of that category in the catalog is compromising.
+    assert.equal(category, 'love-and-relationships');
+  },
+);
+
 Then(
-  /^the dilemma of round (\d+) is (adults only|compromising)$/,
+  /^the dilemma of round (\d+) is (adults only|compromising|not compromising)$/,
   async function (this: GameWorld, round: string, content: string) {
     const entry = await dilemmaOfRound(this, Number(round));
     if (content === 'adults only') assert.equal(entry.minimumAge, 18);
-    else assert.equal(entry.compromising, true);
+    else assert.equal(entry.compromising === true, content === 'compromising');
   },
 );
 

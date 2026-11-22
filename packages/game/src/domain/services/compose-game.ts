@@ -4,7 +4,6 @@ import type { Category } from '../vos/category.vo.ts';
 import type { CandidateDilemma } from '../vos/classification.vo.ts';
 import {
   ANY_CONTENT,
-  isAnyContent,
   type DilemmaOrigin,
   type LobbyDilemma,
   type RoundContent,
@@ -69,6 +68,37 @@ export function drawKey(categories: readonly Category[] | null, content: RoundCo
   return `${key}|${parts.length === 0 ? 'any' : parts.join('+')}`;
 }
 
+/** Categories and a content the system draws a dilemma from; null categories are every one. */
+export interface Draw {
+  readonly categories: readonly Category[] | null;
+  readonly content: RoundContent;
+}
+
+/**
+ * Where a round draws its dilemma from, in order, each once the one before has nothing left: its
+ * categories and content; its categories with the age and a «yes» back to any, keeping a «no»; and,
+ * only while it keeps a «no», every category with its content and then with that one. A round
+ * never plays a compromising dilemma when it ruled them out.
+ */
+export function drawsOf(categories: readonly Category[] | null, content: RoundContent): Draw[] {
+  const relaxed: RoundContent = {
+    age: 'any',
+    compromising: content.compromising === 'no' ? 'no' : 'any',
+  };
+  const draws: Draw[] = [
+    { categories, content },
+    { categories, content: relaxed },
+    ...(relaxed.compromising === 'no'
+      ? [
+          { categories: null, content },
+          { categories: null, content: relaxed },
+        ]
+      : []),
+  ];
+  const keys = draws.map((draw) => drawKey(draw.categories, draw.content));
+  return draws.filter((_, index) => keys.indexOf(keys[index]!) === index);
+}
+
 /** A set of categories and a content the system draws dilemmas from, and how many rounds draw from it. */
 export interface CategoriesDraw {
   /** Null for every category. */
@@ -79,10 +109,11 @@ export interface CategoriesDraw {
 
 /**
  * The categories and content each round the system draws a dilemma for takes it from, each once
- * with how many rounds draw from it: a random round's own, and every category of any content for a
- * round of the players nobody chose a dilemma for and for a round whose dilemma has the gap in a
- * room without the players it needs. A round of a content counts for any content of its categories
- * too, which it plays when its content has nothing left.
+ * with how many rounds draw from it: a random round's own and what it falls back on, and every
+ * category of any content for a round of the players nobody chose a dilemma for and for a round
+ * whose dilemma has the gap in a room without the players it needs. A round of a content counts
+ * for any content of its categories too, which a rematch reads to tell whether they have anything
+ * left.
  */
 export function categoriesToDraw(
   rounds: readonly RoundSnapshot[],
@@ -97,8 +128,15 @@ export function categoriesToDraw(
   for (const round of rounds) {
     const draw = drawFrom(fixedDilemmaOf(round, chosenDilemmas, playsTheGap), round);
     if (draw === undefined) continue;
-    count(draw.categories, ANY_CONTENT);
-    if (!isAnyContent(draw.content)) count(draw.categories, draw.content);
+    const keys = new Set<string>();
+    for (const { categories, content } of [
+      { categories: draw.categories, content: ANY_CONTENT },
+      ...drawsOf(draw.categories, draw.content),
+    ]) {
+      const key = drawKey(categories, content);
+      if (!keys.has(key)) count(categories, content);
+      keys.add(key);
+    }
   }
   return [...drawn.values()];
 }
@@ -119,8 +157,8 @@ export function fixedDilemmaIds(
  * Puts the dilemmas of a game together, one per round and in their order. A specific round plays
  * its dilemma, and a round of the players the one a player chose, unless it has the gap and the
  * room has not the players it needs: then the round is random from every category. For the others
- * the system draws from their categories and content, or any content of their categories when that
- * content has nothing left: if the room includes new dilemmas, the exploration slots
+ * the system draws from their categories and content, or from what they fall back on when that
+ * has nothing left (`drawsOf`): if the room includes new dilemmas, the exploration slots
  * go to random rounds at random, then the rest come from the catalog and, when it runs short, from
  * exploration, the rounds with fewest candidates first. Each round takes, of what it can draw, the
  * dilemma that breaks fewest spacing rules with the rounds around it, then the one fewest players
@@ -179,10 +217,11 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
     }
     return best;
   };
-  /** Of its content, or of any content of its categories once its content has nothing left. */
-  const draw = (position: number, from: Pool, anyContent = false): void => {
-    const { categories } = drawOf(position);
-    const pool = anyContent ? poolOf(drawKey(categories, ANY_CONTENT)) : poolAt(position);
+  /** Of its own categories and content, or of what it falls back on once those have nothing left. */
+  const draw = (position: number, from: Pool, fallback?: Draw): void => {
+    const pool = fallback
+      ? poolOf(drawKey(fallback.categories, fallback.content))
+      : poolAt(position);
     const best = bestIn(position, pool[from]);
     if (!best) return;
     used.add(best.dilemma.dilemmaId);
@@ -209,10 +248,14 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
       if (!composed[position]) draw(position, 'inExploration');
     }
   }
-  // A round whose content has nothing left in the catalog nor in exploration plays any content.
+  // A round whose content has nothing left in the catalog nor in exploration falls back on what it
+  // can relax, each in the catalog first, without playing what it ruled out.
   for (const position of toDraw) {
-    if (!composed[position]) draw(position, 'inCatalog', true);
-    if (!composed[position] && input.newDilemmas) draw(position, 'inExploration', true);
+    const { categories, content } = drawOf(position);
+    for (const fallback of drawsOf(categories, content).slice(1)) {
+      if (!composed[position]) draw(position, 'inCatalog', fallback);
+      if (!composed[position] && input.newDilemmas) draw(position, 'inExploration', fallback);
+    }
   }
   return composed.filter((dilemma): dilemma is ComposedDilemma => dilemma !== null);
 }
