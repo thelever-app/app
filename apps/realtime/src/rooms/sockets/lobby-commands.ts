@@ -1,7 +1,6 @@
 import type {
   ChangeAvatarUseCase,
   ChangeRoomSettingsUseCase,
-  ChooseAmbienceUseCase,
   ChooseRoundDilemmaUseCase,
   ClearRoundDilemmaUseCase,
   ExpelPlayerUseCase,
@@ -19,7 +18,6 @@ import type { SocketMessageHandler } from './socket-message-handler.ts';
 export interface LobbyUseCases {
   readonly changeAvatar: ChangeAvatarUseCase;
   readonly changeSettings: ChangeRoomSettingsUseCase;
-  readonly chooseAmbience: ChooseAmbienceUseCase;
   readonly chooseRoundDilemma: ChooseRoundDilemmaUseCase;
   readonly clearRoundDilemma: ClearRoundDilemmaUseCase;
   readonly expelPlayer: ExpelPlayerUseCase;
@@ -44,13 +42,6 @@ export function lobbyCommandHandlers(
       'change-settings',
       ({ changes }, { roomId, playerId }) =>
         useCases.changeSettings.execute({ roomId, playerId, changes: onlyGiven(changes) }),
-      roomLock,
-      runCommand,
-    ),
-    new RoomCommandHandler(
-      'choose-ambience',
-      ({ ambience }, { roomId, playerId }) =>
-        useCases.chooseAmbience.execute({ roomId, playerId, ambience }),
       roomLock,
       runCommand,
     ),

@@ -308,6 +308,26 @@ export const LobbyRoundDto = z.discriminatedUnion('origin', [
 ]);
 
 /**
+ * What an ambience sets in a room, which choosing it in the settings fills in until the host saves
+ * it: its variant, adults only, compromising dilemmas and its random rounds from every category.
+ */
+export const AmbienceSettingsDto = z.strictObject({
+  variant: RoomSettingsDto.shape.variant,
+  adultsOnly: z.boolean(),
+  compromisingDilemmas: z.boolean(),
+  rounds: z
+    .array(
+      z.strictObject({
+        origin: z.literal('random'),
+        categories: z.null(),
+        content: RoundContentDto,
+      }),
+    )
+    .min(1)
+    .max(MAXIMUM_ROUNDS),
+});
+
+/**
  * What the screen needs to draw the lobby, as the player who receives it may see it: sent when
  * they connect while there is no game, and again after every change of the lobby.
  */
@@ -329,6 +349,14 @@ export const RoomStateDto = z.strictObject({
    * turned on. False for the others, so nobody can tell who it is.
    */
   hasPlayerUnderEighteen: z.boolean(),
+  /** For the host, what each ambience sets in the room; null for the others. */
+  ambiences: z
+    .strictObject({
+      classic: AmbienceSettingsDto,
+      spicy: AmbienceSettingsDto,
+      'no-filter': AmbienceSettingsDto,
+    })
+    .nullable(),
   rounds: z.array(LobbyRoundDto).min(1).max(MAXIMUM_ROUNDS),
   /** The fewest players a game of the room starts with, by its variant: 2 nominal, 3 anonymous. */
   minimumPlayers: z.number().int().positive(),
@@ -469,6 +497,7 @@ export const ServerMessageDto = z.discriminatedUnion('type', [
 
 export type RoomStateDto = z.infer<typeof RoomStateDto>;
 export type LobbyRoundDto = z.infer<typeof LobbyRoundDto>;
+export type AmbienceSettingsDto = z.infer<typeof AmbienceSettingsDto>;
 export type ExpelledDto = z.infer<typeof ExpelledDto>;
 export type GameStateDto = z.infer<typeof GameStateDto>;
 export type PlayerAnsweredDto = z.infer<typeof PlayerAnsweredDto>;
