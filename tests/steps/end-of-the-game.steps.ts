@@ -1086,8 +1086,12 @@ When('the players are in the lobby of the rematch', async function (this: GameWo
 
 When('{string} changes the rounds', async function (this: GameWorld, host: string) {
   this.rounds = [
-    { origin: 'random', categories: ['honesty'], content: [] },
-    { origin: 'random', categories: ['life-and-death'], content: [] },
+    { origin: 'random', categories: ['honesty'], content: { age: 'any', compromising: 'any' } },
+    {
+      origin: 'random',
+      categories: ['life-and-death'],
+      content: { age: 'any', compromising: 'any' },
+    },
   ];
   await this.driver.setRounds(host, this.rounds);
 });
@@ -1107,7 +1111,11 @@ Given(
         ? ({ origin: 'specific', dilemmaId: first } as const)
         : index + 1 === players
           ? ({ origin: 'players' } as const)
-          : ({ origin: 'random', categories: null, content: [] } as const),
+          : ({
+              origin: 'random',
+              categories: null,
+              content: { age: 'any', compromising: 'any' },
+            } as const),
     );
     await this.driver.setRounds(host, rounds);
     const [guest] = await this.guests();
@@ -1145,8 +1153,16 @@ Given(
     // Justice has two dilemmas in Spanish: the two rounds of justice play both.
     const rounds = Array.from({ length: round + 1 }, (_, index) =>
       index + 1 < round
-        ? ({ origin: 'random', categories: null, content: [] } as const)
-        : ({ origin: 'random', categories: ['justice'], content: [] } as const),
+        ? ({
+            origin: 'random',
+            categories: null,
+            content: { age: 'any', compromising: 'any' },
+          } as const)
+        : ({
+            origin: 'random',
+            categories: ['justice'],
+            content: { age: 'any', compromising: 'any' },
+          } as const),
     );
     await this.driver.setRounds(await this.host(), rounds);
     this.dilemmaCount = undefined;
@@ -1167,7 +1183,7 @@ Then('{string} can change its categories', async function (this: GameWorld, host
     await this.driver.tryToSetRound(host, round, {
       origin: 'random',
       categories: ['honesty'],
-      content: [],
+      content: { age: 'any', compromising: 'any' },
     }),
     true,
   );

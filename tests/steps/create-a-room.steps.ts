@@ -23,7 +23,7 @@ const NEW_CONFIGURATION: Partial<SettingsView> = { timePerDilemmaSeconds: 30 };
 const NEW_ROUNDS: readonly RoundSetting[] = Array.from({ length: 6 }, () => ({
   origin: 'random',
   categories: ['honesty'],
-  content: [],
+  content: { age: 'any', compromising: 'any' },
 }));
 
 /** How a player of the lobby sees the rounds the host set: no round of the players chosen yet. */
@@ -31,7 +31,11 @@ function viewsOf(rounds: readonly RoundSetting[]): RoundView[] {
   return rounds.map((round): RoundView => {
     if (round.origin === 'players') return { origin: 'players', dilemmaId: null };
     if (round.origin === 'specific') return round;
-    return { origin: 'random', categories: round.categories, content: round.content ?? [] };
+    return {
+      origin: 'random',
+      categories: round.categories,
+      content: round.content ?? { age: 'any', compromising: 'any' },
+    };
   });
 }
 
@@ -182,7 +186,11 @@ Then(
   'the room has {int} random rounds of every category and the default time per dilemma',
   async function (this: GameWorld, count: number) {
     const host = await this.host();
-    const random: RoundView = { origin: 'random', categories: null, content: [] };
+    const random: RoundView = {
+      origin: 'random',
+      categories: null,
+      content: { age: 'any', compromising: 'any' },
+    };
     assert.deepEqual(await this.driver.roundsSeenBy(host), Array(count).fill(random));
     const settings = await this.driver.settingsSeenBy(host);
     assert.ok(settings.timePerDilemmaSeconds > 0, 'the room has no time per dilemma');
@@ -226,9 +234,9 @@ When('{string} changes the configuration', async function (this: GameWorld, host
   await this.hostIs(host);
   this.changes = { variant: 'anonymous', timePerDilemmaSeconds: 90 };
   this.rounds = [
-    { origin: 'random', categories: ['honesty'], content: [] },
+    { origin: 'random', categories: ['honesty'], content: { age: 'any', compromising: 'any' } },
     { origin: 'players' },
-    { origin: 'random', categories: null, content: [] },
+    { origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
   ];
   await this.driver.changeSettings(host, this.changes);
   await this.driver.setRounds(host, this.rounds);
@@ -464,7 +472,11 @@ When(
   'the host sets round {int} as random from {string} and {string}',
   async function (this: GameWorld, round: number, first: string, second: string) {
     this.categories = [categoryNamed(first), categoryNamed(second)];
-    await setRound(this, round, { origin: 'random', categories: this.categories, content: [] });
+    await setRound(this, round, {
+      origin: 'random',
+      categories: this.categories,
+      content: { age: 'any', compromising: 'any' },
+    });
   },
 );
 
@@ -483,7 +495,11 @@ Given('round {int} has a specific dilemma', async function (this: GameWorld, rou
 });
 
 When('the host sets round {int} as random', async function (this: GameWorld, round: number) {
-  await setRound(this, round, { origin: 'random', categories: null, content: [] });
+  await setRound(this, round, {
+    origin: 'random',
+    categories: null,
+    content: { age: 'any', compromising: 'any' },
+  });
 });
 
 Then('round {int} has no dilemma chosen', async function (this: GameWorld, round: number) {
@@ -543,7 +559,11 @@ Then('the first round plays {string}', async function (this: GameWorld, name: st
 });
 
 Given('a room with {int} rounds', async function (this: GameWorld, count: number) {
-  const random: RoundSetting = { origin: 'random', categories: null, content: [] };
+  const random: RoundSetting = {
+    origin: 'random',
+    categories: null,
+    content: { age: 'any', compromising: 'any' },
+  };
   await this.driver.setRounds(await this.host(), Array(count).fill(random));
   assert.equal((await this.driver.roundsSeenBy(await this.host())).length, count);
 });
@@ -611,7 +631,7 @@ Then('round {int} is random from every category', async function (this: GameWorl
   for (const viewer of this.inRoom) {
     assert.deepEqual(
       await roundSeenBy(this, viewer, round),
-      { origin: 'random', categories: null, content: [] },
+      { origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
       viewer,
     );
   }

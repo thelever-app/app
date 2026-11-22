@@ -91,7 +91,7 @@ import type {
   MarkedDilemma,
   OffReason,
   RoundContent,
-  ContentRequirement,
+  ContentChoices,
   OpenSettingsView,
   SupportInvitationView,
   SupportLineView,
@@ -241,7 +241,7 @@ const SCREEN = {
   qr: (code: string) => `Código QR de la sala ${code}`,
   close: 'Cerrar',
   videoCall: 'videollamada',
-  change: 'Cambiar',
+  configure: 'Configurar',
   save: 'Guardar',
   variants: { nominal: 'Nominal', anonymous: 'Anónimo' },
   switches: {
@@ -1391,8 +1391,8 @@ export class E2eDriver implements GameDriver {
 
   async canChangeSettings(player: string): Promise<boolean> {
     const { page } = screenOf(this.#playerCalled(player));
-    const change = page.getByRole('button', { name: SCREEN.change, exact: true });
-    return steady(async () => (await change.count()) > 0);
+    const configure = page.getByRole('button', { name: SCREEN.configure, exact: true });
+    return steady(async () => (await configure.count()) > 0);
   }
 
   /** As the lobby on the device has them, from the last state of the lobby the room server sent. */
@@ -1575,13 +1575,12 @@ export class E2eDriver implements GameDriver {
     return found.map((listed) => listed.map(({ dilemmaId }) => dilemmaId));
   }
 
-  /** «Cambiar» in the lobby opens the settings sheet. */
-  /** The settings of the lobby, as the host left them open, or opened now. */
+  /** The settings of the lobby, as the host left them open, or opened now from «Configurar». */
   async #openSettings(host: string): Promise<Locator> {
     const { page } = screenOf(this.#playerCalled(host));
     const sheet = page.getByRole('dialog', { name: SCREEN.settingsTitle });
     if (await sheet.isVisible()) return sheet;
-    await page.getByRole('button', { name: SCREEN.change, exact: true }).click();
+    await page.getByRole('button', { name: SCREEN.configure, exact: true }).click();
     await sheet.waitFor();
     return sheet;
   }
@@ -1634,7 +1633,7 @@ export class E2eDriver implements GameDriver {
     if (setting.origin === 'players') return true;
     if (setting.origin === 'random') {
       if (!(await this.#setCategoriesOn(sheet, round, setting.categories))) return false;
-      return this.#setContentOn(sheet, round, setting.content ?? []);
+      return this.#setContentOn(sheet, round, setting.content ?? ANY_CONTENT);
     }
     if (before?.origin === 'specific' && before.dilemmaId === setting.dilemmaId) return true;
     const choose = sheet
@@ -1654,19 +1653,25 @@ export class E2eDriver implements GameDriver {
   }
 
   /**
-   * Marks the content of the random round from «Cualquiera», each requirement it asks for, unless
-   * the sheet turns one off.
+   * Chooses each part of the content of the random round; false if the sheet does not offer a
+   * part the content asks for, which is any wherever the sheet does not offer it.
    */
   async #setContentOn(sheet: Locator, round: number, content: RoundContent): Promise<boolean> {
     const card = this.#roundCardOn(sheet, round);
-    const chip = (name: string) =>
-      card.getByRole('checkbox', { name: spanish(`settings.content.${name}`), exact: true });
-    const any = chip('any');
-    if ((await any.getAttribute('aria-checked')) !== 'true') await any.click();
-    for (const requirement of content) {
-      const option = chip(requirement);
-      if (await option.isDisabled()) return false;
-      await option.click();
+    for (const axis of ['age', 'compromising'] as const) {
+      const options = card.getByRole('radiogroup', {
+        name: spanish(`settings.content.${axis}.label`),
+        exact: true,
+      });
+      if ((await options.count()) === 0) {
+        if (content[axis] === 'any') continue;
+        return false;
+      }
+      const option = options.getByRole('radio', {
+        name: spanish(`settings.content.${axis}.${content[axis]}`),
+        exact: true,
+      });
+      if ((await option.getAttribute('aria-checked')) !== 'true') await option.click();
     }
     return true;
   }
@@ -1906,13 +1911,25 @@ export class E2eDriver implements GameDriver {
   async chooseAmbience(host: string, ambience: Ambience): Promise<void> {
     const sheet = await this.#openSettings(host);
     const options = await this.#ambiencesOn(sheet);
-    await options
-      .getByRole('radio', { name: new RegExp(`^${escaped(spanish(`ambience.${ambience}.name`))}`) })
-      .click();
+    const option = options.getByRole('radio', {
+      name: new RegExp(`^${escaped(spanish(`ambience.${ambience}.name`))}`),
+    });
+    await option.click();
+    // The sheet fills in what the ambience sets once it marks it.
+    await option.and(option.page().locator('[aria-checked="true"]')).waitFor();
+  }
+
+  async saveAmbience(host: string, ambience: Ambience): Promise<void> {
+    await this.chooseAmbience(host, ambience);
+    await this.#saveSettings(await this.#openSettings(host));
     await this.#untilEveryoneSees(
       `the ambience ${ambience}`,
       (lobby) => lobby.ambience === ambience,
     );
+  }
+
+  async closeTheOpenSettings(host: string): Promise<void> {
+    await this.#closeSettings(await this.#openSettings(host));
   }
 
   async markAnonymousOnTheOpenSettings(host: string): Promise<void> {
@@ -2005,19 +2022,16 @@ export class E2eDriver implements GameDriver {
     };
   }
 
-  async contentsOffFor(host: string, round: number): Promise<ContentRequirement[]> {
+  async contentChoicesFor(host: string, round: number): Promise<ContentChoices> {
     const sheet = await this.#openSettings(host);
     const card = this.#roundCardOn(sheet, round);
-    const off: ContentRequirement[] = [];
-    for (const requirement of ['adults-only', 'compromising'] as const) {
-      const option = card.getByRole('checkbox', {
-        name: spanish(`settings.content.${requirement}`),
-        exact: true,
-      });
-      if (await option.isDisabled()) off.push(requirement);
-    }
+    const offered = async (axis: 'age' | 'compromising') =>
+      (await card
+        .getByRole('radiogroup', { name: spanish(`settings.content.${axis}.label`), exact: true })
+        .count()) > 0;
+    const choices = { age: await offered('age'), compromising: await offered('compromising') };
     await this.#closeSettings(sheet);
-    return off;
+    return choices;
   }
 
   /**
@@ -5131,6 +5145,9 @@ function lastGameOf({ screen }: E2ePlayer): GameStateDto | undefined {
   );
 }
 
+/** Any age and compromising or not: the content of a random round the host sets nothing for. */
+const ANY_CONTENT: RoundContent = { age: 'any', compromising: 'any' };
+
 function roundViewOf(round: RoomStateDto['rounds'][number]): RoundView {
   switch (round.origin) {
     case 'random':
@@ -5156,7 +5173,7 @@ function sameRounds(
       if (round.origin === 'random' && other.origin === 'random') {
         return (
           isDeepStrictEqual(sorted(round.categories), sorted(other.categories)) &&
-          round.content.join() === (other.content ?? []).join()
+          isDeepStrictEqual(round.content, other.content ?? ANY_CONTENT)
         );
       }
       if (round.origin === 'specific' && other.origin === 'specific') {

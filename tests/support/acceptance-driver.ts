@@ -9,7 +9,6 @@ import {
   ConnectionChangedEvent,
   ConnectPlayerUseCase,
   AMBIENCES,
-  ChooseAmbienceUseCase,
   Room,
   type RoomSettingsChanges,
   CreateRoomUseCase,
@@ -137,7 +136,7 @@ import type {
   CardView,
   CatalogEntry,
   MarkedDilemma,
-  ContentRequirement,
+  ContentChoices,
   OpenSettingsView,
   SwitchView,
   Declaration,
@@ -1151,7 +1150,10 @@ export class AcceptanceDriver implements GameDriver {
     const rounds = (await this.#roomStateOf(host)).rounds.map(roundChangeOf);
     return this.#accepts(
       () =>
-        this.#changeRounds(host, [...rounds, { origin: 'random', categories: null, content: [] }]),
+        this.#changeRounds(host, [
+          ...rounds,
+          { origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
+        ]),
       InvalidRoomSettingError,
     );
   }
@@ -1349,11 +1351,22 @@ export class AcceptanceDriver implements GameDriver {
     throw new Error('Only the device has the settings open: the scenario must be @screen');
   }
 
-  async chooseAmbience(host: string, ambience: Ambience): Promise<void> {
-    await new ChooseAmbienceUseCase(this.#roomRepository, this.#notifier).execute({
+  chooseAmbience(): Promise<void> {
+    throw new Error('Only the device keeps an ambience unsaved: the scenario must be @screen');
+  }
+
+  closeTheOpenSettings(): Promise<void> {
+    throw new Error('Only the device has the settings open: the scenario must be @screen');
+  }
+
+  /** The settings save what the room server gives the host for that ambience. */
+  async saveAmbience(host: string, ambience: Ambience): Promise<void> {
+    const { ambiences } = await this.#roomStateOf(host);
+    if (!ambiences) throw new Error(`${host} is not given the ambiences, as only the host is`);
+    await this.#changeRoomSettings.execute({
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(host),
-      ambience,
+      changes: ambiences[ambience],
     });
   }
 
@@ -1363,13 +1376,10 @@ export class AcceptanceDriver implements GameDriver {
       AMBIENCES.map(async (ambience) => ({
         ambience,
         described: true,
-        offBecause: (await this.#onACopyOfTheRoom(host, (rooms, playerId) =>
-          new ChooseAmbienceUseCase(rooms, new InMemoryPlayerNotifier()).execute({
-            roomId: this.#currentRoomId(),
-            playerId,
-            ambience,
-          }),
-        ))
+        offBecause: (await this.#onACopyOfTheRoom(host, async (rooms, playerId) => {
+          const { ambiences } = await this.#roomStateOf(host);
+          return this.#changeSettingsOn(rooms, playerId, ambiences![ambience]);
+        }))
           ? null
           : ('minor-in-room' as const),
       })),
@@ -1391,21 +1401,18 @@ export class AcceptanceDriver implements GameDriver {
     return { on, offBecause: turnedOn.compromisingDilemmas ? null : 'only-anonymous' };
   }
 
-  /** The requirements the application takes out of the content of that round. */
-  async contentsOffFor(host: string, round: number): Promise<ContentRequirement[]> {
-    const off: ContentRequirement[] = [];
-    for (const requirement of ['adults-only', 'compromising'] as const) {
-      const rounds = (await this.#roomStateOf(host)).rounds.map(roundChangeOf);
-      const changed = rounds.map((other, index) =>
-        index === round - 1 && other.origin === 'random'
-          ? { ...other, content: [requirement] }
-          : other,
-      );
-      const after = await this.#settingsOnACopy(host, { rounds: changed });
-      const set = after.rounds[round - 1];
-      if (set?.origin !== 'random' || !set.content.includes(requirement)) off.push(requirement);
-    }
-    return off;
+  /** Whether the application keeps a value other than any in each part of the content of that round. */
+  async contentChoicesFor(host: string, round: number): Promise<ContentChoices> {
+    const asked = { age: 'adults-only', compromising: 'yes' } as const;
+    const rounds = (await this.#roomStateOf(host)).rounds.map(roundChangeOf);
+    const changed = rounds.map((other, index) =>
+      index === round - 1 && other.origin === 'random' ? { ...other, content: asked } : other,
+    );
+    const set = (await this.#settingsOnACopy(host, { rounds: changed })).rounds[round - 1];
+    return {
+      age: set?.origin === 'random' && set.content.age === asked.age,
+      compromising: set?.origin === 'random' && set.content.compromising === asked.compromising,
+    };
   }
 
   /** The settings a copy of the room takes with the change. */

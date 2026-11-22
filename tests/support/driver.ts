@@ -28,11 +28,23 @@ export interface OpenSettingsView {
 /** The presets of a room. */
 export type Ambience = 'classic' | 'spicy' | 'no-filter';
 
-/** What the dilemma of a random round must be besides its categories. */
-export type ContentRequirement = 'adults-only' | 'compromising';
+/** The minimum age a random round asks of its dilemma. */
+export type ContentAge = 'any' | 'from-16' | 'adults-only';
 
-/** What a random round draws: every requirement marked, in this order; none is any content. */
-export type RoundContent = readonly ContentRequirement[];
+/** Whether a random round asks for a compromising dilemma. */
+export type ContentCompromising = 'any' | 'no' | 'yes';
+
+/** What the dilemma of a random round must be besides its categories. */
+export interface RoundContent {
+  readonly age: ContentAge;
+  readonly compromising: ContentCompromising;
+}
+
+/** Which parts of the content of a random round the host can set. */
+export interface ContentChoices {
+  readonly age: boolean;
+  readonly compromising: boolean;
+}
 
 /**
  * Why something for adults or compromising is off: a player under 18, someone under 18 in the
@@ -587,8 +599,15 @@ export interface GameDriver {
   canCreateRoomWithoutAmbience(player: string): Promise<boolean>;
   /** The ambience of the room the lobby says, or custom. */
   ambienceSeenBy(viewer: string): Promise<string>;
-  /** In the settings of the lobby, which stay open, filled in with its configuration. */
+  /**
+   * In the settings of the lobby, which stay open, filled in with its configuration: the room
+   * does not take it until the host saves.
+   */
   chooseAmbience(host: string, ambience: Ambience): Promise<void>;
+  /** The host chooses the ambience in the settings and saves them. */
+  saveAmbience(host: string, ambience: Ambience): Promise<void>;
+  /** `host` closes the settings they have open, without saving. */
+  closeTheOpenSettings(host: string): Promise<void>;
   /** `host` turns on the anonymous reveal in the settings they have open, without saving. */
   markAnonymousOnTheOpenSettings(host: string): Promise<void>;
   /** What the settings `host` has open show; undefined if they are closed. */
@@ -597,8 +616,8 @@ export interface GameDriver {
   ambiencesInTheSettings(host: string): Promise<AmbienceOption[]>;
   adultsOnlySwitchSeenBy(host: string): Promise<SwitchView>;
   compromisingSwitchSeenBy(host: string): Promise<SwitchView>;
-  /** Of the contents of that random round, those the host cannot choose. */
-  contentsOffFor(host: string, round: number): Promise<ContentRequirement[]>;
+  /** Which parts of the content of that random round the host can set. */
+  contentChoicesFor(host: string, round: number): Promise<ContentChoices>;
   /** What the search for the dilemma of that round shows, with its marks. */
   searchWithMarks(player: string, round: number): Promise<MarkedDilemma[]>;
   /** Whether the player is told the game includes compromising dilemmas, and can stay or leave. */
