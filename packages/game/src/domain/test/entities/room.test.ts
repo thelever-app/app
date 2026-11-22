@@ -118,7 +118,7 @@ function lobbyWithAPlayersRound(): Room {
     'TestHostId',
     {
       rounds: [
-        { id: 1, origin: 'random', categories: null, content: [] },
+        { id: 1, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
         { id: 2, origin: 'players' },
         { id: 3, origin: 'specific', dilemmaId: FOR_EVERYONE.dilemmaId },
       ],
@@ -261,7 +261,7 @@ describe('Room', () => {
           id: index + 1,
           origin: 'random',
           categories: null,
-          content: [],
+          content: { age: 'any', compromising: 'any' },
         })),
       );
       expect(room.chosenDilemmas).toEqual([]);
@@ -528,16 +528,30 @@ describe('Room', () => {
       room.changeSettings('TestHostId', {
         rounds: [
           { id: 3, origin: 'players' },
-          { origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
-          { id: 1, origin: 'random', categories: null, content: [] },
+          {
+            origin: 'random',
+            categories: ['honesty', 'loyalty'],
+            content: { age: 'any', compromising: 'any' },
+          },
+          {
+            id: 1,
+            origin: 'random',
+            categories: null,
+            content: { age: 'any', compromising: 'any' },
+          },
         ],
       });
 
       // Assert
       expect(room.settings.rounds).toEqual([
         { id: 3, origin: 'players' },
-        { id: 9, origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
-        { id: 1, origin: 'random', categories: null, content: [] },
+        {
+          id: 9,
+          origin: 'random',
+          categories: ['honesty', 'loyalty'],
+          content: { age: 'any', compromising: 'any' },
+        },
+        { id: 1, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
       ]);
     });
 
@@ -605,7 +619,12 @@ describe('Room', () => {
         {
           adultsOnly: true,
           rounds: [
-            { id: 1, origin: 'random', categories: ['honesty'], content: [] },
+            {
+              id: 1,
+              origin: 'random',
+              categories: ['honesty'],
+              content: { age: 'any', compromising: 'any' },
+            },
             { id: 2, origin: 'specific', dilemmaId: FOR_ADULTS.dilemmaId },
           ],
         },
@@ -617,8 +636,13 @@ describe('Room', () => {
 
       // Assert
       expect(room.settings.rounds).toEqual([
-        { id: 1, origin: 'random', categories: ['honesty'], content: [] },
-        { id: 2, origin: 'random', categories: null, content: [] },
+        {
+          id: 1,
+          origin: 'random',
+          categories: ['honesty'],
+          content: { age: 'any', compromising: 'any' },
+        },
+        { id: 2, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
       ]);
     });
 
@@ -637,7 +661,7 @@ describe('Room', () => {
         id: 2,
         origin: 'random',
         categories: null,
-        content: [],
+        content: { age: 'any', compromising: 'any' },
       });
     });
 
@@ -656,7 +680,12 @@ describe('Room', () => {
       // Act
       room.changeSettings('TestHostId', {
         rounds: [
-          { id: 2, origin: 'random', categories: null, content: [] },
+          {
+            id: 2,
+            origin: 'random',
+            categories: null,
+            content: { age: 'any', compromising: 'any' },
+          },
           { id: 4, origin: 'players' },
         ],
       });
@@ -986,9 +1015,9 @@ describe('Room', () => {
 
       // Assert
       expect(room.settings.rounds).toEqual([
-        { id: 1, origin: 'random', categories: null, content: [] },
+        { id: 1, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
         { id: 2, origin: 'players' },
-        { id: 3, origin: 'random', categories: null, content: [] },
+        { id: 3, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
       ]);
       expect(room.chosenDilemmas).toEqual([]);
     });

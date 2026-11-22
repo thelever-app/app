@@ -436,7 +436,7 @@
     "roundCount_one": "{{count}} ronda",
     "roundCount_other": "{{count}} rondas",
     "roundCount_many": "{{count}} rondas",
-    "change": "Cambiar",
+    "configure": "Configurar",
     "adultsOnly": "Solo para mayores de 18",
     "remote": "A distancia: mejor en videollamada.",
     "rounds": {
@@ -560,13 +560,20 @@
       "onlyAnonymous": "Solo en sala anónima"
     },
     "content": {
-      "label": "Contenido",
-      "any": "Cualquiera",
-      "adults-only": "Solo +18",
-      "compromising": "Solo comprometidos",
-      "needsAdults": "«Solo +18» necesita los dilemas +18.",
-      "needsCompromising": "«Solo comprometidos» necesita los dilemas comprometidos.",
-      "needsBoth": "«Solo +18» necesita los dilemas +18, y «Solo comprometidos», los dilemas comprometidos."
+      "age": {
+        "label": "Edad del dilema",
+        "any": "Da igual",
+        "from-16": "Desde 16",
+        "adults-only": "+18"
+      },
+      "compromising": {
+        "label": "Comprometido",
+        "any": "Da igual",
+        "no": "No",
+        "yes": "Sí"
+      },
+      "needsAdults": "Con los dilemas +18 activados, cada ronda aleatoria puede pedir también su edad.",
+      "needsCompromising": "Con los dilemas comprometidos activados, cada ronda aleatoria puede pedir también si lo es."
     }
   },
   "pickDilemmas": {

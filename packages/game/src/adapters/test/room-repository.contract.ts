@@ -3,6 +3,7 @@ import type { RoomRepository } from '../../application/ports/room-repository.por
 import { Room, type RoomSnapshot } from '../../domain/entities/room.ts';
 import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.ts';
 import { FixedRandomness } from '../../domain/test/support/fixed-randomness.ts';
+import { configurationOf } from '../../domain/vos/ambience.vo.ts';
 import { AvatarVO } from '../../domain/vos/avatar.vo.ts';
 
 /** When everything in these tests happens, unless a test says otherwise. */
@@ -86,10 +87,26 @@ export function describeRoomRepositoryContract(
       });
 
       it('should keep compromising dilemmas and the content of each random round', async () => {
-        // Arrange: No filter turns compromising dilemmas on and gives every round a content.
+        // Arrange: No filter turns compromising dilemmas on and gives every round a content; the
+        // last one asks for a mild dilemma, from 16 and not compromising.
         const repository = await create();
         const saved = room();
-        saved.chooseAmbience('TestAnaId', 'no-filter');
+        const { contents, ...noFilter } = configurationOf('no-filter');
+        saved.changeSettings('TestAnaId', {
+          ...noFilter,
+          rounds: [
+            ...contents.map((content) => ({
+              origin: 'random' as const,
+              categories: null,
+              content,
+            })),
+            {
+              origin: 'random',
+              categories: ['honesty'],
+              content: { age: 'from-16', compromising: 'no' },
+            },
+          ],
+        });
         await repository.save(saved);
 
         // Act
@@ -228,12 +245,22 @@ export function describeRoomRepositoryContract(
             timePerDilemmaSeconds: 60,
             newDilemmas: false,
             rounds: [
-              { id: 4, origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
+              {
+                id: 4,
+                origin: 'random',
+                categories: ['honesty', 'loyalty'],
+                content: { age: 'any', compromising: 'any' },
+              },
               { id: 2, origin: 'specific', dilemmaId: 'TestSpecificDilemma' },
               { id: 7, origin: 'players' },
               { id: 1, origin: 'players' },
               { id: 3, origin: 'players' },
-              { id: 9, origin: 'random', categories: null, content: [] },
+              {
+                id: 9,
+                origin: 'random',
+                categories: null,
+                content: { age: 'any', compromising: 'any' },
+              },
             ],
           },
           [

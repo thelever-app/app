@@ -389,13 +389,11 @@ export class Room {
     const compromisingDilemmas =
       variant === 'anonymous' && (rest.compromisingDilemmas ?? this.#settings.compromisingDilemmas);
     if (adultsOnly && !this.#settings.adultsOnly) this.#ensureNobodyUnderEighteen();
-    // What the room no longer allows goes out of the content of each round, which may become any.
-    const allowedOf = (content: RoundContent): RoundContent =>
-      content.filter(
-        (requirement) =>
-          (requirement !== 'adults-only' || adultsOnly) &&
-          (requirement !== 'compromising' || compromisingDilemmas),
-      );
+    // What the room no longer allows goes back to any in the content of each round.
+    const allowedOf = ({ age, compromising }: RoundContent): RoundContent => ({
+      age: adultsOnly ? age : 'any',
+      compromising: compromisingDilemmas ? compromising : 'any',
+    });
     const withoutRounds = this.#settings.with({
       ...rest,
       compromisingDilemmas,
@@ -458,25 +456,6 @@ export class Room {
       rounds: rounds.map((round) => (leftOut.includes(round.id) ? randomRound(round.id) : round)),
     });
     this.#chosenDilemmas = chosen;
-    this.#changeLobby('settings-changed');
-  }
-
-  /**
-   * Only the host, and only in the lobby: the room takes the configuration of the ambience, with 8
-   * random rounds, and keeps its language, its time per dilemma and new dilemmas. Nobody chooses an
-   * ambience for adults with someone under 18 in the room.
-   */
-  chooseAmbience(playerId: string, ambience: string): void {
-    this.#ensureHostInLobby(playerId);
-    const { dilemmaLanguage, timePerDilemmaSeconds, newDilemmas } = this.#settings;
-    const settings = settingsOf(ambienceCalled(ambience), {
-      dilemmaLanguage,
-      timePerDilemmaSeconds,
-      newDilemmas,
-    });
-    if (settings.adultsOnly && !this.#settings.adultsOnly) this.#ensureNobodyUnderEighteen();
-    this.#settings = settings;
-    this.#chosenDilemmas = [];
     this.#changeLobby('settings-changed');
   }
 

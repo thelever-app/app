@@ -62,7 +62,7 @@ export interface CandidateSearch extends Omit<DilemmaSearch, 'text' | 'dilemmaId
   readonly includeGap: boolean;
   /** Never drawn: the dilemmas the game already plays. */
   readonly excludedIds: readonly string[];
-  /** Any of those that suit the room, only the dilemmas for adults or only the compromising ones. */
+  /** The age and whether compromising, among those that suit the room. */
   readonly content: RoundContent;
   /**
    * How many players of the room played each dilemma: those played by fewer are drawn first, and

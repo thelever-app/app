@@ -436,7 +436,7 @@
     "roundCount_one": "{{count}} manche",
     "roundCount_many": "{{count}} manches",
     "roundCount_other": "{{count}} manches",
-    "change": "Modifier",
+    "configure": "Configurer",
     "adultsOnly": "Réservé aux plus de 18 ans",
     "remote": "À distance : mieux en visio.",
     "rounds": {
@@ -560,13 +560,20 @@
       "onlyAnonymous": "Seulement dans une salle anonyme"
     },
     "content": {
-      "label": "Contenu",
-      "any": "N’importe lequel",
-      "adults-only": "+18 seulement",
-      "compromising": "Compromettants seulement",
-      "needsAdults": "« +18 seulement » a besoin des dilemmes +18.",
-      "needsCompromising": "« Compromettants seulement » a besoin des dilemmes compromettants.",
-      "needsBoth": "« +18 seulement » a besoin des dilemmes +18, et « Compromettants seulement », des dilemmes compromettants."
+      "age": {
+        "label": "Âge du dilemme",
+        "any": "Peu importe",
+        "from-16": "Dès 16 ans",
+        "adults-only": "+18"
+      },
+      "compromising": {
+        "label": "Compromettant",
+        "any": "Peu importe",
+        "no": "Non",
+        "yes": "Oui"
+      },
+      "needsAdults": "Avec les dilemmes +18 activés, chaque manche au hasard peut aussi demander son âge.",
+      "needsCompromising": "Avec les dilemmes compromettants activés, chaque manche au hasard peut aussi demander s’il l’est."
     }
   },
   "pickDilemmas": {

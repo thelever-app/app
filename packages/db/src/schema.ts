@@ -25,7 +25,8 @@ import type {
   GameStage,
   PredictedShare,
   AmbienceOrCustom,
-  RoundContent,
+  ContentAge,
+  ContentCompromising,
 } from '@thelever-app/game';
 import type { ColumnType, Generated, Kysely } from 'kysely';
 
@@ -153,8 +154,10 @@ export interface Database {
     round_id: number;
     origin: DilemmaOrigin;
     categories: RoomCategory[] | null;
-    /** What a random round draws; null in the others. */
-    content: RoundContent | null;
+    /** The age a random round draws; null in the others. */
+    content_age: ContentAge | null;
+    /** Whether a random round draws compromising dilemmas; null in the others. */
+    content_compromising: ContentCompromising | null;
     dilemma_id: string | null;
     minimum_age: 16 | 18 | null;
     compromising: boolean | null;

@@ -39,9 +39,9 @@ const A_GAME = {
   count: 10,
   includeGap: true,
   excludedIds: [],
-  content: [],
+  content: { age: 'any', compromising: 'any' },
   playedBy: [],
-};
+} as const;
 
 describe('FindCandidatesUseCase', () => {
   describe('execute', () => {

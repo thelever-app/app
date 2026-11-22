@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { Room } from '../../entities/room.ts';
+import { Room, type RoomSettingsChanges } from '../../entities/room.ts';
 import { InvalidRoomSettingError } from '../../errors/invalid-room-setting.error.ts';
 import { MinorInRoomError } from '../../errors/minor-in-room.error.ts';
-import { NotHostError } from '../../errors/not-host.error.ts';
 import { LobbyChangedEvent } from '../../events/lobby-changed.event.ts';
-import { ambienceOf } from '../../vos/ambience.vo.ts';
+import { type Ambience, ambienceOf, configurationOf } from '../../vos/ambience.vo.ts';
 import { AvatarVO } from '../../vos/avatar.vo.ts';
 import { FixedIdGenerator } from '../support/fixed-id-generator.ts';
 
@@ -137,8 +136,17 @@ describe('Room with ambiences', () => {
     });
   });
 
-  describe('chooseAmbience', () => {
-    it('should apply the ambience, keeping the language, the time and new dilemmas', () => {
+  describe('changeSettings to what an ambience sets', () => {
+    /** The changes that give the room what the ambience sets, as the settings save them. */
+    const changesOf = (ambience: Ambience): RoomSettingsChanges => {
+      const { contents, ...configuration } = configurationOf(ambience);
+      return {
+        ...configuration,
+        rounds: contents.map((content) => ({ origin: 'random', categories: null, content })),
+      };
+    };
+
+    it('should make the room of the ambience, keeping the language, the time and new dilemmas', () => {
       // Arrange
       const room = roomOfAna();
       room.changeSettings(
@@ -146,9 +154,13 @@ describe('Room with ambiences', () => {
         {
           timePerDilemmaSeconds: 45,
           rounds: [
-            { id: 1, origin: 'random', categories: null, content: [] },
-            { id: 2, origin: 'random', categories: null, content: [] },
-            { id: 3, origin: 'specific', dilemmaId: 'TestDilemma' },
+            {
+              id: 1,
+              origin: 'random',
+              categories: null,
+              content: { age: 'any', compromising: 'any' },
+            },
+            { id: 2, origin: 'specific', dilemmaId: 'TestDilemma' },
           ],
         },
         [FOR_EVERYONE],
@@ -156,40 +168,24 @@ describe('Room with ambiences', () => {
       room.pullEvents();
 
       // Act
-      room.chooseAmbience('TestHostId', 'no-filter');
+      room.changeSettings('TestHostId', changesOf('no-filter'));
 
       // Assert
       expect(ambienceOf(room.settings)).toBe('no-filter');
-      expect(room.settings.rounds[2]).toMatchObject({ id: 3, origin: 'random' });
+      expect(room.settings.rounds[1]).toMatchObject({ origin: 'random' });
       expect(room.settings.dilemmaLanguage).toBe('es');
       expect(room.settings.timePerDilemmaSeconds).toBe(45);
       expect(room.pullEvents()).toEqual([new LobbyChangedEvent('TestId', 'settings-changed', 2)]);
     });
 
-    it('should throw an error if the player is not the host', () => {
-      // Arrange
-      const room = roomOfAna();
-      joinLuis(room, false);
-
-      // Act & Assert
-      expect(() => room.chooseAmbience('TestLuisId', 'spicy')).toThrow(NotHostError);
-    });
-
-    it('should throw an error for an ambience that does not exist', () => {
-      // Act & Assert
-      expect(() => roomOfAna().chooseAmbience('TestHostId', 'TestNoAmbience')).toThrow(
-        InvalidRoomSettingError,
-      );
-    });
-
-    it('should not choose an ambience for adults with someone under 18 in the room', () => {
+    it('should not take an ambience for adults with someone under 18 in the room', () => {
       // Arrange
       const room = roomOfAna();
       joinLuis(room, true);
 
       // Act & Assert
-      expect(() => room.chooseAmbience('TestHostId', 'spicy')).toThrow(MinorInRoomError);
-      expect(() => room.chooseAmbience('TestHostId', 'classic')).not.toThrow();
+      expect(() => room.changeSettings('TestHostId', changesOf('spicy'))).toThrow(MinorInRoomError);
+      expect(() => room.changeSettings('TestHostId', changesOf('classic'))).not.toThrow();
     });
   });
 
@@ -224,22 +220,44 @@ describe('Room with ambiences', () => {
     });
 
     it.each([
-      { content: ['adults-only'], change: { adultsOnly: false }, left: [] },
-      { content: ['compromising'], change: { compromisingDilemmas: false }, left: [] },
-      { content: ['compromising'], change: { variant: 'nominal' }, left: [] },
       {
-        content: ['adults-only', 'compromising'],
+        content: { age: 'adults-only', compromising: 'any' },
+        change: { adultsOnly: false },
+        left: { age: 'any', compromising: 'any' },
+      },
+      {
+        content: { age: 'any', compromising: 'yes' },
         change: { compromisingDilemmas: false },
-        left: ['adults-only'],
+        left: { age: 'any', compromising: 'any' },
+      },
+      {
+        content: { age: 'any', compromising: 'yes' },
+        change: { variant: 'nominal' },
+        left: { age: 'any', compromising: 'any' },
+      },
+      {
+        content: { age: 'adults-only', compromising: 'yes' },
+        change: { compromisingDilemmas: false },
+        left: { age: 'adults-only', compromising: 'any' },
+      },
+      {
+        content: { age: 'from-16', compromising: 'no' },
+        change: { adultsOnly: false },
+        left: { age: 'any', compromising: 'no' },
       },
     ] as const)(
-      'should take out of a round of $content what $change rules out',
+      'should take $content back to any where $change rules it out',
       ({ content, change, left }) => {
         // Arrange
         const room = roomOfAna({ ambience: 'no-filter' });
         room.changeSettings('TestHostId', {
           rounds: [
-            { id: 1, origin: 'random', categories: null, content: [] },
+            {
+              id: 1,
+              origin: 'random',
+              categories: null,
+              content: { age: 'any', compromising: 'any' },
+            },
             { id: 2, origin: 'random', categories: ['honesty'], content },
           ],
         });

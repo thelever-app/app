@@ -119,7 +119,13 @@ describe('the lobby over the room sockets', () => {
       type: 'change-settings',
       changes: {
         variant: 'anonymous',
-        rounds: [{ origin: 'random', categories: ['honesty'], content: [] }],
+        rounds: [
+          {
+            origin: 'random',
+            categories: ['honesty'],
+            content: { age: 'any', compromising: 'any' },
+          },
+        ],
       },
     });
 
@@ -133,25 +139,35 @@ describe('the lobby over the room sockets', () => {
           origin: 'random',
           categories: ['honesty'],
           withoutNewDilemmas: false,
-          content: [],
+          content: { age: 'any', compromising: 'any' },
         },
       ]);
     }
   });
 
-  it('should show everyone the ambience the host chooses', async () => {
+  it('should give only the host what each ambience sets, and make the room of the one the host saves', async () => {
     // Arrange
-    const { ana, luis } = await connectedLobby();
+    server = await startRoomServer();
+    const { roomId } = await lobbyOfThree(server.http);
+    const forLuis = await stateSeenBy(server.url, 'luis', roomId);
+    const ana = await TestClient.open(server.url);
+    ana.send({
+      type: 'connect',
+      contractVersion: CONTRACT_VERSION,
+      token: tokenOf('ana'),
+      roomId,
+      language: 'es',
+    });
+    const forAna = await ana.next('room-state');
 
     // Act
-    ana.send({ type: 'choose-ambience', ambience: 'no-filter' });
+    ana.send({ type: 'change-settings', changes: forAna.ambiences!['no-filter'] });
 
     // Assert
-    for (const client of [ana, luis]) {
-      const { ambience, settings } = await client.next('room-state');
-      expect(ambience).toBe('no-filter');
-      expect(settings).toMatchObject({ variant: 'anonymous', compromisingDilemmas: true });
-    }
+    expect(forLuis.ambiences).toBeNull();
+    const { ambience, settings } = await ana.next('room-state');
+    expect(ambience).toBe('no-filter');
+    expect(settings).toMatchObject({ variant: 'anonymous', compromisingDilemmas: true });
   });
 
   it('should take who leaves the lobby out of the room for everyone', async () => {
@@ -202,7 +218,12 @@ describe('the lobby over the room sockets', () => {
       type: 'change-settings',
       changes: {
         rounds: [
-          { id: 1, origin: 'random', categories: null, content: [] },
+          {
+            id: 1,
+            origin: 'random',
+            categories: null,
+            content: { age: 'any', compromising: 'any' },
+          },
           { id: 2, origin: 'players' },
         ],
       },
@@ -313,7 +334,15 @@ describe('the lobby over the room sockets', () => {
     const { ana } = await connectedLobby();
     ana.send({
       type: 'change-settings',
-      changes: { rounds: [{ origin: 'random', categories: ['justice'], content: [] }] },
+      changes: {
+        rounds: [
+          {
+            origin: 'random',
+            categories: ['justice'],
+            content: { age: 'any', compromising: 'any' },
+          },
+        ],
+      },
     });
     await ana.next('room-state');
 

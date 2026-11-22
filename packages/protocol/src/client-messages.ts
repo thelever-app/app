@@ -16,9 +16,11 @@ import { z } from 'zod';
  * and nobody under 18 joins a room for adults (`adults-only-room`). 14 since the ambiences: a
  * room is created with one, the host chooses another (`choose-ambience`), compromising dilemmas
  * and the content of each random round, nothing for adults with a minor in the room
- * (`minor-in-room`), and leaving the lobby.
+ * (`minor-in-room`), and leaving the lobby. 15 since the content of a round in two parts, its age and
+ * whether compromising: the room state gives the host what each ambience sets, which they save as
+ * settings, and nobody chooses an ambience apart.
  */
-export const CONTRACT_VERSION = 14;
+export const CONTRACT_VERSION = 15;
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a
@@ -113,17 +115,17 @@ export const RoundCategoriesDto = z
   .max(CategoryDto.options.length)
   .nullable();
 
-/** What a requirement of the content of a round asks of its dilemma. */
-export const ContentRequirementDto = z.enum(['adults-only', 'compromising']);
+/** The minimum age a random round asks of its dilemma: any, 16 or 18. */
+export const ContentAgeDto = z.enum(['any', 'from-16', 'adults-only']);
 
-/**
- * What the dilemma of a random round must be: each requirement once, in this order, and all of
- * them; none is any content.
- */
-export const RoundContentDto = z
-  .array(ContentRequirementDto)
-  .max(ContentRequirementDto.options.length)
-  .refine((content) => new Set(content).size === content.length, 'a requirement twice');
+/** Whether a random round asks for a compromising dilemma: any, no or yes. */
+export const ContentCompromisingDto = z.enum(['any', 'no', 'yes']);
+
+/** What the dilemma of a random round must be besides its categories. */
+export const RoundContentDto = z.strictObject({
+  age: ContentAgeDto,
+  compromising: ContentCompromisingDto,
+});
 
 /** A round as the host sets it, with where its dilemma comes from; one without an id is a new one. */
 export const RoundSettingsDto = z.discriminatedUnion('origin', [
@@ -320,13 +322,6 @@ export const ChangeSettingsDto = z.strictObject({
   traceparent: TraceparentDto.optional(),
 });
 
-/** The host chooses an ambience, which sets up the room again, before the game starts. */
-export const ChooseAmbienceDto = z.strictObject({
-  type: z.literal('choose-ambience'),
-  ambience: AmbienceDto,
-  traceparent: TraceparentDto.optional(),
-});
-
 /** A player, the host too, chooses a dilemma of the catalog for an empty round of the players. */
 export const ChooseRoundDilemmaDto = z.strictObject({
   type: z.literal('choose-round-dilemma'),
@@ -361,7 +356,6 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   AnswerDilemmaDto,
   ChangeAvatarDto,
   ChangeSettingsDto,
-  ChooseAmbienceDto,
   ChooseRoundDilemmaDto,
   ClearRoundDilemmaDto,
   ExpelPlayerDto,
@@ -385,7 +379,6 @@ export const ClientMessageTypeDto = z.enum([
   'answer-dilemma',
   'change-avatar',
   'change-settings',
-  'choose-ambience',
   'choose-round-dilemma',
   'clear-round-dilemma',
   'expel-player',
@@ -412,9 +405,9 @@ export type PlaceDto = z.infer<typeof PlaceDto>;
 export type RoomSettingsDto = z.infer<typeof RoomSettingsDto>;
 export type AmbienceDto = z.infer<typeof AmbienceDto>;
 export type AmbienceOrCustomDto = z.infer<typeof AmbienceOrCustomDto>;
-export type ContentRequirementDto = z.infer<typeof ContentRequirementDto>;
+export type ContentAgeDto = z.infer<typeof ContentAgeDto>;
+export type ContentCompromisingDto = z.infer<typeof ContentCompromisingDto>;
 export type RoundContentDto = z.infer<typeof RoundContentDto>;
-export type ChooseAmbienceDto = z.infer<typeof ChooseAmbienceDto>;
 export type ChangeAvatarDto = z.infer<typeof ChangeAvatarDto>;
 export type ChangeSettingsDto = z.infer<typeof ChangeSettingsDto>;
 export type RoundSettingsDto = z.infer<typeof RoundSettingsDto>;

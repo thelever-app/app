@@ -111,7 +111,7 @@ const A_GAME = {
   count: 100,
   includeGap: true,
   excludedIds: [],
-  content: [],
+  content: { age: 'any', compromising: 'any' },
   playedBy: [],
 } as const;
 
@@ -522,7 +522,7 @@ export function describeDilemmaCatalogContract(
           ...FOR_EVERYONE,
           ...A_GAME,
           maximumMinimumAge: 18,
-          content: ['adults-only'],
+          content: { age: 'adults-only', compromising: 'any' },
         });
 
         // Assert
@@ -539,11 +539,29 @@ export function describeDilemmaCatalogContract(
           ...FOR_EVERYONE,
           ...A_GAME,
           includeCompromising: true,
-          content: ['compromising'],
+          content: { age: 'any', compromising: 'yes' },
         });
 
         // Assert
         expect(found.map(({ dilemmaId }) => dilemmaId)).toEqual([fourth]);
+      });
+
+      it('should draw only the dilemmas from 16 that are not compromising when asked for those', async () => {
+        // Arrange
+        const { catalog, stored } = await create();
+        const first = stored[0]?.dilemmaId;
+
+        // Act
+        const found = await catalog.findCandidates({
+          ...FOR_EVERYONE,
+          ...A_GAME,
+          maximumMinimumAge: 18,
+          includeCompromising: true,
+          content: { age: 'from-16', compromising: 'no' },
+        });
+
+        // Assert
+        expect(found.map(({ dilemmaId }) => dilemmaId)).toEqual([first]);
       });
 
       it('should leave out the dilemmas excluded, and those with the gap unless they are included', async () => {

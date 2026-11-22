@@ -223,7 +223,7 @@ describe('CachedDilemmaCatalog', () => {
         count: 3,
         includeGap: true,
         excludedIds: [],
-        content: [] as const,
+        content: { age: 'any', compromising: 'any' } as const,
         playedBy: [],
       };
       await catalog.findCandidates(draw);

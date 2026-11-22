@@ -45,10 +45,10 @@ Feature: Create a room
     And it has 8 random rounds from every category with the contents <contents>
 
     Examples:
-      | ambience  | variant   | age         | compromising | contents                                                                          |
-      | Classic   | nominal   | from 16     | off          | any, any, any, any, any, any, any, any                                            |
-      | Spicy     | nominal   | adults only | off          | any, adults only, any, adults only, any, adults only, any, adults only            |
-      | No filter | anonymous | adults only | on           | any, compromising, adults only, any, compromising, adults only, any, compromising |
+      | ambience  | variant   | age         | compromising | contents                                                                                                                   |
+      | Classic   | nominal   | from 16     | off          | any, any, any, any, any, any, any, any                                                                                     |
+      | Spicy     | nominal   | adults only | off          | any, adults only, any, adults only, any, adults only, any, adults only                                                     |
+      | No filter | anonymous | adults only | on           | any, compromising, adults only, adults only and compromising, any, compromising, adults only, adults only and compromising |
 
   @ui
   Scenario: Spicy and No filter are off for a player under 18
@@ -97,7 +97,7 @@ Feature: Create a room
     Given a host who created a room with the ambience "Classic"
     And has set the time per dilemma to 45 seconds
     And has chosen a specific dilemma for round 3
-    When the host chooses the ambience "No filter" in the settings
+    When the host chooses the ambience "No filter" in the settings and saves
     Then the room has the configuration of "No filter"
     And round 3 is random
     And the time per dilemma is 45 seconds
@@ -317,9 +317,16 @@ Feature: Create a room
     Then round 2 plays an adults-only dilemma
 
   @ui
-  Scenario: Adults-only rounds need an adults-only room
-    Given a host in the lobby of a room not marked as adults only
-    Then the host sees the adults-only content of a random round turned off
+  Scenario Outline: Each part of the content of a round shows only where the room allows it
+    Given a host who created a room with the ambience "<ambience>"
+    Then the host <age> set the age of the dilemma of a random round
+    And the host <compromising> set whether the dilemma of a random round is compromising
+
+    Examples:
+      | ambience  | age    | compromising |
+      | Classic   | cannot | cannot       |
+      | Spicy     | can    | cannot       |
+      | No filter | can    | can          |
 
   @ui
   Scenario: A random round can be only for compromising dilemmas
@@ -346,6 +353,12 @@ Feature: Create a room
     When the host sets round 2 to adults-only and compromising content
     Then round 2 plays a dilemma that is both adults-only and compromising
 
+  @ui
+  Scenario: A random round can draw a mild dilemma in a No filter room
+    Given a host who created a room with the ambience "No filter"
+    When the host sets round 2 to from 16 and not compromising content
+    Then round 2 plays a dilemma suitable from 16 that is not compromising
+
   @ui @screen
   Scenario: Choosing an ambience in the settings keeps them open with its configuration
     Given a host in the lobby of a room created with the ambience "Classic"
@@ -357,3 +370,10 @@ Feature: Create a room
     Given the host has chosen the ambience "Spicy" in the settings
     When the host turns on the anonymous reveal
     Then the settings show the room as "Custom" before saving
+
+  @ui @screen
+  Scenario: Choosing an ambience in the settings changes nothing until the host saves
+    Given a host in the lobby of a room created with the ambience "Classic"
+    When the host chooses the ambience "Spicy" in the settings
+    And closes the settings without saving
+    Then everyone in the lobby sees that the room is "Classic"

@@ -67,11 +67,11 @@ describe(THIS, () => {
       .selectFrom('rooms')
       .select('compromising_dilemmas')
       .executeTakeFirstOrThrow();
-    const rounds = await db
-      .selectFrom('room_rounds')
-      .select(['round_id', 'content'])
-      .orderBy('position')
-      .execute();
+    // The content of the rounds as this migration left it, before later ones changed its shape.
+    const { rows: rounds } = await sql<{
+      round_id: number;
+      content: string | null;
+    }>`select round_id, content from room_rounds order by position`.execute(db);
     const game = await db.selectFrom('games').select('ambience').executeTakeFirstOrThrow();
     expect(room.compromising_dilemmas).toBe(false);
     expect(rounds).toEqual([

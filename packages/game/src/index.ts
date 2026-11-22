@@ -21,10 +21,14 @@ export {
 } from './domain/entities/room.ts';
 export {
   ANY_CONTENT,
-  CONTENT_REQUIREMENTS,
+  CONTENT_AGES,
+  CONTENT_COMPROMISING,
   DILEMMA_ORIGINS,
+  isAnyContent,
+  isOfContent,
   randomRound,
-  type ContentRequirement,
+  type ContentAge,
+  type ContentCompromising,
   type DilemmaOrigin,
   type RoundContent,
   type RoundSnapshot,
@@ -87,9 +91,11 @@ export { CATEGORIES, isCategory, type Category } from './domain/vos/category.vo.
 export {
   AMBIENCES,
   ambienceOf,
+  configurationOf,
   keptForANewRoom,
   settingsOf,
   type Ambience,
+  type AmbienceConfiguration,
   type AmbienceOrCustom,
   type KeptSettings,
 } from './domain/vos/ambience.vo.ts';
@@ -250,10 +256,6 @@ export {
   ChangeRoomSettingsUseCase,
   type ChangeRoomSettingsInput,
 } from './application/use-cases/change-room-settings.use-case.ts';
-export {
-  ChooseAmbienceUseCase,
-  type ChooseAmbienceInput,
-} from './application/use-cases/choose-ambience.use-case.ts';
 export {
   ChooseRoundDilemmaUseCase,
   type ChooseRoundDilemmaInput,

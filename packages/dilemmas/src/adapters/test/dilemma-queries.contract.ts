@@ -55,7 +55,7 @@ const A_GAME = {
   count: 100,
   includeGap: true,
   excludedIds: [],
-  content: [],
+  content: { age: 'any', compromising: 'any' },
   playedBy: [],
 } as const;
 
@@ -660,7 +660,7 @@ export function describeDilemmaQueriesContract(
         const found = await idsOf(queries, {
           ...EVERYONE,
           maximumMinimumAge: 18,
-          content: ['adults-only'],
+          content: { age: 'adults-only', compromising: 'any' },
         });
 
         // Assert
@@ -678,7 +678,7 @@ export function describeDilemmaQueriesContract(
         const found = await idsOf(queries, {
           ...EVERYONE,
           includeCompromising: true,
-          content: ['compromising'],
+          content: { age: 'any', compromising: 'yes' },
         });
 
         // Assert
@@ -698,11 +698,31 @@ export function describeDilemmaQueriesContract(
           ...EVERYONE,
           maximumMinimumAge: 18,
           includeCompromising: true,
-          content: ['adults-only', 'compromising'],
+          content: { age: 'adults-only', compromising: 'yes' },
         });
 
         // Assert
         expect(found).toEqual(['TestAdultCompromisingDilemma']);
+      });
+
+      it('should draw only the dilemmas from 16 that are not compromising when asked for those', async () => {
+        // Arrange
+        const queries = await saved(
+          catalogDilemma('TestDilemma'),
+          catalogDilemma('TestAdultDilemma', { minimumAge: 18 }),
+          catalogDilemma('TestCompromisingDilemma', { compromising: true }),
+        );
+
+        // Act
+        const found = await idsOf(queries, {
+          ...EVERYONE,
+          maximumMinimumAge: 18,
+          includeCompromising: true,
+          content: { age: 'from-16', compromising: 'no' },
+        });
+
+        // Assert
+        expect(found).toEqual(['TestDilemma']);
       });
 
       it('should never draw a dilemma excluded', async () => {

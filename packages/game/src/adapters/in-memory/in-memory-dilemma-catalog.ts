@@ -13,6 +13,7 @@ import {
   type SearchPage,
 } from '../../application/ports/dilemma-catalog.port.ts';
 import type { GameDilemma } from '../../domain/entities/game.ts';
+import { isOfContent } from '../../domain/vos/round.vo.ts';
 
 /** The only version of its dilemmas, which never change. */
 const VERSION = 1;
@@ -116,8 +117,7 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
         .filter(
           ({ dilemmaId, hasGap, minimumAge, compromising }) =>
             (criteria.includeGap || !hasGap) &&
-            (!criteria.content.includes('adults-only') || minimumAge === 18) &&
-            (!criteria.content.includes('compromising') || compromising === true) &&
+            isOfContent({ minimumAge, compromising: compromising === true }, criteria.content) &&
             !criteria.excludedIds.includes(dilemmaId),
         )
         // A stable sort: the same players keep the order they were given.

@@ -47,7 +47,12 @@ async function arrange() {
         playerId: lobby.anaId,
         changes: {
           rounds: [
-            { id: 1, origin: 'random', categories: null, content: [] },
+            {
+              id: 1,
+              origin: 'random',
+              categories: null,
+              content: { age: 'any', compromising: 'any' },
+            },
             { id: 2, origin: 'players' },
           ],
         },
@@ -199,7 +204,11 @@ describe('ChangeRoomSettingsUseCase', () => {
       changes: {
         timePerDilemmaSeconds: 90,
         rounds: [
-          { origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
+          {
+            origin: 'random',
+            categories: ['honesty', 'loyalty'],
+            content: { age: 'any', compromising: 'any' },
+          },
           { origin: 'specific', dilemmaId: 'TestCatalog4' },
         ],
       },
@@ -209,7 +218,12 @@ describe('ChangeRoomSettingsUseCase', () => {
     const { settings } = (await roomRepository.findById(roomId))!;
     expect(settings.timePerDilemmaSeconds).toBe(90);
     expect(settings.rounds).toEqual([
-      { id: 9, origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
+      {
+        id: 9,
+        origin: 'random',
+        categories: ['honesty', 'loyalty'],
+        content: { age: 'any', compromising: 'any' },
+      },
       {
         id: 10,
         origin: 'specific',
@@ -515,8 +529,16 @@ describe('GetRoomStateUseCase', () => {
       playerId: anaId,
       changes: {
         rounds: [
-          { origin: 'random', categories: ['honesty'], content: [] },
-          { origin: 'random', categories: ['honesty'], content: [] },
+          {
+            origin: 'random',
+            categories: ['honesty'],
+            content: { age: 'any', compromising: 'any' },
+          },
+          {
+            origin: 'random',
+            categories: ['honesty'],
+            content: { age: 'any', compromising: 'any' },
+          },
         ],
         newDilemmas: false,
       },
@@ -575,7 +597,12 @@ describe('GetRoomStateUseCase', () => {
       playerId: anaId,
       changes: {
         rounds: [
-          { id: 1, origin: 'random', categories: ['honesty'], content: [] },
+          {
+            id: 1,
+            origin: 'random',
+            categories: ['honesty'],
+            content: { age: 'any', compromising: 'any' },
+          },
           { id: 2, origin: 'specific', dilemmaId: 'TestCatalog4' },
           { id: 3, origin: 'players' },
           { id: 4, origin: 'players' },
@@ -630,7 +657,7 @@ describe('GetRoomStateUseCase', () => {
         origin: 'random',
         categories: ['honesty'],
         withoutNewDilemmas: false,
-        content: [],
+        content: { age: 'any', compromising: 'any' },
       },
       {
         roundId: 2,

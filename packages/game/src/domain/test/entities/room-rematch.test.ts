@@ -110,7 +110,10 @@ describe('Room, rematch', () => {
     const room = roomAfterAGame();
     room.startRematch('Ana', PLAYED);
     room.changeSettings('Ana', {
-      rounds: [{ origin: 'players' }, { origin: 'random', categories: null, content: [] }],
+      rounds: [
+        { origin: 'players' },
+        { origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
+      ],
     });
     const [playersRound] = room.settings.rounds;
 

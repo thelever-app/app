@@ -49,7 +49,7 @@ function randomRounds(count: number): RoundSnapshot[] {
     id: index + 1,
     origin: 'random',
     categories: null,
-    content: [],
+    content: { age: 'any', compromising: 'any' },
   }));
 }
 
@@ -92,7 +92,7 @@ describe('composeGame', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
       { id: 4, origin: 'specific', dilemma: SPECIFIC },
-      { id: 1, origin: 'random', categories: null, content: [] },
+      { id: 1, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
       { id: 2, origin: 'players' },
     ];
     const chosenDilemmas = [
@@ -129,7 +129,14 @@ describe('composeGame', () => {
     // Act
     const composed = composeGame(
       input({
-        rounds: [{ id: 1, origin: 'random', categories: ['honesty'], content: [] }],
+        rounds: [
+          {
+            id: 1,
+            origin: 'random',
+            categories: ['honesty'],
+            content: { age: 'any', compromising: 'any' },
+          },
+        ],
         newDilemmas: false,
       }),
       new FixedRandomness(),
@@ -142,8 +149,13 @@ describe('composeGame', () => {
   it('should draw the dilemma of a round of a content from those of its content', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: null, content: ['adults-only'] },
-      { id: 2, origin: 'random', categories: null, content: [] },
+      {
+        id: 1,
+        origin: 'random',
+        categories: null,
+        content: { age: 'adults-only', compromising: 'any' },
+      },
+      { id: 2, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
     ];
     const candidates = new Map([
       ['*|any', { inCatalog: CATALOG.slice(0, 3), inExploration: [] }],
@@ -163,7 +175,12 @@ describe('composeGame', () => {
   it('should play any content of its categories in a round whose content has nothing left', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: ['honesty'], content: ['compromising'] },
+      {
+        id: 1,
+        origin: 'random',
+        categories: ['honesty'],
+        content: { age: 'any', compromising: 'yes' },
+      },
     ];
     const candidates = new Map([
       ['honesty|any', { inCatalog: candidatesCalled(['TestHonesty1']), inExploration: [] }],
@@ -183,7 +200,12 @@ describe('composeGame', () => {
   it('should take a dilemma of its content from the catalog before any content from exploration', () => {
     // Arrange: one exploration slot, which only dilemmas of any content could fill.
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: null, content: ['adults-only'] },
+      {
+        id: 1,
+        origin: 'random',
+        categories: null,
+        content: { age: 'adults-only', compromising: 'any' },
+      },
     ];
     const candidates = new Map([
       ['*|any', { inCatalog: [], inExploration: candidatesCalled(['TestNewAny']) }],
@@ -203,7 +225,7 @@ describe('composeGame', () => {
   it('should take a dilemma of its content from exploration before any content from the catalog', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: null, content: ['compromising'] },
+      { id: 1, origin: 'random', categories: null, content: { age: 'any', compromising: 'yes' } },
     ];
     const candidates = new Map([
       ['*|any', { inCatalog: candidatesCalled(['TestAny']), inExploration: [] }],
@@ -224,7 +246,7 @@ describe('composeGame', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
       { id: 1, origin: 'specific', dilemma: { ...SPECIFIC, dilemmaId: 'TestCatalog1' } },
-      { id: 2, origin: 'random', categories: null, content: [] },
+      { id: 2, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
     ];
 
     // Act
@@ -268,7 +290,7 @@ describe('composeGame', () => {
       id: index + 1,
       origin: 'random',
       categories: ['honesty'],
-      content: [],
+      content: { age: 'any', compromising: 'any' },
     }));
 
     // Act
@@ -283,8 +305,13 @@ describe('composeGame', () => {
     (randomness) => {
       // Arrange: every category has TestHonesty1 and TestLoyalty1, and honesty only TestHonesty1.
       const rounds: RoundSnapshot[] = [
-        { id: 1, origin: 'random', categories: null, content: [] },
-        { id: 2, origin: 'random', categories: ['honesty'], content: [] },
+        { id: 1, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
+        {
+          id: 2,
+          origin: 'random',
+          categories: ['honesty'],
+          content: { age: 'any', compromising: 'any' },
+        },
       ];
       const candidates = new Map([
         [
@@ -481,9 +508,9 @@ describe('composeGame, spacing', () => {
   it('should space the drawn dilemmas around a specific round', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: null, content: [] },
+      { id: 1, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
       { id: 2, origin: 'specific', dilemma: { ...SPECIFIC, type: 'game-theory' } },
-      { id: 3, origin: 'random', categories: null, content: [] },
+      { id: 3, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
     ];
 
     // Act
@@ -552,8 +579,18 @@ describe('categoriesToDraw', () => {
   it('should give each set of categories the random rounds and the empty rounds of the players draw from, once', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: ['loyalty', 'honesty'], content: [] },
-      { id: 2, origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
+      {
+        id: 1,
+        origin: 'random',
+        categories: ['loyalty', 'honesty'],
+        content: { age: 'any', compromising: 'any' },
+      },
+      {
+        id: 2,
+        origin: 'random',
+        categories: ['honesty', 'loyalty'],
+        content: { age: 'any', compromising: 'any' },
+      },
       { id: 3, origin: 'players' },
       { id: 4, origin: 'players' },
       { id: 5, origin: 'specific', dilemma: SPECIFIC },
@@ -577,7 +614,12 @@ describe('categoriesToDraw', () => {
   it('should draw from every category for a dilemma with the gap in a room without the players it needs', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: ['honesty'], content: [] },
+      {
+        id: 1,
+        origin: 'random',
+        categories: ['honesty'],
+        content: { age: 'any', compromising: 'any' },
+      },
       { id: 2, origin: 'specific', dilemma: { ...SPECIFIC, hasGap: true } },
     ];
 
@@ -596,11 +638,26 @@ describe('categoriesToDraw', () => {
   it('should draw each content of a set of categories apart, and count its rounds for any content too', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: null, content: [] },
-      { id: 2, origin: 'random', categories: null, content: ['adults-only'] },
-      { id: 3, origin: 'random', categories: null, content: ['compromising'] },
-      { id: 4, origin: 'random', categories: null, content: ['adults-only'] },
-      { id: 5, origin: 'random', categories: null, content: ['adults-only', 'compromising'] },
+      { id: 1, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
+      {
+        id: 2,
+        origin: 'random',
+        categories: null,
+        content: { age: 'adults-only', compromising: 'any' },
+      },
+      { id: 3, origin: 'random', categories: null, content: { age: 'any', compromising: 'yes' } },
+      {
+        id: 4,
+        origin: 'random',
+        categories: null,
+        content: { age: 'adults-only', compromising: 'any' },
+      },
+      {
+        id: 5,
+        origin: 'random',
+        categories: null,
+        content: { age: 'adults-only', compromising: 'yes' },
+      },
     ];
 
     // Act
@@ -622,7 +679,7 @@ describe('fixedDilemmaIds', () => {
   it('should give the dilemmas the rounds play without drawing them', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
-      { id: 1, origin: 'random', categories: null, content: [] },
+      { id: 1, origin: 'random', categories: null, content: { age: 'any', compromising: 'any' } },
       { id: 2, origin: 'players' },
       { id: 3, origin: 'players' },
       { id: 4, origin: 'specific', dilemma: SPECIFIC },

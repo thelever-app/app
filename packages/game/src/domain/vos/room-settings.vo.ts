@@ -1,7 +1,12 @@
 import { DuplicateDilemmaError } from '../errors/duplicate-dilemma.error.ts';
 import { InvalidRoomSettingError } from '../errors/invalid-room-setting.error.ts';
 import { isCategory } from './category.vo.ts';
-import { CONTENT_REQUIREMENTS, DILEMMA_ORIGINS, type RoundSnapshot } from './round.vo.ts';
+import {
+  CONTENT_AGES,
+  CONTENT_COMPROMISING,
+  DILEMMA_ORIGINS,
+  type RoundSnapshot,
+} from './round.vo.ts';
 
 /** The languages of the app, in which a room can play its dilemmas. */
 export const DILEMMA_LANGUAGES = ['es', 'en', 'fr', 'de', 'it', 'pt', 'ca'] as const;
@@ -131,18 +136,15 @@ function checkedRounds(
           throw new InvalidRoomSettingError('category', unknown ?? 'none');
         }
       }
-      // Each requirement once, in their order, and only those the room allows.
-      const inOrder = CONTENT_REQUIREMENTS.filter((requirement) =>
-        round.content.includes(requirement),
-      );
+      // A known age and compromising, each any where the room does not allow it.
+      const { age, compromising } = round.content ?? {};
       const allowed =
-        Array.isArray(round.content) &&
-        round.content.length === inOrder.length &&
-        round.content.every((requirement, index) => requirement === inOrder[index]) &&
-        (!round.content.includes('adults-only') || adultsOnly) &&
-        (!round.content.includes('compromising') || compromisingDilemmas);
+        (CONTENT_AGES as readonly unknown[]).includes(age) &&
+        (CONTENT_COMPROMISING as readonly unknown[]).includes(compromising) &&
+        (age === 'any' || adultsOnly) &&
+        (compromising === 'any' || compromisingDilemmas);
       if (!allowed) {
-        throw new InvalidRoomSettingError('content of a round', String(round.content));
+        throw new InvalidRoomSettingError('content of a round', `${age} ${compromising}`);
       }
     }
     if (round.origin === 'specific') {
@@ -164,7 +166,7 @@ function copyRound(round: RoundSnapshot): RoundSnapshot {
         id: round.id,
         origin: 'random',
         categories: round.categories && [...new Set(round.categories)],
-        content: round.content,
+        content: { age: round.content.age, compromising: round.content.compromising },
       };
     case 'specific':
       return { id: round.id, origin: 'specific', dilemma: { ...round.dilemma } };

@@ -529,52 +529,50 @@ legend.legend {
   line-height: var(--type-caption-line-height);
 }
 
-/* The content of a random round: any, only for adults or only compromising. */
-.contentRow {
+/* The content of a random round: its age and whether compromising, each where the room allows it. */
+.axis {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
-.contentLabel {
+.axisLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--type-caption-size);
   line-height: var(--type-caption-line-height);
   font-weight: 600;
   color: var(--color-ink-muted);
 }
 
-.contents {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.axisLabel > span {
+  color: var(--color-ink);
 }
 
-.contentOption {
-  min-height: 36px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 10px;
+.axisOptions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 3px;
+  border-radius: 11px;
+  background: var(--color-surface);
+}
+
+.axisOption {
+  min-height: 40px;
+  padding: 0 var(--space-1);
   border: 0;
-  border-radius: var(--radius-full);
-  background: var(--color-surface-raised);
-  box-shadow: inset 0 0 0 1px var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
   font: inherit;
   font-size: 13px;
+  line-height: 16px;
   font-weight: 600;
   color: var(--color-ink);
   cursor: pointer;
 }
 
-.contentOption[aria-checked='true'] {
-  background: var(--color-ink);
-  box-shadow: none;
-  color: var(--color-primary);
-}
-
-.contentOption:disabled {
-  background: var(--color-surface);
-  box-shadow: none;
-  color: var(--color-ink-muted);
-  cursor: not-allowed;
+.axisOption[aria-checked='true'] {
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1.5px var(--color-ink);
 }

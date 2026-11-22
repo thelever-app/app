@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ambienceOf, settingsOf } from '../../vos/ambience.vo.ts';
-import type { ContentRequirement, RoundSnapshot } from '../../vos/round.vo.ts';
+import type { RoundSnapshot } from '../../vos/round.vo.ts';
 
 const KEPT = { dilemmaLanguage: 'en', timePerDilemmaSeconds: 45, newDilemmas: false } as const;
 
@@ -13,13 +13,20 @@ const FOR_EVERYONE = {
   compromising: false,
 } as const;
 
-/** The rounds of an ambience, each with a single requirement or any content, as the table says. */
-function roundsWith(contents: readonly ('any' | ContentRequirement)[]): RoundSnapshot[] {
+/** The contents of the rounds of an ambience, as the table of the ambiences says them. */
+const CONTENTS = {
+  any: { age: 'any', compromising: 'any' },
+  'adults-only': { age: 'adults-only', compromising: 'any' },
+  compromising: { age: 'any', compromising: 'yes' },
+  both: { age: 'adults-only', compromising: 'yes' },
+} as const;
+
+function roundsWith(contents: readonly (keyof typeof CONTENTS)[]): RoundSnapshot[] {
   return contents.map((content, index) => ({
     id: index + 1,
     origin: 'random',
     categories: null,
-    content: content === 'any' ? [] : [content],
+    content: CONTENTS[content],
   }));
 }
 
@@ -57,11 +64,11 @@ describe('settingsOf', () => {
         'any',
         'compromising',
         'adults-only',
+        'both',
         'any',
         'compromising',
         'adults-only',
-        'any',
-        'compromising',
+        'both',
       ],
     },
   ] as const)(
@@ -116,7 +123,11 @@ describe('ambienceOf', () => {
     {
       case: 'a round with another content',
       change: (rounds: RoundSnapshot[]) =>
-        rounds.map((round) => (round.id === 2 ? { ...round, content: [] as const } : round)),
+        rounds.map((round) =>
+          round.id === 2
+            ? { ...round, content: { age: 'any', compromising: 'any' } as const }
+            : round,
+        ),
     },
     {
       case: 'a round from some categories',
@@ -127,7 +138,7 @@ describe('ambienceOf', () => {
                 id: 3,
                 origin: 'random' as const,
                 categories: ['honesty' as const],
-                content: [] as const,
+                content: { age: 'any', compromising: 'any' } as const,
               }
             : round,
         ),

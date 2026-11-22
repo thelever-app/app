@@ -10,7 +10,11 @@ async function randomRoundsOfEveryCategory(world: GameWorld, count: number): Pro
   world.beforeTheGame();
   await world.driver.setRounds(
     await world.host(),
-    Array.from({ length: count }, () => ({ origin: 'random', categories: null, content: [] })),
+    Array.from({ length: count }, () => ({
+      origin: 'random',
+      categories: null,
+      content: { age: 'any', compromising: 'any' },
+    })),
   );
 }
 

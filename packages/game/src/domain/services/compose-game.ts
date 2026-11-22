@@ -4,6 +4,7 @@ import type { Category } from '../vos/category.vo.ts';
 import type { CandidateDilemma } from '../vos/classification.vo.ts';
 import {
   ANY_CONTENT,
+  isAnyContent,
   type DilemmaOrigin,
   type LobbyDilemma,
   type RoundContent,
@@ -59,7 +60,13 @@ export const SPACING_ROUNDS = 5;
 /** The same key for the same categories in any order and the same content; null is every category. */
 export function drawKey(categories: readonly Category[] | null, content: RoundContent): string {
   const key = categories === null ? '*' : [...new Set(categories)].sort().join(',');
-  return `${key}|${content.length === 0 ? 'any' : content.join('+')}`;
+  const parts = [
+    ...(content.age === 'any' ? [] : [content.age]),
+    ...(content.compromising === 'any'
+      ? []
+      : [content.compromising === 'yes' ? 'compromising' : 'not-compromising']),
+  ];
+  return `${key}|${parts.length === 0 ? 'any' : parts.join('+')}`;
 }
 
 /** A set of categories and a content the system draws dilemmas from, and how many rounds draw from it. */
@@ -91,7 +98,7 @@ export function categoriesToDraw(
     const draw = drawFrom(fixedDilemmaOf(round, chosenDilemmas, playsTheGap), round);
     if (draw === undefined) continue;
     count(draw.categories, ANY_CONTENT);
-    if (draw.content.length > 0) count(draw.categories, draw.content);
+    if (!isAnyContent(draw.content)) count(draw.categories, draw.content);
   }
   return [...drawn.values()];
 }

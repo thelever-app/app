@@ -139,7 +139,18 @@ export function LobbyScreen() {
               <Icon name={AMBIENCE_ICONS[lobby.ambience]} size={22} />
               {t(`ambience.${lobby.ambience}.name`)}
             </span>
-            <span className={styles.signage}>{t('lobby.ambience')}</span>
+            {isHost ? (
+              <button
+                type="button"
+                className={styles.configure}
+                onClick={() => setOpen({ sheet: 'settings' })}
+              >
+                <Icon name="tune" size={20} />
+                {t('lobby.configure')}
+              </button>
+            ) : (
+              <span className={styles.signage}>{t('lobby.ambience')}</span>
+            )}
           </div>
           <div className={styles.divider} />
           <div className={styles.variant}>
@@ -178,15 +189,6 @@ export function LobbyScreen() {
                 {summaryOf(settings, say)}
               </span>
             </span>
-            {isHost && (
-              <button
-                type="button"
-                className={styles.change}
-                onClick={() => setOpen({ sheet: 'settings' })}
-              >
-                {t('lobby.change')}
-              </button>
-            )}
           </div>
         </section>
 
@@ -349,7 +351,7 @@ export function LobbyScreen() {
         )}
       </footer>
 
-      {open.sheet === 'settings' && (
+      {open.sheet === 'settings' && lobby.ambiences && (
         <RoomSettingsSheet
           roomId={lobby.roomId}
           settings={settings}
@@ -357,7 +359,7 @@ export function LobbyScreen() {
           hasPlayerUnderEighteen={lobby.hasPlayerUnderEighteen}
           rounds={lobby.rounds}
           onSave={(changes) => send({ type: 'change-settings', changes })}
-          onChooseAmbience={(ambience) => send({ type: 'choose-ambience', ambience })}
+          ambiences={lobby.ambiences}
           onClose={close}
         />
       )}

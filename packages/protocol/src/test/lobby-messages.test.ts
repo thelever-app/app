@@ -28,10 +28,16 @@ const rounds = [
     roundId: 2,
     origin: 'random',
     categories: ['life-and-death', 'honesty'],
-    content: ['adults-only'],
+    content: { age: 'adults-only', compromising: 'any' },
     withoutNewDilemmas: false,
   },
-  { roundId: 5, origin: 'random', categories: null, content: [], withoutNewDilemmas: true },
+  {
+    roundId: 5,
+    origin: 'random',
+    categories: null,
+    content: { age: 'any', compromising: 'any' },
+    withoutNewDilemmas: true,
+  },
   {
     roundId: 3,
     origin: 'players',
@@ -52,6 +58,7 @@ const roomState = {
   settings,
   ambience: 'custom',
   hasPlayerUnderEighteen: false,
+  ambiences: null,
   rounds,
   minimumPlayers: 2,
   minimumPlayersForTheGap: 3,
@@ -83,6 +90,52 @@ describe('RoomStateDto', () => {
     // Assert
     expect(result.success).toBe(true);
     expect(result.data).toEqual(roomState);
+  });
+
+  it('should give the host what each ambience sets in the room', () => {
+    // Arrange
+    const random = (age: string, compromising: string) => ({
+      origin: 'random',
+      categories: null,
+      content: { age, compromising },
+    });
+    const ambience = (variant: string, adultsOnly: boolean, compromisingDilemmas: boolean) => ({
+      variant,
+      adultsOnly,
+      compromisingDilemmas,
+      rounds: [random('any', 'any'), random('adults-only', 'yes')],
+    });
+    const forTheHost = {
+      ...roomState,
+      ambiences: {
+        classic: ambience('nominal', false, false),
+        spicy: ambience('nominal', true, false),
+        'no-filter': ambience('anonymous', true, true),
+      },
+    };
+
+    // Act
+    const result = RoomStateDto.safeParse(forTheHost);
+
+    // Assert
+    expect(result.data).toEqual(forTheHost);
+  });
+
+  it('should reject a content of a round outside its two closed lists', () => {
+    // Arrange
+    const withContent = (content: unknown) => ({
+      ...roomState,
+      rounds: [{ ...rounds[1], content }],
+    });
+
+    // Act & Assert
+    expect(RoomStateDto.safeParse(withContent(['adults-only'])).success).toBe(false);
+    expect(
+      RoomStateDto.safeParse(withContent({ age: 'from-12', compromising: 'any' })).success,
+    ).toBe(false);
+    expect(RoomStateDto.safeParse(withContent({ age: 'any', compromising: true })).success).toBe(
+      false,
+    );
   });
 
   it('should reject who chose the dilemma of a round, as an extra key', () => {
@@ -169,7 +222,11 @@ describe('the commands of the lobby', () => {
           variant: 'anonymous',
           rounds: [
             { id: 1, origin: 'specific', dilemmaId: 'dilemma-1' },
-            { origin: 'random', categories: ['honesty'], content: ['compromising'] },
+            {
+              origin: 'random',
+              categories: ['honesty'],
+              content: { age: 'any', compromising: 'yes' },
+            },
             { id: 3, origin: 'players' },
           ],
         },
@@ -178,7 +235,6 @@ describe('the commands of the lobby', () => {
       { type: 'clear-round-dilemma', roundId: 3 },
       { type: 'expel-player', playerId: 'player-3' },
       { type: 'start-game' },
-      { type: 'choose-ambience', ambience: 'no-filter' },
     ];
 
     // Act
@@ -186,6 +242,13 @@ describe('the commands of the lobby', () => {
 
     // Assert
     expect(parsed).toEqual(commands);
+  });
+
+  it('should reject choosing an ambience apart, which the host saves as settings', () => {
+    // Act & Assert
+    expect(
+      ClientMessageDto.safeParse({ type: 'choose-ambience', ambience: 'no-filter' }).success,
+    ).toBe(false);
   });
 
   it('should reject an avatar outside the closed lists', () => {
@@ -218,7 +281,11 @@ describe('the commands of the lobby', () => {
   it('should reject no rounds, more than 12, or a round without its dilemma', () => {
     // Arrange
     const withRounds = (rounds: unknown[]) => ({ type: 'change-settings', changes: { rounds } });
-    const random = { origin: 'random', categories: null, content: [] };
+    const random = {
+      origin: 'random',
+      categories: null,
+      content: { age: 'any', compromising: 'any' },
+    };
 
     // Act & Assert
     expect(ChangeSettingsDto.safeParse(withRounds([])).success).toBe(false);

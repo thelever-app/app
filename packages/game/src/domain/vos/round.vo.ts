@@ -16,18 +16,44 @@ export type DilemmaOrigin = 'random' | 'specific' | 'players';
 export const DILEMMA_ORIGINS = ['random', 'specific', 'players'] as const;
 
 /**
- * What the dilemma of a random round must be besides its categories (glossary, «Contenido de la
- * ronda»): for adults, in an adults-only room, or compromising, where they are on; in this order.
+ * The minimum age a random round asks of its dilemma: any, 16 or 18. Only an adults-only room asks
+ * for one, since in any other room every dilemma is from 16.
  */
-export const CONTENT_REQUIREMENTS = ['adults-only', 'compromising'] as const;
+export const CONTENT_AGES = ['any', 'from-16', 'adults-only'] as const;
 
-export type ContentRequirement = (typeof CONTENT_REQUIREMENTS)[number];
+export type ContentAge = (typeof CONTENT_AGES)[number];
 
-/** Every requirement marked must hold, so both draw only compromising dilemmas for adults; none is any. */
-export type RoundContent = readonly ContentRequirement[];
+/** Whether a random round asks for a compromising dilemma: only where they are on. */
+export const CONTENT_COMPROMISING = ['any', 'no', 'yes'] as const;
 
-/** Any content: no requirement. */
-export const ANY_CONTENT: RoundContent = [];
+export type ContentCompromising = (typeof CONTENT_COMPROMISING)[number];
+
+/**
+ * What the dilemma of a random round must be besides its categories (glossary, «Contenido de la
+ * ronda»), in the two ways the room tells dilemmas apart.
+ */
+export interface RoundContent {
+  readonly age: ContentAge;
+  readonly compromising: ContentCompromising;
+}
+
+/** Any content: any age and compromising or not. */
+export const ANY_CONTENT: RoundContent = { age: 'any', compromising: 'any' };
+
+export function isAnyContent({ age, compromising }: RoundContent): boolean {
+  return age === 'any' && compromising === 'any';
+}
+
+/** Whether a dilemma of that minimum age, compromising or not, is of the content. */
+export function isOfContent(
+  dilemma: { readonly minimumAge: number; readonly compromising: boolean },
+  { age, compromising }: RoundContent,
+): boolean {
+  return (
+    (age === 'any' || dilemma.minimumAge === (age === 'adults-only' ? 18 : 16)) &&
+    (compromising === 'any' || dilemma.compromising === (compromising === 'yes'))
+  );
+}
 
 /**
  * A round of the settings of the room, with an id of its own in the room, so a player choosing its

@@ -412,7 +412,7 @@
     "summary": "{{seconds}} s per dilemma",
     "roundCount_one": "{{count}} round",
     "roundCount_other": "{{count}} rounds",
-    "change": "Change",
+    "configure": "Set up",
     "adultsOnly": "Over-18s only",
     "remote": "Remote: a video call works best.",
     "rounds": {
@@ -533,13 +533,20 @@
       "onlyAnonymous": "Only in an anonymous room"
     },
     "content": {
-      "label": "Content",
-      "any": "Any",
-      "adults-only": "18+ only",
-      "compromising": "Compromising only",
-      "needsAdults": "“18+ only” needs 18+ dilemmas.",
-      "needsCompromising": "“Compromising only” needs compromising dilemmas.",
-      "needsBoth": "“18+ only” needs 18+ dilemmas, and “Compromising only”, compromising dilemmas."
+      "age": {
+        "label": "Age of the dilemma",
+        "any": "Any",
+        "from-16": "From 16",
+        "adults-only": "18+"
+      },
+      "compromising": {
+        "label": "Compromising",
+        "any": "Any",
+        "no": "No",
+        "yes": "Yes"
+      },
+      "needsAdults": "With 18+ dilemmas on, each random round can also ask for its age.",
+      "needsCompromising": "With compromising dilemmas on, each random round can also ask whether it is one."
     }
   },
   "pickDilemmas": {

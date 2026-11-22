@@ -1,7 +1,12 @@
 import type { Room } from '../../domain/entities/room.ts';
 import { PlayerNotInRoomError } from '../../domain/errors/player-not-in-room.error.ts';
 import { drawKey } from '../../domain/services/compose-game.ts';
-import { type AmbienceOrCustom, ambienceOf } from '../../domain/vos/ambience.vo.ts';
+import {
+  type Ambience,
+  type AmbienceOrCustom,
+  ambienceOf,
+  configurationOf,
+} from '../../domain/vos/ambience.vo.ts';
 import { ANY_CONTENT, type RoundContent } from '../../domain/vos/round.vo.ts';
 import type { Place } from '../../domain/vos/group.vo.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
@@ -49,6 +54,21 @@ export type LobbyRound =
       readonly chosenByYou: boolean;
     };
 
+/**
+ * What an ambience would set in the room, which choosing it in the settings fills in: its variant,
+ * adults only, compromising dilemmas and its random rounds from every category, in order.
+ */
+export interface AmbienceSettings {
+  readonly variant: RoomSettingsSnapshot['variant'];
+  readonly adultsOnly: boolean;
+  readonly compromisingDilemmas: boolean;
+  readonly rounds: readonly {
+    readonly origin: 'random';
+    readonly categories: null;
+    readonly content: RoundContent;
+  }[];
+}
+
 export interface GetRoomStateOutput {
   readonly roomId: string;
   /** The version of the room this state was computed from. */
@@ -66,6 +86,11 @@ export interface GetRoomStateOutput {
    * for adults; false for the others, who need not know, so nobody can tell who it is.
    */
   readonly hasPlayerUnderEighteen: boolean;
+  /**
+   * For the host, what each ambience would set in the room, so the settings fill it in when they
+   * choose it and the room only takes it when they save; null for the others.
+   */
+  readonly ambiences: Readonly<Record<Ambience, AmbienceSettings>> | null;
   /** The rounds of the game in the order it plays them. */
   readonly rounds: readonly LobbyRound[];
   /** The fewest players a game of the room starts with, by its variant: the screen counts what is missing. */
@@ -142,6 +167,7 @@ export class GetRoomStateUseCase {
       settings,
       ambience: ambienceOf(room.settings),
       hasPlayerUnderEighteen: playerId === room.host.id && room.hasPlayerUnderEighteen,
+      ambiences: playerId === room.host.id ? ambienceSettings() : null,
       rounds: rounds.map((round): LobbyRound => {
         if (round.origin === 'random') {
           return {
@@ -253,4 +279,15 @@ export class GetRoomStateUseCase {
     const contents = await this.#dilemmaCatalog.findContents(versions, language);
     return new Map(contents.map(({ dilemmaId, text }) => [dilemmaId, text]));
   }
+}
+
+function ambienceSettings(): Record<Ambience, AmbienceSettings> {
+  const of = (ambience: Ambience): AmbienceSettings => {
+    const { contents, ...configuration } = configurationOf(ambience);
+    return {
+      ...configuration,
+      rounds: contents.map((content) => ({ origin: 'random', categories: null, content })),
+    };
+  };
+  return { classic: of('classic'), spicy: of('spicy'), 'no-filter': of('no-filter') };
 }

@@ -13,7 +13,13 @@ const MIXED_ROUNDS: LobbyRoundDto[] = [
     origin: 'specific',
     dilemma: { dilemmaId: 'test-dilemma-9', text: 'La palanca', hasGap: false },
   },
-  { roundId: 2, origin: 'random', categories: null, content: [], withoutNewDilemmas: false },
+  {
+    roundId: 2,
+    origin: 'random',
+    categories: null,
+    content: { age: 'any', compromising: 'any' },
+    withoutNewDilemmas: false,
+  },
   { roundId: 3, origin: 'players', dilemma: null, chosenByYou: false },
 ];
 
@@ -192,42 +198,42 @@ describe('LobbyScreen', () => {
           roundId: 1,
           origin: 'random',
           categories: ['honesty'],
-          content: [],
+          content: { age: 'any', compromising: 'any' },
           withoutNewDilemmas: false,
         },
         {
           roundId: 2,
           origin: 'random',
           categories: ['honesty'],
-          content: [],
+          content: { age: 'any', compromising: 'any' },
           withoutNewDilemmas: false,
         },
         {
           roundId: 3,
           origin: 'random',
           categories: ['loyalty', 'honesty'],
-          content: [],
+          content: { age: 'any', compromising: 'any' },
           withoutNewDilemmas: false,
         },
         {
           roundId: 4,
           origin: 'random',
           categories: ['honesty', 'loyalty'],
-          content: [],
+          content: { age: 'any', compromising: 'any' },
           withoutNewDilemmas: false,
         },
         {
           roundId: 5,
           origin: 'random',
           categories: ['honesty', 'loyalty', 'justice'],
-          content: [],
+          content: { age: 'any', compromising: 'any' },
           withoutNewDilemmas: false,
         },
         {
           roundId: 6,
           origin: 'random',
           categories: null,
-          content: [],
+          content: { age: 'any', compromising: 'any' },
           withoutNewDilemmas: false,
         },
       ];
@@ -726,7 +732,7 @@ describe('LobbyScreen', () => {
       const { t } = await renderLobby(aRoom(AS_LUIS));
 
       // Assert
-      expect(screen.queryByRole('button', { name: t('lobby.change') })).toBeNull();
+      expect(screen.queryByRole('button', { name: t('lobby.configure') })).toBeNull();
       expect(screen.queryByRole('button', { name: t('lobby.start') })).toBeNull();
       expect(screen.queryByRole('button', { name: /expulsar/ })).toBeNull();
       expect(screen.getByText(t('lobby.guestWait', { host: 'Ana' }))).toBeDefined();
@@ -789,14 +795,14 @@ describe('LobbyScreen', () => {
           roundId: 1,
           origin: 'random',
           categories: null,
-          content: [],
+          content: { age: 'any', compromising: 'any' },
           withoutNewDilemmas: false,
         },
         {
           roundId: 2,
           origin: 'random',
           categories: ['honesty'],
-          content: [],
+          content: { age: 'any', compromising: 'any' },
           withoutNewDilemmas: true,
         },
       ];

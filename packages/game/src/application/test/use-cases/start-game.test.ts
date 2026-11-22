@@ -393,7 +393,7 @@ describe('StartGameUseCase', () => {
           excludedIds: ['TestCatalog3'],
           playedBy: [],
           includeGap: true,
-          content: [],
+          content: { age: 'any', compromising: 'any' },
         }),
       );
     });
@@ -408,8 +408,18 @@ describe('StartGameUseCase', () => {
           adultsOnly: true,
           rounds: [
             ...randomRounds(4, ['life-and-death']),
-            { id: 5, origin: 'random', categories: ['life-and-death'], content: ['adults-only'] },
-            { id: 6, origin: 'random', categories: ['life-and-death'], content: ['adults-only'] },
+            {
+              id: 5,
+              origin: 'random',
+              categories: ['life-and-death'],
+              content: { age: 'adults-only', compromising: 'any' },
+            },
+            {
+              id: 6,
+              origin: 'random',
+              categories: ['life-and-death'],
+              content: { age: 'adults-only', compromising: 'any' },
+            },
           ],
           newDilemmas: false,
         },
@@ -421,10 +431,16 @@ describe('StartGameUseCase', () => {
 
       // Assert
       expect(findCandidates).toHaveBeenCalledWith(
-        expect.objectContaining({ count: 6 * CANDIDATES_PER_ROUND, content: [] }),
+        expect.objectContaining({
+          count: 6 * CANDIDATES_PER_ROUND,
+          content: { age: 'any', compromising: 'any' },
+        }),
       );
       expect(findCandidates).toHaveBeenCalledWith(
-        expect.objectContaining({ count: 2 * CANDIDATES_PER_ROUND, content: ['adults-only'] }),
+        expect.objectContaining({
+          count: 2 * CANDIDATES_PER_ROUND,
+          content: { age: 'adults-only', compromising: 'any' },
+        }),
       );
     });
 

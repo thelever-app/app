@@ -1,8 +1,4 @@
-import {
-  ContentRequirementDto,
-  type LobbyRoundDto,
-  type RoundContentDto,
-} from '@thelever-app/protocol';
+import type { LobbyRoundDto } from '@thelever-app/protocol';
 import { CATEGORIES, type Category } from './categories.ts';
 
 /** The rounds of the lobby that follow one another as a single row: random ones of the same categories. */
@@ -30,10 +26,10 @@ function categoriesKey(categories: readonly Category[] | null): string {
 export function roundRows(rounds: readonly LobbyRoundDto[]): RoundRow[] {
   const rows: RoundRow[] = [];
   rounds.forEach((round, index) => {
-    const content = round.origin === 'random' ? round.content : [];
+    const content = round.origin === 'random' ? round.content : undefined;
     const counts = {
-      adultsOnly: content.includes('adults-only') ? 1 : 0,
-      compromising: content.includes('compromising') ? 1 : 0,
+      adultsOnly: content?.age === 'adults-only' ? 1 : 0,
+      compromising: content?.compromising === 'yes' ? 1 : 0,
     };
     const last = rows.at(-1);
     if (
@@ -69,20 +65,6 @@ export function roundNumbersByDilemma(
   return new Map(
     dilemmaIds.flatMap((dilemmaId, index) => (dilemmaId ? [[dilemmaId, index + 1] as const] : [])),
   );
-}
-
-/**
- * The requirements of the content of a random round once the host taps one: marked or unmarked, in
- * the order the room takes them. None marked is any content.
- */
-export function toggledRequirement(
-  content: RoundContentDto,
-  requirement: ContentRequirementDto,
-): RoundContentDto {
-  const marked = content.includes(requirement)
-    ? content.filter((known) => known !== requirement)
-    : [...content, requirement];
-  return ContentRequirementDto.options.filter((known) => marked.includes(known));
 }
 
 /**

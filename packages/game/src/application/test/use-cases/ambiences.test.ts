@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
-import { NotHostError } from '../../../domain/errors/not-host.error.ts';
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
 import { PlayerLeftEvent } from '../../../domain/events/player-left.event.ts';
 import { ambienceOf } from '../../../domain/vos/ambience.vo.ts';
 import { SequentialIdGenerator } from '../../../adapters/in-memory/sequential-id-generator.ts';
 import { KeepOrderRandomness } from '../../../domain/test/support/keep-order-randomness.ts';
-import { ChooseAmbienceUseCase } from '../../use-cases/choose-ambience.use-case.ts';
+import { ChangeRoomSettingsUseCase } from '../../use-cases/change-room-settings.use-case.ts';
 import { GetRoomStateUseCase } from '../../use-cases/get-room-state.use-case.ts';
 import { testCatalog } from '../support/test-catalog.ts';
 import { LeaveRoomUseCase } from '../../use-cases/leave-room.use-case.ts';
@@ -15,22 +14,58 @@ import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
 async function arrange() {
   const notifier = new InMemoryPlayerNotifier();
   const lobby = await lobbyOfThree(notifier);
-  const { roomRepository, gameRepository, clock } = lobby;
+  const { roomRepository, gameRepository, clock, catalog } = lobby;
   return {
     ...lobby,
     notifier,
-    chooseAmbience: new ChooseAmbienceUseCase(roomRepository, notifier),
+    getRoomState: new GetRoomStateUseCase(roomRepository, testCatalog()),
+    changeSettings: new ChangeRoomSettingsUseCase(roomRepository, catalog, notifier),
     leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier, clock),
   };
 }
 
-describe('ChooseAmbienceUseCase', () => {
-  it('should give the room the configuration of the ambience and tell everyone', async () => {
+describe('GetRoomStateUseCase, with the ambiences', () => {
+  it('should give only the host what each ambience would set in the room', async () => {
     // Arrange
-    const { chooseAmbience, roomRepository, notifier, roomId, anaId, luisId } = await arrange();
+    const { getRoomState, roomId, anaId, luisId } = await arrange();
+    const random = (age: string, compromising: string) => ({
+      origin: 'random',
+      categories: null,
+      content: { age, compromising },
+    });
 
     // Act
-    await chooseAmbience.execute({ roomId, playerId: anaId, ambience: 'spicy' });
+    const forAna = await getRoomState.execute({ roomId, playerId: anaId, language: 'es' });
+    const forLuis = await getRoomState.execute({ roomId, playerId: luisId, language: 'es' });
+
+    // Assert
+    expect(forAna.ambiences?.['no-filter']).toEqual({
+      variant: 'anonymous',
+      adultsOnly: true,
+      compromisingDilemmas: true,
+      rounds: [
+        random('any', 'any'),
+        random('any', 'yes'),
+        random('adults-only', 'any'),
+        random('adults-only', 'yes'),
+        random('any', 'any'),
+        random('any', 'yes'),
+        random('adults-only', 'any'),
+        random('adults-only', 'yes'),
+      ],
+    });
+    expect(Object.keys(forAna.ambiences ?? {})).toEqual(['classic', 'spicy', 'no-filter']);
+    expect(forLuis.ambiences).toBeNull();
+  });
+
+  it('should make the room of the ambience once the host saves what it sets, and tell everyone', async () => {
+    // Arrange
+    const { getRoomState, changeSettings, roomRepository, notifier, roomId, anaId, luisId } =
+      await arrange();
+    const { ambiences } = await getRoomState.execute({ roomId, playerId: anaId, language: 'es' });
+
+    // Act
+    await changeSettings.execute({ roomId, playerId: anaId, changes: ambiences!.spicy });
 
     // Assert
     const room = await roomRepository.findById(roomId);
@@ -39,22 +74,12 @@ describe('ChooseAmbienceUseCase', () => {
       new LobbyChangedEvent(roomId, 'settings-changed', room!.version),
     );
   });
-
-  it('should not let anyone but the host choose it', async () => {
-    // Arrange
-    const { chooseAmbience, roomId, luisId } = await arrange();
-
-    // Act & Assert
-    await expect(
-      chooseAmbience.execute({ roomId, playerId: luisId, ambience: 'spicy' }),
-    ).rejects.toThrow(NotHostError);
-  });
 });
 
 describe('GetRoomStateUseCase, with a minor in the room', () => {
   it('should tell only the host that someone in the room is under 18', async () => {
     // Arrange: Pablo declared he is 17.
-    const { roomRepository, roomId, anaId, luisId, clock } = await arrange();
+    const { getRoomState, roomRepository, roomId, anaId, luisId, clock } = await arrange();
     const room = await roomRepository.findById(roomId);
     room!.join(
       {
@@ -67,7 +92,6 @@ describe('GetRoomStateUseCase, with a minor in the room', () => {
       clock.now(),
     );
     await roomRepository.save(room!);
-    const getRoomState = new GetRoomStateUseCase(roomRepository, testCatalog());
 
     // Act
     const forAna = await getRoomState.execute({ roomId, playerId: anaId, language: 'es' });

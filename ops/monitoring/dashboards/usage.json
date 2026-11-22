@@ -145,7 +145,7 @@
                 "plotType": "STACKED_BAR",
                 "minAlignmentPeriod": "3600s",
                 "timeSeriesQuery": {
-                  "prometheusQuery": "sum by (\"message.type\") (increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"like-dilemma|unlike-dilemma|react|skip-dilemma|report-dilemma|reveal-early|move-on|ready-to-move-on|choose-ambience|choose-round-dilemma|clear-round-dilemma|restart-game\"}[${__interval}]))"
+                  "prometheusQuery": "sum by (\"message.type\") (increase({\"thelever.ws.message.duration_count\", outcome=\"ok\", \"message.type\"=~\"like-dilemma|unlike-dilemma|react|skip-dilemma|report-dilemma|reveal-early|move-on|ready-to-move-on|choose-round-dilemma|clear-round-dilemma|restart-game\"}[${__interval}]))"
                 }
               }
             ]

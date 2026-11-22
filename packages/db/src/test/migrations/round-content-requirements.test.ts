@@ -66,12 +66,10 @@ describe(`Migration ${THIS}`, () => {
     await migrateTo(db, THIS);
 
     // Assert
-    const rounds = await db
-      .selectFrom('room_rounds')
-      .select('content')
-      .orderBy('position')
-      .execute();
-    expect(rounds.map(({ content }) => content)).toEqual([[], ['adults-only'], ['compromising']]);
+    const { rows } = await sql<{
+      content: string[];
+    }>`select content from room_rounds order by position`.execute(db);
+    expect(rows.map(({ content }) => content)).toEqual([[], ['adults-only'], ['compromising']]);
   });
 
   it('should turn down a requirement it does not know', async () => {
