@@ -107,11 +107,14 @@ async function setContent(world: GameWorld, round: number, content: RoundContent
   });
 }
 
-/** The dilemma the game plays in that round. */
+/** The dilemma the game plays in that round, every round of the room being played. */
 async function dilemmaOfRound(world: GameWorld, round: number) {
   const host = await world.host();
   if (!(await world.driver.currentGameSeenBy(host))) await world.driver.startGame(host);
-  const dilemmaId = (await world.driver.dilemmasOfTheGame())[round - 1];
+  const dilemmaIds = await world.driver.dilemmasOfTheGame();
+  const rounds = await world.driver.roundsSeenBy(host);
+  assert.equal(dilemmaIds.length, rounds.length, 'the game leaves out a round of the room');
+  const dilemmaId = dilemmaIds[round - 1];
   assert.ok(dilemmaId, `the game has no round ${round}`);
   return catalogEntryOf(dilemmaId);
 }

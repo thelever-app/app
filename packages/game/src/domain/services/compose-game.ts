@@ -95,8 +95,13 @@ export function drawsOf(categories: readonly Category[] | null, content: RoundCo
         ]
       : []),
   ];
-  const keys = draws.map((draw) => drawKey(draw.categories, draw.content));
-  return draws.filter((_, index) => keys.indexOf(keys[index]!) === index);
+  const keys = new Set<string>();
+  return draws.filter((draw) => {
+    const key = drawKey(draw.categories, draw.content);
+    const first = !keys.has(key);
+    keys.add(key);
+    return first;
+  });
 }
 
 /** A set of categories and a content the system draws dilemmas from, and how many rounds draw from it. */
@@ -249,12 +254,17 @@ export function composeGame(input: ComposeGameInput, randomness: Randomness): Co
     }
   }
   // A round whose content has nothing left in the catalog nor in exploration falls back on what it
-  // can relax, each in the catalog first, without playing what it ruled out.
-  for (const position of toDraw) {
-    const { categories, content } = drawOf(position);
-    for (const fallback of drawsOf(categories, content).slice(1)) {
-      if (!composed[position]) draw(position, 'inCatalog', fallback);
-      if (!composed[position] && input.newDilemmas) draw(position, 'inExploration', fallback);
+  // can relax, each in the catalog first, without playing what it ruled out: every round on its own
+  // categories first, so one that falls back on every category does not take the only dilemma
+  // another round has left in its own.
+  for (const widened of [false, true]) {
+    for (const position of toDraw) {
+      const { categories, content } = drawOf(position);
+      for (const fallback of drawsOf(categories, content).slice(1)) {
+        if ((fallback.categories !== categories) !== widened) continue;
+        if (!composed[position]) draw(position, 'inCatalog', fallback);
+        if (!composed[position] && input.newDilemmas) draw(position, 'inExploration', fallback);
+      }
     }
   }
   return composed.filter((dilemma): dilemma is ComposedDilemma => dilemma !== null);
@@ -309,10 +319,7 @@ function chosenFor(roundId: number, chosenDilemmas: readonly ChosenDilemma[]): F
  * round, and every category of any content for any other round without a fixed dilemma; undefined
  * if it is not drawn.
  */
-function drawFrom(
-  fixed: FixedDilemma | null,
-  round: RoundSnapshot,
-): { readonly categories: readonly Category[] | null; readonly content: RoundContent } | undefined {
+function drawFrom(fixed: FixedDilemma | null, round: RoundSnapshot): Draw | undefined {
   if (fixed) return undefined;
   return round.origin === 'random'
     ? { categories: round.categories, content: round.content }

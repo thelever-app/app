@@ -264,6 +264,43 @@ describe('composeGame', () => {
     expect(ids(composed)).toEqual(['TestMild']);
   });
 
+  it('should let every round fall back on its own categories before any falls back on every category', () => {
+    // Arrange: honesty has nothing that is not compromising; justice has a single one.
+    const rounds: RoundSnapshot[] = [
+      {
+        id: 1,
+        origin: 'random',
+        categories: ['honesty'],
+        content: { age: 'any', compromising: 'no' },
+      },
+      {
+        id: 2,
+        origin: 'random',
+        categories: ['justice'],
+        content: { age: 'from-16', compromising: 'no' },
+      },
+    ];
+    const candidates = new Map([
+      [
+        '*|not-compromising',
+        { inCatalog: candidatesCalled(['TestJustice', 'TestOther']), inExploration: [] },
+      ],
+      [
+        'justice|not-compromising',
+        { inCatalog: candidatesCalled(['TestJustice']), inExploration: [] },
+      ],
+    ]);
+
+    // Act
+    const composed = composeGame(
+      input({ rounds, candidates, newDilemmas: false }),
+      new KeepOrderRandomness(),
+    );
+
+    // Assert
+    expect(ids(composed)).toEqual(['TestOther', 'TestJustice']);
+  });
+
   it('should leave out a round that rules out compromising dilemmas when nothing else is left', () => {
     // Arrange
     const rounds: RoundSnapshot[] = [
