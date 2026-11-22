@@ -188,7 +188,8 @@ export class PostgresRoomRepository implements RoomRepository {
             origin: round.origin,
             categories:
               round.origin === 'random' && round.categories ? [...round.categories] : null,
-            content: round.origin === 'random' ? round.content : null,
+            content_age: round.origin === 'random' ? round.content.age : null,
+            content_compromising: round.origin === 'random' ? round.content.compromising : null,
             dilemma_id: dilemma?.dilemmaId ?? null,
             minimum_age: dilemma?.minimumAge ?? null,
             compromising: dilemma?.compromising ?? null,
@@ -269,7 +270,8 @@ function readRoom(db: Kysely<GameTables>, id: string) {
             'room_rounds.round_id as roundId',
             'room_rounds.origin',
             'room_rounds.categories',
-            'room_rounds.content',
+            'room_rounds.content_age as contentAge',
+            'room_rounds.content_compromising as contentCompromising',
             'room_rounds.dilemma_id as dilemmaId',
             'room_rounds.minimum_age as minimumAge',
             'room_rounds.compromising',
@@ -348,7 +350,12 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
 function roundOf(row: RoomRow['rounds'][number]): RoundSnapshot {
   const { roundId: id } = row;
   if (row.origin === 'random') {
-    return { id, origin: 'random', categories: row.categories, content: row.content ?? [] };
+    return {
+      id,
+      origin: 'random',
+      categories: row.categories,
+      content: { age: row.contentAge ?? 'any', compromising: row.contentCompromising ?? 'any' },
+    };
   }
   if (row.origin === 'players') return { id, origin: 'players' };
   const dilemma = lobbyDilemmaOf(row);
