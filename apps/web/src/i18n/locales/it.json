@@ -436,7 +436,7 @@
     "roundCount_one": "{{count}} turno",
     "roundCount_many": "{{count}} turni",
     "roundCount_other": "{{count}} turni",
-    "change": "Cambia",
+    "configure": "Configura",
     "adultsOnly": "Solo per maggiorenni",
     "remote": "A distanza: meglio in videochiamata.",
     "rounds": {
@@ -560,13 +560,20 @@
       "onlyAnonymous": "Solo in una stanza anonima"
     },
     "content": {
-      "label": "Contenuto",
-      "any": "Qualsiasi",
-      "adults-only": "Solo +18",
-      "compromising": "Solo compromettenti",
-      "needsAdults": "«Solo +18» richiede i dilemmi +18.",
-      "needsCompromising": "«Solo compromettenti» richiede i dilemmi compromettenti.",
-      "needsBoth": "«Solo +18» richiede i dilemmi +18, e «Solo compromettenti», i dilemmi compromettenti."
+      "age": {
+        "label": "Età del dilemma",
+        "any": "Qualsiasi",
+        "from-16": "Dai 16",
+        "adults-only": "18+"
+      },
+      "compromising": {
+        "label": "Compromettente",
+        "any": "Qualsiasi",
+        "no": "No",
+        "yes": "Sì"
+      },
+      "needsAdults": "Con i dilemmi +18 attivi, ogni turno casuale può chiedere anche la sua età.",
+      "needsCompromising": "Con i dilemmi compromettenti attivi, ogni turno casuale può chiedere anche se lo è."
     }
   },
   "pickDilemmas": {

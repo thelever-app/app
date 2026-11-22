@@ -1,8 +1,8 @@
 import {
   type AmbienceDto,
   type AmbienceOrCustomDto,
+  type AmbienceSettingsDto,
   type ChangeSettingsDto,
-  type ContentRequirementDto,
   GAP_MARKER,
   type LobbyRoundDto,
   MAXIMUM_ROUNDS,
@@ -18,7 +18,7 @@ import { DilemmaText } from '../game/dilemma-text.tsx';
 import { AMBIENCE_ICONS, AMBIENCES, isForAdults } from './ambiences.ts';
 import { CATEGORIES, type Category } from './categories.ts';
 import { PickRoundDilemmaSheet } from './pick-round-dilemma-sheet.tsx';
-import { roundNumbersByDilemma, toggledCategory, toggledRequirement } from './rounds.ts';
+import { roundNumbersByDilemma, toggledCategory } from './rounds.ts';
 import styles from './room-settings-sheet.module.css';
 import sheet from './sheet.module.css';
 
@@ -33,8 +33,8 @@ interface RoomSettingsSheetProps {
   readonly rounds: readonly LobbyRoundDto[];
   /** Only what changed, the rounds whole; never empty. */
   readonly onSave: (changes: ChangeSettingsDto['changes']) => void;
-  /** The room takes the configuration of the ambience, which the room server knows. */
-  readonly onChooseAmbience: (ambience: AmbienceDto) => void;
+  /** What each ambience sets in the room, as the room server gives it to the host. */
+  readonly ambiences: Readonly<Record<AmbienceDto, AmbienceSettingsDto>>;
   readonly onClose: () => void;
 }
 
@@ -131,7 +131,7 @@ function withOrigin(round: DraftRound, origin: Origin): DraftRound {
   const { key, id } = round;
   switch (origin) {
     case 'random':
-      return { key, id, origin, categories: null, content: [] };
+      return { key, id, origin, categories: null, content: ANY_CONTENT };
     case 'specific':
       return { key, id, origin, dilemma: undefined };
     case 'players':
@@ -139,27 +139,33 @@ function withOrigin(round: DraftRound, origin: Origin): DraftRound {
   }
 }
 
-/** The requirements a random round may ask of its dilemma, with their symbols. */
-const REQUIREMENTS: readonly (readonly [ContentRequirementDto, IconName])[] = [
-  ['adults-only', 'adultsOnly'],
-  ['compromising', 'heartBroken'],
-];
+const ANY_CONTENT: RoundContentDto = { age: 'any', compromising: 'any' };
 
-/** Whether the settings allow random rounds that ask for that requirement. */
-function allows(settings: RoomSettingsDto, requirement: ContentRequirementDto): boolean {
-  return requirement === 'adults-only' ? settings.adultsOnly : settings.compromisingDilemmas;
+/** Whether the settings let the random rounds choose that part of their content. */
+function allows(settings: RoomSettingsDto, axis: keyof RoundContentDto): boolean {
+  return axis === 'age' ? settings.adultsOnly : settings.compromisingDilemmas;
 }
 
-/** The content without what the settings do not allow, which may leave it any. */
+/** The content with each part the settings do not allow back to any. */
 function allowedIn(settings: RoomSettingsDto, content: RoundContentDto): RoundContentDto {
-  return content.filter((requirement) => allows(settings, requirement));
+  return {
+    age: allows(settings, 'age') ? content.age : 'any',
+    compromising: allows(settings, 'compromising') ? content.compromising : 'any',
+  };
+}
+
+/** What the settings start from: the room as it is, or the ambience the host chose in them. */
+interface Starting {
+  readonly ambience: AmbienceOrCustomDto;
+  readonly settings: RoomSettingsDto;
+  readonly rounds: readonly DraftRound[];
 }
 
 /**
  * The host changes the configuration of the room and its rounds before starting. Choosing an
- * ambience applies it at once and fills the fields in with its configuration once the room has it,
- * without closing; the ambience shows as custom once a field it sets moves away from it. A change
- * that rules out part of the content of a round takes it out.
+ * ambience fills the fields in with what it sets, without closing, and the room only takes it on
+ * saving; the ambience shows as custom once a field it sets moves away from it. A change that rules
+ * out part of the content of a round takes it back to any.
  */
 export function RoomSettingsSheet({
   roomId,
@@ -168,7 +174,7 @@ export function RoomSettingsSheet({
   hasPlayerUnderEighteen,
   rounds,
   onSave,
-  onChooseAmbience,
+  ambiences,
   onClose,
 }: RoomSettingsSheetProps) {
   const { t } = useTranslation();
@@ -177,15 +183,11 @@ export function RoomSettingsSheet({
   // Only one round shows its categories at a time.
   const [expanded, setExpanded] = useState<number | undefined>(undefined);
   const [choosingAmbience, setChoosingAmbience] = useState(false);
-  // The ambience the host just chose, and the settings before it, until the room has its own.
-  const [chosen, setChosen] = useState<
-    { readonly ambience: AmbienceDto; readonly before: RoomSettingsDto } | undefined
-  >(undefined);
-  if (chosen && ambience === chosen.ambience && settings !== chosen.before) {
-    setChosen(undefined);
-    setDraft(settings);
-    setDraftRounds(draftOf(rounds));
-  }
+  const [starting, setStarting] = useState<Starting>(() => ({
+    ambience,
+    settings,
+    rounds: draftOf(rounds),
+  }));
   // The round whose dilemma the host is choosing, over the settings.
   const [picking, setPicking] = useState<number | undefined>(undefined);
   const change = (changes: Partial<RoomSettingsDto>) => {
@@ -228,21 +230,41 @@ export function RoomSettingsSheet({
     onClose();
   };
 
+  /** A key for a round the host adds, below every key on screen. */
+  const newKey = () => Math.min(0, ...draftRounds.map((round) => round.key)) - 1;
   const addRound = () => {
-    const key = Math.min(0, ...draftRounds.map((round) => round.key)) - 1;
     setDraftRounds([
       ...draftRounds,
-      { key, id: undefined, origin: 'random', categories: null, content: [] },
+      { key: newKey(), id: undefined, origin: 'random', categories: null, content: ANY_CONTENT },
     ]);
   };
 
-  // What an ambience sets: once a field of those moves away from the room's, it is custom.
+  /** The fields take what the ambience sets, as new rounds; the room takes it on saving. */
+  const chooseAmbience = (option: AmbienceDto) => {
+    const { variant, adultsOnly, compromisingDilemmas, rounds: preset } = ambiences[option];
+    const first = newKey();
+    const next = { ...draft, variant, adultsOnly, compromisingDilemmas };
+    const nextRounds = preset.map(({ content }, index): DraftRound => ({
+      key: first - index,
+      id: undefined,
+      origin: 'random',
+      categories: null,
+      content,
+    }));
+    setDraft(next);
+    setDraftRounds(nextRounds);
+    setExpanded(undefined);
+    setStarting({ ambience: option, settings: next, rounds: nextRounds });
+  };
+
+  // What an ambience sets: once a field of those moves away from where the settings started, it
+  // is custom.
   const movedAway =
-    draft.variant !== settings.variant ||
-    draft.adultsOnly !== settings.adultsOnly ||
-    draft.compromisingDilemmas !== settings.compromisingDilemmas ||
-    JSON.stringify(settingsOf(draftRounds)) !== JSON.stringify(settingsOf(draftOf(rounds)));
-  const shownAmbience: AmbienceOrCustomDto = movedAway ? 'custom' : ambience;
+    draft.variant !== starting.settings.variant ||
+    draft.adultsOnly !== starting.settings.adultsOnly ||
+    draft.compromisingDilemmas !== starting.settings.compromisingDilemmas ||
+    JSON.stringify(settingsOf(draftRounds)) !== JSON.stringify(settingsOf(starting.rounds));
+  const shownAmbience: AmbienceOrCustomDto = movedAway ? 'custom' : starting.ambience;
 
   const pickingIndex = draftRounds.findIndex(({ key }) => key === picking);
   const pickingRound = draftRounds[pickingIndex];
@@ -293,10 +315,7 @@ export function RoomSettingsSheet({
                             aria-checked={shownAmbience === option}
                             disabled={locked}
                             className={styles.ambienceOption}
-                            onClick={() => {
-                              setChosen({ ambience: option, before: settings });
-                              onChooseAmbience(option);
-                            }}
+                            onClick={() => chooseAmbience(option)}
                           >
                             <span className={styles.ambienceOptionIcon}>
                               <Icon name={locked ? 'lock' : AMBIENCE_ICONS[option]} size={20} />
@@ -408,16 +427,14 @@ export function RoomSettingsSheet({
                   </span>
                 </div>
                 <span className={sheet.hint}>{t('settings.rounds.hint')}</span>
-                {(!draft.adultsOnly || !draft.compromisingDilemmas) && (
+                {draft.adultsOnly !== draft.compromisingDilemmas && (
                   <p className={styles.contentHint}>
                     <Icon name="info" size={20} />
                     <span>
                       {t(
-                        !draft.adultsOnly && !draft.compromisingDilemmas
-                          ? 'settings.content.needsBoth'
-                          : !draft.adultsOnly
-                            ? 'settings.content.needsAdults'
-                            : 'settings.content.needsCompromising',
+                        draft.adultsOnly
+                          ? 'settings.content.needsCompromising'
+                          : 'settings.content.needsAdults',
                       )}
                     </span>
                   </p>
@@ -537,7 +554,6 @@ function RoundCard({
 }: RoundCardProps) {
   const { t } = useTranslation();
   const categoriesId = useId();
-  const contentId = useId();
   const someone = t('pickDilemmas.someone');
 
   return (
@@ -624,39 +640,34 @@ function RoundCard({
               ))}
             </div>
           )}
-          <div className={styles.contentRow}>
-            <span id={contentId} className={styles.contentLabel}>
-              {t('settings.content.label')}
-            </span>
-            <div className={styles.contents} role="group" aria-labelledby={contentId}>
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={round.content.length === 0}
-                className={styles.contentOption}
-                onClick={() => onChange({ ...round, content: [] })}
-              >
-                <Icon name="shuffle" size={18} />
-                {t('settings.content.any')}
-              </button>
-              {REQUIREMENTS.map(([requirement, icon]) => (
-                <button
-                  key={requirement}
-                  type="button"
-                  role="checkbox"
-                  aria-checked={round.content.includes(requirement)}
-                  disabled={!allows(settings, requirement)}
-                  className={styles.contentOption}
-                  onClick={() =>
-                    onChange({ ...round, content: toggledRequirement(round.content, requirement) })
-                  }
-                >
-                  <Icon name={icon} size={18} />
-                  {t(`settings.content.${requirement}`)}
-                </button>
-              ))}
-            </div>
-          </div>
+          {allows(settings, 'age') && (
+            <AxisChoice
+              label={t('settings.content.age.label')}
+              icon="adultsOnly"
+              options={[
+                ['any', t('settings.content.age.any')],
+                ['from-16', t('settings.content.age.from-16')],
+                ['adults-only', t('settings.content.age.adults-only')],
+              ]}
+              value={round.content.age}
+              onChange={(age) => onChange({ ...round, content: { ...round.content, age } })}
+            />
+          )}
+          {allows(settings, 'compromising') && (
+            <AxisChoice
+              label={t('settings.content.compromising.label')}
+              icon="heartBroken"
+              options={[
+                ['any', t('settings.content.compromising.any')],
+                ['no', t('settings.content.compromising.no')],
+                ['yes', t('settings.content.compromising.yes')],
+              ]}
+              value={round.content.compromising}
+              onChange={(compromising) =>
+                onChange({ ...round, content: { ...round.content, compromising } })
+              }
+            />
+          )}
         </>
       )}
 
@@ -716,4 +727,46 @@ function fromCategories(categories: readonly Category[] | null, t: Translate): s
   if (categories.length === 1) return t('settings.rounds.fromOne', { category: first });
   if (categories.length === 2) return t('settings.rounds.fromTwo', { first, second });
   return t('settings.rounds.fromSome', { count: categories.length });
+}
+
+interface AxisChoiceProps<T extends string> {
+  readonly label: string;
+  readonly icon: IconName;
+  /** Each option with its text, in the order the screen offers them. */
+  readonly options: readonly (readonly [T, string])[];
+  readonly value: T;
+  readonly onChange: (value: T) => void;
+}
+
+/** One part of the content of a random round: its age, or whether compromising. */
+function AxisChoice<T extends string>({
+  label,
+  icon,
+  options,
+  value,
+  onChange,
+}: AxisChoiceProps<T>) {
+  const labelId = useId();
+  return (
+    <div className={styles.axis}>
+      <span id={labelId} className={styles.axisLabel}>
+        <Icon name={icon} size={16} />
+        {label}
+      </span>
+      <div className={styles.axisOptions} role="radiogroup" aria-labelledby={labelId}>
+        {options.map(([option, text]) => (
+          <button
+            key={option}
+            type="button"
+            role="radio"
+            aria-checked={value === option}
+            className={styles.axisOption}
+            onClick={() => onChange(option)}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }

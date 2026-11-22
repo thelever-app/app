@@ -436,7 +436,7 @@
     "roundCount_one": "{{count}} ronda",
     "roundCount_many": "{{count}} rondes",
     "roundCount_other": "{{count}} rondes",
-    "change": "Canviar",
+    "configure": "Configurar",
     "adultsOnly": "Només per a majors de 18 anys",
     "remote": "A distància: millor en videotrucada.",
     "rounds": {
@@ -560,13 +560,20 @@
       "onlyAnonymous": "Només en sala anònima"
     },
     "content": {
-      "label": "Contingut",
-      "any": "Qualsevol",
-      "adults-only": "Només +18",
-      "compromising": "Només compromesos",
-      "needsAdults": "«Només +18» necessita els dilemes +18.",
-      "needsCompromising": "«Només compromesos» necessita els dilemes compromesos.",
-      "needsBoth": "«Només +18» necessita els dilemes +18, i «Només compromesos», els dilemes compromesos."
+      "age": {
+        "label": "Edat del dilema",
+        "any": "Tant se val",
+        "from-16": "Des de 16",
+        "adults-only": "+18"
+      },
+      "compromising": {
+        "label": "Compromès",
+        "any": "Tant se val",
+        "no": "No",
+        "yes": "Sí"
+      },
+      "needsAdults": "Amb els dilemes +18 activats, cada ronda aleatòria també pot demanar la seva edat.",
+      "needsCompromising": "Amb els dilemes compromesos activats, cada ronda aleatòria també pot demanar si ho és."
     }
   },
   "pickDilemmas": {

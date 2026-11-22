@@ -412,7 +412,7 @@
     "summary": "{{seconds}} s pro Dilemma",
     "roundCount_one": "{{count}} Runde",
     "roundCount_other": "{{count}} Runden",
-    "change": "Ändern",
+    "configure": "Einstellen",
     "adultsOnly": "Nur ab 18",
     "remote": "Aus der Ferne: am besten per Videoanruf.",
     "rounds": {
@@ -533,13 +533,20 @@
       "onlyAnonymous": "Nur in einem anonymen Raum"
     },
     "content": {
-      "label": "Inhalt",
-      "any": "Beliebig",
-      "adults-only": "Nur ab 18",
-      "compromising": "Nur heikle",
-      "needsAdults": "„Nur ab 18“ braucht Dilemmas ab 18.",
-      "needsCompromising": "„Nur heikle“ braucht heikle Dilemmas.",
-      "needsBoth": "„Nur ab 18“ braucht Dilemmas ab 18 und „Nur heikle“ heikle Dilemmas."
+      "age": {
+        "label": "Alter des Dilemmas",
+        "any": "Egal",
+        "from-16": "Ab 16",
+        "adults-only": "Ab 18"
+      },
+      "compromising": {
+        "label": "Heikel",
+        "any": "Egal",
+        "no": "Nein",
+        "yes": "Ja"
+      },
+      "needsAdults": "Mit eingeschalteten Dilemmas ab 18 kann jede zufällige Runde auch ihr Alter festlegen.",
+      "needsCompromising": "Mit eingeschalteten heiklen Dilemmas kann jede zufällige Runde auch festlegen, ob es eins ist."
     }
   },
   "pickDilemmas": {
