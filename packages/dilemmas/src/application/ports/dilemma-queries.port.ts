@@ -28,10 +28,13 @@ export interface DilemmaCriteria {
 }
 
 /**
- * What a draw asks of the dilemmas it finds: each requirement must hold, so both draw only those
- * for adults that are compromising too; none draws any.
+ * What a draw asks of the dilemmas it finds: their minimum age, any, 16 or 18, and whether they are
+ * compromising, any, no or yes.
  */
-export type CandidateContent = readonly ('adults-only' | 'compromising')[];
+export interface CandidateContent {
+  readonly age: 'any' | 'from-16' | 'adults-only';
+  readonly compromising: 'any' | 'no' | 'yes';
+}
 
 /** The criteria a game is put together with: no text, no ids, and how many it draws. */
 export interface CandidateCriteria extends Omit<DilemmaCriteria, 'text' | 'dilemmaIds'> {
@@ -41,7 +44,7 @@ export interface CandidateCriteria extends Omit<DilemmaCriteria, 'text' | 'dilem
   readonly includeGap: boolean;
   /** Never drawn: the dilemmas the game already plays. */
   readonly excludedIds: readonly string[];
-  /** What the dilemmas drawn must be besides: for adults, compromising, both or nothing more. */
+  /** What the dilemmas drawn must be besides: of an age, compromising or not, or anything. */
   readonly content: CandidateContent;
   /**
    * How many players of the room played each dilemma: those played by fewer are drawn first, and

@@ -104,7 +104,11 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
 
   async candidatesOf(criteria: CandidateCriteria): Promise<DilemmaCandidate[]> {
     const drawable = (await this.#matching(criteria))
-      .filter(({ compromising }) => !criteria.content.includes('compromising') || compromising)
+      .filter(
+        ({ compromising }) =>
+          criteria.content.compromising === 'any' ||
+          compromising === (criteria.content.compromising === 'yes'),
+      )
       .map(({ dilemma }) => ({
         id: dilemma.id,
         type: dilemma.type,
@@ -115,7 +119,8 @@ export class InMemoryDilemmaRepository implements DilemmaRepository, DilemmaQuer
       .filter(
         ({ id, hasGap, minimumAge }) =>
           (criteria.includeGap || !hasGap) &&
-          (!criteria.content.includes('adults-only') || minimumAge === 18) &&
+          (criteria.content.age === 'any' ||
+            minimumAge === (criteria.content.age === 'adults-only' ? 18 : 16)) &&
           !criteria.excludedIds.includes(id),
       );
     const playedBy = new Map(

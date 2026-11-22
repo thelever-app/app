@@ -35,7 +35,11 @@ export function keptForANewRoom(dilemmaLanguage: string): KeptSettings {
   };
 }
 
-interface Preset {
+/**
+ * What an ambience sets, and choosing it in the settings fills in: everything but what it keeps of
+ * the configuration it had.
+ */
+export interface AmbienceConfiguration {
   readonly variant: RoomVariant;
   readonly adultsOnly: boolean;
   readonly compromisingDilemmas: boolean;
@@ -43,11 +47,12 @@ interface Preset {
   readonly contents: readonly RoundContent[];
 }
 
-const ANY: RoundContent = [];
-const ADULTS: RoundContent = ['adults-only'];
-const COMPROMISING: RoundContent = ['compromising'];
+const ANY: RoundContent = { age: 'any', compromising: 'any' };
+const ADULTS: RoundContent = { age: 'adults-only', compromising: 'any' };
+const COMPROMISING: RoundContent = { age: 'any', compromising: 'yes' };
+const BOTH: RoundContent = { age: 'adults-only', compromising: 'yes' };
 
-const PRESETS: Readonly<Record<Ambience, Preset>> = {
+const PRESETS: Readonly<Record<Ambience, AmbienceConfiguration>> = {
   classic: {
     variant: 'nominal',
     adultsOnly: false,
@@ -68,10 +73,14 @@ const PRESETS: Readonly<Record<Ambience, Preset>> = {
     compromisingDilemmas: true,
     contents: Array.from(
       { length: DEFAULT_ROUNDS },
-      (_, index) => [ANY, COMPROMISING, ADULTS][index % 3]!,
+      (_, index) => [ANY, COMPROMISING, ADULTS, BOTH][index % 4]!,
     ),
   },
 };
+
+export function configurationOf(ambience: Ambience): AmbienceConfiguration {
+  return PRESETS[ambience];
+}
 
 /** The configuration of the ambience, keeping the language, the time per dilemma and new dilemmas. */
 export function settingsOf(ambience: Ambience, kept: KeptSettings): RoomSettingsVO {
@@ -93,7 +102,7 @@ export function ambienceOf(settings: RoomSettingsVO): AmbienceOrCustom {
   return AMBIENCES.find((ambience) => matches(snapshot, PRESETS[ambience])) ?? 'custom';
 }
 
-function matches(settings: RoomSettingsSnapshot, preset: Preset): boolean {
+function matches(settings: RoomSettingsSnapshot, preset: AmbienceConfiguration): boolean {
   return (
     settings.variant === preset.variant &&
     settings.adultsOnly === preset.adultsOnly &&
@@ -108,6 +117,7 @@ function follows(round: RoundSnapshot, content: RoundContent, index: number): bo
   return (
     round.origin === 'random' &&
     round.categories === null &&
-    round.content.join() === content.join()
+    round.content.age === content.age &&
+    round.content.compromising === content.compromising
   );
 }

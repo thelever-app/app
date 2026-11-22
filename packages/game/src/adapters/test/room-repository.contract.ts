@@ -3,6 +3,7 @@ import type { RoomRepository } from '../../application/ports/room-repository.por
 import { Room, type RoomSnapshot } from '../../domain/entities/room.ts';
 import { FixedIdGenerator } from '../../domain/test/support/fixed-id-generator.ts';
 import { FixedRandomness } from '../../domain/test/support/fixed-randomness.ts';
+import { configurationOf } from '../../domain/vos/ambience.vo.ts';
 import { AvatarVO } from '../../domain/vos/avatar.vo.ts';
 
 /** When everything in these tests happens, unless a test says otherwise. */
@@ -89,7 +90,11 @@ export function describeRoomRepositoryContract(
         // Arrange: No filter turns compromising dilemmas on and gives every round a content.
         const repository = await create();
         const saved = room();
-        saved.chooseAmbience('TestAnaId', 'no-filter');
+        const { contents, ...noFilter } = configurationOf('no-filter');
+        saved.changeSettings('TestAnaId', {
+          ...noFilter,
+          rounds: contents.map((content) => ({ origin: 'random', categories: null, content })),
+        });
         await repository.save(saved);
 
         // Act
@@ -228,12 +233,22 @@ export function describeRoomRepositoryContract(
             timePerDilemmaSeconds: 60,
             newDilemmas: false,
             rounds: [
-              { id: 4, origin: 'random', categories: ['honesty', 'loyalty'], content: [] },
+              {
+                id: 4,
+                origin: 'random',
+                categories: ['honesty', 'loyalty'],
+                content: { age: 'any', compromising: 'any' },
+              },
               { id: 2, origin: 'specific', dilemmaId: 'TestSpecificDilemma' },
               { id: 7, origin: 'players' },
               { id: 1, origin: 'players' },
               { id: 3, origin: 'players' },
-              { id: 9, origin: 'random', categories: null, content: [] },
+              {
+                id: 9,
+                origin: 'random',
+                categories: null,
+                content: { age: 'any', compromising: 'any' },
+              },
             ],
           },
           [
