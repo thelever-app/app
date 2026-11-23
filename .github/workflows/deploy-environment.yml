@@ -280,7 +280,7 @@ jobs:
             --image "$(cat image.txt)" \
             --service-account "moderation@$PROJECT.iam.gserviceaccount.com" \
             --command node --args apps/realtime/src/jobs/sync-moderation.ts \
-            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=moderation@$PROJECT.iam,MODERATION_REPOSITORY=thelever-app/moderation,MODERATION_ENVIRONMENT=$moderation_environment,SMTP_HOST=smtp.hostinger.com,SMTP_USER=no-reply@thelever.app" \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=moderation@$PROJECT.iam,MODERATION_REPOSITORY=thelever-app/moderation,MODERATION_ENVIRONMENT=$moderation_environment,SMTP_HOST=smtp.hostinger.com,SMTP_USER=privacidad@thelever.app" \
             --set-secrets "GITHUB_TOKEN=moderation-github-token:latest,SMTP_PASSWORD=smtp-password:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest" \
             --max-retries 0 --task-timeout 4m \
             --quiet
