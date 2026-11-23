@@ -3,7 +3,7 @@ import type { AnalyticsEvents } from '../ports/analytics-events.port.ts';
 import type { AnalyticsObjectionRepository } from '../ports/analytics-objection-repository.port.ts';
 
 /**
- * A player objects to product analytics (RES-21): from now on no analytics event of theirs is
+ * A player objects to product analytics: from now on no analytics event of theirs is
  * recorded, and those recorded before are deleted.
  */
 export class ObjectToAnalyticsUseCase {

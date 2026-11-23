@@ -12,7 +12,7 @@ export interface Seal {
   readonly underEighteen: boolean;
   /**
    * Whether the player objects to product analytics: then neither the time they took to answer nor
-   * the time the group spent on the reveal is kept (RES-21).
+   * the time the group spent on the reveal is kept.
    */
   readonly objectsToAnalytics: boolean;
 }

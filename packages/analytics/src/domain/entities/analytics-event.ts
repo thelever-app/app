@@ -1,7 +1,7 @@
 import type { VisitOrigin } from '../vos/visit-origin.vo.ts';
 
 /**
- * What an analytics event tells, and nothing more (RES-20): never votes, predictions, reactions
+ * What an analytics event tells, and nothing more: never votes, predictions, reactions
  * nor which dilemmas are played. The ids of rooms and games are random, and only tie the events
  * of one room or one game together.
  */

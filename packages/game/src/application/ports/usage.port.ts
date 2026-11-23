@@ -1,6 +1,6 @@
 /**
  * A fact of use of the game, for the product analytics: never a vote, a prediction, a reaction
- * nor which dilemmas are played (RES-20).
+ * nor which dilemmas are played.
  */
 export type UsageFact =
   | { readonly kind: 'room-created'; readonly identity: string; readonly roomId: string }
@@ -8,8 +8,10 @@ export type UsageFact =
   | { readonly kind: 'room-joined'; readonly identity: string; readonly roomId: string }
   | {
       readonly kind: 'game-started' | 'game-ended';
-      /** Who plays it, each once. */
+      /** Who plays it, each once: not who was forgotten, who is tied to nobody. */
       readonly identities: readonly string[];
+      /** How many play it, the forgotten ones too. */
+      readonly players: number;
       readonly roomId: string;
       readonly gameId: string;
     };

@@ -89,7 +89,7 @@ export interface RoomApi {
   requestDataDeletion(): Promise<void>;
 }
 
-/** The parameters of the link the app opened with that say where the visit came from (RF-201). */
+/** The parameters of the link the app opened with that say where the visit came from. */
 const ORIGIN_PARAMETERS = ['utm_source', 'utm_campaign', 'utm_content', 'ref'] as const;
 
 /** The query of the origin of the visit, from the query of the address: nothing else of it. */

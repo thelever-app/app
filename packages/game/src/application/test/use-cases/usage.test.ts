@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
-import { recordEndIfJustEnded, recordUsage } from '../../use-cases/record-usage.ts';
+import { playersOf, recordEndIfJustEnded, recordUsage } from '../../use-cases/record-usage.ts';
 import { lobbyOfThree } from '../support/game-in-decision-phase.ts';
 
 describe('the facts of use of the game', () => {
@@ -22,6 +22,7 @@ describe('the facts of use of the game', () => {
       {
         kind: 'game-started',
         identities: ['TestAnaIdentity', 'TestLuisIdentity', 'TestMartaIdentity'],
+        players: 3,
         roomId: lobby.roomId,
         gameId,
       },
@@ -45,6 +46,27 @@ describe('the facts of use of the game', () => {
 
     // Assert
     expect(usage.facts).toEqual([]);
+  });
+
+  it('should count a forgotten player among the players, with no fact of theirs', async () => {
+    // Arrange
+    const lobby = await lobbyOfThree();
+    const { gameId } = await lobby.startGame.execute({
+      roomId: lobby.roomId,
+      playerId: lobby.anaId,
+    });
+    const room = await lobby.roomRepository.findById(lobby.roomId);
+    const game = await lobby.gameRepository.findById(gameId);
+    if (!room || !game) throw new Error('the game did not start');
+
+    // Act: Luis deleted their data while the game goes on.
+    room.forget('TestLuisIdentity');
+
+    // Assert
+    expect(playersOf(room, game)).toEqual({
+      identities: ['TestAnaIdentity', 'TestMartaIdentity'],
+      players: 3,
+    });
   });
 
   it('should never fail the command when the fact cannot be kept', async () => {

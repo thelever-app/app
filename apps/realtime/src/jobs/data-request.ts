@@ -11,7 +11,7 @@ import { carryOutDataRequest, dataRequestArgumentsOf } from './data-request/carr
 import { privacyDependenciesIn } from './privacy-dependencies.ts';
 
 // The Cloud Run job data-request, which the team runs by hand for each request a player sends by
-// email to the contact mailbox (RES-48), once it has read it:
+// email to the contact mailbox, once it has read it:
 //
 //   gcloud run jobs execute data-request --region europe-southwest1 --wait \
 //     --args=apps/realtime/src/jobs/data-request.ts,--code,K7Q4-MD2X-9PRT,--export

@@ -19,7 +19,7 @@ function requestCode(): string {
 // Consent: the game consent can be withdrawn, keeping when it was given; and who objects to product
 // analytics. Analytics: the analytics events, by identity. Game: the seal of each answer, reaction
 // and like keeps whether the player objects. Moderation: a report, a notice and a reported nickname
-// can lose who made them or goes by them, when their data are deleted (DEC-251).
+// can lose who made them or goes by them, when their data are deleted.
 //
 // A direct migration, with no expand and contract, until real players arrive.
 export async function up(db: Kysely<unknown>): Promise<void> {

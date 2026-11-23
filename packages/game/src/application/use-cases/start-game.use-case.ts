@@ -20,7 +20,7 @@ import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findRoom } from './find-room.ts';
 import { notifyRoom } from './notify-room.ts';
-import { identitiesOf, recordUsage } from './record-usage.ts';
+import { playersOf, recordUsage } from './record-usage.ts';
 import type { Usage } from '../ports/usage.port.ts';
 
 export interface StartGameInput {
@@ -197,7 +197,7 @@ export class StartGameUseCase {
     await this.#roomRepository.save(room);
     await recordUsage(this.#usage, {
       kind: 'game-started',
-      identities: identitiesOf(room, game),
+      ...playersOf(room, game),
       roomId: room.id,
       gameId: game.id,
     });

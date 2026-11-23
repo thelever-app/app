@@ -1,4 +1,4 @@
--- Month 3 threshold (DEC-263): more than 0.3 new rooms per room.
+-- Month 3 threshold: more than 0.3 new rooms per room.
 --
 -- A new room is one created by someone who had joined the room of someone else before: the room
 -- they played in gave birth to it. Counted over the rooms created in the last 30 days. Run it in

@@ -164,7 +164,7 @@ export class Issue {
 
   /**
    * The data of the identity are deleted: the issue keeps its reports, notices and decision, which
-   * must hold for 3 years, without them (DEC-251). Their reports count still as one player each.
+   * must hold for 3 years, without them. Their reports count still as one player each.
    */
   unlink(identity: string): void {
     if (this.#content.kind === 'nickname' && this.#content.owner === identity) {

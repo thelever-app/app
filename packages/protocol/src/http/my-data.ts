@@ -19,7 +19,7 @@ export const AnalyticsObjectionRequestDto = z.strictObject({
 
 /**
  * GET /first-access, the first time: where the visit came from, as the link the app opened with
- * says it (RF-201). Anything else of the address is ignored.
+ * says it. Anything else of the address is ignored.
  */
 export const VisitOriginQueryDto = z.object({
   utm_source: z.string().max(200).optional(),

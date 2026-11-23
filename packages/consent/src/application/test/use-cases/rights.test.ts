@@ -88,6 +88,20 @@ describe('WithdrawGameConsentUseCase', () => {
     expect(recorded.withdrawalsLogged).toEqual(['uid-ana']);
   });
 
+  it('should log a withdrawal once, however many times it is sent', async () => {
+    // Arrange
+    const { withdraw, recorded } = await setUp();
+    await withdraw.execute('uid-ana');
+
+    // Act
+    const view = await withdraw.execute('uid-ana');
+
+    // Assert
+    expect(view.pending).toEqual(['game-consent']);
+    expect(recorded.gameDataErased).toEqual(['uid-ana']);
+    expect(recorded.withdrawalsLogged).toEqual(['uid-ana']);
+  });
+
   it('should let the game consent be given again', async () => {
     // Arrange
     const { withdraw, accept } = await setUp();

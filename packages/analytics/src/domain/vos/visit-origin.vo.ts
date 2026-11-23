@@ -13,7 +13,7 @@ export interface VisitOrigin {
 }
 
 /**
- * Where a first visit came from, as the link it opened says (RF-201): only these four parameters,
+ * Where a first visit came from, as the link it opened says: only these four parameters,
  * in small letters, cut short and with nothing but letters, digits, dots, dashes and underscores.
  * Nothing is kept on the device to know it.
  */

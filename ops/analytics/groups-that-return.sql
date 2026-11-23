@@ -1,4 +1,4 @@
--- Month 3 threshold (DEC-263): more than 30 % of the groups come back the following month.
+-- Month 3 threshold: more than 30 % of the groups come back the following month.
 --
 -- A group is the players of a game that started, two or more; it comes back when at least two of
 -- them start another game together on a later day, within 30 days. Counted over the groups of the

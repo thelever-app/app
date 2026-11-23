@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { Kysely, Transaction } from 'kysely';
+import { type Kysely, sql, type Transaction } from 'kysely';
 import type { Database } from './schema.ts';
 
 const current = new AsyncLocalStorage<Transaction<Database>>();
@@ -21,4 +21,26 @@ export async function inTransaction<T>(db: Kysely<Database>, work: () => Promise
 export function currentTransaction<Tables extends Partial<Database> = Database>():
   Transaction<Tables> | undefined {
   return current.getStore() as Transaction<Tables> | undefined;
+}
+
+/**
+ * Runs, through the transaction of the command if any, statements whose failure must not undo it:
+ * a statement that fails aborts the whole transaction, and its commit would then undo the command
+ * without an error. The savepoint makes the failure lose only these statements, and it still throws.
+ */
+export async function withoutAbortingTheCommand<Tables extends Partial<Database>, T>(
+  db: Kysely<Tables>,
+  work: (db: Kysely<Tables>) => Promise<T>,
+): Promise<T> {
+  const transaction = currentTransaction<Tables>();
+  if (!transaction) return work(db);
+  await sql`savepoint without_aborting_the_command`.execute(transaction);
+  try {
+    const result = await work(transaction);
+    await sql`release savepoint without_aborting_the_command`.execute(transaction);
+    return result;
+  } catch (error) {
+    await sql`rollback to savepoint without_aborting_the_command`.execute(transaction);
+    throw error;
+  }
 }

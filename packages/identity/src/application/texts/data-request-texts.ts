@@ -2,7 +2,7 @@ import { CONTACT_EMAIL } from '../contact-email.ts';
 
 /**
  * The answer to a request by email that proves nobody's: without the code, nor from the email of
- * a notice, it is not carried out (RES-48), and the answer says how to send it again.
+ * a notice, it is not carried out, and the answer says how to send it again.
  */
 export const NOT_CARRIED_OUT_REPLY = `Hola:
 

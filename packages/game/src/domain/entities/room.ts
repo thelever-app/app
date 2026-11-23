@@ -388,10 +388,13 @@ export class Room {
    * room and tied to nobody, and the room forgets it expelled them.
    */
   forget(identity: string): void {
-    this.#expelledIdentities.delete(identity);
+    const wasExpelled = this.#expelledIdentities.delete(identity);
     const index = this.#players.findIndex((player) => player.identity === identity);
     const player = this.#players[index];
-    if (!player) return;
+    if (!player) {
+      if (wasExpelled) this.#version += 1;
+      return;
+    }
     this.#renameGeneric(index);
     player.forget();
     this.#version += 1;

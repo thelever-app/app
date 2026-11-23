@@ -38,15 +38,21 @@ export class EraseGameDataUseCase implements EraseGameData {
   }
 
   async execute(identity: string): Promise<void> {
-    for (const roomId of await this.#roomRepository.findIdsWith(identity)) {
+    for (const roomId of await this.#roomRepository.findIdsTiedTo(identity)) {
       await this.#eraseFrom(roomId, identity);
     }
   }
 
   async #eraseFrom(roomId: string, identity: string): Promise<void> {
     const room = await this.#roomRepository.findById(roomId);
-    const player = room?.playerWith(identity);
-    if (!room || !player) return;
+    if (!room) return;
+    const player = room.playerWith(identity);
+    if (!player) {
+      // Expelled: the room only keeps that it expelled the identity, and forgets it.
+      room.forget(identity);
+      await this.#roomRepository.save(room);
+      return;
+    }
     const now = this.#clock.now();
     const games = [];
     for (const gameId of await this.#gameRepository.idsOfRoom(roomId)) {

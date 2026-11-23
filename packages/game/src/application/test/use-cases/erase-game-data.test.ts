@@ -69,6 +69,29 @@ describe('EraseGameDataUseCase', () => {
     expect(await roomRepository.findIdsWith('TestMartaIdentity')).toEqual([]);
   });
 
+  it('should forget that a room expelled the identity', async () => {
+    // Arrange
+    const lobby = await lobbyOfThree();
+    const expelling = await lobby.roomRepository.findById(lobby.roomId);
+    if (!expelling) throw new Error('the room was not created');
+    expelling.expel(lobby.anaId, lobby.martaId);
+    await lobby.roomRepository.save(expelling);
+    const erase = new EraseGameDataUseCase(
+      lobby.roomRepository,
+      lobby.gameRepository,
+      lobby.notifier,
+      lobby.clock,
+    );
+
+    // Act
+    await erase.execute('TestMartaIdentity');
+
+    // Assert
+    const room = await lobby.roomRepository.findById(lobby.roomId);
+    expect(room?.toSnapshot().expelledIdentities).toEqual([]);
+    expect(await lobby.roomRepository.findIdsTiedTo('TestMartaIdentity')).toEqual([]);
+  });
+
   it('should do nothing for an identity in no room', async () => {
     // Arrange
     const lobby = await lobbyOfThree();

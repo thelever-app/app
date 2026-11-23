@@ -26,7 +26,7 @@ export class PostgresDataDeletionRepository implements DataDeletionRepository {
   }
 
   async findById(id: string): Promise<DataDeletion | undefined> {
-    const row = await this.#db
+    const row = await this.#reader()
       .selectFrom('data_deletions')
       .selectAll()
       .where('id', '=', id)
@@ -35,7 +35,7 @@ export class PostgresDataDeletionRepository implements DataDeletionRepository {
   }
 
   async pending(): Promise<DataDeletion[]> {
-    const rows = await this.#db
+    const rows = await this.#reader()
       .selectFrom('data_deletions')
       .selectAll()
       .where('erased_at', 'is', null)
@@ -46,7 +46,7 @@ export class PostgresDataDeletionRepository implements DataDeletionRepository {
   }
 
   async all(): Promise<DataDeletion[]> {
-    const rows = await this.#db
+    const rows = await this.#reader()
       .selectFrom('data_deletions')
       .selectAll()
       .orderBy('requested_at')
@@ -56,7 +56,7 @@ export class PostgresDataDeletionRepository implements DataDeletionRepository {
   }
 
   async ofIdentity(identity: string): Promise<DataDeletion[]> {
-    const rows = await (currentTransaction<IdentityTables>() ?? this.#db)
+    const rows = await this.#reader()
       .selectFrom('data_deletions')
       .selectAll()
       .where('identity', '=', identity)
@@ -64,6 +64,11 @@ export class PostgresDataDeletionRepository implements DataDeletionRepository {
       .orderBy('id')
       .execute();
     return rows.map(deletionOf);
+  }
+
+  /** The transaction of the command, if any: a job has a single connection, which it holds. */
+  #reader(): Kysely<IdentityTables> {
+    return currentTransaction<IdentityTables>() ?? this.#db;
   }
 }
 

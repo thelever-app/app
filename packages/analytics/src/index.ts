@@ -2,8 +2,8 @@
  * @thelever-app/analytics
  *
  * The Analytics context: the product analytics, computed only on the server from facts of use tied
- * to each identity, never with votes, predictions, reactions nor which dilemmas are played
- * (RES-20); nothing of who objects to it (RES-21).
+ * to each identity, never with votes, predictions, reactions nor which dilemmas are played; nothing
+ * of who objects to it.
  */
 export type {
   AnalyticsEvent,

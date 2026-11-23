@@ -27,7 +27,7 @@ export class AnalyticsUsage implements Usage {
               kind: fact.kind,
               roomId: fact.roomId,
               gameId: fact.gameId,
-              players: fact.identities.length,
+              players: fact.players,
             },
           });
         }

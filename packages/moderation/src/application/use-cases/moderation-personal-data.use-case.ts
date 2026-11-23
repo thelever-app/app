@@ -8,7 +8,7 @@ interface DecisionData {
   readonly decidedAt: string;
 }
 
-/** What Moderation keeps of a player, as the file they download shows it (DEC-251). */
+/** What Moderation keeps of a player, as the file they download shows it. */
 export interface ModerationData {
   readonly dilemmaReports: readonly {
     readonly dilemmaId: string;
@@ -138,7 +138,7 @@ export class ExportModerationDataUseCase implements ExportModerationData {
 
 /**
  * Deleting the data of an identity unlinks it from every issue, which keeps its reports, notices
- * and decisions without it for the 3 years they are kept (DEC-251), and deletes its moderation
+ * and decisions without it for the 3 years they are kept, and deletes its moderation
  * notices: the decisions stay in their issues. The issues in the moderation repository are left as
  * they are: without the database they tie the nickname or the reference to nobody.
  */

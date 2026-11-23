@@ -201,6 +201,27 @@ export function describeRoomRepositoryContract(
       });
     });
 
+    describe('findIdsTiedTo', () => {
+      it('should give the rooms where a player has that identity and those that expelled it', async () => {
+        // Arrange
+        const repository = await create();
+        const playing = room('TestPlayingRoomId', 'TestPlayingAnaId', 'K7M2Q');
+        join(playing, 'Luis');
+        const expelling = room('TestExpellingRoomId', 'TestExpellingAnaId', 'P3X8W');
+        join(expelling, 'Luis');
+        expelling.expel('TestExpellingAnaId', 'TestLuisId');
+        const other = room('TestOtherRoomId', 'TestOtherAnaId', 'H4N9R');
+        join(other, 'Eva');
+        for (const saved of [playing, expelling, other]) await repository.save(saved);
+
+        // Act
+        const found = await repository.findIdsTiedTo('TestLuisIdentity');
+
+        // Assert
+        expect([...found].sort()).toEqual(['TestExpellingRoomId', 'TestPlayingRoomId']);
+      });
+    });
+
     describe('findIdsWithNobodyConnected', () => {
       it('should give the rooms with no connection open, whether anyone ever connected or not', async () => {
         // Arrange

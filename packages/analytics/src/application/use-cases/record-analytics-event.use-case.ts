@@ -15,7 +15,7 @@ export interface RecordAnalyticsEvent {
 }
 
 /**
- * Records a fact of use of an identity, computed on the server only (RES-20): nothing of who
+ * Records a fact of use of an identity, computed on the server only: nothing of who
  * objects to product analytics, and the first visit only once.
  */
 export class RecordAnalyticsEventUseCase implements RecordAnalyticsEvent {

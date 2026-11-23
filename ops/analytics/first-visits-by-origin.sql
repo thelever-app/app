@@ -1,4 +1,4 @@
--- Where the first visits came from (RF-201): the posters of the bars, each creator, or none, and
+-- Where the first visits came from: the posters of the bars, each creator, or none, and
 -- how many of those visitors went on to play: created a room, or joined one. Counted over the
 -- first visits of the last 30 days. Run it in DBeaver, read only.
 with visits as (

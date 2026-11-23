@@ -57,20 +57,24 @@ export class OpenAppEndpoint implements HttpEndpoint {
     // A malformed link records the visit without its origin; the visit itself is never lost.
     const query = VisitOriginQueryDto.safeParse(req.query);
     const { utm_source, utm_campaign, utm_content, ref } = query.success ? query.data : {};
-    await this.#runCommand(() =>
-      this.#recordAnalyticsEvent.execute({
-        identity,
-        fact: {
-          kind: 'first-visit',
-          origin: visitOriginOf({
-            source: utm_source,
-            campaign: utm_campaign,
-            content: utm_content,
-            ref,
-          }),
-        },
-      }),
-    );
+    try {
+      await this.#runCommand(() =>
+        this.#recordAnalyticsEvent.execute({
+          identity,
+          fact: {
+            kind: 'first-visit',
+            origin: visitOriginOf({
+              source: utm_source,
+              campaign: utm_campaign,
+              content: utm_content,
+              ref,
+            }),
+          },
+        }),
+      );
+    } catch {
+      // The analytics lose this visit; the app opens as always.
+    }
     res.json(FirstAccessResponseDto.parse(status));
   }
 }

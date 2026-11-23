@@ -28,7 +28,7 @@ export type DataRequestOutcome =
     };
 
 /**
- * The team carries out a request a player sent by email (RES-48): only with the code of their
+ * The team carries out a request a player sent by email: only with the code of their
  * device or from the email of their notice, never otherwise. Deleting puts it in the deletion log;
  * a copy has every section of every identity of the data subject.
  */

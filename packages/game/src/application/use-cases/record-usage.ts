@@ -11,12 +11,17 @@ export async function recordUsage(usage: Usage, fact: UsageFact): Promise<void> 
   }
 }
 
-/** The identities of who plays the game, each once, as the room knows them. */
-export function identitiesOf(room: Room, game: Game): string[] {
-  const identities = room.players
-    .filter(({ id }) => game.playerIds.includes(id))
-    .map(({ identity }) => identity);
-  return [...new Set(identities)];
+/**
+ * Who plays the game, as the room knows them: the identities, each once and none of a forgotten
+ * player, and how many they are, the forgotten ones too.
+ */
+export function playersOf(
+  room: Room,
+  game: Game,
+): { readonly identities: string[]; readonly players: number } {
+  const playing = room.players.filter(({ id }) => game.playerIds.includes(id));
+  const identities = playing.filter(({ forgotten }) => !forgotten).map(({ identity }) => identity);
+  return { identities: [...new Set(identities)], players: playing.length };
 }
 
 /** Records that the game reached its end, if the command just took it there. */
@@ -29,7 +34,7 @@ export async function recordEndIfJustEnded(
   if (stageBefore === 'ended' || game.stage.kind !== 'ended') return;
   await recordUsage(usage, {
     kind: 'game-ended',
-    identities: identitiesOf(room, game),
+    ...playersOf(room, game),
     roomId: room.id,
     gameId: game.id,
   });
