@@ -26,6 +26,7 @@ import {
   JoinRoomUseCase,
   LeaveRoomUseCase,
   ReportDilemmaUseCase,
+  ReportNicknameUseCase,
   MoveOnUseCase,
   GetReadyToMoveOnUseCase,
   ReactUseCase,
@@ -48,12 +49,13 @@ import {
 import { CachedDilemmaCatalog } from '@thelever-app/game/cache';
 import {
   ModerationDilemmaReports,
+  ModerationNicknameReports,
   PublishedDilemmasCatalog,
 } from '@thelever-app/integrations/game';
-import {
-  type DilemmaReportRepository,
-  ReceiveDilemmaReportUseCase,
-} from '@thelever-app/moderation';
+import type {
+  ReceiveDilemmaReport,
+  ReceiveNicknameReport,
+} from '@thelever-app/moderation/published';
 import type { RoundUseCases } from '../rooms/sockets/round-commands.ts';
 import type { LobbyUseCases } from '../rooms/sockets/lobby-commands.ts';
 
@@ -115,8 +117,11 @@ export interface GameCommandsDependencies extends GameQueriesDependencies {
   readonly idGenerator: IdGenerator;
   /** The seal of each player, from their first access: whether they are under 18 and their consent. */
   readonly sealProvider: SealProvider;
-  /** Where Moderation keeps the reports the players make. */
-  readonly dilemmaReports: DilemmaReportRepository;
+  /** How Moderation receives the reports the players make. */
+  readonly moderation: {
+    readonly receiveDilemmaReport: ReceiveDilemmaReport;
+    readonly receiveNicknameReport: ReceiveNicknameReport;
+  };
 }
 
 /**
@@ -146,6 +151,7 @@ export interface GameCommands extends LobbyUseCases, RoundUseCases {
   readonly runOutRound: RunOutRoundUseCase;
   readonly leaveRoom: LeaveRoomUseCase;
   readonly reportDilemma: ReportDilemmaUseCase;
+  readonly reportNickname: ReportNicknameUseCase;
   readonly skipDilemma: SkipDilemmaUseCase;
 }
 
@@ -159,7 +165,7 @@ export function gameCommands({
   randomness,
   clock,
   sealProvider,
-  dilemmaReports,
+  moderation,
 }: GameCommandsDependencies): GameCommands {
   return {
     createRoom: new CreateRoomUseCase(
@@ -235,10 +241,13 @@ export function gameCommands({
     reportDilemma: new ReportDilemmaUseCase({
       roomRepository,
       gameRepository,
-      reports: new ModerationDilemmaReports(
-        new ReceiveDilemmaReportUseCase(dilemmaReports, idGenerator),
-      ),
+      reports: new ModerationDilemmaReports(moderation.receiveDilemmaReport),
       notifier,
+      clock,
+    }),
+    reportNickname: new ReportNicknameUseCase({
+      roomRepository,
+      reports: new ModerationNicknameReports(moderation.receiveNicknameReport),
       clock,
     }),
   };

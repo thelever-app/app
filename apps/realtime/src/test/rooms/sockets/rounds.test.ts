@@ -331,7 +331,12 @@ describe('the rounds over the room sockets', () => {
     const luis = await TestClient.connected(server.url, 'luis', roomId);
 
     // Act
-    luis.send({ type: 'report-dilemma', dilemmaId: dilemmas[0]!.dilemmaId, reason: 'offensive' });
+    luis.send({
+      type: 'report-dilemma',
+      dilemmaId: dilemmas[0]!.dilemmaId,
+      reason: 'offensive',
+      language: 'es',
+    });
     const reported = await luis.next('game-state');
     luis.send({ type: 'skip-dilemma', dilemmaId: dilemmas[0]!.dilemmaId });
 

@@ -169,6 +169,7 @@ describe('the room server on several instances', () => {
       dilemmaId: first!.dilemmaId,
       reason: 'mistranslated',
       comment: 'TestComment',
+      language: 'fr',
     });
     await luis.client.next('game-state');
 

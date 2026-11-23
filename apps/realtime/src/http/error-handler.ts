@@ -24,6 +24,9 @@ const STATUS: Partial<Record<ErrorCodeDto, number>> = {
   'minor-in-room': 403,
   'invalid-declared-age': 400,
   'month-of-birth-needed': 422,
+  'invalid-notice': 400,
+  'too-many-notices': 429,
+  'moderation-notice-not-found': 404,
 };
 
 /** Whether Express could not read the body as JSON. */

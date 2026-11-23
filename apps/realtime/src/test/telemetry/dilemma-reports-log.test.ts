@@ -37,6 +37,7 @@ describe('the log of the reports', () => {
       dilemmaId: first!.dilemmaId,
       reason: 'mistranslated',
       comment: 'TestComment',
+      language: 'fr',
     });
     await luis.next('game-state');
 
@@ -62,7 +63,12 @@ describe('the log of the reports', () => {
     const luis = await TestClient.connected(server.url, 'luis', roomId);
 
     // Act
-    luis.send({ type: 'report-dilemma', dilemmaId: 'not-in-this-game', reason: 'offensive' });
+    luis.send({
+      type: 'report-dilemma',
+      dilemmaId: 'not-in-this-game',
+      reason: 'offensive',
+      language: 'es',
+    });
     await luis.next('error');
 
     // Assert

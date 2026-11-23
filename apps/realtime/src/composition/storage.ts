@@ -4,7 +4,9 @@ import {
   type DatabaseClient,
   inTransaction,
   PostgresAcceptanceRepository,
-  PostgresDilemmaReportRepository,
+  PostgresIssueRepository,
+  PostgresModerationNoticeRepository,
+  PostgresOutbox,
   PostgresFirstAccessRepository,
   PostgresDilemmaLikes,
   PostgresDilemmaQueries,
@@ -38,8 +40,12 @@ import {
 } from '@thelever-app/game/in-memory';
 import type { FirstAccessRepository } from '@thelever-app/identity';
 import { InMemoryFirstAccessRepository } from '@thelever-app/identity/in-memory';
-import type { DilemmaReportRepository } from '@thelever-app/moderation';
-import { InMemoryDilemmaReportRepository } from '@thelever-app/moderation/in-memory';
+import type { IssueRepository, ModerationNoticeRepository, Outbox } from '@thelever-app/moderation';
+import {
+  InMemoryIssueRepository,
+  InMemoryModerationNoticeRepository,
+  InMemoryOutbox,
+} from '@thelever-app/moderation/in-memory';
 import type { RunCommand } from '../rooms/run-command.ts';
 import type { SocketNotifier } from '../rooms/sockets/socket-notifier.ts';
 
@@ -74,8 +80,12 @@ export interface StorageAdapters {
   readonly firstAccesses: FirstAccessRepository;
   /** The legal documents each identity accepted. */
   readonly acceptances: AcceptanceRepository;
-  /** The reports of dilemmas, which Moderation keeps. */
-  readonly dilemmaReports: DilemmaReportRepository;
+  /** The issues of Moderation, with the reports and notices of each content. */
+  readonly issues: IssueRepository;
+  /** What the issues still have to tell the moderation repository, which the job sends. */
+  readonly outbox: Outbox;
+  /** The decisions that wait for each player to open the app. */
+  readonly moderationNotices: ModerationNoticeRepository;
   /**
    * The notifier the use cases get, given the sockets of this instance: in memory, those sockets;
    * in PostgreSQL, every instance, which deliver to their own sockets what it publishes.
@@ -99,7 +109,9 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
       likes: new InMemoryDilemmaLikes(),
       firstAccesses: new InMemoryFirstAccessRepository(),
       acceptances: new InMemoryAcceptanceRepository(),
-      dilemmaReports: new InMemoryDilemmaReportRepository(),
+      issues: new InMemoryIssueRepository(),
+      outbox: new InMemoryOutbox(),
+      moderationNotices: new InMemoryModerationNoticeRepository(),
       notifierFor: (sockets) => sockets,
       runCommand: (command) => command(),
     };
@@ -115,7 +127,9 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
     likes: new PostgresDilemmaLikes(db),
     firstAccesses: new PostgresFirstAccessRepository(db),
     acceptances: new PostgresAcceptanceRepository(db),
-    dilemmaReports: new PostgresDilemmaReportRepository(db),
+    issues: new PostgresIssueRepository(db),
+    outbox: new PostgresOutbox(db),
+    moderationNotices: new PostgresModerationNoticeRepository(db),
     notifierFor: () => new PostgresPlayerNotifier(db),
     runCommand: (command) => inTransaction(db, command),
   };
