@@ -8,3 +8,7 @@ export type {
   WithdrawNickname,
   WithdrawNicknameInput,
 } from './application/use-cases/withdraw-nickname.use-case.ts';
+export type {
+  FindNicknameOfReference,
+  NicknameOfReference,
+} from './application/use-cases/find-nickname-of-reference.use-case.ts';

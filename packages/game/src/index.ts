@@ -234,6 +234,7 @@ export {
   WithdrawNicknameUseCase,
   type WithdrawNicknameInput,
 } from './application/use-cases/withdraw-nickname.use-case.ts';
+export { FindNicknameOfReferenceUseCase } from './application/use-cases/find-nickname-of-reference.use-case.ts';
 export { genericNickname } from './domain/vos/nickname.vo.ts';
 export { RoomNotFoundError } from './application/errors/room-not-found.error.ts';
 export { GameNotFoundError } from './application/errors/game-not-found.error.ts';
