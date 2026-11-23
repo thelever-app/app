@@ -5,7 +5,9 @@
  * tests.
  */
 export {
-  describeDilemmaReportRepositoryContract,
-  type DilemmaReportRepositorySubject,
+  describeIssueRepositoryContract,
+  type IssueRepositorySubject,
   type ReportableDilemma,
-} from './dilemma-report-repository.contract.ts';
+} from './issue-repository.contract.ts';
+export { describeOutboxContract, type OutboxSubject } from './outbox.contract.ts';
+export { describeModerationNoticeRepositoryContract } from './moderation-notice-repository.contract.ts';

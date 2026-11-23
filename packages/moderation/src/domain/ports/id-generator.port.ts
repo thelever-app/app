@@ -1,4 +1,4 @@
-/** Generates the ids of the reports. The database stores them; it never creates them. */
+/** Generates the ids of issues, reports, notices and moderation notices. The database never creates them. */
 export interface IdGenerator {
   generate(): string;
 }

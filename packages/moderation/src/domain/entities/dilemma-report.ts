@@ -1,5 +1,7 @@
 import { CommentTooLongError } from '../errors/comment-too-long.error.ts';
-import type { ReportReason } from '../vos/report-reason.vo.ts';
+import { InvalidEntryError } from '../errors/invalid-entry.error.ts';
+import { isLanguage, type Language } from '../vos/language.vo.ts';
+import { DILEMMA_REPORT_REASONS, type DilemmaReportReason } from '../vos/report-reason.vo.ts';
 
 /** The longest comment a report may have. */
 export const MAXIMUM_COMMENT_LENGTH = 280;
@@ -9,8 +11,10 @@ export interface DilemmaReportSnapshot {
   readonly dilemmaId: string;
   /** The version the player saw. */
   readonly version: number;
-  readonly reason: ReportReason;
+  readonly reason: DilemmaReportReason;
   readonly comment: string | null;
+  /** The language the player read it in: without it, «mistranslated» says no translation to check. */
+  readonly language: Language;
   /** Who reports: the report threshold counts different players, and the decision goes back to them. */
   readonly identity: string;
   /** When, which the 3 years it is kept for count from. */
@@ -26,9 +30,11 @@ export class DilemmaReport {
   }
 
   static receive(report: DilemmaReportSnapshot): DilemmaReport {
-    if (report.comment !== null && report.comment.length > MAXIMUM_COMMENT_LENGTH) {
-      throw new CommentTooLongError(report.comment.length, MAXIMUM_COMMENT_LENGTH);
+    if (!(DILEMMA_REPORT_REASONS as readonly string[]).includes(report.reason)) {
+      throw new InvalidEntryError('reason', report.reason);
     }
+    if (!isLanguage(report.language)) throw new InvalidEntryError('language', report.language);
+    checkComment(report.comment);
     return new DilemmaReport(report);
   }
 
@@ -40,7 +46,26 @@ export class DilemmaReport {
     return this.#snapshot.id;
   }
 
+  get dilemmaId(): string {
+    return this.#snapshot.dilemmaId;
+  }
+
+  get identity(): string {
+    return this.#snapshot.identity;
+  }
+
+  get reason(): DilemmaReportReason {
+    return this.#snapshot.reason;
+  }
+
   toSnapshot(): DilemmaReportSnapshot {
     return { ...this.#snapshot };
+  }
+}
+
+/** A comment is optional and short: what it says goes with the reason, not in its place. */
+export function checkComment(comment: string | null): void {
+  if (comment !== null && comment.length > MAXIMUM_COMMENT_LENGTH) {
+    throw new CommentTooLongError(comment.length, MAXIMUM_COMMENT_LENGTH);
   }
 }
