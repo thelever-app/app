@@ -36,16 +36,20 @@ export interface InMemoryDilemma extends Omit<DilemmaContent, 'language' | 'cate
   readonly minimumAge?: 16 | 18;
   readonly category?: Category;
   readonly tags?: readonly string[];
-  readonly status?: 'in-catalog' | 'in-exploration';
+  readonly status?: InMemoryDilemmaStatus;
   readonly compromising?: boolean;
   readonly type?: DilemmaType;
   readonly scale?: Scale;
   readonly fixedOrder?: boolean;
 }
 
+/** Where a dilemma of the tests is: only one in the general catalog is drawn for a random round. */
+export type InMemoryDilemmaStatus =
+  'in-catalog' | 'in-exploration' | 'hidden-by-reports' | 'withdrawn';
+
 /** A fixed set of dilemmas, at their first version and with their translations, for unit and acceptance tests. */
 export class InMemoryDilemmaCatalog implements DilemmaCatalog {
-  readonly #dilemmas: ReadonlyMap<string, Required<InMemoryDilemma>>;
+  readonly #dilemmas: Map<string, Required<InMemoryDilemma>>;
 
   constructor(dilemmas: readonly InMemoryDilemma[]) {
     this.#dilemmas = new Map(
@@ -66,6 +70,16 @@ export class InMemoryDilemmaCatalog implements DilemmaCatalog {
         },
       ]),
     );
+  }
+
+  /** Moderation took the dilemma out of the catalog, or brought it back: the tests play the part of Dilemmas. */
+  changeStatus(dilemmaId: string, status: InMemoryDilemmaStatus): void {
+    this.#dilemmas.set(dilemmaId, { ...this.#dilemmaOf(dilemmaId), status });
+  }
+
+  /** Where the dilemma is now. */
+  statusOf(dilemmaId: string): InMemoryDilemmaStatus {
+    return this.#dilemmaOf(dilemmaId).status;
   }
 
   async findOptionIds(dilemmaIds: readonly string[]): Promise<readonly GameDilemma[]> {

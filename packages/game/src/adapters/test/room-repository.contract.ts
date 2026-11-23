@@ -172,6 +172,35 @@ export function describeRoomRepositoryContract(
       });
     });
 
+    describe('findIdsWith', () => {
+      it('should give the rooms where a player has that identity, and no other', async () => {
+        // Arrange
+        const repository = await create();
+        const first = room('TestFirstRoomId', 'TestFirstAnaId', 'K7M2Q');
+        join(first, 'Luis');
+        const second = room('TestSecondRoomId', 'TestSecondAnaId', 'P3X8W');
+        second.join(
+          {
+            underEighteen: false,
+            nickname: 'Luis',
+            identity: 'TestLuisIdentity',
+            avatar: second.suggestAvatar(new FixedRandomness()),
+          },
+          new FixedIdGenerator('TestSecondLuisId'),
+          NOW,
+        );
+        const other = room('TestOtherRoomId', 'TestOtherAnaId', 'H4N9R');
+        join(other, 'Eva');
+        for (const saved of [first, second, other]) await repository.save(saved);
+
+        // Act
+        const found = await repository.findIdsWith('TestLuisIdentity');
+
+        // Assert
+        expect([...found].sort()).toEqual(['TestFirstRoomId', 'TestSecondRoomId']);
+      });
+    });
+
     describe('findIdsWithNobodyConnected', () => {
       it('should give the rooms with no connection open, whether anyone ever connected or not', async () => {
         // Arrange

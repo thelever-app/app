@@ -219,6 +219,22 @@ export {
   type DilemmaReports,
 } from './application/ports/dilemma-reports.port.ts';
 export { InvalidReportReasonError } from './application/errors/invalid-report-reason.error.ts';
+export { InvalidReportLanguageError } from './application/errors/invalid-report-language.error.ts';
+export {
+  NICKNAME_REPORT_REASONS,
+  type NicknameReport,
+  type NicknameReportReason,
+  type NicknameReports,
+} from './application/ports/nickname-reports.port.ts';
+export {
+  ReportNicknameUseCase,
+  type ReportNicknameInput,
+} from './application/use-cases/report-nickname.use-case.ts';
+export {
+  WithdrawNicknameUseCase,
+  type WithdrawNicknameInput,
+} from './application/use-cases/withdraw-nickname.use-case.ts';
+export { genericNickname } from './domain/vos/nickname.vo.ts';
 export { RoomNotFoundError } from './application/errors/room-not-found.error.ts';
 export { GameNotFoundError } from './application/errors/game-not-found.error.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';

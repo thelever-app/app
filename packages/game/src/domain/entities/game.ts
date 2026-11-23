@@ -501,7 +501,8 @@ export class Game {
    * the report itself is for Moderation.
    */
   recordReport(playerId: string, dilemmaId: string, offensive: boolean): void {
-    this.#decisionDilemma(dilemmaId);
+    // In its decision or in its reveal: only in the decision can it then be skipped.
+    this.#roundDilemmaNamed(dilemmaId);
     const state = this.#activeStateOf(playerId);
     if (state.reports.has(dilemmaId)) throw new DilemmaAlreadyReportedError(dilemmaId);
 
@@ -1133,10 +1134,16 @@ export class Game {
 
   /** The dilemma, which must be the one of the round, while the round is in its decision phase. */
   #decisionDilemma(dilemmaId: string): DilemmaVO {
+    const dilemma = this.#roundDilemmaNamed(dilemmaId);
+    if (!this.isInDecisionPhase) throw new DecisionPhaseOverError();
+    return dilemma;
+  }
+
+  /** The dilemma of the round, in its decision or in its reveal, if it is that one. */
+  #roundDilemmaNamed(dilemmaId: string): DilemmaVO {
     const dilemma = this.#dilemmaOf(dilemmaId);
     if (!this.#round) throw new DecisionPhaseNotStartedError();
     if (dilemma !== this.#roundDilemma()) throw new DilemmaNotInRoundError(dilemmaId);
-    if (!this.isInDecisionPhase) throw new DecisionPhaseOverError();
     return dilemma;
   }
 

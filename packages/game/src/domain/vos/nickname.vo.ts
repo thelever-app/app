@@ -1,4 +1,24 @@
 import { NicknameMissingError } from '../errors/nickname-missing.error.ts';
+import type { DilemmaLanguage } from './room-settings.vo.ts';
+
+/** «Player», in the language of the room, for a nickname the team withdrew. */
+const GENERIC_NICKNAMES: Readonly<Record<DilemmaLanguage, string>> = {
+  es: 'Jugador',
+  en: 'Player',
+  fr: 'Joueur',
+  de: 'Spieler',
+  it: 'Giocatore',
+  pt: 'Jogador',
+  ca: 'Jugador',
+};
+
+/**
+ * The generic nickname of the room (glossary, «Apodo genérico»): «Jugador 3», with the number of
+ * the player in the room.
+ */
+export function genericNickname(language: DilemmaLanguage, number: number): string {
+  return `${GENERIC_NICKNAMES[language]} ${number}`;
+}
 
 export class NicknameVO {
   readonly value: string;

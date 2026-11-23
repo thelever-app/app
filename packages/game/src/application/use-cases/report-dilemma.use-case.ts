@@ -3,6 +3,8 @@ import { DilemmaNotInGameError } from '../../domain/errors/dilemma-not-in-game.e
 import type { Clock } from '../../domain/ports/clock.port.ts';
 import { handOverHostIfAway } from '../../domain/services/host-handover.ts';
 import { InvalidReportReasonError } from '../errors/invalid-report-reason.error.ts';
+import { InvalidReportLanguageError } from '../errors/invalid-report-language.error.ts';
+import { DILEMMA_LANGUAGES, type DilemmaLanguage } from '../../domain/vos/room-settings.vo.ts';
 import {
   REPORT_REASONS,
   type DilemmaReports,
@@ -21,6 +23,8 @@ export interface ReportDilemmaInput {
   readonly dilemmaId: string;
   readonly reason: string;
   readonly comment?: string | null;
+  /** The language the player read the dilemma in. */
+  readonly language: string;
 }
 
 /**
@@ -54,9 +58,13 @@ export class ReportDilemmaUseCase {
     dilemmaId,
     reason,
     comment,
+    language,
   }: ReportDilemmaInput): Promise<void> {
     if (!(REPORT_REASONS as readonly string[]).includes(reason)) {
       throw new InvalidReportReasonError(reason);
+    }
+    if (!(DILEMMA_LANGUAGES as readonly string[]).includes(language)) {
+      throw new InvalidReportLanguageError(language);
     }
     const { room, game } = await findCurrentGame(
       this.#roomRepository,
@@ -94,6 +102,7 @@ export class ReportDilemmaUseCase {
       version: dilemma.version,
       reason: reason as ReportReason,
       comment: comment?.trim() || null,
+      language: language as DilemmaLanguage,
       identity: player.identity,
       at,
     });

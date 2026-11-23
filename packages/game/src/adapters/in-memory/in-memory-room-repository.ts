@@ -21,6 +21,12 @@ export class InMemoryRoomRepository implements RoomRepository {
     return snapshot && Room.restore(snapshot);
   }
 
+  async findIdsWith(identity: string): Promise<readonly string[]> {
+    return [...this.#snapshots.values()]
+      .filter(({ players }) => players.some((player) => player.identity === identity))
+      .map(({ id }) => id);
+  }
+
   async findIdsWithNobodyConnected(): Promise<readonly string[]> {
     return [...this.#snapshots.values()]
       .filter(({ connections }) => connections.length === 0)

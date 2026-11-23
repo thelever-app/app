@@ -16,7 +16,7 @@ export interface PlayerSnapshot {
 
 export class Player {
   readonly #id: IdVO;
-  readonly #nickname: NicknameVO;
+  #nickname: NicknameVO;
   /** Who uses the app behind this player. It never travels to the other players. */
   readonly #identity: IdVO;
   #avatar: AvatarVO;
@@ -89,6 +89,11 @@ export class Player {
   /** Whether they were under 18 when they entered the room. */
   get underEighteen(): boolean {
     return this.#underEighteen;
+  }
+
+  /** The room checks that nobody else looks the same with it. */
+  rename(nickname: NicknameVO): void {
+    this.#nickname = nickname;
   }
 
   /** The room checks that nobody else has it. */

@@ -4,6 +4,7 @@ export type LobbyChange =
   | 'player-joined'
   | 'player-expelled'
   | 'avatar-changed'
+  | 'nickname-withdrawn'
   | 'settings-changed'
   | 'dilemmas-changed'
   | 'game-started'

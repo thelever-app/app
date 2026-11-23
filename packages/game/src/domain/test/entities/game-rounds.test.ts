@@ -425,6 +425,29 @@ describe('Game, by rounds', () => {
       );
     });
 
+    it('should keep the report of the dilemma of the round in its reveal too, without letting it be skipped', () => {
+      // Arrange
+      const game = gameOfThree();
+      game.reveal('host', AT);
+
+      // Act
+      game.recordReport('Luis', 'TestDilemma1', true);
+
+      // Assert
+      expect(game.reportsOf('Luis')).toEqual([{ dilemmaId: 'TestDilemma1', offensive: true }]);
+      expect(() => game.skip('Luis', 'TestDilemma1')).toThrow(DecisionPhaseOverError);
+    });
+
+    it('should only take a report of the dilemma of the round', () => {
+      // Arrange
+      const game = gameOfThree();
+
+      // Act & Assert
+      expect(() => game.recordReport('Luis', 'TestDilemma2', false)).toThrow(
+        DilemmaNotInRoundError,
+      );
+    });
+
     it('should only skip a dilemma the player reported as offensive', () => {
       // Arrange
       const game = gameOfThree();
