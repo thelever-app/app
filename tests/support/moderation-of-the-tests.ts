@@ -60,6 +60,11 @@ export class ModerationOfTheTestCatalog implements ModeratedDilemmas {
     return (number && this.#ids[Number(number) - 1]) || null;
   }
 
+  /** Each dilemma of the tests is a family of its own: they have no translations. */
+  async familyOf(dilemmaId: string): Promise<readonly string[]> {
+    return [dilemmaId];
+  }
+
   async textOf(dilemmaId: string): Promise<string | null> {
     return this.#texts.get(dilemmaId) ?? null;
   }
@@ -117,7 +122,7 @@ export function moderationInMemory({
   const issues = storage?.issues ?? new InMemoryIssueRepository();
   const outbox = storage?.outbox ?? new InMemoryOutbox();
   const notices = storage?.notices ?? new InMemoryModerationNoticeRepository();
-  const ports = { issues, outbox, dilemmas, idGenerator, clock };
+  const ports = { issues, outbox, dilemmas, nicknames, idGenerator, clock };
   const send = new SendIssueEventUseCase({ issues, outbox, tracker, mailer, dilemmas });
   const read = new ReadDecisionUseCase({
     issues,

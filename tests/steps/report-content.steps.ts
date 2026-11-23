@@ -180,7 +180,7 @@ Then(
 
 // From the web
 
-Given('a person who does not use TheLever', function () {});
+Given('a person who does not use TheLever', function (this: GameWorld) {});
 
 When(
   'the person sends the web form with the link to a catalog dilemma and why it is illegal',

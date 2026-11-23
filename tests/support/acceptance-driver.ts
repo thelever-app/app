@@ -21,6 +21,7 @@ import {
   ReportDilemmaUseCase,
   ReportNicknameUseCase,
   WithdrawNicknameUseCase,
+  FindNicknameOfReferenceUseCase,
   MoveOnUseCase,
   GetReadyToMoveOnUseCase,
   ReactUseCase,
@@ -434,9 +435,10 @@ export class AcceptanceDriver implements GameDriver {
       notices: new InMemoryModerationNoticeRepository(),
     },
     dilemmas: this.#moderationCatalog,
-    nicknames: new RoomNicknamesForModeration(
-      new WithdrawNicknameUseCase(this.#roomRepository, this.#notifier),
-    ),
+    nicknames: new RoomNicknamesForModeration({
+      findNicknameOfReference: new FindNicknameOfReferenceUseCase(this.#roomRepository),
+      withdrawNickname: new WithdrawNicknameUseCase(this.#roomRepository, this.#notifier),
+    }),
     clock: this.#clock,
   });
   /** Who was told the team will review what they reported. */

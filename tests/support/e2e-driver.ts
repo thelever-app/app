@@ -20,7 +20,7 @@ import {
   GetDilemmasUseCase,
   ModerateDilemmaUseCase,
 } from '@thelever-app/dilemmas';
-import { WithdrawNicknameUseCase } from '@thelever-app/game';
+import { FindNicknameOfReferenceUseCase, WithdrawNicknameUseCase } from '@thelever-app/game';
 import {
   CatalogDilemmasForModeration,
   RoomNicknamesForModeration,
@@ -4374,13 +4374,17 @@ export class E2eDriver implements GameDriver {
           findDilemmaOfReference: new FindDilemmaOfReferenceUseCase(dilemmaRepository),
           getDilemmas: new GetDilemmasUseCase(dilemmaRepository),
           moderateDilemma: new ModerateDilemmaUseCase(dilemmaRepository, LanguageDto.options),
+          languages: LanguageDto.options,
         }),
-        nicknames: new RoomNicknamesForModeration(
-          new WithdrawNicknameUseCase(
+        nicknames: new RoomNicknamesForModeration({
+          findNicknameOfReference: new FindNicknameOfReferenceUseCase(
+            new PostgresRoomRepository(db, 'sync-moderation'),
+          ),
+          withdrawNickname: new WithdrawNicknameUseCase(
             new PostgresRoomRepository(db, 'sync-moderation'),
             new PostgresPlayerNotifier(db),
           ),
-        ),
+        }),
         idPrefix: randomUUID(),
         clock: { now: () => new Date() },
         storage: {
