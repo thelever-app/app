@@ -28,3 +28,4 @@ export type {
   ModerationAction,
 } from './application/use-cases/moderate-dilemma.use-case.ts';
 export type { FindDilemmaOfReference } from './application/use-cases/find-dilemma-of-reference.use-case.ts';
+export { familyOf } from './application/catalog-number.ts';

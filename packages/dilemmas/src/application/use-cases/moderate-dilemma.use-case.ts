@@ -1,5 +1,5 @@
 import { DilemmaNotFoundError } from '../errors/dilemma-not-found.error.ts';
-import { idOf, numberOf } from '../catalog-number.ts';
+import { familyOf } from '../catalog-number.ts';
 import type { DilemmaRepository } from '../ports/dilemma-repository.port.ts';
 import type { Dilemma } from '../../domain/entities/dilemma.ts';
 
@@ -37,13 +37,8 @@ export class ModerateDilemmaUseCase implements ModerateDilemma {
   }
 
   async execute({ dilemmaId, action }: ModerateDilemmaInput): Promise<void> {
-    const number = numberOf(dilemmaId);
-    const ids =
-      number === undefined
-        ? [dilemmaId]
-        : [idOf(number), ...this.#languages.map((language) => idOf(number, language))];
     let found = false;
-    for (const id of ids) {
+    for (const id of familyOf(dilemmaId, this.#languages)) {
       const dilemma = await this.#dilemmaRepository.findById(id);
       if (!dilemma) continue;
       found = true;

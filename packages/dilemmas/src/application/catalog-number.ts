@@ -16,3 +16,14 @@ export function numberOf(dilemmaId: string): number | undefined {
   const match = CATALOG_ID.exec(dilemmaId);
   return match ? Number(match[1]) : undefined;
 }
+
+/**
+ * What moderating a dilemma reaches: the dilemma and, if it is of the curated catalog, its original
+ * and its translations into those languages.
+ */
+export function familyOf(dilemmaId: string, languages: readonly string[]): string[] {
+  const number = numberOf(dilemmaId);
+  return number === undefined
+    ? [dilemmaId]
+    : [idOf(number), ...languages.map((language) => idOf(number, language))];
+}
