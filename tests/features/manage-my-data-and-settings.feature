@@ -156,9 +156,9 @@ Feature: Manage my data and settings
     Then the first row is a link to support TheLever with a donation
     And it opens the donation page
 
-  @ui @todo
+  @ui @screen
   Scenario: The settings show the contact email for users and authorities
-    When the player opens "About"
+    When the player opens "Contact and reports"
     Then the player sees the contact email and the languages in which it is answered
     And can open the web form to report illegal content
 

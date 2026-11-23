@@ -177,7 +177,50 @@ export interface Declaration {
 }
 
 /** Why a player reports a dilemma, as the scenario says it. */
-export type ReportReason = 'offensive' | 'confusing';
+export type ReportReason = 'offensive' | 'confusing' | 'badly translated' | 'other';
+
+/** An issue of the moderation repository, as the team sees it there. */
+export interface ModerationIssueView {
+  readonly title: string;
+  readonly body: string;
+  readonly comments: readonly string[];
+  readonly labels: readonly string[];
+}
+
+/** What a person writes in the web form of illegal content. */
+export interface IllegalContentNoticeForm {
+  /** The link to that dilemma of the catalog; something that names no dilemma without one. */
+  readonly dilemmaId?: string;
+  readonly name?: string;
+  readonly email?: string;
+}
+
+/** A moderation notice, as the screen of its player shows it. */
+export interface ModerationNoticeView {
+  /** About a report the player made, or about their nickname. */
+  readonly about: 'report' | 'nickname';
+  readonly outcome: 'withdrawn' | 'kept';
+  /** The section of the terms of use it names. */
+  readonly rule: string | undefined;
+  /** Whether it says that a person decided it. */
+  readonly byAPerson: boolean;
+  /** Whether it says how to appeal. */
+  readonly howToAppeal: boolean;
+  /** The facts it gives, for a nickname. */
+  readonly facts: string | undefined;
+}
+
+/** The dilemma a player reported, as the issue of the team should show it. */
+export interface ReportedDilemma {
+  readonly dilemmaId: string;
+  readonly text: string;
+}
+
+/** An email the app sent, as its inbox shows it. */
+export interface EmailView {
+  readonly subject: string;
+  readonly text: string;
+}
 
 export type InvitationMethod = 'invitation link' | 'code' | 'QR';
 
@@ -856,8 +899,48 @@ export interface GameDriver {
     player: string,
   ): Promise<{ readonly position: number; readonly points: number | null }[]>;
 
-  /** `player` reports the dilemma of the round. */
-  report(player: string, reason: ReportReason): Promise<void>;
+  /** `player` reports the dilemma of the round, in its decision or its reveal, with a comment if given. */
+  report(player: string, reason: ReportReason, comment?: string): Promise<ReportedDilemma>;
+  /** Whether `player` is offered to report the dilemma of the round. */
+  canReport(player: string): Promise<boolean>;
+  /** Whether the screen of `player` told them the team will review what they reported. */
+  toldTheTeamWillReview(player: string): Promise<boolean>;
+  /** Whether anything on the screen of `viewer`, or in what the room told them, says someone reported. */
+  knowsAboutAReport(viewer: string): Promise<boolean>;
+  /** `player` touches the avatar of `other`, in the lobby or in the reveal, and reports their nickname. */
+  reportNickname(player: string, other: string): Promise<void>;
+
+  // Moderation (CU-08 and CU-11)
+
+  /** The job of moderation runs once: the issues reach the repository and the decisions apply. */
+  syncModeration(): Promise<void>;
+  /** The issues of the moderation repository, the oldest first. */
+  moderationIssues(): Promise<ModerationIssueView[]>;
+  /** The comments of the reports Moderation keeps, in its database. Only in the application. */
+  storedReportComments(): Promise<string[]>;
+  /** The team decides the issue of that content in the repository, then the job runs. */
+  teamDecides(
+    issue: { readonly dilemmaId: string } | { readonly nickname: string } | 'the last one',
+    decision: 'withdraw' | 'restore' | 'keep',
+  ): Promise<void>;
+  /** A dilemma of the catalog that suits any room, for what happens to it outside a game. */
+  aCatalogDilemma(): Promise<ReportedDilemma>;
+  /** That many different players report that dilemma of the catalog. Only in the application. */
+  reportedByDifferentPlayers(dilemmaId: string, count: number): Promise<void>;
+  /** Whether the issues of the repository mention `player` by their nickname or their identity. */
+  issuesMention(player: string): Promise<boolean>;
+  /** Whether a new game may play that dilemma. */
+  isPlayableInNewGames(dilemmaId: string): Promise<boolean>;
+  /** Someone who does not use the app sends the web form of illegal content. */
+  sendIllegalContentNotice(form: IllegalContentNoticeForm): Promise<void>;
+  /** Whether the web form said the notice was received. */
+  noticeAcknowledged(): Promise<boolean>;
+  /** The emails the app sent to that address, the oldest first. Only in the application. */
+  emailsTo(address: string): Promise<EmailView[]>;
+  /** `player` opens the app: the moderation notices they get, which they then see. */
+  moderationNoticesOn(player: string): Promise<ModerationNoticeView[]>;
+  /** The nickname `viewer` sees `player` by in the room. */
+  nicknameOfIn(viewer: string, player: string): Promise<string>;
   /** `player` takes the skip the screen offers once they reported the dilemma as offensive. */
   skipReportedDilemma(player: string): Promise<void>;
   /** Who `viewer` sees as the host during the game, by name. */
@@ -946,6 +1029,8 @@ export interface GameDriver {
   ): Promise<{ readonly donation: boolean; readonly href?: string }>;
   /** `user` opens Credits and licences from the settings, and its licence notices. */
   creditsSeenInTheSettings(user: string): Promise<CreditsView>;
+  /** What «Contact and reports» shows, opened from the settings. Only on the device. */
+  contactSeenInTheSettings(user: string): Promise<ContactView>;
   /** The donation page of the environment the app and the web link to. */
   donationPage(): string;
 
@@ -1008,6 +1093,15 @@ export interface FundingView {
 }
 
 /** What the credits of the settings show and link to. */
+/** «Contact and reports» of the settings, as the screen shows it. */
+export interface ContactView {
+  readonly email: string;
+  /** The text that says what the email is for and the languages it is answered in. */
+  readonly text: string;
+  /** Where the link to the web form of illegal content leads. */
+  readonly form: string | undefined;
+}
+
 export interface CreditsView {
   /** The licence notices of the third-party libraries, by the name of each one. */
   readonly notices: readonly string[];

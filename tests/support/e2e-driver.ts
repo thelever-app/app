@@ -5,10 +5,28 @@ import {
   type Database,
   type DatabaseClient,
   ConsoleLogger,
+  inTransaction,
   openDatabase,
   PostgresDilemmaRepository,
+  PostgresIssueRepository,
+  PostgresModerationNoticeRepository,
+  PostgresOutbox,
+  PostgresPlayerNotifier,
+  PostgresRoomRepository,
   PostgresWorldResultRepository,
 } from '@thelever-app/db';
+import {
+  FindDilemmaOfReferenceUseCase,
+  GetDilemmasUseCase,
+  ModerateDilemmaUseCase,
+} from '@thelever-app/dilemmas';
+import { WithdrawNicknameUseCase } from '@thelever-app/game';
+import {
+  CatalogDilemmasForModeration,
+  RoomNicknamesForModeration,
+} from '@thelever-app/integrations/moderation';
+import { InMemoryIssueTracker, InMemoryMailer } from '@thelever-app/moderation/in-memory';
+import { moderationInMemory, TEAM_REASONS } from './moderation-of-the-tests.ts';
 import {
   GetPublicCatalogUseCase,
   ImportCatalogUseCase,
@@ -77,6 +95,12 @@ import type {
   RecordedLike,
   RecordedReaction,
   ReportReason,
+  ReportedDilemma,
+  ContactView,
+  ModerationIssueView,
+  IllegalContentNoticeForm,
+  ModerationNoticeView,
+  EmailView,
   ResultsScreenView,
   RevealView,
   RoomChoices,
@@ -262,7 +286,8 @@ const SCREEN = {
   timePerDilemma: 'Tiempo por dilema',
   search: 'Buscar dilemas',
   more: 'Ver más',
-  toExpel: (nickname: string) => `${nickname}. Toca para expulsar`,
+  playerMenu: (nickname: string) => `${nickname}. Toca para ver opciones`,
+  expelFromTheRoom: 'Expulsar de la sala',
   expel: 'Expulsar',
   expelled: 'Te han sacado de la sala',
   toChangeAvatar: /Toca para cambiar tu avatar$/,
@@ -329,7 +354,12 @@ const SCREEN = {
   mute: 'Silenciar el juego',
   sound: /^Sonido/,
   report: 'Reportar este dilema',
-  reasons: { offensive: 'Ofensivo', confusing: 'Confuso' },
+  reasons: {
+    offensive: 'Ofensivo',
+    confusing: 'Confuso',
+    'badly translated': 'Mal traducido',
+    other: 'Otro',
+  },
   sendReport: 'Enviar reporte',
   skip: 'Saltar dilema',
   leave: 'Salir de la partida',
@@ -563,6 +593,12 @@ interface E2ePlayer {
  */
 export class E2eDriver implements GameDriver {
   readonly #stack: E2eStack;
+  /** The moderation repository and the inbox of the run, which the job of moderation writes. */
+  readonly #moderationTracker = new InMemoryIssueTracker();
+  readonly #moderationMailer = new InMemoryMailer();
+  #noticeAcknowledged = false;
+  /** Whether the scenario reached Moderation, whose rows the worker then clears. */
+  #moderated = false;
   /** In the order the scenario introduced them: the host first. */
   readonly #players = new Map<string, E2ePlayer>();
   /** The votes each player cast, in order, to look for them where they must not be. */
@@ -615,6 +651,9 @@ export class E2eDriver implements GameDriver {
       this.#curatedCatalog.discarded.push(...loaded.map(({ number }) => number));
       await this.#importCatalog();
     }
+    // What a scenario reported, and the dilemmas the team hid or withdrew, leave the database of
+    // the worker, so the issues and the games of the scenarios after it start from nothing.
+    if (this.#moderated) await this.#withDatabase(clearModeration);
   }
 
   // The first access
@@ -1808,7 +1847,8 @@ export class E2eDriver implements GameDriver {
   async expel(host: string, player: string): Promise<void> {
     const expelled = this.#playerCalled(player);
     const { page } = screenOf(this.#playerCalled(host));
-    await page.getByRole('button', { name: SCREEN.toExpel(expelled.nickname) }).click();
+    await page.getByRole('button', { name: SCREEN.playerMenu(expelled.nickname) }).click();
+    await page.getByRole('button', { name: SCREEN.expelFromTheRoom }).click();
     await page.getByRole('dialog').getByRole('button', { name: SCREEN.expel, exact: true }).click();
 
     await this.#untilEveryoneSees(
@@ -1821,8 +1861,14 @@ export class E2eDriver implements GameDriver {
   async canExpel(host: string, player: string): Promise<boolean> {
     const { nickname } = this.#playerCalled(player);
     const { page } = screenOf(this.#playerCalled(host));
-    const expel = page.getByRole('button', { name: SCREEN.toExpel(nickname) });
-    return steady(async () => (await expel.count()) > 0);
+    const menu = page.getByRole('button', { name: SCREEN.playerMenu(nickname) });
+    if (!(await steady(async () => (await menu.count()) > 0))) return false;
+    await menu.click();
+    const expel = page.getByRole('button', { name: SCREEN.expelFromTheRoom });
+    await page.getByRole('button', { name: spanish('playerMenu.report') }).waitFor();
+    const can = (await expel.count()) > 0;
+    await page.keyboard.press('Escape');
+    return can;
   }
 
   /** The room says how many it needs: the driver brings in the missing ones before starting. */
@@ -3150,6 +3196,20 @@ export class E2eDriver implements GameDriver {
     return { notices: await notices.allTextContents(), creditsDiceBear, sourceCode };
   }
 
+  async contactSeenInTheSettings(user: string): Promise<ContactView> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('link', { name: new RegExp(spanish('appSettings.contact')) }).click();
+    await page.getByRole('heading', { name: spanish('contact.title') }).waitFor();
+    return {
+      email: (await page.getByText('privacidad@thelever.app', { exact: true }).textContent()) ?? '',
+      text: (await page.getByRole('main').textContent()) ?? '',
+      form:
+        (await page
+          .getByRole('link', { name: spanish('contact.openForm') })
+          .getAttribute('href')) ?? undefined,
+    };
+  }
+
   donationPage(): string {
     return DONATION_URL;
   }
@@ -4216,18 +4276,34 @@ export class E2eDriver implements GameDriver {
       .toSorted((a, b) => a.position - b.position);
   }
 
-  async report(player: string, reason: ReportReason): Promise<void> {
+  async report(player: string, reason: ReportReason, comment?: string): Promise<ReportedDilemma> {
+    this.#moderated = true;
     const reporter = this.#playerCalled(player);
     const { page } = screenOf(reporter);
     const { dilemmaId } = await this.#roundDilemmaOn(reporter);
     await page.getByRole('button', { name: SCREEN.moreOptions }).click();
     await page.getByRole('button', { name: SCREEN.report }).click();
     await page.getByRole('radio', { name: SCREEN.reasons[reason], exact: true }).click();
+    if (comment !== undefined) {
+      await page.getByRole('textbox', { name: spanish('report.comment') }).fill(comment);
+    }
     await page.getByRole('button', { name: SCREEN.sendReport }).click();
     await waitUntil(
       () => lastGameOf(reporter)?.reports.some((report) => report.dilemmaId === dilemmaId),
       `the room keeps the report of ${player}`,
     );
+    const text = await this.#withDatabase(
+      async (db) =>
+        (
+          await db
+            .selectFrom('dilemma_versions')
+            .select('text')
+            .where('dilemma_id', '=', dilemmaId)
+            .orderBy('number', 'desc')
+            .executeTakeFirstOrThrow()
+        ).text,
+    );
+    return { dilemmaId, text };
   }
 
   async skipReportedDilemma(player: string): Promise<void> {
@@ -4240,6 +4316,278 @@ export class E2eDriver implements GameDriver {
       `the room records that ${player} skipped the dilemma`,
     );
     await page.getByRole('heading', { name: SCREEN.waiting }).waitFor();
+  }
+
+  async canReport(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    await page.getByRole('button', { name: SCREEN.moreOptions }).click();
+    const reported = page.getByText(spanish('gameMenu.reported'));
+    const offered = page.getByRole('button', { name: SCREEN.report });
+    await reported.or(offered).first().waitFor();
+    const can = await offered.isVisible();
+    await page.keyboard.press('Escape');
+    return can;
+  }
+
+  async toldTheTeamWillReview(player: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const thanks = page.getByRole('status').filter({ hasText: spanish('reportSent.thanks') });
+    return thanks
+      .waitFor()
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  async knowsAboutAReport(viewer: string): Promise<boolean> {
+    const watcher = this.#playerCalled(viewer);
+    const { page, received } = screenOf(watcher);
+    const thanks = await page.getByText(spanish('reportSent.thanks')).isVisible();
+    const told = received.some(
+      (message) =>
+        message.type.includes('report') ||
+        (message.type === 'game-state' && message.reports.length > 0),
+    );
+    return thanks || told;
+  }
+
+  async reportNickname(player: string, other: string): Promise<void> {
+    this.#moderated = true;
+    const reporter = this.#playerCalled(player);
+    const { page } = screenOf(reporter);
+    const { nickname } = this.#playerCalled(other);
+    const before = await this.#nicknameReportCount();
+    await page
+      .getByRole('button', { name: spanish('playerMenu.open', { name: nickname }) })
+      .click();
+    await page.getByRole('button', { name: spanish('playerMenu.report') }).click();
+    await page.getByRole('radio', { name: SCREEN.reasons.offensive, exact: true }).click();
+    await page.getByRole('button', { name: SCREEN.sendReport }).click();
+    await waitUntilAsync(async () => (await this.#nicknameReportCount()) > before);
+  }
+
+  async syncModeration(): Promise<void> {
+    this.#moderated = true;
+    await this.#withDatabase(async (db) => {
+      const dilemmaRepository = new PostgresDilemmaRepository(db);
+      const moderation = moderationInMemory({
+        dilemmas: new CatalogDilemmasForModeration({
+          findDilemmaOfReference: new FindDilemmaOfReferenceUseCase(dilemmaRepository),
+          getDilemmas: new GetDilemmasUseCase(dilemmaRepository),
+          moderateDilemma: new ModerateDilemmaUseCase(dilemmaRepository, LanguageDto.options),
+        }),
+        nicknames: new RoomNicknamesForModeration(
+          new WithdrawNicknameUseCase(
+            new PostgresRoomRepository(db, 'sync-moderation'),
+            new PostgresPlayerNotifier(db),
+          ),
+        ),
+        idPrefix: randomUUID(),
+        clock: { now: () => new Date() },
+        storage: {
+          issues: new PostgresIssueRepository(db),
+          outbox: new PostgresOutbox(db),
+          notices: new PostgresModerationNoticeRepository(db),
+        },
+        tracker: this.#moderationTracker,
+        mailer: this.#moderationMailer,
+        runCommand: (command) => inTransaction(db, command),
+      });
+      await moderation.sync();
+    });
+  }
+
+  async moderationIssues(): Promise<ModerationIssueView[]> {
+    return this.#moderationTracker.issues().map(({ title, body, comments, labels }) => ({
+      title,
+      body,
+      comments,
+      labels,
+    }));
+  }
+
+  async storedReportComments(): Promise<string[]> {
+    return this.#withDatabase(async (db) => {
+      const rows = await db
+        .selectFrom('dilemma_reports')
+        .select('comment')
+        .where('comment', 'is not', null)
+        .execute();
+      return rows.map(({ comment }) => comment!);
+    });
+  }
+
+  async teamDecides(
+    issue: { readonly dilemmaId: string } | { readonly nickname: string } | 'the last one',
+    decision: 'withdraw' | 'restore' | 'keep',
+  ): Promise<void> {
+    await this.syncModeration();
+    const issues = this.#moderationTracker.issues();
+    const decided =
+      issue === 'the last one'
+        ? issues.at(-1)
+        : issues.find(({ body }) =>
+            'dilemmaId' in issue
+              ? body.includes(`\`${issue.dilemmaId}\``)
+              : body.includes(`> ${this.#playerCalled(issue.nickname).nickname}`),
+          );
+    if (!decided) throw new Error('No issue of that content in the moderation repository');
+    this.#moderationTracker.decide(decided.number, { label: decision, comment: TEAM_REASONS });
+    await this.syncModeration();
+  }
+
+  async aCatalogDilemma(): Promise<ReportedDilemma> {
+    const { dilemmaId, text } = await this.#catalogDilemma();
+    return { dilemmaId, text };
+  }
+
+  async reportedByDifferentPlayers(): Promise<void> {
+    throw new Error('Many players report a dilemma only in the application');
+  }
+
+  async issuesMention(player: string): Promise<boolean> {
+    const { playerId, nickname } = this.#playerCalled(player);
+    const identity = await this.#withDatabase(
+      async (db) =>
+        (
+          await db
+            .selectFrom('room_players')
+            .select('identity')
+            .where('id', '=', playerId ?? '')
+            .executeTakeFirst()
+        )?.identity,
+    );
+    const issues = JSON.stringify(this.#moderationTracker.issues());
+    return (
+      (identity !== undefined && issues.includes(identity)) ||
+      issues.includes(`> ${nickname}`) ||
+      issues.includes(` ${nickname} `)
+    );
+  }
+
+  async isPlayableInNewGames(): Promise<boolean> {
+    throw new Error('What new games may play is read only in the application');
+  }
+
+  async sendIllegalContentNotice(form: IllegalContentNoticeForm): Promise<void> {
+    this.#moderated = true;
+    const context = await this.#newContext({ locale: SPANISH });
+    const page = await context.newPage();
+    const reference =
+      form.dilemmaId === undefined
+        ? 'Sala ABCDE, el apodo Pepe'
+        : `${this.#stack.webUrl}/d/${(await this.#catalogDilemma()).publicId}`;
+    try {
+      await page.goto(`${this.#stack.webUrl}/denunciar`);
+      await page.getByRole('textbox', { name: spanish('illegalNotice.reference') }).fill(reference);
+      await page
+        .getByRole('textbox', { name: spanish('illegalNotice.explanation') })
+        .fill('Incita al odio contra un colectivo.');
+      if (form.name) {
+        await page.getByRole('textbox', { name: spanish('illegalNotice.name') }).fill(form.name);
+      }
+      if (form.email) {
+        await page.getByRole('textbox', { name: spanish('illegalNotice.email') }).fill(form.email);
+      }
+      await page.getByRole('checkbox', { name: spanish('illegalNotice.goodFaith') }).check();
+      await page.getByRole('button', { name: spanish('illegalNotice.send') }).click();
+      await page.getByRole('heading', { name: spanish('illegalNotice.receivedTitle') }).waitFor();
+      this.#noticeAcknowledged = true;
+    } finally {
+      await context.close();
+    }
+  }
+
+  async noticeAcknowledged(): Promise<boolean> {
+    return this.#noticeAcknowledged;
+  }
+
+  async emailsTo(address: string): Promise<EmailView[]> {
+    return this.#moderationMailer
+      .sent()
+      .filter(({ to }) => to === address)
+      .map(({ subject, text }) => ({ subject, text }));
+  }
+
+  async moderationNoticesOn(player: string): Promise<ModerationNoticeView[]> {
+    const { page } = screenOf(this.#playerCalled(player));
+    const asked = page.waitForResponse((response) =>
+      response.url().includes('/moderation-notices'),
+    );
+    await page.goto(`${this.#stack.webUrl}/app`);
+    await asked;
+    const seen: ModerationNoticeView[] = [];
+    const dialog = page.getByRole('dialog');
+    while (
+      await dialog
+        .waitFor({ timeout: 1000 })
+        .then(() => true)
+        .catch(() => false)
+    ) {
+      const text = (await dialog.textContent()) ?? '';
+      const nickname = text.includes(spanish('moderationNotice.nicknameTitle'));
+      seen.push({
+        about: nickname ? 'nickname' : 'report',
+        outcome: text.includes('retirado') ? 'withdrawn' : 'kept',
+        rule: /(?:apartado) (\S+?) de las condiciones/.exec(text)?.[1],
+        byAPerson: text.includes('una persona del equipo'),
+        howToAppeal: text.includes('reclamar'),
+        facts: nickname
+          ? new RegExp(
+              `${spanish('moderationNotice.factsLabel')}(.*?)${spanish('moderationNotice.ruleLabel')}`,
+            )
+              .exec(text)?.[1]
+              ?.trim()
+          : undefined,
+      });
+      const marked = page.waitForResponse((response) => response.url().includes('/seen'));
+      await page.getByRole('button', { name: spanish('moderationNotice.understood') }).click();
+      await marked;
+      await dialog.waitFor({ state: 'detached' }).catch(() => {});
+    }
+    return seen;
+  }
+
+  async nicknameOfIn(viewer: string, player: string): Promise<string> {
+    const watcher = this.#playerCalled(viewer);
+    const { playerId, nickname: was } = this.#playerCalled(player);
+    const nicknameNow = () =>
+      screenOf(watcher)
+        .received.findLast((message): message is RoomStateDto => message.type === 'room-state')
+        ?.players.find((seen) => seen.playerId === playerId)?.nickname;
+    // The change reaches the screen a moment after the job applies it.
+    return waitUntil(() => {
+      const now = nicknameNow();
+      return now !== undefined && now !== was ? now : false;
+    }, `${viewer} sees ${player} with another nickname`).catch(() => nicknameNow() ?? was);
+  }
+
+  async #nicknameReportCount(): Promise<number> {
+    return this.#withDatabase(async (db) => {
+      const { count } = await db
+        .selectFrom('nickname_reports')
+        .select((eb) => eb.fn.countAll<string>().as('count'))
+        .executeTakeFirstOrThrow();
+      return Number(count);
+    });
+  }
+
+  /** A dilemma of the test catalog for every room, in Spanish, with its public id. */
+  async #catalogDilemma(): Promise<ReportedDilemma & { readonly publicId: string }> {
+    return this.#withDatabase(async (db) => {
+      const row = await db
+        .selectFrom('dilemmas')
+        .innerJoin('dilemma_versions', 'dilemma_versions.dilemma_id', 'dilemmas.id')
+        .select(['dilemmas.id', 'dilemmas.public_id', 'dilemma_versions.text'])
+        .where('dilemmas.translation_of', 'is', null)
+        .where('dilemmas.language', '=', 'es')
+        .where('dilemma_versions.status', '=', 'in-catalog')
+        .where('dilemma_versions.minimum_age', '=', 16)
+        .where('dilemma_versions.compromising', '=', false)
+        .where('dilemma_versions.has_gap', '=', false)
+        .orderBy('dilemmas.id')
+        .executeTakeFirstOrThrow();
+      return { dilemmaId: row.id, text: row.text, publicId: row.public_id };
+    });
   }
 
   /** Who the room server last told `viewer` hosts the game, once it stops changing. */
@@ -5333,6 +5681,46 @@ function overlap(a: Box, b: Box): boolean {
 }
 
 /** Checks again and again until `check` gives something, and returns it. */
+/**
+ * Clears what Moderation keeps and gives the dilemmas the team hid or withdrew back the status
+ * they had: only in the database of a worker of the tests.
+ */
+async function clearModeration(db: DatabaseClient): Promise<void> {
+  for (const table of [
+    'moderation_outbox',
+    'moderation_notices',
+    'illegal_content_notices',
+    'nickname_reports',
+    'dilemma_reports',
+    'moderation_issues',
+  ] as const) {
+    await db.deleteFrom(table).execute();
+  }
+  const moderated = await db
+    .selectFrom('dilemmas')
+    .select(['id', 'moderation_status_before'])
+    .where('moderation', 'is not', null)
+    .execute();
+  for (const { id, moderation_status_before: before } of moderated) {
+    const { number } = await db
+      .selectFrom('dilemma_versions')
+      .select((eb) => eb.fn.max('number').as('number'))
+      .where('dilemma_id', '=', id)
+      .executeTakeFirstOrThrow();
+    await db
+      .updateTable('dilemma_versions')
+      .set({ status: before ?? 'in-catalog' })
+      .where('dilemma_id', '=', id)
+      .where('number', '=', number)
+      .execute();
+  }
+  await db
+    .updateTable('dilemmas')
+    .set({ moderation: null, moderation_status_before: null })
+    .where('moderation', 'is not', null)
+    .execute();
+}
+
 async function waitUntil<T>(
   check: () => T | undefined | false,
   what: string,

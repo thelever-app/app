@@ -82,9 +82,25 @@ Then('it opens the donation page', async function (this: GameWorld) {
 });
 
 When('the player opens {string}', async function (this: GameWorld, screen: string) {
-  assert.equal(screen, 'Credits and licences', `The steps do not open "${screen}"`);
   await this.driver.openSettings(this.player);
+  if (screen === 'Contact and reports') {
+    this.contact = await this.driver.contactSeenInTheSettings(this.player);
+    return;
+  }
+  assert.equal(screen, 'Credits and licences', `The steps do not open "${screen}"`);
   this.credits = await this.driver.creditsSeenInTheSettings(this.player);
+});
+
+Then(
+  'the player sees the contact email and the languages in which it is answered',
+  function (this: GameWorld) {
+    assert.equal(this.contact?.email, 'privacidad@thelever.app');
+    assert.match(this.contact?.text ?? '', /en español y en inglés/);
+  },
+);
+
+Then('can open the web form to report illegal content', function (this: GameWorld) {
+  assert.equal(this.contact?.form, '/denunciar');
 });
 
 Then(
