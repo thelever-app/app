@@ -13,6 +13,7 @@ import { type CountryLookup, NoCountryLookup } from '../../first-access/country-
 import { type AccessGate, OpenAccess } from '../../identity/access-gate.ts';
 import { type AppCheckVerifier, UncheckedAppCheck } from '../../identity/app-check-verifier.ts';
 import type { TokenVerifier } from '../../identity/token-verifier.ts';
+import type { SocketLimits } from '../../rooms/sockets/room-socket-server.ts';
 import { FakeTokenVerifier, tokenOf } from './fake-token-verifier.ts';
 
 /** The origin of the web in the tests, which may read the answers of the HTTP routes. */
@@ -115,6 +116,8 @@ export async function startRoomServer({
   /** What the players send so a closed server lets them through their first access. */
   firstAccessHeaders = {} as Readonly<Record<string, string>>,
   countryLookup = new NoCountryLookup() as CountryLookup,
+  /** Tighter limits of the sockets, so a test reaches them without waiting. */
+  socketLimits = {} as Partial<SocketLimits>,
 } = {}) {
   const composed = await composeRealtimeServer({
     tokenVerifier,
@@ -125,6 +128,7 @@ export async function startRoomServer({
     logger,
     webOrigins: [WEB_ORIGIN],
     countryLookup,
+    socketLimits,
   });
   const { http: server, sockets } = composed;
   await new Promise<void>((resolve) => server.listen(0, resolve));

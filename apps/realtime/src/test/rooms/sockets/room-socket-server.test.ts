@@ -354,6 +354,63 @@ describe('RoomSocketServer', () => {
     });
   });
 
+  describe('limits', () => {
+    function closeOf(client: TestClient): Promise<number> {
+      return new Promise((resolve) => client.socket.once('close', (code) => resolve(code)));
+    }
+
+    it('should close a socket that sends a message larger than any the app sends', async () => {
+      // Arrange
+      server = await startRoomServer({ socketLimits: { maxMessageBytes: 1024 } });
+      const client = await TestClient.open(server.url);
+      const closed = closeOf(client);
+
+      // Act
+      client.send('x'.repeat(2048));
+
+      // Assert
+      expect(await closed).toBe(1009);
+    });
+
+    it('should close a socket that does not connect to a room in time', async () => {
+      // Arrange
+      server = await startRoomServer({ socketLimits: { connectDeadlineMs: 50 } });
+      const client = await TestClient.open(server.url);
+
+      // Act
+      const code = await closeOf(client);
+
+      // Assert
+      expect(code).toBe(1008);
+    });
+
+    it('should keep a socket that connected before the deadline', async () => {
+      // Arrange
+      server = await startRoomServer({ socketLimits: { connectDeadlineMs: 50 } });
+      const { roomId } = await gameInDecisionPhase(server);
+
+      // Act
+      const ana = await TestClient.connected(server.url, 'ana', roomId);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // Assert
+      expect(ana.socket.readyState).toBe(ana.socket.OPEN);
+    });
+
+    it('should close a socket that sends messages faster than anyone plays', async () => {
+      // Arrange
+      server = await startRoomServer({ socketLimits: { messagesPerSecond: 1, messageBurst: 3 } });
+      const client = await TestClient.open(server.url);
+      const closed = closeOf(client);
+
+      // Act
+      for (let sent = 0; sent < 10; sent += 1) client.send('not json');
+
+      // Assert
+      expect(await closed).toBe(1008);
+    });
+  });
+
   describe('messages that cannot be read', () => {
     it.each([
       ['text that is not JSON', 'not json', null],

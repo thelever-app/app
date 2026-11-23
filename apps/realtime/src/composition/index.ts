@@ -55,7 +55,7 @@ import { AnswerDilemmaHandler } from '../rooms/sockets/answer-dilemma.handler.ts
 import { ConnectHandler } from '../rooms/sockets/connect.handler.ts';
 import { DisconnectHandler } from '../rooms/sockets/disconnect.handler.ts';
 import { lobbyCommandHandlers } from '../rooms/sockets/lobby-commands.ts';
-import { RoomSocketServer } from '../rooms/sockets/room-socket-server.ts';
+import { RoomSocketServer, type SocketLimits } from '../rooms/sockets/room-socket-server.ts';
 import { SocketNotifier } from '../rooms/sockets/socket-notifier.ts';
 import { StateSender } from '../rooms/sockets/state-sender.ts';
 import { moderationUseCases, type ModerationUseCases } from './moderation.ts';
@@ -92,6 +92,8 @@ export interface RealtimeConfiguration {
   /** Whether entering a room asks for the access code: in dev and prod while they are closed. */
   readonly accessGate: AccessGate;
   readonly pingIntervalMs: number;
+  /** Tighter limits of the sockets than the defaults, as the tests use. */
+  readonly socketLimits?: Partial<SocketLimits>;
   readonly storage: Storage;
   readonly logger: Logger;
   /** The origins the web is served from: only those may read the answers of the HTTP routes. */
@@ -370,7 +372,7 @@ interface SocketParts {
 }
 
 function roomSocketServer(
-  { tokenVerifier, appCheckVerifier, pingIntervalMs, logger }: RealtimeConfiguration,
+  { tokenVerifier, appCheckVerifier, pingIntervalMs, logger, socketLimits }: RealtimeConfiguration,
   { commands, socketNotifier, stateSender, roomLock, runCommand }: SocketParts,
 ): RoomSocketServer {
   const disconnect = new DisconnectHandler(
@@ -432,7 +434,14 @@ function roomSocketServer(
       runCommand,
     ),
   ];
-  return new RoomSocketServer(handlers, disconnect, errorCodeOf, pingIntervalMs, logger);
+  return new RoomSocketServer(
+    handlers,
+    disconnect,
+    errorCodeOf,
+    pingIntervalMs,
+    logger,
+    socketLimits,
+  );
 }
 
 /** In memory there is nobody to tell: leaving cleanly is stopping. */

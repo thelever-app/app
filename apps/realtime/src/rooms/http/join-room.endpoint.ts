@@ -15,6 +15,8 @@ export class JoinRoomEndpoint implements HttpEndpoint {
   readonly method = 'post';
   readonly path = '/rooms/:roomId/players';
   readonly authenticated = true;
+  /** Joining is retried when a nickname is taken; far more is a script. */
+  readonly perIdentityPerMinute = 20;
   readonly #joinRoom: JoinRoomUseCase;
   readonly #roomLock: KeyedLock;
   readonly #runCommand: RunCommand;

@@ -1,6 +1,6 @@
 import { createTransport } from 'nodemailer';
 import { describe, expect, it } from 'vitest';
-import { SmtpMailer } from '../../email/smtp-mailer.ts';
+import { EmailNotSentError, SmtpMailer } from '../../email/smtp-mailer.ts';
 
 describe('SmtpMailer', () => {
   it('should send the email in plain text, from the sender and with answers to the contact', async () => {
@@ -29,6 +29,31 @@ describe('SmtpMailer', () => {
       subject: 'TestSubject',
       text: 'TestText',
     });
+  });
+
+  it('should fail without the address or what the server answered, which may name it', async () => {
+    // Arrange: the server turns the address down, and says so with it.
+    const rejected = Object.assign(new Error('Recipient rejected: 550 <test@example.com>'), {
+      code: 'EENVELOPE',
+      responseCode: 550,
+      response: '550 5.1.1 <test@example.com> no such user',
+    });
+    const mailer = new SmtpMailer(
+      { sendMail: async () => Promise.reject(rejected) },
+      { from: 'TheLever <no-reply@thelever.test>', replyTo: 'contact@thelever.test' },
+    );
+
+    // Act
+    const failure = await mailer
+      .send({ to: 'test@example.com', subject: 'TestSubject', text: 'TestText' })
+      .catch((error: unknown) => error);
+
+    // Assert
+    expect(failure).toBeInstanceOf(EmailNotSentError);
+    expect(JSON.stringify(failure)).not.toContain('test@example.com');
+    expect(String((failure as Error).message)).not.toContain('test@example.com');
+    expect(String((failure as Error).stack)).not.toContain('test@example.com');
+    expect(failure).toMatchObject({ code: 'EENVELOPE', responseCode: 550 });
   });
 
   it('should send the files that go with the email', async () => {

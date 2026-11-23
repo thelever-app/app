@@ -13,6 +13,8 @@ export class RoomPreviewEndpoint implements HttpEndpoint {
   readonly method = 'get';
   readonly path = '/rooms/by-code/:code';
   readonly authenticated = true;
+  /** A person mistypes a code a few times; a script sweeping the codes goes far beyond. */
+  readonly perIdentityPerMinute = 20;
   readonly #getRoomPreview: GetRoomPreviewUseCase;
 
   constructor(getRoomPreview: GetRoomPreviewUseCase) {

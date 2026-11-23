@@ -26,6 +26,7 @@ const STATUS: Partial<Record<ErrorCodeDto, number>> = {
   'month-of-birth-needed': 422,
   'invalid-notice': 400,
   'too-many-notices': 429,
+  'too-many-requests': 429,
   'moderation-notice-not-found': 404,
 };
 

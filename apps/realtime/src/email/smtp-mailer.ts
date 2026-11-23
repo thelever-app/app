@@ -22,6 +22,30 @@ export interface PlainEmail {
 }
 
 /**
+ * An email the server did not take, with only its codes: nodemailer's message and the answer of the
+ * server name the address, which would reach the logs, out of the reach of the erasure.
+ */
+export class EmailNotSentError extends Error {
+  readonly code: string | undefined;
+  readonly responseCode: number | undefined;
+
+  constructor({
+    code,
+    responseCode,
+  }: {
+    readonly code?: unknown;
+    readonly responseCode?: unknown;
+  }) {
+    super(
+      `the email was not sent (${String(code ?? 'unknown')} ${String(responseCode ?? '')})`.trim(),
+    );
+    this.name = 'EmailNotSentError';
+    this.code = typeof code === 'string' ? code : undefined;
+    this.responseCode = typeof responseCode === 'number' ? responseCode : undefined;
+  }
+}
+
+/**
  * Sends the emails of the app through SMTP: in dev and prod, the contact mailbox of the domain at
  * Hostinger, which already hosts its email, so an answer to an email reaches the team. Plain text
  * only, without links to follow or images to load: the emails of the notices of Moderation, and the
@@ -36,7 +60,15 @@ export class SmtpMailer {
     this.#sender = sender;
   }
 
-  async send({ to, subject, text, attachments = [] }: PlainEmail): Promise<void> {
+  async send(email: PlainEmail): Promise<void> {
+    try {
+      await this.#send(email);
+    } catch (error) {
+      throw new EmailNotSentError((error ?? {}) as { code?: unknown; responseCode?: unknown });
+    }
+  }
+
+  async #send({ to, subject, text, attachments = [] }: PlainEmail): Promise<void> {
     await this.#transporter.sendMail({
       from: this.#sender.from,
       replyTo: this.#sender.replyTo,

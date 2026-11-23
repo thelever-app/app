@@ -27,6 +27,29 @@ function read(data: string): {
   return { command: type.success ? type.data : null, message: message.data };
 }
 
+/** What a socket may do before the server closes it. */
+export interface SocketLimits {
+  /** The largest message: the app's largest is far smaller; a bigger one closes the socket (1009). */
+  readonly maxMessageBytes: number;
+  /** How long a socket may stay open without connecting to a room (1008 once it passes). */
+  readonly connectDeadlineMs: number;
+  /** How many messages a socket may send each second, sustained… */
+  readonly messagesPerSecond: number;
+  /** …and in a burst, before it is closed (1008). */
+  readonly messageBurst: number;
+}
+
+/** Far above what anyone playing sends, far below what could take the instance down. */
+export const DEFAULT_SOCKET_LIMITS: SocketLimits = {
+  maxMessageBytes: 64 * 1024,
+  connectDeadlineMs: 10_000,
+  messagesPerSecond: 10,
+  messageBurst: 30,
+};
+
+/** The close code of a socket that broke a limit: policy violation. */
+const BROKE_A_LIMIT = 1008;
+
 /** How a message ended, as its duration is counted. */
 type Outcome = 'ok' | 'rejected' | 'error';
 
@@ -58,6 +81,9 @@ export class RoomSocketServer {
   readonly #connections = new Set<RoomConnection>();
   /** Once the instance leaves, a closing socket no longer disconnects its player: whoever cleans after it does. */
   #leaving = false;
+  readonly #limits: SocketLimits;
+  /** The `connect` each socket is handling: the next one waits for it, so it ends the right session. */
+  readonly #connecting = new WeakMap<RoomConnection, Promise<void>>();
 
   constructor(
     handlers: readonly SocketMessageHandler[],
@@ -65,17 +91,19 @@ export class RoomSocketServer {
     codeOf: (error: unknown) => ErrorCodeDto | undefined,
     pingIntervalMs: number,
     logger: Logger,
+    limits: Partial<SocketLimits> = {},
   ) {
     this.#handlers = new Map(handlers.map((handler) => [handler.type, handler]));
     this.#disconnect = disconnect;
     this.#codeOf = codeOf;
     this.#pingIntervalMs = pingIntervalMs;
     this.#logger = logger;
+    this.#limits = { ...DEFAULT_SOCKET_LIMITS, ...limits };
   }
 
   /** Serves the sockets on that HTTP server and starts checking that they are alive. */
   attach(server: Server): WebSocketServer {
-    const sockets = new WebSocketServer({ server });
+    const sockets = new WebSocketServer({ server, maxPayload: this.#limits.maxMessageBytes });
     const alive = new WeakMap<WebSocket, boolean>();
 
     sockets.on('connection', (socket) => {
@@ -122,13 +150,58 @@ export class RoomSocketServer {
   #serve(connection: RoomConnection): void {
     this.#connections.add(connection);
     instruments().openSockets.add(1);
-    connection.socket.on('message', (data) => this.#onMessage(String(data), connection));
-    connection.socket.on('close', () => this.#onClose(connection));
+    const { connectDeadlineMs, messagesPerSecond, messageBurst } = this.#limits;
+    // A socket that never connects to a room holds a slot of the instance for nothing.
+    const deadline = setTimeout(() => {
+      if (!connection.session) connection.socket.close(BROKE_A_LIMIT, 'connect to a room first');
+    }, connectDeadlineMs);
+    let allowance = messageBurst;
+    let counted = performance.now();
+    connection.socket.on('message', (data) => {
+      const now = performance.now();
+      allowance = Math.min(messageBurst, allowance + ((now - counted) / 1000) * messagesPerSecond);
+      counted = now;
+      if (allowance < 1) {
+        connection.socket.close(BROKE_A_LIMIT, 'too many messages');
+        return;
+      }
+      allowance -= 1;
+      void this.#onMessage(String(data), connection);
+    });
+    connection.socket.on('close', () => {
+      clearTimeout(deadline);
+      this.#onClose(connection);
+    });
+    // A frame over the limit, or one that breaks the protocol, ends the socket with an error: the
+    // socket closes on its own, and an error nobody listens to would take the process down.
+    connection.socket.on('error', (error) => {
+      this.#logger.warn('a socket broke the protocol', {
+        code: (error as { code?: string }).code ?? 'unknown',
+      });
+    });
   }
 
   /** Handles one message in a span of its own, and times it by its type and how it ended. */
   async #onMessage(data: string, connection: RoomConnection): Promise<void> {
     const { command, message } = read(data);
+    if (message?.type === 'connect') {
+      const previous = this.#connecting.get(connection);
+      const handled = (async () => {
+        await previous;
+        await this.#timed(command, message, connection);
+      })();
+      this.#connecting.set(connection, handled);
+      await handled;
+      return;
+    }
+    await this.#timed(command, message, connection);
+  }
+
+  async #timed(
+    command: ClientMessageTypeDto | null,
+    message: ClientMessageDto | undefined,
+    connection: RoomConnection,
+  ): Promise<void> {
     const type = command ?? 'unknown';
     const started = performance.now();
     const outcome = await inSpan(

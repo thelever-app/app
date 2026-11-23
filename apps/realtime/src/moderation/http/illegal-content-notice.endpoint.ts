@@ -15,6 +15,8 @@ export class IllegalContentNoticeEndpoint implements HttpEndpoint {
   readonly method = 'post';
   readonly path = '/illegal-content-notices';
   readonly authenticated = true;
+  /** Above the 5 of the day, so that one answers first; it still counts one by one notices sent together, which the limit of the day reads in parallel. */
+  readonly perIdentityPerMinute = 6;
   readonly #receive: ReceiveIllegalContentNoticeUseCase;
   readonly #runCommand: RunCommand;
 
