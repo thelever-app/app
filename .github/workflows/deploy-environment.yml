@@ -64,7 +64,7 @@ jobs:
             --image "$(cat image.txt)" \
             --service-account "migrator@$PROJECT.iam.gserviceaccount.com" \
             --command node --args packages/db/src/migrate.ts \
-            --set-env-vars "CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=migrator@$PROJECT.iam,DB_APP_USER=realtime@$PROJECT.iam,DB_CATALOG_USER=catalog-import@$PROJECT.iam,DB_SITE_USER=public-site@$PROJECT.iam" \
+            --set-env-vars "CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=migrator@$PROJECT.iam,DB_APP_USER=realtime@$PROJECT.iam,DB_MODERATION_USER=moderation@$PROJECT.iam,DB_CATALOG_USER=catalog-import@$PROJECT.iam,DB_SITE_USER=public-site@$PROJECT.iam" \
             --max-retries 0 --task-timeout 10m \
             --quiet
           gcloud run jobs execute migrate --project "$PROJECT" --region europe-southwest1 \
@@ -73,8 +73,8 @@ jobs:
       # The rooms live in PostgreSQL, so several instances share them. After a deploy the previous
       # revision keeps its sockets for up to an hour, so two revisions may run side by side: at most
       # 2 instances each, with a pool of 3 and the LISTEN connection, are 16 connections; with 1 of
-      # the migrate job, 1 of the close-rooms job (which publish-world-results takes too, never at
-      # the same time) and 1 of the catalog-import job, 19, the 19 the
+      # the migrate job, 1 of the close-rooms job (which publish-world-results and sync-moderation
+      # take too, never at the same time) and 1 of the catalog-import job, 19, the 19 the
       # micro instance leaves to the app users (25, minus 3 for superusers and 3 Cloud SQL uses).
       # The generate-site job takes the one of catalog-import: a deploy and a load of the catalog never
       # run at the same time (the concurrency of this job), and its schedule runs it at night.
@@ -258,6 +258,44 @@ jobs:
             gcloud scheduler jobs update http publish-world-results "${schedule[@]}"
           else
             gcloud scheduler jobs create http publish-world-results "${schedule[@]}"
+          fi
+
+      # Every 5 minutes, Cloud Scheduler runs the job that takes the issues of the reports and of the
+      # notices to the private moderation repository, reads the decisions of the team there and
+      # sends the emails of the notices. Same image as the room server, but an account of its own:
+      # only it reads the token of GitHub, the password of the mailbox and the key of Anthropic,
+      # which the public room server never sees; its database user has the rows the room server
+      # has. Its connection takes the one of close-rooms and publish-world-results: it runs at
+      # minute 4 of every 5, never on the hour, when close-rooms runs, and a run that meets
+      # publish-world-results at night fails and the next one does the work. A run that failed is
+      # not tried again: the next one, 5 minutes later, takes what is left. In dev, the issues say
+      # so in their title and their label, in the same repository as prod.
+      - name: Deploy the job of moderation, and its schedule
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          moderation_environment=""
+          if [ "$ENVIRONMENT" != prod ]; then moderation_environment="$ENVIRONMENT"; fi
+          gcloud run jobs deploy sync-moderation --project "$PROJECT" --region europe-southwest1 \
+            --image "$(cat image.txt)" \
+            --service-account "moderation@$PROJECT.iam.gserviceaccount.com" \
+            --command node --args apps/realtime/src/jobs/sync-moderation.ts \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=moderation@$PROJECT.iam,MODERATION_REPOSITORY=thelever-app/moderation,MODERATION_ENVIRONMENT=$moderation_environment,SMTP_HOST=smtp.hostinger.com,SMTP_USER=no-reply@thelever.app" \
+            --set-secrets "GITHUB_TOKEN=moderation-github-token:latest,SMTP_PASSWORD=smtp-password:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest" \
+            --max-retries 0 --task-timeout 4m \
+            --quiet
+          schedule=(
+            --project "$PROJECT" --location europe-west1
+            --schedule "4-59/5 * * * *" --time-zone Etc/UTC
+            --uri "https://run.googleapis.com/v2/projects/$PROJECT/locations/europe-southwest1/jobs/sync-moderation:run"
+            --http-method POST
+            --oauth-service-account-email "scheduler@$PROJECT.iam.gserviceaccount.com"
+            --quiet
+          )
+          if gcloud scheduler jobs describe sync-moderation --project "$PROJECT" --location europe-west1 >/dev/null 2>&1; then
+            gcloud scheduler jobs update http sync-moderation "${schedule[@]}"
+          else
+            gcloud scheduler jobs create http sync-moderation "${schedule[@]}"
           fi
 
       # The job that loads the Catalog of dilemmas of Notion, with its translations, which the
