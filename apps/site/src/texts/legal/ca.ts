@@ -111,9 +111,10 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Quines dades tractem, per a què i amb quina base',
       paragraphs: [
-        '- Per jugar, amb el teu consentiment explícit (art. 6.1.a i 9.2.a RGPD): el teu sobrenom i el teu avatar; els teus vots, les teves prediccions del vot dels altres o del repartiment del grup, les teves reaccions i els teus punts; si un dilema tractava sobre tu; l’ordre en què vas veure les opcions; i els teus «Bon dilema», que es guarden a part de la sala.',
-        '- Per votar sol un dilema de la web, amb el mateix consentiment: el teu vot suma al resultat mundial sense que guardem què vas votar, i només queda una marca que ja vas votar aquest dilema, perquè no compti dues vegades.',
+        '- Per jugar, amb el teu consentiment explícit (art. 6.1.a i 9.2.a RGPD): el teu sobrenom i el teu avatar; els teus vots, les teves prediccions del vot dels altres o del repartiment del grup, les teves reaccions i els teus punts; si un dilema tractava sobre tu; i l’ordre en què vas veure les opcions.',
+        '- Per votar sol un dilema de la web, amb el mateix consentiment: el teu vot suma al resultat mundial sense que guardem què vas votar.',
         '- Per no repetir-te dilemes, amb el mateix consentiment: el teu mòbil guarda la llista de dilemes que has jugat, sense els teus vots, i l’envia en entrar en una sala, que només la fa servir per preparar les partides i l’esborra amb la sala.',
+        '- Per valorar quins dilemes agraden i perquè ningú no compti dues vegades al resultat mundial, per interès legítim (art. 6.1.f): els teus «Bon dilema», que es guarden a part de la sala, i la marca que ja vas votar sol un dilema, sense el teu vot. No diuen res del que penses de cap dilema, així que no depenen del consentiment del joc i es queden si el retires. T’hi pots oposar escrivint-nos amb el teu codi per a peticions, i els esborrem.',
         '- Per reconèixer-te, per les condicions d’ús (art. 6.1.b): un identificador anònim del teu dispositiu i quan vas obrir l’app per última vegada.',
         '- Per complir la llei sobre l’edat (art. 6.1.c): el teu any de naixement i, si fas 18 anys aquest any o més endavant, el mes; i la teva regió (Espai Econòmic Europeu, resta del món o país on TheLever no està disponible), que deduïm de la teva adreça IP amb una base de dades al nostre propi servidor, IP Geolocation by DB-IP (db-ip.com, llicència CC BY 4.0). TheLever no guarda la teva IP; el nostre proveïdor d’accés, Firebase Authentication (Google), la registra unes setmanes per seguretat.',
         '- Per poder demostrar què vas acceptar (art. 6.1.c i 7.1): quina versió de les condicions i del consentiment vas acceptar i quan, i quan el vas retirar.',
@@ -146,21 +147,21 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Amb qui compartim les teves dades',
       paragraphs: [
-        'No venem les teves dades. Les tracten per compte nostre, amb contracte i només per prestar el servei, Google Cloud i Firebase (Google), que allotgen l’app, la seva base de dades i l’accés; Hostinger, que allotja el nostre correu i envia els nostres correus; GitHub, on l’equip porta el registre intern de moderació, amb el que s’ha denunciat (per exemple, un sobrenom) però sense qui ho ha denunciat, el seu comentari, el seu nom ni el seu correu; i Anthropic, que tradueix a la teva llengua l’explicació d’una decisió de moderació. El gestor de galetes és de Google, i la xarxa publicitària i els seus socis tracten les seves galetes com a responsables pel seu compte, només si ho acceptes. També podem haver de donar dades a les autoritats quan la llei ens hi obligui.',
+        'No venem les teves dades. Les tracten per compte nostre, amb contracte i només per prestar el servei, Google Cloud i Firebase (Google), que allotgen l’app, la seva base de dades i l’accés; Hostinger, que allotja el nostre correu i envia els nostres correus; i Anthropic, que tradueix a la teva llengua l’explicació d’una decisió de moderació. El gestor de galetes és de Google, i la xarxa publicitària i els seus socis tracten les seves galetes com a responsables pel seu compte, només si ho acceptes. També podem haver de donar dades a les autoritats quan la llei ens hi obligui.',
         'Si TheLever canvia de titular, per exemple en passar a una societat, les teves dades passaran al nou titular per continuar prestant-te el mateix servei, amb les mateixes finalitats i garanties (art. 21 de la LOPDGDD). T’avisarem a l’app abans del canvi i podràs demanar que les esborrem abans.',
       ],
     },
     {
       heading: 'Transferències fora de l’Espai Econòmic Europeu',
       paragraphs: [
-        'Google, GitHub i Anthropic poden tractar dades als Estats Units: Google, emparat en el Marc de Privadesa de Dades UE-EUA i en les clàusules contractuals tipus de la Comissió Europea; GitHub i Anthropic, en aquestes mateixes clàusules, que formen part dels seus contractes. Hostinger guarda el nostre correu a la Unió Europea.',
+        'Google i Anthropic poden tractar dades als Estats Units: Google, emparat en el Marc de Privadesa de Dades UE-EUA i en les clàusules contractuals tipus de la Comissió Europea; Anthropic, en aquestes mateixes clàusules, que formen part del seu contracte. Hostinger guarda el nostre correu a la Unió Europea.',
       ],
     },
     {
       heading: 'Quant de temps guardem les teves dades',
       paragraphs: [
         '- El que respons en una partida: menys de 24 hores des que es tanca la sala.',
-        '- Els teus «Bon dilema» i la marca que has votat sol: fins que demanis esborrar les teves dades o passis 24 mesos sense obrir l’app.',
+        '- Els teus «Bon dilema» i la marca que has votat sol: fins que demanis esborrar les teves dades, t’hi oposis o passis 24 mesos sense obrir l’app.',
         '- La teva edat, la teva regió, el teu codi per a peticions i el que has acceptat: mentre facis servir l’app i, si esborres les teves dades, un registre mínim del que vas acceptar durant 3 anys.',
         '- Les dades d’ús amb el teu identificador: 13 mesos; després, només totals que no t’identifiquen.',
         '- Les denúncies, les decisions de moderació i els seus avisos, les teves peticions amb les nostres respostes i el registre dels teus esborraments: 3 anys. Si esborres les teves dades, les denúncies que vas fer queden sense cap vincle amb tu.',
@@ -172,7 +173,7 @@ export const appPrivacy: OwnPage = {
       heading: 'Els teus drets',
       paragraphs: [
         'Pots demanar accés a les teves dades, rectificar-les, esborrar-les, limitar-ne l’ús, endur-te-les i oposar-te al seu tractament. A Configuració → Privadesa i dades pots, tu mateix:',
-        '- A «Els teus permisos», retirar el consentiment del joc quan vulguis, sense que afecti el que ja s’ha tractat: no podràs crear sales ni entrar-hi fins que el tornis a donar, i esborrem el que vas respondre a les partides que encara no s’han esborrat. També oposar-te a l’anàlisi d’ús.',
+        '- A «Els teus permisos», retirar el consentiment del joc quan vulguis, sense que afecti el que ja s’ha tractat: no podràs crear sales ni entrar-hi fins que el tornis a donar, i esborrem el que vas respondre a les partides que encara no s’han esborrat; els teus «Bon dilema» i les marques dels teus vots sol es queden. També oposar-te a l’anàlisi d’ús.',
         '- A «Esborrar les meves dades», esborrar-les: el teu mòbil queda com nou al moment i esborrem tot el que està vinculat al teu identificador en pocs minuts, i com a màxim en un mes, excepte el registre mínim del que vas acceptar i el del teu esborrament.',
         'Si retires el consentiment o esborres les teves dades, a les sales que encara es conserven el teu sobrenom passa a ser «Jugador».',
         'Per a tota la resta, com demanar una còpia de les teves dades o corregir la teva edat, escriu a privacidad@thelever.app amb el codi que veus a Configuració → Privadesa i dades → Les teves dades: com que jugues sense compte, és el que ens permet saber que la petició és teva, i sense ell no la podem atendre. Si només ens vas denunciar alguna cosa des de la web, escriu-nos des del correu que ens vas donar. Responem en un mes com a màxim.',
