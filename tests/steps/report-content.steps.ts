@@ -122,15 +122,21 @@ Then(
 );
 
 Then(
-  'an issue is created in the moderation repository with the nickname and the reason',
+  'an issue is created in the moderation repository with the reason, without the nickname',
   async function (this: GameWorld) {
     const { nickname, reason } = reported(this);
     assert.ok(nickname && reason, 'The scenario reported no nickname');
     await this.driver.syncModeration();
     const issues = await this.driver.moderationIssues();
-    const issue = issues.find(({ body }) => body.includes(`> ${nickname}`));
-    assert.ok(issue, `No issue of the nickname ${nickname} in the moderation repository`);
+    const issue = issues.find(({ body }) =>
+      body.includes('select nickname from moderation_issues'),
+    );
+    assert.ok(issue, 'No issue of a nickname in the moderation repository');
     assert.ok(issue.body.includes(reason), `The issue does not say the reason "${reason}"`);
+    assert.ok(
+      !`${issue.title} ${issue.body}`.includes(nickname),
+      `The issue has the nickname ${nickname}`,
+    );
   },
 );
 

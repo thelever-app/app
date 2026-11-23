@@ -3115,14 +3115,21 @@ export class AcceptanceDriver implements GameDriver {
     const decided =
       issue === 'the last one'
         ? issues.at(-1)
-        : issues.find(({ body }) =>
-            'dilemmaId' in issue
-              ? body.includes(`\`${issue.dilemmaId}\``)
-              : body.includes(`> ${issue.nickname}`),
-          );
+        : 'dilemmaId' in issue
+          ? issues.find(({ body }) => body.includes(`\`${issue.dilemmaId}\``))
+          : await this.#issueOfNickname(issue.nickname);
     if (!decided) throw new Error('No issue of that content in the moderation repository');
     this.#moderation.tracker.decide(decided.number, { label: decision, comment: TEAM_REASONS });
     await this.#moderation.sync();
+  }
+
+  /** The issue of a nickname, which has it only in the database, as the team reads it. */
+  async #issueOfNickname(nickname: string): Promise<{ readonly number: number } | undefined> {
+    const undecided = await this.#moderationIssues.undecidedInRepository();
+    const issue = undecided.find(
+      ({ content }) => content.kind === 'nickname' && content.nickname === nickname,
+    );
+    return issue?.number == null ? undefined : { number: issue.number };
   }
 
   async aCatalogDilemma(): Promise<ReportedDilemma> {

@@ -4438,14 +4438,25 @@ export class E2eDriver implements GameDriver {
     const decided =
       issue === 'the last one'
         ? issues.at(-1)
-        : issues.find(({ body }) =>
-            'dilemmaId' in issue
-              ? body.includes(`\`${issue.dilemmaId}\``)
-              : body.includes(`> ${this.#playerCalled(issue.nickname).nickname}`),
-          );
+        : 'dilemmaId' in issue
+          ? issues.find(({ body }) => body.includes(`\`${issue.dilemmaId}\``))
+          : await this.#issueOfNickname(this.#playerCalled(issue.nickname).nickname);
     if (!decided) throw new Error('No issue of that content in the moderation repository');
     this.#moderationTracker.decide(decided.number, { label: decision, comment: TEAM_REASONS });
     await this.syncModeration();
+  }
+
+  /** The issue of a nickname, which has it only in the database, as the team reads it. */
+  async #issueOfNickname(nickname: string): Promise<{ readonly number: number } | undefined> {
+    const row = await this.#withDatabase((db) =>
+      db
+        .selectFrom('moderation_issues')
+        .select('number')
+        .where('nickname', '=', nickname)
+        .where('outcome', 'is', null)
+        .executeTakeFirst(),
+    );
+    return row?.number == null ? undefined : { number: row.number };
   }
 
   async aCatalogDilemma(): Promise<ReportedDilemma> {

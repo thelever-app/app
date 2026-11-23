@@ -111,9 +111,10 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Quali dati trattiamo, perché e su quale base',
       paragraphs: [
-        '- Per giocare, con il tuo consenso esplicito (art. 6.1.a e 9.2.a GDPR): il tuo soprannome e il tuo avatar; i tuoi voti, le tue previsioni del voto degli altri o della ripartizione del gruppo, le tue reazioni e i tuoi punti; se un dilemma parlava di te; l’ordine in cui hai visto le opzioni; e i tuoi «Bel dilemma», conservati a parte dalla stanza.',
-        '- Per votare da solo un dilemma del sito, con lo stesso consenso: il tuo voto si somma al risultato mondiale senza che conserviamo cosa hai votato, e resta solo un segno che hai già votato quel dilemma, perché non conti due volte.',
+        '- Per giocare, con il tuo consenso esplicito (art. 6.1.a e 9.2.a GDPR): il tuo soprannome e il tuo avatar; i tuoi voti, le tue previsioni del voto degli altri o della ripartizione del gruppo, le tue reazioni e i tuoi punti; se un dilemma parlava di te; e l’ordine in cui hai visto le opzioni.',
+        '- Per votare da solo un dilemma del sito, con lo stesso consenso: il tuo voto si somma al risultato mondiale senza che conserviamo cosa hai votato.',
         '- Per non ripeterti i dilemmi, con lo stesso consenso: il tuo telefono conserva l’elenco dei dilemmi che hai giocato, senza i tuoi voti, e lo invia quando entri in una stanza, che lo usa solo per preparare le partite e lo cancella con la stanza.',
+        '- Per valutare quali dilemmi piacciono e perché nessuno conti due volte nel risultato mondiale, in base al legittimo interesse (art. 6.1.f): i tuoi «Bel dilemma», conservati a parte dalla stanza, e il segno che hai già votato da solo un dilemma, senza il tuo voto. Non dicono cosa hai scelto né rivelano le tue convinzioni, quindi non dipendono dal consenso del gioco e restano se lo revochi. Puoi opporti scrivendoci con il tuo codice per le richieste, e li cancelliamo.',
         '- Per riconoscerti, in base alle condizioni d’uso (art. 6.1.b): un identificativo anonimo del tuo dispositivo e quando hai aperto l’app l’ultima volta.',
         '- Per rispettare la legge sull’età (art. 6.1.c): il tuo anno di nascita e, se compi 18 anni quest’anno o più avanti, il mese; e la tua regione (Spazio economico europeo, resto del mondo o paese in cui TheLever non è disponibile), che deduciamo dal tuo indirizzo IP con un database sul nostro server, IP Geolocation by DB-IP (db-ip.com, licenza CC BY 4.0). TheLever non conserva il tuo IP; il nostro fornitore di accesso, Firebase Authentication (Google), lo registra per alcune settimane per sicurezza.',
         '- Per poter dimostrare ciò che hai accettato (art. 6.1.c e 7.1): quale versione delle condizioni e del consenso hai accettato e quando, e quando l’hai revocato.',
@@ -146,21 +147,21 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Con chi condividiamo i tuoi dati',
       paragraphs: [
-        'Non vendiamo i tuoi dati. Li trattano per nostro conto, con contratto e solo per fornire il servizio, Google Cloud e Firebase (Google), che ospitano l’app, il suo database e l’accesso; Hostinger, che ospita la nostra posta e invia le nostre email; GitHub, dove il team tiene il registro interno della moderazione, con ciò che è stato segnalato (per esempio, un soprannome) ma senza chi l’ha segnalato, il suo commento, il suo nome o la sua email; e Anthropic, che traduce nella tua lingua la spiegazione di una decisione di moderazione. Il gestore dei cookie è di Google, e la rete pubblicitaria e i suoi partner trattano i loro cookie come titolari autonomi, solo se lo accetti. Possiamo anche dover fornire dati alle autorità quando la legge lo impone.',
+        'Non vendiamo i tuoi dati. Li trattano per nostro conto, con contratto e solo per fornire il servizio, Google Cloud e Firebase (Google), che ospitano l’app, il suo database e l’accesso; Hostinger, che ospita la nostra posta e invia le nostre email; e Anthropic, che traduce nella tua lingua la spiegazione di una decisione di moderazione. Il gestore dei cookie è di Google, e la rete pubblicitaria e i suoi partner trattano i loro cookie come titolari autonomi, solo se lo accetti. Possiamo anche dover fornire dati alle autorità quando la legge lo impone.',
         'Se TheLever cambia titolare, per esempio diventando una società, i tuoi dati passeranno al nuovo titolare per continuare a fornirti lo stesso servizio, con le stesse finalità e garanzie (art. 21 della LOPDGDD). Te lo diremo nell’app prima del cambio e potrai chiederci di cancellarli prima.',
       ],
     },
     {
       heading: 'Trasferimenti fuori dallo Spazio economico europeo',
       paragraphs: [
-        'Google, GitHub e Anthropic possono trattare dati negli Stati Uniti: Google sulla base del quadro UE-USA per la protezione dei dati e delle clausole contrattuali tipo della Commissione europea; GitHub e Anthropic sulla base di queste stesse clausole, che fanno parte dei loro contratti. Hostinger conserva la nostra posta nell’Unione europea.',
+        'Google e Anthropic possono trattare dati negli Stati Uniti: Google sulla base del quadro UE-USA per la protezione dei dati e delle clausole contrattuali tipo della Commissione europea; Anthropic sulla base di queste stesse clausole, che fanno parte del suo contratto. Hostinger conserva la nostra posta nell’Unione europea.',
       ],
     },
     {
       heading: 'Per quanto tempo conserviamo i tuoi dati',
       paragraphs: [
         '- Ciò che rispondi in una partita: meno di 24 ore dalla chiusura della stanza.',
-        '- I tuoi «Bel dilemma» e il segno che hai votato da solo: finché non chiedi di cancellare i tuoi dati o passi 24 mesi senza aprire l’app.',
+        '- I tuoi «Bel dilemma» e il segno che hai votato da solo: finché non chiedi di cancellare i tuoi dati, ti opponi o passi 24 mesi senza aprire l’app.',
         '- La tua età, la tua regione, il tuo codice per le richieste e ciò che hai accettato: finché usi l’app e, se cancelli i tuoi dati, una traccia minima di ciò che hai accettato per 3 anni.',
         '- I dati d’uso con il tuo identificativo: 13 mesi; poi, solo totali che non ti identificano.',
         '- Le segnalazioni, le notifiche di contenuti illegali, le decisioni di moderazione e i loro avvisi, le tue richieste con le nostre risposte e il registro delle tue cancellazioni: 3 anni. Se cancelli i tuoi dati, le segnalazioni e le notifiche che hai fatto restano senza alcun legame con te.',
@@ -172,7 +173,7 @@ export const appPrivacy: OwnPage = {
       heading: 'I tuoi diritti',
       paragraphs: [
         'Puoi chiedere l’accesso ai tuoi dati, rettificarli, cancellarli, limitarne l’uso, portarli con te e opporti al loro trattamento. In Impostazioni → Privacy e dati puoi, da solo:',
-        '- In «I tuoi permessi», revocare il consenso del gioco quando vuoi, senza effetto su ciò che è già stato trattato: non potrai creare stanze né entrarci finché non lo darai di nuovo, e cancelliamo ciò che hai risposto nelle partite non ancora cancellate. Puoi anche opporti all’analisi d’uso.',
+        '- In «I tuoi permessi», revocare il consenso del gioco quando vuoi, senza effetto su ciò che è già stato trattato: non potrai creare stanze né entrarci finché non lo darai di nuovo, e cancelliamo ciò che hai risposto nelle partite non ancora cancellate; i tuoi «Bel dilemma» e i segni dei tuoi voti da solo restano. Puoi anche opporti all’analisi d’uso.',
         '- In «Elimina i miei dati», cancellarli: il tuo telefono torna come nuovo subito e cancelliamo tutto ciò che è legato al tuo identificativo in pochi minuti, e al massimo entro un mese, tranne la traccia minima di ciò che hai accettato e quella della tua cancellazione.',
         'Se revochi il consenso o cancelli i tuoi dati, nelle stanze ancora conservate il tuo soprannome diventa «Giocatore».',
         'Per tutto il resto, come chiedere una copia dei tuoi dati o correggere la tua età, scrivi a privacidad@thelever.app con il codice che vedi in Impostazioni → Privacy e dati → I tuoi dati: poiché giochi senza account, è ciò che ci permette di sapere che la richiesta è tua, e senza di esso non possiamo gestirla. Se ci hai solo segnalato qualcosa dal sito, scrivici dall’email che ci hai dato. Rispondiamo entro un mese al massimo.',
