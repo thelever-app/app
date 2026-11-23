@@ -76,7 +76,7 @@ export function useTestDatabase<DB = unknown>(): {
 
 /** Leaves every table empty, as the contracts expect each repository they get to be. */
 export async function emptyTables(db: Kysely<Database>): Promise<void> {
-  await sql`truncate table dilemmas, rooms, instances, first_accesses, legal_acceptances, moderation_notices cascade`.execute(
+  await sql`truncate table dilemmas, rooms, instances, first_accesses, legal_acceptances, moderation_notices, data_deletions, analytics_objections, analytics_events cascade`.execute(
     db,
   );
 }

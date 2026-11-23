@@ -145,6 +145,8 @@ export class PostgresRoomRepository implements RoomRepository {
         conflict.column('id').doUpdateSet((eb) => ({
           position: eb.ref('excluded.position'),
           nickname: eb.ref('excluded.nickname'),
+          // Only forgetting changes it: the player stays, tied to nobody.
+          identity: eb.ref('excluded.identity'),
           avatar_face: eb.ref('excluded.avatar_face'),
           avatar_color: eb.ref('excluded.avatar_color'),
           has_left: eb.ref('excluded.has_left'),

@@ -18,7 +18,8 @@ try {
     console.log(`granted the rows to ${appUser}`);
   }
   // In Cloud Run, the user of the job of moderation, which applies the decisions on the dilemmas
-  // and the nicknames of the rooms besides keeping the issues: the rows the room server has.
+  // and the nicknames of the rooms besides keeping the issues, and deletes and exports the data of
+  // the players in every context: the rows the room server has.
   const moderationUser = process.env.DB_MODERATION_USER;
   if (moderationUser) {
     await grantRowAccess(db, moderationUser);

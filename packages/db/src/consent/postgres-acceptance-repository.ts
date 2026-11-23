@@ -19,26 +19,31 @@ export class PostgresAcceptanceRepository implements AcceptanceRepository {
       .execute();
     return Acceptances.fromSnapshot({
       identity,
-      accepted: rows.map(({ document, version, accepted_at }) => ({
+      accepted: rows.map(({ document, version, accepted_at, withdrawn_at }) => ({
         document,
         version,
         acceptedAt: accepted_at,
+        withdrawnAt: withdrawn_at,
       })),
     });
   }
 
-  /** A document never goes back to a version before the one kept, even from what was read before. */
+  /**
+   * A document never goes back to a version before the one kept, even from what was read before;
+   * nor does a withdrawal go back, unless the document is given again after it.
+   */
   async save(acceptances: Acceptances): Promise<void> {
     const { identity, accepted } = acceptances.toSnapshot();
     if (accepted.length === 0) return;
     await (currentTransaction<ConsentTables>() ?? this.#db)
       .insertInto('legal_acceptances')
       .values(
-        accepted.map(({ document, version, acceptedAt }) => ({
+        accepted.map(({ document, version, acceptedAt, withdrawnAt }) => ({
           identity,
           document,
           version,
           accepted_at: acceptedAt,
+          withdrawn_at: withdrawnAt,
         })),
       )
       .onConflict((conflict) =>
@@ -47,6 +52,17 @@ export class PostgresAcceptanceRepository implements AcceptanceRepository {
           .doUpdateSet((eb) => ({
             version: eb.ref('excluded.version'),
             accepted_at: eb.ref('excluded.accepted_at'),
+            withdrawn_at: eb
+              .case()
+              .when(
+                eb.and([
+                  eb('legal_acceptances.withdrawn_at', 'is not', null),
+                  eb('excluded.accepted_at', '<=', eb.ref('legal_acceptances.accepted_at')),
+                ]),
+              )
+              .then(eb.ref('legal_acceptances.withdrawn_at'))
+              .else(eb.ref('excluded.withdrawn_at'))
+              .end(),
           }))
           .where((eb) => eb('legal_acceptances.version', '<=', eb.ref('excluded.version'))),
       )

@@ -23,6 +23,7 @@ export class PostgresDilemmaLikes implements DilemmaLikes {
       research_consent_version: seal.researchConsentVersion,
       commercial_licence_consent_version: seal.commercialLicenceConsentVersion,
       under_eighteen: seal.underEighteen,
+      objects_to_analytics: seal.objectsToAnalytics,
     };
     await (currentTransaction<GameTables>() ?? this.#db)
       .insertInto('dilemma_likes')
@@ -41,6 +42,38 @@ export class PostgresDilemmaLikes implements DilemmaLikes {
       .deleteFrom('dilemma_likes')
       .where('identity', '=', identity)
       .where('dilemma_id', '=', dilemmaId)
+      .execute();
+  }
+
+  async likesOf(
+    identity: string,
+  ): Promise<readonly (DilemmaLike & { readonly givenIn: 'game' | 'catalog' })[]> {
+    const rows = await (currentTransaction<GameTables>() ?? this.#db)
+      .selectFrom('dilemma_likes')
+      .selectAll()
+      .where('identity', '=', identity)
+      .orderBy('liked_at')
+      .orderBy('dilemma_id')
+      .execute();
+    return rows.map((row) => ({
+      identity: row.identity,
+      dilemmaId: row.dilemma_id,
+      givenIn: row.given_in,
+      at: row.liked_at,
+      seal: {
+        gameConsentVersion: row.game_consent_version,
+        researchConsentVersion: row.research_consent_version,
+        commercialLicenceConsentVersion: row.commercial_licence_consent_version,
+        underEighteen: row.under_eighteen,
+        objectsToAnalytics: row.objects_to_analytics,
+      },
+    }));
+  }
+
+  async forgetAllOf(identity: string): Promise<void> {
+    await (currentTransaction<GameTables>() ?? this.#db)
+      .deleteFrom('dilemma_likes')
+      .where('identity', '=', identity)
       .execute();
   }
 

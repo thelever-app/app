@@ -64,6 +64,24 @@ export class PostgresModerationNoticeRepository implements ModerationNoticeRepos
     return rows.map(noticeOf);
   }
 
+  async allOf(identity: string): Promise<ModerationNotice[]> {
+    const rows = await (currentTransaction<ModerationTables>() ?? this.#db)
+      .selectFrom('moderation_notices')
+      .selectAll()
+      .where('identity', '=', identity)
+      .orderBy('decided_at')
+      .orderBy('id')
+      .execute();
+    return rows.map(noticeOf);
+  }
+
+  async deleteAllOf(identity: string): Promise<void> {
+    await (currentTransaction<ModerationTables>() ?? this.#db)
+      .deleteFrom('moderation_notices')
+      .where('identity', '=', identity)
+      .execute();
+  }
+
   async findById(id: string): Promise<ModerationNotice | undefined> {
     const row = await (currentTransaction<ModerationTables>() ?? this.#db)
       .selectFrom('moderation_notices')

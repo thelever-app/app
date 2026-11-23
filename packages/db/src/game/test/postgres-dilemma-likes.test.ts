@@ -13,6 +13,7 @@ const SEAL = {
   researchConsentVersion: null,
   commercialLicenceConsentVersion: null,
   underEighteen: true,
+  objectsToAnalytics: false,
 };
 const AT = new Date('2026-11-18T10:00:00.123Z');
 
@@ -65,6 +66,7 @@ describe('PostgresDilemmaLikes', () => {
         research_consent_version: null,
         commercial_licence_consent_version: null,
         under_eighteen: true,
+        objects_to_analytics: false,
       },
     ]);
     expect(await likes.hasLiked('TestLuisIdentity', dilemmaId)).toBe(true);
@@ -102,6 +104,7 @@ describe('PostgresDilemmaLikes', () => {
         research_consent_version: null,
         commercial_licence_consent_version: null,
         under_eighteen: false,
+        objects_to_analytics: false,
       })
       .execute();
 
