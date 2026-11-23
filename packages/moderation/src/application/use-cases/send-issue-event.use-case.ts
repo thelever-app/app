@@ -103,7 +103,7 @@ export class SendIssueEventUseCase {
         issue.numbered(
           await this.#tracker.open({
             title: issueTitle(content, text),
-            body: issueBody(content, text, entry),
+            body: issueBody(issue.id, content, text, entry),
           }),
         );
         await this.#issues.save(issue);

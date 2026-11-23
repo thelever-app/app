@@ -5,9 +5,10 @@ import { NicknameReport } from '../../domain/entities/nickname-report.ts';
 import type { IssueContent } from '../../domain/vos/issue-content.vo.ts';
 import type { ReportReason } from '../../domain/vos/report-reason.vo.ts';
 
-// What the issues of the moderation repository say, in Spanish, the language of the team. Never
-// who reported, the comment of a report or what a notice explains (RF-48): those stay in the
-// database, where the team reads them with the query of the alert.
+// What the issues of the moderation repository say, in Spanish, the language of the team. Never a
+// personal datum, since GitHub has no agreement to process them: not who reported, the comment of a
+// report, what a notice explains, the nickname reported nor what someone wrote in a notice. Those
+// stay in the database, where the team reads them in Cloud SQL Studio with the query of the issue.
 
 /** The label of the issues whose reports hid their dilemma. */
 export const HIDDEN_LABEL = 'hidden-by-reports';
@@ -41,9 +42,9 @@ export function issueTitle(content: IssueContent, text: string | null): string {
     case 'dilemma':
       return shortened(`Dilema: ${text ?? content.dilemmaId}`);
     case 'nickname':
-      return shortened(`Apodo: ${content.nickname}`);
+      return 'Apodo de un jugador';
     case 'reference':
-      return shortened(`Denuncia web: ${content.reference}`);
+      return 'Denuncia web';
   }
 }
 
@@ -59,15 +60,27 @@ export function entryLine(entry: Entry): string {
   return `Denuncia desde el formulario web · ${REASON_NAMES.illegal} · escrita en ${entry.toSnapshot().language}`;
 }
 
-export function issueBody(content: IssueContent, text: string | null, first: Entry): string {
+/** The query that shows the team, in Cloud SQL Studio, what of the issue cannot go in it. */
+function queryOf(column: 'nickname' | 'reference', issueId: string): string {
+  return ['```sql', `select ${column} from moderation_issues where id = '${issueId}';`, '```'].join(
+    '\n',
+  );
+}
+
+export function issueBody(
+  issueId: string,
+  content: IssueContent,
+  text: string | null,
+  first: Entry,
+): string {
   const about = (() => {
     switch (content.kind) {
       case 'dilemma':
         return `Dilema \`${content.dilemmaId}\`:\n\n${quoted(text ?? '(sin texto)')}`;
       case 'nickname':
-        return `Apodo de un jugador:\n\n${quoted(content.nickname)}`;
+        return `El apodo de un jugador. No va aquí, porque es un dato personal: léelo en Cloud SQL Studio.\n\n${queryOf('nickname', issueId)}`;
       case 'reference':
-        return `Una denuncia que no apunta a ningún dilema del catálogo ni al apodo de un jugador de una sala que se conserve. Lo que escribió quien la envió:\n\n${quoted(content.reference)}`;
+        return `Una denuncia que no apunta a ningún dilema del catálogo ni al apodo de un jugador de una sala que se conserve. Lo que escribió quien la envió no va aquí, porque puede llevar datos personales: léelo en Cloud SQL Studio.\n\n${queryOf('reference', issueId)}`;
     }
   })();
   return [

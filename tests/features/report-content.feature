@@ -50,7 +50,7 @@ Feature: Report content
     Scenario Outline: A player reports a nickname from the avatar menu
       Given the room is in the <moment>
       When "Luis" opens the menu on the avatar of "Marta" and reports her nickname
-      Then an issue is created in the moderation repository with the nickname and the reason
+      Then an issue is created in the moderation repository with the reason, without the nickname
       And the issue contains no data about "Luis"
       And "Ana" and "Marta" do not know about the report
 

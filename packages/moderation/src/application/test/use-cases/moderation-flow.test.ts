@@ -259,7 +259,10 @@ describe('Moderation, from a report to the decision', () => {
     await sync();
 
     // Assert
-    expect(tracker.issues()[0]?.body).toContain('TestNickname');
+    const [issue] = tracker.issues();
+    expect(issue?.title).not.toContain('TestNickname');
+    expect(issue?.body).not.toContain('TestNickname');
+    expect(issue?.body).toMatch(/select nickname from moderation_issues where id = '.+';/);
     expect(nicknames.withdrawn).toEqual(['TestOwner TestNickname']);
     const [notice] = await notices.unseenOf('TestOwner');
     expect(notice?.toSnapshot()).toMatchObject({
@@ -369,10 +372,12 @@ describe('Moderation, from a report to the decision', () => {
     await sync();
 
     // Assert
-    expect(tracker.issues().map(({ body }) => body)).toEqual([
-      expect.stringContaining('Sala ABCD, apodo TestNickname'),
-      expect.stringContaining('Sala ABCD, apodo TestNickname'),
-    ]);
+    const issues = tracker.issues();
+    expect(issues).toHaveLength(2);
+    for (const { title, body } of issues) {
+      expect(`${title} ${body}`).not.toContain('Sala ABCD');
+      expect(body).toMatch(/select reference from moderation_issues where id = '.+';/);
+    }
   });
 
   it('should put a notice of a room and a nickname on the issue of that nickname, and withdraw it', async () => {
@@ -387,7 +392,7 @@ describe('Moderation, from a report to the decision', () => {
 
     // Assert
     expect(tracker.issues()).toHaveLength(1);
-    expect(tracker.issues()[0]?.body).toContain('Apodo de un jugador');
+    expect(tracker.issues()[0]?.body).toContain('El apodo de un jugador');
     expect(nicknames.withdrawn).toEqual(['TestOwner TestNickname']);
     const [notice] = await notices.unseenOf('TestOwner');
     expect(notice?.toSnapshot().subject).toMatchObject({ kind: 'nickname', reason: 'illegal' });
