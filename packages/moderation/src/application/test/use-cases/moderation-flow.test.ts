@@ -250,9 +250,10 @@ describe('Moderation, from a report to the decision', () => {
 
   it('should withdraw a nickname from the rooms and tell its player why, in every language', async () => {
     // Arrange
-    const { reportNickname, sync, tracker, nicknames, notices } = setUp();
+    const { reportNickname, sync, tracker, nicknames, notices, issues } = setUp();
     await reportNickname('Test1');
     await sync();
+    const [opened] = await issues.undecidedInRepository();
     tracker.decide(1, { label: 'withdraw', comment: REASONS });
 
     // Act
@@ -262,7 +263,9 @@ describe('Moderation, from a report to the decision', () => {
     const [issue] = tracker.issues();
     expect(issue?.title).not.toContain('TestNickname');
     expect(issue?.body).not.toContain('TestNickname');
-    expect(issue?.body).toMatch(/select nickname from moderation_issues where id = '.+';/);
+    expect(issue?.body).toContain(
+      `select nickname from moderation_issues where id = '${opened?.id}';`,
+    );
     expect(nicknames.withdrawn).toEqual(['TestOwner TestNickname']);
     const [notice] = await notices.unseenOf('TestOwner');
     expect(notice?.toSnapshot()).toMatchObject({
@@ -364,7 +367,7 @@ describe('Moderation, from a report to the decision', () => {
 
   it('should open an issue of its own for a notice that names no dilemma', async () => {
     // Arrange
-    const { sendNotice, sync, tracker } = setUp();
+    const { sendNotice, sync, tracker, issues } = setUp();
 
     // Act
     await sendNotice({ reference: 'Sala ABCD, apodo TestNickname' });
@@ -372,12 +375,14 @@ describe('Moderation, from a report to the decision', () => {
     await sync();
 
     // Assert
-    const issues = tracker.issues();
-    expect(issues).toHaveLength(2);
-    for (const { title, body } of issues) {
+    const opened = await issues.undecidedInRepository();
+    expect(tracker.issues()).toHaveLength(2);
+    tracker.issues().forEach(({ title, body }, index) => {
       expect(`${title} ${body}`).not.toContain('Sala ABCD');
-      expect(body).toMatch(/select reference from moderation_issues where id = '.+';/);
-    }
+      expect(body).toContain(
+        `select reference from moderation_issues where id = '${opened[index]?.id}';`,
+      );
+    });
   });
 
   it('should put a notice of a room and a nickname on the issue of that nickname, and withdraw it', async () => {
