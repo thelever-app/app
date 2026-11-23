@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@thelever-app/db": "workspace:*",
+    "@thelever-app/moderation": "workspace:*",
     "@thelever-app/site": "workspace:*"
   }
 }

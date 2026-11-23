@@ -5,6 +5,8 @@ export interface RoomRepository {
   findById(id: string): Promise<Room | undefined>;
   /** The room with that code, open or closed: no other room has it until a closed one is deleted. */
   findByCode(code: string): Promise<Room | undefined>;
+  /** The rooms, open or closed, where a player has that identity. */
+  findIdsWith(identity: string): Promise<readonly string[]>;
   /** The rooms with no connection open, which may be closed: whether they are, each room says. */
   findIdsWithNobodyConnected(): Promise<readonly string[]>;
   /**

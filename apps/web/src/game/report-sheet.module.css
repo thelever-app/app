@@ -95,3 +95,9 @@
   color: var(--color-ink-muted);
   text-align: center;
 }
+
+.privacy {
+  color: var(--color-ink);
+  font-weight: 500;
+  text-underline-offset: 2px;
+}

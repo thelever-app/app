@@ -31,7 +31,7 @@ import { AMBIENCES, type Ambience, keptForANewRoom, settingsOf } from '../vos/am
 import { AvatarVO } from '../vos/avatar.vo.ts';
 import { toPlace, type Place } from '../vos/group.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
-import { NicknameVO } from '../vos/nickname.vo.ts';
+import { genericNickname, NicknameVO } from '../vos/nickname.vo.ts';
 import { RoomCodeVO } from '../vos/room-code.vo.ts';
 import {
   RoomSettingsVO,
@@ -366,6 +366,27 @@ export class Room {
 
     player.wear(avatar);
     this.#changeLobby('avatar-changed');
+  }
+
+  /**
+   * The team withdrew the nickname of the player behind that identity: if they go by it here, they
+   * take the generic nickname of the room, with their number in it, at any moment of the room.
+   * Whether they did.
+   */
+  withdrawNickname(identity: string, nickname: string): boolean {
+    const index = this.#players.findIndex((player) => player.identity === identity);
+    const player = this.#players[index];
+    if (!player || !new NicknameVO(player.nickname).sameAs(new NicknameVO(nickname))) return false;
+    let number = index + 1;
+    let generic = new NicknameVO(genericNickname(this.#settings.dilemmaLanguage, number));
+    // Someone who wrote «Jugador 3» with the same avatar keeps it: the next number is free.
+    while (this.#looksLikeAnother(generic, player.avatar, player.id)) {
+      number += 1;
+      generic = new NicknameVO(genericNickname(this.#settings.dilemmaLanguage, number));
+    }
+    player.rename(generic);
+    this.#changeLobby('nickname-withdrawn');
+    return true;
   }
 
   /**
@@ -777,13 +798,18 @@ export class Room {
 
   /** Two players never share both the nickname and the avatar, so they can always be told apart. */
   #ensureNobodyLooksTheSame(nickname: NicknameVO, avatar: AvatarVO, playerId?: string): void {
-    const lookalike = this.#players.some(
+    if (this.#looksLikeAnother(nickname, avatar, playerId)) {
+      throw new NicknameAndAvatarTakenError(nickname.value, avatar.face, avatar.color);
+    }
+  }
+
+  #looksLikeAnother(nickname: NicknameVO, avatar: AvatarVO, playerId?: string): boolean {
+    return this.#players.some(
       (other) =>
         other.id !== playerId &&
         other.avatar.equals(avatar) &&
         new NicknameVO(other.nickname).sameAs(nickname),
     );
-    if (lookalike) throw new NicknameAndAvatarTakenError(nickname.value, avatar.face, avatar.color);
   }
 
   /** For the age of the room, and not compromising unless the room includes those. */

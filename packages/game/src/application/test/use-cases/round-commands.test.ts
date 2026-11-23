@@ -11,6 +11,7 @@ import { RevealEarlyUseCase } from '../../use-cases/reveal-early.use-case.ts';
 import { RunOutRoundUseCase } from '../../use-cases/run-out-round.use-case.ts';
 import { SkipDilemmaUseCase } from '../../use-cases/skip-dilemma.use-case.ts';
 import { InvalidReportReasonError } from '../../errors/invalid-report-reason.error.ts';
+import { InvalidReportLanguageError } from '../../errors/invalid-report-language.error.ts';
 import { NotHostError } from '../../../domain/errors/not-host.error.ts';
 import { HostChangedEvent } from '../../../domain/events/host-changed.event.ts';
 import { DilemmaRevealedEvent } from '../../../domain/events/dilemma-revealed.event.ts';
@@ -451,6 +452,7 @@ describe('Round commands', () => {
         dilemmaId: dilemmaIds[0]!,
         reason: 'offensive',
         comment: '  ',
+        language: 'fr',
       });
 
       // Assert
@@ -460,6 +462,7 @@ describe('Round commands', () => {
           version: 1,
           reason: 'offensive',
           comment: null,
+          language: 'fr',
           identity: 'TestLuisIdentity',
           at: clock.now(),
         },
@@ -483,6 +486,7 @@ describe('Round commands', () => {
         dilemmaId: dilemmaIds[0]!,
         reason: 'confusing',
         comment: 'TestComment',
+        language: 'es',
       });
 
       // Assert
@@ -500,8 +504,42 @@ describe('Round commands', () => {
           playerId: luisId,
           dilemmaId: dilemmaIds[0]!,
           reason: 'boring',
+          language: 'es',
         }),
       ).rejects.toThrow(InvalidReportReasonError);
+    });
+
+    it('should throw an error for a language the app does not have', async () => {
+      // Arrange
+      const { reportDilemma, roomId, luisId, dilemmaIds } = await arrange();
+
+      // Act & Assert
+      await expect(
+        reportDilemma.execute({
+          roomId,
+          playerId: luisId,
+          dilemmaId: dilemmaIds[0]!,
+          reason: 'confusing',
+          language: 'ja',
+        }),
+      ).rejects.toThrow(InvalidReportLanguageError);
+    });
+
+    it('should take a dilemma reported as possibly illegal', async () => {
+      // Arrange
+      const { reportDilemma, reports, roomId, luisId, dilemmaIds } = await arrange();
+
+      // Act
+      await reportDilemma.execute({
+        roomId,
+        playerId: luisId,
+        dilemmaId: dilemmaIds[0]!,
+        reason: 'illegal',
+        language: 'es',
+      });
+
+      // Assert
+      expect(reports.reports.map(({ reason }) => reason)).toEqual(['illegal']);
     });
   });
 });

@@ -74,6 +74,9 @@ import sportsEsports from '@material-symbols/svg-500/rounded/sports_esports-fill
 import tune from '@material-symbols/svg-500/rounded/tune-fill.svg?url';
 import description from '@material-symbols/svg-500/rounded/description.svg?url';
 import gavel from '@material-symbols/svg-500/rounded/gavel.svg?url';
+import mail from '@material-symbols/svg-500/rounded/mail.svg?url';
+import contentCopy from '@material-symbols/svg-500/rounded/content_copy.svg?url';
+import personRemove from '@material-symbols/svg-500/rounded/person_remove.svg?url';
 import policy from '@material-symbols/svg-500/rounded/policy.svg?url';
 import settings from '@material-symbols/svg-500/rounded/settings.svg?url';
 import translate from '@material-symbols/svg-500/rounded/translate.svg?url';
@@ -91,6 +94,9 @@ const ICONS = {
   tune,
   description,
   gavel,
+  mail,
+  contentCopy,
+  personRemove,
   policy,
   settings,
   translate,

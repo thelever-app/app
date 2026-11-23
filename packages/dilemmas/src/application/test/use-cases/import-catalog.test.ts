@@ -8,6 +8,7 @@ import type {
   UnreadableDilemma,
 } from '../../ports/curated-catalog.port.ts';
 import type { TranslatableContent, Translator } from '../../ports/translator.port.ts';
+import { ModerateDilemmaUseCase } from '../../use-cases/moderate-dilemma.use-case.ts';
 import { ImportCatalogUseCase } from '../../use-cases/import-catalog.use-case.ts';
 
 const LANGUAGES = ['es', 'en', 'fr'];
@@ -498,6 +499,25 @@ describe('ImportCatalogUseCase', () => {
         expect((await repository.findById(id))?.status).toBe('in-catalog');
       }
       expect((await repository.findById('dlm-183'))?.version).toBe(1);
+    });
+
+    it('should never bring back a dilemma Moderation keeps out, even with a new version', async () => {
+      // Arrange
+      const { catalog, repository, importCatalog } = arrange(CURATED);
+      await importCatalog.execute();
+      const moderate = new ModerateDilemmaUseCase(repository, LANGUAGES);
+      await moderate.execute({ dilemmaId: 'dlm-183', action: 'withdraw' });
+      await moderate.execute({ dilemmaId: 'dlm-183-en', action: 'hide' });
+      catalog.dilemmas = [{ ...CURATED, text: `${CURATED.text} revised` }];
+
+      // Act
+      await importCatalog.execute();
+
+      // Assert
+      expect((await repository.findById('dlm-183'))?.version).toBe(2);
+      for (const id of ['dlm-183', 'dlm-183-en', 'dlm-183-fr']) {
+        expect((await repository.findById(id))?.status).toBe('withdrawn');
+      }
     });
 
     it('should withdraw a discarded dilemma and its translations', async () => {

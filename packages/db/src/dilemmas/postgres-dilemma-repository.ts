@@ -75,6 +75,9 @@ function dilemmaOf(row: Row): Dilemma {
           }),
       ...(args === undefined ? {} : { arguments: args }),
     },
+    ...(row.moderation === null || row.moderation_status_before === null
+      ? {}
+      : { moderation: { by: row.moderation, statusBefore: row.moderation_status_before } }),
   });
 }
 
@@ -276,6 +279,8 @@ export class PostgresDilemmaRepository implements DilemmaRepository {
       name: snapshot.name ?? null,
       creator_type: creator.type,
       creator_identity: creator.type === 'player' ? creator.identity : null,
+      moderation: snapshot.moderation?.by ?? null,
+      moderation_status_before: snapshot.moderation?.statusBefore ?? null,
     };
     await db
       .insertInto('dilemmas')

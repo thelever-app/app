@@ -28,6 +28,13 @@ import type {
   ContentAge,
   ContentCompromising,
 } from '@thelever-app/game';
+import type {
+  DilemmaReportReason,
+  IssueEvent,
+  Language as ModerationLanguage,
+  NicknameReportReason,
+  Outcome,
+} from '@thelever-app/moderation';
 import type { ColumnType, Generated, Kysely } from 'kysely';
 
 /** The tables, as the migrations leave them; the checks of the database guarantee the unions. */
@@ -45,6 +52,9 @@ export interface Database {
     name: string | null;
     /** In a translation, its original. */
     translation_of: string | null;
+    /** Whether Moderation keeps it out of new games, and the status it would have without it. */
+    moderation: 'hidden-by-reports' | 'withdrawn' | null;
+    moderation_status_before: DilemmaStatus | null;
   };
   dilemma_versions: {
     dilemma_id: string;
@@ -300,17 +310,86 @@ export interface Database {
     commercial_licence_consent_version: string | null;
     under_eighteen: boolean;
   };
+  /**
+   * The issues of the moderation repository, each with the reports and notices of one content until
+   * the team decides, kept 3 years.
+   */
+  moderation_issues: {
+    id: string;
+    content_kind: 'dilemma' | 'nickname' | 'reference';
+    dilemma_id: string | null;
+    nickname: string | null;
+    nickname_owner: string | null;
+    reference: string | null;
+    /** Its number in the moderation repository, once it is there. */
+    number: number | null;
+    opened_at: Date;
+    hidden: boolean;
+    outcome: Outcome | null;
+    facts: string | null;
+    translated_facts: ColumnType<
+      Record<ModerationLanguage, string> | null,
+      string | null,
+      string | null
+    >;
+    rule: string | null;
+    decided_at: Date | null;
+  };
   /** The reports players make of dilemmas, kept 3 years from each one. */
   dilemma_reports: {
     id: string;
+    issue_id: string;
     dilemma_id: string;
     /** The version the player saw. */
     version: number;
-    reason: 'offensive' | 'confusing' | 'mistranslated' | 'other';
+    reason: DilemmaReportReason;
     comment: string | null;
+    /** The language the player read it in. */
+    language: ModerationLanguage;
     /** Who reports: the report threshold counts different players. */
     identity: string;
     reported_at: Date;
+  };
+  /** The reports players make of the nicknames of others, kept 3 years. */
+  nickname_reports: {
+    id: string;
+    issue_id: string;
+    nickname: string;
+    /** Who goes by it. */
+    owner: string;
+    reason: NicknameReportReason;
+    comment: string | null;
+    identity: string;
+    reported_at: Date;
+  };
+  /** The notices of illegal content of the web form, with the email for the decision, kept 3 years. */
+  illegal_content_notices: {
+    id: string;
+    issue_id: string;
+    reference: string;
+    explanation: string;
+    name: string | null;
+    email: string | null;
+    language: ModerationLanguage;
+    identity: string;
+    sent_at: Date;
+  };
+  /** What the issues still have to tell the moderation repository and the senders of notices. */
+  moderation_outbox: {
+    id: Generated<string>;
+    issue_id: string;
+    event: ColumnType<IssueEvent, string, string>;
+  };
+  /** The decisions that wait for a player to open the app, kept 3 years. */
+  moderation_notices: {
+    id: string;
+    identity: string;
+    /** What the notice tells, as JSON, with its dates as text. */
+    subject: ColumnType<Record<string, unknown>, string, string>;
+    outcome: Outcome;
+    rule: string;
+    decided_at: Date;
+    seen_at: Date | null;
   };
   /** The first access of each identity: the region of its device, never its address, and its age. */
   first_accesses: {
@@ -346,7 +425,15 @@ export type IdentityTables = Pick<Database, 'first_accesses'>;
 export type ConsentTables = Pick<Database, 'legal_acceptances'>;
 
 /** The tables of Moderation: only its adapters read or write them. */
-export type ModerationTables = Pick<Database, 'dilemma_reports'>;
+export type ModerationTables = Pick<
+  Database,
+  | 'moderation_issues'
+  | 'dilemma_reports'
+  | 'nickname_reports'
+  | 'illegal_content_notices'
+  | 'moderation_outbox'
+  | 'moderation_notices'
+>;
 
 /** The tables of Dilemmas: only its adapters read or write them. */
 export type DilemmasTables = Pick<

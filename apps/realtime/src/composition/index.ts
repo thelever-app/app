@@ -56,7 +56,13 @@ import { lobbyCommandHandlers } from '../rooms/sockets/lobby-commands.ts';
 import { RoomSocketServer } from '../rooms/sockets/room-socket-server.ts';
 import { SocketNotifier } from '../rooms/sockets/socket-notifier.ts';
 import { StateSender } from '../rooms/sockets/state-sender.ts';
-import { LoggedDilemmaReports } from '../telemetry/logged-dilemma-reports.ts';
+import { moderationUseCases, type ModerationUseCases } from './moderation.ts';
+import { IllegalContentNoticeEndpoint } from '../moderation/http/illegal-content-notice.endpoint.ts';
+import {
+  ModerationNoticesEndpoint,
+  SeeModerationNoticeEndpoint,
+} from '../moderation/http/moderation-notices.endpoint.ts';
+import { RoomCommandHandler } from '../rooms/sockets/room-command.handler.ts';
 import { type Lifecycle, sharedLifecycle, type StopServing } from './shared-lifecycle.ts';
 import { adaptersFor, type Storage } from './storage.ts';
 import {
@@ -134,13 +140,16 @@ export async function composeRealtimeServer(
   );
   const socketNotifier = new SocketNotifier(stateSender);
 
-  // 3. The commands, which notify the players of what changed.
+  // 3. The commands, which notify the players of what changed, and what Moderation receives.
+  const idGenerator = new RandomIdGenerator();
+  const notifier = notifierFor(socketNotifier);
+  const moderation = moderationUseCases({ ...repositories, notifier, idGenerator, clock, logger });
   const commands = gameCommands({
     ...repositories,
-    dilemmaReports: new LoggedDilemmaReports(repositories.dilemmaReports, logger),
+    moderation,
     catalog,
-    notifier: notifierFor(socketNotifier),
-    idGenerator: new RandomIdGenerator(),
+    notifier,
+    idGenerator,
     randomness,
     clock,
     sealProvider: firstAccess.sealProvider,
@@ -163,6 +172,7 @@ export async function composeRealtimeServer(
           runCommand,
           firstAccess.gate,
         ),
+        ...moderationEndpoints(moderation, runCommand),
       ],
       {
         authenticate: authentication(
@@ -289,6 +299,21 @@ function dilemmaEndpoints(
   ];
 }
 
+/**
+ * The routes of Moderation: the web form of notices, which anyone sends without the first access,
+ * and the moderation notices of whoever calls.
+ */
+function moderationEndpoints(
+  moderation: ModerationUseCases,
+  runCommand: RunCommand,
+): HttpEndpoint[] {
+  return [
+    new IllegalContentNoticeEndpoint(moderation.receiveIllegalContentNotice, runCommand),
+    new ModerationNoticesEndpoint(moderation.getModerationNotices),
+    new SeeModerationNoticeEndpoint(moderation.seeModerationNotice, runCommand),
+  ];
+}
+
 /** What the handlers of the room sockets share. */
 interface SocketParts {
   readonly commands: GameCommands;
@@ -325,16 +350,31 @@ function roomSocketServer(
     new LeaveRoomHandler(commands.leaveRoom, socketNotifier, roomLock, runCommand),
     new OwnStateCommandHandler(
       'report-dilemma',
-      ({ dilemmaId, reason, comment }, { roomId, playerId }) =>
+      ({ dilemmaId, reason, comment, language }, { roomId, playerId }) =>
         commands.reportDilemma.execute({
           roomId,
           playerId,
           dilemmaId,
           reason,
+          language,
           ...(comment !== undefined && { comment }),
         }),
       roomLock,
       stateSender,
+      runCommand,
+    ),
+    // Nothing changes in the room: nobody else learns about it.
+    new RoomCommandHandler(
+      'report-nickname',
+      ({ playerId: reportedPlayerId, reason, comment }, { roomId, playerId }) =>
+        commands.reportNickname.execute({
+          roomId,
+          playerId,
+          reportedPlayerId,
+          reason,
+          ...(comment !== undefined && { comment }),
+        }),
+      roomLock,
       runCommand,
     ),
     new OwnStateCommandHandler(

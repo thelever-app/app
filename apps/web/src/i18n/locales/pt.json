@@ -139,7 +139,9 @@
       "offensive": "Ofensivo",
       "confusing": "Confuso",
       "mistranslated": "Mal traduzido",
-      "other": "Outro"
+      "other": "Outro",
+      "illegal": "Pode ser ilegal",
+      "impersonation": "Faz-se passar por alguém"
     },
     "comment": "Comentário (opcional)",
     "placeholder": "O que viste?",
@@ -147,7 +149,9 @@
     "counter": "{{count, number}}/{{max, number}}",
     "chooseReason": "Escolhe um motivo",
     "send": "Enviar",
-    "note": "Ninguém do grupo vai saber."
+    "note": "Ninguém do grupo vai saber.",
+    "nicknameTitle": "Qual é o problema com a alcunha de {{name}}?",
+    "privacy": "Política de privacidade"
   },
   "reportSent": {
     "thanks": "Obrigado, vamos rever.",
@@ -470,7 +474,6 @@
     "players": "Na sala · {{count}}",
     "you": "{{name}} (tu)",
     "host": "Anfitrião",
-    "toExpel": "{{name}}. Toca para expulsar",
     "toChangeAvatar": "{{name}}. Toca para mudar o teu avatar",
     "waiting": "Partilha o código ou a ligação.",
     "start": "Começar a partida",
@@ -928,7 +931,8 @@
     "funding": "Como o TheLever é financiado",
     "credits": "Créditos e licenças",
     "legalNotice": "Aviso legal",
-    "outside": "{{name}} (abre no navegador)"
+    "outside": "{{name}} (abre no navegador)",
+    "contact": "Contacto e denúncias"
   },
   "credits": {
     "title": "Créditos e licenças",
@@ -979,5 +983,84 @@
       "close": "Não, obrigado"
     },
     "line": "Gostaram? Apoia o TheLever"
+  },
+  "playerMenu": {
+    "open": "{{name}}. Toca para ver opções",
+    "report": "Denunciar a alcunha",
+    "expel": "Expulsar da sala",
+    "note": "Ninguém do grupo vai saber que a denunciaste."
+  },
+  "moderationNotice": {
+    "reportTitle": "Analisámos a tua denúncia",
+    "aboutDilemma": "Sobre o dilema «{{text}}», que denunciaste a {{date}} como <strong>{{reason}}</strong>:",
+    "aboutNickname": "Sobre a alcunha «{{nickname}}», que denunciaste a {{date}} como <strong>{{reason}}</strong>:",
+    "withdrawnDilemma": "Retirámo-lo do catálogo.",
+    "withdrawnNickname": "Retirámo-la.",
+    "kept": "Mantemo-lo: não viola as condições de utilização nem a lei.",
+    "rule": "Aplicámos a secção {{rule}} das condições de utilização. Decidiu uma pessoa da equipa.",
+    "appeal": "Se não concordares, podes reclamar em Definições → Contacto e denúncias.",
+    "understood": "Entendido",
+    "nicknameTitle": "Retirámos a tua alcunha",
+    "nicknameWhat": "A tua alcunha «{{nickname}}»:",
+    "reasonLabel": "Motivo:",
+    "factsLabel": "Factos:",
+    "ruleLabel": "Regra:",
+    "ruleValue": "secção {{rule}} das condições de utilização.",
+    "whoLabel": "Quem decidiu:",
+    "whoValue": "uma pessoa da equipa, após uma denúncia.",
+    "nicknameEffect": "Nas salas abertas apareces agora com uma alcunha genérica e, ao entrar noutra sala, terás de escrever uma nova.",
+    "reasons": {
+      "offensive": "ofensivo",
+      "confusing": "confuso",
+      "mistranslated": "mal traduzido",
+      "impersonation": "fazer-se passar por alguém",
+      "illegal": "possivelmente ilegal",
+      "other": "outro motivo"
+    },
+    "reasonSentences": {
+      "offensive": "é ofensiva.",
+      "confusing": "é confusa.",
+      "mistranslated": "está mal traduzida.",
+      "impersonation": "faz-se passar por outra pessoa.",
+      "illegal": "pode ser ilegal.",
+      "other": "viola as condições de utilização."
+    }
+  },
+  "contact": {
+    "title": "Contacto e denúncias",
+    "writeTitle": "Escreve-nos",
+    "writeText": "Sobre os teus dados, as tuas denúncias ou qualquer outra coisa. É também o ponto de contacto para utilizadores e autoridades ao abrigo do Regulamento dos Serviços Digitais. Respondemos em espanhol e em inglês.",
+    "copy": "Copiar o email",
+    "copied": "Email copiado",
+    "reportTitle": "Denunciar conteúdo ilegal",
+    "reportText": "Qualquer pessoa pode denunciá-lo no formulário web, sem a app. Durante a partida também podes denunciar no menu «⋮» ou tocando no avatar de alguém.",
+    "openForm": "Abrir o formulário de denúncias",
+    "appealTitle": "Reclamar de uma decisão",
+    "appealText": "Se não concordares com o que decidimos sobre uma denúncia ou sobre a tua alcunha, escreve para este email e voltaremos a analisá-lo."
+  },
+  "illegalNotice": {
+    "title": "Denunciar conteúdo ilegal",
+    "intro": "Não precisas da app. Se jogas, também podes denunciar na partida.",
+    "reference": "Link ou código do dilema, ou a sala e a alcunha",
+    "referencePlaceholder": "thelever.app/pt/…",
+    "explanation": "Porque achas que é ilegal",
+    "explanationPlaceholder": "Explica que norma achas que viola e porquê",
+    "name": "O teu nome (opcional)",
+    "namePlaceholder": "Podes denunciar de forma anónima",
+    "email": "O teu email (opcional)",
+    "emailPlaceholder": "Para te contarmos o que decidimos",
+    "goodFaith": "Declaro de boa-fé que a informação é exata e completa.",
+    "send": "Enviar denúncia",
+    "sending": "A enviar…",
+    "note": "Vais receber um aviso de receção e, se deixares o teu email, a decisão e como reclamar.",
+    "invalid": "Revê o que escreveste: o conteúdo e o motivo são obrigatórios e o email tem de ser válido.",
+    "tooMany": "Hoje já enviaste muitas denúncias. Volta amanhã ou escreve para privacidad@thelever.app.",
+    "failed": "Não foi possível enviar. Tenta de novo.",
+    "receivedTitle": "Recebemos a tua denúncia",
+    "receivedText": "Uma pessoa da equipa vai analisá-la.",
+    "receivedEmail": "Vamos escrever-te para o email que deixaste com a decisão e como reclamar.",
+    "receivedNoEmail": "Como não deixaste email, não te poderemos contar o que decidimos.",
+    "authorities": "Se vires uma ameaça grave ou urgente para alguém, avisa também as autoridades.",
+    "another": "Enviar outra denúncia"
   }
 }

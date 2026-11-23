@@ -1151,3 +1151,117 @@ describe('Dilemma', () => {
     });
   });
 });
+
+describe('Dilemma moderated', () => {
+  it('should be hidden by reports, out of reach of players', () => {
+    // Arrange
+    const dilemma = Dilemma.create(DATA, ids());
+
+    // Act
+    dilemma.hideByReports();
+
+    // Assert
+    expect(dilemma.status).toBe('hidden-by-reports');
+    expect(dilemma.canBeRead()).toBe(false);
+    expect(dilemma.toSnapshot().moderation).toEqual({
+      by: 'hidden-by-reports',
+      statusBefore: 'in-catalog',
+    });
+  });
+
+  it('should be back at the status it had once the team keeps it', () => {
+    // Arrange
+    const dilemma = dilemmaOfAPlayer();
+    dilemma.hideByReports();
+
+    // Act
+    dilemma.restoreAfterReports();
+
+    // Assert
+    expect(dilemma.status).toBe('approved');
+    expect(dilemma.moderation).toBeUndefined();
+  });
+
+  it('should stay withdrawn when the team withdraws it, whatever loading the catalog says', () => {
+    // Arrange
+    const dilemma = Dilemma.create(DATA, ids());
+    dilemma.hideByReports();
+    dilemma.withdrawByModeration();
+
+    // Act
+    dilemma.reinstate();
+    dilemma.restoreAfterReports();
+
+    // Assert
+    expect(dilemma.status).toBe('withdrawn');
+    expect(dilemma.moderation?.by).toBe('withdrawn');
+  });
+
+  it('should keep a new version out of new games too', () => {
+    // Arrange
+    const dilemma = Dilemma.create(DATA, ids());
+    dilemma.hideByReports();
+
+    // Act
+    dilemma.revise({ ...CONTENT, text: 'TestRevisedText' }, new FixedIdGenerator());
+
+    // Assert
+    expect(dilemma.version).toBe(2);
+    expect(dilemma.status).toBe('hidden-by-reports');
+    dilemma.restoreAfterReports();
+    expect(dilemma.status).toBe('in-catalog');
+  });
+
+  it('should be hidden once: a second hiding keeps the status it had first', () => {
+    // Arrange
+    const dilemma = Dilemma.create(DATA, ids());
+    dilemma.hideByReports();
+
+    // Act
+    dilemma.hideByReports();
+    dilemma.restoreAfterReports();
+
+    // Assert
+    expect(dilemma.status).toBe('in-catalog');
+  });
+
+  it('should stay hidden when the catalog withdraws it, and be withdrawn once the team keeps it', () => {
+    // Arrange
+    const dilemma = Dilemma.create(DATA, ids());
+    dilemma.hideByReports();
+
+    // Act
+    dilemma.withdraw();
+
+    // Assert
+    expect(dilemma.status).toBe('hidden-by-reports');
+    dilemma.restoreAfterReports();
+    expect(dilemma.status).toBe('withdrawn');
+  });
+
+  it('should come back to the catalog when the catalog approves it again while hidden', () => {
+    // Arrange
+    const dilemma = Dilemma.create(DATA, ids());
+    dilemma.hideByReports();
+    dilemma.withdraw();
+
+    // Act
+    dilemma.reinstate();
+    dilemma.restoreAfterReports();
+
+    // Assert
+    expect(dilemma.status).toBe('in-catalog');
+  });
+
+  it('should give back the moderation it was restored with', () => {
+    // Arrange
+    const dilemma = Dilemma.create(DATA, ids());
+    dilemma.withdrawByModeration();
+
+    // Act
+    const restored = Dilemma.restore(dilemma.toSnapshot());
+
+    // Assert
+    expect(restored.toSnapshot()).toEqual(dilemma.toSnapshot());
+  });
+});

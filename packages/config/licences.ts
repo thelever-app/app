@@ -7,6 +7,8 @@ import { execFileSync } from 'node:child_process';
  */
 export const ALLOWED_LICENCES: ReadonlySet<string> = new Set([
   'MIT',
+  // The MIT without the notice to keep, as nodemailer has it.
+  'MIT-0',
   'ISC',
   'BSD',
   'BSD-2-Clause',

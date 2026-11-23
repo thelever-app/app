@@ -35,6 +35,7 @@ import {
   PlayerJoinedLateEvent,
   PlayerLeftEvent,
   ReportDilemmaUseCase,
+  ReportNicknameUseCase,
   RevealEarlyUseCase,
   RunOutRoundUseCase,
   SkipDilemmaUseCase,
@@ -62,6 +63,7 @@ import { PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
 import {
   InMemoryDilemmaLikes,
   InMemoryDilemmaReports,
+  InMemoryNicknameReports,
   InMemoryGameRepository,
   InMemoryRoomRepository,
   InMemorySealProvider,
@@ -307,6 +309,11 @@ export class SimulatedRoomConnection implements RoomConnection {
         notifier,
         clock,
       }),
+      reportNickname: new ReportNicknameUseCase({
+        roomRepository: rooms,
+        reports: new InMemoryNicknameReports(),
+        clock,
+      }),
     };
   }
 
@@ -441,15 +448,28 @@ export class SimulatedRoomConnection implements RoomConnection {
         return;
       }
       case 'report-dilemma': {
-        const { dilemmaId, reason, comment } = message;
+        const { dilemmaId, reason, comment, language } = message;
         await useCases.reportDilemma.execute({
           roomId,
           playerId,
           dilemmaId,
           reason,
+          language,
           ...(comment !== undefined && { comment }),
         });
         this.#enqueue(() => this.#sendState());
+        return;
+      }
+      case 'report-nickname': {
+        // Nobody else in the room learns about it: nothing to send.
+        const { playerId: reportedPlayerId, reason, comment } = message;
+        await useCases.reportNickname.execute({
+          roomId,
+          playerId,
+          reportedPlayerId,
+          reason,
+          ...(comment !== undefined && { comment }),
+        });
         return;
       }
       case 'skip-dilemma':

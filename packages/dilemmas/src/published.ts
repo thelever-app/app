@@ -22,3 +22,10 @@ export {
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
 export { InvalidPageError } from './application/errors/invalid-page.error.ts';
 export { GAP_MARKER } from './domain/vos/gap.ts';
+export type {
+  ModerateDilemma,
+  ModerateDilemmaInput,
+  ModerationAction,
+} from './application/use-cases/moderate-dilemma.use-case.ts';
+export type { FindDilemmaOfReference } from './application/use-cases/find-dilemma-of-reference.use-case.ts';
+export { familyOf } from './application/catalog-number.ts';

@@ -6,6 +6,8 @@ import {
   AnswerIncompleteError,
   DilemmaAlreadyReportedError,
   DilemmaNotReportedAsOffensiveError,
+  InvalidReportLanguageError,
+  InvalidReportReasonError,
   DecisionPhaseOverError,
   DilemmaSkippedError,
   DuplicateVotePredictionError,
@@ -59,6 +61,12 @@ import {
   UnknownOptionError,
 } from '@thelever-app/dilemmas';
 import { NotCurrentVersionError } from '@thelever-app/consent';
+import {
+  CommentTooLongError,
+  InvalidEntryError,
+  ModerationNoticeNotFoundError,
+  TooManyNoticesError,
+} from '@thelever-app/moderation';
 import {
   AgeAlreadyDeclaredError,
   BlockedCountryError,
@@ -136,6 +144,13 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [DilemmaSkippedError, 'dilemma-skipped'],
   [DilemmaAlreadyReportedError, 'dilemma-already-reported'],
   [DilemmaNotReportedAsOffensiveError, 'dilemma-not-reported-as-offensive'],
+  [InvalidReportReasonError, 'invalid-message'],
+  [InvalidReportLanguageError, 'invalid-message'],
+  // Moderation's own, from the reports, the notices of the web form and the moderation notices.
+  [CommentTooLongError, 'invalid-message'],
+  [InvalidEntryError, 'invalid-notice'],
+  [TooManyNoticesError, 'too-many-notices'],
+  [ModerationNoticeNotFoundError, 'moderation-notice-not-found'],
   // The first access, from Identity and Consent.
   [FirstAccessRequiredError, 'first-access-required'],
   [FirstAccessNotBegunError, 'first-access-not-begun'],

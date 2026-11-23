@@ -213,6 +213,7 @@ export function DilemmaScreen({
       )}
       <GroupProgressSheet game={game} open={isGroupOpen} onOpenChange={setIsGroupOpen} />
       <ReportSheet
+        target={{ kind: 'dilemma' }}
         open={isReportOpen}
         onOpenChange={setIsReportOpen}
         onSend={(reason, comment) => {

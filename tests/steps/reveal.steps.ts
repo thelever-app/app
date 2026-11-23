@@ -498,15 +498,11 @@ async function pointsIn(world: GameWorld, player: string, position: number) {
 }
 
 // Ten players enter one by one: more than a step usually takes.
-Given(
-  'an anonymous room with {int} players',
-  { timeout: 90_000 },
-  async function (this: GameWorld, count: number) {
-    await roomWith(this, TEN.slice(0, count), ROUNDS);
-    await this.driver.changeSettings(TEN[0]!, { variant: 'anonymous' });
-    this.variant = 'anonymous';
-  },
-);
+Given('an anonymous room with {int} players', async function (this: GameWorld, count: number) {
+  await roomWith(this, TEN.slice(0, count), ROUNDS);
+  await this.driver.changeSettings(TEN[0]!, { variant: 'anonymous' });
+  this.variant = 'anonymous';
+});
 
 Then('no player scores points for the first dilemma', async function (this: GameWorld) {
   for (const player of this.inRoom) {

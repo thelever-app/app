@@ -31,9 +31,14 @@ async function databaseAt(migration: string): Promise<Kysely<Database>> {
     await onServer((quote) => `DROP DATABASE IF EXISTS ${quote(name)} WITH (FORCE)`);
   });
   await migrateTo(db, migration);
-  // The repository saves the dilemmas as they are today, with the public id and the classification
-  // later migrations add; this one neither reads nor changes them.
-  await sql`alter table dilemmas add column public_id text`.execute(db);
+  // The repository saves the dilemmas as they are today, with the public id, the classification
+  // and the moderation later migrations add; this one neither reads nor changes them.
+  await sql`
+    alter table dilemmas
+      add column public_id text,
+      add column moderation text,
+      add column moderation_status_before text
+  `.execute(db);
   await sql`
     alter table dilemma_versions
       add column type text,

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
+import { deviceLanguage } from '../i18n/i18n.ts';
 import { hasReaction } from '../reveal/optimistic.ts';
 import { useGame } from '../room/room-provider.tsx';
 import { REVEAL_INTRO_MS, RevealIntro } from '../reveal/reveal-intro.tsx';
@@ -13,6 +15,7 @@ import { HOME_PATH } from '../home-path.ts';
  */
 export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
   const { game, send, request } = useGame();
   const { reveal } = game;
   const { position } = game.round;
@@ -63,6 +66,23 @@ export function RevealPhase({ onShowQr }: { readonly onShowQr: () => void }) {
           { type: 'unlike-dilemma', position },
           (next) => next.reveal?.position !== position || !next.reveal.youLiked,
         )
+      }
+      onReport={(reason, comment) =>
+        send({
+          type: 'report-dilemma',
+          dilemmaId: reveal.dilemmaId,
+          reason,
+          language: deviceLanguage(i18n),
+          ...(comment.trim() && { comment: comment.trim() }),
+        })
+      }
+      onReportNickname={(playerId, reason, comment) =>
+        send({
+          type: 'report-nickname',
+          playerId,
+          reason,
+          ...(comment.trim() && { comment: comment.trim() }),
+        })
       }
       onReact={(target, emoji) =>
         request(

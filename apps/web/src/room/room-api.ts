@@ -8,6 +8,9 @@ import {
   type ErrorCodeDto,
   FirstAccessResponseDto,
   HttpErrorDto,
+  type IllegalContentNoticeRequestDto,
+  type ModerationNoticeDto,
+  ModerationNoticesResponseDto,
   JoinRoomResponseDto,
   RoomPreviewResponseDto,
   SearchDilemmasResponseDto,
@@ -64,6 +67,12 @@ export interface RoomApi {
     /** One category, or every one; what the player typed, looked for in the text and the tags. */
     criteria: { readonly category?: CategoryDto; readonly q?: string; readonly after?: string },
   ): Promise<SearchDilemmasResponseDto>;
+  /** Anyone sends the web form of illegal content, without the first access. */
+  sendIllegalContentNotice(notice: IllegalContentNoticeRequestDto): Promise<void>;
+  /** The decisions the player has not seen yet, the oldest first, for the app to show on opening. */
+  moderationNotices(): Promise<readonly ModerationNoticeDto[]>;
+  /** The player saw the decision: the app does not show it again. */
+  seeModerationNotice(noticeId: string): Promise<void>;
   /** The access code the player wrote, which every call carries from now on. */
   enterAccessCode(code: string): void;
 }
@@ -175,6 +184,12 @@ export function httpRoomApi({
         SearchDilemmasResponseDto,
       );
     },
+    sendIllegalContentNotice: (notice) =>
+      call('POST', '/illegal-content-notices', NO_CONTENT, notice),
+    moderationNotices: async () =>
+      (await call('GET', '/moderation-notices', ModerationNoticesResponseDto)).notices,
+    seeModerationNotice: (noticeId) =>
+      call('POST', `/moderation-notices/${encodeURIComponent(noticeId)}/seen`, NO_CONTENT),
     enterAccessCode: (code) => accessCode.remember(code),
   };
 }

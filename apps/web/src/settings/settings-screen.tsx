@@ -10,7 +10,7 @@ import screen from '../screens/screen.module.css';
 import { useMuted } from '../sound/sound-context.tsx';
 import { LANGUAGE_NAMES, LanguageSheet } from './language-sheet.tsx';
 import { SettingsHeader } from './settings-header.tsx';
-import { CREDITS_PATH, FUNDING_PATH } from './settings-paths.ts';
+import { CONTACT_EMAIL, CONTACT_PATH, CREDITS_PATH, FUNDING_PATH } from './settings-paths.ts';
 import styles from './settings.module.css';
 
 /** What a row of the settings says: its name and, below, what it is about. */
@@ -111,6 +111,11 @@ export function SettingsScreen() {
         </Block>
         <Block title={t('appSettings.about')}>
           {screenOf('payments', t('appSettings.funding'), FUNDING_PATH)}
+          <Link className={styles.row} to={CONTACT_PATH}>
+            <Icon name="mail" size={22} />
+            <RowText title={t('appSettings.contact')} detail={CONTACT_EMAIL} />
+            <Icon name="chevronRight" size={20} />
+          </Link>
           {screenOf('info', t('appSettings.credits'), CREDITS_PATH)}
           {page('description', t('appSettings.legalNotice'), legal.legalNotice)}
         </Block>

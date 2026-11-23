@@ -225,3 +225,34 @@
   line-height: 16px;
   color: var(--color-ink-muted);
 }
+
+/* The contact email, to select or copy, with the button next to it. */
+.email {
+  margin: var(--space-2) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.emailAddress {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.copy {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}

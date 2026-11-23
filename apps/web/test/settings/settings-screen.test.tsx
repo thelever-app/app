@@ -89,3 +89,31 @@ describe('SettingsScreen', () => {
     expect(screen.queryByText(/\bedad\b|\baño de nacimiento\b/i)).toBeNull();
   });
 });
+
+describe('ContactScreen', () => {
+  it('should show the contact email, the languages it is answered in and the way to the web form', async () => {
+    // Arrange
+    const { ContactScreen } = await import('../../src/settings/contact-screen.tsx');
+
+    // Act
+    const { t } = await renderAtRoute(<ContactScreen />);
+
+    // Assert
+    expect(screen.getByText('privacidad@thelever.app')).toBeDefined();
+    expect(screen.getByText(t('contact.writeText'))).toBeDefined();
+    expect(screen.getByRole('link', { name: t('contact.openForm') }).getAttribute('href')).toBe(
+      '/denunciar',
+    );
+  });
+
+  it('should be one row of About in the settings', async () => {
+    // Arrange
+    const { t, location } = await renderAtRoute(<SettingsScreen />);
+
+    // Act
+    fireEvent.click(screen.getByRole('link', { name: new RegExp(t('appSettings.contact')) }));
+
+    // Assert
+    expect(location()).toBe('/settings/contact');
+  });
+});

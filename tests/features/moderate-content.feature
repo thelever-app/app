@@ -37,25 +37,31 @@ Feature: Moderate content
     Then an issue is created in the moderation repository
     And the dilemma stays in review until the team approves or rejects it
 
-  @todo
   Scenario: A dilemma is hidden automatically after several reports
     Given a dilemma that has received as many reports as the hiding threshold
     Then the dilemma is hidden from new games
     And an issue is created in the moderation repository
-    And its creator sees its status as "hidden by reports"
 
-  @todo
   Scenario: The team restores a hidden dilemma
     Given a dilemma hidden by reports
     When the team restores it
     Then the dilemma returns to the status it had before being hidden
 
-  @todo
-  Scenario: The team withdraws a dilemma with a statement of reasons
+  Scenario: The team withdraws a dilemma hidden by reports
     Given a dilemma hidden by reports
     When the team withdraws it
     Then the dilemma is not used in new games
-    And its creator sees the reason, the facts, the rule applied, that a person decided it and how to appeal
+
+  @todo
+  Scenario: The creator of a dilemma hidden by reports sees its status
+    Given a public dilemma of a player hidden by reports
+    Then its creator sees its status as "hidden by reports"
+
+  @todo
+  Scenario: The team withdraws a dilemma of a player with a statement of reasons
+    Given a public dilemma of a player hidden by reports
+    When the team withdraws it
+    Then its creator sees the reason, the facts, the rule applied, that a person decided it and how to appeal
 
   @todo
   Scenario: The team withdraws a reported private dilemma
@@ -64,7 +70,7 @@ Feature: Moderate content
     Then its creator can no longer add it to any room
     And its creator sees the reason, the facts, the rule applied, that a person decided it and how to appeal
 
-  @todo
+  @ui @screen
   Scenario: The team withdraws a reported nickname
     Given "Marta" is in an open room with a nickname that was reported
     When the team withdraws the nickname
@@ -87,7 +93,6 @@ Feature: Moderate content
     When the team unblocks the creator
     Then the creator can create dilemmas again
 
-  @todo
   Scenario: Whoever reported is told the decision
     Given a dilemma reported by a player and by a web notice with an email
     When the team decides on it

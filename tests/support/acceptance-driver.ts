@@ -19,6 +19,9 @@ import {
   GAP_MARKER,
   LeaveRoomUseCase,
   ReportDilemmaUseCase,
+  ReportNicknameUseCase,
+  WithdrawNicknameUseCase,
+  FindNicknameOfReferenceUseCase,
   MoveOnUseCase,
   GetReadyToMoveOnUseCase,
   ReactUseCase,
@@ -67,7 +70,6 @@ import {
 import {
   InMemoryDilemmaCatalog,
   InMemoryDilemmaLikes,
-  InMemoryDilemmaReports,
   InMemoryGameRepository,
   ManualClock,
   InMemoryPlayerNotifier,
@@ -76,6 +78,16 @@ import {
   SequentialRandomness,
   type InMemoryDilemma,
 } from '@thelever-app/game/in-memory';
+import {
+  InMemoryIssueRepository,
+  InMemoryModerationNoticeRepository,
+  InMemoryOutbox,
+} from '@thelever-app/moderation/in-memory';
+import {
+  moderationInMemory,
+  ModerationOfTheTestCatalog,
+  TEAM_REASONS,
+} from './moderation-of-the-tests.ts';
 import {
   Dilemma,
   FindCandidatesUseCase,
@@ -107,7 +119,13 @@ import {
 } from '@thelever-app/identity';
 import { InMemoryFirstAccessRepository } from '@thelever-app/identity/in-memory';
 import { FirstAccessGate, FirstAccessRequiredError } from '@thelever-app/integrations/first-access';
-import { FirstAccessSealProvider, PublishedDilemmasCatalog } from '@thelever-app/integrations/game';
+import {
+  FirstAccessSealProvider,
+  ModerationDilemmaReports,
+  ModerationNicknameReports,
+  PublishedDilemmasCatalog,
+} from '@thelever-app/integrations/game';
+import { RoomNicknamesForModeration } from '@thelever-app/integrations/moderation';
 import {
   buildSite,
   type BuiltSite,
@@ -158,6 +176,11 @@ import type {
   RecordedLike,
   RecordedReaction,
   ReportReason,
+  ReportedDilemma,
+  ModerationIssueView,
+  IllegalContentNoticeForm,
+  ModerationNoticeView,
+  EmailView,
   ResultsScreenView,
   RevealView,
   RoomChoices,
@@ -179,6 +202,14 @@ import {
   SPANISH_OPTION_TEXTS,
   TEST_DILEMMAS,
 } from './test-catalog.ts';
+
+/** Each reason of the scenarios, as Game names it. */
+const REPORT_REASONS = {
+  offensive: 'offensive',
+  confusing: 'confusing',
+  'badly translated': 'mistranslated',
+  other: 'other',
+} as const satisfies Record<ReportReason, string>;
 
 /** Test data: the vote the driver casts when a step does not say which one; the first option. */
 const VOTE = 'option-1';
@@ -393,6 +424,26 @@ export class AcceptanceDriver implements GameDriver {
   /** Kept with its concrete type to read what each player received. */
   readonly #notifier = new InMemoryPlayerNotifier();
   readonly #clock = new ManualClock();
+  /** Moderation in memory, on the catalog of the tests, which Game plays from here. */
+  readonly #moderationCatalog = new ModerationOfTheTestCatalog(this.#catalog, DILEMMAS);
+  /** Kept with its concrete type to read the comments Moderation keeps. */
+  readonly #moderationIssues = new InMemoryIssueRepository();
+  readonly #moderation = moderationInMemory({
+    storage: {
+      issues: this.#moderationIssues,
+      outbox: new InMemoryOutbox(),
+      notices: new InMemoryModerationNoticeRepository(),
+    },
+    dilemmas: this.#moderationCatalog,
+    nicknames: new RoomNicknamesForModeration({
+      findNicknameOfReference: new FindNicknameOfReferenceUseCase(this.#roomRepository),
+      withdrawNickname: new WithdrawNicknameUseCase(this.#roomRepository, this.#notifier),
+    }),
+    clock: this.#clock,
+  });
+  /** Who was told the team will review what they reported. */
+  readonly #toldOfReview = new Set<string>();
+  #noticeAcknowledged = false;
   /** The first access of each identity and the documents it accepted, in Identity and Consent. */
   readonly #firstAccesses = new InMemoryFirstAccessRepository();
   readonly #acceptances = new InMemoryAcceptanceRepository();
@@ -417,7 +468,6 @@ export class AcceptanceDriver implements GameDriver {
   readonly #seals = new Map<string, Seal>();
   /** The player of the visitor in the room they created from a public page. */
   #visitorHostId: string | undefined;
-  readonly #reports = new InMemoryDilemmaReports();
   readonly #likes = new InMemoryDilemmaLikes();
   /** Whether each player turned on the nicknames of the others on the card they have open. */
   readonly #namesOnTheCard = new Set<string>();
@@ -479,6 +529,7 @@ export class AcceptanceDriver implements GameDriver {
   readonly #restartGame: RestartGameUseCase;
   readonly #leaveRoom: LeaveRoomUseCase;
   readonly #reportDilemma: ReportDilemmaUseCase;
+  readonly #reportNickname: ReportNicknameUseCase;
   readonly #skipDilemma: SkipDilemmaUseCase;
   readonly #deleteClosedRooms: DeleteClosedRoomsUseCase;
   /** What each player is answering of the dilemma they are on, as the screen holds it. */
@@ -598,8 +649,13 @@ export class AcceptanceDriver implements GameDriver {
     this.#reportDilemma = new ReportDilemmaUseCase({
       roomRepository: rooms,
       gameRepository: games,
-      reports: this.#reports,
+      reports: new ModerationDilemmaReports(this.#moderation.receiveDilemmaReport),
       notifier,
+      clock,
+    });
+    this.#reportNickname = new ReportNicknameUseCase({
+      roomRepository: rooms,
+      reports: new ModerationNicknameReports(this.#moderation.receiveNicknameReport),
       clock,
     });
   }
@@ -2872,13 +2928,182 @@ export class AcceptanceDriver implements GameDriver {
     }));
   }
 
-  async report(player: string, reason: ReportReason): Promise<void> {
+  async report(player: string, reason: ReportReason, comment?: string): Promise<ReportedDilemma> {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
     await this.#reportDilemma.execute({
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(player),
-      dilemmaId: (await this.#roundDilemmaOf(player)).dilemmaId,
-      reason,
+      dilemmaId,
+      reason: REPORT_REASONS[reason],
+      language: this.#languageOf(player),
+      ...(comment !== undefined && { comment }),
     });
+    this.#toldOfReview.add(player);
+    return this.#reportedDilemma(dilemmaId);
+  }
+
+  async canReport(player: string): Promise<boolean> {
+    const { dilemmaId } = await this.#roundDilemmaOf(player);
+    const { reports } = await this.#gameStateOf(player);
+    return !reports.some((report) => report.dilemmaId === dilemmaId);
+  }
+
+  async toldTheTeamWillReview(player: string): Promise<boolean> {
+    return this.#toldOfReview.has(player);
+  }
+
+  async knowsAboutAReport(viewer: string): Promise<boolean> {
+    const received = this.#notifier.receivedBy(this.#playerIdOf(viewer));
+    const state = this.#gameId ? await this.#gameStateOf(viewer) : undefined;
+    return (
+      JSON.stringify(received).toLowerCase().includes('report') || (state?.reports.length ?? 0) > 0
+    );
+  }
+
+  async reportNickname(player: string, other: string): Promise<void> {
+    await this.#reportNickname.execute({
+      roomId: this.#currentRoomId(),
+      playerId: this.#playerIdOf(player),
+      reportedPlayerId: this.#playerIdOf(other),
+      reason: 'offensive',
+    });
+    this.#toldOfReview.add(player);
+  }
+
+  async syncModeration(): Promise<void> {
+    await this.#moderation.sync();
+  }
+
+  async moderationIssues(): Promise<ModerationIssueView[]> {
+    return this.#moderation.tracker.issues().map(({ title, body, comments, labels }) => ({
+      title,
+      body,
+      comments,
+      labels,
+    }));
+  }
+
+  async storedReportComments(): Promise<string[]> {
+    return this.#moderationIssues
+      .all()
+      .flatMap(({ dilemmaReports, nicknameReports }) => [...dilemmaReports, ...nicknameReports])
+      .flatMap(({ comment }) => (comment === null ? [] : [comment]));
+  }
+
+  async teamDecides(
+    issue: { readonly dilemmaId: string } | { readonly nickname: string } | 'the last one',
+    decision: 'withdraw' | 'restore' | 'keep',
+  ): Promise<void> {
+    await this.#moderation.sync();
+    const issues = this.#moderation.tracker.issues();
+    const decided =
+      issue === 'the last one'
+        ? issues.at(-1)
+        : issues.find(({ body }) =>
+            'dilemmaId' in issue
+              ? body.includes(`\`${issue.dilemmaId}\``)
+              : body.includes(`> ${issue.nickname}`),
+          );
+    if (!decided) throw new Error('No issue of that content in the moderation repository');
+    this.#moderation.tracker.decide(decided.number, { label: decision, comment: TEAM_REASONS });
+    await this.#moderation.sync();
+  }
+
+  async aCatalogDilemma(): Promise<ReportedDilemma> {
+    const dilemma = DILEMMAS.find(
+      ({ minimumAge, compromising, language }) =>
+        minimumAge === 16 && !compromising && (language ?? 'es') === 'es',
+    );
+    if (!dilemma) throw new Error('The test catalog has no dilemma for every room');
+    return { dilemmaId: dilemma.dilemmaId, text: dilemma.text };
+  }
+
+  async reportedByDifferentPlayers(dilemmaId: string, count: number): Promise<void> {
+    for (let reporter = 1; reporter <= count; reporter++) {
+      await this.#moderation.receiveDilemmaReport.execute({
+        dilemmaId,
+        version: 1,
+        reason: 'offensive',
+        comment: null,
+        language: 'es',
+        identity: identityOf(`Reporter${reporter}`),
+        reportedAt: this.#clock.now(),
+      });
+    }
+  }
+
+  async issuesMention(player: string): Promise<boolean> {
+    const issues = JSON.stringify(this.#moderation.tracker.issues());
+    return (
+      issues.includes(identityOf(player)) ||
+      issues.includes(`"${player}`) ||
+      issues.includes(` ${player} `)
+    );
+  }
+
+  async isPlayableInNewGames(dilemmaId: string): Promise<boolean> {
+    return this.#catalog.statusOf(dilemmaId) === 'in-catalog';
+  }
+
+  async sendIllegalContentNotice(form: IllegalContentNoticeForm): Promise<void> {
+    await this.#moderation.receiveIllegalContentNotice.execute({
+      reference:
+        form.dilemmaId === undefined
+          ? 'Sala ABCDE, el apodo Pepe'
+          : this.#moderationCatalog.linkTo(form.dilemmaId),
+      explanation: 'Incita al odio contra un colectivo.',
+      name: form.name ?? null,
+      email: form.email ?? null,
+      language: 'es',
+      goodFaith: true,
+      identity: identityOf('Notifier'),
+    });
+    this.#noticeAcknowledged = true;
+  }
+
+  async noticeAcknowledged(): Promise<boolean> {
+    return this.#noticeAcknowledged;
+  }
+
+  async emailsTo(address: string): Promise<EmailView[]> {
+    return this.#moderation.mailer
+      .sent()
+      .filter(({ to }) => to === address)
+      .map(({ subject, text }) => ({ subject, text }));
+  }
+
+  async contactSeenInTheSettings(): Promise<never> {
+    throw new Error('Only the device shows the settings: the scenario must be @screen');
+  }
+
+  async moderationNoticesOn(player: string): Promise<ModerationNoticeView[]> {
+    const identity = identityOf(player);
+    const notices = await this.#moderation.getNotices.execute(identity);
+    for (const { id } of notices) {
+      await this.#moderation.seeNotice.execute({ identity, noticeId: id });
+    }
+    return notices.map(({ subject, outcome, rule }) => ({
+      about: subject.kind === 'report' ? 'report' : 'nickname',
+      outcome,
+      rule,
+      // Every moderation notice says a person decided it and how to appeal.
+      byAPerson: true,
+      howToAppeal: true,
+      facts: subject.kind === 'nickname' ? subject.facts.es : undefined,
+    }));
+  }
+
+  async nicknameOfIn(viewer: string, player: string): Promise<string> {
+    const { players } = await this.#roomStateOf(viewer);
+    const seen = players.find(({ playerId }) => playerId === this.#playerIdOf(player));
+    if (!seen) throw new Error(`${viewer} does not see ${player} in the room`);
+    return seen.nickname;
+  }
+
+  #reportedDilemma(dilemmaId: string): ReportedDilemma {
+    const dilemma = DILEMMAS.find((candidate) => candidate.dilemmaId === dilemmaId);
+    if (!dilemma) throw new Error(`${dilemmaId} is not a dilemma of the tests`);
+    return { dilemmaId, text: dilemma.text };
   }
 
   async skipReportedDilemma(player: string): Promise<void> {

@@ -469,10 +469,13 @@ describe('LobbyScreen', () => {
       expect(start).toHaveProperty('disabled', true);
     });
 
-    it('should expel a player after confirming it', async () => {
+    it('should expel a player after confirming it, from the menu of their avatar', async () => {
       // Arrange
       const { t, send } = await renderLobby();
-      fireEvent.click(screen.getByRole('button', { name: t('lobby.toExpel', { name: 'Marta' }) }));
+      fireEvent.click(
+        screen.getByRole('button', { name: t('playerMenu.open', { name: 'Marta' }) }),
+      );
+      fireEvent.click(screen.getByRole('button', { name: t('playerMenu.expel') }));
 
       // Act
       fireEvent.click(screen.getByRole('button', { name: t('expel.confirm') }));
@@ -818,5 +821,45 @@ describe('LobbyScreen', () => {
       fireEvent.click(screen.getByRole('button', { name: t('lobby.changeCategories') }));
       expect(await screen.findByRole('dialog')).toBeDefined();
     });
+  });
+});
+
+describe('reporting a nickname from the lobby', () => {
+  it('should let any player report the nickname of another, and tell nobody', async () => {
+    // Arrange
+    const { t, send } = await renderLobby(aRoom(AS_LUIS));
+    fireEvent.click(screen.getByRole('button', { name: t('playerMenu.open', { name: 'Marta' }) }));
+    expect(screen.queryByRole('button', { name: t('playerMenu.expel') })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: t('playerMenu.report') }));
+    fireEvent.click(screen.getByRole('radio', { name: t('report.reasons.offensive') }));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('report.send') }));
+
+    // Assert
+    expect(send).toHaveBeenLastCalledWith({
+      type: 'report-nickname',
+      playerId: 'test-marta-id',
+      reason: 'offensive',
+    });
+    expect(screen.getByRole('status').textContent).toContain(t('reportSent.thanks'));
+  });
+
+  it('should offer the reasons of a nickname, not those of a dilemma', async () => {
+    // Arrange
+    const { t } = await renderLobby(aRoom(AS_LUIS));
+    fireEvent.click(screen.getByRole('button', { name: t('playerMenu.open', { name: 'Marta' }) }));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('playerMenu.report') }));
+
+    // Assert
+    expect(screen.getAllByRole('radio').map(({ textContent }) => textContent)).toEqual([
+      t('report.reasons.offensive'),
+      t('report.reasons.impersonation'),
+      t('report.reasons.illegal'),
+      t('report.reasons.other'),
+    ]);
+    expect(screen.getByRole('link', { name: t('report.privacy') })).toBeDefined();
   });
 });

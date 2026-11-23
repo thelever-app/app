@@ -393,14 +393,10 @@ Then('all players see the second title of the game', async function (this: GameW
 });
 
 // Every player gets ready on each screen of the results: more than a step usually takes.
-When(
-  'the players have moved through every title',
-  { timeout: 90_000 },
-  async function (this: GameWorld) {
-    const titles = await this.driver.titlesOfTheGame();
-    for (let moved = 1; moved < titles.length; moved += 1) await this.everyoneMovesOn();
-  },
-);
+When('the players have moved through every title', async function (this: GameWorld) {
+  const titles = await this.driver.titlesOfTheGame();
+  for (let moved = 1; moved < titles.length; moved += 1) await this.everyoneMovesOn();
+});
 
 Then('the last title they see is El Mentalista', async function (this: GameWorld) {
   for (const viewer of this.present()) {
@@ -551,7 +547,6 @@ When('the titles of the game are shown', async function (this: GameWorld) {
 // Every player gets ready on each screen of the results: more than a step usually takes.
 Then(
   'they come in this order: {string}, {string}, {string}, {string}, {string}, {string} and {string}',
-  { timeout: 90_000 },
   async function (
     this: GameWorld,
     first: string,
@@ -611,13 +606,9 @@ Then('the title {string} is skipped', async function (this: GameWorld, title: st
 });
 
 // Every player gets ready on each screen of the results: more than a step usually takes.
-When(
-  'the title {string} is shown',
-  { timeout: 90_000 },
-  async function (this: GameWorld, title: string) {
-    await toTheScreen(this, (screen) => screen.kind === 'title' && screen.title === title);
-  },
-);
+When('the title {string} is shown', async function (this: GameWorld, title: string) {
+  await toTheScreen(this, (screen) => screen.kind === 'title' && screen.title === title);
+});
 
 Then(
   'all players see the avatar of the winner, the fact that earned it and the runner-up',
@@ -639,8 +630,8 @@ Given(
   },
 );
 
-// Every player gets ready on each screen of the results: more than a step usually takes.
-When('the ranking is shown', { timeout: 90_000 }, async function (this: GameWorld) {
+// Every player gets ready on each screen of the results.
+When('the ranking is shown', async function (this: GameWorld) {
   await toTheScreen(this, (screen) => screen.kind === 'ranking');
 });
 
@@ -663,17 +654,10 @@ Then(
 );
 
 // Every player gets ready on each screen of the results: more than a step usually takes.
-Given(
-  'all players see who is El Mentalista of the game',
-  { timeout: 90_000 },
-  async function (this: GameWorld) {
-    everyTitle(this, [...this.inRoom][0]!);
-    await toTheScreen(
-      this,
-      (screen) => screen.kind === 'title' && screen.title === 'El Mentalista',
-    );
-  },
-);
+Given('all players see who is El Mentalista of the game', async function (this: GameWorld) {
+  everyTitle(this, [...this.inRoom][0]!);
+  await toTheScreen(this, (screen) => screen.kind === 'title' && screen.title === 'El Mentalista');
+});
 
 When(
   '{string} moves forward in the game results',
@@ -759,7 +743,6 @@ Then(
 // Every player gets ready on each screen of the results: more than a step usually takes.
 Then(
   '{string} sees that {string} and {string} know her best',
-  { timeout: 90_000 },
   async function (this: GameWorld, viewer: string, first: string, second: string) {
     for (let moves = 0; (await screenOf(this, viewer)).kind !== 'known-best'; moves += 1) {
       assert.ok(moves < 10, `${viewer} never sees who knows them best`);

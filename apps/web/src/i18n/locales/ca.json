@@ -139,7 +139,9 @@
       "offensive": "Ofensiu",
       "confusing": "Confús",
       "mistranslated": "Mal traduït",
-      "other": "Altres"
+      "other": "Altres",
+      "illegal": "Pot ser il·legal",
+      "impersonation": "Suplanta algú"
     },
     "comment": "Comentari (opcional)",
     "placeholder": "Què hi has vist?",
@@ -147,7 +149,9 @@
     "counter": "{{count, number}}/{{max, number}}",
     "chooseReason": "Tria un motiu",
     "send": "Enviar la denúncia",
-    "note": "Ningú del grup ho sabrà."
+    "note": "Ningú del grup ho sabrà.",
+    "nicknameTitle": "Què li passa a el sobrenom de {{name}}?",
+    "privacy": "Política de privacitat"
   },
   "reportSent": {
     "thanks": "Gràcies, ho revisarem.",
@@ -470,7 +474,6 @@
     "players": "A la sala · {{count}}",
     "you": "{{name}} (tu)",
     "host": "Amfitrió",
-    "toExpel": "{{name}}. Toca per expulsar",
     "toChangeAvatar": "{{name}}. Toca per canviar el teu avatar",
     "waiting": "Comparteix el codi o l’enllaç.",
     "start": "Començar la partida",
@@ -928,7 +931,8 @@
     "funding": "Com es finança TheLever",
     "credits": "Crèdits i llicències",
     "legalNotice": "Avís legal",
-    "outside": "{{name}} (s’obre al navegador)"
+    "outside": "{{name}} (s’obre al navegador)",
+    "contact": "Contacte i denúncies"
   },
   "credits": {
     "title": "Crèdits i llicències",
@@ -979,5 +983,84 @@
       "close": "No, gràcies"
     },
     "line": "Us ha agradat? Dona suport a TheLever"
+  },
+  "playerMenu": {
+    "open": "{{name}}. Toca per veure opcions",
+    "report": "Reportar el seu sobrenom",
+    "expel": "Expulsar de la sala",
+    "note": "Ningú del grup sabrà que l’has reportat."
+  },
+  "moderationNotice": {
+    "reportTitle": "Hem revisat el teu report",
+    "aboutDilemma": "Sobre el dilema «{{text}}», que vas reportar el {{date}} com a <strong>{{reason}}</strong>:",
+    "aboutNickname": "Sobre el sobrenom «{{nickname}}», que vas reportar el {{date}} com a <strong>{{reason}}</strong>:",
+    "withdrawnDilemma": "L’hem retirat del catàleg.",
+    "withdrawnNickname": "L’hem retirat.",
+    "kept": "El mantenim: no incompleix les condicions d’ús ni la llei.",
+    "rule": "Hem aplicat l’apartat {{rule}} de les condicions d’ús. Ho ha decidit una persona de l’equip.",
+    "appeal": "Si no hi estàs d’acord, pots reclamar des d’Ajustos → Contacte i denúncies.",
+    "understood": "Entesos",
+    "nicknameTitle": "Hem retirat el teu sobrenom",
+    "nicknameWhat": "El teu sobrenom «{{nickname}}»:",
+    "reasonLabel": "Motiu:",
+    "factsLabel": "Fets:",
+    "ruleLabel": "Regla:",
+    "ruleValue": "apartat {{rule}} de les condicions d’ús.",
+    "whoLabel": "Qui ho ha decidit:",
+    "whoValue": "una persona de l’equip, després d’un report.",
+    "nicknameEffect": "A les sales obertes ara apareixes amb un sobrenom genèric i, en entrar a una altra sala, n’hauràs d’escriure un de nou.",
+    "reasons": {
+      "offensive": "ofensiu",
+      "confusing": "confús",
+      "mistranslated": "mal traduït",
+      "impersonation": "suplantar algú",
+      "illegal": "possiblement il·legal",
+      "other": "un altre motiu"
+    },
+    "reasonSentences": {
+      "offensive": "és ofensiu.",
+      "confusing": "és confús.",
+      "mistranslated": "està mal traduït.",
+      "impersonation": "suplanta una altra persona.",
+      "illegal": "pot ser il·legal.",
+      "other": "incompleix les condicions d’ús."
+    }
+  },
+  "contact": {
+    "title": "Contacte i denúncies",
+    "writeTitle": "Escriu-nos",
+    "writeText": "Per a les teves dades, els teus reports o qualsevol altra cosa. També és el punt de contacte per a usuaris i autoritats del Reglament de serveis digitals. Responem en castellà i en anglès.",
+    "copy": "Copiar el correu",
+    "copied": "Correu copiat",
+    "reportTitle": "Denunciar contingut il·legal",
+    "reportText": "Qualsevol persona el pot denunciar des del formulari web, sense fer servir l’app. Durant la partida també pots reportar des del menú «⋮» o tocant l’avatar d’algú.",
+    "openForm": "Obrir el formulari de denúncies",
+    "appealTitle": "Reclamar una decisió",
+    "appealText": "Si no estàs d’acord amb el que hem decidit sobre un report o sobre el teu sobrenom, escriu-nos a aquest correu i ho revisarem de nou."
+  },
+  "illegalNotice": {
+    "title": "Denunciar contingut il·legal",
+    "intro": "No cal fer servir l’app. Si jugues, també pots reportar des de la partida.",
+    "reference": "Enllaç o codi del dilema, o la sala i el sobrenom",
+    "referencePlaceholder": "thelever.app/ca/…",
+    "explanation": "Per què creus que és il·legal",
+    "explanationPlaceholder": "Explica quina norma creus que incompleix i per què",
+    "name": "El teu nom (opcional)",
+    "namePlaceholder": "Pots denunciar de manera anònima",
+    "email": "El teu correu (opcional)",
+    "emailPlaceholder": "Per explicar-te què hem decidit",
+    "goodFaith": "Declaro de bona fe que la informació és exacta i completa.",
+    "send": "Enviar la denúncia",
+    "sending": "Enviant…",
+    "note": "Rebràs un justificant de recepció i, si deixes el teu correu, la decisió i com reclamar.",
+    "invalid": "Revisa el que has escrit: el contingut i el motiu són obligatoris i el correu ha de ser vàlid.",
+    "tooMany": "Avui ja has enviat moltes denúncies. Torna demà o escriu a privacidad@thelever.app.",
+    "failed": "No s’ha pogut enviar. Torna-ho a provar.",
+    "receivedTitle": "Hem rebut la teva denúncia",
+    "receivedText": "Una persona de l’equip la revisarà.",
+    "receivedEmail": "T’escriurem al correu que has deixat amb la decisió i com reclamar.",
+    "receivedNoEmail": "Com que no has deixat correu, no et podrem explicar què hem decidit.",
+    "authorities": "Si veus una amenaça greu o urgent per a algú, avisa també les autoritats.",
+    "another": "Enviar una altra denúncia"
   }
 }

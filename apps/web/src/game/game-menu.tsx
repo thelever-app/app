@@ -19,7 +19,7 @@ interface GameMenuProps {
   /** Whether the player already reported the dilemma on screen. */
   readonly reported?: boolean;
   readonly onShowGroup: () => void;
-  /** Where the dilemma on screen can be reported: in the decision of its round, not in its reveal. */
+  /** Where the dilemma on screen can be reported: in the decision of its round and in its reveal. */
   readonly onReport?: (() => void) | undefined;
   readonly onLeave: () => void;
 }

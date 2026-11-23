@@ -83,6 +83,18 @@ export interface DilemmaSnapshot {
   readonly visibility: Visibility;
   /** The current version; earlier ones never change and are read through the repository. */
   readonly version: VersionSnapshot;
+  /** Only while Moderation keeps it out of new games. */
+  readonly moderation?: Moderation;
+}
+
+/**
+ * Moderation took the dilemma out of new games: hidden by reports until the team decides, or
+ * withdrawn by the team. A new version stays out too, and loading the catalog never brings it back.
+ */
+export interface Moderation {
+  readonly by: 'hidden-by-reports' | 'withdrawn';
+  /** The status it would have without Moderation, which restoring it gives back. */
+  readonly statusBefore: DilemmaStatus;
 }
 
 /** What the translator gives for a version of an original: its content in another language, option by option. */
@@ -126,6 +138,7 @@ export class Dilemma {
   #translationOf: TranslationOf | undefined;
   #translation: Translation | undefined;
   #arguments: ArgumentsVO | undefined;
+  #moderation: Moderation | undefined;
 
   private constructor(snapshot: DilemmaSnapshot) {
     this.#id = new IdVO(snapshot.id);
@@ -139,6 +152,7 @@ export class Dilemma {
     this.#visibility = snapshot.visibility;
     this.#version = new VersionVO(snapshot.version.number, snapshot.version);
     this.#status = snapshot.version.status;
+    this.#moderation = snapshot.moderation;
     this.#translationOf = snapshot.version.translationOf;
     this.#translation = snapshot.version.translation;
     this.#arguments =
@@ -340,7 +354,7 @@ export class Dilemma {
     if (next.hasSameContentAs(this.#version)) return;
 
     this.#version = next;
-    this.#status = Dilemma.#statusOfANewVersion(this.#creator);
+    this.#status = this.#statusOfANewVersionOfThis();
     this.#arguments = undefined;
   }
 
@@ -404,17 +418,61 @@ export class Dilemma {
     return this.#version.hasTheWordingOf(other.#version);
   }
 
-  /** Out of new games, at the version it has. */
+  /**
+   * Out of new games, at the version it has. While the reports hide it, it stays hidden until the
+   * team decides, and keeping it then leaves it withdrawn.
+   */
   withdraw(): void {
+    if (this.#moderation) {
+      this.#moderation = { ...this.#moderation, statusBefore: 'withdrawn' };
+      return;
+    }
     this.#status = 'withdrawn';
   }
 
   /**
    * A withdrawn dilemma back as a new version would leave it: in the catalog if the curation team
-   * wrote it, in review if not. Nothing changes if it is not withdrawn.
+   * wrote it, in review if not. Nothing changes if it is not withdrawn, and nothing brings back
+   * what Moderation keeps out.
    */
   reinstate(): void {
+    if (this.#moderation) {
+      if (this.#moderation.statusBefore === 'withdrawn') {
+        this.#moderation = {
+          ...this.#moderation,
+          statusBefore: Dilemma.#statusOfANewVersion(this.#creator),
+        };
+      }
+      return;
+    }
     if (this.#status === 'withdrawn') this.#status = Dilemma.#statusOfANewVersion(this.#creator);
+  }
+
+  /** The reports hid it from new games, with its translations, until the team decides. */
+  hideByReports(): void {
+    if (this.#moderation) return;
+    this.#moderation = { by: 'hidden-by-reports', statusBefore: this.#status };
+    this.#status = 'hidden-by-reports';
+  }
+
+  /** The team kept a dilemma the reports hid: back to the status it had. */
+  restoreAfterReports(): void {
+    if (this.#moderation?.by !== 'hidden-by-reports') return;
+    this.#status = this.#moderation.statusBefore;
+    this.#moderation = undefined;
+  }
+
+  /** The team withdrew it: out of new games for good, whatever the catalog says. */
+  withdrawByModeration(): void {
+    this.#moderation = {
+      by: 'withdrawn',
+      statusBefore: this.#moderation?.statusBefore ?? this.#status,
+    };
+    this.#status = 'withdrawn';
+  }
+
+  get moderation(): Moderation | undefined {
+    return this.#moderation;
   }
 
   /** Whether a player may read its current version: nothing keeps it in review or has taken it out. */
@@ -457,11 +515,20 @@ export class Dilemma {
           : { translationOf: this.#translationOf, translation: this.#translation! }),
         ...(this.#arguments === undefined ? {} : { arguments: this.#arguments.toSnapshot() }),
       },
+      ...(this.#moderation === undefined ? {} : { moderation: this.#moderation }),
     };
   }
 
   static restore(snapshot: DilemmaSnapshot): Dilemma {
     return new Dilemma(snapshot);
+  }
+
+  /** As a new version of anyone's, unless Moderation keeps the dilemma out, as it keeps the new one. */
+  #statusOfANewVersionOfThis(): DilemmaStatus {
+    const status = Dilemma.#statusOfANewVersion(this.#creator);
+    if (!this.#moderation) return status;
+    this.#moderation = { ...this.#moderation, statusBefore: status };
+    return this.#moderation.by;
   }
 
   /** Only what the curation team writes skips the filter; anything else is reviewed. */
@@ -484,7 +551,7 @@ export class Dilemma {
 
   /** A new version of a translation, of the current version of its original and automatic. */
   #followVersionOf(original: Dilemma): void {
-    this.#status = Dilemma.#statusOfANewVersion(this.#creator);
+    this.#status = this.#statusOfANewVersionOfThis();
     this.#translationOf = { dilemmaId: original.id, version: original.version };
     this.#translation = 'automatic';
   }

@@ -139,7 +139,9 @@
       "offensive": "Offensant",
       "confusing": "Confus",
       "mistranslated": "Mal traduit",
-      "other": "Autre"
+      "other": "Autre",
+      "illegal": "Peut-être illégal",
+      "impersonation": "Usurpe une identité"
     },
     "comment": "Commentaire (facultatif)",
     "placeholder": "Qu’as-tu remarqué ?",
@@ -147,7 +149,9 @@
     "counter": "{{count, number}}/{{max, number}}",
     "chooseReason": "Choisis un motif",
     "send": "Envoyer le signalement",
-    "note": "Personne du groupe ne le saura."
+    "note": "Personne du groupe ne le saura.",
+    "nicknameTitle": "Quel est le problème avec le pseudo de {{name}} ?",
+    "privacy": "Politique de confidentialité"
   },
   "reportSent": {
     "thanks": "Merci, nous allons le vérifier.",
@@ -470,7 +474,6 @@
     "players": "Dans la salle · {{count}}",
     "you": "{{name}} (toi)",
     "host": "Hôte",
-    "toExpel": "{{name}}. Touche pour exclure",
     "toChangeAvatar": "{{name}}. Touche pour changer ton avatar",
     "waiting": "Partage le code ou le lien.",
     "start": "Lancer la partie",
@@ -928,7 +931,8 @@
     "funding": "Comment TheLever est financé",
     "credits": "Crédits et licences",
     "legalNotice": "Mentions légales",
-    "outside": "{{name}} (s’ouvre dans le navigateur)"
+    "outside": "{{name}} (s’ouvre dans le navigateur)",
+    "contact": "Contact et signalements"
   },
   "credits": {
     "title": "Crédits et licences",
@@ -979,5 +983,84 @@
       "close": "Non, merci"
     },
     "line": "Ça vous a plu ? Soutenir TheLever"
+  },
+  "playerMenu": {
+    "open": "{{name}}. Touche pour voir les options",
+    "report": "Signaler son pseudo",
+    "expel": "Exclure de la salle",
+    "note": "Personne du groupe ne saura que tu l’as signalé."
+  },
+  "moderationNotice": {
+    "reportTitle": "Nous avons examiné ton signalement",
+    "aboutDilemma": "À propos du dilemme « {{text}} », que tu as signalé le {{date}} comme <strong>{{reason}}</strong> :",
+    "aboutNickname": "À propos du pseudo « {{nickname}} », que tu as signalé le {{date}} comme <strong>{{reason}}</strong> :",
+    "withdrawnDilemma": "Nous l’avons retiré du catalogue.",
+    "withdrawnNickname": "Nous l’avons retiré.",
+    "kept": "Nous le maintenons : il n’enfreint ni les conditions d’utilisation ni la loi.",
+    "rule": "Nous avons appliqué l’article {{rule}} des conditions d’utilisation. Une personne de l’équipe a décidé.",
+    "appeal": "Si tu n’es pas d’accord, tu peux contester depuis Réglages → Contact et signalements.",
+    "understood": "Compris",
+    "nicknameTitle": "Nous avons retiré ton pseudo",
+    "nicknameWhat": "Ton pseudo « {{nickname}} » :",
+    "reasonLabel": "Motif :",
+    "factsLabel": "Faits :",
+    "ruleLabel": "Règle :",
+    "ruleValue": "article {{rule}} des conditions d’utilisation.",
+    "whoLabel": "Qui a décidé :",
+    "whoValue": "une personne de l’équipe, après un signalement.",
+    "nicknameEffect": "Dans les salles ouvertes, tu apparais maintenant avec un pseudo générique, et pour rejoindre une autre salle tu devras en écrire un nouveau.",
+    "reasons": {
+      "offensive": "offensant",
+      "confusing": "confus",
+      "mistranslated": "mal traduit",
+      "impersonation": "usurpation d’identité",
+      "illegal": "peut-être illégal",
+      "other": "autre motif"
+    },
+    "reasonSentences": {
+      "offensive": "il est offensant.",
+      "confusing": "il est confus.",
+      "mistranslated": "il est mal traduit.",
+      "impersonation": "il usurpe l’identité de quelqu’un.",
+      "illegal": "il peut être illégal.",
+      "other": "il enfreint les conditions d’utilisation."
+    }
+  },
+  "contact": {
+    "title": "Contact et signalements",
+    "writeTitle": "Écris-nous",
+    "writeText": "Pour tes données, tes signalements ou autre chose. C’est aussi le point de contact pour les utilisateurs et les autorités au titre du règlement sur les services numériques. Nous répondons en espagnol et en anglais.",
+    "copy": "Copier l’e-mail",
+    "copied": "E-mail copié",
+    "reportTitle": "Signaler un contenu illégal",
+    "reportText": "Tout le monde peut le signaler avec le formulaire web, sans l’app. Pendant une partie, tu peux aussi signaler depuis le menu « ⋮ » ou en touchant l’avatar de quelqu’un.",
+    "openForm": "Ouvrir le formulaire de signalement",
+    "appealTitle": "Contester une décision",
+    "appealText": "Si tu n’es pas d’accord avec ce que nous avons décidé sur un signalement ou sur ton pseudo, écris-nous à cette adresse et nous l’examinerons à nouveau."
+  },
+  "illegalNotice": {
+    "title": "Signaler un contenu illégal",
+    "intro": "Pas besoin de l’app. Si tu joues, tu peux aussi signaler depuis la partie.",
+    "reference": "Lien ou code du dilemme, ou la salle et le pseudo",
+    "referencePlaceholder": "thelever.app/fr/…",
+    "explanation": "Pourquoi tu penses que c’est illégal",
+    "explanationPlaceholder": "Explique quelle règle tu penses qu’il enfreint et pourquoi",
+    "name": "Ton nom (facultatif)",
+    "namePlaceholder": "Tu peux signaler anonymement",
+    "email": "Ton e-mail (facultatif)",
+    "emailPlaceholder": "Pour te dire ce que nous avons décidé",
+    "goodFaith": "Je déclare de bonne foi que ces informations sont exactes et complètes.",
+    "send": "Envoyer le signalement",
+    "sending": "Envoi…",
+    "note": "Tu recevras un accusé de réception et, si tu laisses ton e-mail, la décision et comment la contester.",
+    "invalid": "Vérifie ce que tu as écrit : le contenu et le motif sont obligatoires et l’e-mail doit être valide.",
+    "tooMany": "Tu as déjà envoyé beaucoup de signalements aujourd’hui. Reviens demain ou écris à privacidad@thelever.app.",
+    "failed": "L’envoi a échoué. Réessaie.",
+    "receivedTitle": "Nous avons reçu ton signalement",
+    "receivedText": "Une personne de l’équipe l’examinera.",
+    "receivedEmail": "Nous t’écrirons à l’e-mail que tu as laissé avec la décision et comment la contester.",
+    "receivedNoEmail": "Comme tu n’as pas laissé d’e-mail, nous ne pourrons pas te dire ce que nous avons décidé.",
+    "authorities": "Si tu vois une menace grave ou urgente pour quelqu’un, préviens aussi les autorités.",
+    "another": "Envoyer un autre signalement"
   }
 }

@@ -1,5 +1,5 @@
 import type { AvatarDto, RoomSettingsDto } from '@thelever-app/protocol';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import mascotWaiting from '../assets/brand/mascot-waiting.svg';
@@ -9,6 +9,9 @@ import { Icon } from '../components/icon.tsx';
 import { useLobby } from '../room/room-provider.tsx';
 import { useMuted } from '../sound/sound-context.tsx';
 import { DilemmaText } from '../game/dilemma-text.tsx';
+import { PlayerMenuSheet } from '../game/player-menu-sheet.tsx';
+import { ReportSheet } from '../game/report-sheet.tsx';
+import { ReportThanks } from '../game/report-thanks.tsx';
 import { useLeavingPlayers } from './leaving-players.ts';
 import { AvatarPickerSheet } from './avatar-picker-sheet.tsx';
 import type { Category } from './categories.ts';
@@ -25,7 +28,7 @@ import { HOME_PATH } from '../home-path.ts';
 
 type Open =
   | { readonly sheet: 'none' | 'settings' | 'avatar' | 'qr' }
-  | { readonly sheet: 'expel'; readonly playerId: string }
+  | { readonly sheet: 'menu' | 'report' | 'expel'; readonly playerId: string }
   | { readonly sheet: 'choose'; readonly roundId: number };
 
 /** The commands whose rejection the lobby explains above its action. */
@@ -45,6 +48,12 @@ export function LobbyScreen() {
   const [muted, setMuted] = useMuted();
   const { rows, gone } = useLeavingPlayers(lobby.players);
   const close = () => setOpen({ sheet: 'none' });
+  const [thanked, setThanked] = useState(false);
+  const hideThanks = useCallback(() => setThanked(false), []);
+  const chosen =
+    open.sheet === 'menu' || open.sheet === 'report'
+      ? lobby.players.find((p) => p.playerId === open.playerId)
+      : undefined;
   // In the lobby of a rematch, the first round whose categories have nothing new left to play.
   const exhaustedIndex = lobby.rounds.findIndex(
     (round) => round.origin === 'random' && round.withoutNewDilemmas,
@@ -281,14 +290,10 @@ export function LobbyScreen() {
               const name = isSelf ? t('lobby.you', { name: player.nickname }) : player.nickname;
               const action = isSelf
                 ? () => setOpen({ sheet: 'avatar' })
-                : isHost
-                  ? () => setOpen({ sheet: 'expel', playerId: player.playerId })
-                  : undefined;
+                : () => setOpen({ sheet: 'menu', playerId: player.playerId });
               const label = isSelf
                 ? t('lobby.toChangeAvatar', { name: player.nickname })
-                : isHost
-                  ? t('lobby.toExpel', { name: player.nickname })
-                  : undefined;
+                : t('playerMenu.open', { name: player.nickname });
               const content = (
                 <>
                   <Avatar avatar={player.avatar} dimmed={!player.connected} />
@@ -386,6 +391,34 @@ export function LobbyScreen() {
           onClose={close}
         />
       )}
+      {open.sheet === 'menu' && chosen && (
+        <PlayerMenuSheet
+          nickname={chosen.nickname}
+          onReport={() => setOpen({ sheet: 'report', playerId: chosen.playerId })}
+          onExpel={
+            isHost ? () => setOpen({ sheet: 'expel', playerId: chosen.playerId }) : undefined
+          }
+          onClose={close}
+        />
+      )}
+      {open.sheet === 'report' && chosen && (
+        <ReportSheet
+          target={{ kind: 'nickname', nickname: chosen.nickname }}
+          open
+          onOpenChange={(next) => !next && close()}
+          onSend={(reason, comment) => {
+            send({
+              type: 'report-nickname',
+              playerId: chosen.playerId,
+              reason,
+              ...(comment.trim() && { comment: comment.trim() }),
+            });
+            setThanked(true);
+            close();
+          }}
+        />
+      )}
+      {thanked && <ReportThanks onDone={hideThanks} />}
       {expelled && (
         <ExpelSheet
           player={expelled}

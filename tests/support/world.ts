@@ -4,7 +4,9 @@ import { AcceptanceDriver } from './acceptance-driver.ts';
 import type {
   AnswerPlan,
   CardView,
+  ContactView,
   GameDriver,
+  ModerationNoticeView,
   CreditsView,
   DonationLinks,
   FundingView,
@@ -73,6 +75,8 @@ export class GameWorld extends World {
 
   /** The dilemma of the test data a step made the first one of the game. */
   dilemmaId = '';
+  /** The moderation notices a player saw when they opened the app. */
+  moderationNotices: readonly ModerationNoticeView[] = [];
 
   /** The dilemma of the public web a scenario talks about as "it", by its name. */
   dilemmaName = '';
@@ -88,6 +92,8 @@ export class GameWorld extends World {
 
   /** What the credits of the settings showed the player. */
   credits: CreditsView | undefined;
+  /** «Contact and reports», as the settings showed it. */
+  contact: ContactView | undefined;
 
   /** The dilemma a visitor chose to play with the group from its public page, by its name. */
   dilemmaToPlayWithTheGroup: string | undefined;

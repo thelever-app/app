@@ -12,8 +12,11 @@ import { startE2eStack, stopE2eStack } from './e2e-stack.ts';
 import { problemsOn } from './screen-checks.ts';
 import type { GameWorld } from './world.ts';
 
-// The e2e steps drive browsers and wait for reconnections; the acceptance ones never get near this.
-setDefaultTimeout(30_000);
+// The e2e steps drive browsers and wait for reconnections: setting up a room of three takes some 9
+// seconds and each round played some 5 more, and a busy machine can take twice as long. The limit
+// only stops a step that hangs, so it stays well above what any step takes; the acceptance ones
+// never get near it.
+setDefaultTimeout(90_000);
 
 BeforeAll({ timeout: 60_000 }, async function () {
   if (this.parameters.driver === 'e2e') await startE2eStack();
