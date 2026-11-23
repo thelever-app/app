@@ -16,12 +16,14 @@ const ANA_SEAL = {
   researchConsentVersion: 'TestResearchConsentVersion1',
   commercialLicenceConsentVersion: 'TestCommercialLicenceConsentVersion1',
   underEighteen: false,
+  objectsToAnalytics: false,
 };
 const LUIS_SEAL = {
   gameConsentVersion: 'TestGameConsentVersion1',
   researchConsentVersion: null,
   commercialLicenceConsentVersion: null,
   underEighteen: true,
+  objectsToAnalytics: false,
 };
 
 /** With milliseconds, so a repository that rounds times fails. */
@@ -115,6 +117,89 @@ export function describeGameRepositoryContract(
   }
 
   describe(`${name} (GameRepository contract)`, () => {
+    describe('the seal of who objects to product analytics', () => {
+      it('should keep that the player objects, and no time of their answer', async () => {
+        // Arrange
+        const { games, room, game, first } = await arrange();
+        start(game, room);
+        game.answer(
+          'TestAnaId',
+          first.dilemmaId,
+          { vote: first.optionIds[0] },
+          { ...ANA_SEAL, objectsToAnalytics: true },
+          new Date(STARTED_AT.getTime() + SECOND),
+        );
+
+        // Act
+        await games.save(game);
+
+        // Assert
+        const found = await games.findById(game.id);
+        expect(found?.toSnapshot()).toEqual(game.toSnapshot());
+        const [ana] = found?.answersOf('TestAnaId') ?? [];
+        expect(ana?.seal.objectsToAnalytics).toBe(true);
+        expect(ana?.responseTimeMs).toBeNull();
+      });
+    });
+
+    describe('idsOfRoom', () => {
+      it('should find the games a room played', async () => {
+        // Arrange
+        const { games, room, game } = await arrange();
+        start(game, room);
+        await games.save(game);
+
+        // Act & Assert
+        expect(await games.idsOfRoom(room.id)).toEqual([game.id]);
+        expect(await games.idsOfRoom('00000000-0000-4000-8000-00000000dead')).toEqual([]);
+      });
+    });
+
+    describe('forget', () => {
+      it('should keep nothing of a forgotten player once saved, nor what was predicted or reacted about them', async () => {
+        // Arrange
+        const { games, room, game, first } = await arrange({ ...ANONYMOUS, variant: 'nominal' });
+        start(game, room);
+        game.answer(
+          'TestAnaId',
+          first.dilemmaId,
+          {
+            vote: first.optionIds[0],
+            votePredictions: [{ playerId: 'TestLuisId', vote: first.optionIds[1] }],
+          },
+          ANA_SEAL,
+          STARTED_AT,
+        );
+        game.answer(
+          'TestLuisId',
+          first.dilemmaId,
+          { vote: first.optionIds[1] },
+          LUIS_SEAL,
+          STARTED_AT,
+        );
+        game.reveal('host', new Date(STARTED_AT.getTime() + 30 * SECOND));
+        game.react('TestLuisId', 0, { kind: 'dilemma' }, '😮', LUIS_SEAL);
+        game.react('TestAnaId', 0, { kind: 'vote', playerId: 'TestLuisId' }, '❤️', ANA_SEAL);
+        game.react('TestAnaId', 0, { kind: 'dilemma' }, '🤔', ANA_SEAL);
+        await games.save(game);
+        const read = await games.findById(game.id);
+        if (!read) throw new Error('the game was not saved');
+        read.forget('TestLuisId');
+
+        // Act
+        await games.save(read);
+
+        // Assert
+        const found = await games.findById(game.id);
+        expect(found?.toSnapshot()).toEqual(read.toSnapshot());
+        expect(found?.answersOf('TestLuisId')).toEqual([]);
+        expect(found?.answersOf('TestAnaId')[0]?.votePredictions).toEqual([]);
+        expect(found?.reactions().map(({ playerId, emoji }) => ({ playerId, emoji }))).toEqual([
+          { playerId: 'TestAnaId', emoji: '🤔' },
+        ]);
+      });
+    });
+
     describe('deleteOfRoom', () => {
       it('should delete the games of that room, answers and all, and keep those of other rooms', async () => {
         // Arrange

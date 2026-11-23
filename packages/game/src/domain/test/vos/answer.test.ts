@@ -8,6 +8,7 @@ const SEAL = {
   researchConsentVersion: null,
   commercialLicenceConsentVersion: null,
   underEighteen: false,
+  objectsToAnalytics: false,
 };
 const PROPS: AnswerProps = {
   vote: 'TestOption',

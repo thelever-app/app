@@ -12,3 +12,9 @@ export type {
   FindNicknameOfReference,
   NicknameOfReference,
 } from './application/use-cases/find-nickname-of-reference.use-case.ts';
+export type { EraseGameData } from './application/use-cases/erase-game-data.use-case.ts';
+export type {
+  ExportLikes,
+  ForgetLikes,
+  LikeData,
+} from './application/use-cases/likes-personal-data.use-case.ts';

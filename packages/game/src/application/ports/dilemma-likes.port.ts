@@ -22,4 +22,10 @@ export interface DilemmaLikes {
   /** Takes back the like the identity gave to that dilemma, wherever it gave it; none, nothing. */
   unlike(identity: string, dilemmaId: string): Promise<void>;
   hasLiked(identity: string, dilemmaId: string): Promise<boolean>;
+  /** Every like of the identity, the oldest first. */
+  likesOf(
+    identity: string,
+  ): Promise<readonly (DilemmaLike & { readonly givenIn: 'game' | 'catalog' })[]>;
+  /** Takes back every like of the identity: what the dilemmas weigh no longer counts them. */
+  forgetAllOf(identity: string): Promise<void>;
 }

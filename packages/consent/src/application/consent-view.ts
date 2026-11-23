@@ -15,6 +15,8 @@ export interface ConsentView {
   readonly current: Readonly<Record<LegalDocument, number>>;
   /** The version of the game consent it gave last, which seals its answers. */
   readonly gameConsentVersion: number | undefined;
+  /** Whether it gave the game consent and then withdrew it, and has not given it again. */
+  readonly gameConsentWithdrawn: boolean;
 }
 
 export function viewOf(acceptances: Acceptances, published: PublishedVersions): ConsentView {
@@ -26,5 +28,6 @@ export function viewOf(acceptances: Acceptances, published: PublishedVersions): 
       'game-consent': currentVersionOf('game-consent', published),
     },
     gameConsentVersion: acceptances.versionOf('game-consent'),
+    gameConsentWithdrawn: acceptances.isWithdrawn('game-consent'),
   };
 }

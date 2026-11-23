@@ -16,6 +16,7 @@ const SEAL = {
   researchConsentVersion: null,
   commercialLicenceConsentVersion: null,
   underEighteen: false,
+  objectsToAnalytics: false,
 };
 const UNDER_EIGHTEEN = { ...SEAL, underEighteen: true };
 const AT = new Date('2026-11-18T10:00:00Z');

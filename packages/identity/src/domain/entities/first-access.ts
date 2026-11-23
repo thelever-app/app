@@ -3,6 +3,7 @@ import { BlockedCountryError } from '../errors/blocked-country.error.ts';
 import { MonthOfBirthNeededError } from '../errors/month-of-birth-needed.error.ts';
 import { ADULT_AGE, DeclaredAgeVO, needsMonthOfBirth } from '../vos/declared-age.vo.ts';
 import { minimumAgeIn, type Region, regionOf } from '../vos/region.vo.ts';
+import type { RequestCodeVO } from '../vos/request-code.vo.ts';
 
 export interface FirstAccessSnapshot {
   readonly identity: string;
@@ -11,6 +12,8 @@ export interface FirstAccessSnapshot {
   /** Only of who may be under 18. */
   readonly birthMonth: number | null;
   readonly lastOpenedAt: Date;
+  /** The code for requests by email, in capitals and without groups. */
+  readonly requestCode: string;
 }
 
 /**
@@ -23,48 +26,62 @@ export type FirstAccessStep = 'blocked-country' | 'age' | 'under-minimum-age' | 
 /**
  * The first access of whoever uses the app with an identity: the region of their device, never
  * its address; the age they declared, once and for good; and when they last opened the app, which
- * the deletion after 24 months without opening it counts from.
+ * the deletion after 24 months without opening it counts from; and the code with which a request
+ * by email is known to be theirs, made with it and never changed.
  */
 export class FirstAccess {
   readonly #identity: string;
   #region: Region;
   #age: DeclaredAgeVO | undefined;
   #lastOpenedAt: Date;
+  readonly #requestCode: string;
 
   private constructor(
     identity: string,
     region: Region,
     age: DeclaredAgeVO | undefined,
     lastOpenedAt: Date,
+    requestCode: string,
   ) {
     this.#identity = identity;
     this.#region = region;
     this.#age = age;
     this.#lastOpenedAt = lastOpenedAt;
+    this.#requestCode = requestCode;
   }
 
-  /** The first time the app opens with this identity, in the country its address is in. */
+  /**
+   * The first time the app opens with this identity, in the country its address is in, with a
+   * code for requests by email that no other identity has.
+   */
   static begin({
     identity,
     country,
     now,
+    requestCode,
   }: {
     readonly identity: string;
     readonly country: string | undefined;
     readonly now: Date;
+    readonly requestCode: RequestCodeVO;
   }): FirstAccess {
-    return new FirstAccess(identity, regionOf(country), undefined, now);
+    return new FirstAccess(identity, regionOf(country), undefined, now, requestCode.value);
   }
 
   static fromSnapshot(snapshot: FirstAccessSnapshot): FirstAccess {
-    const { identity, region, birthYear, birthMonth, lastOpenedAt } = snapshot;
+    const { identity, region, birthYear, birthMonth, lastOpenedAt, requestCode } = snapshot;
     const age =
       birthYear === null ? undefined : new DeclaredAgeVO(birthYear, birthMonth, lastOpenedAt);
-    return new FirstAccess(identity, region, age, lastOpenedAt);
+    return new FirstAccess(identity, region, age, lastOpenedAt, requestCode);
   }
 
   get identity(): string {
     return this.#identity;
+  }
+
+  /** In capitals and without groups, as it is kept. */
+  get requestCode(): string {
+    return this.#requestCode;
   }
 
   get region(): Region {
@@ -113,6 +130,7 @@ export class FirstAccess {
       birthYear: this.#age?.birthYear ?? null,
       birthMonth: this.#age?.birthMonth ?? null,
       lastOpenedAt: this.#lastOpenedAt,
+      requestCode: this.#requestCode,
     };
   }
 }

@@ -79,3 +79,12 @@ export {
 export { GetUndecidedIssuesUseCase } from './application/use-cases/get-undecided-issues.use-case.ts';
 export { GetModerationNoticesUseCase } from './application/use-cases/get-moderation-notices.use-case.ts';
 export { SeeModerationNoticeUseCase } from './application/use-cases/see-moderation-notice.use-case.ts';
+export {
+  type EraseModerationData,
+  EraseModerationDataUseCase,
+  type ExportModerationData,
+  ExportModerationDataUseCase,
+  type ModerationData,
+  type SendersWithEmail,
+  SendersWithEmailUseCase,
+} from './application/use-cases/moderation-personal-data.use-case.ts';

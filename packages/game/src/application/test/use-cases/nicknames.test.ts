@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import { describe, expect, it } from 'vitest';
 import { InMemoryNicknameReports } from '../../../adapters/in-memory/in-memory-nickname-reports.ts';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
@@ -137,15 +138,18 @@ describe('WithdrawNicknameUseCase', () => {
       idGenerator,
       randomness,
     } = await arrange();
-    await new JoinRoomUseCase({
-      sealProvider: new InMemorySealProvider(),
-      roomRepository,
-      gameRepository,
-      notifier: new InMemoryPlayerNotifier(),
-      idGenerator,
-      randomness,
-      clock,
-    }).execute({
+    await new JoinRoomUseCase(
+      {
+        sealProvider: new InMemorySealProvider(),
+        roomRepository,
+        gameRepository,
+        notifier: new InMemoryPlayerNotifier(),
+        idGenerator,
+        randomness,
+        clock,
+      },
+      new InMemoryUsage(),
+    ).execute({
       roomId,
       nickname: 'Jugador 3',
       identity: 'TestPabloIdentity',

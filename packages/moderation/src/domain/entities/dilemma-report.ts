@@ -15,8 +15,11 @@ export interface DilemmaReportSnapshot {
   readonly comment: string | null;
   /** The language the player read it in: without it, «mistranslated» says no translation to check. */
   readonly language: Language;
-  /** Who reports: the report threshold counts different players, and the decision goes back to them. */
-  readonly identity: string;
+  /**
+   * Who reports: the report threshold counts different players, and the decision goes back to
+   * them. Null once their data are deleted: the report stays, as one more player, without them.
+   */
+  readonly identity: string | null;
   /** When, which the 3 years it is kept for count from. */
   readonly reportedAt: Date;
 }
@@ -50,8 +53,14 @@ export class DilemmaReport {
     return this.#snapshot.dilemmaId;
   }
 
-  get identity(): string {
+  get identity(): string | null {
     return this.#snapshot.identity;
+  }
+
+  /** The same report, without who made it nor, if it was about them, nothing else of theirs. */
+  unlinked(identity: string): DilemmaReport {
+    if (this.#snapshot.identity !== identity) return this;
+    return new DilemmaReport({ ...this.#snapshot, identity: null });
   }
 
   get reason(): DilemmaReportReason {

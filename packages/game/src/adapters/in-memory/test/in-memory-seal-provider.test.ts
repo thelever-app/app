@@ -10,6 +10,7 @@ describe('InMemorySealProvider', () => {
         researchConsentVersion: 'TestResearchConsentVersion',
         commercialLicenceConsentVersion: null,
         underEighteen: false,
+        objectsToAnalytics: false,
       };
       const provider = new InMemorySealProvider(new Map([['TestAnaIdentity', seal]]));
 
@@ -34,6 +35,7 @@ describe('InMemorySealProvider', () => {
         researchConsentVersion: null,
         commercialLicenceConsentVersion: null,
         underEighteen: true,
+        objectsToAnalytics: false,
       });
     });
   });

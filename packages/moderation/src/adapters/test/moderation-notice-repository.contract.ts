@@ -80,5 +80,24 @@ export function describeModerationNoticeRepositoryContract(
       expect(await repository.unseenOf('TestIdentity')).toEqual([]);
       expect((await repository.findById('TestNotice'))?.toSnapshot().seenAt).toEqual(AT);
     });
+
+    it('should give every notice of an identity, seen or not, and delete them all', async () => {
+      // Arrange
+      const repository = await create();
+      const seen = noticeOf('TestSeen');
+      seen.seen(AT);
+      await repository.save(seen);
+      await repository.save(noticeOf('TestUnseen'));
+      await repository.save(noticeOf('TestOther', 'TestOtherIdentity'));
+      const all = await repository.allOf('TestIdentity');
+
+      // Act
+      await repository.deleteAllOf('TestIdentity');
+
+      // Assert
+      expect(all.map(({ id }) => id).sort()).toEqual(['TestSeen', 'TestUnseen']);
+      expect(await repository.allOf('TestIdentity')).toEqual([]);
+      expect(await repository.allOf('TestOtherIdentity')).toHaveLength(1);
+    });
   });
 }

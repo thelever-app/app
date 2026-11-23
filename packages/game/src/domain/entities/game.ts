@@ -488,7 +488,8 @@ export class Game {
     const isComplete = this.#isComplete(playerId, dilemmaId, answer);
     if (wasComplete && !isComplete) throw new AnswerIncompleteError(dilemmaId);
 
-    if (isComplete && !wasComplete) {
+    // Who objects to product analytics completes it with no time kept.
+    if (isComplete && !wasComplete && !seal.objectsToAnalytics) {
       answer = answer.completedIn(at.getTime() - (this.#round as RoundState).startedAt.getTime());
     }
     state.answers.set(dilemmaId, answer);
@@ -672,7 +673,7 @@ export class Game {
       }
       return;
     }
-    if (round.revealedAt) {
+    if (round.revealedAt && !this.#someoneObjectsToAnalyticsIn(this.#roundDilemma().dilemmaId)) {
       // The instance that moves on may run a few milliseconds behind the one that revealed.
       this.#timesSpent.set(
         this.#roundDilemma().dilemmaId,
@@ -760,6 +761,32 @@ export class Game {
   timeSpentOn(dilemmaId: string): number | null {
     this.#dilemmaOf(dilemmaId);
     return this.#timesSpent.get(dilemmaId) ?? null;
+  }
+
+  /**
+   * Whoever is behind the player withdrew the game consent or deleted their data: nothing of
+   * theirs stays in the game, nor what the others predicted or reacted about them (glossary,
+   * «Consentimiento del juego»), and no round waits for them any more.
+   */
+  forget(playerId: string): void {
+    const state = this.#players.get(playerId);
+    if (!state) return;
+    state.left = true;
+    state.answers.clear();
+    state.didNotVote.clear();
+    state.points.clear();
+    state.reports.clear();
+    for (const [otherId, other] of this.#players) {
+      if (otherId === playerId) continue;
+      for (const [dilemmaId, answer] of other.answers) {
+        other.answers.set(dilemmaId, answer.withoutPredictionsAbout(playerId));
+      }
+    }
+    this.#reactions = this.#reactions.filter(
+      (reaction) => reaction.playerId !== playerId && reaction.aboutId !== playerId,
+    );
+    this.#readyToMoveOn.delete(playerId);
+    this.#version += 1;
   }
 
   /** The player leaves on purpose: they keep their answers, and no round waits for them any more. */
@@ -1250,6 +1277,13 @@ export class Game {
   }
 
   /** Whether the rounds were played to their end: a stopped game has no results. */
+  /** Whether a player who answered the dilemma objects to product analytics. */
+  #someoneObjectsToAnalyticsIn(dilemmaId: string): boolean {
+    return [...this.#players.values()].some(
+      ({ answers }) => answers.get(dilemmaId)?.seal.objectsToAnalytics === true,
+    );
+  }
+
   #hasResults(): boolean {
     return this.#stage === 'results' || this.#stage === 'ended';
   }

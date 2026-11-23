@@ -7,6 +7,8 @@ import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findRoom } from './find-room.ts';
 import { notifyGame } from './notify-game.ts';
+import { recordEndIfJustEnded } from './record-usage.ts';
+import type { Usage } from '../ports/usage.port.ts';
 
 export interface DisconnectPlayerInput {
   readonly roomId: string;
@@ -25,17 +27,20 @@ export class DisconnectPlayerUseCase {
   readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
   readonly #clock: Clock;
+  readonly #usage: Usage;
 
   constructor(
     roomRepository: RoomRepository,
     gameRepository: GameRepository,
     notifier: PlayerNotifier,
     clock: Clock,
+    usage: Usage,
   ) {
     this.#roomRepository = roomRepository;
     this.#gameRepository = gameRepository;
     this.#notifier = notifier;
     this.#clock = clock;
+    this.#usage = usage;
   }
 
   async execute({ roomId, playerId, connectionId }: DisconnectPlayerInput): Promise<void> {
@@ -45,6 +50,7 @@ export class DisconnectPlayerUseCase {
     room.disconnect(playerId, connectionId, this.#clock.now());
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
+    const stageBefore = game?.stage.kind;
     // Neither the round nor its reveal waits for who disconnects; past its time, the round is
     // revealed by time.
     const notRevealedByTime =
@@ -57,6 +63,7 @@ export class DisconnectPlayerUseCase {
     const gameEvents = game?.pullEvents() ?? [];
     await this.#roomRepository.save(room);
     if (game && gameEvents.length > 0) await this.#gameRepository.save(game);
+    if (game && stageBefore) await recordEndIfJustEnded(this.#usage, room, game, stageBefore);
 
     if (game) {
       await notifyGame({ room, game }, { roomEvents, gameEvents }, this.#notifier, playerId);

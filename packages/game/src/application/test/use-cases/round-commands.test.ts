@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import { describe, expect, it } from 'vitest';
 import { AnswerDilemmaUseCase } from '../../use-cases/answer-dilemma.use-case.ts';
 import { ConnectPlayerUseCase } from '../../use-cases/connect-player.use-case.ts';
@@ -78,14 +79,27 @@ async function arrange() {
       notifier,
       game.clock,
     ),
-    moveOn: new MoveOnUseCase(game.roomRepository, game.gameRepository, notifier, game.clock),
+    moveOn: new MoveOnUseCase(
+      game.roomRepository,
+      game.gameRepository,
+      notifier,
+      game.clock,
+      new InMemoryUsage(),
+    ),
     getReadyToMoveOn: new GetReadyToMoveOnUseCase(
       game.roomRepository,
       game.gameRepository,
       notifier,
       game.clock,
+      new InMemoryUsage(),
     ),
-    leaveRoom: new LeaveRoomUseCase(game.roomRepository, game.gameRepository, notifier, game.clock),
+    leaveRoom: new LeaveRoomUseCase(
+      game.roomRepository,
+      game.gameRepository,
+      notifier,
+      game.clock,
+      new InMemoryUsage(),
+    ),
     reportDilemma: new ReportDilemmaUseCase({ ...ports, reports }),
     skipDilemma: new SkipDilemmaUseCase(ports),
     disconnectPlayer: new DisconnectPlayerUseCase(
@@ -93,13 +107,17 @@ async function arrange() {
       game.gameRepository,
       notifier,
       game.clock,
+      new InMemoryUsage(),
     ),
-    joinRoom: new JoinRoomUseCase({
-      sealProvider: new InMemorySealProvider(),
-      ...ports,
-      idGenerator: game.idGenerator,
-      randomness: game.randomness,
-    }),
+    joinRoom: new JoinRoomUseCase(
+      {
+        sealProvider: new InMemorySealProvider(),
+        ...ports,
+        idGenerator: game.idGenerator,
+        randomness: game.randomness,
+      },
+      new InMemoryUsage(),
+    ),
   };
 }
 

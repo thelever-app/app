@@ -10,6 +10,7 @@ export const SEAL_BEFORE_FIRST_ACCESS: Seal = {
   researchConsentVersion: null,
   commercialLicenceConsentVersion: null,
   underEighteen: true,
+  objectsToAnalytics: false,
 };
 
 /** Gives the seals it is given, by identity, and the one of before the first access to anyone else. */

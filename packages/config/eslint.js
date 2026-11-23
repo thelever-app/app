@@ -5,7 +5,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 /** The bounded contexts, each in its own package (ADR 0001). */
-const CONTEXTS = ['game', 'dilemmas', 'consent', 'events', 'moderation', 'identity'];
+const CONTEXTS = ['game', 'dilemmas', 'consent', 'events', 'moderation', 'identity', 'analytics'];
 
 /** Every entry of these packages. */
 const entriesOf = (packages) =>

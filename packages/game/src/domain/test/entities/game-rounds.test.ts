@@ -31,6 +31,7 @@ const SEAL = {
   researchConsentVersion: null,
   commercialLicenceConsentVersion: null,
   underEighteen: false,
+  objectsToAnalytics: false,
 };
 const AT = new Date('2026-11-09T10:00:00Z');
 const SECOND = 1000;

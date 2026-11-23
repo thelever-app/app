@@ -10,6 +10,11 @@ export interface Seal {
   readonly researchConsentVersion: string | null;
   readonly commercialLicenceConsentVersion: string | null;
   readonly underEighteen: boolean;
+  /**
+   * Whether the player objects to product analytics: then neither the time they took to answer nor
+   * the time the group spent on the reveal is kept (RES-21).
+   */
+  readonly objectsToAnalytics: boolean;
 }
 
 /** The vote a player believes another one chose. */
@@ -95,6 +100,16 @@ export class AnswerVO {
 
   get seal(): Seal {
     return { ...this.#props.seal };
+  }
+
+  /** The same answer, without the predictions of the vote of that player. */
+  withoutPredictionsAbout(playerId: string): AnswerVO {
+    return new AnswerVO({
+      ...this.toProps(),
+      votePredictions: this.votePredictions.filter(
+        (prediction) => prediction.playerId !== playerId,
+      ),
+    });
   }
 
   /** The same answer, now with the time it took to complete it. */

@@ -18,3 +18,9 @@ export type {
   ReportReason,
 } from './domain/vos/report-reason.vo.ts';
 export type { Language } from './domain/vos/language.vo.ts';
+export type {
+  EraseModerationData,
+  ExportModerationData,
+  ModerationData,
+  SendersWithEmail,
+} from './application/use-cases/moderation-personal-data.use-case.ts';

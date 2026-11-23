@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import {
   InMemorySealProvider,
   SEAL_BEFORE_FIRST_ACCESS,
@@ -46,15 +47,18 @@ function joinRoomOf(
   ports: Awaited<ReturnType<typeof lobbyOfThree>>,
   notifier: InMemoryPlayerNotifier,
 ): JoinRoomUseCase {
-  return new JoinRoomUseCase({
-    sealProvider: new InMemorySealProvider(SEALS),
-    roomRepository: ports.roomRepository,
-    gameRepository: ports.gameRepository,
-    notifier,
-    idGenerator: ports.idGenerator,
-    randomness: new KeepOrderRandomness(),
-    clock: ports.clock,
-  });
+  return new JoinRoomUseCase(
+    {
+      sealProvider: new InMemorySealProvider(SEALS),
+      roomRepository: ports.roomRepository,
+      gameRepository: ports.gameRepository,
+      notifier,
+      idGenerator: ports.idGenerator,
+      randomness: new KeepOrderRandomness(),
+      clock: ports.clock,
+    },
+    new InMemoryUsage(),
+  );
 }
 
 describe('JoinRoomUseCase', () => {
@@ -175,6 +179,7 @@ describe('JoinRoomUseCase', () => {
             researchConsentVersion: null,
             commercialLicenceConsentVersion: null,
             underEighteen: false,
+            objectsToAnalytics: false,
           },
           new Date(),
         ),

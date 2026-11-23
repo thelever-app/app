@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import { describe, expect, it } from 'vitest';
 import { ConnectPlayerUseCase } from '../../use-cases/connect-player.use-case.ts';
 import { DisconnectPlayerUseCase } from '../../use-cases/disconnect-player.use-case.ts';
@@ -25,6 +26,7 @@ async function arrange() {
     game.gameRepository,
     notifier,
     game.clock,
+    new InMemoryUsage(),
   );
   const { connectionId } = await connectPlayer.execute({
     roomId: game.roomId,

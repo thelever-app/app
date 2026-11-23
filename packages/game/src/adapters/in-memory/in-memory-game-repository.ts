@@ -14,6 +14,12 @@ export class InMemoryGameRepository implements GameRepository {
     return snapshot && Game.restore(snapshot);
   }
 
+  async idsOfRoom(roomId: string): Promise<readonly string[]> {
+    return [...this.#snapshots.values()]
+      .filter((snapshot) => snapshot.roomId === roomId)
+      .map(({ id }) => id);
+  }
+
   async deleteOfRoom(roomId: string): Promise<void> {
     for (const [id, snapshot] of this.#snapshots) {
       if (snapshot.roomId === roomId) this.#snapshots.delete(id);

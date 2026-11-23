@@ -362,3 +362,15 @@ export {
   SkipDilemmaUseCase,
   type SkipDilemmaInput,
 } from './application/use-cases/skip-dilemma.use-case.ts';
+export type { Usage, UsageFact } from './application/ports/usage.port.ts';
+export {
+  type EraseGameData,
+  EraseGameDataUseCase,
+} from './application/use-cases/erase-game-data.use-case.ts';
+export {
+  type ExportLikes,
+  ExportLikesUseCase,
+  type ForgetLikes,
+  ForgetLikesUseCase,
+  type LikeData,
+} from './application/use-cases/likes-personal-data.use-case.ts';

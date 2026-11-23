@@ -41,8 +41,8 @@ export function describeAcceptanceRepositoryContract(
       const found = await repository.findByIdentity('TestIdentity');
       expect(found.toSnapshot().accepted).toEqual(
         expect.arrayContaining([
-          { document: 'terms-of-use', version: 2, acceptedAt: ACCEPTED_AT },
-          { document: 'game-consent', version: 1, acceptedAt: ACCEPTED_AT },
+          { document: 'terms-of-use', version: 2, acceptedAt: ACCEPTED_AT, withdrawnAt: null },
+          { document: 'game-consent', version: 1, acceptedAt: ACCEPTED_AT, withdrawnAt: null },
         ]),
       );
       expect(found.toSnapshot().accepted).toHaveLength(2);
@@ -63,7 +63,7 @@ export function describeAcceptanceRepositoryContract(
 
       // Assert
       expect((await repository.findByIdentity('TestIdentity')).toSnapshot().accepted).toEqual([
-        { document: 'game-consent', version: 1, acceptedAt: later },
+        { document: 'game-consent', version: 1, acceptedAt: later, withdrawnAt: null },
       ]);
     });
 
@@ -73,7 +73,9 @@ export function describeAcceptanceRepositoryContract(
       await repository.save(
         Acceptances.fromSnapshot({
           identity: 'TestIdentity',
-          accepted: [{ document: 'terms-of-use', version: 1, acceptedAt: ACCEPTED_AT }],
+          accepted: [
+            { document: 'terms-of-use', version: 1, acceptedAt: ACCEPTED_AT, withdrawnAt: null },
+          ],
         }),
       );
       const giving = await repository.findByIdentity('TestIdentity');
@@ -89,10 +91,31 @@ export function describeAcceptanceRepositoryContract(
       // Assert
       expect((await repository.findByIdentity('TestIdentity')).toSnapshot().accepted).toEqual(
         expect.arrayContaining([
-          { document: 'terms-of-use', version: 2, acceptedAt: later },
-          { document: 'game-consent', version: 1, acceptedAt: later },
+          { document: 'terms-of-use', version: 2, acceptedAt: later, withdrawnAt: null },
+          { document: 'game-consent', version: 1, acceptedAt: later, withdrawnAt: null },
         ]),
       );
+    });
+
+    it('should not lose a withdrawal to a save of what was read before it', async () => {
+      // Arrange: the game consent is withdrawn while something else of the same identity is saved.
+      const repository = await create();
+      const given = Acceptances.none('TestIdentity');
+      given.accept('game-consent', 1, PUBLISHED, ACCEPTED_AT);
+      await repository.save(given);
+      const stale = await repository.findByIdentity('TestIdentity');
+      const withdrawing = await repository.findByIdentity('TestIdentity');
+      const withdrawn = new Date('2026-12-01T08:00:00Z');
+      withdrawing.withdraw('game-consent', withdrawn);
+      await repository.save(withdrawing);
+
+      // Act
+      await repository.save(stale);
+
+      // Assert
+      expect((await repository.findByIdentity('TestIdentity')).toSnapshot().accepted).toEqual([
+        { document: 'game-consent', version: 1, acceptedAt: ACCEPTED_AT, withdrawnAt: withdrawn },
+      ]);
     });
 
     it('should keep each identity apart', async () => {

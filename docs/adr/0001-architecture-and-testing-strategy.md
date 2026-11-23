@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-15
-- Revised: 2026-11-04 (integration between bounded contexts), 2026-11-06 (the @screen tag)
+- Revised: 2026-11-04 (integration between bounded contexts), 2026-11-06 (the @screen tag), 2026-11-23 (the Analytics context)
 - Notion: [ADR 0001: arquitectura y estrategia de tests (DDD, hexagonal y BDD en dos niveles)](https://app.notion.com/p/3fa95e6919c581bb8105c6c894a93074)
 
 ## Context
@@ -26,7 +26,7 @@ Forces:
 
 Option 2.
 
-**Bounded contexts.** Game (rooms, decision phase, reveal and points), Dilemmas (versions, translations, catalog and authoring), Moderation, Consent and research (`consent` and `events`, with the single consent gate) and Identity. Each context is modelled when its first story arrives. Game comes first and lives in `packages/game`.
+**Bounded contexts.** Game (rooms, decision phase, reveal and points), Dilemmas (versions, translations, catalog and authoring), Moderation, Consent and research (`consent` and `events`, with the single consent gate), Identity and, since 2026-11-23, Analytics (`packages/analytics`: the product analytics, computed only on the server from usage events). Each context is modelled when its first story arrives. Game comes first and lives in `packages/game`.
 
 **Layers inside each context.**
 

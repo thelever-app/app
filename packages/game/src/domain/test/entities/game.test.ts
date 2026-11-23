@@ -24,6 +24,7 @@ const SEAL = {
   researchConsentVersion: 'TestResearchConsentVersion',
   commercialLicenceConsentVersion: null,
   underEighteen: false,
+  objectsToAnalytics: false,
 };
 const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId, index) => ({
   dilemmaId,

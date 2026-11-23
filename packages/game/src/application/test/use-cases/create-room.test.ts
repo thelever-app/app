@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { describe, expect, it } from 'vitest';
 import { CreateRoomUseCase } from '../../use-cases/create-room.use-case.ts';
@@ -34,6 +35,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialRandomness(),
         new ManualClock(),
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       );
 
       // Act
@@ -61,6 +63,7 @@ describe('CreateRoomUseCase', () => {
         new FixedRandomness(0, 0, 0, 0, 0),
         new ManualClock(),
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       ).execute(ANA);
 
       // Act
@@ -71,6 +74,7 @@ describe('CreateRoomUseCase', () => {
         new FixedRandomness(0, 0, 0, 0, 0, 1, 1, 1, 1, 1),
         new ManualClock(),
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       ).execute(ANA);
 
       // Assert
@@ -89,6 +93,7 @@ describe('CreateRoomUseCase', () => {
         new FixedRandomness(),
         new ManualClock(),
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       ).execute(ANA);
 
       // Act & Assert
@@ -100,6 +105,7 @@ describe('CreateRoomUseCase', () => {
           new FixedRandomness(),
           new ManualClock(),
           new InMemorySealProvider(),
+          new InMemoryUsage(),
         ).execute(ANA),
       ).rejects.toThrow(RoomCodeUnavailableError);
     });
@@ -114,6 +120,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialRandomness(),
         new ManualClock(),
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       );
 
       // Act
@@ -153,6 +160,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialRandomness(),
         new ManualClock(),
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       );
 
       // Act & Assert
@@ -170,6 +178,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialRandomness(),
         new ManualClock(),
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       );
 
       // Act & Assert
@@ -187,6 +196,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialRandomness(),
         new ManualClock(),
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       );
 
       // Act & Assert
@@ -208,6 +218,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialRandomness(),
         new ManualClock(),
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       );
 
       // Act & Assert
@@ -225,6 +236,7 @@ describe('CreateRoomUseCase', () => {
         new SequentialRandomness(),
         new ManualClock(),
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       );
 
       // Act & Assert

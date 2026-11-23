@@ -26,6 +26,7 @@ const LUIS_SEAL = {
   researchConsentVersion: 'TestResearchConsentVersion',
   commercialLicenceConsentVersion: null,
   underEighteen: false,
+  objectsToAnalytics: false,
 };
 
 /** Ana hosts a room with Luis and Marta, and the game is in the decision phase. */

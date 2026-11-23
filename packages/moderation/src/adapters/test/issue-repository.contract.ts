@@ -280,5 +280,85 @@ export function describeIssueRepositoryContract(
         await repository.noticesSentSince('TestNotifier', new Date('2026-11-22T00:00:00Z')),
       ).toBe(1);
     });
+
+    it('should keep the issues of a deleted player without them, and find them by identity before', async () => {
+      // Arrange
+      const {
+        repository,
+        dilemmas: [dilemma],
+      } = await create();
+      const dilemmaIssue = Issue.openWith(
+        'TestDilemmaIssue',
+        { kind: 'dilemma', dilemmaId: dilemma.dilemmaId },
+        report(dilemma, 'TestReport1', 'TestPlayer'),
+        AT,
+      );
+      dilemmaIssue.receive(report(dilemma, 'TestReport2', 'TestOther'));
+      const nicknameIssue = Issue.openWith(
+        'TestNicknameIssue',
+        { kind: 'nickname', nickname: 'TestNickname', owner: 'TestPlayer' },
+        nicknameReport('TestNicknameReport', 'TestPlayer'),
+        AT,
+      );
+      const noticeIssue = Issue.openWith(
+        'TestNoticeIssue',
+        { kind: 'reference', reference: 'TestReference' },
+        notice('TestNotice', AT, 'TestPlayer'),
+        AT,
+      );
+      for (const issue of [dilemmaIssue, nicknameIssue, noticeIssue]) await repository.save(issue);
+      const involving = await repository.involving('TestPlayer');
+
+      // Act
+      for (const issue of involving) {
+        issue.unlink('TestPlayer');
+        await repository.save(issue);
+      }
+
+      // Assert
+      expect(involving.map(({ id }) => id).sort()).toEqual([
+        'TestDilemmaIssue',
+        'TestNicknameIssue',
+        'TestNoticeIssue',
+      ]);
+      expect(await repository.involving('TestPlayer')).toEqual([]);
+      const dilemmaReports = (await repository.findById('TestDilemmaIssue'))?.toSnapshot()
+        .dilemmaReports;
+      expect(dilemmaReports?.map(({ identity, comment }) => ({ identity, comment }))).toEqual([
+        { identity: null, comment: 'TestComment' },
+        { identity: 'TestOther', comment: 'TestComment' },
+      ]);
+      const nickname = (await repository.findById('TestNicknameIssue'))?.toSnapshot();
+      expect(nickname?.content).toEqual({
+        kind: 'nickname',
+        nickname: 'TestNickname',
+        owner: null,
+      });
+      expect(nickname?.nicknameReports[0]?.owner).toBeNull();
+      const sent = (await repository.findById('TestNoticeIssue'))?.toSnapshot().notices[0];
+      expect(sent).toMatchObject({
+        identity: null,
+        name: null,
+        email: null,
+        reference: 'TestReference',
+      });
+    });
+
+    it('should find who sent notices with an email, however it is written', async () => {
+      // Arrange
+      const { repository } = await create();
+      await repository.save(
+        Issue.openWith(
+          'TestNoticeIssue',
+          { kind: 'reference', reference: 'TestReference' },
+          notice('TestNotice'),
+          AT,
+        ),
+      );
+
+      // Act & Assert
+      expect(await repository.sendersWithEmail(' TEST@example.com')).toEqual(['TestNotifier']);
+      expect(await repository.sendersWithEmail('other@example.com')).toEqual([]);
+    });
   });
 }

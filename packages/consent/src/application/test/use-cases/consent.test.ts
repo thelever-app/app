@@ -32,6 +32,7 @@ describe('GetConsentUseCase', () => {
       changed: [],
       current: { 'terms-of-use': 2, 'game-consent': 1 },
       gameConsentVersion: undefined,
+      gameConsentWithdrawn: false,
     });
   });
 });
@@ -51,7 +52,7 @@ describe('AcceptDocumentUseCase', () => {
     // Assert
     expect(view.pending).toEqual(['game-consent']);
     expect((await repository.findByIdentity('uid-ana')).toSnapshot().accepted).toEqual([
-      { document: 'terms-of-use', version: 2, acceptedAt: NOW },
+      { document: 'terms-of-use', version: 2, acceptedAt: NOW, withdrawnAt: null },
     ]);
   });
 

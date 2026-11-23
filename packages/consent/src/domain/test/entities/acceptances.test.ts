@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Acceptances } from '../../entities/acceptances.ts';
 import { NotCurrentVersionError } from '../../errors/not-current-version.error.ts';
+import { NotWithdrawableError } from '../../errors/not-withdrawable.error.ts';
 import type { PublishedVersions } from '../../vos/legal-document.vo.ts';
 
 const NOW = new Date('2026-11-19T10:00:00Z');
@@ -76,7 +77,7 @@ describe('Acceptances', () => {
       // Assert
       expect(acceptances.toSnapshot()).toEqual({
         identity: 'uid-ana',
-        accepted: [{ document: 'game-consent', version: 1, acceptedAt: NOW }],
+        accepted: [{ document: 'game-consent', version: 1, acceptedAt: NOW, withdrawnAt: null }],
       });
     });
 
@@ -95,6 +96,76 @@ describe('Acceptances', () => {
       expect(() => acceptances.accept('terms-of-use', 3, later, NOW)).toThrow(
         NotCurrentVersionError,
       );
+    });
+  });
+
+  describe('withdraw', () => {
+    function playing(): Acceptances {
+      const acceptances = Acceptances.none('uid-ana');
+      acceptances.accept('terms-of-use', 1, FIRST, NOW);
+      acceptances.accept('game-consent', 1, FIRST, NOW);
+      return acceptances;
+    }
+
+    it('should leave the game consent to give again, without saying it changed', () => {
+      // Arrange
+      const acceptances = playing();
+
+      // Act
+      acceptances.withdraw('game-consent', new Date('2026-11-23T10:00:00Z'));
+
+      // Assert
+      expect(acceptances.pending(FIRST)).toEqual(['game-consent']);
+      expect(acceptances.changed(FIRST)).toEqual([]);
+      expect(acceptances.versionOf('game-consent')).toBeUndefined();
+      expect(acceptances.isWithdrawn('game-consent')).toBe(true);
+    });
+
+    it('should keep what was given and when, with when it was withdrawn', () => {
+      // Arrange
+      const acceptances = playing();
+      const withdrawn = new Date('2026-11-23T10:00:00Z');
+
+      // Act
+      acceptances.withdraw('game-consent', withdrawn);
+      acceptances.withdraw('game-consent', new Date('2026-11-24T10:00:00Z'));
+
+      // Assert
+      expect(acceptances.toSnapshot().accepted).toContainEqual({
+        document: 'game-consent',
+        version: 1,
+        acceptedAt: NOW,
+        withdrawnAt: withdrawn,
+      });
+    });
+
+    it('should let it be given again, as easily as the first time', () => {
+      // Arrange
+      const acceptances = playing();
+      acceptances.withdraw('game-consent', new Date('2026-11-23T10:00:00Z'));
+
+      // Act
+      acceptances.accept('game-consent', 1, FIRST, new Date('2026-11-25T10:00:00Z'));
+
+      // Assert
+      expect(acceptances.pending(FIRST)).toEqual([]);
+      expect(acceptances.isWithdrawn('game-consent')).toBe(false);
+    });
+
+    it('should do nothing when the game consent was never given', () => {
+      // Arrange
+      const acceptances = Acceptances.none('uid-ana');
+
+      // Act
+      acceptances.withdraw('game-consent', NOW);
+
+      // Assert
+      expect(acceptances.toSnapshot().accepted).toEqual([]);
+    });
+
+    it('should not withdraw the terms of use', () => {
+      // Act & Assert
+      expect(() => playing().withdraw('terms-of-use', NOW)).toThrow(NotWithdrawableError);
     });
   });
 });

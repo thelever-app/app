@@ -7,3 +7,9 @@
 export type { GetConsent } from './application/use-cases/get-consent.use-case.ts';
 export type { ConsentView } from './application/consent-view.ts';
 export type { LegalDocument } from './domain/vos/legal-document.vo.ts';
+export type { ObjectsToAnalytics } from './application/use-cases/objects-to-analytics.use-case.ts';
+export type {
+  ConsentData,
+  EraseConsentData,
+  ExportConsentData,
+} from './application/use-cases/consent-personal-data.use-case.ts';

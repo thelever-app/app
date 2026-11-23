@@ -40,7 +40,7 @@ export interface IssueSnapshot {
  */
 export class Issue {
   readonly #id: string;
-  readonly #content: IssueContent;
+  #content: IssueContent;
   readonly #openedAt: Date;
   #number: number | null;
   #hidden: boolean;
@@ -117,7 +117,7 @@ export class Issue {
     if (
       this.#content.kind === 'dilemma' &&
       !this.#hidden &&
-      new Set(this.#dilemmaReports.map(({ identity }) => identity)).size >= REPORT_THRESHOLD
+      this.#differentReporters() >= REPORT_THRESHOLD
     ) {
       this.#hidden = true;
       this.#events.push({ type: 'hidden' });
@@ -137,13 +137,63 @@ export class Issue {
     }
   }
 
-  /** The players who reported it, once each, in the order they first did: the decision goes to them. */
+  /**
+   * The players who reported it, once each, in the order they first did: the decision goes to
+   * them. Who deleted their data is no longer among them.
+   */
   reporters(): string[] {
     return [
       ...new Set(
-        [...this.#dilemmaReports, ...this.#nicknameReports].map(({ identity }) => identity),
+        [...this.#dilemmaReports, ...this.#nicknameReports].flatMap(({ identity }) =>
+          identity === null ? [] : [identity],
+        ),
       ),
     ];
+  }
+
+  /** Whether anything of the identity is in the issue: a report, a notice or its nickname. */
+  involves(identity: string): boolean {
+    return (
+      (this.#content.kind === 'nickname' && this.#content.owner === identity) ||
+      [...this.#dilemmaReports, ...this.#nicknameReports, ...this.#notices].some(
+        (entry) => entry.identity === identity,
+      ) ||
+      this.#nicknameReports.some((report) => report.toSnapshot().owner === identity)
+    );
+  }
+
+  /**
+   * The data of the identity are deleted: the issue keeps its reports, notices and decision, which
+   * must hold for 3 years, without them (DEC-251). Their reports count still as one player each.
+   */
+  unlink(identity: string): void {
+    if (this.#content.kind === 'nickname' && this.#content.owner === identity) {
+      this.#content = { ...this.#content, owner: null };
+    }
+    this.#dilemmaReports.splice(
+      0,
+      this.#dilemmaReports.length,
+      ...this.#dilemmaReports.map((report) => report.unlinked(identity)),
+    );
+    this.#nicknameReports.splice(
+      0,
+      this.#nicknameReports.length,
+      ...this.#nicknameReports.map((report) => report.unlinked(identity)),
+    );
+    this.#notices.splice(
+      0,
+      this.#notices.length,
+      ...this.#notices.map((notice) => notice.unlinked(identity)),
+    );
+  }
+
+  /** Each player who reported the dilemma once; a report whose player deleted their data, as one more. */
+  #differentReporters(): number {
+    const identities = this.#dilemmaReports.map(({ identity }) => identity);
+    return (
+      new Set(identities.filter((identity) => identity !== null)).size +
+      identities.filter((identity) => identity === null).length
+    );
   }
 
   pullEvents(): IssueEvent[] {

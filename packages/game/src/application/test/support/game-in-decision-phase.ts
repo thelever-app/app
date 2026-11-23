@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import {
   InMemorySealProvider,
   SEAL_BEFORE_FIRST_ACCESS,
@@ -48,18 +49,22 @@ export async function lobbyOfThree(
   roomRepository = new InMemoryRoomRepository(),
 ) {
   const gameRepository = new InMemoryGameRepository();
+  const usage = new InMemoryUsage();
   const idGenerator = new SequentialIdGenerator();
   const randomness = new SequentialRandomness();
   const clock = new ManualClock();
-  const joinRoom = new JoinRoomUseCase({
-    sealProvider: ADULT_SEALS,
-    roomRepository,
-    gameRepository,
-    notifier,
-    idGenerator,
-    randomness,
-    clock,
-  });
+  const joinRoom = new JoinRoomUseCase(
+    {
+      sealProvider: ADULT_SEALS,
+      roomRepository,
+      gameRepository,
+      notifier,
+      idGenerator,
+      randomness,
+      clock,
+    },
+    usage,
+  );
 
   const { roomId, hostId: anaId } = await new CreateRoomUseCase(
     roomRepository,
@@ -68,6 +73,7 @@ export async function lobbyOfThree(
     randomness,
     clock,
     ADULT_SEALS,
+    usage,
   ).execute({
     ambience: 'classic',
     hostNickname: 'Ana',
@@ -107,11 +113,13 @@ export async function lobbyOfThree(
     },
     EXPLORATION_SLOTS,
     CANDIDATES_PER_ROUND,
+    usage,
   );
 
   return {
     roomRepository,
     gameRepository,
+    usage,
     notifier,
     idGenerator,
     randomness,

@@ -43,6 +43,21 @@ export class InMemoryIssueRepository implements IssueRepository {
       .filter((notice) => notice.identity === identity && notice.sentAt >= since).length;
   }
 
+  async involving(identity: string): Promise<Issue[]> {
+    return [...this.#snapshots.values()]
+      .map((snapshot) => Issue.fromSnapshot(snapshot))
+      .filter((issue) => issue.involves(identity))
+      .sort((a, b) => a.toSnapshot().openedAt.getTime() - b.toSnapshot().openedAt.getTime());
+  }
+
+  async sendersWithEmail(email: string): Promise<string[]> {
+    const senders = [...this.#snapshots.values()]
+      .flatMap(({ notices }) => notices)
+      .filter((notice) => notice.email?.toLowerCase() === email.trim().toLowerCase())
+      .flatMap(({ identity }) => (identity === null ? [] : [identity]));
+    return [...new Set(senders)];
+  }
+
   /** Every issue kept, for tests and the scenarios to read. */
   all(): IssueSnapshot[] {
     return [...this.#snapshots.values()].map((snapshot) => snapshot);

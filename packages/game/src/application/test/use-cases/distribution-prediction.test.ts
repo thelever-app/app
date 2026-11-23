@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import { describe, expect, it } from 'vitest';
 import { AnswerDilemmaUseCase } from '../../use-cases/answer-dilemma.use-case.ts';
 import { GetGameStateUseCase } from '../../use-cases/get-game-state.use-case.ts';
@@ -27,7 +28,13 @@ async function arrange() {
     notifier,
     game.clock,
   );
-  const moveOn = new MoveOnUseCase(game.roomRepository, game.gameRepository, notifier, game.clock);
+  const moveOn = new MoveOnUseCase(
+    game.roomRepository,
+    game.gameRepository,
+    notifier,
+    game.clock,
+    new InMemoryUsage(),
+  );
   const getGameState = new GetGameStateUseCase(
     game.roomRepository,
     game.gameRepository,

@@ -17,6 +17,7 @@ const SEAL = {
   researchConsentVersion: null,
   commercialLicenceConsentVersion: null,
   underEighteen: false,
+  objectsToAnalytics: false,
 };
 
 /** Ana hosts Luis and Marta, all connected, in the first round of an anonymous game of two dilemmas. */

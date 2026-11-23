@@ -3,16 +3,20 @@ import { FirstAccess } from '../../entities/first-access.ts';
 import { AgeAlreadyDeclaredError } from '../../errors/age-already-declared.error.ts';
 import { BlockedCountryError } from '../../errors/blocked-country.error.ts';
 import { MonthOfBirthNeededError } from '../../errors/month-of-birth-needed.error.ts';
+import { RequestCodeVO } from '../../vos/request-code.vo.ts';
 
 const NOW = new Date('2026-11-19T10:00:00Z');
 
+const REQUEST_CODE = RequestCodeVO.parse('K7Q4-MD2X-9PRT');
+
 function begun(country: string | undefined): FirstAccess {
-  return FirstAccess.begin({ identity: 'uid-ana', country, now: NOW });
+  if (!REQUEST_CODE) throw new Error('K7Q4-MD2X-9PRT is a request code');
+  return FirstAccess.begin({ identity: 'uid-ana', country, now: NOW, requestCode: REQUEST_CODE });
 }
 
 describe('FirstAccess', () => {
   describe('begin', () => {
-    it('should keep only the region of the country, and when the app was opened', () => {
+    it('should keep only the region of the country, when the app was opened and its request code', () => {
       // Act
       const firstAccess = begun('ES');
 
@@ -23,6 +27,7 @@ describe('FirstAccess', () => {
         birthYear: null,
         birthMonth: null,
         lastOpenedAt: NOW,
+        requestCode: 'K7Q4MD2X9PRT',
       });
     });
 

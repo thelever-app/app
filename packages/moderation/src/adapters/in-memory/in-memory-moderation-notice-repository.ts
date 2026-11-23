@@ -18,6 +18,19 @@ export class InMemoryModerationNoticeRepository implements ModerationNoticeRepos
       .map((snapshot) => ModerationNotice.fromSnapshot(snapshot));
   }
 
+  async allOf(identity: string): Promise<ModerationNotice[]> {
+    return [...this.#snapshots.values()]
+      .filter((notice) => notice.identity === identity)
+      .sort((a, b) => a.decidedAt.getTime() - b.decidedAt.getTime() || a.id.localeCompare(b.id))
+      .map((snapshot) => ModerationNotice.fromSnapshot(snapshot));
+  }
+
+  async deleteAllOf(identity: string): Promise<void> {
+    for (const [id, notice] of this.#snapshots) {
+      if (notice.identity === identity) this.#snapshots.delete(id);
+    }
+  }
+
   async findById(id: string): Promise<ModerationNotice | undefined> {
     const snapshot = this.#snapshots.get(id);
     return snapshot && ModerationNotice.fromSnapshot(snapshot);
