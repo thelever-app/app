@@ -117,4 +117,6 @@ export interface SiteTexts {
   readonly terms: OwnPage;
   /** The privacy policy of the app, which its game consent links to. */
   readonly appPrivacy: OwnPage;
+  /** The cookies policy of the app: what it keeps on the device. Its privacy policy links to it. */
+  readonly appCookies: OwnPage;
 }

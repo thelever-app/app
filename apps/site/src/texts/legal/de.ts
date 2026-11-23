@@ -119,10 +119,11 @@ export const appPrivacy: OwnPage = {
         '- Um das Gesetz zum Alter einzuhalten (Art. 6 Abs. 1 lit. c): dein Geburtsjahr und, wenn du dieses Jahr oder später 18 wirst, der Monat; und deine Region (Europäischer Wirtschaftsraum, übrige Welt oder ein Land, in dem TheLever nicht verfügbar ist), die wir mit einer Datenbank auf unserem eigenen Server aus deiner IP-Adresse ableiten, IP Geolocation by DB-IP (db-ip.com, Lizenz CC BY 4.0). TheLever speichert deine IP nicht; unser Anmeldedienst, Firebase Authentication (Google), protokolliert sie einige Wochen lang zur Sicherheit.',
         '- Um nachweisen zu können, was du akzeptiert hast (Art. 6 Abs. 1 lit. c und Art. 7 Abs. 1): welche Version der Bedingungen und der Einwilligung du wann akzeptiert hast und wann du sie widerrufen hast.',
         '- Um die Nutzung zu messen und das Spiel zu verbessern, aufgrund berechtigten Interesses (Art. 6 Abs. 1 lit. f): wann du die App zum ersten Mal geöffnet hast und über welchen Link du gekommen bist (zum Beispiel den eines Plakats); wann du einen Raum erstellst oder den Raum von jemand anderem betrittst; wann ein Spiel beginnt und endet und mit wie vielen Spielenden; und wie lange du und die Gruppe für jedes Dilemma zum Antworten braucht, was mit dem Spiel gelöscht wird. Niemals deine Stimmen, deine Vorhersagen oder deine Reaktionen, und ohne Cookies: Unser Server zeichnet es auf. Der erste Besuch wird aufgezeichnet, bevor du widersprechen konntest. Du kannst unter Einstellungen → Datenschutz und Daten → Deine Berechtigungen widersprechen: Dann zeichnen wir es nicht mehr auf und löschen die Ereignisse, die wir hatten; die Zeiten der noch gespeicherten Spiele werden mit ihnen gelöscht.',
-        '- Für die Werbung, mit deiner Einwilligung (Art. 6 Abs. 1 lit. a DSGVO und Art. 22.2 LSSI): die Cookies und Kennungen des Werbenetzwerks, je nachdem, was du im Cookie-Manager von Google wählst.',
+        '- Für die Werbung, mit deiner Einwilligung (Art. 6 Abs. 1 lit. a DSGVO und Art. 22.2 LSSI): die Cookies und Kennungen des Werbenetzwerks, je nachdem, was du im Cookie-Manager von Google wählst. Was die App auf deinem Gerät speichert und wie du das änderst, steht in der Cookie-Richtlinie der App (thelever.app/de/cookies-der-app).',
         '- Zur Moderation (rechtliche Pflicht aus dem Gesetz über digitale Dienste und berechtigtes Interesse an einem sicheren Dienst, Art. 6 Abs. 1 lit. c und f): das Dilemma oder der Spitzname, den du meldest, der Grund und dein Kommentar, ohne dass jemand in der Gruppe erfährt, dass du es gemeldet hast; wenn dein Spitzname gemeldet wird, der Spitzname und unsere Entscheidung; wenn du über die Website rechtswidrige Inhalte meldest, was du uns schreibst und, wenn du sie uns gibst, dein Name und deine E-Mail, damit wir dir antworten können; und die Mitteilungen zu jeder Entscheidung.',
         '- Um deine Anfragen zu bearbeiten (Art. 6 Abs. 1 lit. c): deine E-Mail, dein Anliegen und der Code für Anfragen, den wir dir beim ersten Öffnen der App geben und den du unter Einstellungen → Datenschutz und Daten → Deine Daten siehst.',
         '- Damit eine Löschung nicht rückgängig gemacht wird, wenn wir eine Sicherung wiederherstellen (Art. 6 Abs. 1 lit. c und Art. 17): deine anonyme Kennung, der Grund der Löschung und wann du sie beantragt hast und wann sie abgeschlossen war.',
+        '- Wenn du uns mit einer Spende auf Ko-fi unterstützt (Ko-fi Labs Limited, Vereinigtes Königreich): Ko-fi gibt uns deinen Namen oder Nutzernamen, deine E-Mail, den Betrag und die Nachricht, die du schreibst. Wir nutzen sie, um deine Spende abzuwickeln und dir zu danken, aufgrund berechtigten Interesses (Art. 6 Abs. 1 lit. f), und um unsere steuerlichen Pflichten zu erfüllen (Art. 6 Abs. 1 lit. c). Wir verbinden sie nie mit deiner Kennung oder mit irgendetwas, das du in der App tust. Ko-fi und wer die Zahlung abwickelt (PayPal oder Stripe) verarbeiten deine Daten in eigener Verantwortung, nach ihren eigenen Richtlinien.',
       ],
     },
     {
@@ -166,6 +167,7 @@ export const appPrivacy: OwnPage = {
         '- Nutzungsdaten mit deiner Kennung: 13 Monate; danach nur Summen, die dich nicht identifizieren.',
         '- Meldungen, Hinweise auf rechtswidrige Inhalte, Moderationsentscheidungen und ihre Mitteilungen, deine Anfragen mit unseren Antworten und das Register deiner Löschungen: 3 Jahre. Wenn du deine Daten löschst, haben die Meldungen und Hinweise, die du gemacht hast, keinerlei Verbindung mehr zu dir.',
         '- Deine Cookie-Auswahl: was der Cookie-Manager von Google festlegt, höchstens 13 Monate.',
+        '- Die Daten einer Spende: so lange, wie das Steuerrecht es verlangt, in der Regel 4 Jahre.',
         '- Was wir löschen, bleibt einige Tage in den Sicherungen: 7 Tage in unseren und bis zu 180 in denen von Firebase. In der Zwischenzeit wird es für nichts genutzt.',
       ],
     },
@@ -191,6 +193,130 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         'Wir verschlüsseln die Daten bei der Übertragung und im Ruhezustand, gewähren nur den nötigsten Zugriff, speichern deine IP nicht in unseren Datenbanken und löschen Spiele automatisch. Bei einer Datenpanne, die dich betrifft, informieren wir dich und die AEPD, wenn das Gesetz es verlangt.',
         'Wenn wir diese Erklärung wesentlich ändern, sagen wir es dir in der App, bevor es dich betrifft, und wenn die Änderung deine Einwilligung braucht, bitten wir dich erneut darum.',
+      ],
+    },
+  ],
+};
+
+/** The cookies policy of the app: what it keeps on the device, which its privacy policy links to. */
+export const appCookies: OwnPage = {
+  title: 'Cookies der App',
+  description:
+    'Was die App von TheLever auf deinem Gerät speichert, wofür und wie du änderst, was du akzeptierst.',
+  updated: UPDATED,
+  sections: [
+    {
+      heading: 'Was sie sind',
+      paragraphs: [
+        'Cookies sind kleine Dateien, die eine Website oder eine App in deinem Browser speichert und später wieder liest. Diese Richtlinie nennt auch ähnliche Techniken „Cookies“, etwa den lokalen Speicher des Browsers, den die App fast immer nutzt.',
+      ],
+    },
+    {
+      heading: 'Was sie speichert, ohne dich zu fragen',
+      paragraphs: [
+        'Nur das, was für das Spiel unerlässlich ist oder um sich zu merken, was du wählst, und das das Gesetz nicht von einer Einwilligung abhängig macht (Art. 22.2 des spanischen LSSI). Fast alles gehört TheLever; die Sitzung gehört Firebase Authentication (Google), das uns die Anmeldung bereitstellt, und was du im Cookie-Manager antwortest, speichert der Manager von Google.',
+      ],
+      table: {
+        headers: ['Name', 'Von wem', 'Wofür', 'Dauer'],
+        rows: [
+          [
+            'firebaseLocalStorageDb',
+            'Firebase Authentication (Google)',
+            'Deine Sitzung: die anonyme Kennung deines Geräts',
+            'Bis du deine Daten oder die des Browsers löschst',
+          ],
+          ['thelever.language', 'TheLever', 'Die Sprache, die du gewählt hast', 'Ebenso'],
+          ['thelever.muted', 'TheLever', 'Ob du den Ton ausgeschaltet hast', 'Ebenso'],
+          [
+            'thelever.cookieConsentAnswered',
+            'TheLever',
+            'Dass du dem Cookie-Manager schon geantwortet hast',
+            'Ebenso',
+          ],
+          [
+            'thelever.personalisedAds',
+            'TheLever',
+            'Ob Werbung personalisiert werden darf, je nachdem, was du akzeptiert hast',
+            'Ebenso',
+          ],
+          [
+            'thelever.lastNickname',
+            'TheLever',
+            'Der letzte Spitzname, mit dem du gespielt hast, um ihn dir vorzuschlagen',
+            'Ebenso',
+          ],
+          [
+            'thelever.playedDilemmas',
+            'TheLever',
+            'Die Dilemmas, die du gespielt hast, ohne deine Stimmen, damit sie sich nicht wiederholen',
+            'Ebenso',
+          ],
+          [
+            'thelever.worldVote.…',
+            'TheLever',
+            'Was du allein abgestimmt und vorhergesagt hast, um dir das weltweite Ergebnis zu zeigen',
+            'Ebenso',
+          ],
+          [
+            'thelever.installOfferClosedAt und thelever.lastFinishedGameAt',
+            'TheLever',
+            'Wann du das Angebot, die App zu installieren, geschlossen und wann du dein letztes Spiel beendet hast, damit es nicht zu früh wiederkommt',
+            'Ebenso',
+          ],
+          [
+            'thelever.supportCardClosed',
+            'TheLever',
+            'Dass du die Karte zur Unterstützung von TheLever geschlossen hast',
+            'Ebenso',
+          ],
+          [
+            'thelever.accessCode',
+            'TheLever',
+            'Der Zugangscode, solange die App nicht für alle offen ist',
+            'Bis du die Daten des Browsers löschst',
+          ],
+          [
+            'thelever.toldAnonymous',
+            'TheLever',
+            'Dass wir dir schon gesagt haben, dass der Raum anonym ist',
+            'Bis du den Tab schließt',
+          ],
+          [
+            'FCCDCF',
+            'Cookie-Manager von Google',
+            'Speichern, was du im Manager antwortest',
+            '13 Monate',
+          ],
+        ],
+      },
+    },
+    {
+      heading: 'Was deine Einwilligung braucht',
+      paragraphs: [
+        'Alles andere, und nur wenn du es im Cookie-Manager von Google akzeptierst, der dich beim ersten Besuch fragt:',
+        '- Die Statistiken des Managers selbst (FCNEC, von Google, 365 Tage).',
+        '- Die Werbung. Heute zeigt die App keine. Wenn sie welche zeigt, nutzen Google AdSense und seine Partner Cookies, um sie anzuzeigen und zu messen und, wenn du 18 Jahre oder älter bist und zustimmst, um sie zu personalisieren; wenn dein Browser das Signal Global Privacy Control sendet, wird sie nicht personalisiert. Sie wird nie anhand deiner Stimmen ausgewählt, und bevor sie kommt, ergänzt diese Richtlinie ihre Cookies.',
+        'Wir nutzen keine Analyse-Cookies: Was wir von der Nutzung messen, zeichnet unser Server auf, wie die Datenschutzerklärung der App erklärt.',
+      ],
+    },
+    {
+      heading: 'Wie du änderst, was du akzeptierst',
+      paragraphs: [
+        'Unter Einstellungen → Datenschutz und Daten → Cookies und Werbung öffnest du den Cookie-Manager von Google erneut und änderst, was du akzeptiert hast, so leicht wie beim ersten Mal.',
+        'Alles andere löschst du mit Einstellungen → Datenschutz und Daten → Meine Daten löschen, das dein Handy wie neu macht, oder in den Einstellungen deines Browsers. Wenn du ohne Konto spielst, behandelt dich die App dann wie ein neues Gerät.',
+      ],
+    },
+    {
+      heading: 'Dritte und Übermittlungen',
+      paragraphs: [
+        'Firebase Authentication verarbeitet deine Sitzung in unserem Auftrag. Google und die Werbepartner, die du akzeptierst, nutzen ihre Cookies als eigene Verantwortliche; der Cookie-Manager folgt dem Transparency and Consent Framework von IAB Europe und zeigt dir, wer sie sind und wofür jeder deine Daten nutzt.',
+        'Google kann Daten außerhalb des Europäischen Wirtschaftsraums verarbeiten, auf Grundlage des Datenschutzrahmens EU-USA und der Standardvertragsklauseln der Europäischen Kommission.',
+      ],
+    },
+    {
+      heading: 'Mehr Informationen',
+      paragraphs: [
+        'Wie wir deine Daten verarbeiten, steht in der Datenschutzerklärung der App. Bei Fragen schreib an privacidad@thelever.app.',
       ],
     },
   ],

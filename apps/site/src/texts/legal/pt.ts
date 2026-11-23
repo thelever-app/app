@@ -119,10 +119,11 @@ export const appPrivacy: OwnPage = {
         '- Para cumprir a lei sobre a idade (art. 6.1.c): o teu ano de nascimento e, se fazes 18 anos este ano ou mais tarde, o mês; e a tua região (Espaço Económico Europeu, resto do mundo ou país onde o TheLever não está disponível), que deduzimos do teu endereço IP com uma base de dados no nosso próprio servidor, IP Geolocation by DB-IP (db-ip.com, licença CC BY 4.0). O TheLever não guarda o teu IP; o nosso fornecedor de acesso, o Firebase Authentication (Google), regista-o durante algumas semanas por segurança.',
         '- Para podermos provar o que aceitaste (art. 6.1.c e 7.1): que versão das condições e do consentimento aceitaste e quando, e quando o retiraste.',
         '- Para medir a utilização e melhorar o jogo, com base no interesse legítimo (art. 6.1.f): quando abriste a app pela primeira vez e por que link chegaste (por exemplo, o de um cartaz); quando crias uma sala ou entras na de outra pessoa; quando um jogo começa e acaba e com quantos jogadores; e quanto tempo tu e o grupo demoram a responder a cada dilema, que se apaga com o jogo. Nunca os teus votos, as tuas previsões nem as tuas reações, e sem cookies: é o nosso servidor que o regista. A primeira visita é registada antes de te poderes opor. Podes opor-te em Definições → Privacidade e dados → As tuas permissões: deixamos de o registar e apagamos os eventos que tínhamos; os tempos dos jogos que ainda se conservam apagam-se com eles.',
-        '- Para os anúncios, com o teu consentimento (art. 6.1.a RGPD e art. 22.2 LSSI): os cookies e identificadores da rede publicitária, conforme o que escolheres no gestor de cookies da Google.',
+        '- Para os anúncios, com o teu consentimento (art. 6.1.a RGPD e art. 22.2 LSSI): os cookies e identificadores da rede publicitária, conforme o que escolheres no gestor de cookies da Google. O que a app guarda no teu dispositivo, e como o mudar, está na política de cookies da app (thelever.app/pt/cookies-da-app).',
         '- Para moderar (obrigação legal do Regulamento dos Serviços Digitais e interesse legítimo num serviço seguro, art. 6.1.c e 6.1.f): o dilema ou a alcunha que denuncias, o motivo e o teu comentário, sem dizer a ninguém do grupo que o denunciaste; se denunciarem a tua alcunha, a alcunha e a nossa decisão; se denunciares conteúdo ilegal a partir do site, o que nos contas e, se nos deres, o teu nome e o teu email para te respondermos; e os avisos de cada decisão.',
         '- Para tratar os teus pedidos (art. 6.1.c): o teu email, o que nos pedires e o código para pedidos que te damos quando abres a app pela primeira vez, que vês em Definições → Privacidade e dados → Os teus dados.',
         '- Para que um apagamento não se desfaça se restaurarmos uma cópia de segurança (art. 6.1.c e 17): o teu identificador anónimo, o motivo do apagamento e quando o pediste e quando terminou.',
+        '- Se nos apoiares com um donativo no Ko-fi (Ko-fi Labs Limited, Reino Unido): o Ko-fi dá-nos o teu nome ou nome de utilizador, o teu email, o montante e a mensagem que escreveres. Usamo-los para gerir e agradecer o teu donativo, com base no interesse legítimo (art. 6.1.f), e para cumprir as nossas obrigações fiscais (art. 6.1.c). Nunca os ligamos ao teu identificador nem a nada do que fazes na app. O Ko-fi e quem processa o pagamento (PayPal ou Stripe) tratam os teus dados por conta própria, segundo as suas políticas.',
       ],
     },
     {
@@ -166,6 +167,7 @@ export const appPrivacy: OwnPage = {
         '- Os dados de utilização com o teu identificador: 13 meses; depois, só totais que não te identificam.',
         '- As denúncias, as decisões de moderação e os seus avisos, os teus pedidos com as nossas respostas e o registo dos teus apagamentos: 3 anos. Se apagares os teus dados, as denúncias que fizeste ficam sem qualquer ligação a ti.',
         '- As tuas escolhas de cookies: o que o gestor de cookies da Google definir, no máximo 13 meses.',
+        '- Os dados de um donativo: o tempo que a lei fiscal exige, em geral 4 anos.',
         '- O que apagamos fica alguns dias nas cópias de segurança: 7 dias nas nossas e até 180 nas do Firebase. Entretanto não é usado para nada.',
       ],
     },
@@ -191,6 +193,130 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         'Ciframos os dados em trânsito e em repouso, damos o acesso mínimo a eles, não guardamos o teu IP nas nossas bases de dados e apagamos os jogos sozinhos. Se houvesse uma violação que te afetasse, avisávamos-te a ti e à AEPD quando a lei o exigisse.',
         'Se alterarmos esta política de forma importante, dizemos-te na app antes de te afetar, e se a alteração exigir o teu consentimento, pedimos-to de novo.',
+      ],
+    },
+  ],
+};
+
+/** The cookies policy of the app: what it keeps on the device, which its privacy policy links to. */
+export const appCookies: OwnPage = {
+  title: 'Cookies da app',
+  description:
+    'O que a app do TheLever guarda no teu dispositivo, para quê e como mudar o que aceitas.',
+  updated: UPDATED,
+  sections: [
+    {
+      heading: 'O que são',
+      paragraphs: [
+        'Os cookies são pequenos ficheiros que um site ou uma app guarda no teu navegador e volta a ler depois. Esta política chama também «cookies» às tecnologias parecidas, como o armazenamento local do navegador, que é o que a app usa quase sempre.',
+      ],
+    },
+    {
+      heading: 'O que guarda sem te pedir autorização',
+      paragraphs: [
+        'Só o imprescindível para que o jogo funcione ou para lembrar o que escolhes, que a lei não sujeita a consentimento (art. 22.2 da LSSI espanhola). Quase tudo é do TheLever; a sessão é do Firebase Authentication (Google), que nos dá o acesso, e o que respondes no gestor de cookies é guardado pelo gestor da Google.',
+      ],
+      table: {
+        headers: ['Nome', 'De quem', 'Para quê', 'Duração'],
+        rows: [
+          [
+            'firebaseLocalStorageDb',
+            'Firebase Authentication (Google)',
+            'A tua sessão: o identificador anónimo do teu dispositivo',
+            'Até apagares os teus dados ou os do navegador',
+          ],
+          ['thelever.language', 'TheLever', 'A língua que escolheste', 'Igual'],
+          ['thelever.muted', 'TheLever', 'Se tiraste o som', 'Igual'],
+          [
+            'thelever.cookieConsentAnswered',
+            'TheLever',
+            'Que já respondeste ao gestor de cookies',
+            'Igual',
+          ],
+          [
+            'thelever.personalisedAds',
+            'TheLever',
+            'Se os anúncios podem ser personalizados, segundo o que aceitaste',
+            'Igual',
+          ],
+          [
+            'thelever.lastNickname',
+            'TheLever',
+            'A última alcunha com que jogaste, para ta propor',
+            'Igual',
+          ],
+          [
+            'thelever.playedDilemmas',
+            'TheLever',
+            'Os dilemas que jogaste, sem os teus votos, para não tos repetir',
+            'Igual',
+          ],
+          [
+            'thelever.worldVote.…',
+            'TheLever',
+            'O que votaste e previste sozinho, para te mostrar o resultado mundial',
+            'Igual',
+          ],
+          [
+            'thelever.installOfferClosedAt e thelever.lastFinishedGameAt',
+            'TheLever',
+            'Quando fechaste a oferta de instalar a app e quando acabaste o teu último jogo, para não ta repetir antes do tempo',
+            'Igual',
+          ],
+          [
+            'thelever.supportCardClosed',
+            'TheLever',
+            'Que fechaste o cartão para apoiar o TheLever',
+            'Igual',
+          ],
+          [
+            'thelever.accessCode',
+            'TheLever',
+            'O código de acesso, enquanto a app não está aberta a todos',
+            'Até apagares os dados do navegador',
+          ],
+          [
+            'thelever.toldAnonymous',
+            'TheLever',
+            'Que já te avisámos de que a sala é anónima',
+            'Até fechares o separador',
+          ],
+          [
+            'FCCDCF',
+            'Gestor de cookies da Google',
+            'Guardar o que respondes no gestor',
+            '13 meses',
+          ],
+        ],
+      },
+    },
+    {
+      heading: 'O que precisa do teu consentimento',
+      paragraphs: [
+        'Tudo o resto, e só se o aceitares no gestor de cookies da Google, que te pergunta na primeira vez que entras:',
+        '- As estatísticas do próprio gestor (FCNEC, da Google, 365 dias).',
+        '- Os anúncios. Hoje a app não mostra nenhum. Quando os mostrar, o Google AdSense e os seus parceiros vão usar cookies para os mostrar e medir e, se tiveres 18 anos ou mais e o aceitares, para os personalizar; se o teu navegador enviar o sinal Global Privacy Control, não são personalizados. Nunca são escolhidos a partir do que votas, e antes de chegarem esta política vai acrescentar os seus cookies.',
+        'Não usamos cookies de análise: o que medimos da utilização é registado pelo nosso servidor, como explica a política de privacidade da app.',
+      ],
+    },
+    {
+      heading: 'Como mudar o que aceitas',
+      paragraphs: [
+        'Em Definições → Privacidade e dados → Cookies e anúncios voltas a abrir o gestor de cookies da Google e mudas o que aceitaste tão facilmente como na primeira vez.',
+        'O resto apagas com Definições → Privacidade e dados → Apagar os meus dados, que deixa o teu telemóvel como novo, ou nas definições do navegador. Se jogas sem conta, a app vai então tratar-te como um dispositivo novo.',
+      ],
+    },
+    {
+      heading: 'Terceiros e transferências',
+      paragraphs: [
+        'O Firebase Authentication trata a tua sessão por nossa conta. A Google e os parceiros publicitários que aceitares usam os seus cookies como responsáveis por conta própria; o gestor de cookies segue o Quadro de Transparência e Consentimento da IAB Europe e mostra-te quem são e para que usa cada um os teus dados.',
+        'A Google pode tratar dados fora do Espaço Económico Europeu, ao abrigo do Quadro de Privacidade de Dados UE-EUA e das cláusulas contratuais-tipo da Comissão Europeia.',
+      ],
+    },
+    {
+      heading: 'Mais informação',
+      paragraphs: [
+        'Como tratamos os teus dados está na política de privacidade da app. Para qualquer dúvida, escreve para privacidad@thelever.app.',
       ],
     },
   ],

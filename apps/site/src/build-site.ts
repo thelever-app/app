@@ -108,7 +108,14 @@ export function buildSite(
         ),
       });
     }
-    for (const which of ['privacy', 'cookies', 'legalNotice', 'terms', 'appPrivacy'] as const) {
+    for (const which of [
+      'privacy',
+      'cookies',
+      'legalNotice',
+      'terms',
+      'appPrivacy',
+      'appCookies',
+    ] as const) {
       const own = texts[which];
       pages.push({
         path: pagePath(language, own.title),
