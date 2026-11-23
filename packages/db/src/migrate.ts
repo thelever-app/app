@@ -17,6 +17,13 @@ try {
     await grantRowAccess(db, appUser);
     console.log(`granted the rows to ${appUser}`);
   }
+  // In Cloud Run, the user of the job of moderation, which applies the decisions on the dilemmas
+  // and the nicknames of the rooms besides keeping the issues: the rows the room server has.
+  const moderationUser = process.env.DB_MODERATION_USER;
+  if (moderationUser) {
+    await grantRowAccess(db, moderationUser);
+    console.log(`granted the rows to ${moderationUser}`);
+  }
   // In Cloud Run, the user of the job that loads the catalog, which only touches the dilemmas.
   const catalogUser = process.env.DB_CATALOG_USER;
   if (catalogUser) {

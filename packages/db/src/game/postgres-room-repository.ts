@@ -50,6 +50,17 @@ export class PostgresRoomRepository implements RoomRepository {
     return found && this.findById(found.id);
   }
 
+  async findIdsWith(identity: string): Promise<readonly string[]> {
+    const rows = await (currentTransaction<GameTables>() ?? this.#db)
+      .selectFrom('room_players')
+      .select('room_id')
+      .distinct()
+      .where('identity', '=', identity)
+      .orderBy('room_id')
+      .execute();
+    return rows.map(({ room_id }) => room_id);
+  }
+
   async findIdsWithNobodyConnected(): Promise<readonly string[]> {
     const rows = await (currentTransaction<GameTables>() ?? this.#db)
       .selectFrom('rooms')

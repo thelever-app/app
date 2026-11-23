@@ -36,9 +36,13 @@ async function databaseAt(migration: string): Promise<Kysely<Database>> {
 
 /** A game in progress of each variant, as dev and prod have them, where Ana has voted the first dilemma. */
 async function gamesBefore(db: Kysely<Database>): Promise<void> {
-  // The repository of today writes them as they were, and whether each version has the gap, which
-  // a later migration adds: this one neither reads nor changes it.
+  // The repository of today writes them as they were, and whether each version has the gap and
+  // whether Moderation keeps the dilemma out, which later migrations add: this one neither reads
+  // nor changes them.
   await sql`alter table dilemma_versions add column has_gap boolean`.execute(db);
+  await sql`
+    alter table dilemmas add column moderation text, add column moderation_status_before text
+  `.execute(db);
   const dilemma = Dilemma.create(
     {
       text: 'TestText',

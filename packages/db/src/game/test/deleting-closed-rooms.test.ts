@@ -60,7 +60,12 @@ const KEPT = [
   'dilemma_likes',
   'first_accesses',
   'legal_acceptances',
+  'moderation_issues',
   'dilemma_reports',
+  'nickname_reports',
+  'illegal_content_notices',
+  'moderation_outbox',
+  'moderation_notices',
 ];
 
 /** How many rows each table of the app has, by its name. */
