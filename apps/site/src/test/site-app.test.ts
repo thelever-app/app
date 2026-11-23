@@ -39,6 +39,22 @@ describe('the service of the public web', () => {
     expect(response.text).toContain('Dilemas morales para jugar con tu gente');
   });
 
+  it('should send the security headers with every answer, pages and assets alike', async () => {
+    // Arrange
+    const app = await appWithASite();
+
+    // Act
+    const answers = [await request(app).get('/es/'), await request(app).get('/es/no-existe')];
+
+    // Assert
+    for (const { headers } of answers) {
+      expect(headers['x-content-type-options']).toBe('nosniff');
+      expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+      expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
+      expect(headers['permissions-policy']).toContain('camera=()');
+    }
+  });
+
   it('should serve the stylesheet, the fonts and the illustrations of the pages', async () => {
     // Arrange
     const app = await appWithASite();

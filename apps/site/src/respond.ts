@@ -52,6 +52,7 @@ export async function respond(
   if (path === '/') return home(languageFor(acceptLanguage, languages));
   if (path === '/robots.txt') return robots(environment, origin);
   if (path === '/ads.txt') return adsTxt(adsenseClient);
+  if (path === '/.well-known/security.txt') return securityTxt(origin);
   if (path === '/sitemap.xml') {
     return page(200, await site.read(SITEMAP_FILE), 'application/xml; charset=utf-8', environment);
   }
@@ -145,6 +146,28 @@ function adsTxt(adsenseClient: string | undefined): SiteResponse {
     status: 200,
     headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': CACHE },
     body: `google.com, ${adsenseClient.replace(/^ca-/, '')}, DIRECT, f08c47fec0942fa0\n`,
+  };
+}
+
+/**
+ * Until when security.txt holds, as RFC 9116 asks: under a year away. A test fails once it is
+ * near, so it is renewed before it lapses.
+ */
+export const SECURITY_TXT_EXPIRES = '2027-11-23T00:00:00.000Z';
+
+/** Where to report a vulnerability (RFC 9116): the contact mailbox and the policy of the repository. */
+function securityTxt(origin: string): SiteResponse {
+  return {
+    status: 200,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': CACHE },
+    body: [
+      'Contact: mailto:privacidad@thelever.app',
+      `Expires: ${SECURITY_TXT_EXPIRES}`,
+      'Preferred-Languages: es, en',
+      `Canonical: ${origin}/.well-known/security.txt`,
+      'Policy: https://github.com/thelever-app/app/blob/main/SECURITY.md',
+      '',
+    ].join('\n'),
   };
 }
 

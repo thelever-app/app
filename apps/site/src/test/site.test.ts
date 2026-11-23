@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { pagePath } from '../addresses.ts';
 import { buildSite, fileOf } from '../build-site.ts';
 import type { Languages } from '../pages/page.ts';
-import { type Environment, respond } from '../respond.ts';
+import { type Environment, respond, SECURITY_TXT_EXPIRES } from '../respond.ts';
 import { es } from '../texts/es.ts';
 import { assetPath } from '../serve/assets.ts';
 import { LANGUAGES as SITE_LANGUAGES } from '../texts/index.ts';
@@ -430,6 +430,26 @@ describe('the public web', () => {
     expect(home.body).toContain('href="/es/tecnologia-y-futuro/"');
     expect(home.body).toContain('href="/es/privacidad"');
     expect(home.body).toContain('href="/es/aviso-legal"');
+  });
+
+  it('should say where to report a vulnerability, in security.txt, before it lapses', async () => {
+    // Act
+    const answer = await respond(
+      '/.well-known/security.txt',
+      published({ dilemmas: [], withdrawn: [] }),
+      {
+        environment: 'prod',
+        origin: CONFIG.origin,
+        languages: [...LANGUAGES.keys()],
+      },
+    );
+
+    // Assert
+    expect(answer.status).toBe(200);
+    expect(answer.body).toContain('Contact: mailto:privacidad@thelever.app');
+    expect(answer.body).toContain(`Canonical: ${CONFIG.origin}/.well-known/security.txt`);
+    const monthAhead = Date.now() + 30 * 24 * 60 * 60 * 1000;
+    expect(Date.parse(SECURITY_TXT_EXPIRES)).toBeGreaterThan(monthAhead);
   });
 
   it('should declare the publisher of AdSense in ads.txt once there is one, and answer 404 until then', async () => {
