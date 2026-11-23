@@ -79,6 +79,26 @@ export class PostgresWorldResultRepository implements WorldResultRepository {
     `.execute(currentTransaction<DilemmasTables>() ?? this.#db);
   }
 
+  async receiptsOf(
+    identity: string,
+  ): Promise<{ readonly dilemmaId: string; readonly version: number }[]> {
+    const rows = await (currentTransaction<DilemmasTables>() ?? this.#db)
+      .selectFrom('world_vote_receipts')
+      .select(['dilemma_id', 'version'])
+      .where('identity', '=', identity)
+      .orderBy('dilemma_id')
+      .orderBy('version')
+      .execute();
+    return rows.map(({ dilemma_id, version }) => ({ dilemmaId: dilemma_id, version }));
+  }
+
+  async forgetReceiptsOf(identity: string): Promise<void> {
+    await (currentTransaction<DilemmasTables>() ?? this.#db)
+      .deleteFrom('world_vote_receipts')
+      .where('identity', '=', identity)
+      .execute();
+  }
+
   async publishedCountsOf(
     dilemmaId: string,
     version: number,

@@ -6,6 +6,8 @@ import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findCurrentGame } from './find-current-game.ts';
 import { notifyGame } from './notify-game.ts';
+import { recordEndIfJustEnded } from './record-usage.ts';
+import type { Usage } from '../ports/usage.port.ts';
 
 export interface MoveOnInput {
   readonly roomId: string;
@@ -29,17 +31,20 @@ export class MoveOnUseCase {
   readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
   readonly #clock: Clock;
+  readonly #usage: Usage;
 
   constructor(
     roomRepository: RoomRepository,
     gameRepository: GameRepository,
     notifier: PlayerNotifier,
     clock: Clock,
+    usage: Usage,
   ) {
     this.#roomRepository = roomRepository;
     this.#gameRepository = gameRepository;
     this.#notifier = notifier;
     this.#clock = clock;
+    this.#usage = usage;
   }
 
   async execute({ roomId, playerId, fromPosition }: MoveOnInput): Promise<void> {
@@ -51,9 +56,11 @@ export class MoveOnUseCase {
     if (!room.hasPlayer(playerId)) throw new PlayerNotInRoomError(playerId);
     if (room.host.id !== playerId) throw new NotHostError(playerId);
 
+    const stageBefore = game.stage.kind;
     if (!game.moveOn(playerId, fromPosition, this.#clock.now())) return;
     const gameEvents = game.pullEvents();
     await this.#gameRepository.save(game);
+    await recordEndIfJustEnded(this.#usage, room, game, stageBefore);
 
     await notifyGame({ room, game }, { roomEvents: [], gameEvents }, this.#notifier);
   }

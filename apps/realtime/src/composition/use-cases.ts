@@ -43,6 +43,7 @@ import {
   type Randomness,
   type RoomRepository,
   type SealProvider,
+  type Usage,
   SearchDilemmasUseCase,
   StartGameUseCase,
 } from '@thelever-app/game';
@@ -114,6 +115,8 @@ export function gameQueries({
 /** What the commands of Game need, besides what the queries read from. */
 export interface GameCommandsDependencies extends GameQueriesDependencies {
   readonly notifier: PlayerNotifier;
+  /** Where the facts of use go, for the product analytics. */
+  readonly usage: Usage;
   readonly idGenerator: IdGenerator;
   /** The seal of each player, from their first access: whether they are under 18 and their consent. */
   readonly sealProvider: SealProvider;
@@ -166,6 +169,7 @@ export function gameCommands({
   clock,
   sealProvider,
   moderation,
+  usage,
 }: GameCommandsDependencies): GameCommands {
   return {
     createRoom: new CreateRoomUseCase(
@@ -175,16 +179,20 @@ export function gameCommands({
       randomness,
       clock,
       sealProvider,
+      usage,
     ),
-    joinRoom: new JoinRoomUseCase({
-      sealProvider,
-      roomRepository,
-      gameRepository,
-      notifier,
-      idGenerator,
-      randomness,
-      clock,
-    }),
+    joinRoom: new JoinRoomUseCase(
+      {
+        sealProvider,
+        roomRepository,
+        gameRepository,
+        notifier,
+        idGenerator,
+        randomness,
+        clock,
+      },
+      usage,
+    ),
     connectPlayer: new ConnectPlayerUseCase(
       roomRepository,
       gameRepository,
@@ -192,7 +200,13 @@ export function gameCommands({
       idGenerator,
       clock,
     ),
-    disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier, clock),
+    disconnectPlayer: new DisconnectPlayerUseCase(
+      roomRepository,
+      gameRepository,
+      notifier,
+      clock,
+      usage,
+    ),
     disconnectConnections: new DisconnectConnectionsUseCase(roomRepository, notifier),
     changeAvatar: new ChangeAvatarUseCase(roomRepository, notifier),
     changeSettings: new ChangeRoomSettingsUseCase(roomRepository, catalog, notifier),
@@ -211,6 +225,7 @@ export function gameCommands({
       },
       EXPLORATION_SLOTS,
       CANDIDATES_PER_ROUND,
+      usage,
     ),
     answerDilemma: new AnswerDilemmaUseCase({
       roomRepository,
@@ -221,8 +236,14 @@ export function gameCommands({
       clock,
     }),
     revealEarly: new RevealEarlyUseCase(roomRepository, gameRepository, notifier, clock),
-    moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock),
-    getReadyToMoveOn: new GetReadyToMoveOnUseCase(roomRepository, gameRepository, notifier, clock),
+    moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock, usage),
+    getReadyToMoveOn: new GetReadyToMoveOnUseCase(
+      roomRepository,
+      gameRepository,
+      notifier,
+      clock,
+      usage,
+    ),
     react: new ReactUseCase({ roomRepository, gameRepository, sealProvider, notifier }),
     likeDilemma: new LikeDilemmaUseCase({
       roomRepository,
@@ -236,7 +257,7 @@ export function gameCommands({
     startRematch: new StartRematchUseCase(roomRepository, gameRepository, notifier),
     restartGame: new RestartGameUseCase(roomRepository, gameRepository, notifier),
     runOutRound: new RunOutRoundUseCase(roomRepository, gameRepository, notifier, clock),
-    leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier, clock),
+    leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier, clock, usage),
     skipDilemma: new SkipDilemmaUseCase({ roomRepository, gameRepository, notifier, clock }),
     reportDilemma: new ReportDilemmaUseCase({
       roomRepository,

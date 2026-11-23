@@ -9,6 +9,8 @@ import type { DilemmaCatalog } from '../ports/dilemma-catalog.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import type { SealProvider } from '../ports/seal-provider.port.ts';
 import { findLobbyDilemmas } from './find-lobby-dilemmas.ts';
+import { recordUsage } from './record-usage.ts';
+import type { Usage } from '../ports/usage.port.ts';
 
 /** With over 28 million codes, ten taken in a row means something is wrong, not bad luck. */
 const CODE_ATTEMPTS = 10;
@@ -47,6 +49,7 @@ export class CreateRoomUseCase {
   readonly #randomness: Randomness;
   readonly #clock: Clock;
   readonly #sealProvider: SealProvider;
+  readonly #usage: Usage;
 
   constructor(
     roomRepository: RoomRepository,
@@ -56,6 +59,7 @@ export class CreateRoomUseCase {
     clock: Clock,
     /** Whether the host is under 18, by the age they declared. */
     sealProvider: SealProvider,
+    usage: Usage,
   ) {
     this.#roomRepository = roomRepository;
     this.#dilemmaCatalog = dilemmaCatalog;
@@ -63,6 +67,7 @@ export class CreateRoomUseCase {
     this.#randomness = randomness;
     this.#clock = clock;
     this.#sealProvider = sealProvider;
+    this.#usage = usage;
   }
 
   async execute({ firstRoundDilemmaId, ...input }: CreateRoomInput): Promise<CreateRoomOutput> {
@@ -92,6 +97,11 @@ export class CreateRoomUseCase {
     );
 
     await this.#roomRepository.save(room);
+    await recordUsage(this.#usage, {
+      kind: 'room-created',
+      identity: input.hostIdentity,
+      roomId: room.id,
+    });
 
     return { roomId: room.id, code: room.code, hostId: room.host.id };
   }

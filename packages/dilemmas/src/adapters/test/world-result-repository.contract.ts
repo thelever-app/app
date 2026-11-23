@@ -137,5 +137,25 @@ export function describeWorldResultRepositoryContract(
         expect(await (await create()).publishedCountsOf('TestDilemmaId', 1)).toEqual(new Map());
       });
     });
+
+    describe('receiptsOf and forgetReceiptsOf', () => {
+      it('should give the versions an identity voted, and forget them keeping the answers', async () => {
+        // Arrange
+        const repository = await create();
+        await repository.countVote('TestIdentity1', FIRST);
+        await repository.countVote('TestIdentity2', FIRST);
+        await repository.publish(1);
+        const receipts = await repository.receiptsOf('TestIdentity1');
+
+        // Act
+        await repository.forgetReceiptsOf('TestIdentity1');
+
+        // Assert
+        expect(receipts).toEqual([{ dilemmaId: 'TestDilemmaId', version: 1 }]);
+        expect(await repository.receiptsOf('TestIdentity1')).toEqual([]);
+        expect(await repository.receiptsOf('TestIdentity2')).toHaveLength(1);
+        expect(await repository.publishedCountsOf('TestDilemmaId', 1)).toEqual(new Map([[0, 2]]));
+      });
+    });
   });
 }

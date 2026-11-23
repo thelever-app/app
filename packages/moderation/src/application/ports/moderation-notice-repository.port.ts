@@ -6,4 +6,7 @@ export interface ModerationNoticeRepository {
   /** The notices of that identity not seen yet, the oldest first. */
   unseenOf(identity: string): Promise<ModerationNotice[]>;
   findById(id: string): Promise<ModerationNotice | undefined>;
+  /** Every notice of that identity, seen or not, the oldest first. */
+  allOf(identity: string): Promise<ModerationNotice[]>;
+  deleteAllOf(identity: string): Promise<void>;
 }

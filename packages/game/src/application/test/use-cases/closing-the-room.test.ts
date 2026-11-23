@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { describe, expect, it } from 'vitest';
 import { RoomCodeNotFoundError } from '../../errors/room-code-not-found.error.ts';
@@ -23,15 +24,18 @@ function useCasesOf(arranged: Awaited<ReturnType<typeof lobbyOfThree>>) {
   const { roomRepository, gameRepository, notifier, idGenerator, randomness, clock } = arranged;
   return {
     getRoomPreview: new GetRoomPreviewUseCase(roomRepository, new FixedRandomness(), clock),
-    joinRoom: new JoinRoomUseCase({
-      sealProvider: new InMemorySealProvider(),
-      roomRepository,
-      gameRepository,
-      notifier,
-      idGenerator,
-      randomness,
-      clock,
-    }),
+    joinRoom: new JoinRoomUseCase(
+      {
+        sealProvider: new InMemorySealProvider(),
+        roomRepository,
+        gameRepository,
+        notifier,
+        idGenerator,
+        randomness,
+        clock,
+      },
+      new InMemoryUsage(),
+    ),
     connectPlayer: new ConnectPlayerUseCase(
       roomRepository,
       gameRepository,
@@ -39,9 +43,21 @@ function useCasesOf(arranged: Awaited<ReturnType<typeof lobbyOfThree>>) {
       idGenerator,
       clock,
     ),
-    disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier, clock),
+    disconnectPlayer: new DisconnectPlayerUseCase(
+      roomRepository,
+      gameRepository,
+      notifier,
+      clock,
+      new InMemoryUsage(),
+    ),
     disconnectConnections: new DisconnectConnectionsUseCase(roomRepository, notifier),
-    leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier, clock),
+    leaveRoom: new LeaveRoomUseCase(
+      roomRepository,
+      gameRepository,
+      notifier,
+      clock,
+      new InMemoryUsage(),
+    ),
     deleteClosedRooms: new DeleteClosedRoomsUseCase(roomRepository, gameRepository, clock),
   };
 }
@@ -301,6 +317,7 @@ describe('Closing the room', () => {
         arranged.randomness,
         arranged.clock,
         new InMemorySealProvider(),
+        new InMemoryUsage(),
       ).execute({
         ambience: 'classic',
         hostNickname: 'Pedro',

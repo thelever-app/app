@@ -15,7 +15,7 @@ function contentOf(row: IssueRow): IssueContent {
     case 'dilemma':
       return { kind: 'dilemma', dilemmaId: row.dilemma_id! };
     case 'nickname':
-      return { kind: 'nickname', nickname: row.nickname!, owner: row.nickname_owner! };
+      return { kind: 'nickname', nickname: row.nickname!, owner: row.nickname_owner };
     case 'reference':
       return { kind: 'reference', reference: row.reference! };
   }
@@ -80,9 +80,48 @@ export class PostgresIssueRepository implements IssueRepository {
     return Number(count);
   }
 
+  async involving(identity: string): Promise<Issue[]> {
+    const db = currentTransaction<ModerationTables>() ?? this.#db;
+    const rows = await db
+      .selectFrom('moderation_issues')
+      .select('id')
+      .where('nickname_owner', '=', identity)
+      .union(
+        db.selectFrom('dilemma_reports').select('issue_id as id').where('identity', '=', identity),
+      )
+      .union(
+        db
+          .selectFrom('nickname_reports')
+          .select('issue_id as id')
+          .where((eb) => eb.or([eb('identity', '=', identity), eb('owner', '=', identity)])),
+      )
+      .union(
+        db
+          .selectFrom('illegal_content_notices')
+          .select('issue_id as id')
+          .where('identity', '=', identity),
+      )
+      .execute();
+    if (rows.length === 0) return [];
+    return this.#issues({ ids: rows.map(({ id }) => id) });
+  }
+
+  async sendersWithEmail(email: string): Promise<string[]> {
+    const rows = await (currentTransaction<ModerationTables>() ?? this.#db)
+      .selectFrom('illegal_content_notices')
+      .select('identity')
+      .distinct()
+      .where(sql<string>`lower(email)`, '=', email.trim().toLowerCase())
+      .where('identity', 'is not', null)
+      .orderBy('identity')
+      .execute();
+    return rows.flatMap(({ identity }) => (identity === null ? [] : [identity]));
+  }
+
   /** The issues that match, the oldest first, each with its reports and notices. */
   async #issues(filter: {
     readonly id?: string;
+    readonly ids?: readonly string[];
     readonly undecided?: boolean;
     readonly numbered?: boolean;
     readonly content?: Exclude<IssueContent, { kind: 'reference' }>;
@@ -90,6 +129,7 @@ export class PostgresIssueRepository implements IssueRepository {
     const db = currentTransaction<ModerationTables>() ?? this.#db;
     let query = db.selectFrom('moderation_issues').selectAll();
     if (filter.id !== undefined) query = query.where('id', '=', filter.id);
+    if (filter.ids !== undefined) query = query.where('id', 'in', filter.ids);
     if (filter.undecided) query = query.where('outcome', 'is', null);
     if (filter.numbered) query = query.where('number', 'is not', null);
     const { content } = filter;
@@ -101,7 +141,7 @@ export class PostgresIssueRepository implements IssueRepository {
       query = query
         .where('content_kind', '=', 'nickname')
         .where('nickname', '=', content.nickname)
-        .where('nickname_owner', '=', content.owner);
+        .where('nickname_owner', content.owner === null ? 'is' : '=', content.owner);
     }
     const rows = await query.orderBy('opened_at').orderBy('id').execute();
     if (rows.length === 0) return [];
@@ -217,10 +257,13 @@ export class PostgresIssueRepository implements IssueRepository {
           translated_facts: sql`coalesce(moderation_issues.translated_facts, excluded.translated_facts)`,
           rule: sql`coalesce(moderation_issues.rule, excluded.rule)`,
           decided_at: sql`coalesce(moderation_issues.decided_at, excluded.decided_at)`,
+          // Unlinking only ever empties it.
+          nickname_owner: sql`case when excluded.nickname_owner is null then null else moderation_issues.nickname_owner end`,
         }),
       )
       .execute();
-    // Reports and notices never change: only the new ones are added.
+    // Reports and notices never change but to lose who made them, once their data are deleted:
+    // the new ones are added, and the rest only ever lose it.
     if (snapshot.dilemmaReports.length > 0) {
       await db
         .insertInto('dilemma_reports')
@@ -237,7 +280,9 @@ export class PostgresIssueRepository implements IssueRepository {
             reported_at: report.reportedAt,
           })),
         )
-        .onConflict((conflict) => conflict.column('id').doNothing())
+        .onConflict((conflict) =>
+          conflict.column('id').doUpdateSet({ identity: unlinked('dilemma_reports', 'identity') }),
+        )
         .execute();
     }
     if (snapshot.nicknameReports.length > 0) {
@@ -255,7 +300,12 @@ export class PostgresIssueRepository implements IssueRepository {
             reported_at: report.reportedAt,
           })),
         )
-        .onConflict((conflict) => conflict.column('id').doNothing())
+        .onConflict((conflict) =>
+          conflict.column('id').doUpdateSet({
+            identity: unlinked('nickname_reports', 'identity'),
+            owner: unlinked('nickname_reports', 'owner'),
+          }),
+        )
         .execute();
     }
     if (snapshot.notices.length > 0) {
@@ -274,8 +324,19 @@ export class PostgresIssueRepository implements IssueRepository {
             sent_at: notice.sentAt,
           })),
         )
-        .onConflict((conflict) => conflict.column('id').doNothing())
+        .onConflict((conflict) =>
+          conflict.column('id').doUpdateSet({
+            identity: unlinked('illegal_content_notices', 'identity'),
+            name: unlinked('illegal_content_notices', 'name'),
+            email: unlinked('illegal_content_notices', 'email'),
+          }),
+        )
         .execute();
     }
   }
+}
+
+/** A column that a save may empty, never fill again: what unlinking someone takes away. */
+function unlinked(table: string, column: string) {
+  return sql<null>`case when ${sql.ref(`excluded.${column}`)} is null then null else ${sql.ref(`${table}.${column}`)} end`;
 }

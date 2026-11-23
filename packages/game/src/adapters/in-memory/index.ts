@@ -18,3 +18,4 @@ export { ManualClock } from './manual-clock.ts';
 export { InMemoryDilemmaReports } from './in-memory-dilemma-reports.ts';
 export { InMemoryNicknameReports } from './in-memory-nickname-reports.ts';
 export { InMemoryDilemmaLikes } from './in-memory-dilemma-likes.ts';
+export { InMemoryUsage } from './in-memory-usage.ts';

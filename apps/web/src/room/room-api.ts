@@ -12,6 +12,7 @@ import {
   type ModerationNoticeDto,
   ModerationNoticesResponseDto,
   JoinRoomResponseDto,
+  MyDataResponseDto,
   RoomPreviewResponseDto,
   SearchDilemmasResponseDto,
   WorldResultResponseDto,
@@ -32,8 +33,11 @@ export class RoomApiError extends Error {
 
 /** What a player does with the rooms before entering one, and searching once in it. */
 export interface RoomApi {
-  /** Opens the app: the first time, it begins the first access; it says where it is. */
-  openApp(): Promise<FirstAccessResponseDto>;
+  /**
+   * Opens the app: the first time, it begins the first access, and the visit is recorded with
+   * where the link that opened it came from, read from its query; it says where it is.
+   */
+  openApp(search?: string): Promise<FirstAccessResponseDto>;
   /** Once and for good; the month only of who may be under 18, month-of-birth-needed without it. */
   declareAge(birthYear: number, birthMonth?: number): Promise<FirstAccessResponseDto>;
   /** Accepts the terms of use, or gives the game consent, in the version the app showed. */
@@ -75,6 +79,28 @@ export interface RoomApi {
   seeModerationNotice(noticeId: string): Promise<void>;
   /** The access code the player wrote, which every call carries from now on. */
   enterAccessCode(code: string): void;
+  /** What Settings › Privacy and data shows: the code for requests by email and the permissions. */
+  myData(): Promise<MyDataResponseDto>;
+  /** Withdraws the game consent; it says where the first access is, which asks for it again. */
+  withdrawGameConsent(): Promise<FirstAccessResponseDto>;
+  /** Objects to product analytics, or no longer. */
+  objectToAnalytics(objects: boolean): Promise<void>;
+  /** Asks for the data of the player to be deleted. */
+  requestDataDeletion(): Promise<void>;
+}
+
+/** The parameters of the link the app opened with that say where the visit came from. */
+const ORIGIN_PARAMETERS = ['utm_source', 'utm_campaign', 'utm_content', 'ref'] as const;
+
+/** The query of the origin of the visit, from the query of the address: nothing else of it. */
+function originQueryOf(search: string | undefined): string {
+  const from = new URLSearchParams(search);
+  const origin = new URLSearchParams();
+  for (const name of ORIGIN_PARAMETERS) {
+    const value = from.get(name);
+    if (value) origin.set(name, value.slice(0, 200));
+  }
+  return origin.size > 0 ? `?${origin.toString()}` : '';
 }
 
 export interface HttpRoomApiOptions {
@@ -143,7 +169,8 @@ export function httpRoomApi({
   }
 
   return {
-    openApp: () => call('GET', '/first-access', FirstAccessResponseDto),
+    openApp: (search) =>
+      call('GET', `/first-access${originQueryOf(search)}`, FirstAccessResponseDto),
     declareAge: (birthYear, birthMonth) =>
       call('POST', '/first-access/age', FirstAccessResponseDto, {
         birthYear,
@@ -191,5 +218,11 @@ export function httpRoomApi({
     seeModerationNotice: (noticeId) =>
       call('POST', `/moderation-notices/${encodeURIComponent(noticeId)}/seen`, NO_CONTENT),
     enterAccessCode: (code) => accessCode.remember(code),
+    myData: () => call('GET', '/my-data', MyDataResponseDto),
+    withdrawGameConsent: () =>
+      call('POST', '/my-data/game-consent-withdrawal', FirstAccessResponseDto, {}),
+    objectToAnalytics: (objects) =>
+      call('POST', '/my-data/analytics-objection', NO_CONTENT, { objects }),
+    requestDataDeletion: () => call('POST', '/my-data/deletion', NO_CONTENT, {}),
   };
 }

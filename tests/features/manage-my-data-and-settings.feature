@@ -44,15 +44,21 @@ Feature: Manage my data and settings
     When the player opens the history
     Then the player sees that game
 
-  @ui @todo
+  @ui
   Scenario: The player withdraws the game consent
-    Given the player has an account with a game history
+    Given the player has played a game whose room is still kept
     When the player chooses to withdraw the game consent in the settings
     Then the player is warned that the history stored in the account and the game data still within 24 hours will be deleted
     When the player confirms
     Then the player cannot create or join a room
-    And the history stored in the account and the game data still within 24 hours are deleted
+    And the game data still within 24 hours are deleted
     And the player is offered to give the game consent again
+
+  @todo
+  Scenario: Withdrawing the game consent deletes the history stored in the account
+    Given the player has an account with a game history
+    When the player withdraws the game consent
+    Then the history stored in the account is deleted
 
   @ui @todo
   Scenario: The player downloads their data
@@ -60,27 +66,24 @@ Feature: Manage my data and settings
     When the player downloads their data in the settings
     Then the player gets a JSON file with their nickname, email, age, region, consents with dates and versions, history, created dilemmas, likes, reports, moderation decisions and analytics events
 
-  @todo
   Scenario: A request by email without a code is not answered
     Given a player without an account
     When someone sends a data request by email without the code of that player
     Then the request is not carried out
     And the reply explains how to send it with the code
 
-  @todo
   Scenario: The player objects to product analytics
     When the player objects to product analytics in the settings
     And plays a game
     Then no analytics event of the player is recorded
 
-  @todo
   Scenario: The player requests the deletion of their data
     When the player requests the deletion of their data
     Then all data linked to their identifier is deleted within one month
     And their account is deleted if they have one
     And only a minimal record of the consent required by law is kept
 
-  @ui @todo
+  @ui @screen
   Scenario: The deletion screen explains what is deleted and what is kept
     When the player opens "Delete my data"
     Then the player is told what is deleted and what is kept
@@ -93,7 +96,7 @@ Feature: Manage my data and settings
     And "Ana" opens that game in the history
     Then "Ana" sees "Player" instead of "Luis" in the ranking, with his position
 
-  @ui @todo
+  @ui
   Scenario: A player without account gets a code to send requests by email
     Given a player without an account
     When the player opens "Your data" in the settings
@@ -118,7 +121,7 @@ Feature: Manage my data and settings
     Then their account, email, device identifier and history are deleted
     And their public dilemmas remain in the catalog without a link to them
 
-  @ui @todo
+  @ui @screen
   Scenario: The device starts from scratch as soon as the deletion is requested
     When the player requests the deletion of their data
     Then the player is signed out at once
@@ -137,7 +140,7 @@ Feature: Manage my data and settings
     When the player downloads their data in the settings
     Then the player gets the JSON file without having to identify themselves any further
 
-  @ui @todo
+  @ui @screen
   Scenario: The player changes the cookie choices
     When the player opens "Cookies and ads" in the settings
     Then the player can change what they allow, personalised ads included, as easily as they first answered

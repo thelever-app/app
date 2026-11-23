@@ -29,3 +29,8 @@ export type {
 } from './application/use-cases/moderate-dilemma.use-case.ts';
 export type { FindDilemmaOfReference } from './application/use-cases/find-dilemma-of-reference.use-case.ts';
 export { familyOf } from './application/catalog-number.ts';
+export type {
+  DilemmasData,
+  EraseDilemmasData,
+  ExportDilemmasData,
+} from './application/use-cases/dilemmas-personal-data.use-case.ts';

@@ -4,5 +4,6 @@
  */
 export type IssueContent =
   | { readonly kind: 'dilemma'; readonly dilemmaId: string }
-  | { readonly kind: 'nickname'; readonly nickname: string; readonly owner: string }
+  /** The owner is null once their data are deleted. */
+  | { readonly kind: 'nickname'; readonly nickname: string; readonly owner: string | null }
   | { readonly kind: 'reference'; readonly reference: string };

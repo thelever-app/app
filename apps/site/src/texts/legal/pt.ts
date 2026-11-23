@@ -1,6 +1,6 @@
 import type { OwnPage } from '../site-texts.ts';
 
-const UPDATED = '19 de novembro de 2026';
+const UPDATED = '23 de novembro de 2026';
 
 /** The terms of use of the app, version 1, which the first access asks to accept. */
 export const terms: OwnPage = {
@@ -45,7 +45,7 @@ export const terms: OwnPage = {
     {
       heading: 'Moderação e denúncias',
       paragraphs: [
-        'Qualquer jogador pode denunciar um dilema a partir do jogo, e a nossa equipa revê-o. Se violares estas condições, podemos substituir a tua alcunha por uma genérica ou impedir-te o acesso, e dizemos-te o motivo, os factos, a regra aplicada e como reclamar.',
+        'Qualquer jogador pode denunciar um dilema ou uma alcunha a partir do jogo, e a nossa equipa revê a denúncia. Se violares estas condições, podemos substituir a tua alcunha por uma genérica ou impedir-te o acesso, e dizemos-te o motivo, os factos, a regra aplicada e como reclamar.',
         'Qualquer pessoa, jogue ou não, pode denunciar conteúdo ilegal escrevendo para privacidad@thelever.app, que é também o ponto de contacto para as autoridades.',
       ],
     },
@@ -71,7 +71,7 @@ export const terms: OwnPage = {
     {
       heading: 'Deixar de jogar',
       paragraphs: [
-        'Podes deixar de usar o TheLever quando quiseres e pedir-nos que apaguemos os teus dados escrevendo para privacidad@thelever.app. Se violares estas condições de forma grave ou repetida, podemos impedir-te o acesso, com a fundamentação prevista na parte da moderação.',
+        'Podes deixar de usar o TheLever quando quiseres e apagar os teus dados em Definições → Privacidade e dados → Apagar os meus dados. Se violares estas condições de forma grave ou repetida, podemos impedir-te o acesso, com a fundamentação prevista na parte da moderação.',
       ],
     },
     {
@@ -111,15 +111,17 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Que dados tratamos, para quê e com que base',
       paragraphs: [
-        '- Para jogar, com o teu consentimento explícito (art. 6.1.a e 9.2.a RGPD): a tua alcunha e o teu avatar; os teus votos, as tuas previsões do voto dos outros ou da distribuição do grupo, as tuas reações e os teus pontos; se um dilema era sobre ti; a ordem em que viste as opções e quanto tempo demoraste a responder; e os teus «Bom dilema», guardados à parte da sala.',
+        '- Para jogar, com o teu consentimento explícito (art. 6.1.a e 9.2.a RGPD): a tua alcunha e o teu avatar; os teus votos, as tuas previsões do voto dos outros ou da distribuição do grupo, as tuas reações e os teus pontos; se um dilema era sobre ti; a ordem em que viste as opções; e os teus «Bom dilema», guardados à parte da sala.',
         '- Para votar sozinho um dilema do site, com o mesmo consentimento: o teu voto soma ao resultado mundial sem que guardemos o que votaste, e fica só uma marca de que já votaste esse dilema, para não contar duas vezes.',
         '- Para não te repetirmos dilemas, com o mesmo consentimento: o teu telemóvel guarda a lista de dilemas que jogaste, sem os teus votos, e envia-a ao entrares numa sala, que só a usa para preparar os jogos e a apaga com a sala.',
         '- Para te reconhecer, pelas condições de utilização (art. 6.1.b): um identificador anónimo do teu dispositivo e quando abriste a app pela última vez.',
         '- Para cumprir a lei sobre a idade (art. 6.1.c): o teu ano de nascimento e, se fazes 18 anos este ano ou mais tarde, o mês; e a tua região (Espaço Económico Europeu, resto do mundo ou país onde o TheLever não está disponível), que deduzimos do teu endereço IP com uma base de dados no nosso próprio servidor, IP Geolocation by DB-IP (db-ip.com, licença CC BY 4.0). O TheLever não guarda o teu IP; o nosso fornecedor de acesso, o Firebase Authentication (Google), regista-o durante algumas semanas por segurança.',
-        '- Para podermos provar o que aceitaste (art. 6.1.c e 7.1): que versão das condições e do consentimento aceitaste e quando.',
+        '- Para podermos provar o que aceitaste (art. 6.1.c e 7.1): que versão das condições e do consentimento aceitaste e quando, e quando o retiraste.',
+        '- Para medir a utilização e melhorar o jogo, com base no interesse legítimo (art. 6.1.f): quando abriste a app pela primeira vez e por que link chegaste (por exemplo, o de um cartaz); quando crias uma sala ou entras na de outra pessoa; quando um jogo começa e acaba e com quantos jogadores; e quanto tempo tu e o grupo demoram a responder a cada dilema, que se apaga com o jogo. Nunca os teus votos, as tuas previsões nem as tuas reações, e sem cookies: é o nosso servidor que o regista. A primeira visita é registada antes de te poderes opor. Podes opor-te em Definições → Privacidade e dados → As tuas permissões: deixamos de o registar e apagamos os eventos que tínhamos; os tempos dos jogos que ainda se conservam apagam-se com eles.',
         '- Para os anúncios, com o teu consentimento (art. 6.1.a RGPD e art. 22.2 LSSI): os cookies e identificadores da rede publicitária, conforme o que escolheres no gestor de cookies da Google.',
-        '- Para moderar (obrigação legal do Regulamento dos Serviços Digitais e interesse legítimo num serviço seguro, art. 6.1.c e 6.1.f): o dilema que denuncias, o motivo e o teu comentário, sem dizer a ninguém do grupo que o denunciaste.',
-        '- Para tratar os teus pedidos (art. 6.1.c): o teu email e o que nos pedires.',
+        '- Para moderar (obrigação legal do Regulamento dos Serviços Digitais e interesse legítimo num serviço seguro, art. 6.1.c e 6.1.f): o dilema ou a alcunha que denuncias, o motivo e o teu comentário, sem dizer a ninguém do grupo que o denunciaste; se denunciarem a tua alcunha, a alcunha e a nossa decisão; se denunciares conteúdo ilegal a partir do site, o que nos contas e, se nos deres, o teu nome e o teu email para te respondermos; e os avisos de cada decisão.',
+        '- Para tratar os teus pedidos (art. 6.1.c): o teu email, o que nos pedires e o código para pedidos que te damos quando abres a app pela primeira vez, que vês em Definições → Privacidade e dados → Os teus dados.',
+        '- Para que um apagamento não se desfaça se restaurarmos uma cópia de segurança (art. 6.1.c e 17): o teu identificador anónimo, o motivo do apagamento e quando o pediste e quando terminou.',
       ],
     },
     {
@@ -132,7 +134,7 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Menores',
       paragraphs: [
-        'Para jogar é preciso ter pelo menos 16 anos no Espaço Económico Europeu e 18 no resto do mundo. Os jogadores de 16 e 17 anos só jogam dilemas adequados à sua idade, não entram em salas com dilemas +18 e os seus anúncios nunca são personalizados. Se a idade que declaras não chega à mínima, só guardamos o teu ano de nascimento, o mês se o indicaste, a tua região e quando abriste a app pela última vez, para que não possas jogar nesse dispositivo, e apagamo-los após 24 meses sem abrir a app. Se soubermos por outra via que alguém não tem a idade mínima, apagamos os seus dados.',
+        'Para jogar é preciso ter pelo menos 16 anos no Espaço Económico Europeu e 18 no resto do mundo. Os jogadores de 16 e 17 anos só jogam dilemas adequados à sua idade, não entram em salas com dilemas +18 e os seus anúncios nunca são personalizados. Se a idade que declaras não chega à mínima, só guardamos o teu ano de nascimento, o mês se o indicaste, a tua região, quando abriste a app pela última vez, o teu código para pedidos e o registo da tua primeira visita, para que não possas jogar nesse dispositivo, e apagamo-los após 24 meses sem abrir a app. Se soubermos por outra via que alguém não tem a idade mínima, apagamos os seus dados.',
       ],
     },
     {
@@ -144,14 +146,14 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Com quem partilhamos os teus dados',
       paragraphs: [
-        'Não vendemos os teus dados. São tratados por nossa conta, com contrato e só para prestar o serviço, pela Google Cloud e pelo Firebase (Google), que alojam a app, a sua base de dados e o acesso, e pela Hostinger, que aloja o nosso correio. O gestor de cookies é da Google, e a rede publicitária e os seus parceiros tratam os seus cookies como responsáveis por conta própria, só se o aceitares. Também podemos ter de dar dados às autoridades quando a lei o exigir.',
+        'Não vendemos os teus dados. São tratados por nossa conta, com contrato e só para prestar o serviço, pela Google Cloud e pelo Firebase (Google), que alojam a app, a sua base de dados e o acesso; pela Hostinger, que aloja o nosso correio e envia os nossos emails; pelo GitHub, onde a equipa mantém o registo interno de moderação, com o que foi denunciado (por exemplo, uma alcunha) mas sem quem o denunciou, o seu comentário, o seu nome ou o seu email; e pela Anthropic, que traduz para a tua língua a explicação de uma decisão de moderação. O gestor de cookies é da Google, e a rede publicitária e os seus parceiros tratam os seus cookies como responsáveis por conta própria, só se o aceitares. Também podemos ter de dar dados às autoridades quando a lei o exigir.',
         'Se o TheLever mudar de titular, por exemplo ao passar a uma sociedade, os teus dados passam para o novo titular para continuar a prestar-te o mesmo serviço, com as mesmas finalidades e garantias (art. 21 da LOPDGDD). Avisamos-te na app antes da mudança e podes pedir-nos que os apaguemos antes.',
       ],
     },
     {
       heading: 'Transferências para fora do Espaço Económico Europeu',
       paragraphs: [
-        'A Google pode tratar dados nos Estados Unidos, ao abrigo do Quadro de Privacidade de Dados UE-EUA e das cláusulas contratuais-tipo da Comissão Europeia.',
+        'A Google, o GitHub e a Anthropic podem tratar dados nos Estados Unidos: a Google, ao abrigo do Quadro de Privacidade de Dados UE-EUA e das cláusulas contratuais-tipo da Comissão Europeia; o GitHub e a Anthropic, ao abrigo dessas mesmas cláusulas, que fazem parte dos seus contratos. A Hostinger guarda o nosso correio na União Europeia.',
       ],
     },
     {
@@ -159,7 +161,9 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         '- O que respondes num jogo: menos de 24 horas desde que a sala fecha.',
         '- Os teus «Bom dilema» e a marca de que votaste sozinho: até pedires para apagar os teus dados ou passares 24 meses sem abrir a app.',
-        '- A tua idade, a tua região e o que aceitaste: enquanto usares a app e, se apagares os teus dados, um registo mínimo do que aceitaste durante 3 anos.',
+        '- A tua idade, a tua região, o teu código para pedidos e o que aceitaste: enquanto usares a app e, se apagares os teus dados, um registo mínimo do que aceitaste durante 3 anos.',
+        '- Os dados de utilização com o teu identificador: 13 meses; depois, só totais que não te identificam.',
+        '- As denúncias, as decisões de moderação e os seus avisos, os teus pedidos com as nossas respostas e o registo dos teus apagamentos: 3 anos. Se apagares os teus dados, as denúncias que fizeste ficam sem qualquer ligação a ti.',
         '- As tuas escolhas de cookies: o que o gestor de cookies da Google definir, no máximo 13 meses.',
         '- O que apagamos fica alguns dias nas cópias de segurança: 7 dias nas nossas e até 180 nas do Firebase. Entretanto não é usado para nada.',
       ],
@@ -167,7 +171,11 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Os teus direitos',
       paragraphs: [
-        'Podes pedir acesso aos teus dados, retificá-los, apagá-los, limitar o seu uso, levá-los contigo e opor-te ao seu tratamento, e retirar o consentimento do jogo quando quiseres, sem afetar o que já foi tratado. Escreve para privacidad@thelever.app; como jogas sem conta, se não pudermos confirmar que o pedido é teu, pedimos-te o necessário para o fazer. Respondemos no máximo num mês.',
+        'Podes pedir acesso aos teus dados, retificá-los, apagá-los, limitar o seu uso, levá-los contigo e opor-te ao seu tratamento. Em Definições → Privacidade e dados podes, tu mesmo:',
+        '- Em «As tuas permissões», retirar o consentimento do jogo quando quiseres, sem afetar o que já foi tratado: não poderás criar salas nem entrar nelas até o dares de novo, e apagamos o que respondeste nos jogos que ainda não foram apagados. Também te podes opor à análise de utilização.',
+        '- Em «Apagar os meus dados», apagá-los: o teu telemóvel fica como novo no momento e apagamos tudo o que está ligado ao teu identificador em poucos minutos, e no máximo num mês, exceto o registo mínimo do que aceitaste e o do teu apagamento.',
+        'Se retirares o consentimento ou apagares os teus dados, nas salas que ainda se conservam a tua alcunha passa a «Jogador».',
+        'Para tudo o resto, como pedir uma cópia dos teus dados ou corrigir a tua idade, escreve para privacidad@thelever.app com o código que vês em Definições → Privacidade e dados → Os teus dados: como jogas sem conta, é o que nos permite saber que o pedido é teu, e sem ele não o podemos tratar. Se só nos denunciaste algo a partir do site, escreve-nos a partir do email que nos deste. Respondemos no máximo num mês.',
         'Se achares que não tratámos bem os teus dados, podes reclamar junto da Agência Espanhola de Proteção de Dados (aepd.es) ou da autoridade do teu país.',
       ],
     },

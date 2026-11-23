@@ -20,6 +20,8 @@ import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findRoom } from './find-room.ts';
 import { notifyRoom } from './notify-room.ts';
+import { playersOf, recordUsage } from './record-usage.ts';
+import type { Usage } from '../ports/usage.port.ts';
 
 export interface StartGameInput {
   readonly roomId: string;
@@ -46,6 +48,7 @@ export class StartGameUseCase {
   readonly #clock: Clock;
   readonly #explorationSlots: ExplorationSlots;
   readonly #candidatesPerRound: number;
+  readonly #usage: Usage;
 
   constructor(
     ports: {
@@ -63,6 +66,7 @@ export class StartGameUseCase {
      * rounds of categories in common, never the whole catalog. A setting, not a rule of the game.
      */
     candidatesPerRound: number,
+    usage: Usage,
   ) {
     this.#roomRepository = ports.roomRepository;
     this.#gameRepository = ports.gameRepository;
@@ -73,6 +77,7 @@ export class StartGameUseCase {
     this.#clock = ports.clock;
     this.#explorationSlots = explorationSlots;
     this.#candidatesPerRound = candidatesPerRound;
+    this.#usage = usage;
   }
 
   async execute({ roomId, playerId }: StartGameInput): Promise<StartGameOutput> {
@@ -190,6 +195,12 @@ export class StartGameUseCase {
     const events = room.pullEvents();
     await this.#gameRepository.save(game);
     await this.#roomRepository.save(room);
+    await recordUsage(this.#usage, {
+      kind: 'game-started',
+      ...playersOf(room, game),
+      roomId: room.id,
+      gameId: game.id,
+    });
     await notifyRoom(room, events, this.#notifier);
 
     return { gameId: game.id };

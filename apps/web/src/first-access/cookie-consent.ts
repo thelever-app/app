@@ -112,3 +112,59 @@ export function rememberCookieAnswer(personalised: boolean, storage: Storage = l
     // A device that keeps nothing asks again next time, which is what protects the person.
   }
 }
+
+declare global {
+  interface Window {
+    googlefc?: {
+      callbackQueue?: (() => void)[];
+      showRevocationMessage?: () => void;
+    };
+  }
+}
+
+/**
+ * Opens the cookie manager of Google again, as the button «Manage cookies» of the public web does,
+ * so the person changes what they accept as easily as they first answered; it resolves once they
+ * do, with whether they accept personalised ads now. If the manager does not load, nothing changes
+ * and it resolves with what the device kept.
+ */
+export function changeCookieChoices(
+  adsenseClient: string,
+  doc: Document = document,
+  storage: Storage = localStorage,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const win = doc.defaultView ?? window;
+    const kept = () => {
+      try {
+        return storage.getItem(PERSONALISED_ADS_KEY) === 'yes';
+      } catch {
+        return false;
+      }
+    };
+    const open = () => {
+      win.googlefc ??= {};
+      win.googlefc.callbackQueue ??= [];
+      win.googlefc.callbackQueue.push(() => win.googlefc?.showRevocationMessage?.());
+      if (!win.__tcfapi) {
+        resolve(kept());
+        return;
+      }
+      win.__tcfapi('addEventListener', 2, (data, success) => {
+        if (!success || data.eventStatus !== 'useractioncomplete') return;
+        const consents = data.purpose?.consents ?? {};
+        resolve(PERSONALISED_AD_PURPOSES.every((purpose) => consents[purpose] === true));
+      });
+    };
+    if (win.__tcfapi) {
+      open();
+      return;
+    }
+    const script = doc.createElement('script');
+    script.async = true;
+    script.src = cookieManagerUrl(adsenseClient);
+    script.addEventListener('load', open);
+    script.addEventListener('error', () => resolve(kept()));
+    doc.head.append(script);
+  });
+}

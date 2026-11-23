@@ -8,6 +8,8 @@ import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findCurrentGame } from './find-current-game.ts';
 import { findRoom } from './find-room.ts';
 import { notifyGame } from './notify-game.ts';
+import { recordEndIfJustEnded } from './record-usage.ts';
+import type { Usage } from '../ports/usage.port.ts';
 
 export interface LeaveRoomInput {
   readonly roomId: string;
@@ -24,17 +26,20 @@ export class LeaveRoomUseCase {
   readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
   readonly #clock: Clock;
+  readonly #usage: Usage;
 
   constructor(
     roomRepository: RoomRepository,
     gameRepository: GameRepository,
     notifier: PlayerNotifier,
     clock: Clock,
+    usage: Usage,
   ) {
     this.#roomRepository = roomRepository;
     this.#gameRepository = gameRepository;
     this.#notifier = notifier;
     this.#clock = clock;
+    this.#usage = usage;
   }
 
   async execute({ roomId, playerId }: LeaveRoomInput): Promise<void> {
@@ -54,6 +59,7 @@ export class LeaveRoomUseCase {
       roomId,
     );
 
+    const stageBefore = game.stage.kind;
     room.leave(playerId, game.playerIds, this.#clock.now());
     if (game.playerIds.includes(playerId)) {
       game.leave(playerId);
@@ -69,6 +75,7 @@ export class LeaveRoomUseCase {
     const gameEvents = game.pullEvents();
     await this.#roomRepository.save(room);
     await this.#gameRepository.save(game);
+    await recordEndIfJustEnded(this.#usage, room, game, stageBefore);
 
     // Who left hears it too: their other connections, in this or another instance, close.
     await notifyGame({ room, game }, { roomEvents, gameEvents }, this.#notifier);

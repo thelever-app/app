@@ -932,7 +932,15 @@
     "credits": "Crediti e licenze",
     "legalNotice": "Note legali",
     "outside": "{{name}} (si apre nel browser)",
-    "contact": "Contatti e segnalazioni"
+    "contact": "Contatti e segnalazioni",
+    "permissions": "I tuoi permessi",
+    "permissionsDetail": "Permesso del gioco e analisi d’uso",
+    "yourData": "I tuoi dati",
+    "yourDataDetail": "Chiederci una copia o una correzione",
+    "cookies": "Cookie e annunci",
+    "cookiesDetail": "Cambia ciò che consenti",
+    "deleteData": "Elimina i miei dati",
+    "deleteDataDetail": "Tutto, entro un mese al massimo"
   },
   "credits": {
     "title": "Crediti e licenze",
@@ -1062,5 +1070,51 @@
     "receivedNoEmail": "Non avendo lasciato un’email, non potremo dirti cosa abbiamo deciso.",
     "authorities": "Se vedi una minaccia grave o urgente per qualcuno, avvisa anche le autorità.",
     "another": "Invia un’altra segnalazione"
+  },
+  "permissions": {
+    "title": "I tuoi permessi",
+    "lead": "Puoi cambiarli quando vuoi. Nessuno del gruppo vede cosa scegli.",
+    "game": "Permesso del gioco",
+    "gameOn": "Necessario per giocare. I tuoi voti si vedono nella rivelazione e si conservano fino a 24 h, tranne la tua cronologia.",
+    "analytics": "Analisi d’uso",
+    "analyticsOn": "Contiamo partite e visite, mai i tuoi voti.",
+    "analyticsOff": "Ti sei opposto: non contiamo niente di tuo.",
+    "cookies": "Cookie e annunci",
+    "cookiesText": "Quali cookie consenti e se gli annunci sono personalizzati.",
+    "cookiesGpc": "Il tuo browser invia Global Privacy Control: i tuoi annunci non sono mai personalizzati.",
+    "failed": "Non siamo riusciti a salvarlo. Riprova.",
+    "withdraw": {
+      "title": "Ritirare il permesso del gioco?",
+      "blocked": "Non potrai creare né entrare in stanze finché non lo darai di nuovo.",
+      "deleted": "Vengono eliminati la tua cronologia dell’account e i dati delle partite la cui stanza si è chiusa meno di 24 ore fa.",
+      "confirm": "Ritira il permesso del gioco",
+      "cancel": "Annulla"
+    }
+  },
+  "yourData": {
+    "title": "I tuoi dati",
+    "emailTitle": "Se ci scrivi per email",
+    "emailText": "Per chiederci una copia dei tuoi dati, correggerne uno (per esempio la tua età) o qualsiasi altra cosa su di essi, scrivici a {{email}}. Lo esaminiamo a mano e ti rispondiamo entro un mese al massimo.",
+    "codeText": "Siccome non hai un account, includi questo codice nel messaggio così sappiamo che sei tu.",
+    "copy": "Copia il codice",
+    "copied": "Codice copiato",
+    "failed": "Non siamo riusciti a caricare il tuo codice. Riapri questa schermata."
+  },
+  "deleteData": {
+    "title": "Eliminare tutti i tuoi dati?",
+    "games": "Eliminiamo le tue partite, i tuoi voti e il tuo account se ne hai uno, entro un mese al massimo.",
+    "consent": "Conserviamo solo una traccia minima del tuo consenso, perché lo richiede la legge.",
+    "public": "I tuoi dilemmi pubblici restano nel catalogo, ma non più collegati a te.",
+    "history": "Nella cronologia di chi ha giocato con te, il tuo nickname diventa «Giocatore».",
+    "device": "Questo telefono riparte da zero, come il primo giorno.",
+    "undo": "Non si può annullare.",
+    "confirm": "Sì, elimina i miei dati",
+    "cancel": "Annulla",
+    "failed": "Non siamo riusciti a chiedere l’eliminazione. Riprova."
+  },
+  "dataDeleted": {
+    "title": "Abbiamo ricevuto la tua richiesta",
+    "text": "Questo telefono non conserva più niente di tuo ed entro un mese al massimo avremo eliminato i tuoi dati dai nostri server. Le copie di sicurezza impiegano un po’ di più a rinnovarsi e nel frattempo non vengono usate. Se giochi di nuovo, ripartirai da zero.",
+    "home": "Torna all’inizio"
   }
 }

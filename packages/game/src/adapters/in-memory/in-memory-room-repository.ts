@@ -27,6 +27,16 @@ export class InMemoryRoomRepository implements RoomRepository {
       .map(({ id }) => id);
   }
 
+  async findIdsTiedTo(identity: string): Promise<readonly string[]> {
+    return [...this.#snapshots.values()]
+      .filter(
+        ({ players, expelledIdentities }) =>
+          players.some((player) => player.identity === identity) ||
+          expelledIdentities.includes(identity),
+      )
+      .map(({ id }) => id);
+  }
+
   async findIdsWithNobodyConnected(): Promise<readonly string[]> {
     return [...this.#snapshots.values()]
       .filter(({ connections }) => connections.length === 0)

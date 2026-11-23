@@ -86,6 +86,9 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.43.0
         version: 1.43.0
+      '@thelever-app/analytics':
+        specifier: workspace:*
+        version: link:../../packages/analytics
       '@thelever-app/consent':
         specifier: workspace:*
         version: link:../../packages/consent
@@ -285,6 +288,12 @@ importers:
         specifier: ^8.3.0
         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)
 
+  packages/analytics:
+    devDependencies:
+      '@thelever-app/config':
+        specifier: workspace:*
+        version: link:../config
+
   packages/config: {}
 
   packages/consent:
@@ -301,6 +310,9 @@ importers:
       '@opentelemetry/api':
         specifier: ^1.10.0
         version: 1.10.0
+      '@thelever-app/analytics':
+        specifier: workspace:*
+        version: link:../analytics
       '@thelever-app/consent':
         specifier: workspace:*
         version: link:../consent
@@ -371,6 +383,9 @@ importers:
 
   packages/integrations:
     dependencies:
+      '@thelever-app/analytics':
+        specifier: workspace:*
+        version: link:../analytics
       '@thelever-app/consent':
         specifier: workspace:*
         version: link:../consent
@@ -441,6 +456,9 @@ importers:
       '@cucumber/cucumber':
         specifier: ^13.2.1
         version: 13.2.1
+      '@thelever-app/analytics':
+        specifier: workspace:*
+        version: link:../packages/analytics
       '@thelever-app/config':
         specifier: workspace:*
         version: link:../packages/config

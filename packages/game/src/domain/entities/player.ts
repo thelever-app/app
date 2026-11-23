@@ -3,6 +3,9 @@ import { AvatarVO } from '../vos/avatar.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { NicknameVO } from '../vos/nickname.vo.ts';
 
+/** The identity of a forgotten player starts so: it is tied to nobody. */
+const FORGOTTEN = 'forgotten-';
+
 export interface PlayerSnapshot {
   readonly id: string;
   readonly nickname: string;
@@ -18,7 +21,7 @@ export class Player {
   readonly #id: IdVO;
   #nickname: NicknameVO;
   /** Who uses the app behind this player. It never travels to the other players. */
-  readonly #identity: IdVO;
+  #identity: IdVO;
   #avatar: AvatarVO;
   #playedDilemmaIds: readonly string[];
   readonly #underEighteen: boolean;
@@ -75,6 +78,19 @@ export class Player {
 
   get identity(): string {
     return this.#identity.value;
+  }
+
+  /**
+   * Whoever was behind this player withdrew the game consent or deleted their data: the player
+   * stays in the room for the others, tied to nobody.
+   */
+  forget(): void {
+    this.#identity = new IdVO(`${FORGOTTEN}${this.id}`);
+  }
+
+  /** Whether whoever was behind the player withdrew the game consent or deleted their data. */
+  get forgotten(): boolean {
+    return this.#identity.value.startsWith(FORGOTTEN);
   }
 
   get avatar(): AvatarVO {

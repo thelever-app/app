@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import { Room } from '../../../domain/entities/room.ts';
 import { describe, expect, it, vi } from 'vitest';
 import { ChangeRoomSettingsUseCase } from '../../use-cases/change-room-settings.use-case.ts';
@@ -29,6 +30,7 @@ async function arrange() {
     },
     EXPLORATION_SLOTS,
     CANDIDATES_PER_ROUND,
+    new InMemoryUsage(),
   );
   const changeSettings = new ChangeRoomSettingsUseCase(
     lobby.roomRepository,

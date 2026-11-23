@@ -13,3 +13,7 @@ export const CONTACT_EMAIL = 'privacidad@thelever.app';
 
 /** Where the app keeps its source code, as the AGPL-3.0 asks to offer whoever uses it over a network. */
 export const SOURCE_CODE_URL = 'https://github.com/thelever-app/app';
+
+/** Settings › Privacy and data: the permissions, and the data with the code for requests by email. */
+export const PERMISSIONS_PATH = '/settings/permissions';
+export const YOUR_DATA_PATH = '/settings/your-data';

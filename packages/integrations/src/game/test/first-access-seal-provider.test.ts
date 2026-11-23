@@ -1,9 +1,13 @@
 import {
   AcceptDocumentUseCase,
   GetConsentUseCase,
+  ObjectsToAnalyticsUseCase,
   type PublishedVersions,
 } from '@thelever-app/consent';
-import { InMemoryAcceptanceRepository } from '@thelever-app/consent/in-memory';
+import {
+  InMemoryAcceptanceRepository,
+  InMemoryAnalyticsObjectionRepository,
+} from '@thelever-app/consent/in-memory';
 import { DeclareAgeUseCase, GetFirstAccessUseCase, OpenAppUseCase } from '@thelever-app/identity';
 import { InMemoryFirstAccessRepository } from '@thelever-app/identity/in-memory';
 import { describe, expect, it } from 'vitest';
@@ -20,15 +24,33 @@ function setUp() {
   const acceptances = new InMemoryAcceptanceRepository();
   const getFirstAccess = new GetFirstAccessUseCase(firstAccesses, clock);
   const getConsent = new GetConsentUseCase(acceptances, PUBLISHED);
+  const objections = new InMemoryAnalyticsObjectionRepository();
+  let draw = 0;
+  const randomness = { integer: (maxExclusive: number) => draw++ % maxExclusive };
   return {
-    openApp: new OpenAppUseCase(firstAccesses, clock),
+    objections,
+    openApp: new OpenAppUseCase(firstAccesses, clock, randomness),
     declareAge: new DeclareAgeUseCase(firstAccesses, clock),
     accept: new AcceptDocumentUseCase(acceptances, PUBLISHED, clock),
-    seals: new FirstAccessSealProvider(getFirstAccess, getConsent),
+    seals: new FirstAccessSealProvider(
+      getFirstAccess,
+      getConsent,
+      new ObjectsToAnalyticsUseCase(objections),
+    ),
   };
 }
 
 describe('FirstAccessSealProvider', () => {
+  it('should seal that the player objects to product analytics', async () => {
+    // Arrange
+    const { seals, openApp, objections } = setUp();
+    await openApp.execute({ identity: 'uid-luis', country: 'ES' });
+    await objections.object('uid-luis', new Date('2026-11-19T10:00:00Z'));
+
+    // Act & Assert
+    expect((await seals.sealFor('uid-luis')).objectsToAnalytics).toBe(true);
+  });
+
   it('should seal with the game consent given and whether the player is under 18', async () => {
     // Arrange
     const { seals, openApp, declareAge, accept } = setUp();
@@ -42,6 +64,7 @@ describe('FirstAccessSealProvider', () => {
       researchConsentVersion: null,
       commercialLicenceConsentVersion: null,
       underEighteen: true,
+      objectsToAnalytics: false,
     });
   });
 

@@ -24,6 +24,7 @@
     "@opentelemetry/sdk-node": "^0.300.0",
     "@opentelemetry/sdk-trace": "^3.0.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
+    "@thelever-app/analytics": "workspace:*",
     "@thelever-app/consent": "workspace:*",
     "@thelever-app/db": "workspace:*",
     "@thelever-app/dilemmas": "workspace:*",

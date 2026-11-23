@@ -1,6 +1,6 @@
 import type { OwnPage } from '../site-texts.ts';
 
-const UPDATED = '19 de novembre de 2026';
+const UPDATED = '23 de novembre de 2026';
 
 /** The terms of use of the app, version 1, which the first access asks to accept. */
 export const terms: OwnPage = {
@@ -45,7 +45,7 @@ export const terms: OwnPage = {
     {
       heading: 'Moderació i denúncies',
       paragraphs: [
-        'Qualsevol jugador pot denunciar un dilema des de la partida, i el revisa el nostre equip. Si incompleixes aquestes condicions, podem substituir el teu sobrenom per un de genèric o impedir-te l’accés, i et direm el motiu, els fets, la norma aplicada i com reclamar.',
+        'Qualsevol jugador pot denunciar un dilema o un sobrenom des de la partida, i el nostre equip ho revisa. Si incompleixes aquestes condicions, podem substituir el teu sobrenom per un de genèric o impedir-te l’accés, i et direm el motiu, els fets, la norma aplicada i com reclamar.',
         'Qualsevol persona, jugui o no, pot denunciar contingut il·legal escrivint a privacidad@thelever.app, que també és el punt de contacte per a les autoritats.',
       ],
     },
@@ -71,7 +71,7 @@ export const terms: OwnPage = {
     {
       heading: 'Deixar de jugar',
       paragraphs: [
-        'Pots deixar de fer servir TheLever quan vulguis i demanar-nos que esborrem les teves dades escrivint a privacidad@thelever.app. Si incompleixes aquestes condicions de manera greu o repetida, podem impedir-te l’accés, amb la motivació de l’apartat de moderació.',
+        'Pots deixar de fer servir TheLever quan vulguis i esborrar les teves dades a Configuració → Privadesa i dades → Esborrar les meves dades. Si incompleixes aquestes condicions de manera greu o repetida, podem impedir-te l’accés, amb la motivació de l’apartat de moderació.',
       ],
     },
     {
@@ -111,15 +111,17 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Quines dades tractem, per a què i amb quina base',
       paragraphs: [
-        '- Per jugar, amb el teu consentiment explícit (art. 6.1.a i 9.2.a RGPD): el teu sobrenom i el teu avatar; els teus vots, les teves prediccions del vot dels altres o del repartiment del grup, les teves reaccions i els teus punts; si un dilema tractava sobre tu; l’ordre en què vas veure les opcions i quant vas trigar a respondre; i els teus «Bon dilema», que es guarden a part de la sala.',
+        '- Per jugar, amb el teu consentiment explícit (art. 6.1.a i 9.2.a RGPD): el teu sobrenom i el teu avatar; els teus vots, les teves prediccions del vot dels altres o del repartiment del grup, les teves reaccions i els teus punts; si un dilema tractava sobre tu; l’ordre en què vas veure les opcions; i els teus «Bon dilema», que es guarden a part de la sala.',
         '- Per votar sol un dilema de la web, amb el mateix consentiment: el teu vot suma al resultat mundial sense que guardem què vas votar, i només queda una marca que ja vas votar aquest dilema, perquè no compti dues vegades.',
         '- Per no repetir-te dilemes, amb el mateix consentiment: el teu mòbil guarda la llista de dilemes que has jugat, sense els teus vots, i l’envia en entrar en una sala, que només la fa servir per preparar les partides i l’esborra amb la sala.',
         '- Per reconèixer-te, per les condicions d’ús (art. 6.1.b): un identificador anònim del teu dispositiu i quan vas obrir l’app per última vegada.',
         '- Per complir la llei sobre l’edat (art. 6.1.c): el teu any de naixement i, si fas 18 anys aquest any o més endavant, el mes; i la teva regió (Espai Econòmic Europeu, resta del món o país on TheLever no està disponible), que deduïm de la teva adreça IP amb una base de dades al nostre propi servidor, IP Geolocation by DB-IP (db-ip.com, llicència CC BY 4.0). TheLever no guarda la teva IP; el nostre proveïdor d’accés, Firebase Authentication (Google), la registra unes setmanes per seguretat.',
-        '- Per poder demostrar què vas acceptar (art. 6.1.c i 7.1): quina versió de les condicions i del consentiment vas acceptar i quan.',
+        '- Per poder demostrar què vas acceptar (art. 6.1.c i 7.1): quina versió de les condicions i del consentiment vas acceptar i quan, i quan el vas retirar.',
+        '- Per mesurar l’ús i millorar el joc, per interès legítim (art. 6.1.f): quan vas obrir l’app per primera vegada i des de quin enllaç hi vas arribar (per exemple, el d’un cartell); quan crees una sala o entres a la d’un altre; quan comença i acaba una partida i amb quants jugadors; i quant trigueu tu i el grup a respondre cada dilema, que s’esborra amb la partida. Mai els teus vots, les teves prediccions ni les teves reaccions, i sense galetes: ho registra el nostre servidor. La primera visita es registra abans que t’hi hagis pogut oposar. T’hi pots oposar a Configuració → Privadesa i dades → Els teus permisos: deixem de registrar-ho i esborrem els esdeveniments que teníem; els temps de les partides que encara es conserven s’esborren amb elles.',
         '- Per als anuncis, amb el teu consentiment (art. 6.1.a RGPD i art. 22.2 LSSI): les galetes i identificadors de la xarxa publicitària, segons el que triïs al gestor de galetes de Google.',
-        '- Per moderar (obligació legal del Reglament de Serveis Digitals i interès legítim en un servei segur, art. 6.1.c i 6.1.f): el dilema que denuncies, el motiu i el teu comentari, sense dir a ningú del grup que l’has denunciat.',
-        '- Per atendre les teves peticions (art. 6.1.c): el teu correu i el que ens demanis.',
+        '- Per moderar (obligació legal del Reglament de Serveis Digitals i interès legítim en un servei segur, art. 6.1.c i 6.1.f): el dilema o el sobrenom que denuncies, el motiu i el teu comentari, sense dir a ningú del grup que l’has denunciat; si denuncien el teu sobrenom, el sobrenom i la nostra decisió; si denuncies contingut il·legal des de la web, el que ens expliques i, si ens els dones, el teu nom i el teu correu per respondre’t; i els avisos de cada decisió.',
+        '- Per atendre les teves peticions (art. 6.1.c): el teu correu, el que ens demanis i el codi per a peticions que et donem quan obres l’app per primera vegada, que veus a Configuració → Privadesa i dades → Les teves dades.',
+        '- Perquè un esborrament no es desfaci si restaurem una còpia de seguretat (art. 6.1.c i 17): el teu identificador anònim, el motiu de l’esborrament i quan el vas demanar i quan va acabar.',
       ],
     },
     {
@@ -132,7 +134,7 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Menors',
       paragraphs: [
-        'Per jugar cal tenir com a mínim 16 anys a l’Espai Econòmic Europeu i 18 a la resta del món. Els jugadors de 16 i 17 anys només juguen dilemes aptes per a la seva edat, no entren en sales amb dilemes +18 i els seus anuncis mai es personalitzen. Si l’edat que declares no arriba a la mínima, només guardem el teu any de naixement, el mes si el vas donar, la teva regió i quan vas obrir l’app per última vegada, perquè no puguis jugar en aquest dispositiu, i ho esborrem després de 24 mesos sense obrir l’app. Si sabem per una altra via que algú no té l’edat mínima, esborrem les seves dades.',
+        'Per jugar cal tenir com a mínim 16 anys a l’Espai Econòmic Europeu i 18 a la resta del món. Els jugadors de 16 i 17 anys només juguen dilemes aptes per a la seva edat, no entren en sales amb dilemes +18 i els seus anuncis mai es personalitzen. Si l’edat que declares no arriba a la mínima, només guardem el teu any de naixement, el mes si el vas donar, la teva regió, quan vas obrir l’app per última vegada, el teu codi per a peticions i el registre de la teva primera visita, perquè no puguis jugar en aquest dispositiu, i ho esborrem després de 24 mesos sense obrir l’app. Si sabem per una altra via que algú no té l’edat mínima, esborrem les seves dades.',
       ],
     },
     {
@@ -144,14 +146,14 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Amb qui compartim les teves dades',
       paragraphs: [
-        'No venem les teves dades. Les tracten per compte nostre, amb contracte i només per prestar el servei, Google Cloud i Firebase (Google), que allotgen l’app, la seva base de dades i l’accés, i Hostinger, que allotja el nostre correu. El gestor de galetes és de Google, i la xarxa publicitària i els seus socis tracten les seves galetes com a responsables pel seu compte, només si ho acceptes. També podem haver de donar dades a les autoritats quan la llei ens hi obligui.',
+        'No venem les teves dades. Les tracten per compte nostre, amb contracte i només per prestar el servei, Google Cloud i Firebase (Google), que allotgen l’app, la seva base de dades i l’accés; Hostinger, que allotja el nostre correu i envia els nostres correus; GitHub, on l’equip porta el registre intern de moderació, amb el que s’ha denunciat (per exemple, un sobrenom) però sense qui ho ha denunciat, el seu comentari, el seu nom ni el seu correu; i Anthropic, que tradueix a la teva llengua l’explicació d’una decisió de moderació. El gestor de galetes és de Google, i la xarxa publicitària i els seus socis tracten les seves galetes com a responsables pel seu compte, només si ho acceptes. També podem haver de donar dades a les autoritats quan la llei ens hi obligui.',
         'Si TheLever canvia de titular, per exemple en passar a una societat, les teves dades passaran al nou titular per continuar prestant-te el mateix servei, amb les mateixes finalitats i garanties (art. 21 de la LOPDGDD). T’avisarem a l’app abans del canvi i podràs demanar que les esborrem abans.',
       ],
     },
     {
       heading: 'Transferències fora de l’Espai Econòmic Europeu',
       paragraphs: [
-        'Google pot tractar dades als Estats Units, emparat en el Marc de Privadesa de Dades UE-EUA i en les clàusules contractuals tipus de la Comissió Europea.',
+        'Google, GitHub i Anthropic poden tractar dades als Estats Units: Google, emparat en el Marc de Privadesa de Dades UE-EUA i en les clàusules contractuals tipus de la Comissió Europea; GitHub i Anthropic, en aquestes mateixes clàusules, que formen part dels seus contractes. Hostinger guarda el nostre correu a la Unió Europea.',
       ],
     },
     {
@@ -159,7 +161,9 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         '- El que respons en una partida: menys de 24 hores des que es tanca la sala.',
         '- Els teus «Bon dilema» i la marca que has votat sol: fins que demanis esborrar les teves dades o passis 24 mesos sense obrir l’app.',
-        '- La teva edat, la teva regió i el que has acceptat: mentre facis servir l’app i, si esborres les teves dades, un registre mínim del que vas acceptar durant 3 anys.',
+        '- La teva edat, la teva regió, el teu codi per a peticions i el que has acceptat: mentre facis servir l’app i, si esborres les teves dades, un registre mínim del que vas acceptar durant 3 anys.',
+        '- Les dades d’ús amb el teu identificador: 13 mesos; després, només totals que no t’identifiquen.',
+        '- Les denúncies, les decisions de moderació i els seus avisos, les teves peticions amb les nostres respostes i el registre dels teus esborraments: 3 anys. Si esborres les teves dades, les denúncies que vas fer queden sense cap vincle amb tu.',
         '- Les teves eleccions de galetes: el que fixi el gestor de galetes de Google, com a màxim 13 mesos.',
         '- El que esborrem continua uns dies a les còpies de seguretat: 7 dies a les nostres i fins a 180 a les de Firebase. Mentrestant no es fa servir per a res.',
       ],
@@ -167,7 +171,11 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Els teus drets',
       paragraphs: [
-        'Pots demanar accés a les teves dades, rectificar-les, esborrar-les, limitar-ne l’ús, endur-te-les i oposar-te al seu tractament, i retirar el consentiment del joc quan vulguis, sense que afecti el que ja s’ha tractat. Escriu a privacidad@thelever.app; com que jugues sense compte, si no podem comprovar que la petició és teva et demanarem el necessari per fer-ho. Responem en un mes com a màxim.',
+        'Pots demanar accés a les teves dades, rectificar-les, esborrar-les, limitar-ne l’ús, endur-te-les i oposar-te al seu tractament. A Configuració → Privadesa i dades pots, tu mateix:',
+        '- A «Els teus permisos», retirar el consentiment del joc quan vulguis, sense que afecti el que ja s’ha tractat: no podràs crear sales ni entrar-hi fins que el tornis a donar, i esborrem el que vas respondre a les partides que encara no s’han esborrat. També oposar-te a l’anàlisi d’ús.',
+        '- A «Esborrar les meves dades», esborrar-les: el teu mòbil queda com nou al moment i esborrem tot el que està vinculat al teu identificador en pocs minuts, i com a màxim en un mes, excepte el registre mínim del que vas acceptar i el del teu esborrament.',
+        'Si retires el consentiment o esborres les teves dades, a les sales que encara es conserven el teu sobrenom passa a ser «Jugador».',
+        'Per a tota la resta, com demanar una còpia de les teves dades o corregir la teva edat, escriu a privacidad@thelever.app amb el codi que veus a Configuració → Privadesa i dades → Les teves dades: com que jugues sense compte, és el que ens permet saber que la petició és teva, i sense ell no la podem atendre. Si només ens vas denunciar alguna cosa des de la web, escriu-nos des del correu que ens vas donar. Responem en un mes com a màxim.',
         'Si creus que no hem tractat bé les teves dades, pots reclamar davant de l’Agència Espanyola de Protecció de Dades (aepd.es) o de l’autoritat del teu país.',
       ],
     },

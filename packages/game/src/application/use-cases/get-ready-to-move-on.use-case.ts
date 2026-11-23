@@ -6,6 +6,8 @@ import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findCurrentGame } from './find-current-game.ts';
 import { notifyGame } from './notify-game.ts';
+import { recordEndIfJustEnded } from './record-usage.ts';
+import type { Usage } from '../ports/usage.port.ts';
 
 export interface GetReadyToMoveOnInput {
   readonly roomId: string;
@@ -28,17 +30,20 @@ export class GetReadyToMoveOnUseCase {
   readonly #gameRepository: GameRepository;
   readonly #notifier: PlayerNotifier;
   readonly #clock: Clock;
+  readonly #usage: Usage;
 
   constructor(
     roomRepository: RoomRepository,
     gameRepository: GameRepository,
     notifier: PlayerNotifier,
     clock: Clock,
+    usage: Usage,
   ) {
     this.#roomRepository = roomRepository;
     this.#gameRepository = gameRepository;
     this.#notifier = notifier;
     this.#clock = clock;
+    this.#usage = usage;
   }
 
   async execute({ roomId, playerId, fromPosition }: GetReadyToMoveOnInput): Promise<void> {
@@ -49,6 +54,7 @@ export class GetReadyToMoveOnUseCase {
     );
     if (!room.hasPlayer(playerId)) throw new PlayerNotInRoomError(playerId);
 
+    const stageBefore = game.stage.kind;
     game.getReadyToMoveOn(playerId, fromPosition, room.connectedPlayerIds, this.#clock.now());
     if (game.stage.kind === 'ended') handOverHostIfAway(room, game);
     const gameEvents = game.pullEvents();
@@ -56,6 +62,7 @@ export class GetReadyToMoveOnUseCase {
     const roomEvents = room.pullEvents();
     await this.#gameRepository.save(game);
     if (roomEvents.length > 0) await this.#roomRepository.save(room);
+    await recordEndIfJustEnded(this.#usage, room, game, stageBefore);
 
     await notifyGame({ room, game }, { roomEvents, gameEvents }, this.#notifier);
   }

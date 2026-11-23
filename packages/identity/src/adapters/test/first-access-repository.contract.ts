@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { FirstAccessRepository } from '../../application/ports/first-access-repository.port.ts';
 import { FirstAccess } from '../../domain/entities/first-access.ts';
+import { RequestCodeVO } from '../../domain/vos/request-code.vo.ts';
 
 const OPENED = new Date('2026-11-19T10:00:00Z');
+
+function requestCode(written: string): RequestCodeVO {
+  const code = RequestCodeVO.parse(written);
+  if (!code) throw new Error(`${written} is not a request code`);
+  return code;
+}
+
+const CODE = requestCode('K7Q4-MD2X-9PRT');
+const OTHER_CODE = requestCode('A1B2-C3D4-E5F6');
 
 async function foundIn(repository: FirstAccessRepository): Promise<FirstAccess> {
   const found = await repository.findByIdentity('TestIdentity');
@@ -31,6 +41,7 @@ export function describeFirstAccessRepositoryContract(
         identity: 'TestIdentity',
         country: 'ES',
         now: OPENED,
+        requestCode: CODE,
       });
       firstAccess.declareAge(2010, 3, OPENED);
 
@@ -49,6 +60,7 @@ export function describeFirstAccessRepositoryContract(
         identity: 'TestIdentity',
         country: 'US',
         now: OPENED,
+        requestCode: CODE,
       });
       await repository.save(firstAccess);
       const later = new Date('2026-12-01T08:30:00Z');
@@ -66,6 +78,7 @@ export function describeFirstAccessRepositoryContract(
         birthYear: 1990,
         birthMonth: null,
         lastOpenedAt: later,
+        requestCode: 'K7Q4MD2X9PRT',
       });
     });
 
@@ -73,7 +86,12 @@ export function describeFirstAccessRepositoryContract(
       // Arrange: the app opens again while the age is being declared.
       const repository = await create();
       await repository.save(
-        FirstAccess.begin({ identity: 'TestIdentity', country: 'ES', now: OPENED }),
+        FirstAccess.begin({
+          identity: 'TestIdentity',
+          country: 'ES',
+          now: OPENED,
+          requestCode: CODE,
+        }),
       );
       const reopened = await foundIn(repository);
       const declaring = await foundIn(repository);
@@ -93,6 +111,7 @@ export function describeFirstAccessRepositoryContract(
         birthYear: 1990,
         birthMonth: null,
         lastOpenedAt: later,
+        requestCode: 'K7Q4MD2X9PRT',
       });
     });
 
@@ -100,10 +119,20 @@ export function describeFirstAccessRepositoryContract(
       // Arrange
       const repository = await create();
       await repository.save(
-        FirstAccess.begin({ identity: 'TestIdentity1', country: 'ES', now: OPENED }),
+        FirstAccess.begin({
+          identity: 'TestIdentity1',
+          country: 'ES',
+          now: OPENED,
+          requestCode: CODE,
+        }),
       );
       await repository.save(
-        FirstAccess.begin({ identity: 'TestIdentity2', country: 'GB', now: OPENED }),
+        FirstAccess.begin({
+          identity: 'TestIdentity2',
+          country: 'GB',
+          now: OPENED,
+          requestCode: OTHER_CODE,
+        }),
       );
 
       // Act
@@ -111,6 +140,89 @@ export function describeFirstAccessRepositoryContract(
 
       // Assert
       expect(first?.region).toBe('eea');
+    });
+
+    it('should find the first access by its request code', async () => {
+      // Arrange
+      const repository = await create();
+      await repository.save(
+        FirstAccess.begin({
+          identity: 'TestIdentity1',
+          country: 'ES',
+          now: OPENED,
+          requestCode: CODE,
+        }),
+      );
+      await repository.save(
+        FirstAccess.begin({
+          identity: 'TestIdentity2',
+          country: 'ES',
+          now: OPENED,
+          requestCode: OTHER_CODE,
+        }),
+      );
+
+      // Act
+      const found = await repository.findByRequestCode('A1B2C3D4E5F6');
+
+      // Assert
+      expect(found?.identity).toBe('TestIdentity2');
+      expect(await repository.findByRequestCode('ZZZZZZZZZZZZ')).toBeUndefined();
+    });
+
+    it('should refuse a request code another identity already has', async () => {
+      // Arrange
+      const repository = await create();
+      await repository.save(
+        FirstAccess.begin({
+          identity: 'TestIdentity1',
+          country: 'ES',
+          now: OPENED,
+          requestCode: CODE,
+        }),
+      );
+
+      // Act & Assert
+      await expect(
+        repository.save(
+          FirstAccess.begin({
+            identity: 'TestIdentity2',
+            country: 'ES',
+            now: OPENED,
+            requestCode: CODE,
+          }),
+        ),
+      ).rejects.toThrow();
+      expect((await repository.findByRequestCode('K7Q4MD2X9PRT'))?.identity).toBe('TestIdentity1');
+    });
+
+    it('should delete the first access of an identity, its request code included', async () => {
+      // Arrange
+      const repository = await create();
+      await repository.save(
+        FirstAccess.begin({
+          identity: 'TestIdentity1',
+          country: 'ES',
+          now: OPENED,
+          requestCode: CODE,
+        }),
+      );
+      await repository.save(
+        FirstAccess.begin({
+          identity: 'TestIdentity2',
+          country: 'ES',
+          now: OPENED,
+          requestCode: OTHER_CODE,
+        }),
+      );
+
+      // Act
+      await repository.delete('TestIdentity1');
+
+      // Assert
+      expect(await repository.findByIdentity('TestIdentity1')).toBeUndefined();
+      expect(await repository.findByRequestCode('K7Q4MD2X9PRT')).toBeUndefined();
+      expect(await repository.findByIdentity('TestIdentity2')).toBeDefined();
     });
   });
 }

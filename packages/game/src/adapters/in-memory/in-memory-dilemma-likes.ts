@@ -22,6 +22,25 @@ export class InMemoryDilemmaLikes implements DilemmaLikes {
     return this.#likes.has(keyOf(identity, dilemmaId));
   }
 
+  async likesOf(
+    identity: string,
+  ): Promise<readonly (DilemmaLike & { readonly givenIn: 'game' | 'catalog' })[]> {
+    return [...this.#likes.values()]
+      .filter((like) => like.identity === identity)
+      .sort((a, b) => a.at.getTime() - b.at.getTime())
+      .map(({ weight, ...like }) => ({
+        ...like,
+        seal: { ...like.seal },
+        givenIn: weight === GAME_LIKE_WEIGHT ? 'game' : 'catalog',
+      }));
+  }
+
+  async forgetAllOf(identity: string): Promise<void> {
+    for (const [key, like] of this.#likes) {
+      if (like.identity === identity) this.#likes.delete(key);
+    }
+  }
+
   /** What the likes of a dilemma weigh in all, as the rating counts them. */
   weightOf(dilemmaId: string): number {
     return [...this.#likes.values()]

@@ -69,6 +69,23 @@ export class InMemoryWorldResultRepository implements WorldResultRepository {
     }
   }
 
+  async receiptsOf(
+    identity: string,
+  ): Promise<{ readonly dilemmaId: string; readonly version: number }[]> {
+    return [...this.#receipts].flatMap((receipt) => {
+      const [owner, version] = JSON.parse(receipt) as [string, string];
+      if (owner !== identity) return [];
+      const [dilemmaId, number] = JSON.parse(version) as [string, number];
+      return [{ dilemmaId, version: number }];
+    });
+  }
+
+  async forgetReceiptsOf(identity: string): Promise<void> {
+    for (const receipt of [...this.#receipts]) {
+      if ((JSON.parse(receipt) as [string, string])[0] === identity) this.#receipts.delete(receipt);
+    }
+  }
+
   async publishedCountsOf(
     dilemmaId: string,
     version: number,

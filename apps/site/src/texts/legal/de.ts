@@ -1,6 +1,6 @@
 import type { OwnPage } from '../site-texts.ts';
 
-const UPDATED = '19. November 2026';
+const UPDATED = '23. November 2026';
 
 /** The terms of use of the app, version 1, which the first access asks to accept. */
 export const terms: OwnPage = {
@@ -45,7 +45,7 @@ export const terms: OwnPage = {
     {
       heading: 'Moderation und Meldungen',
       paragraphs: [
-        'Alle Spielenden können ein Dilemma aus dem Spiel heraus melden, und unser Team prüft es. Wenn du gegen diese Bedingungen verstößt, können wir deinen Spitznamen durch einen allgemeinen ersetzen oder dir den Zugang sperren, und wir nennen dir den Grund, die Tatsachen, die angewandte Regel und wie du widersprechen kannst.',
+        'Alle Spielenden können ein Dilemma oder einen Spitznamen aus dem Spiel heraus melden, und unser Team prüft es. Wenn du gegen diese Bedingungen verstößt, können wir deinen Spitznamen durch einen allgemeinen ersetzen oder dir den Zugang sperren, und wir nennen dir den Grund, die Tatsachen, die angewandte Regel und wie du widersprechen kannst.',
         'Alle, ob sie spielen oder nicht, können rechtswidrige Inhalte melden, indem sie an privacidad@thelever.app schreiben; das ist auch die Kontaktstelle für Behörden.',
       ],
     },
@@ -71,7 +71,7 @@ export const terms: OwnPage = {
     {
       heading: 'Mit dem Spielen aufhören',
       paragraphs: [
-        'Du kannst TheLever jederzeit nicht mehr nutzen und uns bitten, deine Daten zu löschen, indem du an privacidad@thelever.app schreibst. Wenn du schwer oder wiederholt gegen diese Bedingungen verstößt, können wir dir den Zugang sperren, mit der Begründung, die der Abschnitt zur Moderation vorsieht.',
+        'Du kannst TheLever jederzeit nicht mehr nutzen und deine Daten unter Einstellungen → Datenschutz und Daten → „Meine Daten löschen“ entfernen. Wenn du schwer oder wiederholt gegen diese Bedingungen verstößt, können wir dir den Zugang sperren, mit der Begründung, die der Abschnitt zur Moderation vorsieht.',
       ],
     },
     {
@@ -111,15 +111,17 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Welche Daten wir verarbeiten, wofür und auf welcher Grundlage',
       paragraphs: [
-        '- Zum Spielen, mit deiner ausdrücklichen Einwilligung (Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a DSGVO): dein Spitzname und dein Avatar; deine Stimmen, deine Vorhersagen der Stimmen der anderen oder der Verteilung der Gruppe, deine Reaktionen und deine Punkte; ob ein Dilemma von dir handelte; die Reihenfolge, in der du die Optionen gesehen hast, und wie lange du zum Antworten gebraucht hast; und deine „Gutes Dilemma“, die getrennt vom Raum gespeichert werden.',
+        '- Zum Spielen, mit deiner ausdrücklichen Einwilligung (Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a DSGVO): dein Spitzname und dein Avatar; deine Stimmen, deine Vorhersagen der Stimmen der anderen oder der Verteilung der Gruppe, deine Reaktionen und deine Punkte; ob ein Dilemma von dir handelte; die Reihenfolge, in der du die Optionen gesehen hast; und deine „Gutes Dilemma“, die getrennt vom Raum gespeichert werden.',
         '- Um ein Dilemma der Website allein abzustimmen, mit derselben Einwilligung: Deine Stimme zählt zum weltweiten Ergebnis, ohne dass wir speichern, was du gewählt hast; es bleibt nur ein Vermerk, dass du dieses Dilemma schon abgestimmt hast, damit es nicht doppelt zählt.',
         '- Damit sich Dilemmas nicht wiederholen, mit derselben Einwilligung: Dein Handy speichert die Liste der Dilemmas, die du gespielt hast, ohne deine Stimmen, und schickt sie, wenn du einen Raum betrittst; der Raum nutzt sie nur, um die Spiele zusammenzustellen, und löscht sie mit sich.',
         '- Um dich wiederzuerkennen, aufgrund der Nutzungsbedingungen (Art. 6 Abs. 1 lit. b): eine anonyme Kennung deines Geräts und wann du die App zuletzt geöffnet hast.',
         '- Um das Gesetz zum Alter einzuhalten (Art. 6 Abs. 1 lit. c): dein Geburtsjahr und, wenn du dieses Jahr oder später 18 wirst, der Monat; und deine Region (Europäischer Wirtschaftsraum, übrige Welt oder ein Land, in dem TheLever nicht verfügbar ist), die wir mit einer Datenbank auf unserem eigenen Server aus deiner IP-Adresse ableiten, IP Geolocation by DB-IP (db-ip.com, Lizenz CC BY 4.0). TheLever speichert deine IP nicht; unser Anmeldedienst, Firebase Authentication (Google), protokolliert sie einige Wochen lang zur Sicherheit.',
-        '- Um nachweisen zu können, was du akzeptiert hast (Art. 6 Abs. 1 lit. c und Art. 7 Abs. 1): welche Version der Bedingungen und der Einwilligung du wann akzeptiert hast.',
+        '- Um nachweisen zu können, was du akzeptiert hast (Art. 6 Abs. 1 lit. c und Art. 7 Abs. 1): welche Version der Bedingungen und der Einwilligung du wann akzeptiert hast und wann du sie widerrufen hast.',
+        '- Um die Nutzung zu messen und das Spiel zu verbessern, aufgrund berechtigten Interesses (Art. 6 Abs. 1 lit. f): wann du die App zum ersten Mal geöffnet hast und über welchen Link du gekommen bist (zum Beispiel den eines Plakats); wann du einen Raum erstellst oder den Raum von jemand anderem betrittst; wann ein Spiel beginnt und endet und mit wie vielen Spielenden; und wie lange du und die Gruppe für jedes Dilemma zum Antworten braucht, was mit dem Spiel gelöscht wird. Niemals deine Stimmen, deine Vorhersagen oder deine Reaktionen, und ohne Cookies: Unser Server zeichnet es auf. Der erste Besuch wird aufgezeichnet, bevor du widersprechen konntest. Du kannst unter Einstellungen → Datenschutz und Daten → Deine Berechtigungen widersprechen: Dann zeichnen wir es nicht mehr auf und löschen die Ereignisse, die wir hatten; die Zeiten der noch gespeicherten Spiele werden mit ihnen gelöscht.',
         '- Für die Werbung, mit deiner Einwilligung (Art. 6 Abs. 1 lit. a DSGVO und Art. 22.2 LSSI): die Cookies und Kennungen des Werbenetzwerks, je nachdem, was du im Cookie-Manager von Google wählst.',
-        '- Zur Moderation (rechtliche Pflicht aus dem Gesetz über digitale Dienste und berechtigtes Interesse an einem sicheren Dienst, Art. 6 Abs. 1 lit. c und f): das Dilemma, das du meldest, der Grund und dein Kommentar, ohne dass jemand in der Gruppe erfährt, dass du es gemeldet hast.',
-        '- Um deine Anfragen zu bearbeiten (Art. 6 Abs. 1 lit. c): deine E-Mail und dein Anliegen.',
+        '- Zur Moderation (rechtliche Pflicht aus dem Gesetz über digitale Dienste und berechtigtes Interesse an einem sicheren Dienst, Art. 6 Abs. 1 lit. c und f): das Dilemma oder der Spitzname, den du meldest, der Grund und dein Kommentar, ohne dass jemand in der Gruppe erfährt, dass du es gemeldet hast; wenn dein Spitzname gemeldet wird, der Spitzname und unsere Entscheidung; wenn du über die Website rechtswidrige Inhalte meldest, was du uns schreibst und, wenn du sie uns gibst, dein Name und deine E-Mail, damit wir dir antworten können; und die Mitteilungen zu jeder Entscheidung.',
+        '- Um deine Anfragen zu bearbeiten (Art. 6 Abs. 1 lit. c): deine E-Mail, dein Anliegen und der Code für Anfragen, den wir dir beim ersten Öffnen der App geben und den du unter Einstellungen → Datenschutz und Daten → Deine Daten siehst.',
+        '- Damit eine Löschung nicht rückgängig gemacht wird, wenn wir eine Sicherung wiederherstellen (Art. 6 Abs. 1 lit. c und Art. 17): deine anonyme Kennung, der Grund der Löschung und wann du sie beantragt hast und wann sie abgeschlossen war.',
       ],
     },
     {
@@ -132,7 +134,7 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Minderjährige',
       paragraphs: [
-        'Zum Spielen musst du im Europäischen Wirtschaftsraum mindestens 16 und in der übrigen Welt 18 Jahre alt sein. Spielende mit 16 und 17 Jahren spielen nur Dilemmas, die zu ihrem Alter passen, betreten keine Räume mit Dilemmas ab 18, und ihre Werbung wird nie personalisiert. Wenn das Alter, das du angibst, unter dem Mindestalter liegt, speichern wir nur dein Geburtsjahr, den Monat, falls du ihn angegeben hast, deine Region und wann du die App zuletzt geöffnet hast, damit du auf diesem Gerät nicht spielen kannst, und löschen das nach 24 Monaten, in denen du die App nicht öffnest. Wenn wir auf anderem Weg erfahren, dass jemand das Mindestalter nicht erreicht, löschen wir seine Daten.',
+        'Zum Spielen musst du im Europäischen Wirtschaftsraum mindestens 16 und in der übrigen Welt 18 Jahre alt sein. Spielende mit 16 und 17 Jahren spielen nur Dilemmas, die zu ihrem Alter passen, betreten keine Räume mit Dilemmas ab 18, und ihre Werbung wird nie personalisiert. Wenn das Alter, das du angibst, unter dem Mindestalter liegt, speichern wir nur dein Geburtsjahr, den Monat, falls du ihn angegeben hast, deine Region, wann du die App zuletzt geöffnet hast, deinen Code für Anfragen und den Eintrag deines ersten Besuchs, damit du auf diesem Gerät nicht spielen kannst, und löschen das nach 24 Monaten, in denen du die App nicht öffnest. Wenn wir auf anderem Weg erfahren, dass jemand das Mindestalter nicht erreicht, löschen wir seine Daten.',
       ],
     },
     {
@@ -144,14 +146,14 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Mit wem wir deine Daten teilen',
       paragraphs: [
-        'Wir verkaufen deine Daten nicht. Sie werden in unserem Auftrag, mit Vertrag und nur zur Erbringung des Dienstes verarbeitet, von Google Cloud und Firebase (Google), die die App, ihre Datenbank und die Anmeldung hosten, und von Hostinger, das unsere E-Mails hostet. Der Cookie-Manager ist der von Google, und das Werbenetzwerk und seine Partner verarbeiten ihre Cookies als eigene Verantwortliche, nur wenn du zustimmst. Außerdem müssen wir Daten an Behörden geben, wenn das Gesetz es verlangt.',
+        'Wir verkaufen deine Daten nicht. Sie werden in unserem Auftrag, mit Vertrag und nur zur Erbringung des Dienstes verarbeitet, von Google Cloud und Firebase (Google), die die App, ihre Datenbank und die Anmeldung hosten; von Hostinger, das unsere E-Mails hostet und versendet; von GitHub, wo das Team das interne Moderationsregister führt, mit dem Gemeldeten (zum Beispiel einem Spitznamen), aber ohne Angabe, wer es gemeldet hat, und ohne dessen Kommentar, Namen oder E-Mail; und von Anthropic, das die Begründung einer Moderationsentscheidung in deine Sprache übersetzt. Der Cookie-Manager ist der von Google, und das Werbenetzwerk und seine Partner verarbeiten ihre Cookies als eigene Verantwortliche, nur wenn du zustimmst. Außerdem müssen wir Daten an Behörden geben, wenn das Gesetz es verlangt.',
         'Wenn TheLever den Inhaber wechselt, zum Beispiel wenn es eine Gesellschaft wird, gehen deine Daten an den neuen Inhaber über, damit er dir weiter denselben Dienst bietet, mit denselben Zwecken und Garantien (Art. 21 LOPDGDD). Wir sagen es dir vorher in der App, und du kannst uns bitten, sie vorher zu löschen.',
       ],
     },
     {
       heading: 'Übermittlungen außerhalb des Europäischen Wirtschaftsraums',
       paragraphs: [
-        'Google kann Daten in den Vereinigten Staaten verarbeiten, auf Grundlage des Datenschutzrahmens EU-USA und der Standardvertragsklauseln der Europäischen Kommission.',
+        'Google, GitHub und Anthropic können Daten in den Vereinigten Staaten verarbeiten: Google auf Grundlage des Datenschutzrahmens EU-USA und der Standardvertragsklauseln der Europäischen Kommission; GitHub und Anthropic auf Grundlage derselben Klauseln, die Teil ihrer Verträge sind. Hostinger speichert unsere E-Mails in der Europäischen Union.',
       ],
     },
     {
@@ -159,7 +161,9 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         '- Was du in einem Spiel antwortest: weniger als 24 Stunden nach dem Schließen des Raums.',
         '- Deine „Gutes Dilemma“ und der Vermerk, dass du allein abgestimmt hast: bis du die Löschung deiner Daten verlangst oder 24 Monate die App nicht öffnest.',
-        '- Dein Alter, deine Region und was du akzeptiert hast: solange du die App nutzt, und wenn du deine Daten löschst, ein minimaler Nachweis dessen, was du akzeptiert hast, für 3 Jahre.',
+        '- Dein Alter, deine Region, dein Code für Anfragen und was du akzeptiert hast: solange du die App nutzt, und wenn du deine Daten löschst, ein minimaler Nachweis dessen, was du akzeptiert hast, für 3 Jahre.',
+        '- Nutzungsdaten mit deiner Kennung: 13 Monate; danach nur Summen, die dich nicht identifizieren.',
+        '- Meldungen, Hinweise auf rechtswidrige Inhalte, Moderationsentscheidungen und ihre Mitteilungen, deine Anfragen mit unseren Antworten und das Register deiner Löschungen: 3 Jahre. Wenn du deine Daten löschst, haben die Meldungen und Hinweise, die du gemacht hast, keinerlei Verbindung mehr zu dir.',
         '- Deine Cookie-Auswahl: was der Cookie-Manager von Google festlegt, höchstens 13 Monate.',
         '- Was wir löschen, bleibt einige Tage in den Sicherungen: 7 Tage in unseren und bis zu 180 in denen von Firebase. In der Zwischenzeit wird es für nichts genutzt.',
       ],
@@ -167,7 +171,11 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Deine Rechte',
       paragraphs: [
-        'Du kannst Auskunft über deine Daten verlangen, sie berichtigen, löschen, ihre Nutzung einschränken, sie mitnehmen und ihrer Verarbeitung widersprechen und die Einwilligung zum Spiel jederzeit widerrufen, ohne dass das die bisherige Verarbeitung berührt. Schreib an privacidad@thelever.app; da du ohne Konto spielst, bitten wir dich, wenn wir nicht prüfen können, dass die Anfrage von dir stammt, um das, was wir dafür brauchen. Wir antworten innerhalb von höchstens einem Monat.',
+        'Du kannst Auskunft über deine Daten verlangen, sie berichtigen, löschen, ihre Nutzung einschränken, sie mitnehmen und ihrer Verarbeitung widersprechen. Unter Einstellungen → Datenschutz und Daten kannst du selbst:',
+        '- Unter „Deine Berechtigungen“ die Einwilligung zum Spiel jederzeit widerrufen, ohne dass das die bisherige Verarbeitung berührt: Du kannst dann keine Räume erstellen oder betreten, bis du sie erneut gibst, und wir löschen, was du in den noch nicht gelöschten Spielen geantwortet hast. Außerdem der Nutzungsanalyse widersprechen.',
+        '- Unter „Meine Daten löschen“ deine Daten löschen: Dein Handy ist sofort wie neu, und wir löschen alles, was mit deiner Kennung verbunden ist, innerhalb weniger Minuten und spätestens innerhalb eines Monats, außer dem minimalen Nachweis dessen, was du akzeptiert hast, und dem deiner Löschung.',
+        'Wenn du die Einwilligung widerrufst oder deine Daten löschst, wird dein Spitzname in den Räumen, die noch gespeichert sind, zu „Spieler“.',
+        'Für alles andere, etwa eine Kopie deiner Daten oder die Berichtigung deines Alters, schreib an privacidad@thelever.app mit dem Code, den du unter Einstellungen → Datenschutz und Daten → Deine Daten siehst: Da du ohne Konto spielst, wissen wir nur so, dass die Anfrage von dir stammt, und ohne ihn können wir sie nicht bearbeiten. Wenn du uns nur über die Website etwas gemeldet hast, schreib uns von der E-Mail-Adresse, die du uns gegeben hast. Wir antworten innerhalb von höchstens einem Monat.',
         'Wenn du meinst, dass wir deine Daten nicht richtig behandelt haben, kannst du dich bei der spanischen Datenschutzbehörde (aepd.es) oder bei der Behörde deines Landes beschweren.',
       ],
     },

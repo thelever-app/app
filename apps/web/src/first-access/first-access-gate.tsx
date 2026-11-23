@@ -31,7 +31,9 @@ export function FirstAccessGate({ adsenseClient, children }: FirstAccessGateProp
   const { t } = useTranslation();
   const api = useRoomApi();
   const { withAccess, accessCodeScreen } = useAccessGate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  // Where the visit came from is in the address the app opened with, not in the ones after it.
+  const [openedWith] = useState(search);
   const [status, setStatus] = useState<FirstAccessResponseDto>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -42,7 +44,7 @@ export function FirstAccessGate({ adsenseClient, children }: FirstAccessGateProp
 
   useEffect(() => {
     let active = true;
-    withAccess(() => api.openApp()).then(
+    withAccess(() => api.openApp(openedWith)).then(
       (opened) => {
         if (!active) return;
         if (opened) setStatus(opened);
@@ -53,7 +55,7 @@ export function FirstAccessGate({ adsenseClient, children }: FirstAccessGateProp
     return () => {
       active = false;
     };
-  }, [api, withAccess, attempt]);
+  }, [api, withAccess, attempt, openedWith]);
 
   // Whoever comes from the link of a room sees who invites them; without it, the welcome of always.
   const welcoming = status?.step === 'age' && !started;

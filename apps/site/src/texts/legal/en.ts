@@ -1,6 +1,6 @@
 import type { OwnPage } from '../site-texts.ts';
 
-const UPDATED = '19 November 2026';
+const UPDATED = '23 November 2026';
 
 /** The terms of use of the app, version 1, which the first access asks to accept. */
 export const terms: OwnPage = {
@@ -44,7 +44,7 @@ export const terms: OwnPage = {
     {
       heading: 'Moderation and reports',
       paragraphs: [
-        'Any player can report a dilemma from the game, and our team reviews it. If you breach these terms, we can replace your nickname with a generic one or stop your access, and we will tell you the reason, the facts, the rule applied and how to appeal.',
+        'Any player can report a dilemma or a nickname from the game, and our team reviews it. If you breach these terms, we can replace your nickname with a generic one or stop your access, and we will tell you the reason, the facts, the rule applied and how to appeal.',
         'Anyone, whether they play or not, can report illegal content by writing to privacidad@thelever.app, which is also the point of contact for the authorities.',
       ],
     },
@@ -70,7 +70,7 @@ export const terms: OwnPage = {
     {
       heading: 'Stopping playing',
       paragraphs: [
-        'You can stop using TheLever whenever you want and ask us to delete your data by writing to privacidad@thelever.app. If you breach these terms seriously or repeatedly, we can stop your access, with the reasons explained in the section on moderation.',
+        'You can stop using TheLever whenever you want and delete your data in Settings → Privacy and data → Delete my data. If you breach these terms seriously or repeatedly, we can stop your access, with the reasons explained in the section on moderation.',
       ],
     },
     {
@@ -110,15 +110,17 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'What data we process, why and on what basis',
       paragraphs: [
-        '- To play, with your explicit consent (art. 6.1.a and 9.2.a GDPR): your nickname and avatar; your votes, your predictions of the others’ votes or of the group’s split, your reactions and your points; whether a dilemma was about you; the order in which you saw the options and how long you took to answer; and your “Good dilemma” likes, which are kept apart from the room.',
+        '- To play, with your explicit consent (art. 6.1.a and 9.2.a GDPR): your nickname and avatar; your votes, your predictions of the others’ votes or of the group’s split, your reactions and your points; whether a dilemma was about you; the order in which you saw the options; and your “Good dilemma” likes, which are kept apart from the room.',
         '- To vote a dilemma of the website alone, with the same consent: your vote adds to the world result without us keeping what you voted, and only a mark that you already voted that dilemma is kept, so it does not count twice.',
         '- Not to repeat dilemmas, with the same consent: your phone keeps the list of dilemmas you have played, without your votes, and sends it when you join a room, which only uses it to put the games together and deletes it with the room.',
         '- To recognise you, under the terms of use (art. 6.1.b): an anonymous identifier of your device and when you last opened the app.',
         '- To comply with the law on age (art. 6.1.c): your year of birth and, if you turn 18 this year or later, the month; and your region (European Economic Area, rest of the world or a country where TheLever is not available), which we work out from your IP address with a database on our own server, IP Geolocation by DB-IP (db-ip.com, CC BY 4.0 licence). TheLever does not keep your IP; our sign-in provider, Firebase Authentication (Google), logs it for a few weeks for security.',
-        '- To be able to prove what you accepted (art. 6.1.c and 7.1): which version of the terms and of the consent you accepted and when.',
+        '- To be able to prove what you accepted (art. 6.1.c and 7.1): which version of the terms and of the consent you accepted and when, and when you withdrew it.',
+        '- To measure use and improve the game, on the basis of legitimate interest (art. 6.1.f): when you first opened the app and which link brought you (for example, the one on a poster); when you create a room or join someone else’s; when a game starts and ends and with how many players; and how long you and the group take to answer each dilemma, which is deleted with the game. Never your votes, your predictions or your reactions, and without cookies: our server records it. The first visit is recorded before you have been able to object. You can object in Settings → Privacy and data → Your permissions: we stop recording it and delete the events we had; the times of the games still kept are deleted with them.',
         '- For the ads, with your consent (art. 6.1.a GDPR and art. 22.2 LSSI): the cookies and identifiers of the ad network, according to what you choose in Google’s cookie manager.',
-        '- To moderate (legal obligation under the Digital Services Act and legitimate interest in a safe service, art. 6.1.c and 6.1.f): the dilemma you report, the reason and your comment, without telling anyone in the group that you reported it.',
-        '- To handle your requests (art. 6.1.c): your email and what you ask us.',
+        '- To moderate (legal obligation under the Digital Services Act and legitimate interest in a safe service, art. 6.1.c and 6.1.f): the dilemma or nickname you report, the reason and your comment, without telling anyone in the group that you reported it; if your nickname is reported, the nickname and our decision; if you report illegal content from the website, what you tell us and, if you give them to us, your name and email so we can reply; and the notices of each decision.',
+        '- To handle your requests (art. 6.1.c): your email, what you ask us and the request code we give you when you first open the app, which you can see in Settings → Privacy and data → Your data.',
+        '- So that a deletion is not undone if we restore a backup (art. 6.1.c and 17): your anonymous identifier, the reason for the deletion, and when you asked for it and when it was completed.',
       ],
     },
     {
@@ -131,7 +133,7 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Minors',
       paragraphs: [
-        'To play you must be at least 16 in the European Economic Area and 18 in the rest of the world. Players aged 16 and 17 only play dilemmas suited to their age, cannot join rooms with 18+ dilemmas and their ads are never personalised. If the age you declare is under the minimum, we only keep your year of birth, the month if you gave it, your region and when you last opened the app, so that you cannot play on that device, and we delete it after 24 months without opening the app. If we learn in some other way that someone is under the minimum age, we delete their data.',
+        'To play you must be at least 16 in the European Economic Area and 18 in the rest of the world. Players aged 16 and 17 only play dilemmas suited to their age, cannot join rooms with 18+ dilemmas and their ads are never personalised. If the age you declare is under the minimum, we only keep your year of birth, the month if you gave it, your region, when you last opened the app, your request code and the record of your first visit, so that you cannot play on that device, and we delete it after 24 months without opening the app. If we learn in some other way that someone is under the minimum age, we delete their data.',
       ],
     },
     {
@@ -143,14 +145,14 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Who we share your data with',
       paragraphs: [
-        'We do not sell your data. They are processed on our behalf, under contract and only to provide the service, by Google Cloud and Firebase (Google), which host the app, its database and the sign-in, and by Hostinger, which hosts our email. The cookie manager is Google’s, and the ad network and its partners process their cookies as controllers on their own account, only if you accept it. We may also have to give data to the authorities when the law requires it.',
+        'We do not sell your data. They are processed on our behalf, under contract and only to provide the service, by Google Cloud and Firebase (Google), which host the app, its database and the sign-in; Hostinger, which hosts our email and sends our emails; GitHub, where the team keeps the internal moderation record, with what was reported (for example, a nickname) but not who reported it, their comment, their name or their email; and Anthropic, which translates into your language the explanation of a moderation decision. The cookie manager is Google’s, and the ad network and its partners process their cookies as controllers on their own account, only if you accept it. We may also have to give data to the authorities when the law requires it.',
         'If TheLever changes owner, for example when it becomes a company, your data will pass to the new owner to keep providing you the same service, with the same purposes and safeguards (art. 21 of the LOPDGDD). We will tell you in the app before the change and you can ask us to delete them before.',
       ],
     },
     {
       heading: 'Transfers outside the European Economic Area',
       paragraphs: [
-        'Google may process data in the United States, under the EU-US Data Privacy Framework and the standard contractual clauses of the European Commission.',
+        'Google, GitHub and Anthropic may process data in the United States: Google under the EU-US Data Privacy Framework and the standard contractual clauses of the European Commission; GitHub and Anthropic under those same clauses, which are part of their contracts. Hostinger keeps our email in the European Union.',
       ],
     },
     {
@@ -158,7 +160,9 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         '- What you answer in a game: less than 24 hours from the room closing.',
         '- Your “Good dilemma” likes and the mark that you voted alone: until you ask to delete your data or spend 24 months without opening the app.',
-        '- Your age, your region and what you accepted: while you use the app and, if you delete your data, a minimal record of what you accepted for 3 years.',
+        '- Your age, your region, your request code and what you accepted: while you use the app and, if you delete your data, a minimal record of what you accepted for 3 years.',
+        '- Usage data with your identifier: 13 months; after that, only totals that do not identify you.',
+        '- Reports, notices of illegal content, moderation decisions and their notices, your requests with our answers and the record of your deletions: 3 years. If you delete your data, the reports and notices you made are left with no link to you.',
         '- Your cookie choices: what Google’s cookie manager sets, 13 months at most.',
         '- What we delete stays a few days in the backups: 7 days in ours and up to 180 in Firebase’s. Meanwhile it is not used for anything.',
       ],
@@ -166,7 +170,11 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Your rights',
       paragraphs: [
-        'You can ask for access to your data, correct it, delete it, restrict its use, take it with you and object to its processing, and withdraw the game consent whenever you want, without affecting what was already processed. Write to privacidad@thelever.app; since you play without an account, if we cannot check that the request is yours we will ask you for what we need to do so. We answer within one month at most.',
+        'You can ask for access to your data, correct it, delete it, restrict its use, take it with you and object to its processing. In Settings → Privacy and data you can, yourself:',
+        '- In “Your permissions”, withdraw the game consent whenever you want, without affecting what was already processed: you will not be able to create or join rooms until you give it again, and we delete what you answered in the games that have not been deleted yet. You can also object to analytics.',
+        '- In “Delete my data”, delete it: your phone is left as new at once and we delete everything linked to your identifier within minutes, and within one month at most, except the minimal record of what you accepted and the one of your deletion.',
+        'If you withdraw the consent or delete your data, your nickname becomes “Player” in the rooms that are still kept.',
+        'For anything else, such as asking for a copy of your data or correcting your age, write to privacidad@thelever.app with the code you see in Settings → Privacy and data → Your data: since you play without an account, it is what lets us know the request is yours, and without it we cannot handle it. If you only reported something to us from the website, write from the email you gave us. We answer within one month at most.',
         'If you think we have not handled your data properly, you can complain to the Spanish Data Protection Agency (aepd.es) or to the authority of your country.',
       ],
     },

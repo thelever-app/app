@@ -1,6 +1,6 @@
 import type { OwnPage } from '../site-texts.ts';
 
-const UPDATED = '19 novembre 2026';
+const UPDATED = '23 novembre 2026';
 
 /** The terms of use of the app, version 1, which the first access asks to accept. */
 export const terms: OwnPage = {
@@ -45,7 +45,7 @@ export const terms: OwnPage = {
     {
       heading: 'Modération et signalements',
       paragraphs: [
-        'Tout joueur peut signaler un dilemme depuis la partie, et notre équipe l’examine. Si tu enfreins ces conditions, nous pouvons remplacer ton pseudo par un pseudo générique ou t’empêcher d’accéder au service, et nous te dirons le motif, les faits, la règle appliquée et comment contester.',
+        'Tout joueur peut signaler un dilemme ou un pseudo depuis la partie, et notre équipe l’examine. Si tu enfreins ces conditions, nous pouvons remplacer ton pseudo par un pseudo générique ou t’empêcher d’accéder au service, et nous te dirons le motif, les faits, la règle appliquée et comment contester.',
         'Toute personne, qu’elle joue ou non, peut signaler un contenu illégal en écrivant à privacidad@thelever.app, qui est aussi le point de contact pour les autorités.',
       ],
     },
@@ -71,7 +71,7 @@ export const terms: OwnPage = {
     {
       heading: 'Arrêter de jouer',
       paragraphs: [
-        'Tu peux arrêter d’utiliser TheLever quand tu veux et nous demander de supprimer tes données en écrivant à privacidad@thelever.app. Si tu enfreins ces conditions de façon grave ou répétée, nous pouvons t’empêcher d’accéder au service, avec la motivation prévue dans la partie sur la modération.',
+        'Tu peux arrêter d’utiliser TheLever quand tu veux et supprimer tes données dans Réglages → Confidentialité et données → Supprimer mes données. Si tu enfreins ces conditions de façon grave ou répétée, nous pouvons t’empêcher d’accéder au service, avec la motivation prévue dans la partie sur la modération.',
       ],
     },
     {
@@ -111,15 +111,17 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Quelles données nous traitons, pourquoi et sur quelle base',
       paragraphs: [
-        '- Pour jouer, avec ton consentement explicite (art. 6.1.a et 9.2.a RGPD) : ton pseudo et ton avatar ; tes votes, tes prédictions du vote des autres ou de la répartition du groupe, tes réactions et tes points ; si un dilemme portait sur toi ; l’ordre dans lequel tu as vu les options et le temps mis à répondre ; et tes « Bon dilemme », conservés à part de la salle.',
+        '- Pour jouer, avec ton consentement explicite (art. 6.1.a et 9.2.a RGPD) : ton pseudo et ton avatar ; tes votes, tes prédictions du vote des autres ou de la répartition du groupe, tes réactions et tes points ; si un dilemme portait sur toi ; l’ordre dans lequel tu as vu les options ; et tes « Bon dilemme », conservés à part de la salle.',
         '- Pour voter seul·e un dilemme du site, avec le même consentement : ton vote s’ajoute au résultat mondial sans que nous gardions ce que tu as voté, et seule reste une marque indiquant que tu as déjà voté ce dilemme, pour qu’il ne compte pas deux fois.',
         '- Pour ne pas te répéter les dilemmes, avec le même consentement : ton téléphone garde la liste des dilemmes que tu as joués, sans tes votes, et l’envoie quand tu entres dans une salle, qui ne l’utilise que pour préparer les parties et la supprime avec la salle.',
         '- Pour te reconnaître, en vertu des conditions d’utilisation (art. 6.1.b) : un identifiant anonyme de ton appareil et la date de ta dernière ouverture de l’app.',
         '- Pour respecter la loi sur l’âge (art. 6.1.c) : ton année de naissance et, si tu as 18 ans cette année ou plus tard, le mois ; et ta région (Espace économique européen, reste du monde ou pays où TheLever n’est pas disponible), que nous déduisons de ton adresse IP avec une base de données sur notre propre serveur, IP Geolocation by DB-IP (db-ip.com, licence CC BY 4.0). TheLever ne garde pas ton IP ; notre fournisseur de connexion, Firebase Authentication (Google), l’enregistre quelques semaines pour la sécurité.',
-        '- Pour pouvoir prouver ce que tu as accepté (art. 6.1.c et 7.1) : quelle version des conditions et du consentement tu as acceptée et quand.',
+        '- Pour pouvoir prouver ce que tu as accepté (art. 6.1.c et 7.1) : quelle version des conditions et du consentement tu as acceptée et quand, et quand tu l’as retiré.',
+        '- Pour mesurer l’usage et améliorer le jeu, sur la base de l’intérêt légitime (art. 6.1.f) : quand tu as ouvert l’app pour la première fois et par quel lien tu es arrivé·e (par exemple, celui d’une affiche) ; quand tu crées une salle ou entres dans celle de quelqu’un d’autre ; quand une partie commence et se termine et avec combien de joueurs ; et le temps que toi et le groupe mettez à répondre à chaque dilemme, supprimé avec la partie. Jamais tes votes, tes prédictions ni tes réactions, et sans cookies : c’est notre serveur qui l’enregistre. La première visite est enregistrée avant que tu aies pu t’y opposer. Tu peux t’y opposer dans Réglages → Confidentialité et données → Tes autorisations : nous arrêtons de l’enregistrer et supprimons les événements que nous avions ; les temps des parties encore conservées sont supprimés avec elles.',
         '- Pour la publicité, avec ton consentement (art. 6.1.a RGPD et art. 22.2 LSSI) : les cookies et identifiants du réseau publicitaire, selon ce que tu choisis dans le gestionnaire de cookies de Google.',
-        '- Pour modérer (obligation légale du règlement sur les services numériques et intérêt légitime à un service sûr, art. 6.1.c et 6.1.f) : le dilemme que tu signales, le motif et ton commentaire, sans dire à personne du groupe que tu l’as signalé.',
-        '- Pour traiter tes demandes (art. 6.1.c) : ton e-mail et ce que tu nous demandes.',
+        '- Pour modérer (obligation légale du règlement sur les services numériques et intérêt légitime à un service sûr, art. 6.1.c et 6.1.f) : le dilemme ou le pseudo que tu signales, le motif et ton commentaire, sans dire à personne du groupe que tu l’as signalé ; si ton pseudo est signalé, le pseudo et notre décision ; si tu signales un contenu illicite depuis le site, ce que tu nous racontes et, si tu nous les donnes, ton nom et ton e-mail pour te répondre ; et les avis de chaque décision.',
+        '- Pour traiter tes demandes (art. 6.1.c) : ton e-mail, ce que tu nous demandes et le code pour les demandes que nous te donnons à ta première ouverture de l’app, que tu vois dans Réglages → Confidentialité et données → Tes données.',
+        '- Pour qu’une suppression ne soit pas annulée si nous restaurons une sauvegarde (art. 6.1.c et 17) : ton identifiant anonyme, le motif de la suppression, quand tu l’as demandée et quand elle s’est terminée.',
       ],
     },
     {
@@ -132,7 +134,7 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Mineurs',
       paragraphs: [
-        'Pour jouer, il faut avoir au moins 16 ans dans l’Espace économique européen et 18 ans dans le reste du monde. Les joueurs de 16 et 17 ans ne jouent qu’à des dilemmes adaptés à leur âge, n’entrent pas dans les salles avec des dilemmes +18 et leurs publicités ne sont jamais personnalisées. Si l’âge que tu déclares n’atteint pas le minimum, nous ne gardons que ton année de naissance, le mois si tu l’as donné, ta région et la date à laquelle tu as ouvert l’app pour la dernière fois, pour que tu ne puisses pas jouer sur cet appareil, et nous les supprimons après 24 mois sans ouvrir l’app. Si nous apprenons par un autre moyen qu’une personne n’a pas l’âge minimum, nous supprimons ses données.',
+        'Pour jouer, il faut avoir au moins 16 ans dans l’Espace économique européen et 18 ans dans le reste du monde. Les joueurs de 16 et 17 ans ne jouent qu’à des dilemmes adaptés à leur âge, n’entrent pas dans les salles avec des dilemmes +18 et leurs publicités ne sont jamais personnalisées. Si l’âge que tu déclares n’atteint pas le minimum, nous ne gardons que ton année de naissance, le mois si tu l’as donné, ta région, la date à laquelle tu as ouvert l’app pour la dernière fois, ton code pour les demandes et la trace de ta première visite, pour que tu ne puisses pas jouer sur cet appareil, et nous les supprimons après 24 mois sans ouvrir l’app. Si nous apprenons par un autre moyen qu’une personne n’a pas l’âge minimum, nous supprimons ses données.',
       ],
     },
     {
@@ -144,14 +146,14 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Avec qui nous partageons tes données',
       paragraphs: [
-        'Nous ne vendons pas tes données. Elles sont traitées pour notre compte, sous contrat et uniquement pour fournir le service, par Google Cloud et Firebase (Google), qui hébergent l’app, sa base de données et la connexion, et par Hostinger, qui héberge notre messagerie. Le gestionnaire de cookies est celui de Google, et le réseau publicitaire et ses partenaires traitent leurs cookies en tant que responsables pour leur propre compte, uniquement si tu l’acceptes. Nous pouvons aussi devoir communiquer des données aux autorités lorsque la loi l’exige.',
+        'Nous ne vendons pas tes données. Elles sont traitées pour notre compte, sous contrat et uniquement pour fournir le service, par Google Cloud et Firebase (Google), qui hébergent l’app, sa base de données et la connexion ; Hostinger, qui héberge notre messagerie et envoie nos e-mails ; GitHub, où l’équipe tient le registre interne de modération, avec ce qui a été signalé (par exemple, un pseudo) mais sans qui l’a signalé, son commentaire, son nom ni son e-mail ; et Anthropic, qui traduit dans ta langue l’explication d’une décision de modération. Le gestionnaire de cookies est celui de Google, et le réseau publicitaire et ses partenaires traitent leurs cookies en tant que responsables pour leur propre compte, uniquement si tu l’acceptes. Nous pouvons aussi devoir communiquer des données aux autorités lorsque la loi l’exige.',
         'Si TheLever change de titulaire, par exemple en devenant une société, tes données passeront au nouveau titulaire pour continuer à te fournir le même service, avec les mêmes finalités et garanties (art. 21 de la LOPDGDD). Nous te préviendrons dans l’app avant le changement et tu pourras nous demander de les supprimer avant.',
       ],
     },
     {
       heading: 'Transferts hors de l’Espace économique européen',
       paragraphs: [
-        'Google peut traiter des données aux États-Unis, dans le cadre du cadre de protection des données UE-États-Unis et des clauses contractuelles types de la Commission européenne.',
+        'Google, GitHub et Anthropic peuvent traiter des données aux États-Unis : Google, dans le cadre du cadre de protection des données UE-États-Unis et des clauses contractuelles types de la Commission européenne ; GitHub et Anthropic, sur la base de ces mêmes clauses, qui font partie de leurs contrats. Hostinger conserve notre messagerie dans l’Union européenne.',
       ],
     },
     {
@@ -159,7 +161,9 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         '- Ce que tu réponds dans une partie : moins de 24 heures après la fermeture de la salle.',
         '- Tes « Bon dilemme » et la marque indiquant que tu as voté seul·e : jusqu’à ce que tu demandes la suppression de tes données ou passes 24 mois sans ouvrir l’app.',
-        '- Ton âge, ta région et ce que tu as accepté : tant que tu utilises l’app et, si tu supprimes tes données, une trace minimale de ce que tu as accepté pendant 3 ans.',
+        '- Ton âge, ta région, ton code pour les demandes et ce que tu as accepté : tant que tu utilises l’app et, si tu supprimes tes données, une trace minimale de ce que tu as accepté pendant 3 ans.',
+        '- Les données d’usage avec ton identifiant : 13 mois ; ensuite, seulement des totaux qui ne t’identifient pas.',
+        '- Les signalements, les notifications de contenu illicite, les décisions de modération et leurs avis, tes demandes avec nos réponses et le registre de tes suppressions : 3 ans. Si tu supprimes tes données, les signalements et les notifications que tu as faits n’ont plus aucun lien avec toi.',
         '- Tes choix de cookies : ce que fixe le gestionnaire de cookies de Google, 13 mois au maximum.',
         '- Ce que nous supprimons reste quelques jours dans les sauvegardes : 7 jours dans les nôtres et jusqu’à 180 dans celles de Firebase. Entre-temps, rien n’en est fait.',
       ],
@@ -167,7 +171,11 @@ export const appPrivacy: OwnPage = {
     {
       heading: 'Tes droits',
       paragraphs: [
-        'Tu peux demander l’accès à tes données, les rectifier, les supprimer, en limiter l’usage, les emporter et t’opposer à leur traitement, et retirer le consentement du jeu quand tu veux, sans effet sur ce qui a déjà été traité. Écris à privacidad@thelever.app ; comme tu joues sans compte, si nous ne pouvons pas vérifier que la demande vient de toi, nous te demanderons ce qu’il faut pour le faire. Nous répondons en un mois au maximum.',
+        'Tu peux demander l’accès à tes données, les rectifier, les supprimer, en limiter l’usage, les emporter et t’opposer à leur traitement. Dans Réglages → Confidentialité et données, tu peux toi-même :',
+        '- Dans « Tes autorisations », retirer le consentement du jeu quand tu veux, sans effet sur ce qui a déjà été traité : tu ne pourras plus créer de salle ni entrer dans une salle jusqu’à ce que tu le redonnes, et nous supprimons ce que tu as répondu dans les parties qui n’ont pas encore été supprimées. Tu peux aussi t’opposer à l’analyse d’usage.',
+        '- Dans « Supprimer mes données », les supprimer : ton téléphone redevient comme neuf tout de suite et nous supprimons tout ce qui est lié à ton identifiant en quelques minutes, et en un mois au maximum, sauf la trace minimale de ce que tu as accepté et celle de ta suppression.',
+        'Si tu retires le consentement ou supprimes tes données, ton pseudo devient « Joueur » dans les salles encore conservées.',
+        'Pour tout le reste, comme demander une copie de tes données ou corriger ton âge, écris à privacidad@thelever.app avec le code que tu vois dans Réglages → Confidentialité et données → Tes données : comme tu joues sans compte, c’est ce qui nous permet de savoir que la demande vient de toi, et sans lui nous ne pouvons pas la traiter. Si tu nous as seulement signalé quelque chose depuis le site, écris-nous depuis l’e-mail que tu nous as donné. Nous répondons en un mois au maximum.',
         'Si tu penses que nous n’avons pas bien traité tes données, tu peux saisir l’Agence espagnole de protection des données (aepd.es) ou l’autorité de ton pays.',
       ],
     },

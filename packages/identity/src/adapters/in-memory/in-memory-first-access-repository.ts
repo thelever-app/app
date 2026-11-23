@@ -10,14 +10,30 @@ export class InMemoryFirstAccessRepository implements FirstAccessRepository {
     return snapshot && FirstAccess.fromSnapshot(snapshot);
   }
 
-  /** A declared age stays, even if what is saved was read before it was declared. */
+  async findByRequestCode(requestCode: string): Promise<FirstAccess | undefined> {
+    const snapshot = [...this.#snapshots.values()].find((kept) => kept.requestCode === requestCode);
+    return snapshot && FirstAccess.fromSnapshot(snapshot);
+  }
+
+  /**
+   * A declared age stays, even if what is saved was read before it was declared; a request code
+   * another identity has is refused, as the unique column refuses it in the database.
+   */
   async save(firstAccess: FirstAccess): Promise<void> {
     const snapshot = firstAccess.toSnapshot();
+    const owner = await this.findByRequestCode(snapshot.requestCode);
+    if (owner && owner.identity !== snapshot.identity) {
+      throw new Error(`the request code of ${snapshot.identity} is taken`);
+    }
     const kept = this.#snapshots.get(snapshot.identity);
     const declared = kept?.birthYear !== null && kept?.birthYear !== undefined;
     this.#snapshots.set(
       snapshot.identity,
       declared ? { ...snapshot, birthYear: kept.birthYear, birthMonth: kept.birthMonth } : snapshot,
     );
+  }
+
+  async delete(identity: string): Promise<void> {
+    this.#snapshots.delete(identity);
   }
 }

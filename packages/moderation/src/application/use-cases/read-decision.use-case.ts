@@ -45,11 +45,15 @@ export function decisionIn(
   return 'no-reasons';
 }
 
-/** The reason of the first report of each reporter, and when they made it. */
+/**
+ * The reason of the first report of each reporter, and when they made it; who deleted their data
+ * is told nothing.
+ */
 function firstReports(issue: Issue): Map<string, { reason: ReportReason; reportedAt: Date }> {
   const { dilemmaReports, nicknameReports } = issue.toSnapshot();
   const first = new Map<string, { reason: ReportReason; reportedAt: Date }>();
   for (const { identity, reason, reportedAt } of [...dilemmaReports, ...nicknameReports]) {
+    if (identity === null) continue;
     const known = first.get(identity);
     if (!known || reportedAt < known.reportedAt) first.set(identity, { reason, reportedAt });
   }
@@ -151,7 +155,8 @@ export class ReadDecisionUseCase {
         break;
       }
       case 'nickname': {
-        if (decision.outcome === 'withdrawn') {
+        // Whoever deleted their data has no rooms nor screen left to withdraw it from.
+        if (decision.outcome === 'withdrawn' && content.owner !== null) {
           await this.#nicknames.withdraw(content.owner, content.nickname);
           await this.#notices.save(
             ModerationNotice.create({

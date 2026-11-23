@@ -128,3 +128,10 @@ export {
   type FindCandidatesInput,
   type FindCandidatesOutput,
 } from './application/use-cases/find-candidates.use-case.ts';
+export {
+  type DilemmasData,
+  type EraseDilemmasData,
+  EraseDilemmasDataUseCase,
+  type ExportDilemmasData,
+  ExportDilemmasDataUseCase,
+} from './application/use-cases/dilemmas-personal-data.use-case.ts';

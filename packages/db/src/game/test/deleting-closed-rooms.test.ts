@@ -43,8 +43,9 @@ const GAME_DATA = [
 /**
  * The tables that do not hang from any room, so they stay when one is deleted: the
  * dilemmas, the likes, the instances of the room server, the first access and the legal
- * documents each identity accepted, and the reports of dilemmas, which Moderation keeps 3 years.
- * Counters and the history go here when they come.
+ * documents each identity accepted, the reports of dilemmas, which Moderation keeps 3 years, the
+ * deletion log, the objections to product analytics and the analytics events. Counters and the
+ * history go here when they come.
  */
 const KEPT = [
   'dilemmas',
@@ -56,6 +57,9 @@ const KEPT = [
   'world_counts',
   'world_results',
   'world_vote_receipts',
+  'data_deletions',
+  'analytics_objections',
+  'analytics_events',
   'instances',
   'dilemma_likes',
   'first_accesses',

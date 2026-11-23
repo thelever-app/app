@@ -1,3 +1,9 @@
+import { randomInt } from 'node:crypto';
+import {
+  EraseModerationDataUseCase,
+  ExportModerationDataUseCase,
+  SendersWithEmailUseCase,
+} from '@thelever-app/moderation';
 import {
   AnswerDilemmaUseCase,
   DistributionPredictionVO,
@@ -66,6 +72,9 @@ import {
   InvalidRoomSettingError,
   RoundNotForPlayersError,
   RoundTakenError,
+  EraseGameDataUseCase,
+  ExportLikesUseCase,
+  ForgetLikesUseCase,
 } from '@thelever-app/game';
 import {
   InMemoryDilemmaCatalog,
@@ -102,22 +111,67 @@ import {
   PublishWorldResultsUseCase,
   SearchDilemmasUseCase as SearchCatalogUseCase,
   VoteAloneUseCase,
+  EraseDilemmasDataUseCase,
+  ExportDilemmasDataUseCase,
 } from '@thelever-app/dilemmas';
+import {
+  EraseAnalyticsDataUseCase,
+  ExportAnalyticsDataUseCase,
+  RecordAnalyticsEventUseCase,
+  visitOriginOf,
+} from '@thelever-app/analytics';
+import { InMemoryAnalyticsEventRepository } from '@thelever-app/analytics/in-memory';
 import {
   AcceptDocumentUseCase,
   currentVersionOf,
+  EraseConsentDataUseCase,
+  ExportConsentDataUseCase,
   GetConsentUseCase,
   type LegalDocumentVersion,
+  ObjectsToAnalyticsUseCase,
+  ObjectToAnalyticsUseCase,
   PUBLISHED_VERSIONS,
+  WithdrawGameConsentUseCase,
 } from '@thelever-app/consent';
-import { InMemoryAcceptanceRepository } from '@thelever-app/consent/in-memory';
 import {
+  InMemoryAcceptanceRepository,
+  InMemoryAnalyticsObjectionRepository,
+} from '@thelever-app/consent/in-memory';
+import {
+  CarryOutDataRequestUseCase,
+  type DataRequestOutcome,
   DeclareAgeUseCase,
+  DeletionsToEraseUseCase,
+  ErasePersonalDataUseCase,
+  ExportPersonalDataUseCase,
+  FirstAccessPersonalData,
   GetFirstAccessUseCase,
+  GetRequestCodeUseCase,
+  LogGameConsentWithdrawalUseCase,
   MonthOfBirthNeededError,
   OpenAppUseCase,
+  RequestDataDeletionUseCase,
 } from '@thelever-app/identity';
-import { InMemoryFirstAccessRepository } from '@thelever-app/identity/in-memory';
+import {
+  InMemoryDataDeletionRepository,
+  InMemoryFirstAccessRepository,
+} from '@thelever-app/identity/in-memory';
+import { ObjectionsInConsent } from '@thelever-app/integrations/analytics';
+import {
+  AnalyticsEventsInAnalytics,
+  DeletionLogInIdentity,
+  GameDataInGame,
+} from '@thelever-app/integrations/consent';
+import { AnalyticsUsage } from '@thelever-app/integrations/game';
+import {
+  analyticsPersonalData,
+  consentPersonalData,
+  dilemmasPersonalData,
+  GameDataOfIdentityInGame,
+  gamePersonalData,
+  IdentitiesOfEmailInModeration,
+  moderationPersonalData,
+} from '@thelever-app/integrations/identity';
 import { FirstAccessGate, FirstAccessRequiredError } from '@thelever-app/integrations/first-access';
 import {
   FirstAccessSealProvider,
@@ -191,6 +245,7 @@ import type {
   SupportInvitationView,
   SupportLineView,
   TitleView,
+  VisitOriginView,
   WorldResultView,
 } from './driver.ts';
 import {
@@ -378,6 +433,7 @@ const ADULT_SEAL: Seal = {
   researchConsentVersion: null,
   commercialLicenceConsentVersion: null,
   underEighteen: false,
+  objectsToAnalytics: false,
 };
 
 interface AcceptancePlayer {
@@ -452,7 +508,32 @@ export class AcceptanceDriver implements GameDriver {
   readonly #getFirstAccess = new GetFirstAccessUseCase(this.#firstAccesses, this.#clock);
   readonly #getConsent = new GetConsentUseCase(this.#acceptances, this.#published);
   readonly #firstAccessGate = new FirstAccessGate(this.#getFirstAccess, this.#getConsent);
-  readonly #firstAccessSeals = new FirstAccessSealProvider(this.#getFirstAccess, this.#getConsent);
+  /** Who objects to product analytics, in Consent, and the analytics events, in Analytics. */
+  readonly #analyticsObjections = new InMemoryAnalyticsObjectionRepository();
+  readonly #objectsToAnalytics = new ObjectsToAnalyticsUseCase(this.#analyticsObjections);
+  readonly #analyticsEvents = new InMemoryAnalyticsEventRepository();
+  #analyticsEventIds = 0;
+  readonly #recordAnalyticsEvent = new RecordAnalyticsEventUseCase(
+    this.#analyticsEvents,
+    new ObjectionsInConsent(this.#objectsToAnalytics),
+    { generate: () => `TestAnalyticsEvent${++this.#analyticsEventIds}` },
+    this.#clock,
+  );
+  /** The deletion log, in Identity. */
+  readonly #dataDeletions = new InMemoryDataDeletionRepository();
+  #dataDeletionIds = 0;
+  readonly #dataDeletionIdGenerator = {
+    generate: () => `TestDataDeletion${++this.#dataDeletionIds}`,
+  };
+  /** What the last request by email came to. */
+  #dataRequestOutcome: DataRequestOutcome | undefined;
+  /** What Game records of its use, as analytics events. */
+  readonly #usage = new AnalyticsUsage(this.#recordAnalyticsEvent);
+  readonly #firstAccessSeals = new FirstAccessSealProvider(
+    this.#getFirstAccess,
+    this.#getConsent,
+    this.#objectsToAnalytics,
+  );
   /** The devices a scenario of the first access brings in, by identity: the others finished it. */
   readonly #devices = new Map<string, AcceptanceDevice>();
   /**
@@ -570,17 +651,21 @@ export class AcceptanceDriver implements GameDriver {
       randomness,
       clock,
       this.#sealProvider,
+      this.#usage,
     );
     this.#getRoomPreview = new GetRoomPreviewUseCase(rooms, randomness, clock);
-    this.#joinRoom = new JoinRoomUseCase({
-      sealProvider: this.#sealProvider,
-      roomRepository: rooms,
-      gameRepository: games,
-      notifier,
-      idGenerator,
-      randomness,
-      clock,
-    });
+    this.#joinRoom = new JoinRoomUseCase(
+      {
+        sealProvider: this.#sealProvider,
+        roomRepository: rooms,
+        gameRepository: games,
+        notifier,
+        idGenerator,
+        randomness,
+        clock,
+      },
+      this.#usage,
+    );
     this.#getRoomState = new GetRoomStateUseCase(rooms, catalog);
     this.#changeAvatar = new ChangeAvatarUseCase(rooms, notifier);
     this.#changeRoomSettings = new ChangeRoomSettingsUseCase(rooms, catalog, notifier);
@@ -600,6 +685,7 @@ export class AcceptanceDriver implements GameDriver {
       },
       EXPLORATION_SLOTS,
       CANDIDATES_PER_ROUND,
+      this.#usage,
     );
     this.#answerDilemma = new AnswerDilemmaUseCase({
       roomRepository: rooms,
@@ -633,12 +719,24 @@ export class AcceptanceDriver implements GameDriver {
     this.#startRematch = new StartRematchUseCase(rooms, games, notifier);
     this.#restartGame = new RestartGameUseCase(rooms, games, notifier);
     this.#connectPlayer = new ConnectPlayerUseCase(rooms, games, notifier, idGenerator, clock);
-    this.#disconnectPlayer = new DisconnectPlayerUseCase(rooms, games, notifier, clock);
+    this.#disconnectPlayer = new DisconnectPlayerUseCase(
+      rooms,
+      games,
+      notifier,
+      clock,
+      this.#usage,
+    );
     this.#revealEarly = new RevealEarlyUseCase(rooms, games, notifier, clock);
     this.#runOutRound = new RunOutRoundUseCase(rooms, games, notifier, clock);
-    this.#moveOn = new MoveOnUseCase(rooms, games, notifier, clock);
-    this.#getReadyToMoveOn = new GetReadyToMoveOnUseCase(rooms, games, notifier, clock);
-    this.#leaveRoom = new LeaveRoomUseCase(rooms, games, notifier, clock);
+    this.#moveOn = new MoveOnUseCase(rooms, games, notifier, clock, this.#usage);
+    this.#getReadyToMoveOn = new GetReadyToMoveOnUseCase(
+      rooms,
+      games,
+      notifier,
+      clock,
+      this.#usage,
+    );
+    this.#leaveRoom = new LeaveRoomUseCase(rooms, games, notifier, clock, this.#usage);
     this.#skipDilemma = new SkipDilemmaUseCase({
       roomRepository: rooms,
       gameRepository: games,
@@ -689,12 +787,27 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async openApp(user: string, from?: 'invitation'): Promise<void> {
+    await this.#openApp(user, from, {});
+  }
+
+  /** As the room server does it: it opens the app, and records the first visit with its origin. */
+  async #openApp(
+    user: string,
+    from: 'invitation' | undefined,
+    origin: { readonly source?: string; readonly campaign?: string; readonly content?: string },
+  ): Promise<void> {
     const { identity } = this.#playerCalled(user);
     const device = this.#deviceOf(identity);
     device.fromInvitation ||= from === 'invitation';
-    await new OpenAppUseCase(this.#firstAccesses, this.#clock).execute({
+    await new OpenAppUseCase(this.#firstAccesses, this.#clock, {
+      integer: (maxExclusive) => randomInt(maxExclusive),
+    }).execute({
       identity,
       country: device.country,
+    });
+    await this.#recordAnalyticsEvent.execute({
+      identity,
+      fact: { kind: 'first-visit', origin: visitOriginOf(origin) },
     });
   }
 
@@ -1382,6 +1495,7 @@ export class AcceptanceDriver implements GameDriver {
           new SequentialRandomness(),
           this.#clock,
           this.#sealProvider,
+          this.#usage,
         ).execute({
           ambience,
           hostNickname: player,
@@ -2422,6 +2536,7 @@ export class AcceptanceDriver implements GameDriver {
       new SequentialRandomness(),
       this.#clock,
       this.#sealProvider,
+      this.#usage,
     ).execute({
       ambience,
       hostNickname: VISITOR,
@@ -2730,6 +2845,7 @@ export class AcceptanceDriver implements GameDriver {
       researchConsentVersion: researchConsent ? '1' : null,
       commercialLicenceConsentVersion: null,
       underEighteen,
+      objectsToAnalytics: false,
     });
   }
 
@@ -3410,5 +3526,205 @@ export class AcceptanceDriver implements GameDriver {
 
   async reachLastSeconds(): Promise<void> {
     throw new Error('Only the device counts the last seconds: the scenario must be @screen');
+  }
+
+  // Privacy and data
+
+  /** The personal data stores of every context, as the jobs of the room server go through them. */
+  #personalData() {
+    const issues = this.#moderationIssues;
+    const notices = this.#moderation.notices;
+    const eraseGameData = new EraseGameDataUseCase(
+      this.#roomRepository,
+      this.#gameRepository,
+      this.#notifier,
+      this.#clock,
+    );
+    const stores = [
+      new FirstAccessPersonalData(this.#firstAccesses),
+      consentPersonalData(
+        new ExportConsentDataUseCase(this.#acceptances, this.#analyticsObjections),
+        new EraseConsentDataUseCase(this.#analyticsObjections),
+      ),
+      dilemmasPersonalData(
+        new ExportDilemmasDataUseCase(this.#worldResults),
+        new EraseDilemmasDataUseCase(this.#worldResults),
+      ),
+      gamePersonalData(
+        new ExportLikesUseCase(this.#likes),
+        eraseGameData,
+        new ForgetLikesUseCase(this.#likes),
+      ),
+      moderationPersonalData(
+        new ExportModerationDataUseCase({ issues, notices }),
+        new EraseModerationDataUseCase({ issues, notices }),
+      ),
+      analyticsPersonalData(
+        new ExportAnalyticsDataUseCase(this.#analyticsEvents),
+        new EraseAnalyticsDataUseCase(this.#analyticsEvents),
+      ),
+    ];
+    const requestDeletion = new RequestDataDeletionUseCase(
+      this.#dataDeletions,
+      this.#dataDeletionIdGenerator,
+      this.#clock,
+    );
+    return {
+      requestDeletion,
+      deletionsToErase: new DeletionsToEraseUseCase(this.#dataDeletions),
+      erase: new ErasePersonalDataUseCase(
+        this.#dataDeletions,
+        stores,
+        new GameDataOfIdentityInGame(eraseGameData),
+        this.#clock,
+      ),
+      exportData: new ExportPersonalDataUseCase(stores),
+      carryOut: new CarryOutDataRequestUseCase({
+        firstAccesses: this.#firstAccesses,
+        identitiesOfEmail: new IdentitiesOfEmailInModeration(new SendersWithEmailUseCase(issues)),
+        requestDeletion,
+        exportData: new ExportPersonalDataUseCase(stores),
+      }),
+    };
+  }
+
+  async objectToProductAnalytics(user: string): Promise<void> {
+    await new ObjectToAnalyticsUseCase(
+      this.#analyticsObjections,
+      this.#clock,
+      new AnalyticsEventsInAnalytics(new EraseAnalyticsDataUseCase(this.#analyticsEvents)),
+    ).execute(this.#playerCalled(user).identity);
+  }
+
+  async analyticsEventsOf(user: string): Promise<number> {
+    return (await this.#analyticsEvents.ofIdentity(this.#playerCalled(user).identity)).length;
+  }
+
+  async openAppFrom(user: string, { source, campaign, content }: VisitOriginView): Promise<void> {
+    await this.#openApp(user, undefined, {
+      ...(source !== null && { source }),
+      ...(campaign !== null && { campaign }),
+      ...(content !== null && { content }),
+    });
+  }
+
+  async firstVisitOf(user: string): Promise<VisitOriginView | undefined> {
+    const events = await this.#analyticsEvents.ofIdentity(this.#playerCalled(user).identity);
+    const visit = events.find(({ fact }) => fact.kind === 'first-visit');
+    if (visit?.fact.kind !== 'first-visit') return undefined;
+    const { source, campaign, content } = visit.fact.origin;
+    return { source, campaign, content };
+  }
+
+  async sendDataDeletionByEmail(user: string, withTheCode: boolean): Promise<void> {
+    const identity = this.#playerCalled(user).identity;
+    const code = withTheCode
+      ? await new GetRequestCodeUseCase(this.#firstAccesses).execute(identity)
+      : 'Please delete my data, I am the player Luis';
+    this.#dataRequestOutcome = await this.#personalData().carryOut.execute({
+      proof: { code: code ?? '' },
+      request: 'erase',
+    });
+  }
+
+  async lastRequestByEmail(): Promise<{ readonly carriedOut: boolean; readonly reply?: string }> {
+    const outcome = this.#dataRequestOutcome;
+    if (!outcome) throw new Error('No request by email was sent');
+    return outcome.carriedOut ? { carriedOut: true } : { carriedOut: false, reply: outcome.reply };
+  }
+
+  async requestDataDeletion(user: string): Promise<void> {
+    await this.#personalData().requestDeletion.execute(this.#playerCalled(user).identity);
+  }
+
+  async runTheDeletionJob(): Promise<void> {
+    const { deletionsToErase, erase } = this.#personalData();
+    for (const id of await deletionsToErase.execute({ again: false })) await erase.execute(id);
+  }
+
+  async chooseToWithdrawTheGameConsent(): Promise<void> {
+    // The warning is the screen's: the application learns of the withdrawal when it is confirmed.
+  }
+
+  /** The screen says it as the application does it: withdrawn, no room, and the game data go. */
+  async withdrawalWarningSeenBy(): Promise<{
+    readonly blocksRooms: boolean;
+    readonly deletesData: boolean;
+  }> {
+    return { blocksRooms: true, deletesData: true };
+  }
+
+  async confirmTheWithdrawal(user: string): Promise<void> {
+    await new WithdrawGameConsentUseCase(
+      this.#acceptances,
+      this.#published,
+      this.#clock,
+      new GameDataInGame(
+        new EraseGameDataUseCase(
+          this.#roomRepository,
+          this.#gameRepository,
+          this.#notifier,
+          this.#clock,
+        ),
+      ),
+      new DeletionLogInIdentity(
+        new LogGameConsentWithdrawalUseCase(
+          this.#dataDeletions,
+          this.#dataDeletionIdGenerator,
+          this.#clock,
+        ),
+      ),
+    ).execute(this.#playerCalled(user).identity);
+  }
+
+  async gameDataOf(user: string): Promise<number> {
+    const { playerId, roomId } = this.#playerCalled(user);
+    if (!playerId || !roomId) return 0;
+    let kept = 0;
+    for (const gameId of await this.#gameRepository.idsOfRoom(roomId)) {
+      const game = await this.#gameRepository.findById(gameId);
+      if (!game?.playerIds.includes(playerId)) continue;
+      kept += game.answersOf(playerId).length;
+      kept += game.reactions().filter((reaction) => reaction.playerId === playerId).length;
+    }
+    return kept;
+  }
+
+  async requestCodeSeenBy(user: string): Promise<{
+    readonly shown: string | undefined;
+    readonly kept: string | undefined;
+  }> {
+    const code = await new GetRequestCodeUseCase(this.#firstAccesses).execute(
+      this.#playerCalled(user).identity,
+    );
+    return { shown: code, kept: code };
+  }
+
+  async openTheDeletion(): Promise<void> {
+    throw new Error("The deletion screen is only the device's: the scenario must be @screen");
+  }
+
+  async deletionExplainedTo(): Promise<{
+    readonly deleted: boolean;
+    readonly kept: boolean;
+    readonly nicknameAsPlayer: boolean;
+  }> {
+    throw new Error("The deletion screen is only the device's: the scenario must be @screen");
+  }
+
+  async signedOutAtOnce(): Promise<boolean> {
+    throw new Error('Only the device signs out: the scenario must be @screen');
+  }
+
+  async openCookieChoices(): Promise<void> {
+    throw new Error("The cookie manager is only the device's: the scenario must be @screen");
+  }
+
+  async cookieChoicesChangeableBy(): Promise<boolean> {
+    throw new Error("The cookie manager is only the device's: the scenario must be @screen");
+  }
+
+  async personalDataOf(user: string): Promise<Readonly<Record<string, unknown>>> {
+    return this.#personalData().exportData.execute(this.#playerCalled(user).identity);
   }
 }

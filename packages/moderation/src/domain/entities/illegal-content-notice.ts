@@ -21,8 +21,11 @@ export interface IllegalContentNoticeSnapshot {
   readonly email: string | null;
   /** The language of the form, which the emails are written in. */
   readonly language: Language;
-  /** Who sent it, as anyone the app signs in without asking anything. */
-  readonly identity: string;
+  /**
+   * Who sent it, as anyone the app signs in without asking anything. Null once their data are
+   * deleted, with their name and their email: the notice stays, without them.
+   */
+  readonly identity: string | null;
   readonly sentAt: Date;
 }
 
@@ -74,6 +77,16 @@ export class IllegalContentNotice {
 
   get email(): string | null {
     return this.#snapshot.email;
+  }
+
+  get identity(): string | null {
+    return this.#snapshot.identity;
+  }
+
+  /** The same notice without who sent it: no identity, no name and no email to write back to. */
+  unlinked(identity: string): IllegalContentNotice {
+    if (this.#snapshot.identity !== identity) return this;
+    return new IllegalContentNotice({ ...this.#snapshot, identity: null, name: null, email: null });
   }
 
   toSnapshot(): IllegalContentNoticeSnapshot {

@@ -7,9 +7,11 @@ import {
   VoteAloneUseCase,
   type WorldResultRepository,
 } from '@thelever-app/dilemmas';
+import type { RecordAnalyticsEvent } from '@thelever-app/analytics';
 import {
   AcceptDocumentUseCase,
   GetConsentUseCase,
+  type ObjectsToAnalytics,
   PUBLISHED_VERSIONS,
   type PublishedVersions,
 } from '@thelever-app/consent';
@@ -65,6 +67,13 @@ import {
 import { RoomCommandHandler } from '../rooms/sockets/room-command.handler.ts';
 import { type Lifecycle, sharedLifecycle, type StopServing } from './shared-lifecycle.ts';
 import { adaptersFor, type Storage } from './storage.ts';
+import { privacyUseCases, type PrivacyUseCases } from './privacy.ts';
+import {
+  AnalyticsObjectionEndpoint,
+  MyDataEndpoint,
+  RequestDataDeletionEndpoint,
+  WithdrawGameConsentEndpoint,
+} from '../my-data/my-data.endpoints.ts';
 import {
   dilemmaCatalog,
   type GameCommands,
@@ -112,11 +121,7 @@ export async function composeRealtimeServer(
   const { notifierFor, runCommand, ...repositories } = await adaptersFor(storage);
   const catalog = dilemmaCatalog(repositories.dilemmaRepository, repositories.dilemmaQueries);
   const clock = new SystemClock();
-  const firstAccess = firstAccessUseCases(
-    repositories,
-    configuration.publishedVersions ?? PUBLISHED_VERSIONS,
-    clock,
-  );
+  const published = configuration.publishedVersions ?? PUBLISHED_VERSIONS;
 
   // 2. The queries, and with them what sends each player the state of their room. One holder per
   // room at a time in this instance: its commands never interleave, and an event of the room
@@ -124,6 +129,7 @@ export async function composeRealtimeServer(
   // phase sets the timer of its round in this instance.
   const roomLock = new KeyedLock();
   const randomness = new CryptoRandomness();
+  const idGenerator = new RandomIdGenerator();
   const queries = gameQueries({ ...repositories, catalog, randomness, clock });
   const timers = new RoundTimers(
     (roomId) => commands.runOutRound.execute({ roomId }),
@@ -140,9 +146,17 @@ export async function composeRealtimeServer(
   );
   const socketNotifier = new SocketNotifier(stateSender);
 
-  // 3. The commands, which notify the players of what changed, and what Moderation receives.
-  const idGenerator = new RandomIdGenerator();
+  // 3. The commands, which notify the players of what changed, what Moderation receives, and the
+  // rights of the players over their data, with the product analytics.
   const notifier = notifierFor(socketNotifier);
+  const privacy = privacyUseCases({ ...repositories, notifier, idGenerator, clock, published });
+  const firstAccess = firstAccessUseCases(
+    repositories,
+    published,
+    clock,
+    randomness,
+    privacy.objectsToAnalytics,
+  );
   const moderation = moderationUseCases({ ...repositories, notifier, idGenerator, clock, logger });
   const commands = gameCommands({
     ...repositories,
@@ -153,13 +167,20 @@ export async function composeRealtimeServer(
     randomness,
     clock,
     sealProvider: firstAccess.sealProvider,
+    usage: privacy.usage,
   });
 
   // 4. The HTTP routes and the room sockets on the same server.
   const http = createServer(
     createApp(
       [
-        ...firstAccessEndpoints(firstAccess, configuration.countryLookup, runCommand),
+        ...firstAccessEndpoints(
+          firstAccess,
+          configuration.countryLookup,
+          runCommand,
+          privacy.recordAnalyticsEvent,
+        ),
+        ...myDataEndpoints(privacy, firstAccess.gate, runCommand),
         ...httpEndpoints(
           commands,
           queries,
@@ -234,16 +255,18 @@ function firstAccessUseCases(
   }: Pick<Awaited<ReturnType<typeof adaptersFor>>, 'firstAccesses' | 'acceptances'>,
   published: PublishedVersions,
   clock: SystemClock,
+  randomness: CryptoRandomness,
+  objectsToAnalytics: ObjectsToAnalytics,
 ): FirstAccessUseCases {
   const getFirstAccess = new GetFirstAccessUseCase(firstAccesses, clock);
   const getConsent = new GetConsentUseCase(acceptances, published);
   return {
-    openApp: new OpenAppUseCase(firstAccesses, clock),
+    openApp: new OpenAppUseCase(firstAccesses, clock, randomness),
     declareAge: new DeclareAgeUseCase(firstAccesses, clock),
     acceptDocument: new AcceptDocumentUseCase(acceptances, published, clock),
     getConsent,
     gate: new FirstAccessGate(getFirstAccess, getConsent),
-    sealProvider: new FirstAccessSealProvider(getFirstAccess, getConsent),
+    sealProvider: new FirstAccessSealProvider(getFirstAccess, getConsent, objectsToAnalytics),
   };
 }
 
@@ -252,11 +275,34 @@ function firstAccessEndpoints(
   { openApp, declareAge, acceptDocument, getConsent, gate }: FirstAccessUseCases,
   countries: CountryLookup,
   runCommand: RunCommand,
+  recordAnalyticsEvent: RecordAnalyticsEvent,
 ): HttpEndpoint[] {
   return [
-    new OpenAppEndpoint(openApp, getConsent, countries, runCommand),
+    new OpenAppEndpoint(openApp, getConsent, countries, runCommand, recordAnalyticsEvent),
     new DeclareAgeEndpoint(declareAge, gate, runCommand),
     new AcceptDocumentEndpoint(acceptDocument, gate, runCommand),
+  ];
+}
+
+/**
+ * The routes of Settings › Privacy and data: the code for requests by email, the permissions and
+ * deleting the data. Withdrawing the game consent and objecting need no first access done: whoever
+ * withdrew it is still asked for it.
+ */
+function myDataEndpoints(
+  privacy: PrivacyUseCases,
+  gate: FirstAccessGate,
+  runCommand: RunCommand,
+): HttpEndpoint[] {
+  return [
+    new MyDataEndpoint(privacy.getRequestCode, privacy.getConsent, privacy.objectsToAnalytics),
+    new WithdrawGameConsentEndpoint(privacy.withdrawGameConsent, gate, runCommand),
+    new AnalyticsObjectionEndpoint(
+      privacy.objectToAnalytics,
+      privacy.liftAnalyticsObjection,
+      runCommand,
+    ),
+    new RequestDataDeletionEndpoint(privacy.requestDataDeletion, runCommand),
   ];
 }
 

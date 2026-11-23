@@ -14,4 +14,11 @@ export interface IssueRepository {
   undecidedInRepository(): Promise<Issue[]>;
   /** How many notices that identity sent since then, to keep the web form from flooding the team. */
   noticesSentSince(identity: string, since: Date): Promise<number>;
+  /**
+   * The issues with anything of that identity, the oldest first: a report or a notice of theirs, or
+   * their nickname.
+   */
+  involving(identity: string): Promise<Issue[]>;
+  /** The identities that sent notices with that email, to know whose a request by email is. */
+  sendersWithEmail(email: string): Promise<string[]>;
 }

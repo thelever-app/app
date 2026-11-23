@@ -1,9 +1,9 @@
 import { FirstAccess, type FirstAccessRepository } from '@thelever-app/identity';
-import type { Kysely } from 'kysely';
+import type { Kysely, Selectable } from 'kysely';
 import type { IdentityTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
 
-/** The first access of each identity, one row per identity. */
+/** The first access of each identity, one row per identity, with a request code no other row has. */
 export class PostgresFirstAccessRepository implements FirstAccessRepository {
   readonly #db: Kysely<IdentityTables>;
 
@@ -17,21 +17,25 @@ export class PostgresFirstAccessRepository implements FirstAccessRepository {
       .selectAll()
       .where('identity', '=', identity)
       .executeTakeFirst();
-    return (
-      row &&
-      FirstAccess.fromSnapshot({
-        identity: row.identity,
-        region: row.region,
-        birthYear: row.birth_year,
-        birthMonth: row.birth_month,
-        lastOpenedAt: row.last_opened_at,
-      })
-    );
+    return row && firstAccessOf(row);
   }
 
-  /** A declared age stays, even if what is saved was read before it was declared. */
+  async findByRequestCode(requestCode: string): Promise<FirstAccess | undefined> {
+    const row = await (currentTransaction<IdentityTables>() ?? this.#db)
+      .selectFrom('first_accesses')
+      .selectAll()
+      .where('request_code', '=', requestCode)
+      .executeTakeFirst();
+    return row && firstAccessOf(row);
+  }
+
+  /**
+   * A declared age stays, even if what is saved was read before it was declared; the request code
+   * is written once, and the unique column refuses one another identity has.
+   */
   async save(firstAccess: FirstAccess): Promise<void> {
-    const { identity, region, birthYear, birthMonth, lastOpenedAt } = firstAccess.toSnapshot();
+    const { identity, region, birthYear, birthMonth, lastOpenedAt, requestCode } =
+      firstAccess.toSnapshot();
     await (currentTransaction<IdentityTables>() ?? this.#db)
       .insertInto('first_accesses')
       .values({
@@ -40,6 +44,7 @@ export class PostgresFirstAccessRepository implements FirstAccessRepository {
         birth_year: birthYear,
         birth_month: birthMonth,
         last_opened_at: lastOpenedAt,
+        request_code: requestCode,
       })
       .onConflict((conflict) =>
         conflict.column('identity').doUpdateSet((eb) => {
@@ -64,4 +69,22 @@ export class PostgresFirstAccessRepository implements FirstAccessRepository {
       )
       .execute();
   }
+
+  async delete(identity: string): Promise<void> {
+    await (currentTransaction<IdentityTables>() ?? this.#db)
+      .deleteFrom('first_accesses')
+      .where('identity', '=', identity)
+      .execute();
+  }
+}
+
+function firstAccessOf(row: Selectable<IdentityTables['first_accesses']>): FirstAccess {
+  return FirstAccess.fromSnapshot({
+    identity: row.identity,
+    region: row.region,
+    birthYear: row.birth_year,
+    birthMonth: row.birth_month,
+    lastOpenedAt: row.last_opened_at,
+    requestCode: row.request_code,
+  });
 }

@@ -80,10 +80,24 @@ import personRemove from '@material-symbols/svg-500/rounded/person_remove.svg?ur
 import policy from '@material-symbols/svg-500/rounded/policy.svg?url';
 import settings from '@material-symbols/svg-500/rounded/settings.svg?url';
 import translate from '@material-symbols/svg-500/rounded/translate.svg?url';
+import verifiedUser from '@material-symbols/svg-500/rounded/verified_user-fill.svg?url';
+import key from '@material-symbols/svg-500/rounded/key.svg?url';
+import deleteIcon from '@material-symbols/svg-500/rounded/delete.svg?url';
+import monitoring from '@material-symbols/svg-500/rounded/monitoring.svg?url';
+import restartAlt from '@material-symbols/svg-500/rounded/restart_alt.svg?url';
+import publicIcon from '@material-symbols/svg-500/rounded/public.svg?url';
+import history from '@material-symbols/svg-500/rounded/history.svg?url';
 import styles from './icon.module.css';
 
 /** The Material Symbols the screens use, hosted with the app: never loaded from Google. */
 const ICONS = {
+  verifiedUser,
+  key,
+  delete: deleteIcon,
+  monitoring,
+  restartAlt,
+  public: publicIcon,
+  history,
   ad,
   autoDelete,
   cookie,

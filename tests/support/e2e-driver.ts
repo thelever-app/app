@@ -120,6 +120,7 @@ import type {
   SupportInvitationView,
   SupportLineView,
   SwitchView,
+  VisitOriginView,
 } from './driver.ts';
 import type { E2eStack } from './e2e-stack.ts';
 import {
@@ -458,11 +459,7 @@ const TEST_COOKIE_MANAGER = `(() => {
     listeners.push(callback);
     if (answer) callback(answer, true);
   };
-  const answered = localStorage.getItem('test-cookie-manager');
-  if (answered) {
-    answer = { eventStatus: 'tcloaded', gdprApplies: true, purpose: { consents: JSON.parse(answered) } };
-    return;
-  }
+  const show = () => {
   const dialog = document.createElement('div');
   dialog.setAttribute('role', 'dialog');
   dialog.setAttribute('aria-label', '${TEST_COOKIE_MANAGER_NAME}');
@@ -478,6 +475,17 @@ const TEST_COOKIE_MANAGER = `(() => {
     dialog.append(button);
   }
   document.body.append(dialog);
+  };
+  // As Google's: what was answered once loads again, and showRevocationMessage asks it again.
+  const queued = window.googlefc?.callbackQueue ?? [];
+  window.googlefc = { showRevocationMessage: show, callbackQueue: { push: (callback) => callback() } };
+  const answered = localStorage.getItem('test-cookie-manager');
+  if (answered) {
+    answer = { eventStatus: 'tcloaded', gdprApplies: true, purpose: { consents: JSON.parse(answered) } };
+  } else {
+    show();
+  }
+  for (const callback of queued) callback();
 })();`;
 /** Test data: an address of each country the scenarios name, as DB-IP Lite places them. */
 const ADDRESSES: Readonly<Record<string, string>> = {
@@ -2885,6 +2893,7 @@ export class E2eDriver implements GameDriver {
           research_consent_version: null,
           commercial_licence_consent_version: null,
           under_eighteen: false,
+          objects_to_analytics: false,
         })
         .execute(),
     );
@@ -5463,6 +5472,195 @@ export class E2eDriver implements GameDriver {
     const player = this.#players.get(name);
     if (!player) throw new Error(`No player called "${name}" in this scenario`);
     return player;
+  }
+
+  // Privacy and data: what the room server keeps is read in the application.
+
+  async objectToProductAnalytics(): Promise<void> {
+    throw new Error('Only the application keeps the objection: the scenario must not be @ui');
+  }
+
+  async analyticsEventsOf(): Promise<number> {
+    throw new Error(
+      'Only the application keeps the analytics events: the scenario must not be @ui',
+    );
+  }
+
+  async openAppFrom(): Promise<void> {
+    throw new Error('Only the application keeps the first visit: the scenario must not be @ui');
+  }
+
+  async firstVisitOf(): Promise<VisitOriginView | undefined> {
+    throw new Error('Only the application keeps the first visit: the scenario must not be @ui');
+  }
+
+  async sendDataDeletionByEmail(): Promise<void> {
+    throw new Error(
+      'The team carries out a request by email in a job: the scenario must not be @ui',
+    );
+  }
+
+  async lastRequestByEmail(): Promise<{ readonly carriedOut: boolean; readonly reply?: string }> {
+    throw new Error(
+      'The team carries out a request by email in a job: the scenario must not be @ui',
+    );
+  }
+
+  async requestDataDeletion(user: string): Promise<void> {
+    await this.openSettings(user);
+    await this.openTheDeletion(user);
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('button', { name: spanish('deleteData.confirm') }).click();
+    await page.getByRole('heading', { name: spanish('dataDeleted.title') }).waitFor();
+  }
+
+  async runTheDeletionJob(): Promise<void> {
+    throw new Error('The deletion job runs on the application: the scenario must not be @ui');
+  }
+
+  async personalDataOf(): Promise<Readonly<Record<string, unknown>>> {
+    throw new Error('What the app keeps is read in the application: the scenario must not be @ui');
+  }
+
+  /** The players of `user` in the rooms, before withdrawing ties them to nobody. */
+  readonly #playersBeforeWithdrawing = new Map<string, readonly string[]>();
+
+  async #roomPlayersOfDevice(user: string): Promise<readonly string[]> {
+    const identity = await this.#identityOfDevice(user);
+    const rows = await this.#withDatabase((db) =>
+      db.selectFrom('room_players').select('id').where('identity', '=', identity).execute(),
+    );
+    return rows.map(({ id }) => id);
+  }
+
+  async chooseToWithdrawTheGameConsent(user: string): Promise<void> {
+    this.#playersBeforeWithdrawing.set(user, await this.#roomPlayersOfDevice(user));
+    await this.openSettings(user);
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('link', { name: new RegExp(spanish('appSettings.permissions')) }).click();
+    const game = page.getByRole('switch', { name: new RegExp(spanish('permissions.game')) });
+    // Clickable once the screen has read the permissions.
+    await page.locator('[role="switch"][aria-checked="true"]').first().waitFor();
+    await game.click();
+    await page.getByRole('dialog', { name: spanish('permissions.withdraw.title') }).waitFor();
+  }
+
+  async withdrawalWarningSeenBy(user: string): Promise<{
+    readonly blocksRooms: boolean;
+    readonly deletesData: boolean;
+  }> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const text =
+      (await page
+        .getByRole('dialog', { name: spanish('permissions.withdraw.title') })
+        .textContent()) ?? '';
+    return {
+      blocksRooms: text.includes(spanish('permissions.withdraw.blocked')),
+      deletesData: text.includes(spanish('permissions.withdraw.deleted')),
+    };
+  }
+
+  async confirmTheWithdrawal(user: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('button', { name: spanish('permissions.withdraw.confirm') }).click();
+    // Withdrawn, the app opens again from the start, which asks for the game consent.
+    await page.getByRole('heading', { name: SCREEN_TEXT('firstAccess.consent.title') }).waitFor();
+  }
+
+  async gameDataOf(user: string): Promise<number> {
+    const playerIds = [
+      ...new Set([
+        ...(this.#playersBeforeWithdrawing.get(user) ?? []),
+        ...(await this.#roomPlayersOfDevice(user)),
+      ]),
+    ];
+    if (playerIds.length === 0) return 0;
+    const [answers, reactions] = await this.#withDatabase((db) =>
+      Promise.all([
+        db
+          .selectFrom('answers')
+          .select((eb) => eb.fn.countAll<string>().as('count'))
+          .where('player_id', 'in', playerIds)
+          .executeTakeFirstOrThrow(),
+        db
+          .selectFrom('reactions')
+          .select((eb) => eb.fn.countAll<string>().as('count'))
+          .where('player_id', 'in', playerIds)
+          .executeTakeFirstOrThrow(),
+      ]),
+    );
+    return Number(answers.count) + Number(reactions.count);
+  }
+
+  async requestCodeSeenBy(user: string): Promise<{
+    readonly shown: string | undefined;
+    readonly kept: string | undefined;
+  }> {
+    await this.openSettings(user);
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('link', { name: new RegExp(spanish('appSettings.yourData')) }).click();
+    const code = page.getByText(/^[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
+    await code.waitFor();
+    const identity = await this.#identityOfDevice(user);
+    const row = await this.#withDatabase((db) =>
+      db
+        .selectFrom('first_accesses')
+        .select('request_code')
+        .where('identity', '=', identity)
+        .executeTakeFirst(),
+    );
+    return {
+      shown: (await code.textContent()) ?? undefined,
+      kept: row?.request_code.match(/.{4}/g)?.join('-'),
+    };
+  }
+
+  async openTheDeletion(user: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('button', { name: new RegExp(spanish('appSettings.deleteData')) }).click();
+    await page.getByRole('dialog', { name: spanish('deleteData.title') }).waitFor();
+  }
+
+  async deletionExplainedTo(user: string): Promise<{
+    readonly deleted: boolean;
+    readonly kept: boolean;
+    readonly nicknameAsPlayer: boolean;
+  }> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const text =
+      (await page.getByRole('dialog', { name: spanish('deleteData.title') }).textContent()) ?? '';
+    return {
+      deleted: text.includes(spanish('deleteData.games')),
+      kept:
+        text.includes(spanish('deleteData.consent')) && text.includes(spanish('deleteData.public')),
+      nicknameAsPlayer: text.includes(spanish('deleteData.history')),
+    };
+  }
+
+  async signedOutAtOnce(user: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    const kept = (await page.evaluate(`Object.keys(localStorage).filter(
+      (key) => key.startsWith('thelever.') && key !== '${ACCESS_CODE_KEY}',
+    )`)) as string[];
+    await page.getByRole('button', { name: spanish('dataDeleted.home') }).click();
+    return kept.length === 0;
+  }
+
+  async openCookieChoices(user: string): Promise<void> {
+    const { page } = screenOf(this.#playerCalled(user));
+    await page.getByRole('button', { name: new RegExp(spanish('appSettings.cookies')) }).click();
+    await page.getByRole('dialog', { name: TEST_COOKIE_MANAGER_NAME }).waitFor();
+  }
+
+  async cookieChoicesChangeableBy(user: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(user));
+    // The first access accepted everything: now the player rejects it, ads personalised included.
+    await page
+      .getByRole('dialog', { name: TEST_COOKIE_MANAGER_NAME })
+      .getByRole('button', { name: 'Reject' })
+      .click();
+    await page.waitForFunction(`localStorage.getItem('${PERSONALISED_ADS_KEY}') === 'no'`);
+    return true;
   }
 }
 

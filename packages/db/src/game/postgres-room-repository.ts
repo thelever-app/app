@@ -61,6 +61,23 @@ export class PostgresRoomRepository implements RoomRepository {
     return rows.map(({ room_id }) => room_id);
   }
 
+  async findIdsTiedTo(identity: string): Promise<readonly string[]> {
+    const db = currentTransaction<GameTables>() ?? this.#db;
+    const rows = await db
+      .selectFrom('room_players')
+      .select('room_id')
+      .where('identity', '=', identity)
+      .union(
+        db
+          .selectFrom('room_expelled_identities')
+          .select('room_id')
+          .where('identity', '=', identity),
+      )
+      .orderBy('room_id')
+      .execute();
+    return rows.map(({ room_id }) => room_id);
+  }
+
   async findIdsWithNobodyConnected(): Promise<readonly string[]> {
     const rows = await (currentTransaction<GameTables>() ?? this.#db)
       .selectFrom('rooms')
@@ -145,6 +162,8 @@ export class PostgresRoomRepository implements RoomRepository {
         conflict.column('id').doUpdateSet((eb) => ({
           position: eb.ref('excluded.position'),
           nickname: eb.ref('excluded.nickname'),
+          // Only forgetting changes it: the player stays, tied to nobody.
+          identity: eb.ref('excluded.identity'),
           avatar_face: eb.ref('excluded.avatar_face'),
           avatar_color: eb.ref('excluded.avatar_color'),
           has_left: eb.ref('excluded.has_left'),

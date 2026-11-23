@@ -141,6 +141,11 @@ Feature: First access to the app
     Then the region is stored with the declared age
     And the IP address is not stored
 
+  Scenario: The first visit records where it came from
+    Given a device that has never used TheLever
+    When the user opens the app from a link with the source "cartel", the campaign "bares" and the content "tinder"
+    Then the first visit is recorded with that source, that campaign and that content
+
   @ui
   Scenario: A user under the minimum age stays blocked on that device
     Given a device in the EEA where the user declared an age of 15

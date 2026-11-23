@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import { describe, expect, it } from 'vitest';
 import { AnswerDilemmaUseCase } from '../../use-cases/answer-dilemma.use-case.ts';
 import { ConnectPlayerUseCase } from '../../use-cases/connect-player.use-case.ts';
@@ -30,6 +31,7 @@ const LUIS_SEAL = {
   researchConsentVersion: null,
   commercialLicenceConsentVersion: null,
   underEighteen: true,
+  objectsToAnalytics: false,
 };
 
 /** Ana hosts Luis and Marta in a nominal game of the three test dilemmas, all three connected. */
@@ -66,8 +68,14 @@ async function arrange() {
     connections,
     answerDilemma: new AnswerDilemmaUseCase({ ...ports, sealProvider, dilemmaCatalog: catalog }),
     revealEarly: new RevealEarlyUseCase(roomRepository, gameRepository, notifier, clock),
-    moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock),
-    getReadyToMoveOn: new GetReadyToMoveOnUseCase(roomRepository, gameRepository, notifier, clock),
+    moveOn: new MoveOnUseCase(roomRepository, gameRepository, notifier, clock, new InMemoryUsage()),
+    getReadyToMoveOn: new GetReadyToMoveOnUseCase(
+      roomRepository,
+      gameRepository,
+      notifier,
+      clock,
+      new InMemoryUsage(),
+    ),
     react: new ReactUseCase({ ...ports, sealProvider }),
     likeDilemma: new LikeDilemmaUseCase({ ...ports, likes, sealProvider }),
     unlikeDilemma: new UnlikeDilemmaUseCase({ ...ports, likes }),
@@ -75,13 +83,22 @@ async function arrange() {
     restartGame: new RestartGameUseCase(roomRepository, gameRepository, notifier),
     getGameState: new GetGameStateUseCase(roomRepository, gameRepository, catalog, likes),
     getRoomState: new GetRoomStateUseCase(roomRepository, catalog),
-    disconnectPlayer: new DisconnectPlayerUseCase(roomRepository, gameRepository, notifier, clock),
-    joinRoom: new JoinRoomUseCase({
-      sealProvider: new InMemorySealProvider(),
-      ...ports,
-      idGenerator: game.idGenerator,
-      randomness: game.randomness,
-    }),
+    disconnectPlayer: new DisconnectPlayerUseCase(
+      roomRepository,
+      gameRepository,
+      notifier,
+      clock,
+      new InMemoryUsage(),
+    ),
+    joinRoom: new JoinRoomUseCase(
+      {
+        sealProvider: new InMemorySealProvider(),
+        ...ports,
+        idGenerator: game.idGenerator,
+        randomness: game.randomness,
+      },
+      new InMemoryUsage(),
+    ),
   };
 }
 

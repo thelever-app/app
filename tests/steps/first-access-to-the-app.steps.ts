@@ -423,3 +423,18 @@ Then(
     assert.equal(await this.driver.isGameDataKept(), false);
   },
 );
+
+When(
+  'the user opens the app from a link with the source {string}, the campaign {string} and the content {string}',
+  async function (this: GameWorld, source: string, campaign: string, content: string) {
+    await this.driver.openAppFrom(this.player, { source, campaign, content });
+    this.visitOrigin = { source, campaign, content };
+  },
+);
+
+Then(
+  'the first visit is recorded with that source, that campaign and that content',
+  async function (this: GameWorld) {
+    assert.deepEqual(await this.driver.firstVisitOf(this.player), this.visitOrigin);
+  },
+);

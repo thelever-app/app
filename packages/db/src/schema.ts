@@ -35,6 +35,8 @@ import type {
   NicknameReportReason,
   Outcome,
 } from '@thelever-app/moderation';
+import type { AnalyticsEventKind, AnalyticsFact } from '@thelever-app/analytics';
+import type { DeletionReason } from '@thelever-app/identity';
 import type { ColumnType, Generated, Kysely } from 'kysely';
 
 /** The tables, as the migrations leave them; the checks of the database guarantee the unions. */
@@ -273,6 +275,7 @@ export interface Database {
     research_consent_version: string | null;
     commercial_licence_consent_version: string | null;
     under_eighteen: boolean;
+    objects_to_analytics: boolean;
     /** Written as JSON text: the driver would turn an array into a PostgreSQL array. */
     vote_predictions: ColumnType<VotePrediction[], string, string>;
     /** In an anonymous room; written as JSON text, like the vote predictions. */
@@ -297,6 +300,7 @@ export interface Database {
     research_consent_version: string | null;
     commercial_licence_consent_version: string | null;
     under_eighteen: boolean;
+    objects_to_analytics: boolean;
   };
   /** One like per identity and dilemma in all, apart from the rooms, which are deleted. */
   dilemma_likes: {
@@ -309,6 +313,7 @@ export interface Database {
     research_consent_version: string | null;
     commercial_licence_consent_version: string | null;
     under_eighteen: boolean;
+    objects_to_analytics: boolean;
   };
   /**
    * The issues of the moderation repository, each with the reports and notices of one content until
@@ -346,8 +351,8 @@ export interface Database {
     comment: string | null;
     /** The language the player read it in. */
     language: ModerationLanguage;
-    /** Who reports: the report threshold counts different players. */
-    identity: string;
+    /** Who reports: the report threshold counts different players. Null once their data are deleted. */
+    identity: string | null;
     reported_at: Date;
   };
   /** The reports players make of the nicknames of others, kept 3 years. */
@@ -355,11 +360,11 @@ export interface Database {
     id: string;
     issue_id: string;
     nickname: string;
-    /** Who goes by it. */
-    owner: string;
+    /** Who goes by it; null once their data are deleted. */
+    owner: string | null;
     reason: NicknameReportReason;
     comment: string | null;
-    identity: string;
+    identity: string | null;
     reported_at: Date;
   };
   /** The notices of illegal content of the web form, with the email for the decision, kept 3 years. */
@@ -371,7 +376,7 @@ export interface Database {
     name: string | null;
     email: string | null;
     language: ModerationLanguage;
-    identity: string;
+    identity: string | null;
     sent_at: Date;
   };
   /** What the issues still have to tell the moderation repository and the senders of notices. */
@@ -400,6 +405,30 @@ export interface Database {
     birth_month: number | null;
     /** The deletion after 24 months without opening the app counts from it. */
     last_opened_at: Date;
+    /** The code for requests by email, unique, in capitals and without groups. */
+    request_code: string;
+  };
+  /** The deletion log: what the deletion job does, and does again after a restore; kept 3 years. */
+  data_deletions: {
+    id: string;
+    identity: string;
+    reason: DeletionReason;
+    requested_at: Date;
+    erased_at: Date | null;
+  };
+  /** Who objects to product analytics, and since when. */
+  analytics_objections: {
+    identity: string;
+    objected_at: Date;
+  };
+  /** The facts of use of each identity, kept 13 months. */
+  analytics_events: {
+    id: string;
+    identity: string;
+    kind: AnalyticsEventKind;
+    occurred_at: Date;
+    /** Written as JSON text, like the predictions. */
+    fact: ColumnType<AnalyticsFact, string, string>;
   };
   /** The last version of each legal document each identity accepted, and when. */
   legal_acceptances: {
@@ -407,6 +436,8 @@ export interface Database {
     document: 'terms-of-use' | 'game-consent';
     version: number;
     accepted_at: Date;
+    /** Only of the game consent, once withdrawn. */
+    withdrawn_at: Date | null;
   };
 }
 
@@ -419,10 +450,13 @@ interface WorldAnswers {
 }
 
 /** The tables of Identity: only its adapters read or write them. */
-export type IdentityTables = Pick<Database, 'first_accesses'>;
+export type IdentityTables = Pick<Database, 'first_accesses' | 'data_deletions'>;
 
 /** The tables of Consent: only its adapters read or write them. */
-export type ConsentTables = Pick<Database, 'legal_acceptances'>;
+export type ConsentTables = Pick<Database, 'legal_acceptances' | 'analytics_objections'>;
+
+/** The tables of Analytics: only its adapters read or write them. */
+export type AnalyticsTables = Pick<Database, 'analytics_events'>;
 
 /** The tables of Moderation: only its adapters read or write them. */
 export type ModerationTables = Pick<

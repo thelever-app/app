@@ -138,6 +138,7 @@ export function moderationInMemory({
   const undecided = new GetUndecidedIssuesUseCase(issues);
   return {
     issues,
+    notices,
     tracker,
     mailer,
     receiveDilemmaReport: new ReceiveDilemmaReportUseCase(ports),

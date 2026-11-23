@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import { describe, expect, it } from 'vitest';
 import { InMemoryPlayerNotifier } from '../../../adapters/in-memory/in-memory-player-notifier.ts';
 import { LobbyChangedEvent } from '../../../domain/events/lobby-changed.event.ts';
@@ -20,7 +21,13 @@ async function arrange() {
     notifier,
     getRoomState: new GetRoomStateUseCase(roomRepository, testCatalog()),
     changeSettings: new ChangeRoomSettingsUseCase(roomRepository, catalog, notifier),
-    leaveRoom: new LeaveRoomUseCase(roomRepository, gameRepository, notifier, clock),
+    leaveRoom: new LeaveRoomUseCase(
+      roomRepository,
+      gameRepository,
+      notifier,
+      clock,
+      new InMemoryUsage(),
+    ),
   };
 }
 

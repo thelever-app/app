@@ -377,6 +377,32 @@ export class Room {
     const index = this.#players.findIndex((player) => player.identity === identity);
     const player = this.#players[index];
     if (!player || !new NicknameVO(player.nickname).sameAs(new NicknameVO(nickname))) return false;
+    this.#renameGeneric(index);
+    this.#changeLobby('nickname-withdrawn');
+    return true;
+  }
+
+  /**
+   * Whoever is behind the player of that identity withdrew the game consent or deleted their data,
+   * once they left the room: in it they stay, for the others, under the generic nickname of the
+   * room and tied to nobody, and the room forgets it expelled them.
+   */
+  forget(identity: string): void {
+    const wasExpelled = this.#expelledIdentities.delete(identity);
+    const index = this.#players.findIndex((player) => player.identity === identity);
+    const player = this.#players[index];
+    if (!player) {
+      if (wasExpelled) this.#version += 1;
+      return;
+    }
+    this.#renameGeneric(index);
+    player.forget();
+    this.#version += 1;
+  }
+
+  /** «Jugador N», with their number in the room, or the next one free if someone looks the same. */
+  #renameGeneric(index: number): void {
+    const player = this.#players[index] as Player;
     let number = index + 1;
     let generic = new NicknameVO(genericNickname(this.#settings.dilemmaLanguage, number));
     // Someone who wrote «Jugador 3» with the same avatar keeps it: the next number is free.
@@ -385,8 +411,6 @@ export class Room {
       generic = new NicknameVO(genericNickname(this.#settings.dilemmaLanguage, number));
     }
     player.rename(generic);
-    this.#changeLobby('nickname-withdrawn');
-    return true;
   }
 
   /**

@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '../../../adapters/in-memory/in-memory-usage.ts';
 import { InMemorySealProvider } from '../../../adapters/in-memory/in-memory-seal-provider.ts';
 import { describe, expect, it } from 'vitest';
 import { ChangeAvatarUseCase } from '../../use-cases/change-avatar.use-case.ts';
@@ -63,7 +64,10 @@ async function arrange() {
     expelPlayer: new ExpelPlayerUseCase(roomRepository, notifier),
     searchDilemmas: new SearchDilemmasUseCase(roomRepository, catalog),
     getRoomPreview: new GetRoomPreviewUseCase(roomRepository, new FixedRandomness(), lobby.clock),
-    joinRoom: new JoinRoomUseCase({ sealProvider: new InMemorySealProvider(), ...lobby, notifier }),
+    joinRoom: new JoinRoomUseCase(
+      { sealProvider: new InMemorySealProvider(), ...lobby, notifier },
+      new InMemoryUsage(),
+    ),
     getRoomState: new GetRoomStateUseCase(roomRepository, catalog),
   };
 }

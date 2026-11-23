@@ -5,3 +5,4 @@
  * database. Never for production.
  */
 export { InMemoryAcceptanceRepository } from './in-memory-acceptance-repository.ts';
+export { InMemoryAnalyticsObjectionRepository } from './in-memory-analytics-objection-repository.ts';

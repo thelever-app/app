@@ -10,6 +10,8 @@ import type { SealProvider } from '../ports/seal-provider.port.ts';
 import { findRoom } from './find-room.ts';
 import { notifyGame } from './notify-game.ts';
 import { notifyRoom } from './notify-room.ts';
+import { recordUsage } from './record-usage.ts';
+import type { Usage } from '../ports/usage.port.ts';
 
 export interface JoinRoomInput {
   readonly roomId: string;
@@ -43,17 +45,21 @@ export class JoinRoomUseCase {
   readonly #randomness: Randomness;
   readonly #clock: Clock;
   readonly #sealProvider: SealProvider;
+  readonly #usage: Usage;
 
-  constructor(ports: {
-    readonly roomRepository: RoomRepository;
-    readonly gameRepository: GameRepository;
-    readonly notifier: PlayerNotifier;
-    readonly idGenerator: IdGenerator;
-    readonly randomness: Randomness;
-    readonly clock: Clock;
-    /** Whether who joins is under 18, by the age they declared. */
-    readonly sealProvider: SealProvider;
-  }) {
+  constructor(
+    ports: {
+      readonly roomRepository: RoomRepository;
+      readonly gameRepository: GameRepository;
+      readonly notifier: PlayerNotifier;
+      readonly idGenerator: IdGenerator;
+      readonly randomness: Randomness;
+      readonly clock: Clock;
+      /** Whether who joins is under 18, by the age they declared. */
+      readonly sealProvider: SealProvider;
+    },
+    usage: Usage,
+  ) {
     this.#roomRepository = ports.roomRepository;
     this.#gameRepository = ports.gameRepository;
     this.#notifier = ports.notifier;
@@ -61,6 +67,7 @@ export class JoinRoomUseCase {
     this.#randomness = ports.randomness;
     this.#clock = ports.clock;
     this.#sealProvider = ports.sealProvider;
+    this.#usage = usage;
   }
 
   async execute({
@@ -85,6 +92,9 @@ export class JoinRoomUseCase {
     const playedChanged = playedBefore?.join() !== player.playedDilemmaIds.join();
     // The room first: a player of the game must be a player of the room.
     if (events.length > 0 || playedChanged) await this.#roomRepository.save(room);
+    if (playedBefore === undefined && room.host.id !== player.id) {
+      await recordUsage(this.#usage, { kind: 'room-joined', identity, roomId: room.id });
+    }
     const gameId = room.currentGameId;
     const game = gameId ? await this.#gameRepository.findById(gameId) : undefined;
     // Who comes once the rounds are over, in the results or at the end, watches them and waits in

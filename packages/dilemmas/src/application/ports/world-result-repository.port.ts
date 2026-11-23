@@ -22,6 +22,10 @@ export interface WorldResultRepository {
   publish(minimumNewAnswers: number): Promise<void>;
   /** Forgets who voted each version that is no longer the current one of its dilemma; its answers stay. */
   forgetReceiptsOfFormerVersions(): Promise<void>;
+  /** The versions that identity voted alone, by their mark: never the option, nor the time. */
+  receiptsOf(identity: string): Promise<{ readonly dilemmaId: string; readonly version: number }[]>;
+  /** Forgets every mark of that identity; the answers it added stay, counted without anyone. */
+  forgetReceiptsOf(identity: string): Promise<void>;
   /** The published answers to each option of that version, by position; an option nobody voted has none. */
   publishedCountsOf(dilemmaId: string, version: number): Promise<ReadonlyMap<number, number>>;
 }

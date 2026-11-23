@@ -12,6 +12,8 @@ import { ContactScreen } from './settings/contact-screen.tsx';
 import { CreditsScreen } from './settings/credits-screen.tsx';
 import { FundingScreen } from './settings/funding-screen.tsx';
 import { NoticesScreen } from './settings/notices-screen.tsx';
+import { PermissionsScreen } from './settings/permissions-screen.tsx';
+import { YourDataScreen } from './settings/your-data-screen.tsx';
 import { SettingsScreen } from './settings/settings-screen.tsx';
 import {
   CONTACT_PATH,
@@ -19,7 +21,9 @@ import {
   FUNDING_PATH,
   ILLEGAL_CONTENT_PATH,
   NOTICES_PATH,
+  PERMISSIONS_PATH,
   SETTINGS_PATH,
+  YOUR_DATA_PATH,
 } from './settings/settings-paths.ts';
 
 /**
@@ -49,11 +53,16 @@ function GatedApp({ adsenseClient }: { readonly adsenseClient?: string | undefin
         <Route path="/new/:publicId" element={<PlayDilemmaScreen />} />
         <Route path="/vote/:publicId" element={<VoteAloneScreen />} />
         <Route path="/rooms/:roomId" element={<RoomScreen />} />
-        <Route path={SETTINGS_PATH} element={<SettingsScreen />} />
+        <Route path={SETTINGS_PATH} element={<SettingsScreen adsenseClient={adsenseClient} />} />
         <Route path={FUNDING_PATH} element={<FundingScreen />} />
         <Route path={CONTACT_PATH} element={<ContactScreen />} />
         <Route path={CREDITS_PATH} element={<CreditsScreen />} />
         <Route path={NOTICES_PATH} element={<NoticesScreen />} />
+        <Route
+          path={PERMISSIONS_PATH}
+          element={<PermissionsScreen adsenseClient={adsenseClient} />}
+        />
+        <Route path={YOUR_DATA_PATH} element={<YourDataScreen />} />
         <Route path="*" element={<Navigate to={HOME_PATH} replace />} />
       </Routes>
     </FirstAccessGate>

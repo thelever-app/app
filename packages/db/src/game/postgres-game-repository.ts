@@ -52,6 +52,16 @@ export class PostgresGameRepository implements GameRepository {
     return found;
   }
 
+  async idsOfRoom(roomId: string): Promise<readonly string[]> {
+    const rows = await (currentTransaction<GameTables>() ?? this.#db)
+      .selectFrom('games')
+      .select('id')
+      .where('room_id', '=', roomId)
+      .orderBy('id')
+      .execute();
+    return rows.map(({ id }) => id);
+  }
+
   /** Everything of a game hangs from its row in cascade: its dilemmas, its players and their answers. */
   async deleteOfRoom(roomId: string): Promise<void> {
     await (currentTransaction<GameTables>() ?? this.#db)
@@ -280,6 +290,7 @@ export class PostgresGameRepository implements GameRepository {
           research_consent_version: eb.ref('excluded.research_consent_version'),
           commercial_licence_consent_version: eb.ref('excluded.commercial_licence_consent_version'),
           under_eighteen: eb.ref('excluded.under_eighteen'),
+          objects_to_analytics: eb.ref('excluded.objects_to_analytics'),
         })),
       )
       .execute();
@@ -423,6 +434,7 @@ function snapshotOf(row: GameRow): GameSnapshot {
         researchConsentVersion: reaction.research_consent_version,
         commercialLicenceConsentVersion: reaction.commercial_licence_consent_version,
         underEighteen: reaction.under_eighteen,
+        objectsToAnalytics: reaction.objects_to_analytics,
       },
     })),
     players: row.players.map(({ player_id, has_left, joined_at_position }) => {
@@ -451,6 +463,7 @@ function snapshotOf(row: GameRow): GameSnapshot {
               researchConsentVersion: answer.research_consent_version,
               commercialLicenceConsentVersion: answer.commercial_licence_consent_version,
               underEighteen: answer.under_eighteen,
+              objectsToAnalytics: answer.objects_to_analytics,
             },
           })),
         didNotVote: ofPlayer.flatMap(({ dilemma_id, did_not_vote }) =>
@@ -599,6 +612,7 @@ function answerRowsOf({ id, dilemmas, players }: GameSnapshot): AnswerRow[] {
       research_consent_version: answer.seal.researchConsentVersion,
       commercial_licence_consent_version: answer.seal.commercialLicenceConsentVersion,
       under_eighteen: answer.seal.underEighteen,
+      objects_to_analytics: answer.seal.objectsToAnalytics,
     })),
   );
 }
@@ -615,6 +629,7 @@ function reactionRowsOf({ id, reactions }: GameSnapshot): ReactionRow[] {
     research_consent_version: reaction.seal.researchConsentVersion,
     commercial_licence_consent_version: reaction.seal.commercialLicenceConsentVersion,
     under_eighteen: reaction.seal.underEighteen,
+    objects_to_analytics: reaction.seal.objectsToAnalytics,
   }));
 }
 

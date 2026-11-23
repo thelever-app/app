@@ -6,12 +6,15 @@ export interface NicknameReportSnapshot {
   readonly id: string;
   /** The nickname as the reporter saw it. */
   readonly nickname: string;
-  /** Who goes by it: if the team withdraws it, it changes in their rooms and they see why. */
-  readonly owner: string;
+  /**
+   * Who goes by it: if the team withdraws it, it changes in their rooms and they see why. Null
+   * once their data are deleted: the nickname stays, as what was decided on.
+   */
+  readonly owner: string | null;
   readonly reason: NicknameReportReason;
   readonly comment: string | null;
-  /** Who reports: the decision goes back to them. */
-  readonly identity: string;
+  /** Who reports: the decision goes back to them. Null once their data are deleted. */
+  readonly identity: string | null;
   readonly reportedAt: Date;
 }
 
@@ -39,8 +42,19 @@ export class NicknameReport {
     return this.#snapshot.id;
   }
 
-  get identity(): string {
+  get identity(): string | null {
     return this.#snapshot.identity;
+  }
+
+  /** The same report without that identity, whether it made it or goes by the nickname. */
+  unlinked(identity: string): NicknameReport {
+    const { identity: reporter, owner } = this.#snapshot;
+    if (reporter !== identity && owner !== identity) return this;
+    return new NicknameReport({
+      ...this.#snapshot,
+      identity: reporter === identity ? null : reporter,
+      owner: owner === identity ? null : owner,
+    });
   }
 
   get reason(): NicknameReportReason {

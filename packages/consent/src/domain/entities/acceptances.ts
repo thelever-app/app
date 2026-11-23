@@ -1,4 +1,5 @@
 import { NotCurrentVersionError } from '../errors/not-current-version.error.ts';
+import { NotWithdrawableError } from '../errors/not-withdrawable.error.ts';
 import {
   currentVersionOf,
   LEGAL_DOCUMENTS,
@@ -7,12 +8,20 @@ import {
   versionRequiredOf,
 } from '../vos/legal-document.vo.ts';
 
-/** The version of a document an identity accepted, and when, which proves it (art. 7.1 GDPR). */
+/**
+ * The version of a document an identity accepted, and when, which proves it (art. 7.1 GDPR); and,
+ * for the game consent, when it was withdrawn, which keeps the proof of what was given before.
+ */
 export interface Acceptance {
   readonly document: LegalDocument;
   readonly version: number;
   readonly acceptedAt: Date;
+  /** Null while it stands. */
+  readonly withdrawnAt: Date | null;
 }
+
+/** The documents that can be withdrawn: the game consent, not the terms of use. */
+const WITHDRAWABLE: readonly LegalDocument[] = ['game-consent'];
 
 export interface AcceptancesSnapshot {
   readonly identity: string;
@@ -48,12 +57,29 @@ export class Acceptances {
     if (version !== currentVersionOf(document, published)) {
       throw new NotCurrentVersionError(document, version);
     }
-    this.#accepted.set(document, { document, version, acceptedAt: now });
+    this.#accepted.set(document, { document, version, acceptedAt: now, withdrawnAt: null });
   }
 
-  /** The version of the document accepted last, if any. */
+  /**
+   * Withdraws the game consent: from now on it is still to give, as easily as it was given. What
+   * was given and when stays, with when it was withdrawn; withdrawing it twice keeps the first time.
+   */
+  withdraw(document: LegalDocument, now: Date): void {
+    if (!WITHDRAWABLE.includes(document)) throw new NotWithdrawableError(document);
+    const acceptance = this.#accepted.get(document);
+    if (!acceptance || acceptance.withdrawnAt) return;
+    this.#accepted.set(document, { ...acceptance, withdrawnAt: now });
+  }
+
+  /** The version of the document accepted last and not withdrawn, if any. */
   versionOf(document: LegalDocument): number | undefined {
-    return this.#accepted.get(document)?.version;
+    const acceptance = this.#accepted.get(document);
+    return acceptance && !acceptance.withdrawnAt ? acceptance.version : undefined;
+  }
+
+  /** Whether the document was given and then withdrawn, and not given again. */
+  isWithdrawn(document: LegalDocument): boolean {
+    return Boolean(this.#accepted.get(document)?.withdrawnAt);
   }
 
   /** The documents still to accept before playing, in the order the first access asks for them. */

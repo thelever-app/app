@@ -10,7 +10,18 @@ import screen from '../screens/screen.module.css';
 import { useMuted } from '../sound/sound-context.tsx';
 import { LANGUAGE_NAMES, LanguageSheet } from './language-sheet.tsx';
 import { SettingsHeader } from './settings-header.tsx';
-import { CONTACT_EMAIL, CONTACT_PATH, CREDITS_PATH, FUNDING_PATH } from './settings-paths.ts';
+import { useUnderEighteen } from '../first-access/device-age.tsx';
+import { changeCookies } from './change-cookies.ts';
+import { DataDeletedScreen } from './data-deleted-screen.tsx';
+import { DeleteDataSheet } from './delete-data-sheet.tsx';
+import {
+  CONTACT_EMAIL,
+  CONTACT_PATH,
+  CREDITS_PATH,
+  FUNDING_PATH,
+  PERMISSIONS_PATH,
+  YOUR_DATA_PATH,
+} from './settings-paths.ts';
 import styles from './settings.module.css';
 
 /** What a row of the settings says: its name and, below, what it is about. */
@@ -37,8 +48,14 @@ function Block({ title, children }: { readonly title: string; readonly children:
  * /settings, from the start: the way to support TheLever first, then each block with the rows that
  * work today. The age is neither shown nor changed here: it cannot be.
  */
-export function SettingsScreen() {
+export function SettingsScreen({
+  adsenseClient,
+}: {
+  /** The publisher of the cookie manager of Google; none where there are no cookies to change. */
+  readonly adsenseClient?: string | undefined;
+}) {
   const { t, i18n } = useTranslation();
+  const underEighteen = useUnderEighteen();
   const donationUrl = useDonationUrl();
   const [muted, setMuted] = useMuted();
   const [choosingLanguage, setChoosingLanguage] = useState(false);
@@ -58,13 +75,16 @@ export function SettingsScreen() {
       <Icon name="openInNew" size={20} />
     </a>
   );
-  const screenOf = (icon: IconName, title: string, to: string) => (
+  const screenOf = (icon: IconName, title: string, to: string, detail?: string) => (
     <Link className={styles.row} to={to}>
       <Icon name={icon} size={22} />
-      <RowText title={title} />
+      <RowText title={title} {...(detail !== undefined && { detail })} />
       <Icon name="chevronRight" size={20} />
     </Link>
   );
+  const [deleting, setDeleting] = useState(false);
+  const [deleted, setDeleted] = useState(false);
+  if (deleted) return <DataDeletedScreen />;
 
   return (
     <div className={screen.screen}>
@@ -106,8 +126,38 @@ export function SettingsScreen() {
           </button>
         </Block>
         <Block title={t('appSettings.privacy')}>
+          {screenOf(
+            'verifiedUser',
+            t('appSettings.permissions'),
+            PERMISSIONS_PATH,
+            t('appSettings.permissionsDetail'),
+          )}
+          {screenOf(
+            'key',
+            t('appSettings.yourData'),
+            YOUR_DATA_PATH,
+            t('appSettings.yourDataDetail'),
+          )}
           {page('policy', t('appSettings.privacyPolicy'), legal.privacy)}
           {page('gavel', t('appSettings.terms'), legal.terms)}
+          <button
+            type="button"
+            className={styles.row}
+            disabled={!adsenseClient}
+            onClick={() => adsenseClient && void changeCookies(adsenseClient, underEighteen)}
+          >
+            <Icon name="cookie" size={22} />
+            <RowText title={t('appSettings.cookies')} detail={t('appSettings.cookiesDetail')} />
+            <Icon name="chevronRight" size={20} />
+          </button>
+          <button type="button" className={styles.row} onClick={() => setDeleting(true)}>
+            <Icon name="delete" size={22} />
+            <RowText
+              title={t('appSettings.deleteData')}
+              detail={t('appSettings.deleteDataDetail')}
+            />
+            <Icon name="chevronRight" size={20} />
+          </button>
         </Block>
         <Block title={t('appSettings.about')}>
           {screenOf('payments', t('appSettings.funding'), FUNDING_PATH)}
@@ -121,6 +171,9 @@ export function SettingsScreen() {
         </Block>
       </main>
       <LanguageSheet open={choosingLanguage} onOpenChange={setChoosingLanguage} />
+      {deleting && (
+        <DeleteDataSheet onClose={() => setDeleting(false)} onDeleted={() => setDeleted(true)} />
+      )}
     </div>
   );
 }
