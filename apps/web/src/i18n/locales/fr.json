@@ -932,7 +932,15 @@
     "credits": "Crédits et licences",
     "legalNotice": "Mentions légales",
     "outside": "{{name}} (s’ouvre dans le navigateur)",
-    "contact": "Contact et signalements"
+    "contact": "Contact et signalements",
+    "permissions": "Tes autorisations",
+    "permissionsDetail": "Autorisation du jeu et analyse d’utilisation",
+    "yourData": "Tes données",
+    "yourDataDetail": "Nous demander une copie ou une correction",
+    "cookies": "Cookies et publicités",
+    "cookiesDetail": "Modifier ce que tu autorises",
+    "deleteData": "Supprimer mes données",
+    "deleteDataDetail": "Tout, en un mois maximum"
   },
   "credits": {
     "title": "Crédits et licences",
@@ -1062,5 +1070,51 @@
     "receivedNoEmail": "Comme tu n’as pas laissé d’e-mail, nous ne pourrons pas te dire ce que nous avons décidé.",
     "authorities": "Si tu vois une menace grave ou urgente pour quelqu’un, préviens aussi les autorités.",
     "another": "Envoyer un autre signalement"
+  },
+  "permissions": {
+    "title": "Tes autorisations",
+    "lead": "Tu peux les modifier quand tu veux. Personne du groupe ne voit ce que tu choisis.",
+    "game": "Autorisation du jeu",
+    "gameOn": "Nécessaire pour jouer. Tes votes s’affichent lors de la révélation et sont gardés jusqu’à 24 h, sauf ton historique.",
+    "analytics": "Analyse d’utilisation",
+    "analyticsOn": "Nous comptons les parties et les visites, jamais tes votes.",
+    "analyticsOff": "Tu t’y es opposé·e : nous ne comptons rien de toi.",
+    "cookies": "Cookies et publicités",
+    "cookiesText": "Les cookies que tu autorises et si les publicités sont personnalisées.",
+    "cookiesGpc": "Ton navigateur envoie Global Privacy Control : tes publicités ne sont jamais personnalisées.",
+    "failed": "Nous n’avons pas pu l’enregistrer. Réessaie.",
+    "withdraw": {
+      "title": "Retirer l’autorisation du jeu ?",
+      "blocked": "Tu ne pourras ni créer ni rejoindre de salles tant que tu ne l’auras pas redonnée.",
+      "deleted": "Ton historique du compte et les données des parties dont la salle a fermé il y a moins de 24 heures sont supprimés.",
+      "confirm": "Retirer l’autorisation du jeu",
+      "cancel": "Annuler"
+    }
+  },
+  "yourData": {
+    "title": "Tes données",
+    "emailTitle": "Si tu nous écris par e-mail",
+    "emailText": "Pour nous demander une copie de tes données, en corriger une (ton âge, par exemple) ou toute autre chose à leur sujet, écris-nous à {{email}}. Nous l’examinons à la main et te répondons en un mois maximum.",
+    "codeText": "Comme tu n’as pas de compte, ajoute ce code à ton message pour que nous sachions que c’est toi.",
+    "copy": "Copier le code",
+    "copied": "Code copié",
+    "failed": "Nous n’avons pas pu charger ton code. Rouvre cet écran."
+  },
+  "deleteData": {
+    "title": "Supprimer toutes tes données ?",
+    "games": "Nous supprimons tes parties, tes votes et ton compte si tu en as un, en un mois maximum.",
+    "consent": "Nous ne gardons qu’une trace minimale de ton consentement, parce que la loi l’exige.",
+    "public": "Tes dilemmes publics restent dans le catalogue, mais sans lien avec toi.",
+    "history": "Dans l’historique de celles et ceux qui ont joué avec toi, ton pseudo devient « Joueur ».",
+    "device": "Ce téléphone repart de zéro, comme le premier jour.",
+    "undo": "C’est irréversible.",
+    "confirm": "Oui, supprimer mes données",
+    "cancel": "Annuler",
+    "failed": "Nous n’avons pas pu demander la suppression. Réessaie."
+  },
+  "dataDeleted": {
+    "title": "Nous avons reçu ta demande",
+    "text": "Ce téléphone ne garde plus rien de toi et, en un mois maximum, nous aurons supprimé tes données de nos serveurs. Les sauvegardes mettent un peu plus de temps à se renouveler et ne sont pas utilisées entre-temps. Si tu rejoues, tu repartiras de zéro.",
+    "home": "Retour à l’accueil"
   }
 }

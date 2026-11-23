@@ -932,7 +932,15 @@
     "credits": "Créditos y licencias",
     "legalNotice": "Aviso legal",
     "outside": "{{name}} (se abre en el navegador)",
-    "contact": "Contacto y denuncias"
+    "contact": "Contacto y denuncias",
+    "permissions": "Tus permisos",
+    "permissionsDetail": "Permiso del juego y análisis de uso",
+    "yourData": "Tus datos",
+    "yourDataDetail": "Pedirnos una copia o corregir uno",
+    "cookies": "Cookies y anuncios",
+    "cookiesDetail": "Cambiar lo que permites",
+    "deleteData": "Borrar mis datos",
+    "deleteDataDetail": "Todo, en un mes como máximo"
   },
   "credits": {
     "title": "Créditos y licencias",
@@ -1062,5 +1070,51 @@
     "receivedNoEmail": "Como no has dejado email, no podremos contarte qué decidimos.",
     "authorities": "Si ves una amenaza grave o urgente para alguien, avisa también a las autoridades.",
     "another": "Enviar otra denuncia"
+  },
+  "permissions": {
+    "title": "Tus permisos",
+    "lead": "Puedes cambiarlos cuando quieras. Nadie del grupo ve lo que eliges.",
+    "game": "Permiso del juego",
+    "gameOn": "Necesario para jugar. Tus votos se ven en el reveal y se guardan hasta 24 h, salvo tu historial.",
+    "analytics": "Análisis de uso",
+    "analyticsOn": "Contamos partidas y visitas, nunca tus votos.",
+    "analyticsOff": "Te has opuesto: no contamos nada tuyo.",
+    "cookies": "Cookies y anuncios",
+    "cookiesText": "Qué cookies permites y si los anuncios se personalizan.",
+    "cookiesGpc": "Tu navegador envía Global Privacy Control: tus anuncios nunca se personalizan.",
+    "failed": "No hemos podido guardarlo. Inténtalo de nuevo.",
+    "withdraw": {
+      "title": "¿Retirar el permiso del juego?",
+      "blocked": "No podrás crear ni unirte a salas hasta que vuelvas a darlo.",
+      "deleted": "Se borran tu historial de la cuenta y los datos de las partidas cuya sala se cerró hace menos de 24 horas.",
+      "confirm": "Retirar el permiso del juego",
+      "cancel": "Cancelar"
+    }
+  },
+  "yourData": {
+    "title": "Tus datos",
+    "emailTitle": "Si nos escribes por email",
+    "emailText": "Para pedirnos una copia de tus datos, corregir uno (por ejemplo, tu edad) o cualquier otra cosa sobre ellos, escríbenos a {{email}}. Lo revisamos a mano y te contestamos en un mes como máximo.",
+    "codeText": "Como no tienes cuenta, incluye este código en tu mensaje para que sepamos que eres tú.",
+    "copy": "Copiar el código",
+    "copied": "Código copiado",
+    "failed": "No hemos podido cargar tu código. Vuelve a abrir esta pantalla."
+  },
+  "deleteData": {
+    "title": "¿Borrar todos tus datos?",
+    "games": "Borramos tus partidas, tus votos y tu cuenta si la tienes, en un mes como máximo.",
+    "consent": "Solo conservamos un registro mínimo de tu consentimiento, porque lo exige la ley.",
+    "public": "Tus dilemas públicos siguen en el catálogo, pero ya sin vincularlos a ti.",
+    "history": "En el historial de quienes jugaron contigo, tu apodo pasa a ser «Jugador».",
+    "device": "Este móvil vuelve a empezar desde cero, como el primer día.",
+    "undo": "No se puede deshacer.",
+    "confirm": "Sí, borrar mis datos",
+    "cancel": "Cancelar",
+    "failed": "No hemos podido pedir el borrado. Inténtalo de nuevo."
+  },
+  "dataDeleted": {
+    "title": "Hemos recibido tu petición",
+    "text": "Este móvil ya no guarda nada tuyo y en un mes como máximo habremos borrado tus datos de nuestros servidores. Las copias de seguridad tardan algo más en renovarse y mientras tanto no se usan. Si vuelves a jugar, empezarás desde cero.",
+    "home": "Volver al inicio"
   }
 }

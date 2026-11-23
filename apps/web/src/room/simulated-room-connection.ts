@@ -1,3 +1,4 @@
+import { InMemoryUsage } from '@thelever-app/game/in-memory';
 import {
   Dilemma,
   FindCandidatesUseCase,
@@ -229,16 +230,20 @@ export class SimulatedRoomConnection implements RoomConnection {
         MATH_RANDOMNESS,
         clock,
         sealProvider,
+        new InMemoryUsage(),
       ),
-      joinRoom: new JoinRoomUseCase({
-        sealProvider,
-        roomRepository: rooms,
-        gameRepository: games,
-        notifier,
-        idGenerator,
-        randomness: MATH_RANDOMNESS,
-        clock,
-      }),
+      joinRoom: new JoinRoomUseCase(
+        {
+          sealProvider,
+          roomRepository: rooms,
+          gameRepository: games,
+          notifier,
+          idGenerator,
+          randomness: MATH_RANDOMNESS,
+          clock,
+        },
+        new InMemoryUsage(),
+      ),
       connectPlayer: new ConnectPlayerUseCase(rooms, games, notifier, idGenerator, clock),
       getRoomState: new GetRoomStateUseCase(rooms, catalog),
       getGameState: new GetGameStateUseCase(rooms, games, catalog, likes),
@@ -260,6 +265,7 @@ export class SimulatedRoomConnection implements RoomConnection {
         },
         EXPLORATION_SLOTS,
         CANDIDATES_PER_ROUND,
+        new InMemoryUsage(),
       ),
       answerDilemma: new AnswerDilemmaUseCase({
         roomRepository: rooms,
@@ -270,8 +276,14 @@ export class SimulatedRoomConnection implements RoomConnection {
         clock,
       }),
       revealEarly: new RevealEarlyUseCase(rooms, games, notifier, clock),
-      moveOn: new MoveOnUseCase(rooms, games, notifier, clock),
-      getReadyToMoveOn: new GetReadyToMoveOnUseCase(rooms, games, notifier, clock),
+      moveOn: new MoveOnUseCase(rooms, games, notifier, clock, new InMemoryUsage()),
+      getReadyToMoveOn: new GetReadyToMoveOnUseCase(
+        rooms,
+        games,
+        notifier,
+        clock,
+        new InMemoryUsage(),
+      ),
       react: new ReactUseCase({
         roomRepository: rooms,
         gameRepository: games,
@@ -295,7 +307,7 @@ export class SimulatedRoomConnection implements RoomConnection {
       startRematch: new StartRematchUseCase(rooms, games, notifier),
       restartGame: new RestartGameUseCase(rooms, games, notifier),
       runOutRound: new RunOutRoundUseCase(rooms, games, notifier, clock),
-      leaveRoom: new LeaveRoomUseCase(rooms, games, notifier, clock),
+      leaveRoom: new LeaveRoomUseCase(rooms, games, notifier, clock, new InMemoryUsage()),
       skipDilemma: new SkipDilemmaUseCase({
         roomRepository: rooms,
         gameRepository: games,

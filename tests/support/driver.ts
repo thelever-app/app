@@ -1070,6 +1070,69 @@ export interface GameDriver {
   startingDilemmaShownToTheVisitor(): Promise<string | undefined>;
   /** The name of the specific dilemma of round 1 of the room the visitor created; none if it is not specific. */
   firstRoundDilemmaOfTheVisitorRoom(): Promise<string | undefined>;
+
+  // Privacy and data.
+
+  /** `user` objects to product analytics in the settings. */
+  objectToProductAnalytics(user: string): Promise<void>;
+  /** How many analytics events the room server keeps of `user`. */
+  analyticsEventsOf(user: string): Promise<number>;
+  /** `user` opens the app for the first time from a link with those parameters of its origin. */
+  openAppFrom(user: string, origin: VisitOriginView): Promise<void>;
+  /** Where the first visit of `user` came from, as the room server keeps it. */
+  firstVisitOf(user: string): Promise<VisitOriginView | undefined>;
+  /**
+   * Someone sends the team a request by email to delete the data of `user`, with the code their
+   * device shows or without it, and the team carries it out as the request allows.
+   */
+  sendDataDeletionByEmail(user: string, withTheCode: boolean): Promise<void>;
+  /** Whether the last request by email was carried out, and the answer it got when it was not. */
+  lastRequestByEmail(): Promise<{ readonly carriedOut: boolean; readonly reply?: string }>;
+  /** `user` asks for their data to be deleted in the settings, and confirms it. */
+  requestDataDeletion(user: string): Promise<void>;
+  /** The deletion job runs, as it does every day. */
+  runTheDeletionJob(): Promise<void>;
+  /** What the room server keeps of `user`, one section per store, as their downloaded file would. */
+  personalDataOf(user: string): Promise<Readonly<Record<string, unknown>>>;
+  /** `user`, in Your permissions, chooses to withdraw the game consent: the warning shows. */
+  chooseToWithdrawTheGameConsent(user: string): Promise<void>;
+  /** What the warning before withdrawing the game consent tells `user`. */
+  withdrawalWarningSeenBy(
+    user: string,
+  ): Promise<{ readonly blocksRooms: boolean; readonly deletesData: boolean }>;
+  /** `user` confirms the withdrawal of the game consent. */
+  confirmTheWithdrawal(user: string): Promise<void>;
+  /** How many answers and reactions of `user` the rooms still kept have. */
+  gameDataOf(user: string): Promise<number>;
+  /** The code «Your data» shows `user`, and the one the room server keeps of them, as written. */
+  requestCodeSeenBy(user: string): Promise<RequestCodeView>;
+  /** `user` opens «Delete my data» in the settings. */
+  openTheDeletion(user: string): Promise<void>;
+  /** What «Delete my data» tells `user` before they confirm. */
+  deletionExplainedTo(user: string): Promise<{
+    readonly deleted: boolean;
+    readonly kept: boolean;
+    readonly nicknameAsPlayer: boolean;
+  }>;
+  /** Whether the device of `user` keeps nothing of them, signed out of their identity. */
+  signedOutAtOnce(user: string): Promise<boolean>;
+  /** `user` opens «Cookies and ads» in the settings: the cookie manager opens again. */
+  openCookieChoices(user: string): Promise<void>;
+  /** Whether `user` changes what they allow in the cookie manager opened again, ads included. */
+  cookieChoicesChangeableBy(user: string): Promise<boolean>;
+}
+
+/** The code for requests by email, as a screen shows it and as the room server keeps it. */
+export interface RequestCodeView {
+  readonly shown: string | undefined;
+  readonly kept: string | undefined;
+}
+
+/** Where a first visit came from: the parameters of the link the app opened with. */
+export interface VisitOriginView {
+  readonly source: string | null;
+  readonly campaign: string | null;
+  readonly content: string | null;
 }
 
 /** What the visitor sees of the world result of a dilemma after voting it alone. */

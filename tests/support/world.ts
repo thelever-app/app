@@ -16,6 +16,8 @@ import type {
   SettingsView,
   MarkedDilemma,
   SupportLineView,
+  RequestCodeView,
+  VisitOriginView,
 } from './driver.ts';
 import { E2eDriver } from './e2e-driver.ts';
 import { e2eStack } from './e2e-stack.ts';
@@ -89,6 +91,12 @@ export class GameWorld extends World {
 
   /** How TheLever is funded, as the settings of the app told the player. */
   funding: FundingView | undefined;
+
+  /** Where the link the app opened with says the first visit came from. */
+  visitOrigin: VisitOriginView | undefined;
+
+  /** The code for requests by email «Your data» showed the player, and the one the server keeps. */
+  requestCode: RequestCodeView | undefined;
 
   /** What the credits of the settings showed the player. */
   credits: CreditsView | undefined;

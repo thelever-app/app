@@ -932,7 +932,15 @@
     "credits": "Crèdits i llicències",
     "legalNotice": "Avís legal",
     "outside": "{{name}} (s’obre al navegador)",
-    "contact": "Contacte i denúncies"
+    "contact": "Contacte i denúncies",
+    "permissions": "Els teus permisos",
+    "permissionsDetail": "Permís del joc i anàlisi d’ús",
+    "yourData": "Les teves dades",
+    "yourDataDetail": "Demanar-nos una còpia o una correcció",
+    "cookies": "Galetes i anuncis",
+    "cookiesDetail": "Canviar el que permets",
+    "deleteData": "Esborrar les meves dades",
+    "deleteDataDetail": "Tot, en un mes com a màxim"
   },
   "credits": {
     "title": "Crèdits i llicències",
@@ -1062,5 +1070,51 @@
     "receivedNoEmail": "Com que no has deixat correu, no et podrem explicar què hem decidit.",
     "authorities": "Si veus una amenaça greu o urgent per a algú, avisa també les autoritats.",
     "another": "Enviar una altra denúncia"
+  },
+  "permissions": {
+    "title": "Els teus permisos",
+    "lead": "Els pots canviar quan vulguis. Ningú del grup veu què tries.",
+    "game": "Permís del joc",
+    "gameOn": "Necessari per jugar. Els teus vots es veuen en la revelació i es guarden fins a 24 h, excepte el teu historial.",
+    "analytics": "Anàlisi d’ús",
+    "analyticsOn": "Comptem partides i visites, mai els teus vots.",
+    "analyticsOff": "T’hi has oposat: no comptem res teu.",
+    "cookies": "Galetes i anuncis",
+    "cookiesText": "Quines galetes permets i si els anuncis es personalitzen.",
+    "cookiesGpc": "El teu navegador envia Global Privacy Control: els teus anuncis no es personalitzen mai.",
+    "failed": "No ho hem pogut desar. Torna-ho a provar.",
+    "withdraw": {
+      "title": "Retirar el permís del joc?",
+      "blocked": "No podràs crear ni entrar a sales fins que el tornis a donar.",
+      "deleted": "S’esborren el teu historial del compte i les dades de les partides la sala de les quals es va tancar fa menys de 24 hores.",
+      "confirm": "Retirar el permís del joc",
+      "cancel": "Cancel·lar"
+    }
+  },
+  "yourData": {
+    "title": "Les teves dades",
+    "emailTitle": "Si ens escrius per correu",
+    "emailText": "Per demanar-nos una còpia de les teves dades, corregir-ne una (per exemple, la teva edat) o qualsevol altra cosa sobre elles, escriu-nos a {{email}}. Ho revisem a mà i et responem en un mes com a màxim.",
+    "codeText": "Com que no tens compte, inclou aquest codi al missatge perquè sapiguem que ets tu.",
+    "copy": "Copiar el codi",
+    "copied": "Codi copiat",
+    "failed": "No hem pogut carregar el teu codi. Torna a obrir aquesta pantalla."
+  },
+  "deleteData": {
+    "title": "Esborrar totes les teves dades?",
+    "games": "Esborrem les teves partides, els teus vots i el teu compte si en tens, en un mes com a màxim.",
+    "consent": "Només conservem un registre mínim del teu consentiment, perquè ho exigeix la llei.",
+    "public": "Els teus dilemes públics continuen al catàleg, però ja sense vincular-los a tu.",
+    "history": "A l’historial de qui ha jugat amb tu, el teu sobrenom passa a ser «Jugador».",
+    "device": "Aquest mòbil torna a començar de zero, com el primer dia.",
+    "undo": "No es pot desfer.",
+    "confirm": "Sí, esborrar les meves dades",
+    "cancel": "Cancel·lar",
+    "failed": "No hem pogut demanar l’esborrat. Torna-ho a provar."
+  },
+  "dataDeleted": {
+    "title": "Hem rebut la teva petició",
+    "text": "Aquest mòbil ja no guarda res teu i en un mes com a màxim haurem esborrat les teves dades dels nostres servidors. Les còpies de seguretat triguen una mica més a renovar-se i mentrestant no es fan servir. Si tornes a jugar, començaràs de zero.",
+    "home": "Tornar a l’inici"
   }
 }

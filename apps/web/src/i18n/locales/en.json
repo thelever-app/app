@@ -896,7 +896,15 @@
     "credits": "Credits and licences",
     "legalNotice": "Legal notice",
     "outside": "{{name}} (opens in the browser)",
-    "contact": "Contact and reports"
+    "contact": "Contact and reports",
+    "permissions": "Your permissions",
+    "permissionsDetail": "Game permission and usage analytics",
+    "yourData": "Your data",
+    "yourDataDetail": "Ask us for a copy or to correct something",
+    "cookies": "Cookies and ads",
+    "cookiesDetail": "Change what you allow",
+    "deleteData": "Delete my data",
+    "deleteDataDetail": "Everything, within a month at most"
   },
   "credits": {
     "title": "Credits and licences",
@@ -1026,5 +1034,51 @@
     "receivedNoEmail": "Since you left no email, we will not be able to tell you what we decided.",
     "authorities": "If you see a serious or urgent threat to someone, tell the authorities too.",
     "another": "Send another report"
+  },
+  "permissions": {
+    "title": "Your permissions",
+    "lead": "You can change them whenever you like. Nobody in the group sees what you choose.",
+    "game": "Game permission",
+    "gameOn": "Needed to play. Your votes are shown in the reveal and kept up to 24 h, except your history.",
+    "analytics": "Usage analytics",
+    "analyticsOn": "We count games and visits, never your votes.",
+    "analyticsOff": "You objected: we count nothing of yours.",
+    "cookies": "Cookies and ads",
+    "cookiesText": "Which cookies you allow and whether ads are personalised.",
+    "cookiesGpc": "Your browser sends Global Privacy Control: your ads are never personalised.",
+    "failed": "We couldn't save it. Try again.",
+    "withdraw": {
+      "title": "Withdraw the game permission?",
+      "blocked": "You won't be able to create or join rooms until you give it again.",
+      "deleted": "Your history in your account and the data of the games whose room closed less than 24 hours ago are deleted.",
+      "confirm": "Withdraw the game permission",
+      "cancel": "Cancel"
+    }
+  },
+  "yourData": {
+    "title": "Your data",
+    "emailTitle": "If you write to us by email",
+    "emailText": "To ask us for a copy of your data, to correct something (your age, for example) or anything else about them, write to {{email}}. We review it by hand and answer within a month at most.",
+    "codeText": "As you don't have an account, include this code in your message so we know it's you.",
+    "copy": "Copy the code",
+    "copied": "Code copied",
+    "failed": "We couldn't load your code. Open this screen again."
+  },
+  "deleteData": {
+    "title": "Delete all your data?",
+    "games": "We delete your games, your votes and your account if you have one, within a month at most.",
+    "consent": "We only keep a minimal record of your consent, because the law requires it.",
+    "public": "Your public dilemmas stay in the catalogue, but no longer linked to you.",
+    "history": "In the history of those who played with you, your nickname becomes \"Player\".",
+    "device": "This phone starts again from scratch, like the first day.",
+    "undo": "This can't be undone.",
+    "confirm": "Yes, delete my data",
+    "cancel": "Cancel",
+    "failed": "We couldn't request the deletion. Try again."
+  },
+  "dataDeleted": {
+    "title": "We've received your request",
+    "text": "This phone no longer keeps anything of yours, and within a month at most we'll have deleted your data from our servers. Backups take a little longer to renew and aren't used in the meantime. If you play again, you'll start from scratch.",
+    "home": "Back to the start"
   }
 }

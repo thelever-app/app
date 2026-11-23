@@ -896,7 +896,15 @@
     "credits": "Danksagungen und Lizenzen",
     "legalNotice": "Impressum",
     "outside": "{{name}} (öffnet sich im Browser)",
-    "contact": "Kontakt und Meldungen"
+    "contact": "Kontakt und Meldungen",
+    "permissions": "Deine Berechtigungen",
+    "permissionsDetail": "Spielberechtigung und Nutzungsanalyse",
+    "yourData": "Deine Daten",
+    "yourDataDetail": "Eine Kopie oder Korrektur anfordern",
+    "cookies": "Cookies und Werbung",
+    "cookiesDetail": "Ändern, was du erlaubst",
+    "deleteData": "Meine Daten löschen",
+    "deleteDataDetail": "Alles, innerhalb von höchstens einem Monat"
   },
   "credits": {
     "title": "Danksagungen und Lizenzen",
@@ -1026,5 +1034,51 @@
     "receivedNoEmail": "Da du keine E-Mail angegeben hast, können wir dir die Entscheidung nicht mitteilen.",
     "authorities": "Wenn du eine ernste oder dringende Gefahr für jemanden siehst, informiere auch die Behörden.",
     "another": "Weitere Meldung senden"
+  },
+  "permissions": {
+    "title": "Deine Berechtigungen",
+    "lead": "Du kannst sie jederzeit ändern. Niemand aus der Gruppe sieht, was du wählst.",
+    "game": "Spielberechtigung",
+    "gameOn": "Nötig zum Spielen. Deine Stimmen werden bei der Auflösung gezeigt und bis zu 24 Std. gespeichert, außer deinem Verlauf.",
+    "analytics": "Nutzungsanalyse",
+    "analyticsOn": "Wir zählen Spiele und Besuche, nie deine Stimmen.",
+    "analyticsOff": "Du hast widersprochen: Wir zählen nichts von dir.",
+    "cookies": "Cookies und Werbung",
+    "cookiesText": "Welche Cookies du erlaubst und ob Werbung personalisiert wird.",
+    "cookiesGpc": "Dein Browser sendet Global Privacy Control: Deine Werbung wird nie personalisiert.",
+    "failed": "Wir konnten es nicht speichern. Versuch es noch einmal.",
+    "withdraw": {
+      "title": "Spielberechtigung zurückziehen?",
+      "blocked": "Du kannst keine Räume erstellen oder betreten, bis du sie wieder erteilst.",
+      "deleted": "Dein Verlauf im Konto und die Daten der Spiele, deren Raum vor weniger als 24 Stunden geschlossen wurde, werden gelöscht.",
+      "confirm": "Spielberechtigung zurückziehen",
+      "cancel": "Abbrechen"
+    }
+  },
+  "yourData": {
+    "title": "Deine Daten",
+    "emailTitle": "Wenn du uns per E-Mail schreibst",
+    "emailText": "Um eine Kopie deiner Daten anzufordern, etwas zu korrigieren (zum Beispiel dein Alter) oder sonst etwas zu ihnen, schreib uns an {{email}}. Wir prüfen es von Hand und antworten innerhalb von höchstens einem Monat.",
+    "codeText": "Da du kein Konto hast, füge diesen Code in deine Nachricht ein, damit wir wissen, dass du es bist.",
+    "copy": "Code kopieren",
+    "copied": "Code kopiert",
+    "failed": "Wir konnten deinen Code nicht laden. Öffne diesen Bildschirm erneut."
+  },
+  "deleteData": {
+    "title": "Alle deine Daten löschen?",
+    "games": "Wir löschen deine Spiele, deine Stimmen und dein Konto, falls du eins hast, innerhalb von höchstens einem Monat.",
+    "consent": "Wir behalten nur einen minimalen Nachweis deiner Einwilligung, weil das Gesetz es verlangt.",
+    "public": "Deine öffentlichen Dilemmas bleiben im Katalog, aber nicht mehr mit dir verknüpft.",
+    "history": "Im Verlauf derer, die mit dir gespielt haben, wird dein Spitzname zu „Spieler“.",
+    "device": "Dieses Handy fängt wieder bei null an, wie am ersten Tag.",
+    "undo": "Das lässt sich nicht rückgängig machen.",
+    "confirm": "Ja, meine Daten löschen",
+    "cancel": "Abbrechen",
+    "failed": "Wir konnten die Löschung nicht anfordern. Versuch es noch einmal."
+  },
+  "dataDeleted": {
+    "title": "Wir haben deine Anfrage erhalten",
+    "text": "Dieses Handy speichert nichts mehr von dir, und innerhalb von höchstens einem Monat haben wir deine Daten von unseren Servern gelöscht. Sicherungskopien brauchen etwas länger, bis sie erneuert sind, und werden in der Zwischenzeit nicht verwendet. Wenn du wieder spielst, fängst du bei null an.",
+    "home": "Zurück zum Anfang"
   }
 }

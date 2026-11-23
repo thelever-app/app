@@ -12,6 +12,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@cucumber/cucumber": "^13.2.1",
+    "@thelever-app/analytics": "workspace:*",
     "@thelever-app/config": "workspace:*",
     "@thelever-app/consent": "workspace:*",
     "@thelever-app/dilemmas": "workspace:*",

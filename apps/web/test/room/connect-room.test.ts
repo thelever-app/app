@@ -25,6 +25,10 @@ function unusedApi(): RoomApi {
     moderationNotices: vi.fn(),
     seeModerationNotice: vi.fn(),
     enterAccessCode: vi.fn(),
+    myData: vi.fn(),
+    withdrawGameConsent: vi.fn(),
+    objectToAnalytics: vi.fn(),
+    requestDataDeletion: vi.fn(),
   };
 }
 

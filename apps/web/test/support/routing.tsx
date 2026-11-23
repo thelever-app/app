@@ -47,6 +47,10 @@ export function fakeRoomApi(overrides: Partial<RoomApi> = {}): RoomApi {
     moderationNotices: vi.fn(async () => []),
     seeModerationNotice: unexpected('seeModerationNotice'),
     enterAccessCode: vi.fn(),
+    myData: unexpected('myData'),
+    withdrawGameConsent: unexpected('withdrawGameConsent'),
+    objectToAnalytics: unexpected('objectToAnalytics'),
+    requestDataDeletion: unexpected('requestDataDeletion'),
     ...overrides,
   };
 }
