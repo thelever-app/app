@@ -1,8 +1,9 @@
 import type { Logger } from '@thelever-app/db';
-import type {
-  GetUndecidedIssuesUseCase,
-  ReadDecisionUseCase,
-  SendIssueEventUseCase,
+import {
+  type GetUndecidedIssuesUseCase,
+  type ReadDecisionUseCase,
+  SendingIssueEventFailedError,
+  type SendIssueEventUseCase,
 } from '@thelever-app/moderation';
 
 /** What a run of the job needs. */
@@ -18,9 +19,10 @@ export interface ModerationSync {
 /**
  * One run of the job: the outbox first, so every issue is in the repository with all it has to
  * say; then the decision of each undecided issue, and the outbox again, for the emails of the
- * decisions. A decision that fails is logged and the rest go on: the run fails at the end, so the
- * next one tries it again and the alert of the job fires. An event that fails stops the outbox
- * there, since the next ones may need it.
+ * decisions. A decision or an event that fails is logged and the rest go on: the run fails at the
+ * end, so the next one tries it again and the alert of the job fires. After an event that fails,
+ * the later ones of its issue wait for the next run, since they may need it; those of the other
+ * issues go.
  */
 export async function syncModeration({
   sendIssueEvent,
@@ -30,11 +32,24 @@ export async function syncModeration({
   logger,
 }: ModerationSync): Promise<{ readonly sent: number; readonly read: number }> {
   let sent = 0;
+  let failed: unknown;
+  const skipping = new Set<string>();
   const sendAll = async () => {
-    while (await runCommand(() => sendIssueEvent.execute())) sent += 1;
+    for (;;) {
+      try {
+        if (!(await runCommand(() => sendIssueEvent.execute(skipping)))) return;
+        sent += 1;
+      } catch (error) {
+        if (!(error instanceof SendingIssueEventFailedError)) throw error;
+        logger.error('sending an event of an issue failed', error.cause, {
+          issueId: error.issueId,
+        });
+        skipping.add(error.issueId);
+        failed ??= error;
+      }
+    }
   };
   await sendAll();
-  let failed: unknown;
   const issueIds = await getUndecidedIssues.execute();
   for (const issueId of issueIds) {
     try {

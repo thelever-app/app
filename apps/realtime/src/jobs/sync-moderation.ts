@@ -11,8 +11,6 @@ import {
   PostgresPlayerNotifier,
   PostgresRoomRepository,
 } from '@thelever-app/db';
-import { WithdrawNicknameUseCase } from '@thelever-app/game';
-import { RoomNicknamesForModeration } from '@thelever-app/integrations/moderation';
 import {
   CONTACT_EMAIL,
   GetUndecidedIssuesUseCase,
@@ -20,7 +18,10 @@ import {
   SendIssueEventUseCase,
 } from '@thelever-app/moderation';
 import { createTransport } from 'nodemailer';
-import { catalogDilemmasForModeration } from '../composition/moderation.ts';
+import {
+  catalogDilemmasForModeration,
+  roomNicknamesForModeration,
+} from '../composition/moderation.ts';
 import { RandomIdGenerator } from '../rooms/random-id-generator.ts';
 import { SystemClock } from '../rooms/system-clock.ts';
 import { CloudLoggingLogger } from '../telemetry/cloud-logging-logger.ts';
@@ -83,9 +84,7 @@ try {
       outbox,
       tracker,
       dilemmas,
-      nicknames: new RoomNicknamesForModeration(
-        new WithdrawNicknameUseCase(rooms, new PostgresPlayerNotifier(db)),
-      ),
+      nicknames: roomNicknamesForModeration(rooms, new PostgresPlayerNotifier(db)),
       notices: new PostgresModerationNoticeRepository(db),
       translator: new AnthropicFactsTranslator(
         new Anthropic({ apiKey: required('ANTHROPIC_API_KEY') }).messages,

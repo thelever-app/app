@@ -5,7 +5,16 @@ import {
   GetDilemmasUseCase,
   ModerateDilemmaUseCase,
 } from '@thelever-app/dilemmas';
-import { CatalogDilemmasForModeration } from '@thelever-app/integrations/moderation';
+import {
+  FindNicknameOfReferenceUseCase,
+  type PlayerNotifier,
+  type RoomRepository,
+  WithdrawNicknameUseCase,
+} from '@thelever-app/game';
+import {
+  CatalogDilemmasForModeration,
+  RoomNicknamesForModeration,
+} from '@thelever-app/integrations/moderation';
 import {
   type Clock,
   GetModerationNoticesUseCase,
@@ -29,6 +38,8 @@ export interface ModerationDependencies {
   readonly outbox: Outbox;
   readonly moderationNotices: ModerationNoticeRepository;
   readonly dilemmaRepository: DilemmaRepository;
+  readonly roomRepository: RoomRepository;
+  readonly notifier: PlayerNotifier;
   readonly idGenerator: IdGenerator;
   readonly clock: Clock;
   readonly logger: Logger;
@@ -55,6 +66,18 @@ export function catalogDilemmasForModeration(
     findDilemmaOfReference: new FindDilemmaOfReferenceUseCase(dilemmaRepository),
     getDilemmas: new GetDilemmasUseCase(dilemmaRepository),
     moderateDilemma: new ModerateDilemmaUseCase(dilemmaRepository, LanguageDto.options),
+    languages: LanguageDto.options,
+  });
+}
+
+/** The nicknames of the players of the rooms as Moderation sees them. */
+export function roomNicknamesForModeration(
+  roomRepository: RoomRepository,
+  notifier: PlayerNotifier,
+): RoomNicknamesForModeration {
+  return new RoomNicknamesForModeration({
+    findNicknameOfReference: new FindNicknameOfReferenceUseCase(roomRepository),
+    withdrawNickname: new WithdrawNicknameUseCase(roomRepository, notifier),
   });
 }
 
@@ -63,6 +86,8 @@ export function moderationUseCases({
   outbox,
   moderationNotices,
   dilemmaRepository,
+  roomRepository,
+  notifier,
   idGenerator,
   clock,
   logger,
@@ -71,6 +96,7 @@ export function moderationUseCases({
     issues,
     outbox,
     dilemmas: catalogDilemmasForModeration(dilemmaRepository),
+    nicknames: roomNicknamesForModeration(roomRepository, notifier),
     idGenerator,
     clock,
   };

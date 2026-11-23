@@ -142,12 +142,13 @@ export async function composeRealtimeServer(
 
   // 3. The commands, which notify the players of what changed, and what Moderation receives.
   const idGenerator = new RandomIdGenerator();
-  const moderation = moderationUseCases({ ...repositories, idGenerator, clock, logger });
+  const notifier = notifierFor(socketNotifier);
+  const moderation = moderationUseCases({ ...repositories, notifier, idGenerator, clock, logger });
   const commands = gameCommands({
     ...repositories,
     moderation,
     catalog,
-    notifier: notifierFor(socketNotifier),
+    notifier,
     idGenerator,
     randomness,
     clock,

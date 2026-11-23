@@ -8,9 +8,9 @@ export interface Sender {
 }
 
 /**
- * Sends the emails of the notices through SMTP: in dev and prod, the mailbox no-reply of the
- * domain at Hostinger, which already hosts its email. Plain text only, without links to follow
- * or images to load.
+ * Sends the emails of the notices through SMTP: in dev and prod, the contact mailbox of the domain
+ * at Hostinger, which already hosts its email, so an answer to an email is an appeal that reaches
+ * the team. Plain text only, without links to follow or images to load.
  */
 export class SmtpMailer implements Mailer {
   readonly #transporter: Pick<Transporter, 'sendMail'>;
