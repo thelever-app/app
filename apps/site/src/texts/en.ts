@@ -1,7 +1,7 @@
-import { appPrivacy, terms } from './legal/en.ts';
+import { appCookies, appPrivacy, terms } from './legal/en.ts';
 import type { SiteTexts } from './site-texts.ts';
 
-const UPDATED = '17 November 2026';
+const UPDATED = '23 November 2026';
 
 export const en: SiteTexts = {
   languageName: 'English',
@@ -139,6 +139,12 @@ export const en: SiteTexts = {
         heading: 'The app',
         paragraphs: [
           'If you choose to vote on a dilemma or play it with your group, you move to the TheLever app, which explains how it processes your data and asks for your consent before you play.',
+        ],
+      },
+      {
+        heading: 'Donations',
+        paragraphs: [
+          'If you support us with a donation on Ko-fi (Ko-fi Labs Limited, United Kingdom), Ko-fi gives us your name or username, your email, the amount and the message you write. We use them to handle and thank you for your donation, on the basis of legitimate interest (art. 6.1.f GDPR), and to meet our tax obligations (art. 6.1.c), and we keep them as long as tax law requires, generally 4 years. We never link them to anything you do in the app. Ko-fi and whoever processes the payment (PayPal or Stripe) process your data on their own account, under their own policies.',
         ],
       },
       {
@@ -329,4 +335,5 @@ export const en: SiteTexts = {
   },
   terms,
   appPrivacy,
+  appCookies,
 };

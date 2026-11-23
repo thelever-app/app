@@ -19,6 +19,7 @@ describe('the texts of the public web', () => {
         slug(texts.legalNotice.title),
         slug(texts.terms.title),
         slug(texts.appPrivacy.title),
+        slug(texts.appCookies.title),
       ];
 
       // Assert
@@ -27,6 +28,19 @@ describe('the texts of the public web', () => {
         addresses.every((address) => address.length > 0),
         language,
       ).toBe(true);
+    }
+  });
+
+  it('should publish the cookies policy of the app where its privacy policy links to it', () => {
+    for (const [language, texts] of LANGUAGES) {
+      // Act
+      const address = `thelever.app${pagePath(language, texts.appCookies.title)}`;
+
+      // Assert
+      expect(
+        texts.appPrivacy.sections.flatMap(({ paragraphs }) => paragraphs).join(' '),
+        language,
+      ).toContain(`(${address})`);
     }
   });
 
