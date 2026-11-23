@@ -21,6 +21,7 @@ COPY packages/integrations/package.json packages/integrations/
 COPY packages/identity/package.json packages/identity/
 COPY packages/consent/package.json packages/consent/
 COPY packages/moderation/package.json packages/moderation/
+COPY packages/analytics/package.json packages/analytics/
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts --filter '@thelever-app/realtime...'
 
 FROM node:24.21.0-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS countries
@@ -55,7 +56,9 @@ COPY packages/identity/src packages/identity/src
 COPY packages/consent/package.json packages/consent/
 COPY packages/consent/src packages/consent/src
 COPY packages/moderation/package.json packages/moderation/
+COPY packages/analytics/package.json packages/analytics/
 COPY packages/moderation/src packages/moderation/src
+COPY packages/analytics/src packages/analytics/src
 USER node
 # The telemetry loads first, so its instrumentations see every module the server loads.
 CMD ["node", "--import", "./apps/realtime/src/telemetry/register.ts", "apps/realtime/src/server.ts"]

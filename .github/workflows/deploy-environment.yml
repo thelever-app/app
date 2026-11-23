@@ -73,9 +73,9 @@ jobs:
       # The rooms live in PostgreSQL, so several instances share them. After a deploy the previous
       # revision keeps its sockets for up to an hour, so two revisions may run side by side: at most
       # 2 instances each, with a pool of 3 and the LISTEN connection, are 16 connections; with 1 of
-      # the migrate job, 1 of the close-rooms job (which publish-world-results and sync-moderation
-      # take too, never at the same time) and 1 of the catalog-import job, 19, the 19 the
-      # micro instance leaves to the app users (25, minus 3 for superusers and 3 Cloud SQL uses).
+      # the migrate job, 1 of the close-rooms job (which publish-world-results, sync-moderation and
+      # data-request take too, never at the same time) and 1 of the catalog-import job, 19, the 19
+      # the micro instance leaves to the app users (25, minus 3 for superusers and 3 Cloud SQL uses).
       # The generate-site job takes the one of catalog-import: a deploy and a load of the catalog never
       # run at the same time (the concurrency of this job), and its schedule runs it at night.
       # Each open socket is one of the 250 requests an instance takes at once: 500 sockets in all,
@@ -262,9 +262,10 @@ jobs:
 
       # Every 5 minutes, Cloud Scheduler runs the job that takes the issues of the reports and of the
       # notices to the private moderation repository, reads the decisions of the team there and
-      # sends the emails of the notices. Same image as the room server, but an account of its own:
-      # only it reads the token of GitHub, the password of the mailbox and the key of Anthropic,
-      # which the public room server never sees; its database user has the rows the room server
+      # sends the emails of the notices; then it deletes the data the players asked to delete. Same
+      # image as the room server, but an account of its own: only it reads the token of GitHub, the
+      # password of the mailbox and the key of Anthropic, and deletes users of Firebase Auth, which
+      # the public room server never can; its database user has the rows the room server
       # has. Its connection takes the one of close-rooms and publish-world-results: it runs at
       # minute 4 of every 5, never on the hour, when close-rooms runs, and a run that meets
       # publish-world-results at night fails and the next one does the work. A run that failed is
@@ -297,6 +298,23 @@ jobs:
           else
             gcloud scheduler jobs create http sync-moderation "${schedule[@]}"
           fi
+
+      # The job the team runs by hand for each request a player sends by email, and after a backup is
+      # restored to do every deletion of the log again (apps/realtime/src/jobs/data-request.ts and
+      # erase-personal-data.ts). No schedule: it costs only while it runs. Same image and account as
+      # sync-moderation, which does the daily deletions: the account of moderation may delete users
+      # of Firebase Auth and reads the password of the mailbox. Its connection takes the one of
+      # close-rooms; a run that meets another fails, and is run again.
+      - name: Deploy the job of the requests by email
+        run: |
+          gcloud run jobs deploy data-request --project "$PROJECT" --region europe-southwest1 \
+            --image "$(cat image.txt)" \
+            --service-account "moderation@$PROJECT.iam.gserviceaccount.com" \
+            --command node --args apps/realtime/src/jobs/data-request.ts \
+            --set-env-vars "FIREBASE_PROJECT_ID=$PROJECT,CLOUD_SQL_INSTANCE=$PROJECT:europe-southwest1:thelever,DB_USER=moderation@$PROJECT.iam,SMTP_HOST=smtp.hostinger.com,SMTP_USER=privacidad@thelever.app" \
+            --set-secrets "SMTP_PASSWORD=smtp-password:latest" \
+            --max-retries 0 --task-timeout 30m \
+            --quiet
 
       # The job that loads the Catalog of dilemmas of Notion, with its translations, which the
       # workflow Import the catalog runs by hand: here it only gets the new image. Same image as the

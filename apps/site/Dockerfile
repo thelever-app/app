@@ -16,6 +16,7 @@ COPY packages/dilemmas/package.json packages/dilemmas/
 COPY packages/identity/package.json packages/identity/
 COPY packages/consent/package.json packages/consent/
 COPY packages/moderation/package.json packages/moderation/
+COPY packages/analytics/package.json packages/analytics/
 COPY packages/db/package.json packages/db/
 COPY packages/ui/package.json packages/ui/
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts --filter '@thelever-app/site...'
@@ -40,7 +41,9 @@ COPY packages/identity/src packages/identity/src
 COPY packages/consent/package.json packages/consent/
 COPY packages/consent/src packages/consent/src
 COPY packages/moderation/package.json packages/moderation/
+COPY packages/analytics/package.json packages/analytics/
 COPY packages/moderation/src packages/moderation/src
+COPY packages/analytics/src packages/analytics/src
 COPY packages/db/package.json packages/db/
 COPY packages/db/src packages/db/src
 COPY packages/ui/package.json packages/ui/

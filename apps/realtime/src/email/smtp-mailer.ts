@@ -1,4 +1,3 @@
-import type { Email, Mailer } from '@thelever-app/moderation';
 import type { Transporter } from 'nodemailer';
 
 /** Who the emails come from, and where an answer goes: answering is how a decision is appealed. */
@@ -7,12 +6,28 @@ export interface Sender {
   readonly replyTo: string;
 }
 
+/** A file that goes with an email, such as the data a request by email asked for. */
+export interface Attachment {
+  readonly filename: string;
+  readonly content: string;
+  readonly contentType: string;
+}
+
+/** An email in plain text, with the files that go with it, if any. */
+export interface PlainEmail {
+  readonly to: string;
+  readonly subject: string;
+  readonly text: string;
+  readonly attachments?: readonly Attachment[];
+}
+
 /**
- * Sends the emails of the notices through SMTP: in dev and prod, the contact mailbox of the domain
- * at Hostinger, which already hosts its email, so an answer to an email is an appeal that reaches
- * the team. Plain text only, without links to follow or images to load.
+ * Sends the emails of the app through SMTP: in dev and prod, the contact mailbox of the domain at
+ * Hostinger, which already hosts its email, so an answer to an email reaches the team. Plain text
+ * only, without links to follow or images to load: the emails of the notices of Moderation, and the
+ * data a request by email asked for, which go to the contact mailbox itself.
  */
-export class SmtpMailer implements Mailer {
+export class SmtpMailer {
   readonly #transporter: Pick<Transporter, 'sendMail'>;
   readonly #sender: Sender;
 
@@ -21,13 +36,20 @@ export class SmtpMailer implements Mailer {
     this.#sender = sender;
   }
 
-  async send({ to, subject, text }: Email): Promise<void> {
+  async send({ to, subject, text, attachments = [] }: PlainEmail): Promise<void> {
     await this.#transporter.sendMail({
       from: this.#sender.from,
       replyTo: this.#sender.replyTo,
       to,
       subject,
       text,
+      ...(attachments.length > 0 && {
+        attachments: attachments.map(({ filename, content, contentType }) => ({
+          filename,
+          content,
+          contentType,
+        })),
+      }),
     });
   }
 }

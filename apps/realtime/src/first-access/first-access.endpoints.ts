@@ -1,9 +1,11 @@
+import { type RecordAnalyticsEvent, visitOriginOf } from '@thelever-app/analytics';
 import type { AcceptDocumentUseCase, GetConsentUseCase } from '@thelever-app/consent';
 import type { DeclareAgeUseCase, OpenAppUseCase } from '@thelever-app/identity';
 import {
   AcceptDocumentRequestDto,
   DeclareAgeRequestDto,
   FirstAccessResponseDto,
+  VisitOriginQueryDto,
 } from '@thelever-app/protocol';
 import type { Request, Response } from 'express';
 import { identityOf } from '../http/authentication.ts';
@@ -15,8 +17,9 @@ import { type FirstAccessGate, statusOf } from '@thelever-app/integrations/first
 
 /**
  * GET /first-access: whoever opens the app. The first time, it begins their first access in the
- * region of the country of the address of the call, which is not kept; every time, it keeps when
- * they opened it. It answers where their first access is.
+ * region of the country of the address of the call, which is not kept, and the first visit is
+ * recorded with where it came from, as the parameters of the link the app opened with say; every
+ * time, it keeps when they opened it. It answers where their first access is.
  */
 export class OpenAppEndpoint implements HttpEndpoint {
   readonly method = 'get';
@@ -26,17 +29,20 @@ export class OpenAppEndpoint implements HttpEndpoint {
   readonly #getConsent: GetConsentUseCase;
   readonly #countries: CountryLookup;
   readonly #runCommand: RunCommand;
+  readonly #recordAnalyticsEvent: RecordAnalyticsEvent;
 
   constructor(
     openApp: OpenAppUseCase,
     getConsent: GetConsentUseCase,
     countries: CountryLookup,
     runCommand: RunCommand,
+    recordAnalyticsEvent: RecordAnalyticsEvent,
   ) {
     this.#openApp = openApp;
     this.#getConsent = getConsent;
     this.#countries = countries;
     this.#runCommand = runCommand;
+    this.#recordAnalyticsEvent = recordAnalyticsEvent;
   }
 
   async handle(req: Request, res: Response): Promise<void> {
@@ -47,6 +53,23 @@ export class OpenAppEndpoint implements HttpEndpoint {
         await this.#openApp.execute({ identity, country }),
         await this.#getConsent.execute(identity),
       ),
+    );
+    // A malformed link records the visit without its origin; the visit itself is never lost.
+    const query = VisitOriginQueryDto.safeParse(req.query);
+    const { utm_source, utm_campaign, utm_content, ref } = query.success ? query.data : {};
+    await this.#runCommand(() =>
+      this.#recordAnalyticsEvent.execute({
+        identity,
+        fact: {
+          kind: 'first-visit',
+          origin: visitOriginOf({
+            source: utm_source,
+            campaign: utm_campaign,
+            content: utm_content,
+            ref,
+          }),
+        },
+      }),
     );
     res.json(FirstAccessResponseDto.parse(status));
   }

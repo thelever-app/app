@@ -1,9 +1,17 @@
-import type { AcceptanceRepository } from '@thelever-app/consent';
-import { InMemoryAcceptanceRepository } from '@thelever-app/consent/in-memory';
+import type { AnalyticsEventRepository } from '@thelever-app/analytics';
+import { InMemoryAnalyticsEventRepository } from '@thelever-app/analytics/in-memory';
+import type { AcceptanceRepository, AnalyticsObjectionRepository } from '@thelever-app/consent';
+import {
+  InMemoryAcceptanceRepository,
+  InMemoryAnalyticsObjectionRepository,
+} from '@thelever-app/consent/in-memory';
 import {
   type DatabaseClient,
   inTransaction,
   PostgresAcceptanceRepository,
+  PostgresAnalyticsEventRepository,
+  PostgresAnalyticsObjectionRepository,
+  PostgresDataDeletionRepository,
   PostgresIssueRepository,
   PostgresModerationNoticeRepository,
   PostgresOutbox,
@@ -38,8 +46,11 @@ import {
   InMemoryGameRepository,
   InMemoryRoomRepository,
 } from '@thelever-app/game/in-memory';
-import type { FirstAccessRepository } from '@thelever-app/identity';
-import { InMemoryFirstAccessRepository } from '@thelever-app/identity/in-memory';
+import type { DataDeletionRepository, FirstAccessRepository } from '@thelever-app/identity';
+import {
+  InMemoryDataDeletionRepository,
+  InMemoryFirstAccessRepository,
+} from '@thelever-app/identity/in-memory';
 import type { IssueRepository, ModerationNoticeRepository, Outbox } from '@thelever-app/moderation';
 import {
   InMemoryIssueRepository,
@@ -80,6 +91,12 @@ export interface StorageAdapters {
   readonly firstAccesses: FirstAccessRepository;
   /** The legal documents each identity accepted. */
   readonly acceptances: AcceptanceRepository;
+  /** Who objects to product analytics. */
+  readonly analyticsObjections: AnalyticsObjectionRepository;
+  /** The facts of use of each identity. */
+  readonly analyticsEvents: AnalyticsEventRepository;
+  /** The deletions the deletion job does, and does again after a restore. */
+  readonly dataDeletions: DataDeletionRepository;
   /** The issues of Moderation, with the reports and notices of each content. */
   readonly issues: IssueRepository;
   /** What the issues still have to tell the moderation repository, which the job sends. */
@@ -109,6 +126,9 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
       likes: new InMemoryDilemmaLikes(),
       firstAccesses: new InMemoryFirstAccessRepository(),
       acceptances: new InMemoryAcceptanceRepository(),
+      analyticsObjections: new InMemoryAnalyticsObjectionRepository(),
+      analyticsEvents: new InMemoryAnalyticsEventRepository(),
+      dataDeletions: new InMemoryDataDeletionRepository(),
       issues: new InMemoryIssueRepository(),
       outbox: new InMemoryOutbox(),
       moderationNotices: new InMemoryModerationNoticeRepository(),
@@ -127,6 +147,9 @@ export async function adaptersFor(storage: Storage): Promise<StorageAdapters> {
     likes: new PostgresDilemmaLikes(db),
     firstAccesses: new PostgresFirstAccessRepository(db),
     acceptances: new PostgresAcceptanceRepository(db),
+    analyticsObjections: new PostgresAnalyticsObjectionRepository(db),
+    analyticsEvents: new PostgresAnalyticsEventRepository(db),
+    dataDeletions: new PostgresDataDeletionRepository(db),
     issues: new PostgresIssueRepository(db),
     outbox: new PostgresOutbox(db),
     moderationNotices: new PostgresModerationNoticeRepository(db),
