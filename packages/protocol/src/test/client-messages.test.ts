@@ -248,13 +248,42 @@ describe('the messages of the rounds', () => {
         dilemmaId: 'dilemma-1',
         reason: 'offensive',
         comment: 'It names a real person',
+        language: 'fr',
       }).success,
     ).toBe(true);
   });
 
+  it('should accept a report of a nickname, and a dilemma that may be illegal', () => {
+    // Act & Assert
+    expect(
+      ClientMessageDto.safeParse({
+        type: 'report-nickname',
+        playerId: 'p-1',
+        reason: 'impersonation',
+      }).success,
+    ).toBe(true);
+    expect(
+      ClientMessageDto.safeParse({
+        type: 'report-dilemma',
+        dilemmaId: 'dilemma-1',
+        reason: 'illegal',
+        language: 'es',
+      }).success,
+    ).toBe(true);
+    expect(
+      ClientMessageDto.safeParse({ type: 'report-nickname', playerId: 'p-1', reason: 'confusing' })
+        .success,
+    ).toBe(false);
+  });
+
   it('should reject a report without a reason Moderation knows, or with a comment too long', () => {
     // Arrange
-    const report = { type: 'report-dilemma', dilemmaId: 'dilemma-1', reason: 'confusing' };
+    const report = {
+      type: 'report-dilemma',
+      dilemmaId: 'dilemma-1',
+      reason: 'confusing',
+      language: 'es',
+    };
 
     // Act & Assert
     expect(ReportDilemmaDto.safeParse({ ...report, reason: 'boring' }).success).toBe(false);

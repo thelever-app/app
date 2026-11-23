@@ -59,6 +59,8 @@ export {
   LeaveRoomDto,
   ReportReasonDto,
   ReportDilemmaDto,
+  NicknameReportReasonDto,
+  ReportNicknameDto,
   SkipDilemmaDto,
   GAP_MARKER,
   MAXIMUM_PLAYED_DILEMMAS,
@@ -76,6 +78,12 @@ export {
 } from './http/world-result.ts';
 export { SearchDilemmasQueryDto, SearchDilemmasResponseDto } from './http/search-dilemmas.ts';
 export { HttpErrorDto } from './http/http-error.ts';
+export {
+  IllegalContentNoticeRequestDto,
+  ModerationNoticeDto,
+  ModerationNoticesResponseDto,
+  ModerationReasonDto,
+} from './http/moderation.ts';
 export {
   AcceptDocumentRequestDto,
   DeclareAgeRequestDto,

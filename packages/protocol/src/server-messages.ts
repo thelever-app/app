@@ -474,6 +474,9 @@ export const ErrorCodeDto = z.enum([
   'not-current-version',
   'adults-only-room',
   'minor-in-room',
+  'invalid-notice',
+  'too-many-notices',
+  'moderation-notice-not-found',
 ]);
 
 /** The answer to a rejected message, on the same connection. */

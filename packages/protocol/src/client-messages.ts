@@ -18,9 +18,11 @@ import { z } from 'zod';
  * and the content of each random round, nothing for adults with a minor in the room
  * (`minor-in-room`), and leaving the lobby. 15 since the content of a round in two parts, its age and
  * whether compromising: the room state gives the host what each ambience sets, which they save as
- * settings, and nobody chooses an ambience apart.
+ * settings, and nobody chooses an ambience apart. 16 since moderation: a report of a dilemma
+ * says the language it was read in and may say it may be illegal, and a player reports the
+ * nickname of another (`report-nickname`).
  */
-export const CONTRACT_VERSION = 15;
+export const CONTRACT_VERSION = 16;
 
 /**
  * Where the nickname of the person in the gap "someone in the group" goes, in the text of a
@@ -286,13 +288,36 @@ export const LeaveRoomDto = z.strictObject({
 });
 
 /** Why a player reports a dilemma; only an offensive one lets them skip it. */
-export const ReportReasonDto = z.enum(['offensive', 'confusing', 'mistranslated', 'other']);
+export const ReportReasonDto = z.enum([
+  'offensive',
+  'confusing',
+  'mistranslated',
+  'illegal',
+  'other',
+]);
 
 /** The player reports a dilemma of the game to Moderation, once. */
 export const ReportDilemmaDto = z.strictObject({
   type: z.literal('report-dilemma'),
   dilemmaId: z.string().min(1),
   reason: ReportReasonDto,
+  comment: z.string().max(280).optional(),
+  /** The language the player read it in. */
+  language: LanguageDto,
+  traceparent: TraceparentDto.optional(),
+});
+
+/** Why a player reports the nickname of another. */
+export const NicknameReportReasonDto = z.enum(['offensive', 'impersonation', 'illegal', 'other']);
+
+/**
+ * The player reports the nickname of another player of the room to Moderation, from the menu of
+ * their avatar. Nobody else in the room learns about it.
+ */
+export const ReportNicknameDto = z.strictObject({
+  type: z.literal('report-nickname'),
+  playerId: z.string().min(1),
+  reason: NicknameReportReasonDto,
   comment: z.string().max(280).optional(),
   traceparent: TraceparentDto.optional(),
 });
@@ -365,6 +390,7 @@ export const ClientMessageDto = z.discriminatedUnion('type', [
   GetReadyToMoveOnDto,
   LeaveRoomDto,
   ReportDilemmaDto,
+  ReportNicknameDto,
   SkipDilemmaDto,
   ReactDto,
   LikeDilemmaDto,
@@ -388,6 +414,7 @@ export const ClientMessageTypeDto = z.enum([
   'ready-to-move-on',
   'leave-room',
   'report-dilemma',
+  'report-nickname',
   'skip-dilemma',
   'react',
   'like-dilemma',
@@ -415,6 +442,8 @@ export type RoundCategoriesDto = z.infer<typeof RoundCategoriesDto>;
 export type ChooseRoundDilemmaDto = z.infer<typeof ChooseRoundDilemmaDto>;
 export type ClearRoundDilemmaDto = z.infer<typeof ClearRoundDilemmaDto>;
 export type ExpelPlayerDto = z.infer<typeof ExpelPlayerDto>;
+export type ReportNicknameDto = z.infer<typeof ReportNicknameDto>;
+export type NicknameReportReasonDto = z.infer<typeof NicknameReportReasonDto>;
 export type StartGameDto = z.infer<typeof StartGameDto>;
 export type ConnectDto = z.infer<typeof ConnectDto>;
 export type DistributionPredictionDto = z.infer<typeof DistributionPredictionDto>;
