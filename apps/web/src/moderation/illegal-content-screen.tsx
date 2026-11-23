@@ -76,7 +76,9 @@ export function IllegalContentScreen() {
         return { step: 'received', withEmail: email !== '' };
       } catch (failure) {
         const code = codeOf(failure);
-        if (code === 'too-many-notices') return { step: 'writing', error: 'tooMany' };
+        if (code === 'too-many-notices' || code === 'too-many-requests') {
+          return { step: 'writing', error: 'tooMany' };
+        }
         if (code === 'invalid-notice' || code === 'invalid-message') {
           return { step: 'writing', error: 'invalid' };
         }

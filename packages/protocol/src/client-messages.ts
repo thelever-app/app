@@ -81,6 +81,31 @@ export const PlayerColorDto = z.enum([
   'stone',
 ]);
 
+/** The longest nickname a player may choose: the screens stop there, and so does the room server. */
+export const NICKNAME_MAX_LENGTH = 20;
+
+/**
+ * Control, invisible and direction characters, which would let a nickname look like another or turn
+ * the text around it. Some stay, because a nickname needs them: the joiners of emojis (U+200D, so 👩‍💻)
+ * and of Persian (U+200C), and the tags of the flags of England, Scotland and Wales.
+ */
+const HIDDEN_CHARACTERS = /[\p{Cc}\p{Co}\p{Cs}]|(?!\u200c|\u200d|[\u{e0020}-\u{e007f}])\p{Cf}/gu;
+
+/** The nickname without the characters it may not have, as a form keeps it while it is written. */
+export function withoutHiddenCharacters(nickname: string): string {
+  return nickname.replace(HIDDEN_CHARACTERS, '');
+}
+
+/** The nickname a player chooses to create or join a room. */
+export const NicknameDto = z
+  .string()
+  .min(1)
+  .max(NICKNAME_MAX_LENGTH)
+  .refine(
+    (nickname) => withoutHiddenCharacters(nickname) === nickname,
+    'invisible or control characters',
+  );
+
 /** A face and a colour: no two players of a room share both. */
 export const AvatarDto = z.strictObject({ face: AvatarFaceDto, color: PlayerColorDto });
 

@@ -19,7 +19,15 @@ concurrency:
 
 jobs:
   prod:
-    if: github.event.workflow_run.conclusion == 'success'
+    # Only a run of this repository's own Deploy, on a push to main: workflow_run matches a run by
+    # the name of its workflow and the name of its branch, which a pull request from a fork with a
+    # branch called main and a workflow called Deploy also has.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.path == '.github/workflows/deploy.yml'
     uses: ./.github/workflows/deploy-environment.yml
     permissions:
       actions: read

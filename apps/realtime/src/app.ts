@@ -1,6 +1,7 @@
 import express, { type ErrorRequestHandler, type Express, type RequestHandler } from 'express';
 import { cors } from './http/cors.ts';
 import type { HttpEndpoint } from './http/http-endpoint.ts';
+import { perIdentityLimit } from './http/per-identity-limit.ts';
 
 export interface AppOptions {
   /** Runs before every endpoint that asks for authentication. */
@@ -25,7 +26,10 @@ export function createApp(
   app.use(express.json());
 
   for (const endpoint of endpoints) {
-    const guards = endpoint.authenticated ? [authenticate] : [];
+    const limit = endpoint.perIdentityPerMinute;
+    const guards = endpoint.authenticated
+      ? [authenticate, ...(limit === undefined ? [] : [perIdentityLimit(limit)])]
+      : [];
     app[endpoint.method](endpoint.path, ...guards, (req, res) => endpoint.handle(req, res));
   }
 

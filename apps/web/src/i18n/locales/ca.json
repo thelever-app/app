@@ -353,6 +353,7 @@
     "lookalikeJustJoined": "Algú acaba d’entrar com a {{nickname}} amb aquest avatar. Tria’n un altre."
   },
   "roomErrors": {
+    "too-many-requests": "Massa intents seguits. Espera un minut i torna-ho a provar.",
     "nickname-missing": "Escriu un sobrenom.",
     "room-full": "La sala és plena: ja hi ha 50 jugadors.",
     "player-expelled": "L’amfitrió t’ha tret d’aquesta partida.",

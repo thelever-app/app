@@ -10,6 +10,19 @@ export interface SiteAppOptions extends RespondOptions {
 
 /** The assets change only with a new image, which the deploy brings: a day in the caches. */
 const ASSET_CACHE = 'public, max-age=86400';
+/**
+ * Sent with every answer, the same as Firebase Hosting sends for the app (firebase.json): no page
+ * is framed by another site, nothing is sniffed into another type, links tell other sites only
+ * the origin, and no page uses the camera, the microphone or the location. The policy leaves
+ * scripts alone: the ads and the cookie manager of Google load what they need.
+ */
+export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Content-Security-Policy': "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+};
+
 /** How old the manifest may be before an answer other than a page reads it again. */
 const RECHECK_AFTER_MS = 10_000;
 
@@ -20,6 +33,10 @@ const RECHECK_AFTER_MS = 10_000;
 export function createSiteApp({ site, ...options }: SiteAppOptions): Express {
   const app = express();
   app.disable('x-powered-by');
+  app.use((_req, res, next) => {
+    res.set(SECURITY_HEADERS);
+    next();
+  });
 
   app.get('/health', (_req, res) => {
     res.status(200).send('ok');

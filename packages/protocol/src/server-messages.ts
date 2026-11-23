@@ -476,6 +476,7 @@ export const ErrorCodeDto = z.enum([
   'minor-in-room',
   'invalid-notice',
   'too-many-notices',
+  'too-many-requests',
   'moderation-notice-not-found',
 ]);
 

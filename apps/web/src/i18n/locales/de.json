@@ -331,6 +331,7 @@
     "lookalikeJustJoined": "Gerade ist jemand als {{nickname}} mit diesem Avatar beigetreten. Wähle einen anderen."
   },
   "roomErrors": {
+    "too-many-requests": "Zu viele Versuche hintereinander. Warte eine Minute und versuch es noch einmal.",
     "nickname-missing": "Gib einen Spitznamen ein.",
     "room-full": "Der Raum ist voll: Es sind schon 50 Spieler drin.",
     "player-expelled": "Der Gastgeber hat dich aus diesem Spiel entfernt.",

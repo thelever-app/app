@@ -11,6 +11,8 @@ export class CreateRoomEndpoint implements HttpEndpoint {
   readonly method = 'post';
   readonly path = '/rooms';
   readonly authenticated = true;
+  /** A host creates a room now and then; each one takes a code and rows of the database. */
+  readonly perIdentityPerMinute = 5;
   readonly #createRoom: CreateRoomUseCase;
   readonly #runCommand: RunCommand;
 

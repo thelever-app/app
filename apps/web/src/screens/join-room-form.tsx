@@ -1,4 +1,9 @@
-import type { AvatarDto, RoomPreviewResponseDto } from '@thelever-app/protocol';
+import {
+  type AvatarDto,
+  NICKNAME_MAX_LENGTH,
+  withoutHiddenCharacters,
+  type RoomPreviewResponseDto,
+} from '@thelever-app/protocol';
 import { useActionState, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -91,10 +96,10 @@ export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: Jo
               className={styles.input}
               name="nickname"
               required
-              maxLength={20}
+              maxLength={NICKNAME_MAX_LENGTH}
               autoComplete="nickname"
               value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
+              onChange={(event) => setNickname(withoutHiddenCharacters(event.target.value))}
             />
           </label>
         </div>

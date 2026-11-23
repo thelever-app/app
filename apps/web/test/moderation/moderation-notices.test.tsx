@@ -63,6 +63,26 @@ describe('ModerationNotices', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
+  it('should show the reported nickname as text, whatever it is written with', async () => {
+    // Arrange: a nickname written as markup, which the room took as it came.
+    const nickname = '<strong style="color: red">Nick</strong>';
+    const api = fakeRoomApi({
+      moderationNotices: vi.fn(async () => [
+        {
+          ...ON_A_REPORT,
+          subject: { ...ON_A_REPORT.subject, content: { kind: 'nickname', nickname } },
+        } as ModerationNoticeDto,
+      ]),
+    });
+
+    // Act
+    const { t } = await renderAtRoute(<ModerationNotices />, { api });
+
+    // Assert
+    const sheet = await screen.findByRole('dialog', { name: t('moderationNotice.reportTitle') });
+    expect(sheet.textContent).toContain(nickname);
+  });
+
   it('should show the next one once the player saw the first', async () => {
     // Arrange
     const api = fakeRoomApi({
