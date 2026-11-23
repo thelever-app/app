@@ -1,7 +1,8 @@
-import type {
-  FindDilemmaOfReference,
-  GetDilemmas,
-  ModerateDilemma,
+import {
+  familyOf,
+  type FindDilemmaOfReference,
+  type GetDilemmas,
+  type ModerateDilemma,
 } from '@thelever-app/dilemmas/published';
 import type { ModeratedDilemmas } from '@thelever-app/moderation';
 
@@ -14,15 +15,23 @@ export class CatalogDilemmasForModeration implements ModeratedDilemmas {
   readonly #findDilemmaOfReference: FindDilemmaOfReference;
   readonly #getDilemmas: GetDilemmas;
   readonly #moderateDilemma: ModerateDilemma;
+  readonly #languages: readonly string[];
 
+  /** `languages`: every language a dilemma of the catalog is played in, as for moderating it. */
   constructor(ports: {
     readonly findDilemmaOfReference: FindDilemmaOfReference;
     readonly getDilemmas: GetDilemmas;
     readonly moderateDilemma: ModerateDilemma;
+    readonly languages: readonly string[];
   }) {
     this.#findDilemmaOfReference = ports.findDilemmaOfReference;
     this.#getDilemmas = ports.getDilemmas;
     this.#moderateDilemma = ports.moderateDilemma;
+    this.#languages = ports.languages;
+  }
+
+  async familyOf(dilemmaId: string): Promise<readonly string[]> {
+    return familyOf(dilemmaId, this.#languages);
   }
 
   async dilemmaOf(reference: string): Promise<string | null> {

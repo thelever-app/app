@@ -33,6 +33,7 @@ async function arrange() {
       findDilemmaOfReference: new FindDilemmaOfReferenceUseCase(repository),
       getDilemmas: new GetDilemmasUseCase(repository),
       moderateDilemma: new ModerateDilemmaUseCase(repository, ['en']),
+      languages: ['en'],
     }),
   };
 }

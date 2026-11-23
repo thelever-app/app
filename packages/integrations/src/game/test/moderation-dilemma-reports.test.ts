@@ -13,6 +13,7 @@ const AT = new Date('2026-11-21T10:00:00Z');
 /** Dilemmas, as Moderation sees them: nothing to find, hide or withdraw here. */
 const NO_DILEMMAS: ModeratedDilemmas = {
   dilemmaOf: async () => null,
+  familyOf: async (dilemmaId) => [dilemmaId],
   textOf: async () => null,
   hide: async () => {},
   restore: async () => {},
