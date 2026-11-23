@@ -42,6 +42,10 @@ export function fakeRoomApi(overrides: Partial<RoomApi> = {}): RoomApi {
     worldResult: unexpected('worldResult'),
     joinRoom: unexpected('joinRoom'),
     searchDilemmas: unexpected('searchDilemmas'),
+    sendIllegalContentNotice: unexpected('sendIllegalContentNotice'),
+    // Nothing decided on the reports of the device, unless the test says otherwise.
+    moderationNotices: vi.fn(async () => []),
+    seeModerationNotice: unexpected('seeModerationNotice'),
     enterAccessCode: vi.fn(),
     ...overrides,
   };

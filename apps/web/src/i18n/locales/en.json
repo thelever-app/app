@@ -129,7 +129,9 @@
       "offensive": "Offensive",
       "confusing": "Confusing",
       "mistranslated": "Badly translated",
-      "other": "Other"
+      "other": "Other",
+      "illegal": "May be illegal",
+      "impersonation": "Impersonates someone"
     },
     "comment": "Comment (optional)",
     "placeholder": "What did you notice?",
@@ -137,7 +139,9 @@
     "counter": "{{count, number}}/{{max, number}}",
     "chooseReason": "Pick a reason",
     "send": "Send report",
-    "note": "No one in the group will know."
+    "note": "No one in the group will know.",
+    "nicknameTitle": "What is wrong with {{name}}’s nickname?",
+    "privacy": "Privacy policy"
   },
   "reportSent": {
     "thanks": "Thanks, we’ll review it.",
@@ -444,7 +448,6 @@
     "players": "In the room · {{count}}",
     "you": "{{name}} (you)",
     "host": "Host",
-    "toExpel": "{{name}}. Tap to remove",
     "toChangeAvatar": "{{name}}. Tap to change your avatar",
     "waiting": "Share the code or the link.",
     "start": "Start the game",
@@ -892,7 +895,8 @@
     "funding": "How TheLever is funded",
     "credits": "Credits and licences",
     "legalNotice": "Legal notice",
-    "outside": "{{name}} (opens in the browser)"
+    "outside": "{{name}} (opens in the browser)",
+    "contact": "Contact and reports"
   },
   "credits": {
     "title": "Credits and licences",
@@ -943,5 +947,84 @@
       "close": "No, thanks"
     },
     "line": "Did you enjoy it? Support TheLever"
+  },
+  "playerMenu": {
+    "open": "{{name}}. Tap for options",
+    "report": "Report their nickname",
+    "expel": "Remove from the room",
+    "note": "Nobody in the group will know you reported it."
+  },
+  "moderationNotice": {
+    "reportTitle": "We have reviewed your report",
+    "aboutDilemma": "About the dilemma “{{text}}”, which you reported on {{date}} as <strong>{{reason}}</strong>:",
+    "aboutNickname": "About the nickname “{{nickname}}”, which you reported on {{date}} as <strong>{{reason}}</strong>:",
+    "withdrawnDilemma": "We have withdrawn it from the catalogue.",
+    "withdrawnNickname": "We have withdrawn it.",
+    "kept": "We are keeping it: it breaks neither the terms of use nor the law.",
+    "rule": "We applied section {{rule}} of the terms of use. A person on the team decided it.",
+    "appeal": "If you disagree, you can appeal from Settings → Contact and reports.",
+    "understood": "Got it",
+    "nicknameTitle": "We have withdrawn your nickname",
+    "nicknameWhat": "Your nickname “{{nickname}}”:",
+    "reasonLabel": "Reason:",
+    "factsLabel": "Facts:",
+    "ruleLabel": "Rule:",
+    "ruleValue": "section {{rule}} of the terms of use.",
+    "whoLabel": "Who decided:",
+    "whoValue": "a person on the team, after a report.",
+    "nicknameEffect": "In open rooms you now appear with a generic nickname, and when you join another room you will have to write a new one.",
+    "reasons": {
+      "offensive": "offensive",
+      "confusing": "confusing",
+      "mistranslated": "badly translated",
+      "impersonation": "impersonating someone",
+      "illegal": "possibly illegal",
+      "other": "another reason"
+    },
+    "reasonSentences": {
+      "offensive": "it is offensive.",
+      "confusing": "it is confusing.",
+      "mistranslated": "it is badly translated.",
+      "impersonation": "it impersonates someone else.",
+      "illegal": "it may be illegal.",
+      "other": "it breaks the terms of use."
+    }
+  },
+  "contact": {
+    "title": "Contact and reports",
+    "writeTitle": "Write to us",
+    "writeText": "About your data, your reports or anything else. It is also the point of contact for users and authorities under the Digital Services Act. We answer in Spanish and English.",
+    "copy": "Copy the email",
+    "copied": "Email copied",
+    "reportTitle": "Report illegal content",
+    "reportText": "Anyone can report it with the web form, without the app. During a game you can also report from the “⋮” menu or by tapping someone’s avatar.",
+    "openForm": "Open the report form",
+    "appealTitle": "Appeal a decision",
+    "appealText": "If you disagree with what we decided about a report or about your nickname, write to this email and we will review it again."
+  },
+  "illegalNotice": {
+    "title": "Report illegal content",
+    "intro": "You do not need the app. If you play, you can also report from the game.",
+    "reference": "Link or code of the dilemma, or the room and the nickname",
+    "referencePlaceholder": "thelever.app/en/…",
+    "explanation": "Why you think it is illegal",
+    "explanationPlaceholder": "Explain which law you think it breaks and why",
+    "name": "Your name (optional)",
+    "namePlaceholder": "You can report anonymously",
+    "email": "Your email (optional)",
+    "emailPlaceholder": "To tell you what we decided",
+    "goodFaith": "I declare in good faith that this information is accurate and complete.",
+    "send": "Send report",
+    "sending": "Sending…",
+    "note": "You will get an acknowledgement and, if you leave your email, the decision and how to appeal.",
+    "invalid": "Check what you wrote: the content and the reason are required and the email must be valid.",
+    "tooMany": "You have already sent many reports today. Come back tomorrow or write to privacidad@thelever.app.",
+    "failed": "It could not be sent. Try again.",
+    "receivedTitle": "We have received your report",
+    "receivedText": "A person on the team will review it.",
+    "receivedEmail": "We will write to the email you left with the decision and how to appeal.",
+    "receivedNoEmail": "Since you left no email, we will not be able to tell you what we decided.",
+    "authorities": "If you see a serious or urgent threat to someone, tell the authorities too.",
+    "another": "Send another report"
   }
 }

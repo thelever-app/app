@@ -46,4 +46,18 @@ describe('App', () => {
     // Assert
     await waitFor(() => expect(location()).toBe('/app'));
   });
+
+  it('should open the web form of illegal content without the first access', async () => {
+    // Arrange
+    const openApp = vi.fn(async () => {
+      throw new Error('the form does not wait for the first access');
+    });
+
+    // Act
+    const { t } = await renderAtRoute(<App />, { api: fakeRoomApi({ openApp }), at: '/denunciar' });
+
+    // Assert
+    expect(await screen.findByRole('heading', { name: t('illegalNotice.title') })).toBeDefined();
+    expect(openApp).not.toHaveBeenCalled();
+  });
 });

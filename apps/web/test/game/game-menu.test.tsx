@@ -78,6 +78,7 @@ describe('the menu of the game', () => {
       type: 'report-dilemma',
       dilemmaId: 'test-dilemma-1',
       reason: 'offensive',
+      language: 'es',
     });
     expect(connection.send).toHaveBeenLastCalledWith({
       type: 'skip-dilemma',

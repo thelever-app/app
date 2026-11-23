@@ -5,6 +5,7 @@ import mascotWaving from '../assets/brand/mascot-waving.svg';
 import { Icon } from '../components/icon.tsx';
 import { SupportCard } from '../donations/support-card.tsx';
 import { InstallOffer } from '../install/install-offer.tsx';
+import { ModerationNotices } from '../moderation/moderation-notices.tsx';
 import { SETTINGS_PATH } from '../settings/settings-paths.ts';
 import { CreateRoomForm } from './create-room-form.tsx';
 import screen from './screen.module.css';
@@ -69,6 +70,7 @@ export function HomeScreen() {
         <SupportCard />
         <InstallOffer />
       </main>
+      <ModerationNotices />
     </div>
   );
 }

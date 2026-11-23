@@ -597,3 +597,59 @@ describe('RevealPhase', () => {
     });
   });
 });
+
+describe('RevealPhase, reporting', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should let the player report the dilemma from the menu of the reveal, in their language', async () => {
+    // Arrange
+    const { connection, t } = await renderReveal(revealed(NOMINAL_REVEAL));
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.open') }));
+    fireEvent.click(screen.getByRole('button', { name: t('gameMenu.report') }));
+    fireEvent.click(screen.getByRole('radio', { name: t('report.reasons.illegal') }));
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('report.send') }));
+
+    // Assert
+    expect(connection.send).toHaveBeenLastCalledWith({
+      type: 'report-dilemma',
+      dilemmaId: NOMINAL_REVEAL.dilemmaId,
+      reason: 'illegal',
+      language: 'es',
+    });
+    expect(screen.getByRole('status').textContent).toContain(t('reportSent.thanks'));
+  });
+
+  it('should let the player report the nickname of another from their avatar', async () => {
+    // Arrange
+    const { connection, t } = await renderReveal(revealed(NOMINAL_REVEAL));
+    fireEvent.click(screen.getByRole('button', { name: t('playerMenu.open', { name: 'Luis' }) }));
+    fireEvent.click(screen.getByRole('button', { name: t('playerMenu.report') }));
+    fireEvent.click(screen.getByRole('radio', { name: t('report.reasons.impersonation') }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: ' TestComment ' } });
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('report.send') }));
+
+    // Assert
+    expect(connection.send).toHaveBeenLastCalledWith({
+      type: 'report-nickname',
+      playerId: 'test-luis-id',
+      reason: 'impersonation',
+      comment: 'TestComment',
+    });
+  });
+
+  it('should not offer to report the nickname of the player themself', async () => {
+    // Act
+    const { t } = await renderReveal(revealed(NOMINAL_REVEAL));
+
+    // Assert
+    expect(
+      screen.queryByRole('button', { name: t('playerMenu.open', { name: 'Ana' }) }),
+    ).toBeNull();
+  });
+});

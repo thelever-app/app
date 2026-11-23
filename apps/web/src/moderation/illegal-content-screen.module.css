@@ -1,0 +1,58 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 24px 24px;
+}
+
+.title {
+  composes: title from '../styles/typography.module.css';
+  margin: 0;
+}
+
+.text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--color-ink);
+}
+
+.explanation {
+  min-height: 0;
+  padding-block: var(--space-3);
+  resize: vertical;
+}
+
+.goodFaith {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.check {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--color-ink);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-ink-muted);
+}
+
+.another {
+  align-self: flex-start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-ink);
+  font-weight: 500;
+  text-underline-offset: 3px;
+}

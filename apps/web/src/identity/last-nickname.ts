@@ -26,3 +26,14 @@ export function rememberNickname(nickname: string, storage: DeviceStorage = devi
     // Private mode, blocked or full storage: the next time the field starts empty, nothing else changes.
   }
 }
+
+/** The team withdrew that nickname: the device stops proposing it. Any other one stays. */
+export function forgetNickname(nickname: string, storage: DeviceStorage = deviceStorage): void {
+  try {
+    if (storage().getItem(KEY)?.trim().toLowerCase() === nickname.trim().toLowerCase()) {
+      storage().setItem(KEY, '');
+    }
+  } catch {
+    // A browser that keeps nothing has nothing to forget.
+  }
+}

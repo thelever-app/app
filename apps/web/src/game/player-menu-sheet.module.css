@@ -1,0 +1,42 @@
+.overlay {
+  composes: overlay from './sheet.module.css';
+}
+
+.sheet {
+  composes: sheet from './sheet.module.css';
+  gap: var(--space-3);
+}
+
+.handle {
+  composes: handle from './sheet.module.css';
+}
+
+.title {
+  composes: titleSheet from '../styles/typography.module.css';
+}
+
+.item {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-ink-muted);
+  text-align: center;
+}

@@ -1,5 +1,9 @@
-import type { GameStateDto } from '@thelever-app/protocol';
-import { type CSSProperties, useState } from 'react';
+import type {
+  GameStateDto,
+  NicknameReportReasonDto,
+  ReportReasonDto,
+} from '@thelever-app/protocol';
+import { type CSSProperties, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../avatar/avatar.tsx';
 import { GroupProgressSheet } from '../components/group-progress-sheet.tsx';
@@ -8,6 +12,9 @@ import { Icon } from '../components/icon.tsx';
 import { isAnonymous, usePlayerName } from '../components/players.ts';
 import { DilemmaText, personInTheGapOf } from '../game/dilemma-text.tsx';
 import { GameMenu } from '../game/game-menu.tsx';
+import { PlayerMenuSheet } from '../game/player-menu-sheet.tsx';
+import { ReportSheet } from '../game/report-sheet.tsx';
+import { ReportThanks } from '../game/report-thanks.tsx';
 import { missedOf } from './missed.ts';
 import {
   type ReactionTarget,
@@ -48,7 +55,21 @@ interface RevealScreenProps {
   readonly onUnlike: () => Promise<void>;
   /** A reaction to the dilemma or to a vote, resolved once the server answers. */
   readonly onReact: (target: ReactionTarget, emoji: string) => Promise<void>;
+  /** Reports the dilemma of the reveal to Moderation, once. */
+  readonly onReport: (reason: ReportReasonDto, comment: string) => void;
+  /** Reports the nickname of another player to Moderation. */
+  readonly onReportNickname: (
+    playerId: string,
+    reason: NicknameReportReasonDto,
+    comment: string,
+  ) => void;
 }
+
+/** What the player is reporting from the reveal, if anything. */
+type Reporting =
+  | { readonly step: 'none' }
+  | { readonly step: 'dilemma' }
+  | { readonly step: 'menu' | 'nickname'; readonly player: Player };
 
 /**
  * The reveal of the dilemma of the round: how many chose each option and, in a nominal room, what
@@ -67,11 +88,20 @@ export function RevealScreen({
   onLike,
   onUnlike,
   onReact,
+  onReport,
+  onReportNickname,
 }: RevealScreenProps) {
   const { t } = useTranslation();
   const nameOf = usePlayerName();
   const [isGroupOpen, setIsGroupOpen] = useState(false);
   const [reacting, setReacting] = useState<ReactionTarget | undefined>(undefined);
+  const [reporting, setReporting] = useState<Reporting>({ step: 'none' });
+  const [reportedHere, setReportedHere] = useState(false);
+  const [thanked, setThanked] = useState(false);
+  const hideThanks = useCallback(() => setThanked(false), []);
+  const reported =
+    reportedHere || game.reports.some(({ dilemmaId }) => dilemmaId === reveal.dilemmaId);
+  const closeReport = () => setReporting({ step: 'none' });
   const [liked, toggleLike] = useOptimisticLike(reveal.youLiked, onLike, onUnlike);
   const [yours, react] = useOptimisticReactions(reveal.yourReactions, onReact);
   const dilemma = game.dilemmas.find(({ dilemmaId }) => dilemmaId === reveal.dilemmaId)!;
@@ -98,11 +128,17 @@ export function RevealScreen({
             code={game.code}
             onShowQr={onShowQr}
             onRestart={onRestart}
+            reported={reported}
             onShowGroup={() => setIsGroupOpen(true)}
+            onReport={() => setReporting({ step: 'dilemma' })}
             onLeave={onLeave}
           />
         </div>
-        <Players players={game.players} selfId={game.playerId} />
+        <Players
+          players={game.players}
+          selfId={game.playerId}
+          onOpen={(player) => setReporting({ step: 'menu', player })}
+        />
       </header>
       <main
         className={styles.main}
@@ -168,6 +204,37 @@ export function RevealScreen({
         </footer>
       )}
       <GroupProgressSheet game={game} open={isGroupOpen} onOpenChange={setIsGroupOpen} />
+      <ReportSheet
+        target={{ kind: 'dilemma' }}
+        open={reporting.step === 'dilemma'}
+        onOpenChange={(open) => !open && closeReport()}
+        onSend={(reason, comment) => {
+          onReport(reason, comment);
+          setReportedHere(true);
+          setThanked(true);
+          closeReport();
+        }}
+      />
+      {reporting.step === 'menu' && (
+        <PlayerMenuSheet
+          nickname={nameOf(reporting.player)}
+          onReport={() => setReporting({ step: 'nickname', player: reporting.player })}
+          onClose={closeReport}
+        />
+      )}
+      {reporting.step === 'nickname' && (
+        <ReportSheet
+          target={{ kind: 'nickname', nickname: nameOf(reporting.player) }}
+          open
+          onOpenChange={(open) => !open && closeReport()}
+          onSend={(reason, comment) => {
+            onReportNickname(reporting.player.playerId, reason, comment);
+            setThanked(true);
+            closeReport();
+          }}
+        />
+      )}
+      {thanked && <ReportThanks onDone={hideThanks} />}
       {reacting && (
         <ReactSheet
           open
@@ -284,9 +351,12 @@ function DilemmaReactions({
 export function Players({
   players,
   selfId,
+  onOpen,
 }: {
   readonly players: readonly Player[];
   readonly selfId: string;
+  /** Opens the menu of another player, to report their nickname; none where it cannot be done. */
+  readonly onOpen?: (player: Player) => void;
 }) {
   const { t } = useTranslation();
   const nameOf = usePlayerName();
@@ -301,8 +371,21 @@ export function Players({
       <ul className={styles.avatars}>
         {visible.map((player) => (
           <li key={player.playerId} title={nameOf(player)}>
-            <Avatar avatar={player.avatar} size="xs" dimmed={!player.connected} />
-            <span className={styles.hidden}>{nameOf(player)}</span>
+            {onOpen && player.playerId !== selfId ? (
+              <button
+                type="button"
+                className={styles.avatarButton}
+                aria-label={t('playerMenu.open', { name: nameOf(player) })}
+                onClick={() => onOpen(player)}
+              >
+                <Avatar avatar={player.avatar} size="xs" dimmed={!player.connected} />
+              </button>
+            ) : (
+              <>
+                <Avatar avatar={player.avatar} size="xs" dimmed={!player.connected} />
+                <span className={styles.hidden}>{nameOf(player)}</span>
+              </>
+            )}
           </li>
         ))}
       </ul>

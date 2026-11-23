@@ -1,0 +1,11 @@
+.thanks {
+  composes: thanks from '../screens/dilemma-screen.module.css';
+}
+
+.icon {
+  composes: thanksIcon from '../screens/dilemma-screen.module.css';
+}
+
+.signal {
+  composes: signal from '../screens/dilemma-screen.module.css';
+}

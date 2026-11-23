@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
+import { deviceLanguage } from '../i18n/i18n.ts';
 import {
   hasAnswered,
   isAnonymous,
@@ -19,6 +21,7 @@ import { HOME_PATH } from '../home-path.ts';
  */
 export function DecisionPhase({ onShowQr }: { readonly onShowQr: () => void }) {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
   const { game, rejection, answerDilemma, send } = useGame();
   const [isChanging, setIsChanging] = useState(false);
   const [isRevealOpen, setIsRevealOpen] = useState(false);
@@ -64,6 +67,7 @@ export function DecisionPhase({ onShowQr }: { readonly onShowQr: () => void }) {
               type: 'report-dilemma',
               dilemmaId: reported,
               reason,
+              language: deviceLanguage(i18n),
               ...(comment.trim() && { comment: comment.trim() }),
             })
           }

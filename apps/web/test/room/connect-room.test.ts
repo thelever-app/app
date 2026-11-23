@@ -21,6 +21,9 @@ function unusedApi(): RoomApi {
     worldResult: vi.fn(),
     joinRoom: vi.fn(),
     searchDilemmas: vi.fn(),
+    sendIllegalContentNotice: vi.fn(),
+    moderationNotices: vi.fn(),
+    seeModerationNotice: vi.fn(),
     enterAccessCode: vi.fn(),
   };
 }

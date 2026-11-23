@@ -1,0 +1,75 @@
+.overlay {
+  composes: overlay from '../game/sheet.module.css';
+}
+
+.sheet {
+  composes: sheet from '../game/sheet.module.css';
+  gap: var(--space-3);
+}
+
+.handle {
+  composes: handle from '../game/sheet.module.css';
+}
+
+.title {
+  composes: titleSheet from '../styles/typography.module.css';
+}
+
+.text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.decision {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.decision strong {
+  font-weight: 600;
+}
+
+.reasons {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.reasons div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.reasons dt {
+  font-weight: 600;
+}
+
+.reasons dd {
+  margin: 0;
+}
+
+.appeal {
+  margin: 0;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--color-ink-muted);
+}
+
+.understood {
+  composes: primary from '../styles/buttons.module.css';
+  min-height: 52px;
+}

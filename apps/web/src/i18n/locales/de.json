@@ -129,7 +129,9 @@
       "offensive": "Beleidigend",
       "confusing": "Unklar",
       "mistranslated": "Schlecht übersetzt",
-      "other": "Anderes"
+      "other": "Anderes",
+      "illegal": "Könnte illegal sein",
+      "impersonation": "Gibt sich als jemand aus"
     },
     "comment": "Kommentar (optional)",
     "placeholder": "Was ist dir aufgefallen?",
@@ -137,7 +139,9 @@
     "counter": "{{count, number}}/{{max, number}}",
     "chooseReason": "Wähle einen Grund",
     "send": "Meldung senden",
-    "note": "Niemand aus der Gruppe erfährt es."
+    "note": "Niemand aus der Gruppe erfährt es.",
+    "nicknameTitle": "Was stimmt mit dem Spitznamen von {{name}} nicht?",
+    "privacy": "Datenschutzerklärung"
   },
   "reportSent": {
     "thanks": "Danke, wir prüfen es.",
@@ -444,7 +448,6 @@
     "players": "Im Raum · {{count}}",
     "you": "{{name}} (du)",
     "host": "Gastgeber",
-    "toExpel": "{{name}}. Tippen zum Entfernen",
     "toChangeAvatar": "{{name}}. Tippen, um deinen Avatar zu ändern",
     "waiting": "Teile den Code oder den Link.",
     "start": "Spiel starten",
@@ -892,7 +895,8 @@
     "funding": "Wie TheLever finanziert wird",
     "credits": "Danksagungen und Lizenzen",
     "legalNotice": "Impressum",
-    "outside": "{{name}} (öffnet sich im Browser)"
+    "outside": "{{name}} (öffnet sich im Browser)",
+    "contact": "Kontakt und Meldungen"
   },
   "credits": {
     "title": "Danksagungen und Lizenzen",
@@ -943,5 +947,84 @@
       "close": "Nein, danke"
     },
     "line": "Hat es euch gefallen? TheLever unterstützen"
+  },
+  "playerMenu": {
+    "open": "{{name}}. Tippe für Optionen",
+    "report": "Spitznamen melden",
+    "expel": "Aus dem Raum entfernen",
+    "note": "Niemand aus der Gruppe erfährt, dass du ihn gemeldet hast."
+  },
+  "moderationNotice": {
+    "reportTitle": "Wir haben deine Meldung geprüft",
+    "aboutDilemma": "Zum Dilemma „{{text}}“, das du am {{date}} als <strong>{{reason}}</strong> gemeldet hast:",
+    "aboutNickname": "Zum Spitznamen „{{nickname}}“, den du am {{date}} als <strong>{{reason}}</strong> gemeldet hast:",
+    "withdrawnDilemma": "Wir haben es aus dem Katalog entfernt.",
+    "withdrawnNickname": "Wir haben ihn entfernt.",
+    "kept": "Wir behalten es: Es verstößt weder gegen die Nutzungsbedingungen noch gegen das Gesetz.",
+    "rule": "Wir haben Abschnitt {{rule}} der Nutzungsbedingungen angewendet. Eine Person aus dem Team hat entschieden.",
+    "appeal": "Wenn du nicht einverstanden bist, kannst du unter Einstellungen → Kontakt und Meldungen widersprechen.",
+    "understood": "Verstanden",
+    "nicknameTitle": "Wir haben deinen Spitznamen entfernt",
+    "nicknameWhat": "Dein Spitzname „{{nickname}}“:",
+    "reasonLabel": "Grund:",
+    "factsLabel": "Sachverhalt:",
+    "ruleLabel": "Regel:",
+    "ruleValue": "Abschnitt {{rule}} der Nutzungsbedingungen.",
+    "whoLabel": "Wer entschieden hat:",
+    "whoValue": "eine Person aus dem Team, nach einer Meldung.",
+    "nicknameEffect": "In offenen Räumen erscheinst du jetzt mit einem allgemeinen Spitznamen, und wenn du einem anderen Raum beitrittst, musst du einen neuen schreiben.",
+    "reasons": {
+      "offensive": "beleidigend",
+      "confusing": "verwirrend",
+      "mistranslated": "schlecht übersetzt",
+      "impersonation": "Identitätsanmaßung",
+      "illegal": "möglicherweise illegal",
+      "other": "anderer Grund"
+    },
+    "reasonSentences": {
+      "offensive": "Er ist beleidigend.",
+      "confusing": "Er ist verwirrend.",
+      "mistranslated": "Er ist schlecht übersetzt.",
+      "impersonation": "Er gibt sich als eine andere Person aus.",
+      "illegal": "Er könnte illegal sein.",
+      "other": "Er verstößt gegen die Nutzungsbedingungen."
+    }
+  },
+  "contact": {
+    "title": "Kontakt und Meldungen",
+    "writeTitle": "Schreib uns",
+    "writeText": "Zu deinen Daten, deinen Meldungen oder allem anderen. Es ist auch die Kontaktstelle für Nutzer und Behörden nach dem Gesetz über digitale Dienste. Wir antworten auf Spanisch und Englisch.",
+    "copy": "E-Mail kopieren",
+    "copied": "E-Mail kopiert",
+    "reportTitle": "Illegale Inhalte melden",
+    "reportText": "Jede Person kann sie über das Webformular melden, ohne die App. Während einer Partie kannst du auch über das Menü „⋮“ oder durch Tippen auf einen Avatar melden.",
+    "openForm": "Meldeformular öffnen",
+    "appealTitle": "Einer Entscheidung widersprechen",
+    "appealText": "Wenn du mit unserer Entscheidung zu einer Meldung oder zu deinem Spitznamen nicht einverstanden bist, schreib an diese Adresse, und wir prüfen es erneut."
+  },
+  "illegalNotice": {
+    "title": "Illegale Inhalte melden",
+    "intro": "Du brauchst die App nicht. Wenn du spielst, kannst du auch in der Partie melden.",
+    "reference": "Link oder Code des Dilemmas, oder der Raum und der Spitzname",
+    "referencePlaceholder": "thelever.app/de/…",
+    "explanation": "Warum du es für illegal hältst",
+    "explanationPlaceholder": "Erkläre, gegen welche Vorschrift es deiner Meinung nach verstößt und warum",
+    "name": "Dein Name (optional)",
+    "namePlaceholder": "Du kannst anonym melden",
+    "email": "Deine E-Mail (optional)",
+    "emailPlaceholder": "Damit wir dir die Entscheidung mitteilen",
+    "goodFaith": "Ich erkläre nach bestem Wissen und Gewissen, dass die Angaben richtig und vollständig sind.",
+    "send": "Meldung senden",
+    "sending": "Wird gesendet…",
+    "note": "Du erhältst eine Eingangsbestätigung und, wenn du deine E-Mail angibst, die Entscheidung und wie du widersprechen kannst.",
+    "invalid": "Prüfe deine Angaben: Inhalt und Begründung sind Pflicht, und die E-Mail muss gültig sein.",
+    "tooMany": "Du hast heute schon viele Meldungen gesendet. Komm morgen wieder oder schreib an privacidad@thelever.app.",
+    "failed": "Das Senden hat nicht geklappt. Versuch es noch einmal.",
+    "receivedTitle": "Wir haben deine Meldung erhalten",
+    "receivedText": "Eine Person aus dem Team prüft sie.",
+    "receivedEmail": "Wir schreiben dir an die angegebene E-Mail mit der Entscheidung und wie du widersprechen kannst.",
+    "receivedNoEmail": "Da du keine E-Mail angegeben hast, können wir dir die Entscheidung nicht mitteilen.",
+    "authorities": "Wenn du eine ernste oder dringende Gefahr für jemanden siehst, informiere auch die Behörden.",
+    "another": "Weitere Meldung senden"
   }
 }

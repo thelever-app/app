@@ -139,7 +139,9 @@
       "offensive": "Offensivo",
       "confusing": "Confuso",
       "mistranslated": "Tradotto male",
-      "other": "Altro"
+      "other": "Altro",
+      "illegal": "Potrebbe essere illegale",
+      "impersonation": "Si spaccia per qualcuno"
     },
     "comment": "Commento (facoltativo)",
     "placeholder": "Cosa hai notato?",
@@ -147,7 +149,9 @@
     "counter": "{{count, number}}/{{max, number}}",
     "chooseReason": "Scegli un motivo",
     "send": "Invia segnalazione",
-    "note": "Nessuno del gruppo lo saprà."
+    "note": "Nessuno del gruppo lo saprà.",
+    "nicknameTitle": "Che problema ha il nickname di {{name}}?",
+    "privacy": "Informativa sulla privacy"
   },
   "reportSent": {
     "thanks": "Grazie, lo controlleremo.",
@@ -470,7 +474,6 @@
     "players": "Nella stanza · {{count}}",
     "you": "{{name}} (tu)",
     "host": "Host",
-    "toExpel": "{{name}}. Tocca per espellere",
     "toChangeAvatar": "{{name}}. Tocca per cambiare il tuo avatar",
     "waiting": "Condividi il codice o il link.",
     "start": "Inizia la partita",
@@ -928,7 +931,8 @@
     "funding": "Come si finanzia TheLever",
     "credits": "Crediti e licenze",
     "legalNotice": "Note legali",
-    "outside": "{{name}} (si apre nel browser)"
+    "outside": "{{name}} (si apre nel browser)",
+    "contact": "Contatti e segnalazioni"
   },
   "credits": {
     "title": "Crediti e licenze",
@@ -979,5 +983,84 @@
       "close": "No, grazie"
     },
     "line": "Vi è piaciuto? Sostieni TheLever"
+  },
+  "playerMenu": {
+    "open": "{{name}}. Tocca per le opzioni",
+    "report": "Segnala il nickname",
+    "expel": "Espelli dalla stanza",
+    "note": "Nessuno del gruppo saprà che l’hai segnalato."
+  },
+  "moderationNotice": {
+    "reportTitle": "Abbiamo esaminato la tua segnalazione",
+    "aboutDilemma": "Sul dilemma «{{text}}», che hai segnalato il {{date}} come <strong>{{reason}}</strong>:",
+    "aboutNickname": "Sul nickname «{{nickname}}», che hai segnalato il {{date}} come <strong>{{reason}}</strong>:",
+    "withdrawnDilemma": "L’abbiamo rimosso dal catalogo.",
+    "withdrawnNickname": "L’abbiamo rimosso.",
+    "kept": "Lo manteniamo: non viola né le condizioni d’uso né la legge.",
+    "rule": "Abbiamo applicato la sezione {{rule}} delle condizioni d’uso. Ha deciso una persona del team.",
+    "appeal": "Se non sei d’accordo, puoi presentare reclamo da Impostazioni → Contatti e segnalazioni.",
+    "understood": "Capito",
+    "nicknameTitle": "Abbiamo rimosso il tuo nickname",
+    "nicknameWhat": "Il tuo nickname «{{nickname}}»:",
+    "reasonLabel": "Motivo:",
+    "factsLabel": "Fatti:",
+    "ruleLabel": "Regola:",
+    "ruleValue": "sezione {{rule}} delle condizioni d’uso.",
+    "whoLabel": "Chi ha deciso:",
+    "whoValue": "una persona del team, dopo una segnalazione.",
+    "nicknameEffect": "Nelle stanze aperte ora appari con un nickname generico, e per entrare in un’altra stanza dovrai scriverne uno nuovo.",
+    "reasons": {
+      "offensive": "offensivo",
+      "confusing": "confuso",
+      "mistranslated": "tradotto male",
+      "impersonation": "sostituzione di persona",
+      "illegal": "forse illegale",
+      "other": "altro motivo"
+    },
+    "reasonSentences": {
+      "offensive": "è offensivo.",
+      "confusing": "è confuso.",
+      "mistranslated": "è tradotto male.",
+      "impersonation": "si spaccia per un’altra persona.",
+      "illegal": "potrebbe essere illegale.",
+      "other": "viola le condizioni d’uso."
+    }
+  },
+  "contact": {
+    "title": "Contatti e segnalazioni",
+    "writeTitle": "Scrivici",
+    "writeText": "Per i tuoi dati, le tue segnalazioni o qualsiasi altra cosa. È anche il punto di contatto per utenti e autorità ai sensi del regolamento sui servizi digitali. Rispondiamo in spagnolo e in inglese.",
+    "copy": "Copia l’email",
+    "copied": "Email copiata",
+    "reportTitle": "Segnalare contenuti illegali",
+    "reportText": "Chiunque può segnalarli con il modulo web, senza l’app. Durante la partita puoi segnalare anche dal menu «⋮» o toccando l’avatar di qualcuno.",
+    "openForm": "Apri il modulo di segnalazione",
+    "appealTitle": "Contestare una decisione",
+    "appealText": "Se non sei d’accordo con quanto deciso su una segnalazione o sul tuo nickname, scrivi a questo indirizzo e lo esamineremo di nuovo."
+  },
+  "illegalNotice": {
+    "title": "Segnalare contenuti illegali",
+    "intro": "Non serve l’app. Se giochi, puoi segnalare anche dalla partita.",
+    "reference": "Link o codice del dilemma, oppure la stanza e il nickname",
+    "referencePlaceholder": "thelever.app/it/…",
+    "explanation": "Perché pensi che sia illegale",
+    "explanationPlaceholder": "Spiega quale norma pensi che violi e perché",
+    "name": "Il tuo nome (facoltativo)",
+    "namePlaceholder": "Puoi segnalare in forma anonima",
+    "email": "La tua email (facoltativa)",
+    "emailPlaceholder": "Per dirti cosa abbiamo deciso",
+    "goodFaith": "Dichiaro in buona fede che le informazioni sono esatte e complete.",
+    "send": "Invia segnalazione",
+    "sending": "Invio…",
+    "note": "Riceverai una conferma di ricezione e, se lasci la tua email, la decisione e come presentare reclamo.",
+    "invalid": "Controlla quello che hai scritto: il contenuto e il motivo sono obbligatori e l’email deve essere valida.",
+    "tooMany": "Oggi hai già inviato molte segnalazioni. Torna domani o scrivi a privacidad@thelever.app.",
+    "failed": "Invio non riuscito. Riprova.",
+    "receivedTitle": "Abbiamo ricevuto la tua segnalazione",
+    "receivedText": "Una persona del team la esaminerà.",
+    "receivedEmail": "Ti scriveremo all’email che hai lasciato con la decisione e come presentare reclamo.",
+    "receivedNoEmail": "Non avendo lasciato un’email, non potremo dirti cosa abbiamo deciso.",
+    "authorities": "Se vedi una minaccia grave o urgente per qualcuno, avvisa anche le autorità.",
+    "another": "Invia un’altra segnalazione"
   }
 }
