@@ -5,6 +5,11 @@ export interface ModeratedDilemmas {
    * none, such as a room and a nickname.
    */
   dilemmaOf(reference: string): Promise<string | null>;
+  /**
+   * The dilemmas that hiding, restoring and withdrawing it reach: itself and, with a dilemma of the
+   * curated catalog, the original and every translation.
+   */
+  familyOf(dilemmaId: string): Promise<readonly string[]>;
   /** Its text, for the issue and for whoever reported it; null if there is no such dilemma. */
   textOf(dilemmaId: string): Promise<string | null>;
   /** Out of new games, with its translations, until the team decides. */

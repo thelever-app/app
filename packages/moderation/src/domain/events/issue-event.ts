@@ -12,5 +12,5 @@ export type IssueEvent =
   | { readonly type: 'hidden' }
   /** A notice with an email: its acknowledgement of receipt is sent to it. */
   | { readonly type: 'acknowledged'; readonly entryId: string }
-  /** The team decided: whoever sent a notice with an email gets the decision. */
-  | { readonly type: 'decided' };
+  /** The team decided: that notice had an email, and the decision goes to it. */
+  | { readonly type: 'decided'; readonly entryId: string };

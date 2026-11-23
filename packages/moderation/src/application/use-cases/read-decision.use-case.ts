@@ -56,10 +56,17 @@ function firstReports(issue: Issue): Map<string, { reason: ReportReason; reporte
   return first;
 }
 
-/** The reason most players reported the nickname for, the first one on a tie. */
+/**
+ * The reason most reported the nickname for, the first one on a tie; a notice of the web form
+ * says it is illegal.
+ */
 function mostReported(issue: Issue): ReportReason {
+  const { nicknameReports, notices } = issue.toSnapshot();
   const counts = new Map<ReportReason, number>();
-  for (const { reason } of issue.toSnapshot().nicknameReports) {
+  for (const reason of [
+    ...nicknameReports.map(({ reason }) => reason),
+    ...notices.map((): ReportReason => 'illegal'),
+  ]) {
     counts.set(reason, (counts.get(reason) ?? 0) + 1);
   }
   return [...counts].reduce((most, entry) => (entry[1] > most[1] ? entry : most))[0];
@@ -110,7 +117,14 @@ export class ReadDecisionUseCase {
     if (!issue || issue.decision || issue.number === null) return;
     const tracked = await this.#tracker.read(issue.number);
     if (!tracked.closed) return;
-    const read = decisionIn(tracked);
+    const found = decisionIn(tracked);
+    // A notice that points to no dilemma has nothing the job can withdraw.
+    const read =
+      typeof found !== 'string' &&
+      found.outcome === 'withdrawn' &&
+      issue.content.kind === 'reference'
+        ? 'nothing-to-withdraw'
+        : found;
     if (typeof read === 'string') {
       await this.#tracker.comment(issue.number, PROBLEM_COMMENTS[read]);
       await this.#tracker.reopen(issue.number);
@@ -129,7 +143,9 @@ export class ReadDecisionUseCase {
     switch (content.kind) {
       case 'dilemma': {
         if (decision.outcome === 'withdrawn') await this.#dilemmas.withdraw(content.dilemmaId);
-        else if (hidden) await this.#dilemmas.restore(content.dilemmaId);
+        else if (hidden && !(await this.#hiddenByAnother(content.dilemmaId))) {
+          await this.#dilemmas.restore(content.dilemmaId);
+        }
         const text = (await this.#dilemmas.textOf(content.dilemmaId)) ?? content.dilemmaId;
         reported = { kind: 'dilemma', text };
         break;
@@ -175,5 +191,19 @@ export class ReadDecisionUseCase {
     }
     await this.#issues.save(issue);
     await this.#outbox.add(issue.id, issue.pullEvents());
+  }
+
+  /**
+   * Whether the reports of another dilemma of its family, such as a translation, hide it too until
+   * the team decides on them: restoring it would bring all of them back.
+   */
+  async #hiddenByAnother(dilemmaId: string): Promise<boolean> {
+    for (const other of await this.#dilemmas.familyOf(dilemmaId)) {
+      if (other === dilemmaId) continue;
+      if ((await this.#issues.undecidedOf({ kind: 'dilemma', dilemmaId: other }))?.hidden) {
+        return true;
+      }
+    }
+    return false;
   }
 }

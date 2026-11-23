@@ -257,7 +257,36 @@ describe('Issue', () => {
     // Assert
     expect(issue.toSnapshot().decision).toEqual(DECISION);
     expect(issue.reporters()).toEqual(['Test1', 'Test2']);
-    expect(issue.pullEvents()).toEqual([{ type: 'decided' }]);
+  });
+
+  it('should send the decision to each notice with an email apart, so none gets it twice', () => {
+    // Arrange
+    const issue = Issue.openWith('TestIssue', DILEMMA, notice({ email: 'test1@example.com' }), AT);
+    issue.receive(notice({ id: 'TestNotice2' }));
+    issue.receive(notice({ id: 'TestNotice3', email: 'test3@example.com' }));
+    issue.pullEvents();
+
+    // Act
+    issue.decide(DECISION);
+
+    // Assert
+    expect(issue.pullEvents()).toEqual([
+      { type: 'decided', entryId: 'TestNotice' },
+      { type: 'decided', entryId: 'TestNotice3' },
+    ]);
+  });
+
+  it('should take one report of a nickname from each player', () => {
+    // Arrange
+    const issue = Issue.openWith('TestIssue', NICKNAME, nicknameReport(), AT);
+    issue.pullEvents();
+
+    // Act
+    issue.receive(nicknameReport({ id: 'TestNicknameReport2', reason: 'other' }));
+
+    // Assert
+    expect(issue.toSnapshot().nicknameReports.map(({ id }) => id)).toEqual(['TestNicknameReport']);
+    expect(issue.pullEvents()).toEqual([]);
   });
 
   it('should not be decided twice', () => {

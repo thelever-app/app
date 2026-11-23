@@ -49,14 +49,19 @@ export function describeOutboxContract(name: string, create: () => Promise<Outbo
         outbox,
         issueIds: [issueId],
       } = await create();
-      await outbox.add(issueId, [{ type: 'opened', entryId: 'TestReport' }, { type: 'decided' }]);
+      await outbox.add(issueId, [
+        { type: 'opened', entryId: 'TestReport' },
+        { type: 'decided', entryId: 'TestNotice' },
+      ]);
       const [sent] = await outbox.pending();
 
       // Act
       await outbox.sent(sent!.id);
 
       // Assert
-      expect((await outbox.pending()).map(({ event }) => event)).toEqual([{ type: 'decided' }]);
+      expect((await outbox.pending()).map(({ event }) => event)).toEqual([
+        { type: 'decided', entryId: 'TestNotice' },
+      ]);
     });
   });
 }

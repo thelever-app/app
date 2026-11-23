@@ -107,7 +107,10 @@ export class Issue {
     return this.#decision;
   }
 
-  /** A later report or notice of the same content; enough reports hide a dilemma. */
+  /**
+   * A later report or notice of the same content; enough reports hide a dilemma. A player reports a
+   * nickname once: another report of theirs adds nothing.
+   */
   receive(entry: Entry): void {
     if (this.#decision) throw new IssueAlreadyDecidedError(this.#id);
     this.#add(entry, 'received');
@@ -129,7 +132,9 @@ export class Issue {
   decide(decision: Decision): void {
     if (this.#decision) throw new IssueAlreadyDecidedError(this.#id);
     this.#decision = decision;
-    this.#events.push({ type: 'decided' });
+    for (const notice of this.#notices) {
+      if (notice.email !== null) this.#events.push({ type: 'decided', entryId: notice.id });
+    }
   }
 
   /** The players who reported it, once each, in the order they first did: the decision goes to them. */
@@ -173,9 +178,9 @@ export class Issue {
       if (content.kind !== 'nickname' || content.nickname !== nickname || content.owner !== owner) {
         throw new ContentMismatchError(this.#id, entry.id);
       }
+      if (this.#nicknameReports.some(({ identity }) => identity === entry.identity)) return;
       this.#nicknameReports.push(entry);
     } else {
-      if (content.kind === 'nickname') throw new ContentMismatchError(this.#id, entry.id);
       this.#notices.push(entry);
     }
     this.#events.push({ type, entryId: entry.id });

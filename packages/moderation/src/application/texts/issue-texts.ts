@@ -67,7 +67,7 @@ export function issueBody(content: IssueContent, text: string | null, first: Ent
       case 'nickname':
         return `Apodo de un jugador:\n\n${quoted(content.nickname)}`;
       case 'reference':
-        return `Una denuncia que no apunta a ningún dilema del catálogo. Lo que escribió quien la envió:\n\n${quoted(content.reference)}`;
+        return `Una denuncia que no apunta a ningún dilema del catálogo ni al apodo de un jugador de una sala que se conserve. Lo que escribió quien la envió:\n\n${quoted(content.reference)}`;
     }
   })();
   return [
@@ -86,7 +86,8 @@ export const HIDDEN_COMMENT =
   'Oculto de las partidas nuevas: lo han reportado 3 jugadores distintos. Con `restore` o `keep` vuelve a las partidas; con `withdraw` se retira.';
 
 /** Why the job did not apply what the team did when closing the issue, and what to do. */
-export type DecisionProblem = 'no-decision' | 'several-decisions' | 'no-reasons';
+export type DecisionProblem =
+  'no-decision' | 'several-decisions' | 'no-reasons' | 'nothing-to-withdraw';
 
 export const PROBLEM_COMMENTS: Readonly<Record<DecisionProblem, string>> = {
   'no-decision':
@@ -95,4 +96,6 @@ export const PROBLEM_COMMENTS: Readonly<Record<DecisionProblem, string>> = {
     'Lo he vuelto a abrir: tiene más de una etiqueta de decisión. Deja solo una de `withdraw`, `restore` y `keep` y ciérralo otra vez.',
   'no-reasons':
     'Lo he vuelto a abrir: falta el comentario con la motivación. Escribe uno con una línea `Hechos:` y otra `Regla:` y ciérralo otra vez.',
+  'nothing-to-withdraw':
+    'Lo he vuelto a abrir: esta denuncia no apunta a un dilema del catálogo ni a un apodo de una sala que se conserve, así que no hay nada que yo pueda retirar. Cámbiala a `keep`, explica en `Hechos:` qué encontraste y ciérralo otra vez: a quien la envió le diremos que no lo hemos encontrado.',
 };

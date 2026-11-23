@@ -10,14 +10,16 @@ interface EmailTexts {
   readonly locale: string;
   readonly hello: string;
   readonly receivedSubject: (number: number) => string;
-  readonly received: (date: string, reference: string) => string;
+  readonly received: (date: string) => string;
   readonly review: string;
   readonly authorities: string;
   readonly decidedSubject: (number: number) => string;
-  readonly decided: (date: string, reference: string) => string;
+  readonly decided: (date: string) => string;
   readonly decision: string;
   readonly withdrawn: string;
   readonly kept: string;
+  /** Kept, as said of a notice that points to nothing the team could find. */
+  readonly notFound: string;
   readonly reason: string;
   readonly ruleLabel: string;
   readonly rule: (rule: string) => string;
@@ -29,21 +31,24 @@ interface EmailTexts {
 
 // The texts of the two emails of a notice (artboards I and J of CU-08), in every language of the
 // app: drafts of Claude, waiting for the lawyer like the rest of the texts of notices.
+// Nothing the sender wrote goes in them, only the number and the date of the notice: the form
+// would otherwise send any text, from the domain, to any address.
 const TEXTS: Readonly<Record<Language, EmailTexts>> = {
   es: {
     locale: 'es-ES',
     hello: 'Hola:',
     receivedSubject: (number) => `Hemos recibido tu denuncia n.º ${number}`,
-    received: (date, reference) => `Hemos recibido tu denuncia del ${date} sobre «${reference}».`,
+    received: (date) => `Hemos recibido tu denuncia del ${date}.`,
     review:
       'Una persona del equipo la revisará. Cuando decidamos, te escribiremos a este email con la decisión, el motivo y cómo reclamar si no estás de acuerdo.',
     authorities:
       'Si ves una amenaza grave o urgente para alguien, avisa también a las autoridades.',
     decidedSubject: (number) => `Decisión sobre tu denuncia n.º ${number}`,
-    decided: (date, reference) => `Hemos revisado tu denuncia del ${date} sobre «${reference}».`,
+    decided: (date) => `Hemos revisado tu denuncia del ${date}.`,
     decision: 'Decisión',
     withdrawn: 'lo hemos retirado.',
     kept: 'lo mantenemos, porque no incumple las condiciones de uso ni la ley.',
+    notFound: 'no hemos encontrado ese contenido en TheLever, así que no hay nada que retirar.',
     reason: 'Motivo',
     ruleLabel: 'Regla',
     rule: (rule) => `apartado ${rule} de las condiciones de uso.`,
@@ -57,15 +62,16 @@ const TEXTS: Readonly<Record<Language, EmailTexts>> = {
     locale: 'en-GB',
     hello: 'Hello,',
     receivedSubject: (number) => `We have received your notice no. ${number}`,
-    received: (date, reference) => `We have received your notice of ${date} about “${reference}”.`,
+    received: (date) => `We have received your notice of ${date}.`,
     review:
       'A person on the team will review it. When we decide, we will write to this email with the decision, the reason and how to appeal if you disagree.',
     authorities: 'If you see a serious or urgent threat to someone, tell the authorities too.',
     decidedSubject: (number) => `Decision on your notice no. ${number}`,
-    decided: (date, reference) => `We have reviewed your notice of ${date} about “${reference}”.`,
+    decided: (date) => `We have reviewed your notice of ${date}.`,
     decision: 'Decision',
     withdrawn: 'we have withdrawn it.',
     kept: 'we are keeping it, because it breaks neither the terms of use nor the law.',
+    notFound: 'we have not found that content on TheLever, so there is nothing to withdraw.',
     reason: 'Reason',
     ruleLabel: 'Rule',
     rule: (rule) => `section ${rule} of the terms of use.`,
@@ -79,18 +85,17 @@ const TEXTS: Readonly<Record<Language, EmailTexts>> = {
     locale: 'fr-FR',
     hello: 'Bonjour,',
     receivedSubject: (number) => `Nous avons reçu votre signalement n° ${number}`,
-    received: (date, reference) =>
-      `Nous avons reçu votre signalement du ${date} concernant « ${reference} ».`,
+    received: (date) => `Nous avons reçu votre signalement du ${date}.`,
     review:
       'Une personne de l’équipe l’examinera. Une fois la décision prise, nous vous écrirons à cette adresse avec la décision, le motif et la façon de la contester si vous n’êtes pas d’accord.',
     authorities:
       'Si vous voyez une menace grave ou urgente pour quelqu’un, prévenez aussi les autorités.',
     decidedSubject: (number) => `Décision sur votre signalement n° ${number}`,
-    decided: (date, reference) =>
-      `Nous avons examiné votre signalement du ${date} concernant « ${reference} ».`,
+    decided: (date) => `Nous avons examiné votre signalement du ${date}.`,
     decision: 'Décision',
     withdrawn: 'nous l’avons retiré.',
     kept: 'nous le maintenons, car il n’enfreint ni les conditions d’utilisation ni la loi.',
+    notFound: 'nous n’avons pas trouvé ce contenu sur TheLever, il n’y a donc rien à retirer.',
     reason: 'Motif',
     ruleLabel: 'Règle',
     rule: (rule) => `article ${rule} des conditions d’utilisation.`,
@@ -104,17 +109,18 @@ const TEXTS: Readonly<Record<Language, EmailTexts>> = {
     locale: 'de-DE',
     hello: 'Hallo,',
     receivedSubject: (number) => `Wir haben deine Meldung Nr. ${number} erhalten`,
-    received: (date, reference) =>
-      `Wir haben deine Meldung vom ${date} zu „${reference}“ erhalten.`,
+    received: (date) => `Wir haben deine Meldung vom ${date} erhalten.`,
     review:
       'Eine Person aus dem Team prüft sie. Sobald wir entschieden haben, schreiben wir dir an diese Adresse mit der Entscheidung, dem Grund und wie du widersprechen kannst.',
     authorities:
       'Wenn du eine ernste oder dringende Gefahr für jemanden siehst, informiere auch die Behörden.',
     decidedSubject: (number) => `Entscheidung zu deiner Meldung Nr. ${number}`,
-    decided: (date, reference) => `Wir haben deine Meldung vom ${date} zu „${reference}“ geprüft.`,
+    decided: (date) => `Wir haben deine Meldung vom ${date} geprüft.`,
     decision: 'Entscheidung',
     withdrawn: 'wir haben ihn entfernt.',
     kept: 'wir behalten ihn, weil er weder gegen die Nutzungsbedingungen noch gegen das Gesetz verstößt.',
+    notFound:
+      'wir haben diesen Inhalt auf TheLever nicht gefunden, es gibt also nichts zu entfernen.',
     reason: 'Grund',
     ruleLabel: 'Regel',
     rule: (rule) => `Abschnitt ${rule} der Nutzungsbedingungen.`,
@@ -128,17 +134,17 @@ const TEXTS: Readonly<Record<Language, EmailTexts>> = {
     locale: 'it-IT',
     hello: 'Ciao,',
     receivedSubject: (number) => `Abbiamo ricevuto la tua segnalazione n. ${number}`,
-    received: (date, reference) =>
-      `Abbiamo ricevuto la tua segnalazione del ${date} su «${reference}».`,
+    received: (date) => `Abbiamo ricevuto la tua segnalazione del ${date}.`,
     review:
       'Una persona del team la esaminerà. Quando avremo deciso, ti scriveremo a questo indirizzo con la decisione, il motivo e come presentare reclamo se non sei d’accordo.',
     authorities: 'Se vedi una minaccia grave o urgente per qualcuno, avvisa anche le autorità.',
     decidedSubject: (number) => `Decisione sulla tua segnalazione n. ${number}`,
-    decided: (date, reference) =>
-      `Abbiamo esaminato la tua segnalazione del ${date} su «${reference}».`,
+    decided: (date) => `Abbiamo esaminato la tua segnalazione del ${date}.`,
     decision: 'Decisione',
     withdrawn: 'l’abbiamo rimosso.',
     kept: 'lo manteniamo, perché non viola né le condizioni d’uso né la legge.',
+    notFound:
+      'non abbiamo trovato questo contenuto su TheLever, quindi non c’è nulla da rimuovere.',
     reason: 'Motivo',
     ruleLabel: 'Regola',
     rule: (rule) => `sezione ${rule} delle condizioni d’uso.`,
@@ -152,15 +158,16 @@ const TEXTS: Readonly<Record<Language, EmailTexts>> = {
     locale: 'pt-PT',
     hello: 'Olá,',
     receivedSubject: (number) => `Recebemos a tua denúncia n.º ${number}`,
-    received: (date, reference) => `Recebemos a tua denúncia de ${date} sobre «${reference}».`,
+    received: (date) => `Recebemos a tua denúncia de ${date}.`,
     review:
       'Uma pessoa da equipa vai analisá-la. Quando decidirmos, escrevemos-te para este email com a decisão, o motivo e como reclamar se não concordares.',
     authorities: 'Se vires uma ameaça grave ou urgente para alguém, avisa também as autoridades.',
     decidedSubject: (number) => `Decisão sobre a tua denúncia n.º ${number}`,
-    decided: (date, reference) => `Analisámos a tua denúncia de ${date} sobre «${reference}».`,
+    decided: (date) => `Analisámos a tua denúncia de ${date}.`,
     decision: 'Decisão',
     withdrawn: 'retirámo-lo.',
     kept: 'mantemo-lo, porque não viola as condições de utilização nem a lei.',
+    notFound: 'não encontrámos esse conteúdo no TheLever, por isso não há nada a retirar.',
     reason: 'Motivo',
     ruleLabel: 'Regra',
     rule: (rule) => `secção ${rule} das condições de utilização.`,
@@ -174,15 +181,16 @@ const TEXTS: Readonly<Record<Language, EmailTexts>> = {
     locale: 'ca-ES',
     hello: 'Hola:',
     receivedSubject: (number) => `Hem rebut la teva denúncia núm. ${number}`,
-    received: (date, reference) => `Hem rebut la teva denúncia del ${date} sobre «${reference}».`,
+    received: (date) => `Hem rebut la teva denúncia del ${date}.`,
     review:
       'Una persona de l’equip la revisarà. Quan decidim, t’escriurem a aquest correu amb la decisió, el motiu i com reclamar si no hi estàs d’acord.',
     authorities: 'Si veus una amenaça greu o urgent per a algú, avisa també les autoritats.',
     decidedSubject: (number) => `Decisió sobre la teva denúncia núm. ${number}`,
-    decided: (date, reference) => `Hem revisat la teva denúncia del ${date} sobre «${reference}».`,
+    decided: (date) => `Hem revisat la teva denúncia del ${date}.`,
     decision: 'Decisió',
     withdrawn: 'l’hem retirat.',
     kept: 'el mantenim, perquè no incompleix les condicions d’ús ni la llei.',
+    notFound: 'no hem trobat aquest contingut a TheLever, així que no hi ha res a retirar.',
     reason: 'Motiu',
     ruleLabel: 'Regla',
     rule: (rule) => `apartat ${rule} de les condicions d’ús.`,
@@ -211,7 +219,7 @@ export function acknowledgementEmail(
     subject: texts.receivedSubject(number),
     text: [
       texts.hello,
-      texts.received(dateOf(notice.sentAt, texts.locale), notice.reference),
+      texts.received(dateOf(notice.sentAt, texts.locale)),
       texts.review,
       texts.authorities,
       texts.why,
@@ -219,11 +227,21 @@ export function acknowledgementEmail(
   };
 }
 
-/** The decision on a notice, with its reason, the rule and how to appeal. */
+function outcomeText(texts: EmailTexts, decision: Decision, located: boolean): string {
+  if (decision.outcome === 'withdrawn') return texts.withdrawn;
+  return located ? texts.kept : texts.notFound;
+}
+
+/**
+ * The decision on a notice, with its reason, the rule and how to appeal. `located`: whether the
+ * notice points to a content of TheLever; if not, keeping it says the team did not find it, never
+ * that it breaks no rule.
+ */
 export function decisionEmail(
   notice: IllegalContentNoticeSnapshot & { readonly email: string },
   number: number,
   decision: Decision,
+  located: boolean,
 ): Email {
   const texts = TEXTS[notice.language];
   return {
@@ -231,9 +249,9 @@ export function decisionEmail(
     subject: texts.decidedSubject(number),
     text: [
       texts.hello,
-      texts.decided(dateOf(notice.sentAt, texts.locale), notice.reference),
+      texts.decided(dateOf(notice.sentAt, texts.locale)),
       [
-        `${texts.decision}: ${decision.outcome === 'withdrawn' ? texts.withdrawn : texts.kept}`,
+        `${texts.decision}: ${outcomeText(texts, decision, located)}`,
         `${texts.reason}: ${decision.translatedFacts[notice.language]}`,
         `${texts.ruleLabel}: ${texts.rule(decision.rule)}`,
         `${texts.who}: ${texts.person}`,

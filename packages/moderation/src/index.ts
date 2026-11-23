@@ -69,6 +69,7 @@ export {
 } from './application/use-cases/receive-illegal-content-notice.use-case.ts';
 export {
   IssueNotFoundError,
+  SendingIssueEventFailedError,
   SendIssueEventUseCase,
 } from './application/use-cases/send-issue-event.use-case.ts';
 export {

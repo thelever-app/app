@@ -10,6 +10,7 @@ import type { ModeratedNicknames } from '../ports/moderated-nicknames.port.ts';
 /** Test data: the dilemmas Moderation can find, by id, with their text. */
 export const TEXTS: Readonly<Record<string, string>> = {
   TestDilemma: 'TestText of the dilemma',
+  'TestDilemma-en': 'TestText of the translation of the dilemma',
   TestOther: 'TestText of another dilemma',
 };
 
@@ -20,6 +21,10 @@ export class FakeDilemmas implements ModeratedDilemmas {
   async dilemmaOf(reference: string): Promise<string | null> {
     const number = /-(\d+)$/.exec(reference)?.[1];
     return number === '1' ? 'TestDilemma' : null;
+  }
+
+  async familyOf(dilemmaId: string): Promise<readonly string[]> {
+    return dilemmaId.startsWith('TestDilemma') ? ['TestDilemma', 'TestDilemma-en'] : [dilemmaId];
   }
 
   async textOf(dilemmaId: string): Promise<string | null> {
@@ -41,6 +46,15 @@ export class FakeDilemmas implements ModeratedDilemmas {
 
 export class FakeNicknames implements ModeratedNicknames {
   readonly withdrawn: string[] = [];
+
+  /** The room TESTS has a player called TestNickname, whose identity is TestOwner. */
+  async nicknameOf(
+    reference: string,
+  ): Promise<{ readonly nickname: string; readonly owner: string } | null> {
+    return reference.includes('TESTS') && reference.includes('TestNickname')
+      ? { nickname: 'TestNickname', owner: 'TestOwner' }
+      : null;
+  }
 
   async withdraw(owner: string, nickname: string): Promise<void> {
     this.withdrawn.push(`${owner} ${nickname}`);

@@ -6,7 +6,7 @@ import type { IssueRepository } from '../ports/issue-repository.port.ts';
 import type { IssueTracker } from '../ports/issue-tracker.port.ts';
 import type { Mailer } from '../ports/mailer.port.ts';
 import type { ModeratedDilemmas } from '../ports/moderated-dilemmas.port.ts';
-import type { Outbox } from '../ports/outbox.port.ts';
+import type { Outbox, PendingEvent } from '../ports/outbox.port.ts';
 import { acknowledgementEmail, decisionEmail } from '../texts/email-texts.ts';
 import {
   HIDDEN_COMMENT,
@@ -21,6 +21,17 @@ export class IssueNotFoundError extends Error {
   constructor(issueId: string) {
     super(`issue ${issueId} is not kept`);
     this.name = 'IssueNotFoundError';
+  }
+}
+
+/** Sending an event of that issue failed: the event stays in the outbox. */
+export class SendingIssueEventFailedError extends Error {
+  readonly issueId: string;
+
+  constructor(issueId: string, cause: unknown) {
+    super(`sending an event of issue ${issueId} failed`, { cause });
+    this.name = 'SendingIssueEventFailedError';
+    this.issueId = issueId;
   }
 }
 
@@ -43,7 +54,8 @@ function numberOf(issue: Issue): number {
 /**
  * Sends the oldest event of the outbox where it goes: the moderation repository, or the email of
  * whoever sent a notice. Run in a transaction of its own: if sending fails, the event stays and
- * the next run sends it again. Says whether there was one.
+ * the next run sends it again. Skips the events of the issues given, whose earlier events failed,
+ * since an event may need the ones before it. Says whether there was one.
  */
 export class SendIssueEventUseCase {
   readonly #issues: IssueRepository;
@@ -66,9 +78,19 @@ export class SendIssueEventUseCase {
     this.#dilemmas = ports.dilemmas;
   }
 
-  async execute(): Promise<boolean> {
-    const [pending] = await this.#outbox.pending();
+  async execute(skipping: ReadonlySet<string> = new Set()): Promise<boolean> {
+    const pending = (await this.#outbox.pending()).find(({ issueId }) => !skipping.has(issueId));
     if (!pending) return false;
+    try {
+      await this.#send(pending);
+    } catch (cause) {
+      throw new SendingIssueEventFailedError(pending.issueId, cause);
+    }
+    await this.#outbox.sent(pending.id);
+    return true;
+  }
+
+  async #send(pending: PendingEvent): Promise<void> {
     const issue = await this.#issues.findById(pending.issueId);
     if (!issue) throw new IssueNotFoundError(pending.issueId);
     const { event } = pending;
@@ -109,16 +131,19 @@ export class SendIssueEventUseCase {
       case 'decided': {
         const { decision } = issue;
         if (!decision) throw new Error(`issue ${issue.id} is not decided`);
-        for (const notice of issue.toSnapshot().notices) {
-          if (notice.email === null) continue;
+        const notice = entryOf(issue, event.entryId).toSnapshot();
+        if ('email' in notice && notice.email !== null) {
           await this.#mailer.send(
-            decisionEmail({ ...notice, email: notice.email }, numberOf(issue), decision),
+            decisionEmail(
+              { ...notice, email: notice.email },
+              numberOf(issue),
+              decision,
+              issue.content.kind !== 'reference',
+            ),
           );
         }
         break;
       }
     }
-    await this.#outbox.sent(pending.id);
-    return true;
   }
 }

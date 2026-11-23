@@ -174,6 +174,30 @@ describe('Moderation, from a report to the decision', () => {
     expect(dilemmas.done).toEqual(['hide TestDilemma', 'restore TestDilemma']);
   });
 
+  it('should keep a dilemma hidden while the reports of a translation of it hide it too', async () => {
+    // Arrange
+    const { reportDilemma, sync, tracker, dilemmas } = setUp();
+    for (const identity of ['Test1', 'Test2', 'Test3']) await reportDilemma(identity);
+    for (const identity of ['Test4', 'Test5', 'Test6']) {
+      await reportDilemma(identity, { dilemmaId: 'TestDilemma-en' });
+    }
+    await sync();
+    tracker.decide(1, { label: 'keep', comment: REASONS });
+    await sync();
+    expect(dilemmas.done).toEqual(['hide TestDilemma', 'hide TestDilemma-en']);
+    tracker.decide(2, { label: 'keep', comment: REASONS });
+
+    // Act
+    await sync();
+
+    // Assert
+    expect(dilemmas.done).toEqual([
+      'hide TestDilemma',
+      'hide TestDilemma-en',
+      'restore TestDilemma-en',
+    ]);
+  });
+
   it('should open a new issue for a report after the decision', async () => {
     // Arrange
     const { reportDilemma, sync, tracker } = setUp();
@@ -248,6 +272,20 @@ describe('Moderation, from a report to the decision', () => {
       outcome: 'withdrawn',
     });
     expect(await notices.unseenOf('Test1')).toHaveLength(1);
+  });
+
+  it('should take one report of a nickname from each player', async () => {
+    // Arrange
+    const { reportNickname, sync, tracker } = setUp();
+    await reportNickname('Test1');
+    await sync();
+
+    // Act
+    await reportNickname('Test1');
+    await sync();
+
+    // Assert
+    expect(tracker.issues()[0]?.comments).toEqual([]);
   });
 
   it('should leave a kept nickname as it is, and tell only who reported it', async () => {
@@ -335,6 +373,127 @@ describe('Moderation, from a report to the decision', () => {
       expect.stringContaining('Sala ABCD, apodo TestNickname'),
       expect.stringContaining('Sala ABCD, apodo TestNickname'),
     ]);
+  });
+
+  it('should put a notice of a room and a nickname on the issue of that nickname, and withdraw it', async () => {
+    // Arrange
+    const { sendNotice, sync, tracker, nicknames, notices, mailer } = setUp();
+    await sendNotice({ reference: 'Sala TESTS, el apodo TestNickname' });
+    await sync();
+    tracker.decide(1, { label: 'withdraw', comment: REASONS });
+
+    // Act
+    await sync();
+
+    // Assert
+    expect(tracker.issues()).toHaveLength(1);
+    expect(tracker.issues()[0]?.body).toContain('Apodo de un jugador');
+    expect(nicknames.withdrawn).toEqual(['TestOwner TestNickname']);
+    const [notice] = await notices.unseenOf('TestOwner');
+    expect(notice?.toSnapshot().subject).toMatchObject({ kind: 'nickname', reason: 'illegal' });
+    expect(mailer.sent().at(-1)?.text).toContain('lo hemos retirado.');
+  });
+
+  it('should put a notice of a nickname on the issue of its reports', async () => {
+    // Arrange
+    const { sendNotice, reportNickname, sync, tracker } = setUp();
+    await reportNickname('Test1');
+    await sync();
+
+    // Act
+    await sendNotice({ reference: 'Sala TESTS, el apodo TestNickname' });
+    await sync();
+
+    // Assert
+    expect(tracker.issues()).toHaveLength(1);
+    expect(tracker.issues()[0]?.comments).toEqual([
+      expect.stringContaining('Denuncia desde el formulario web'),
+    ]);
+  });
+
+  it('should tell whoever sent a notice that names nothing found that the team did not find it', async () => {
+    // Arrange
+    const { sendNotice, sync, tracker, mailer } = setUp();
+    await sendNotice({ reference: 'Sala ABCDE, apodo TestNickname' });
+    await sync();
+    tracker.decide(1, { label: 'keep', comment: REASONS });
+
+    // Act
+    await sync();
+
+    // Assert
+    const decision = mailer.sent().at(-1)?.text;
+    expect(decision).toContain('no hemos encontrado ese contenido en TheLever');
+    expect(decision).not.toContain('no incumple');
+  });
+
+  it('should open again a notice that names no dilemma closed as withdrawn, and send no decision', async () => {
+    // Arrange
+    const { sendNotice, sync, tracker, mailer } = setUp();
+    await sendNotice({ reference: 'Sala ABCD, apodo TestNickname' });
+    await sync();
+    tracker.decide(1, { label: 'withdraw', comment: REASONS });
+
+    // Act
+    await sync();
+
+    // Assert
+    const [issue] = tracker.issues();
+    expect(issue?.closed).toBe(false);
+    expect(issue?.comments.at(-1)).toContain('no hay nada que yo pueda retirar');
+    expect(mailer.sent().map(({ subject }) => subject)).toEqual([
+      'Hemos recibido tu denuncia n.º 1',
+    ]);
+  });
+
+  it('should put nothing the sender wrote in the emails', async () => {
+    // Arrange
+    const { sendNotice, sync, tracker, mailer } = setUp();
+    await sendNotice({ reference: 'TestSpam https://spam.test' });
+    await sync();
+    tracker.decide(1, { label: 'keep', comment: REASONS });
+
+    // Act
+    await sync();
+
+    // Assert
+    expect(mailer.sent()).toHaveLength(2);
+    expect(JSON.stringify(mailer.sent())).not.toContain('TestSpam');
+  });
+
+  it('should send the events of the issues not skipped', async () => {
+    // Arrange
+    const ports = setUp();
+    await ports.reportDilemma('Test1');
+    await ports.reportDilemma('Test2', { dilemmaId: 'TestOther' });
+    const [first] = await ports.outbox.pending();
+
+    // Act
+    await new SendIssueEventUseCase(ports).execute(new Set([first!.issueId]));
+
+    // Assert
+    expect(ports.tracker.issues().map(({ body }) => body)).toEqual([
+      expect.stringContaining('TestOther'),
+    ]);
+  });
+
+  it('should say which issue an event that fails to send is of', async () => {
+    // Arrange
+    const ports = setUp();
+    await ports.reportDilemma('Test1');
+    const [first] = await ports.outbox.pending();
+    const send = new SendIssueEventUseCase({
+      ...ports,
+      tracker: Object.assign(ports.tracker, {
+        open: async () => {
+          throw new Error('TestFailure');
+        },
+      }),
+    });
+
+    // Act & Assert
+    await expect(send.execute()).rejects.toMatchObject({ issueId: first!.issueId });
+    expect(await ports.outbox.pending()).toHaveLength(1);
   });
 
   it(`should take no more than ${MAXIMUM_NOTICES_PER_DAY} notices a day from one identity`, async () => {
