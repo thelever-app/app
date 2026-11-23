@@ -122,6 +122,80 @@ describe(`Migration ${THIS}`, () => {
     ]);
   });
 
+  it('should hide, with its translations, a dilemma 3 different players had reported', async () => {
+    // Arrange
+    const db = await databaseAt(BEFORE);
+    await reportedDilemmas(db);
+    for (const identity of ['TestIdentity2', 'TestIdentity3']) {
+      await sql`
+        insert into dilemma_reports (id, dilemma_id, version, reason, comment, identity,
+          reported_at)
+        values (${`TestReportOf${identity}`}, 'dlm-7', 1, 'offensive', null, ${identity},
+          '2026-11-21T13:00:00Z')
+      `.execute(db);
+    }
+
+    // Act
+    await migrateTo(db, THIS);
+
+    // Assert
+    const issues = await db
+      .selectFrom('moderation_issues')
+      .select(['id', 'hidden'])
+      .orderBy('id')
+      .execute();
+    expect(issues).toEqual([
+      { id: 'migrated-dlm-7', hidden: true },
+      { id: 'migrated-dlm-7-en', hidden: false },
+    ]);
+    const dilemmas = await db
+      .selectFrom('dilemmas')
+      .innerJoin('dilemma_versions', 'dilemma_versions.dilemma_id', 'dilemmas.id')
+      .select(['id', 'status', 'moderation', 'moderation_status_before'])
+      .orderBy('id')
+      .execute();
+    expect(dilemmas).toEqual([
+      {
+        id: 'dlm-7',
+        status: 'hidden-by-reports',
+        moderation: 'hidden-by-reports',
+        moderation_status_before: 'in-catalog',
+      },
+      {
+        id: 'dlm-7-en',
+        status: 'hidden-by-reports',
+        moderation: 'hidden-by-reports',
+        moderation_status_before: 'in-catalog',
+      },
+    ]);
+    const outbox = await db
+      .selectFrom('moderation_outbox')
+      .select('event')
+      .where('issue_id', '=', 'migrated-dlm-7')
+      .orderBy('id')
+      .execute();
+    expect(outbox.map(({ event }) => event.type)).toEqual([
+      'opened',
+      'received',
+      'received',
+      'received',
+      'hidden',
+    ]);
+  });
+
+  it('should hide no dilemma that fewer than 3 different players had reported', async () => {
+    // Arrange
+    const db = await databaseAt(BEFORE);
+    await reportedDilemmas(db);
+
+    // Act
+    await migrateTo(db, THIS);
+
+    // Assert
+    const dilemmas = await db.selectFrom('dilemmas').select('moderation').execute();
+    expect(dilemmas).toEqual([{ moderation: null }, { moderation: null }]);
+  });
+
   it('should take a dilemma reported as possibly illegal from now on', async () => {
     // Arrange
     const db = await databaseAt(BEFORE);

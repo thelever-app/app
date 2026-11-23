@@ -4,7 +4,7 @@ import {
   type IssueRepository,
   type IssueSnapshot,
 } from '@thelever-app/moderation';
-import type { Kysely, Selectable, Transaction } from 'kysely';
+import { type Kysely, type Selectable, sql, type Transaction } from 'kysely';
 import type { ModerationTables } from '../schema.ts';
 import { currentTransaction } from '../transaction.ts';
 
@@ -21,10 +21,22 @@ function contentOf(row: IssueRow): IssueContent {
   }
 }
 
+/** The key that makes the commands on the undecided issue of a content wait for each other. */
+function lockKeyOf(content: Exclude<IssueContent, { kind: 'reference' }>): string {
+  return content.kind === 'dilemma'
+    ? `moderation dilemma ${content.dilemmaId}`
+    : `moderation nickname ${content.owner} ${content.nickname}`;
+}
+
 /**
  * The issues, one row each, with their reports and notices in tables of their own. Saved in the
  * transaction of the command, with the outbox, so what the issue still has to tell is never lost
  * nor told twice. Nothing of an issue is ever deleted here: it is kept 3 years.
+ *
+ * Two commands may change an issue at once: a report while the job takes it to the repository or
+ * reads its decision. What the commands change of the row only ever goes one way (a number, hidden,
+ * a decision), so saving keeps what another command saved first. And the reports of one content wait
+ * for each other, so the second sees the issue the first opened and counts its reporters.
  */
 export class PostgresIssueRepository implements IssueRepository {
   readonly #db: Kysely<ModerationTables>;
@@ -46,6 +58,10 @@ export class PostgresIssueRepository implements IssueRepository {
 
   async undecidedOf(content: IssueContent): Promise<Issue | undefined> {
     if (content.kind === 'reference') return undefined;
+    // Until the transaction of the command ends.
+    await sql`select pg_advisory_xact_lock(hashtextextended(${lockKeyOf(content)}, 0))`.execute(
+      currentTransaction<ModerationTables>() ?? this.#db,
+    );
     const [issue] = await this.#issues({ undecided: true, content });
     return issue;
   }
@@ -192,7 +208,17 @@ export class PostgresIssueRepository implements IssueRepository {
         opened_at: snapshot.openedAt,
         ...changing,
       })
-      .onConflict((conflict) => conflict.column('id').doUpdateSet(changing))
+      .onConflict((conflict) =>
+        conflict.column('id').doUpdateSet({
+          number: sql`coalesce(moderation_issues.number, excluded.number)`,
+          hidden: sql`moderation_issues.hidden or excluded.hidden`,
+          outcome: sql`coalesce(moderation_issues.outcome, excluded.outcome)`,
+          facts: sql`coalesce(moderation_issues.facts, excluded.facts)`,
+          translated_facts: sql`coalesce(moderation_issues.translated_facts, excluded.translated_facts)`,
+          rule: sql`coalesce(moderation_issues.rule, excluded.rule)`,
+          decided_at: sql`coalesce(moderation_issues.decided_at, excluded.decided_at)`,
+        }),
+      )
       .execute();
     // Reports and notices never change: only the new ones are added.
     if (snapshot.dilemmaReports.length > 0) {
