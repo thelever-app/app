@@ -8,7 +8,8 @@
   "type": "module",
   "exports": {
     "./game": "./src/game/index.ts",
-    "./first-access": "./src/first-access/index.ts"
+    "./first-access": "./src/first-access/index.ts",
+    "./moderation": "./src/moderation/index.ts"
   },
   "dependencies": {
     "@thelever-app/consent": "workspace:*",
