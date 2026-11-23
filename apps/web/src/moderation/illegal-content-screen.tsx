@@ -1,4 +1,4 @@
-import { useActionState } from 'react';
+import { startTransition, useActionState, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SubmitButton } from '../components/submit-button.tsx';
 import { deviceLanguage } from '../i18n/i18n.ts';
@@ -15,6 +15,26 @@ type Sent =
   | { readonly step: 'received'; readonly withEmail: boolean };
 
 /**
+ * What the person writes, kept by the screen and sent from it, not from the form: React empties a
+ * form after its action, and the person would lose it all when sending fails.
+ */
+interface Written {
+  readonly reference: string;
+  readonly explanation: string;
+  readonly name: string;
+  readonly email: string;
+  readonly goodFaith: boolean;
+}
+
+const NOTHING_WRITTEN: Written = {
+  reference: '',
+  explanation: '',
+  name: '',
+  email: '',
+  goodFaith: false,
+};
+
+/**
  * /denunciar: anyone, without the app and without its first access, sends a notice of illegal
  * content: the link or the code of the dilemma, or the room and the nickname, why it is illegal and,
  * if they want, their name and email, declaring that they act in good faith. They get the
@@ -24,16 +44,26 @@ export function IllegalContentScreen() {
   const { t, i18n } = useTranslation();
   const api = useRoomApi();
   const { withAccess, accessCodeScreen } = useAccessGate();
+  const [written, setWritten] = useState(NOTHING_WRITTEN);
+  const write =
+    (field: keyof Written) =>
+    ({ target }: { target: HTMLInputElement | HTMLTextAreaElement }) =>
+      setWritten((before) => ({
+        ...before,
+        [field]:
+          target instanceof HTMLInputElement && target.type === 'checkbox'
+            ? target.checked
+            : target.value,
+      }));
   const [sent, send, isPending] = useActionState(
-    async (_before: Sent, data: FormData): Promise<Sent> => {
-      const text = (name: string) => String(data.get(name) ?? '').trim();
-      const email = text('email');
-      const name = text('name');
+    async (_before: Sent, notice: Written): Promise<Sent> => {
+      const email = notice.email.trim();
+      const name = notice.name.trim();
       try {
         const done = await withAccess(async () => {
           await api.sendIllegalContentNotice({
-            reference: text('reference'),
-            explanation: text('explanation'),
+            reference: notice.reference.trim(),
+            explanation: notice.explanation.trim(),
             ...(name && { name }),
             ...(email && { email }),
             language: deviceLanguage(i18n),
@@ -79,12 +109,20 @@ export function IllegalContentScreen() {
       <main className={styles.main}>
         <h1 className={styles.title}>{t('illegalNotice.title')}</h1>
         <p className={styles.text}>{t('illegalNotice.intro')}</p>
-        <form action={send} className={form.form}>
+        <form
+          className={form.form}
+          onSubmit={(event) => {
+            event.preventDefault();
+            startTransition(() => send(written));
+          }}
+        >
           <label className={form.field}>
             {t('illegalNotice.reference')}
             <input
               className={form.input}
               name="reference"
+              value={written.reference}
+              onChange={write('reference')}
               required
               maxLength={500}
               placeholder={t('illegalNotice.referencePlaceholder')}
@@ -95,6 +133,8 @@ export function IllegalContentScreen() {
             <textarea
               className={`${form.input} ${styles.explanation}`}
               name="explanation"
+              value={written.explanation}
+              onChange={write('explanation')}
               required
               rows={4}
               maxLength={2000}
@@ -106,6 +146,8 @@ export function IllegalContentScreen() {
             <input
               className={form.input}
               name="name"
+              value={written.name}
+              onChange={write('name')}
               maxLength={100}
               autoComplete="name"
               placeholder={t('illegalNotice.namePlaceholder')}
@@ -116,6 +158,8 @@ export function IllegalContentScreen() {
             <input
               className={form.input}
               name="email"
+              value={written.email}
+              onChange={write('email')}
               type="email"
               maxLength={254}
               autoComplete="email"
@@ -123,7 +167,14 @@ export function IllegalContentScreen() {
             />
           </label>
           <label className={styles.goodFaith}>
-            <input className={styles.check} type="checkbox" name="goodFaith" required />
+            <input
+              className={styles.check}
+              type="checkbox"
+              name="goodFaith"
+              required
+              checked={written.goodFaith}
+              onChange={write('goodFaith')}
+            />
             <span>{t('illegalNotice.goodFaith')}</span>
           </label>
           {sent.error && (

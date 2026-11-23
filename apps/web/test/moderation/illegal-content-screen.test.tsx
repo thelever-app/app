@@ -76,4 +76,33 @@ describe('IllegalContentScreen', () => {
     // Assert
     expect((await screen.findByRole('alert')).textContent).toBe(t('illegalNotice.tooMany'));
   });
+
+  it('should keep what the person wrote when sending fails', async () => {
+    // Arrange
+    const { t } = await renderAtRoute(<IllegalContentScreen />, {
+      api: fakeRoomApi({
+        sendIllegalContentNotice: vi.fn(async () => {
+          throw new Error('TestFailure');
+        }),
+      }),
+    });
+    fillIn(t, { email: 'test@example.com' });
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('illegalNotice.send') }));
+
+    // Assert
+    await screen.findByRole('alert');
+    const field = (label: string) =>
+      (screen.getByRole('textbox', { name: label }) as HTMLInputElement).value;
+    expect(field(t('illegalNotice.reference'))).toBe(
+      'https://thelever.app/es/honestidad/el-test-7',
+    );
+    expect(field(t('illegalNotice.explanation'))).toBe('TestExplanation');
+    expect(field(t('illegalNotice.email'))).toBe('test@example.com');
+    expect(
+      (screen.getByRole('checkbox', { name: t('illegalNotice.goodFaith') }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+  });
 });
