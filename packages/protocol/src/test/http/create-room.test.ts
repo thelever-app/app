@@ -21,6 +21,13 @@ describe('CreateRoomRequestDto', () => {
     expect(CreateRoomRequestDto.safeParse({ ...request, identity: 'uid' }).success).toBe(false);
   });
 
+  it('should reject a nickname longer than the screens let anyone write', () => {
+    // Act & Assert
+    expect(CreateRoomRequestDto.safeParse({ ...request, nickname: 'A'.repeat(21) }).success).toBe(
+      false,
+    );
+  });
+
   it('should reject a missing avatar', () => {
     // Arrange
     const { avatar, ...withoutAvatar } = request;

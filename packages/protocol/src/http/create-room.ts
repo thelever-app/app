@@ -3,13 +3,14 @@ import {
   AmbienceDto,
   AvatarDto,
   LanguageDto,
+  NicknameDto,
   PlaceDto,
   PlayedDilemmaIdsDto,
 } from '../client-messages.ts';
 
 /** POST /rooms: whoever calls creates a room and becomes its host. Who calls comes from their token. */
 export const CreateRoomRequestDto = z.strictObject({
-  nickname: z.string().min(1),
+  nickname: NicknameDto,
   /** The ambience the host chose, which sets up the room. */
   ambience: AmbienceDto,
   /** The avatar the host chose before creating the room. */

@@ -82,6 +82,10 @@ function NoticeSheet({
                     reason: t(`moderationNotice.reasons.${subject.reason}`),
                   }}
                   components={{ strong: <strong /> }}
+                  // The nickname and the text come from other players: escaped before the
+                  // markup of the sentence is read, they show as the text they are.
+                  tOptions={{ interpolation: { escapeValue: true } }}
+                  shouldUnescape
                 />
               </p>
               <div className={styles.decision}>

@@ -1,4 +1,9 @@
-import { type AmbienceDto, type LanguageDto, PlaceDto } from '@thelever-app/protocol';
+import {
+  type AmbienceDto,
+  type LanguageDto,
+  NICKNAME_MAX_LENGTH,
+  PlaceDto,
+} from '@thelever-app/protocol';
 import { useActionState, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -107,7 +112,7 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
               className={styles.input}
               name="nickname"
               required
-              maxLength={20}
+              maxLength={NICKNAME_MAX_LENGTH}
               autoComplete="nickname"
               placeholder={t('createRoom.nicknamePlaceholder')}
               value={choices.nickname}

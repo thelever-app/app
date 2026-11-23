@@ -28,6 +28,8 @@ export {
   EmojiDto,
   DistributionPredictionDto,
   AvatarDto,
+  NICKNAME_MAX_LENGTH,
+  NicknameDto,
   AvatarFaceDto,
   CategoryDto,
   ChangeAvatarDto,

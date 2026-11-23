@@ -24,6 +24,26 @@ describe('JoinRoomRequestDto', () => {
     );
   });
 
+  it('should reject a nickname with invisible or control characters, but not an emoji', () => {
+    // Act & Assert
+    for (const hidden of ['Ana\u200b', '\u202eanA', 'An\u0000a', 'Ana\ufeff']) {
+      expect(JoinRoomRequestDto.safeParse({ ...request, nickname: hidden }).success, hidden).toBe(
+        false,
+      );
+    }
+    expect(JoinRoomRequestDto.safeParse({ ...request, nickname: 'Ana 👩‍💻' }).success).toBe(true);
+  });
+
+  it('should reject a nickname longer than the screens let anyone write', () => {
+    // Act & Assert
+    expect(JoinRoomRequestDto.safeParse({ ...request, nickname: 'L'.repeat(20) }).success).toBe(
+      true,
+    );
+    expect(JoinRoomRequestDto.safeParse({ ...request, nickname: 'L'.repeat(21) }).success).toBe(
+      false,
+    );
+  });
+
   it('should reject an empty nickname, a missing avatar or one outside the closed list', () => {
     // Act & Assert
     expect(JoinRoomRequestDto.safeParse({ ...request, nickname: '' }).success).toBe(false);
