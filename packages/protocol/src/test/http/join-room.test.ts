@@ -31,7 +31,15 @@ describe('JoinRoomRequestDto', () => {
         false,
       );
     }
-    expect(JoinRoomRequestDto.safeParse({ ...request, nickname: 'Ana 👩‍💻' }).success).toBe(true);
+    for (const written of [
+      'Ana 👩‍💻',
+      'Ana 🏴\u{e0067}\u{e0062}\u{e0065}\u{e006e}\u{e0067}\u{e007f}',
+      'می\u200cخواهم',
+    ]) {
+      expect(JoinRoomRequestDto.safeParse({ ...request, nickname: written }).success, written).toBe(
+        true,
+      );
+    }
   });
 
   it('should reject a nickname longer than the screens let anyone write', () => {

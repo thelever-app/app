@@ -42,7 +42,8 @@ export interface SocketLimits {
 /** Far above what anyone playing sends, far below what could take the instance down. */
 export const DEFAULT_SOCKET_LIMITS: SocketLimits = {
   maxMessageBytes: 64 * 1024,
-  connectDeadlineMs: 10_000,
+  // The device asks for its tokens after the socket opens, renewing them on a slow network.
+  connectDeadlineMs: 30_000,
   messagesPerSecond: 10,
   messageBurst: 30,
 };

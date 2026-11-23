@@ -353,6 +353,7 @@
     "lookalikeJustJoined": "Alguien acaba de entrar como {{nickname}} con este avatar. Elige otro."
   },
   "roomErrors": {
+    "too-many-requests": "Demasiados intentos seguidos. Espera un minuto y vuelve a probar.",
     "nickname-missing": "Escribe un apodo.",
     "room-full": "La sala está llena: ya hay 50 jugadores.",
     "player-expelled": "El anfitrión te ha sacado de esta partida.",

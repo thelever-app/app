@@ -1,6 +1,7 @@
 import {
   type AvatarDto,
   NICKNAME_MAX_LENGTH,
+  withoutHiddenCharacters,
   type RoomPreviewResponseDto,
 } from '@thelever-app/protocol';
 import { useActionState, useState } from 'react';
@@ -98,7 +99,7 @@ export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: Jo
               maxLength={NICKNAME_MAX_LENGTH}
               autoComplete="nickname"
               value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
+              onChange={(event) => setNickname(withoutHiddenCharacters(event.target.value))}
             />
           </label>
         </div>

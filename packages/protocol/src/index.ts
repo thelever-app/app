@@ -30,6 +30,7 @@ export {
   AvatarDto,
   NICKNAME_MAX_LENGTH,
   NicknameDto,
+  withoutHiddenCharacters,
   AvatarFaceDto,
   CategoryDto,
   ChangeAvatarDto,

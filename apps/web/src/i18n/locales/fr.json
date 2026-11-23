@@ -353,6 +353,7 @@
     "lookalikeJustJoined": "Quelqu’un vient d’entrer sous le nom {{nickname}} avec cet avatar. Choisis-en un autre."
   },
   "roomErrors": {
+    "too-many-requests": "Trop de tentatives à la suite. Attends une minute et réessaie.",
     "nickname-missing": "Écris un pseudo.",
     "room-full": "La salle est pleine : il y a déjà 50 joueurs.",
     "player-expelled": "L’hôte a décidé de t’exclure de cette partie.",

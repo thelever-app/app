@@ -17,7 +17,7 @@
     ],
     "headers": [
       {
-        "source": "**",
+        "source": "!/__/**",
         "headers": [
           {
             "key": "X-Content-Type-Options",
