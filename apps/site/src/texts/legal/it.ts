@@ -116,6 +116,7 @@ export const appPrivacy: OwnPage = {
         '- Per non ripeterti i dilemmi, con lo stesso consenso: il tuo telefono conserva l’elenco dei dilemmi che hai giocato, senza i tuoi voti, e lo invia quando entri in una stanza, che lo usa solo per preparare le partite e lo cancella con la stanza.',
         '- Per valutare quali dilemmi piacciono e perché nessuno conti due volte nel risultato mondiale, in base al legittimo interesse (art. 6.1.f): i tuoi «Bel dilemma», conservati a parte dalla stanza, e il segno che hai già votato da solo un dilemma, senza il tuo voto. Non dicono cosa hai scelto né rivelano le tue convinzioni, quindi non dipendono dal consenso del gioco e restano se lo revochi. Puoi opporti scrivendoci con il tuo codice per le richieste, e li cancelliamo.',
         '- Per riconoscerti, in base alle condizioni d’uso (art. 6.1.b): un identificativo anonimo del tuo dispositivo e quando hai aperto l’app l’ultima volta.',
+        '- Per proteggere il servizio da abusi e programmi automatici, in base al legittimo interesse (art. 6.1.f): ogni volta che entri, Firebase App Check verifica con reCAPTCHA Enterprise di Google che la richiesta venga dall’app vera; per farlo Google analizza dati tecnici del tuo browser e di come usi la pagina, e vi conserva un token e un cookie, come spiega la politica sui cookie dell’app.',
         '- Per rispettare la legge sull’età (art. 6.1.c): il tuo anno di nascita e, se compi 18 anni quest’anno o più avanti, il mese; e la tua regione (Spazio economico europeo, resto del mondo o paese in cui TheLever non è disponibile), che deduciamo dal tuo indirizzo IP con un database sul nostro server, IP Geolocation by DB-IP (db-ip.com, licenza CC BY 4.0). TheLever non conserva il tuo IP; il nostro fornitore di accesso, Firebase Authentication (Google), lo registra per alcune settimane per sicurezza.',
         '- Per poter dimostrare ciò che hai accettato (art. 6.1.c e 7.1): quale versione delle condizioni e del consenso hai accettato e quando, e quando l’hai revocato.',
         '- Per misurare l’uso e migliorare il gioco, in base al legittimo interesse (art. 6.1.f): quando hai aperto l’app per la prima volta e da quale link sei arrivato (per esempio, quello di un manifesto); quando crei una stanza o entri in quella di un altro; quando una partita inizia e finisce e con quanti giocatori; e quanto impiegate tu e il gruppo a rispondere a ogni dilemma, che si cancella con la partita. Mai i tuoi voti, le tue previsioni o le tue reazioni, e senza cookie: lo registra il nostro server. La prima visita si registra prima che tu abbia potuto opporti. Puoi opporti in Impostazioni → Privacy e dati → I tuoi permessi: smettiamo di registrarlo e cancelliamo gli eventi che avevamo; i tempi delle partite ancora conservate si cancellano con esse.',
@@ -214,7 +215,7 @@ export const appCookies: OwnPage = {
     {
       heading: 'Cosa conserva senza chiederti il permesso',
       paragraphs: [
-        'Solo l’indispensabile perché il gioco funzioni o per ricordare ciò che scegli, che la legge non sottopone a consenso (art. 22.2 della LSSI spagnola). Quasi tutto è di TheLever; la sessione è di Firebase Authentication (Google), che ci fornisce l’accesso, e ciò che rispondi nel gestore dei cookie lo conserva il gestore di Google.',
+        'Solo l’indispensabile perché il gioco funzioni o per ricordare ciò che scegli, che la legge non sottopone a consenso (art. 22.2 della LSSI spagnola). Quasi tutto è di TheLever. Ciò che è di Firebase e di reCAPTCHA Enterprise, di Google, ci fornisce l’accesso e protegge il servizio dai programmi automatici, e ciò che rispondi nel gestore dei cookie lo conserva il gestore di Google.',
       ],
       table: {
         headers: ['Nome', 'Di chi', 'A cosa serve', 'Durata'],
@@ -224,6 +225,24 @@ export const appCookies: OwnPage = {
             'Firebase Authentication (Google)',
             'La tua sessione: l’identificativo anonimo del tuo dispositivo',
             'Finché non cancelli i tuoi dati o quelli del browser',
+          ],
+          [
+            'firebase-app-check-database',
+            'Firebase App Check (Google)',
+            'La prova che le richieste vengono dall’app vera e non da un programma automatico',
+            'Qualche ora; poi se ne chiede un’altra',
+          ],
+          [
+            'firebase-heartbeat-database',
+            'Firebase (Google)',
+            'In quali giorni si è usato l’SDK di Firebase e la sua versione, che Google riceve per mantenere il suo servizio',
+            'Finché non cancelli i dati del browser',
+          ],
+          [
+            '_GRECAPTCHA (su google.com)',
+            'reCAPTCHA Enterprise (Google)',
+            'Valutare il rischio che chi usa l’app sia un programma automatico',
+            '6 mesi',
           ],
           ['thelever.language', 'TheLever', 'La lingua che hai scelto', 'Idem'],
           ['thelever.muted', 'TheLever', 'Se hai tolto il suono', 'Idem'],
@@ -296,20 +315,20 @@ export const appCookies: OwnPage = {
         'Tutto il resto, e solo se lo accetti nel gestore dei cookie di Google, che te lo chiede la prima volta che entri:',
         '- Le statistiche del gestore stesso (FCNEC, di Google, 365 giorni).',
         '- La pubblicità. Oggi l’app non ne mostra. Quando la mostrerà, Google AdSense e i suoi partner useranno cookie per mostrarla e misurarla e, se hai 18 anni o più e lo accetti, per personalizzarla; se il tuo browser invia il segnale Global Privacy Control, non viene personalizzata. Non viene mai scelta in base a ciò che voti, e prima che arrivi questa politica aggiungerà i suoi cookie.',
-        'Non usiamo cookie di analisi: ciò che misuriamo dell’uso lo registra il nostro server, come spiega la politica sulla privacy dell’app.',
+        'Non usiamo cookie di analisi: ciò che misuriamo dell’uso lo registra il nostro server, come spiega la politica sulla privacy dell’app. L’SDK di Firebase conserva invece in quali giorni è stato usato e la sua versione, come dice la tabella, senza nulla di ciò che fai nel gioco.',
       ],
     },
     {
       heading: 'Come cambiare ciò che accetti',
       paragraphs: [
-        'In Impostazioni → Privacy e dati → Cookie e pubblicità riapri il gestore dei cookie di Google e cambi ciò che hai accettato con la stessa facilità della prima volta.',
-        'Il resto lo cancelli con Impostazioni → Privacy e dati → Elimina i miei dati, che lascia il tuo telefono come nuovo, o dalle impostazioni del browser. Se giochi senza account, l’app ti tratterà allora come un dispositivo nuovo.',
+        'In Impostazioni → Privacy e dati → Cookie e annunci riapri il gestore dei cookie di Google e cambi ciò che hai accettato con la stessa facilità della prima volta.',
+        'Il resto lo cancelli con Impostazioni → Privacy e dati → Elimina i miei dati, che lascia il tuo telefono come nuovo: se giochi senza account, l’app ti tratterà come un dispositivo nuovo. Ciò che conservano Firebase App Check, l’SDK di Firebase, reCAPTCHA e il gestore dei cookie, e il codice di accesso, resta finché non scade o finché non cancelli i dati del browser dalle sue impostazioni.',
       ],
     },
     {
       heading: 'Terzi e trasferimenti',
       paragraphs: [
-        'Firebase Authentication tratta la tua sessione per nostro conto. Google e i partner pubblicitari che accetti usano i loro cookie come titolari autonomi; il gestore dei cookie segue il quadro di trasparenza e consenso di IAB Europe e ti mostra chi sono e per cosa ciascuno usa i tuoi dati.',
+        'Firebase e reCAPTCHA Enterprise, di Google, trattano per nostro conto la tua sessione e la verifica che usi l’app vera. Google e i partner pubblicitari che accetti usano i loro cookie come titolari autonomi; il gestore dei cookie segue il quadro di trasparenza e consenso di IAB Europe e ti mostra chi sono e per cosa ciascuno usa i tuoi dati.',
         'Google può trattare dati fuori dallo Spazio economico europeo, sulla base del quadro UE-USA per la protezione dei dati e delle clausole contrattuali tipo della Commissione europea.',
       ],
     },

@@ -116,6 +116,7 @@ export const appPrivacy: OwnPage = {
         '- Per no repetir-te dilemes, amb el mateix consentiment: el teu mòbil guarda la llista de dilemes que has jugat, sense els teus vots, i l’envia en entrar en una sala, que només la fa servir per preparar les partides i l’esborra amb la sala.',
         '- Per valorar quins dilemes agraden i perquè ningú no compti dues vegades al resultat mundial, per interès legítim (art. 6.1.f): els teus «Bon dilema», que es guarden a part de la sala, i la marca que ja vas votar sol un dilema, sense el teu vot. No diuen què vas triar ni revelen les teves conviccions, així que no depenen del consentiment del joc i es queden si el retires. T’hi pots oposar escrivint-nos amb el teu codi per a peticions, i els esborrem.',
         '- Per reconèixer-te, per les condicions d’ús (art. 6.1.b): un identificador anònim del teu dispositiu i quan vas obrir l’app per última vegada.',
+        '- Per protegir el servei d’abusos i de programes automàtics, per interès legítim (art. 6.1.f): cada vegada que entres, Firebase App Check comprova amb reCAPTCHA Enterprise de Google que la petició ve de l’app de veritat; per fer-ho, Google analitza dades tècniques del teu navegador i de com fas servir la pàgina, i hi guarda un testimoni i una galeta, com explica la política de galetes de l’app.',
         '- Per complir la llei sobre l’edat (art. 6.1.c): el teu any de naixement i, si fas 18 anys aquest any o més endavant, el mes; i la teva regió (Espai Econòmic Europeu, resta del món o país on TheLever no està disponible), que deduïm de la teva adreça IP amb una base de dades al nostre propi servidor, IP Geolocation by DB-IP (db-ip.com, llicència CC BY 4.0). TheLever no guarda la teva IP; el nostre proveïdor d’accés, Firebase Authentication (Google), la registra unes setmanes per seguretat.',
         '- Per poder demostrar què vas acceptar (art. 6.1.c i 7.1): quina versió de les condicions i del consentiment vas acceptar i quan, i quan el vas retirar.',
         '- Per mesurar l’ús i millorar el joc, per interès legítim (art. 6.1.f): quan vas obrir l’app per primera vegada i des de quin enllaç hi vas arribar (per exemple, el d’un cartell); quan crees una sala o entres a la d’un altre; quan comença i acaba una partida i amb quants jugadors; i quant trigueu tu i el grup a respondre cada dilema, que s’esborra amb la partida. Mai els teus vots, les teves prediccions ni les teves reaccions, i sense galetes: ho registra el nostre servidor. La primera visita es registra abans que t’hi hagis pogut oposar. T’hi pots oposar a Configuració → Privadesa i dades → Els teus permisos: deixem de registrar-ho i esborrem els esdeveniments que teníem; els temps de les partides que encara es conserven s’esborren amb elles.',
@@ -214,7 +215,7 @@ export const appCookies: OwnPage = {
     {
       heading: 'El que guarda sense demanar-te permís',
       paragraphs: [
-        'Només l’imprescindible perquè el joc funcioni o per recordar el que tries, que la llei no sotmet a consentiment (art. 22.2 de la LSSI espanyola). Gairebé tot és de TheLever; la sessió és de Firebase Authentication (Google), que ens dona l’accés, i el que respons al gestor de galetes ho guarda el gestor de Google.',
+        'Només l’imprescindible perquè el joc funcioni o per recordar el que tries, que la llei no sotmet a consentiment (art. 22.2 de la LSSI espanyola). Gairebé tot és de TheLever. El que és de Firebase i de reCAPTCHA Enterprise, de Google, ens dona l’accés i protegeix el servei de programes automàtics, i el que respons al gestor de galetes ho guarda el gestor de Google.',
       ],
       table: {
         headers: ['Nom', 'De qui', 'Per a què', 'Durada'],
@@ -224,6 +225,24 @@ export const appCookies: OwnPage = {
             'Firebase Authentication (Google)',
             'La teva sessió: l’identificador anònim del teu dispositiu',
             'Fins que esborris les teves dades o les del navegador',
+          ],
+          [
+            'firebase-app-check-database',
+            'Firebase App Check (Google)',
+            'La prova que les peticions vénen de l’app de veritat, i no d’un programa automàtic',
+            'Unes hores; després se’n demana una altra',
+          ],
+          [
+            'firebase-heartbeat-database',
+            'Firebase (Google)',
+            'Quins dies es va fer servir l’SDK de Firebase i la seva versió, que Google rep per mantenir el seu servei',
+            'Fins que esborris les dades del navegador',
+          ],
+          [
+            '_GRECAPTCHA (a google.com)',
+            'reCAPTCHA Enterprise (Google)',
+            'Avaluar el risc que qui fa servir l’app sigui un programa automàtic',
+            '6 mesos',
           ],
           ['thelever.language', 'TheLever', 'La llengua que vas triar', 'Igual'],
           ['thelever.muted', 'TheLever', 'Si vas treure el so', 'Igual'],
@@ -291,20 +310,20 @@ export const appCookies: OwnPage = {
         'Tota la resta, i només si ho acceptes al gestor de galetes de Google, que t’ho pregunta la primera vegada que entres:',
         '- Les estadístiques del mateix gestor (FCNEC, de Google, 365 dies).',
         '- Els anuncis. Avui l’app no en mostra cap. Quan en mostri, Google AdSense i els seus socis faran servir galetes per mostrar-los i mesurar-los i, si tens 18 anys o més i ho acceptes, per personalitzar-los; si el teu navegador envia el senyal Global Privacy Control, no es personalitzen. Mai no es trien a partir del que votes, i abans que arribin aquesta política hi afegirà les seves galetes.',
-        'No fem servir galetes d’analítica: el que mesurem de l’ús ho registra el nostre servidor, com explica la política de privadesa de l’app.',
+        'No fem servir galetes d’analítica: el que mesurem de l’ús ho registra el nostre servidor, com explica la política de privadesa de l’app. L’SDK de Firebase sí que guarda quins dies es va fer servir i la seva versió, com diu la taula, sense res del que fas al joc.',
       ],
     },
     {
       heading: 'Com canviar el que acceptes',
       paragraphs: [
         'A Configuració → Privadesa i dades → Galetes i anuncis tornes a obrir el gestor de galetes de Google i canvies el que vas acceptar tan fàcilment com la primera vegada.',
-        'La resta l’esborres amb Configuració → Privadesa i dades → Esborrar les meves dades, que deixa el teu mòbil com nou, o des de la configuració del navegador. Si jugues sense compte, l’app et tractarà llavors com un dispositiu nou.',
+        'La resta l’esborres amb Configuració → Privadesa i dades → Esborrar les meves dades, que deixa el teu mòbil com nou: si jugues sense compte, l’app et tractarà com un dispositiu nou. El que guarden Firebase App Check, l’SDK de Firebase, reCAPTCHA i el gestor de galetes, i el codi d’accés, es queda fins que caduqui o fins que esborris les dades del navegador des de la seva configuració.',
       ],
     },
     {
       heading: 'Tercers i transferències',
       paragraphs: [
-        'Firebase Authentication tracta la teva sessió per compte nostre. Google i els socis publicitaris que acceptis fan servir les seves galetes com a responsables pel seu compte; el gestor de galetes segueix el Marc de Transparència i Consentiment d’IAB Europe i et mostra qui són i per a què fa servir cadascun les teves dades.',
+        'Firebase i reCAPTCHA Enterprise, de Google, tracten per compte nostre la teva sessió i la comprovació que fas servir l’app de veritat. Google i els socis publicitaris que acceptis fan servir les seves galetes com a responsables pel seu compte; el gestor de galetes segueix el Marc de Transparència i Consentiment d’IAB Europe i et mostra qui són i per a què fa servir cadascun les teves dades.',
         'Google pot tractar dades fora de l’Espai Econòmic Europeu, emparat en el Marc de Privadesa de Dades UE-EUA i en les clàusules contractuals tipus de la Comissió Europea.',
       ],
     },

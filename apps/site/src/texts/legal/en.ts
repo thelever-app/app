@@ -115,6 +115,7 @@ export const appPrivacy: OwnPage = {
         '- Not to repeat dilemmas, with the same consent: your phone keeps the list of dilemmas you have played, without your votes, and sends it when you join a room, which only uses it to put the games together and deletes it with the room.',
         '- To rate which dilemmas people like and so that nobody counts twice in the world result, on the basis of legitimate interest (art. 6.1.f): your “Good dilemma” likes, which are kept apart from the room, and the mark that you already voted alone on a dilemma, without your vote. They do not say what you chose nor reveal your beliefs, so they do not depend on the game consent and stay if you withdraw it. You can object by writing to us with your request code, and we delete them.',
         '- To recognise you, under the terms of use (art. 6.1.b): an anonymous identifier of your device and when you last opened the app.',
+        '- To protect the service from abuse and automated programs, on the basis of legitimate interest (art. 6.1.f): each time you come in, Firebase App Check checks with Google’s reCAPTCHA Enterprise that the request comes from the real app; to do so, Google analyses technical data of your browser and of how you use the page, and keeps a token and a cookie in it, as the cookies policy of the app explains.',
         '- To comply with the law on age (art. 6.1.c): your year of birth and, if you turn 18 this year or later, the month; and your region (European Economic Area, rest of the world or a country where TheLever is not available), which we work out from your IP address with a database on our own server, IP Geolocation by DB-IP (db-ip.com, CC BY 4.0 licence). TheLever does not keep your IP; our sign-in provider, Firebase Authentication (Google), logs it for a few weeks for security.',
         '- To be able to prove what you accepted (art. 6.1.c and 7.1): which version of the terms and of the consent you accepted and when, and when you withdrew it.',
         '- To measure use and improve the game, on the basis of legitimate interest (art. 6.1.f): when you first opened the app and which link brought you (for example, the one on a poster); when you create a room or join someone else’s; when a game starts and ends and with how many players; and how long you and the group take to answer each dilemma, which is deleted with the game. Never your votes, your predictions or your reactions, and without cookies: our server records it. The first visit is recorded before you have been able to object. You can object in Settings → Privacy and data → Your permissions: we stop recording it and delete the events we had; the times of the games still kept are deleted with them.',
@@ -207,13 +208,13 @@ export const appCookies: OwnPage = {
     {
       heading: 'What they are',
       paragraphs: [
-        'Cookies are small files that a website or an app keeps in your browser and reads again later. This policy also calls «cookies» similar technologies, such as the local storage of the browser, which is what the app almost always uses.',
+        'Cookies are small files that a website or an app keeps in your browser and reads again later. This policy also uses “cookies” for similar technologies, such as the browser’s local storage, which is what the app almost always uses.',
       ],
     },
     {
       heading: 'What it keeps without asking you',
       paragraphs: [
-        'Only what is essential for the game to work or to remember what you choose, which the law does not subject to consent (art. 22.2 of the Spanish LSSI). Almost all of it belongs to TheLever; the session belongs to Firebase Authentication (Google), which gives us the sign-in, and what you answer in the cookie manager is kept by Google’s manager.',
+        'Only what is essential for the game to work or to remember what you choose, which the law does not subject to consent (art. 22.2 of the Spanish LSSI). Almost all of it belongs to TheLever. What belongs to Firebase and reCAPTCHA Enterprise, by Google, gives us the sign-in and protects the service from automated programs, and what you answer in the cookie manager is kept by Google’s manager.',
       ],
       table: {
         headers: ['Name', 'Whose', 'What for', 'How long'],
@@ -223,6 +224,24 @@ export const appCookies: OwnPage = {
             'Firebase Authentication (Google)',
             'Your session: the anonymous identifier of your device',
             'Until you delete your data or the data of the browser',
+          ],
+          [
+            'firebase-app-check-database',
+            'Firebase App Check (Google)',
+            'The proof that requests come from the real app, and not from an automated program',
+            'A few hours; then a new one is requested',
+          ],
+          [
+            'firebase-heartbeat-database',
+            'Firebase (Google)',
+            'Which days the Firebase SDK was used and its version, which Google receives to maintain its service',
+            'Until you delete the data of the browser',
+          ],
+          [
+            '_GRECAPTCHA (on google.com)',
+            'reCAPTCHA Enterprise (Google)',
+            'Assessing the risk that whoever uses the app is an automated program',
+            '6 months',
           ],
           ['thelever.language', 'TheLever', 'The language you chose', 'The same'],
           ['thelever.muted', 'TheLever', 'Whether you turned the sound off', 'The same'],
@@ -295,20 +314,20 @@ export const appCookies: OwnPage = {
         'Everything else, and only if you accept it in Google’s cookie manager, which asks you the first time you come in:',
         '- The statistics of the manager itself (FCNEC, by Google, 365 days).',
         '- The ads. Today the app shows none. When it does, Google AdSense and its partners will use cookies to show and measure them and, if you are 18 or older and accept it, to personalise them; if your browser sends the Global Privacy Control signal, they are not personalised. They are never chosen from what you vote, and before they arrive this policy will add their cookies.',
-        'We do not use analytics cookies: what we measure of the use is recorded by our server, as the privacy policy of the app explains.',
+        'We do not use analytics cookies: what we measure of the use is recorded by our server, as the privacy policy of the app explains. The Firebase SDK does keep which days it was used and its version, as the table says, without anything of what you do in the game.',
       ],
     },
     {
       heading: 'How to change what you accept',
       paragraphs: [
         'In Settings → Privacy and data → Cookies and ads you open Google’s cookie manager again and change what you accepted as easily as the first time.',
-        'Everything else you delete with Settings → Privacy and data → Delete my data, which leaves your phone as new, or from the settings of your browser. If you play without an account, the app will then treat you as a new device.',
+        'Everything else you delete with Settings → Privacy and data → Delete my data, which leaves your phone as new: if you play without an account, the app will treat you as a new device. What Firebase App Check, the Firebase SDK, reCAPTCHA and the cookie manager keep, and the access code, stays until it expires or until you delete the data of the browser in its settings.',
       ],
     },
     {
       heading: 'Third parties and transfers',
       paragraphs: [
-        'Firebase Authentication processes your session on our behalf. Google and the advertising partners you accept use their cookies as controllers on their own account; the cookie manager follows the Transparency and Consent Framework of IAB Europe and shows you who they are and what each uses your data for.',
+        'Firebase and reCAPTCHA Enterprise, by Google, process on our behalf your session and the check that you use the real app. Google and the advertising partners you accept use their cookies as controllers on their own account; the cookie manager follows the Transparency and Consent Framework of IAB Europe and shows you who they are and what each uses your data for.',
         'Google may process data outside the European Economic Area, under the EU-US Data Privacy Framework and the standard contractual clauses of the European Commission.',
       ],
     },
