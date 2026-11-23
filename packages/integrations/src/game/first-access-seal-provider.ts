@@ -1,4 +1,4 @@
-import type { GetConsent } from '@thelever-app/consent/published';
+import type { GetConsent, ObjectsToAnalytics } from '@thelever-app/consent/published';
 import type { Seal, SealProvider } from '@thelever-app/game';
 import type { GetFirstAccess } from '@thelever-app/identity/published';
 
@@ -10,22 +10,30 @@ import type { GetFirstAccess } from '@thelever-app/identity/published';
 export class FirstAccessSealProvider implements SealProvider {
   readonly #getFirstAccess: GetFirstAccess;
   readonly #getConsent: GetConsent;
+  readonly #objectsToAnalytics: ObjectsToAnalytics;
 
-  constructor(getFirstAccess: GetFirstAccess, getConsent: GetConsent) {
+  constructor(
+    getFirstAccess: GetFirstAccess,
+    getConsent: GetConsent,
+    objectsToAnalytics: ObjectsToAnalytics,
+  ) {
     this.#getFirstAccess = getFirstAccess;
     this.#getConsent = getConsent;
+    this.#objectsToAnalytics = objectsToAnalytics;
   }
 
   async sealFor(identity: string): Promise<Seal> {
-    const [firstAccess, consent] = await Promise.all([
+    const [firstAccess, consent, objects] = await Promise.all([
       this.#getFirstAccess.execute(identity),
       this.#getConsent.execute(identity),
+      this.#objectsToAnalytics.execute(identity),
     ]);
     return {
       gameConsentVersion: String(consent.gameConsentVersion ?? 0),
       researchConsentVersion: null,
       commercialLicenceConsentVersion: null,
       underEighteen: firstAccess?.underEighteen ?? true,
+      objectsToAnalytics: objects,
     };
   }
 }

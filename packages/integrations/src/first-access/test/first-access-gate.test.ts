@@ -22,7 +22,9 @@ function setUp() {
   const getFirstAccess = new GetFirstAccessUseCase(firstAccesses, clock);
   const getConsent = new GetConsentUseCase(acceptances, PUBLISHED);
   return {
-    openApp: new OpenAppUseCase(firstAccesses, clock),
+    openApp: new OpenAppUseCase(firstAccesses, clock, {
+      integer: (maxExclusive) => Math.floor(Math.random() * maxExclusive),
+    }),
     declareAge: new DeclareAgeUseCase(firstAccesses, clock),
     accept: new AcceptDocumentUseCase(acceptances, PUBLISHED, clock),
     gate: new FirstAccessGate(getFirstAccess, getConsent),

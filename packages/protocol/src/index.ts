@@ -91,3 +91,8 @@ export {
   LegalDocumentDto,
   RegionDto,
 } from './http/first-access.ts';
+export {
+  AnalyticsObjectionRequestDto,
+  MyDataResponseDto,
+  VisitOriginQueryDto,
+} from './http/my-data.ts';

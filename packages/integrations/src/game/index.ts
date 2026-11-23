@@ -8,3 +8,4 @@ export { PublishedDilemmasCatalog } from './published-dilemmas-catalog.ts';
 export { FirstAccessSealProvider } from './first-access-seal-provider.ts';
 export { ModerationDilemmaReports } from './moderation-dilemma-reports.ts';
 export { ModerationNicknameReports } from './moderation-nickname-reports.ts';
+export { AnalyticsUsage } from './analytics-usage.ts';
