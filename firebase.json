@@ -38,15 +38,6 @@
         ]
       },
       {
-        "source": "!{/,/@(es|en|fr|de|it|pt|ca){,/**},/_site/**,/robots.txt,/sitemap.xml,/ads.txt,/.well-known/security.txt}",
-        "headers": [
-          {
-            "key": "X-Robots-Tag",
-            "value": "noindex"
-          }
-        ]
-      },
-      {
         "source": "/config.json",
         "headers": [
           {

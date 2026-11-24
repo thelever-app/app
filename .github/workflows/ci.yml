@@ -76,7 +76,8 @@ jobs:
   # emulator, all of them on the runner. The Auth emulator runs on Node: no Java needed.
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # A share takes 11 to 13 minutes on a usual runner; a slower one passed 15.
+    timeout-minutes: 20
     # The scenarios split among three jobs at once, a share each, so each one stays well under its
     # limit. One failing does not stop the others, to see every failure at once.
     strategy:
