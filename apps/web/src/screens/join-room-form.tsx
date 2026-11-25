@@ -28,6 +28,8 @@ interface JoinRoomFormProps {
   readonly players: RoomPreviewResponseDto['players'];
   /** The avatar the room suggested, which nobody inside had. */
   readonly suggestedAvatar: AvatarDto;
+  /** The room of their own the host leaves from its lobby for this one, which then closes. */
+  readonly leavingRoomId?: string | undefined;
   /** The room turned the player away: the screen explains why, at full screen. */
   readonly onRefused: (code: JoinRefusalCode) => void;
 }
@@ -38,7 +40,13 @@ interface JoinRoomFormProps {
  * so may the avatar, but not both: the picker leaves out the avatars of whoever is called the
  * same, and the button says so if the nickname makes the avatar one of them.
  */
-export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: JoinRoomFormProps) {
+export function JoinRoomForm({
+  roomId,
+  players,
+  suggestedAvatar,
+  leavingRoomId,
+  onRefused,
+}: JoinRoomFormProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const api = useRoomApi();
@@ -60,11 +68,13 @@ export function JoinRoomForm({ roomId, players, suggestedAvatar, onRefused }: Jo
   const lookalike = taken.some((other) => sameAvatar(other, avatar));
   const missing = nickname.trim() === '' ? 'nickname' : lookalike ? 'avatar' : undefined;
 
+  // Only the host who leaves a room of their own for this one says which.
+  const leaving = leavingRoomId === undefined ? [] : [leavingRoomId];
   // Why the last attempt failed; the nickname stays in its field.
   const [error, formAction, isPending] = useActionState(async (): Promise<string | undefined> => {
     try {
       const joined = await withAccess(() =>
-        api.joinRoom(roomId, nickname, avatar, playedDilemmas()),
+        api.joinRoom(roomId, nickname, avatar, playedDilemmas(), ...leaving),
       );
       // Back from the access code: the form stays as the player left it.
       if (!joined) return undefined;

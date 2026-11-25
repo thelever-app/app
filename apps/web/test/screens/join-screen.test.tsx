@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { RoomApiError } from '../../src/room/room-api.ts';
 import { JoinScreen } from '../../src/screens/join-screen.tsx';
@@ -126,5 +126,43 @@ describe('JoinScreen', () => {
     ).toBeDefined();
     expect(screen.queryByTestId('room-of')).toBeNull();
     expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it('should show the fewest players of the room next to its ambience', async () => {
+    // Act
+    const { t } = await renderJoin(async () => PREVIEW);
+
+    // Assert
+    const ambience = await screen.findByTestId('room-ambience');
+    expect(within(ambience).getByTestId('minimum-players').textContent).toBe(
+      t('badges.players', { minimum: 3 }),
+    );
+    expect(within(ambience).queryByTestId('anonymous-badge')).toBeNull();
+  });
+
+  it('should leave the room of their own the host came from, on joining this one', async () => {
+    // Arrange
+    const joinRoom = vi.fn(async () => ({ playerId: 'test-luis-id', joinedLate: false }));
+    const { t } = await renderAtRoute(<JoinScreen />, {
+      api: fakeRoomApi({ previewRoom: vi.fn(async () => PREVIEW), joinRoom }),
+      at: { pathname: '/join/K7M2Q', state: { fromCode: true, leavingRoomId: 'test-own-room-id' } },
+      path: '/join/:code',
+    });
+    fireEvent.change(await screen.findByRole('textbox', { name: t('joinRoom.nickname') }), {
+      target: { value: 'Luis' },
+    });
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('joinRoom.submit') }));
+
+    // Assert
+    await waitFor(() => expect(joinRoom).toHaveBeenCalled());
+    expect(joinRoom.mock.calls[0]).toEqual([
+      'test-room-id',
+      'Luis',
+      PREVIEW.suggestedAvatar,
+      [],
+      'test-own-room-id',
+    ]);
   });
 });

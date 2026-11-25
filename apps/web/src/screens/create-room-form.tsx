@@ -12,9 +12,10 @@ import { AvatarButton } from '../avatar/avatar-button.tsx';
 import { randomAvatar } from '../avatar/random-avatar.ts';
 import { Icon, type IconName } from '../components/icon.tsx';
 import { useUnderEighteen } from '../first-access/device-age.tsx';
-import { AMBIENCE_ICONS, AMBIENCES, isForAdults } from '../lobby/ambiences.ts';
+import { AMBIENCE_ICONS, AMBIENCES, isForAdults, variantOf } from '../lobby/ambiences.ts';
 import { AvatarPickerSheet } from '../lobby/avatar-picker-sheet.tsx';
 import { SubmitButton } from '../components/submit-button.tsx';
+import { VariantBadges } from '../components/variant-badges.tsx';
 import { playedDilemmas } from '../game/played-dilemmas.ts';
 import { lastNickname, rememberNickname } from '../identity/last-nickname.ts';
 import { deviceLanguage } from '../i18n/i18n.ts';
@@ -166,7 +167,10 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
                     <Icon name={locked ? 'lock' : AMBIENCE_ICONS[ambience]} size={22} />
                   </span>
                   <span className={styles.ambienceText}>
-                    <span className={styles.ambienceName}>{t(`ambience.${ambience}.name`)}</span>
+                    <span className={styles.ambienceHead}>
+                      <span className={styles.ambienceName}>{t(`ambience.${ambience}.name`)}</span>
+                      <VariantBadges variant={variantOf(ambience)} withAnonymous off={locked} />
+                    </span>
                     <span>{t(`ambience.${ambience}.line`)}</span>
                     <span className={styles.ambienceNote}>
                       {locked ? t('ambience.onlyAdults') : t(`ambience.${ambience}.example`)}

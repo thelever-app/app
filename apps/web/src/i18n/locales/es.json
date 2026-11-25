@@ -372,7 +372,9 @@
     "title": "¿Jugamos?",
     "create": "Crear sala",
     "joinWithCode": "Unirme con un código",
-    "back": "Volver"
+    "back": "Volver",
+    "createHint": "Solo una persona del grupo: luego invita a los demás",
+    "joinHint": "Si alguien ya ha creado la sala"
   },
   "joinCode": {
     "title": "Escribe el código de la sala",
@@ -495,6 +497,12 @@
     "adults": {
       "name": "Con dilemas +18:",
       "text": "solo pueden entrar mayores de 18."
+    },
+    "joinOther": {
+      "title": "¿Otra persona del grupo ya ha creado una sala?",
+      "hint": "Únete a la suya. Esta sala se cierra sola.",
+      "code": "Código de la otra sala",
+      "placeholder": "Código"
     }
   },
   "categories": {
@@ -546,7 +554,16 @@
       "playersHint": "La elige un jugador desde el lobby. Si nadie la elige, sale una aleatoria.",
       "playersChosen": "Ya la ha elegido un jugador: «{{title}}».",
       "add": "Añadir ronda",
-      "full": "{{maximum}} rondas: el máximo"
+      "full": "{{maximum}} rondas: el máximo",
+      "round": "Ronda {{number}}:",
+      "done": "Listo",
+      "summary": {
+        "notCompromising": "No comprometido",
+        "missingDilemma": "Falta elegir el dilema",
+        "players": "La elige un jugador desde el lobby",
+        "playersChosen": "Elegido: «{{title}}»",
+        "specific": "«{{title}}»"
+      }
     },
     "newDilemmas": {
       "label": "Incluir dilemas nuevos",
@@ -891,13 +908,13 @@
     },
     "spicy": {
       "name": "Picante",
-      "line": "Temas de adultos. Solo +18.",
+      "line": "Lo de Clásica, más temas de adultos. Solo +18.",
       "example": "Por ejemplo: «Más años o mejor sexo»"
     },
     "no-filter": {
       "name": "Sin filtro",
-      "line": "Anónimo, +18 y con preguntas comprometidas",
-      "example": "Por ejemplo: «La pregunta de tu pareja» · Desde 3 jugadores"
+      "line": "Lo de Picante, más preguntas comprometidas. Anónimo: nadie ve qué votas.",
+      "example": "Por ejemplo: «La pregunta de tu pareja»"
     },
     "custom": {
       "name": "Personalizada"
@@ -1117,5 +1134,9 @@
     "title": "Hemos recibido tu petición",
     "text": "Este móvil ya no guarda nada tuyo y en un mes como máximo habremos borrado tus datos de nuestros servidores. Las copias de seguridad tardan algo más en renovarse y mientras tanto no se usan. Si vuelves a jugar, empezarás desde cero.",
     "home": "Volver al inicio"
+  },
+  "badges": {
+    "players": "{{minimum}}+ jugadores",
+    "anonymous": "Anónimo"
   }
 }

@@ -167,6 +167,14 @@
   gap: 2px;
 }
 
+/* The name and, beside it, its badges, which go below when they do not fit. */
+.ambienceHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
 .ambienceName {
   font-family: var(--font-display);
   font-size: 21px;

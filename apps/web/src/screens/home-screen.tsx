@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import mascotWaving from '../assets/brand/mascot-waving.svg';
@@ -18,6 +18,8 @@ type Step = 'start' | 'create';
 export function HomeScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const createHintId = useId();
+  const joinHintId = useId();
   const [step, setStep] = useState<Step>('start');
   const back = (
     <button
@@ -59,13 +61,34 @@ export function HomeScreen() {
       <div aria-hidden="true" className={styles.stripe} />
       <main className={styles.main} data-column>
         <h1 className={styles.title}>{t('home.title')}</h1>
-        <button type="button" className={styles.create} onClick={() => setStep('create')}>
+        {/* Under each button, who presses it: only one person of the group creates the room. */}
+        <button
+          type="button"
+          className={styles.create}
+          aria-describedby={createHintId}
+          onClick={() => setStep('create')}
+        >
           <Icon name="addCircle" size={26} />
-          {t('home.create')}
+          <span className={styles.buttonText}>
+            {t('home.create')}
+            <span id={createHintId} aria-hidden="true" className={styles.buttonHint}>
+              {t('home.createHint')}
+            </span>
+          </span>
         </button>
-        <button type="button" className={styles.join} onClick={() => void navigate('/join')}>
+        <button
+          type="button"
+          className={styles.join}
+          aria-describedby={joinHintId}
+          onClick={() => void navigate('/join')}
+        >
           <Icon name="pin" />
-          {t('home.joinWithCode')}
+          <span className={styles.buttonText}>
+            {t('home.joinWithCode')}
+            <span id={joinHintId} aria-hidden="true" className={styles.buttonHint}>
+              {t('home.joinHint')}
+            </span>
+          </span>
         </button>
         <SupportCard />
         <InstallOffer />

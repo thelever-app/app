@@ -350,7 +350,9 @@
     "title": "Shall we play?",
     "create": "Create room",
     "joinWithCode": "Join with a code",
-    "back": "Back"
+    "back": "Back",
+    "createHint": "Just one person in the group: then invite the others",
+    "joinHint": "If someone has already created the room"
   },
   "joinCode": {
     "title": "Type the room code",
@@ -468,6 +470,12 @@
     "adults": {
       "name": "With 18+ dilemmas:",
       "text": "only people 18 or over can join."
+    },
+    "joinOther": {
+      "title": "Has someone else in the group already created a room?",
+      "hint": "Join theirs. This room closes by itself.",
+      "code": "Code of the other room",
+      "placeholder": "Code"
     }
   },
   "categories": {
@@ -519,7 +527,16 @@
       "playersHint": "A player chooses it from the lobby. If nobody does, a random one comes up.",
       "playersChosen": "A player has already chosen it: “{{title}}”.",
       "add": "Add round",
-      "full": "{{maximum}} rounds: the maximum"
+      "full": "{{maximum}} rounds: the maximum",
+      "round": "Round {{number}}:",
+      "done": "Done",
+      "summary": {
+        "notCompromising": "Not compromising",
+        "missingDilemma": "The dilemma is still to choose",
+        "players": "A player chooses it from the lobby",
+        "playersChosen": "Chosen: “{{title}}”",
+        "specific": "“{{title}}”"
+      }
     },
     "newDilemmas": {
       "label": "Include new dilemmas",
@@ -855,13 +872,13 @@
     },
     "spicy": {
       "name": "Spicy",
-      "line": "Adult topics. 18+ only.",
+      "line": "What Classic has, plus adult topics. 18+ only.",
       "example": "For example: “More years or better sex”"
     },
     "no-filter": {
       "name": "No filter",
-      "line": "Anonymous, 18+ and with compromising questions",
-      "example": "For example: “Your partner’s question” · From 3 players"
+      "line": "What Spicy has, plus compromising questions. Anonymous: nobody sees what you vote.",
+      "example": "For example: “Your partner’s question”"
     },
     "custom": {
       "name": "Custom"
@@ -1081,5 +1098,9 @@
     "title": "We've received your request",
     "text": "This phone no longer keeps anything of yours, and within a month at most we'll have deleted your data from our servers. Backups take a little longer to renew and aren't used in the meantime. If you play again, you'll start from scratch.",
     "home": "Back to the start"
+  },
+  "badges": {
+    "players": "{{minimum}}+ players",
+    "anonymous": "Anonymous"
   }
 }

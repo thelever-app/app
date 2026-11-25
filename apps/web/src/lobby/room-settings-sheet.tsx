@@ -6,6 +6,7 @@ import {
   GAP_MARKER,
   type LobbyRoundDto,
   MAXIMUM_ROUNDS,
+  MINIMUM_PLAYERS,
   type RoomSettingsDto,
   type RoundContentDto,
   type RoundSettingsDto,
@@ -15,7 +16,8 @@ import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon, type IconName } from '../components/icon.tsx';
 import { DilemmaText } from '../game/dilemma-text.tsx';
-import { AMBIENCE_ICONS, AMBIENCES, isForAdults } from './ambiences.ts';
+import { VariantBadges } from '../components/variant-badges.tsx';
+import { AMBIENCE_ICONS, AMBIENCES, isForAdults, variantOf } from './ambiences.ts';
 import { CATEGORIES, type Category } from './categories.ts';
 import { PickRoundDilemmaSheet } from './pick-round-dilemma-sheet.tsx';
 import { roundNumbersByDilemma, toggledCategory } from './rounds.ts';
@@ -178,10 +180,17 @@ export function RoomSettingsSheet({
   onClose,
 }: RoomSettingsSheetProps) {
   const { t } = useTranslation();
+  const minimumId = useId();
   const [draft, setDraft] = useState(settings);
   const [draftRounds, setDraftRounds] = useState(() => draftOf(rounds));
+  // Every round opens folded into its summary line; only the one the host edits unfolds.
+  const [unfolded, setUnfolded] = useState<number | undefined>(undefined);
   // Only one round shows its categories at a time.
   const [expanded, setExpanded] = useState<number | undefined>(undefined);
+  const unfold = (key: number | undefined) => {
+    setUnfolded(key);
+    setExpanded(undefined);
+  };
   const [choosingAmbience, setChoosingAmbience] = useState(false);
   const [starting, setStarting] = useState<Starting>(() => ({
     ambience,
@@ -232,11 +241,14 @@ export function RoomSettingsSheet({
 
   /** A key for a round the host adds, below every key on screen. */
   const newKey = () => Math.min(0, ...draftRounds.map((round) => round.key)) - 1;
+  /** A round the host adds comes unfolded, to set it at once. */
   const addRound = () => {
+    const key = newKey();
     setDraftRounds([
       ...draftRounds,
-      { key: newKey(), id: undefined, origin: 'random', categories: null, content: ANY_CONTENT },
+      { key, id: undefined, origin: 'random', categories: null, content: ANY_CONTENT },
     ]);
+    unfold(key);
   };
 
   /** The fields take what the ambience sets, as new rounds; the room takes it on saving. */
@@ -253,7 +265,7 @@ export function RoomSettingsSheet({
     }));
     setDraft(next);
     setDraftRounds(nextRounds);
-    setExpanded(undefined);
+    unfold(undefined);
     setStarting({ ambience: option, settings: next, rounds: nextRounds });
   };
 
@@ -293,8 +305,11 @@ export function RoomSettingsSheet({
                 >
                   <Icon name={AMBIENCE_ICONS[shownAmbience]} size={22} />
                   <span className={styles.ambienceNow}>
-                    <span className={styles.ambienceLabel}>{t('settings.ambience.label')}</span>{' '}
-                    {t(`ambience.${shownAmbience}.name`)}
+                    <span>
+                      <span className={styles.ambienceLabel}>{t('settings.ambience.label')}</span>{' '}
+                      {t(`ambience.${shownAmbience}.name`)}
+                    </span>
+                    <VariantBadges variant={draft.variant} withAnonymous />
                   </span>
                   <span className={styles.ambienceChange}>
                     {t('settings.ambience.change')}
@@ -321,8 +336,15 @@ export function RoomSettingsSheet({
                               <Icon name={locked ? 'lock' : AMBIENCE_ICONS[option]} size={20} />
                             </span>
                             <span className={styles.ambienceOptionText}>
-                              <span className={styles.ambienceOptionName}>
-                                {t(`ambience.${option}.name`)}
+                              <span className={styles.ambienceOptionHead}>
+                                <span className={styles.ambienceOptionName}>
+                                  {t(`ambience.${option}.name`)}
+                                </span>
+                                <VariantBadges
+                                  variant={variantOf(option)}
+                                  withAnonymous
+                                  off={locked}
+                                />
                               </span>
                               <span className={sheet.hint}>
                                 {locked ? t('ambience.minorInRoom') : t(`ambience.${option}.line`)}
@@ -345,14 +367,29 @@ export function RoomSettingsSheet({
                 <legend className={styles.legend}>{t('settings.reveal')}</legend>
                 <div className={styles.segmented}>
                   {(['nominal', 'anonymous'] as const).map((variant) => (
-                    <label key={variant} className={styles.segment}>
+                    <label key={variant} className={`${styles.segment} ${styles.variantSegment}`}>
                       <input
                         type="radio"
                         name="variant"
                         checked={draft.variant === variant}
+                        aria-describedby={`${minimumId}-${variant}`}
                         onChange={() => change({ variant })}
                       />
-                      {t(`settings.${variant}`)}
+                      <span className={styles.variantName}>
+                        <Icon
+                          name={variant === 'nominal' ? 'visibility' : 'visibilityOff'}
+                          size={18}
+                        />
+                        {t(`settings.${variant}`)}
+                      </span>
+                      <span
+                        id={`${minimumId}-${variant}`}
+                        aria-hidden="true"
+                        className={styles.variantMinimum}
+                        data-testid={`minimum-players-${variant}`}
+                      >
+                        {t('badges.players', { minimum: MINIMUM_PLAYERS[variant] })}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -448,12 +485,15 @@ export function RoomSettingsSheet({
                       only={draftRounds.length === 1}
                       settings={draft}
                       chosen={chosenIn(round.id)}
+                      unfolded={unfolded === round.key}
+                      onUnfold={(open) => unfold(open ? round.key : undefined)}
                       expanded={expanded === round.key}
                       onExpand={(open) => setExpanded(open ? round.key : undefined)}
                       onChange={(changed) => changeRound(round.key, changed)}
-                      onRemove={() =>
-                        setDraftRounds(draftRounds.filter(({ key }) => key !== round.key))
-                      }
+                      onRemove={() => {
+                        setDraftRounds(draftRounds.filter(({ key }) => key !== round.key));
+                        unfold(undefined);
+                      }}
                       onPick={() => setPicking(round.key)}
                     />
                   ))}
@@ -532,6 +572,10 @@ interface RoundCardProps {
   readonly only: boolean;
   /** For a round of the players, the dilemma one of them already chose. */
   readonly chosen: { readonly dilemmaId: string; readonly text: string } | null;
+  /** Whether the round shows what the host sets, or only its summary line. */
+  readonly unfolded: boolean;
+  readonly onUnfold: (open: boolean) => void;
+  /** Whether a random round shows the chips of its categories. */
   readonly expanded: boolean;
   readonly onExpand: (open: boolean) => void;
   readonly onChange: (round: DraftRound) => void;
@@ -539,13 +583,18 @@ interface RoundCardProps {
   readonly onPick: () => void;
 }
 
-/** A round of the settings: where its dilemma comes from and, by its origin, what the host sets. */
+/**
+ * A round of the settings, folded into a line with its number, where its dilemma comes from and
+ * its content; unfolded, what the host sets by its origin, the way to remove it and «Listo».
+ */
 function RoundCard({
   round,
   settings,
   number,
   only,
   chosen,
+  unfolded,
+  onUnfold,
   expanded,
   onExpand,
   onChange,
@@ -553,168 +602,242 @@ function RoundCard({
   onPick,
 }: RoundCardProps) {
   const { t } = useTranslation();
+  const say = t as unknown as Translate;
+  const bodyId = useId();
   const categoriesId = useId();
   const someone = t('pickDilemmas.someone');
+  const icon = ORIGINS.find(([origin]) => origin === round.origin)![1];
 
   return (
-    <li className={styles.round}>
-      <div className={styles.roundTop}>
-        <span aria-hidden="true" className={styles.roundNumber}>
+    <li className={styles.round} data-unfolded={unfolded || undefined}>
+      <button
+        type="button"
+        className={styles.roundHead}
+        aria-expanded={unfolded}
+        aria-controls={bodyId}
+        onClick={() => onUnfold(!unfolded)}
+      >
+        <span aria-hidden="true" className={styles.roundNumber} data-testid="round-number">
           {number}
         </span>
-        <div
-          className={styles.origins}
-          role="radiogroup"
-          aria-label={t('settings.rounds.origin', { number })}
-        >
-          {ORIGINS.map(([origin, icon]) => (
-            <button
-              key={origin}
-              type="button"
-              role="radio"
-              aria-checked={round.origin === origin}
-              className={styles.origin}
-              onClick={() => round.origin !== origin && onChange(withOrigin(round, origin))}
-            >
-              <Icon name={icon} size={20} />
-              {t(`settings.rounds.origins.${origin}`)}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          className={styles.removeRound}
-          aria-label={t('settings.rounds.remove', { number })}
-          disabled={only}
-          onClick={onRemove}
-        >
-          <Icon name="close" size={22} />
-        </button>
-      </div>
+        <span className={styles.roundSummary}>
+          <span className={styles.roundOrigin}>
+            <span className={styles.hidden}>{t('settings.rounds.round', { number })} </span>
+            <Icon name={icon} size={18} />
+            {t(`settings.rounds.origins.${round.origin}`)}
+          </span>
+          <span className={styles.roundLine} data-testid="round-summary">
+            {summaryOf(round, settings, chosen, someone, say)}
+          </span>
+        </span>
+        <Icon name={unfolded ? 'expandLess' : 'expandMore'} size={22} />
+      </button>
 
-      {round.origin === 'random' && (
-        <>
-          <button
-            type="button"
-            className={styles.expander}
-            aria-expanded={expanded}
-            aria-controls={categoriesId}
-            aria-label={t('settings.rounds.categoriesOf', {
-              number,
-              summary: fromCategories(round.categories, t as unknown as Translate),
-            })}
-            onClick={() => onExpand(!expanded)}
-          >
-            <span>{fromCategories(round.categories, t as unknown as Translate)}</span>
-            <Icon name={expanded ? 'expandLess' : 'expandMore'} size={22} />
-          </button>
-          {expanded && (
+      {unfolded && (
+        <div id={bodyId} className={styles.roundBody}>
+          <div className={styles.roundTop}>
             <div
-              id={categoriesId}
-              className={styles.chips}
-              role="group"
-              aria-label={t('settings.rounds.categories', { number })}
+              className={styles.origins}
+              role="radiogroup"
+              aria-label={t('settings.rounds.origin', { number })}
             >
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={round.categories === null}
-                className={styles.chip}
-                onClick={() => onChange({ ...round, categories: null })}
-              >
-                {t('settings.rounds.allCategories')}
-              </button>
-              {CATEGORIES.map((category) => (
+              {ORIGINS.map(([origin, originIcon]) => (
                 <button
-                  key={category}
+                  key={origin}
                   type="button"
-                  role="checkbox"
-                  aria-checked={round.categories?.includes(category) ?? false}
-                  className={styles.chip}
-                  onClick={() =>
-                    onChange({ ...round, categories: toggledCategory(round.categories, category) })
-                  }
+                  role="radio"
+                  aria-checked={round.origin === origin}
+                  className={styles.origin}
+                  onClick={() => round.origin !== origin && onChange(withOrigin(round, origin))}
                 >
-                  {t(`categories.${category}`)}
+                  <Icon name={originIcon} size={20} />
+                  {t(`settings.rounds.origins.${origin}`)}
                 </button>
               ))}
             </div>
-          )}
-          {allows(settings, 'age') && (
-            <AxisChoice
-              label={t('settings.content.age.label')}
-              icon="adultsOnly"
-              options={[
-                ['any', t('settings.content.age.any')],
-                ['from-16', t('settings.content.age.from-16')],
-                ['adults-only', t('settings.content.age.adults-only')],
-              ]}
-              value={round.content.age}
-              onChange={(age) => onChange({ ...round, content: { ...round.content, age } })}
-            />
-          )}
-          {allows(settings, 'compromising') && (
-            <AxisChoice
-              label={t('settings.content.compromising.label')}
-              icon="heartBroken"
-              options={[
-                ['any', t('settings.content.compromising.any')],
-                ['no', t('settings.content.compromising.no')],
-                ['yes', t('settings.content.compromising.yes')],
-              ]}
-              value={round.content.compromising}
-              onChange={(compromising) =>
-                onChange({ ...round, content: { ...round.content, compromising } })
-              }
-            />
-          )}
-        </>
-      )}
-
-      {round.origin === 'specific' &&
-        (round.dilemma ? (
-          <div className={styles.specific}>
-            <span className={styles.specificText}>
-              <span className={styles.specificTitle}>
-                <DilemmaText text={round.dilemma.text} personInTheGap={someone} />
-              </span>
-              {round.dilemma.meta && <span className={sheet.hint}>{round.dilemma.meta}</span>}
-            </span>
             <button
               type="button"
-              className={styles.change}
-              aria-label={t('settings.rounds.changeLabel', { number })}
-              onClick={onPick}
+              className={styles.removeRound}
+              aria-label={t('settings.rounds.remove', { number })}
+              disabled={only}
+              onClick={onRemove}
             >
-              {t('settings.rounds.change')}
+              <Icon name="close" size={22} />
             </button>
           </div>
-        ) : (
-          <button
-            type="button"
-            className={styles.choose}
-            aria-label={t('settings.rounds.chooseLabel', { number })}
-            onClick={onPick}
-          >
-            {t('settings.rounds.choose')}
-            <Icon name="chevronRight" size={22} />
-          </button>
-        ))}
 
-      {round.origin === 'players' && (
-        <p className={styles.players}>
-          <Icon name="groupsOutline" size={20} />
-          <span>
-            {chosen
-              ? t('settings.rounds.playersChosen', {
-                  title: chosen.text.replaceAll(GAP_MARKER, someone),
-                })
-              : t('settings.rounds.playersHint')}
-          </span>
-        </p>
+          {round.origin === 'random' && (
+            <>
+              <button
+                type="button"
+                className={styles.expander}
+                aria-expanded={expanded}
+                aria-controls={categoriesId}
+                aria-label={t('settings.rounds.categoriesOf', {
+                  number,
+                  summary: fromCategories(round.categories, say),
+                })}
+                onClick={() => onExpand(!expanded)}
+              >
+                <span>{fromCategories(round.categories, say)}</span>
+                <Icon name={expanded ? 'expandLess' : 'expandMore'} size={22} />
+              </button>
+              {expanded && (
+                <div
+                  id={categoriesId}
+                  className={styles.chips}
+                  role="group"
+                  aria-label={t('settings.rounds.categories', { number })}
+                >
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={round.categories === null}
+                    className={styles.chip}
+                    onClick={() => onChange({ ...round, categories: null })}
+                  >
+                    {t('settings.rounds.allCategories')}
+                  </button>
+                  {CATEGORIES.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={round.categories?.includes(category) ?? false}
+                      className={styles.chip}
+                      onClick={() =>
+                        onChange({
+                          ...round,
+                          categories: toggledCategory(round.categories, category),
+                        })
+                      }
+                    >
+                      {t(`categories.${category}`)}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {allows(settings, 'age') && (
+                <AxisChoice
+                  label={t('settings.content.age.label')}
+                  icon="adultsOnly"
+                  options={[
+                    ['any', t('settings.content.age.any')],
+                    ['from-16', t('settings.content.age.from-16')],
+                    ['adults-only', t('settings.content.age.adults-only')],
+                  ]}
+                  value={round.content.age}
+                  onChange={(age) => onChange({ ...round, content: { ...round.content, age } })}
+                />
+              )}
+              {allows(settings, 'compromising') && (
+                <AxisChoice
+                  label={t('settings.content.compromising.label')}
+                  icon="heartBroken"
+                  options={[
+                    ['any', t('settings.content.compromising.any')],
+                    ['no', t('settings.content.compromising.no')],
+                    ['yes', t('settings.content.compromising.yes')],
+                  ]}
+                  value={round.content.compromising}
+                  onChange={(compromising) =>
+                    onChange({ ...round, content: { ...round.content, compromising } })
+                  }
+                />
+              )}
+            </>
+          )}
+
+          {round.origin === 'specific' &&
+            (round.dilemma ? (
+              <div className={styles.specific}>
+                <span className={styles.specificText}>
+                  <span className={styles.specificTitle}>
+                    <DilemmaText text={round.dilemma.text} personInTheGap={someone} />
+                  </span>
+                  {round.dilemma.meta && <span className={sheet.hint}>{round.dilemma.meta}</span>}
+                </span>
+                <button
+                  type="button"
+                  className={styles.change}
+                  aria-label={t('settings.rounds.changeLabel', { number })}
+                  onClick={onPick}
+                >
+                  {t('settings.rounds.change')}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={styles.choose}
+                aria-label={t('settings.rounds.chooseLabel', { number })}
+                onClick={onPick}
+              >
+                {t('settings.rounds.choose')}
+                <Icon name="chevronRight" size={22} />
+              </button>
+            ))}
+
+          {round.origin === 'players' && (
+            <p className={styles.players}>
+              <Icon name="groupsOutline" size={20} />
+              <span>
+                {chosen
+                  ? t('settings.rounds.playersChosen', {
+                      title: chosen.text.replaceAll(GAP_MARKER, someone),
+                    })
+                  : t('settings.rounds.playersHint')}
+              </span>
+            </p>
+          )}
+
+          <button type="button" className={styles.done} onClick={() => onUnfold(false)}>
+            <Icon name="check" size={20} />
+            {t('settings.rounds.done')}
+          </button>
+        </div>
       )}
     </li>
   );
+}
+
+/**
+ * The line a folded round reads: the categories and the content that is not «Da igual» of a
+ * random round, the dilemma of a specific one or that it is still to choose, and who chooses one
+ * of the players.
+ */
+function summaryOf(
+  round: DraftRound,
+  settings: RoomSettingsDto,
+  chosen: { readonly text: string } | null,
+  someone: string,
+  t: Translate,
+): string {
+  switch (round.origin) {
+    case 'specific':
+      return round.dilemma
+        ? t('settings.rounds.summary.specific', {
+            title: round.dilemma.text.replaceAll(GAP_MARKER, someone),
+          })
+        : t('settings.rounds.summary.missingDilemma');
+    case 'players':
+      return chosen
+        ? t('settings.rounds.summary.playersChosen', {
+            title: chosen.text.replaceAll(GAP_MARKER, someone),
+          })
+        : t('settings.rounds.summary.players');
+    case 'random': {
+      const { age, compromising } = allowedIn(settings, round.content);
+      return [
+        fromCategories(round.categories, t),
+        age === 'any' ? undefined : t(`settings.content.age.${age}`),
+        compromising === 'no' ? t('settings.rounds.summary.notCompromising') : undefined,
+        compromising === 'yes' ? t('settings.content.compromising.label') : undefined,
+      ]
+        .filter((part) => part !== undefined)
+        .join(' · ');
+    }
+  }
 }
 
 /** The translation of a key, as the screens use it here. */

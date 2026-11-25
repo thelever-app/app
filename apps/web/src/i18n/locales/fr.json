@@ -372,7 +372,9 @@
     "title": "On joue ?",
     "create": "Créer une salle",
     "joinWithCode": "Rejoindre avec un code",
-    "back": "Retour"
+    "back": "Retour",
+    "createHint": "Une seule personne du groupe : puis invite les autres",
+    "joinHint": "Si quelqu’un a déjà créé la salle"
   },
   "joinCode": {
     "title": "Écris le code de la salle",
@@ -495,6 +497,12 @@
     "adults": {
       "name": "Avec des dilemmes +18 :",
       "text": "seuls les plus de 18 ans peuvent entrer."
+    },
+    "joinOther": {
+      "title": "Quelqu’un d’autre du groupe a déjà créé une salle ?",
+      "hint": "Rejoins la sienne. Cette salle se fermera toute seule.",
+      "code": "Code de l’autre salle",
+      "placeholder": "Code"
     }
   },
   "categories": {
@@ -546,7 +554,16 @@
       "playersHint": "Un joueur la choisit depuis la salle d’attente. Si personne ne la choisit, elle sera au hasard.",
       "playersChosen": "Un joueur l’a déjà choisie : « {{title}} ».",
       "add": "Ajouter une manche",
-      "full": "{{maximum}} manches : le maximum"
+      "full": "{{maximum}} manches : le maximum",
+      "round": "Manche {{number}} :",
+      "done": "Terminé",
+      "summary": {
+        "notCompromising": "Pas compromettant",
+        "missingDilemma": "Le dilemme reste à choisir",
+        "players": "Un joueur la choisit depuis la salle d’attente",
+        "playersChosen": "Choisi : « {{title}} »",
+        "specific": "« {{title}} »"
+      }
     },
     "newDilemmas": {
       "label": "Inclure de nouveaux dilemmes",
@@ -891,13 +908,13 @@
     },
     "spicy": {
       "name": "Épicée",
-      "line": "Thèmes pour adultes. +18 seulement.",
+      "line": "Ce qu’a Classique, plus des thèmes pour adultes. +18 seulement.",
       "example": "Par exemple : « Plus d’années ou plus de plaisir »"
     },
     "no-filter": {
       "name": "Sans filtre",
-      "line": "Anonyme, +18 et avec des questions compromettantes",
-      "example": "Par exemple : « La question de ton partenaire » · Dès 3 joueurs"
+      "line": "Ce qu’a Épicée, plus des questions compromettantes. Anonyme : personne ne voit ce que tu votes.",
+      "example": "Par exemple : « La question de ton partenaire »"
     },
     "custom": {
       "name": "Personnalisée"
@@ -1117,5 +1134,9 @@
     "title": "Nous avons reçu ta demande",
     "text": "Ce téléphone ne garde plus rien de toi et, en un mois maximum, nous aurons supprimé tes données de nos serveurs. Les sauvegardes mettent un peu plus de temps à se renouveler et ne sont pas utilisées entre-temps. Si tu rejoues, tu repartiras de zéro.",
     "home": "Retour à l’accueil"
+  },
+  "badges": {
+    "players": "{{minimum}}+ joueurs",
+    "anonymous": "Anonyme"
   }
 }
