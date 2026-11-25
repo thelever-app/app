@@ -11,6 +11,7 @@ export { Player, type PlayerSnapshot } from './domain/entities/player.ts';
 export {
   Room,
   MAXIMUM_PLAYERS,
+  MINIMUM_PLAYERS,
   MINIMUM_PLAYERS_FOR_THE_GAP,
   CLOSES_WITH_NOBODY_CONNECTED_AFTER_MS,
   type RoomSnapshot,

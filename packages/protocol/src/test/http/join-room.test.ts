@@ -9,6 +9,15 @@ describe('JoinRoomRequestDto', () => {
     expect(JoinRoomRequestDto.parse(request)).toEqual(request);
   });
 
+  it('should accept the room the player leaves for this one', () => {
+    // Act & Assert
+    expect(JoinRoomRequestDto.parse({ ...request, leavingRoomId: 'room-1' })).toEqual({
+      ...request,
+      leavingRoomId: 'room-1',
+    });
+    expect(JoinRoomRequestDto.safeParse({ ...request, leavingRoomId: '' }).success).toBe(false);
+  });
+
   it('should accept the dilemmas the device says the player played, up to the most it takes', () => {
     // Arrange
     const played = Array.from({ length: 2000 }, (_, index) => `dilemma-${index}`);

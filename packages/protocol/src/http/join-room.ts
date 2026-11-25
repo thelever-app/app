@@ -7,6 +7,8 @@ export const JoinRoomRequestDto = z.strictObject({
   /** The avatar the player chose before entering. */
   avatar: AvatarDto,
   playedDilemmaIds: PlayedDilemmaIdsDto.optional(),
+  /** The room the player leaves for this one, as a host alone in its lobby does. */
+  leavingRoomId: z.string().min(1).max(200).optional(),
 });
 
 export const JoinRoomResponseDto = z.strictObject({

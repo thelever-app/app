@@ -129,6 +129,22 @@ export const RoomSettingsDto = z.strictObject({
   newDilemmas: z.boolean(),
 });
 
+/**
+ * The fewest players a game starts with, by the variant of its room, as the room server checks
+ * it: the screens show it without asking.
+ */
+export const MINIMUM_PLAYERS: Readonly<Record<RoomSettingsDto['variant'], number>> = {
+  nominal: 2,
+  anonymous: 3,
+};
+
+/** The variant each ambience sets, whose minimum of players its badge shows. */
+export const VARIANT_OF_AMBIENCE: Readonly<Record<AmbienceDto, RoomSettingsDto['variant']>> = {
+  classic: 'nominal',
+  spicy: 'nominal',
+  'no-filter': 'anonymous',
+};
+
 /** The id of a round in its room, which it keeps when the host adds or removes others. */
 export const RoundIdDto = z.number().int().positive().max(32_767);
 

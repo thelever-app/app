@@ -89,6 +89,28 @@ describe('POST /rooms/:roomId/players', () => {
     expect(response.body).toEqual({ code: 'invalid-message' });
   });
 
+  it('should close the room the caller was alone in once they join the other', async () => {
+    // Arrange
+    const { server, room } = await roomOfAna();
+    const { body: own } = await request(server)
+      .post('/rooms')
+      .set('Authorization', bearer('luis'))
+      .send({ nickname: 'Luis', ...ROOM_CHOICES });
+
+    // Act
+    const response = await request(server)
+      .post(`/rooms/${room.roomId}/players`)
+      .set('Authorization', bearer('luis'))
+      .send({ nickname: 'Luis', avatar: JOIN_AVATAR, leavingRoomId: own.roomId });
+
+    // Assert
+    expect(response.status).toBe(201);
+    const closed = await request(server)
+      .get(`/rooms/by-code/${own.code}`)
+      .set('Authorization', bearer('marta'));
+    expect(closed.status).toBe(404);
+  });
+
   it('should answer room-not-found for a room that does not exist', async () => {
     // Act
     const response = await request(await composedHttpServer())
