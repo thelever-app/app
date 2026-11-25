@@ -66,8 +66,8 @@
   },
   "aboutYou": {
     "title": "It’s about you",
-    "nominal": "You don’t vote: guess what each person will choose.",
-    "anonymous": "You don’t vote: guess how the others will split."
+    "nominal": "You don’t vote. Guess what each person will choose.",
+    "anonymous": "You don’t vote. Guess how the others will split."
   },
   "answerSteps": {
     "label": "Steps of your answer",
@@ -184,7 +184,7 @@
     "nobodyChose": "No one picked it",
     "guessed": "· you said {{letter}}",
     "voterRight": "{{name}}, you got it right",
-    "voterMissed": "{{name}}, you missed: you said {{letter}}",
+    "voterMissed": "{{name}}, you missed. You said {{letter}}",
     "optionCount": "{{count, number}} · {{percent}}",
     "optionCountPredicted": "{{count, number}} · {{percent}} · you, {{predicted}}",
     "didNotVote_one": "Didn't vote · {{names}}",
@@ -208,10 +208,10 @@
     "introMascot": "La Palanca, celebrating",
     "aboutTitle": "It was about {{name}}",
     "aboutYouTitle": "It was about you",
-    "aboutNominal": "Didn’t vote: guessed what each person would do",
-    "aboutYouNominal": "You didn’t vote: you guessed what each person would do.",
-    "aboutAnonymous": "Didn’t vote: predicted the split.",
-    "aboutYouAnonymous": "You didn’t vote: you predicted the split. Only you see it.",
+    "aboutNominal": "Didn’t vote, guessed what each person would do",
+    "aboutYouNominal": "You didn’t vote, you guessed what each person would do.",
+    "aboutAnonymous": "Didn’t vote, predicted the split.",
+    "aboutYouAnonymous": "You didn’t vote, you predicted the split. Only you see it.",
     "aboutHits": "{{right, number}} of {{of, number}}",
     "aboutHitsLabel": "right",
     "aboutYouHitsLabel": "right",
@@ -243,7 +243,7 @@
     "note": "Ties share the place.",
     "next": "Continue",
     "nominalTitle": "Leaderboard",
-    "nominalText": "Points for guessing the others’ votes: the fewer people chose the same, the more you get.",
+    "nominalText": "Points for guessing the others’ votes. The fewer people chose the same, the more you get.",
     "nominalNote": "Ties share the place."
   },
   "end": {
@@ -320,7 +320,7 @@
     "roomOf": "{{host}}'s room · {{code}}",
     "inTheRoom_one": "{{count}} in the room",
     "inTheRoom_other": "{{count}} in the room",
-    "adultsOnly": "Over-18s only: it may have adult dilemmas.",
+    "adultsOnly": "Over-18s only. It may have adult dilemmas.",
     "nickname": "Your nickname",
     "submit": "Join the room",
     "submitting": "Joining…",
@@ -333,7 +333,7 @@
   "roomErrors": {
     "too-many-requests": "Too many attempts in a row. Wait a minute and try again.",
     "nickname-missing": "Type a nickname.",
-    "room-full": "The room is full: there are already 50 players.",
+    "room-full": "The room is full. There are already 50 players.",
     "player-expelled": "The host has removed you from this game.",
     "room-code-not-found": "There's no room with that code.",
     "room-not-found": "That room no longer exists.",
@@ -351,7 +351,7 @@
     "create": "Create room",
     "joinWithCode": "Join with a code",
     "back": "Back",
-    "createHint": "Just one person in the group: then invite the others",
+    "createHint": "Just one person in the group, then invite the others",
     "joinHint": "If someone has already created the room"
   },
   "joinCode": {
@@ -385,7 +385,7 @@
     "illustration": "La Palanca, unsure, next to the end of a track",
     "room-code-not-found": {
       "title": "That room doesn't exist",
-      "text": "Check the code: it's 5 characters. Ask whoever created the room for it again.",
+      "text": "Check the code, it’s 5 characters. Ask whoever created the room for it again.",
       "action": "Try another code"
     },
     "room-full": {
@@ -421,7 +421,7 @@
     "roundCount_other": "{{count}} rounds",
     "configure": "Set up",
     "adultsOnly": "Over-18s only",
-    "remote": "Remote: a video call works best.",
+    "remote": "Remote, a video call works best.",
     "rounds": {
       "title": "Rounds · {{count}}",
       "hint": "They play in this order.",
@@ -459,7 +459,7 @@
     "guestWait": "Waiting for {{host}} to start.",
     "gapWarningTitle": "A dilemma is about someone in the group.",
     "noNewDilemmas": "No unplayed dilemmas left",
-    "noNewDilemmasNotice": "Round {{round, number}} has no unplayed dilemmas: it will draw from all categories.",
+    "noNewDilemmasNotice": "Round {{round, number}} has no unplayed dilemmas, so it will draw from all categories.",
     "changeCategories": "Change categories",
     "gapWarning": "It needs at least {{minimum, number}} players; with fewer, the round will be random.",
     "ambience": "Ambience",
@@ -505,7 +505,7 @@
     "rounds": {
       "title": "Rounds · {{count}}",
       "range": "From 1 to {{maximum}}",
-      "hint": "Each round: a random dilemma, one you choose or one a player chooses.",
+      "hint": "Each round plays a random dilemma, one you choose or one a player chooses.",
       "origin": "Who chooses the dilemma of round {{number}}",
       "origins": {
         "random": "Random",
@@ -525,9 +525,9 @@
       "choose": "Choose a dilemma",
       "chooseLabel": "Choose a dilemma for round {{number}}",
       "playersHint": "A player chooses it from the lobby. If nobody does, a random one comes up.",
-      "playersChosen": "A player has already chosen it: “{{title}}”.",
+      "playersChosen": "A player has already chosen “{{title}}”.",
       "add": "Add round",
-      "full": "{{maximum}} rounds: the maximum",
+      "full": "{{maximum}} rounds, the maximum",
       "round": "Round {{number}}:",
       "done": "Done",
       "summary": {
@@ -574,7 +574,7 @@
     "title": "Dilemma of round {{number}}",
     "back": "Back",
     "search": "Search dilemmas",
-    "searchPlaceholder": "Search by text or tag: family, trolley…",
+    "searchPlaceholder": "Search by text or tag, like family or trolley",
     "all": "All",
     "categories": "Categories",
     "hint": "Only dilemmas suitable for this room appear. A dilemma already in another round can’t be repeated.",
@@ -649,9 +649,9 @@
     "loadingResult": "Finding how the world voted…",
     "sameAsYou": "{{percentage}}%",
     "thoughtLikeYou": "voted the same as you.",
-    "predictionOff_one": "You said {{prediction}}%: you were {{count}} point off.",
-    "predictionOff_other": "You said {{prediction}}%: you were {{count, number}} points off.",
-    "predictionRight": "You said {{prediction}}%: you got it.",
+    "predictionOff_one": "You said {{prediction}}% and were {{count}} point off.",
+    "predictionOff_other": "You said {{prediction}}% and were {{count, number}} points off.",
+    "predictionRight": "You said {{prediction}}% and got it.",
     "yours": "{{option}} · your vote",
     "answers_one": "{{count, number}} answer around the world. Updated once a day.",
     "answers_other": "{{count, number}} answers around the world. Updated once a day.",
@@ -829,7 +829,7 @@
       },
       "donations": {
         "title": "Donations.",
-        "text": "If you like it, you can help keep it going with a donation. Donating gives you no advantage in the game: everyone plays the same.",
+        "text": "If you like it, you can help keep it going with a donation. Donating gives you no advantage in the game. Everyone plays the same.",
         "link": "Support TheLever",
         "label": "Support TheLever (opens in the browser)"
       }
@@ -877,7 +877,7 @@
     },
     "no-filter": {
       "name": "No filter",
-      "line": "What Spicy has, plus compromising questions. Anonymous: nobody sees what you vote.",
+      "line": "What Spicy has, plus compromising questions. Nobody sees what you vote.",
       "example": "For example: “Your partner’s question”"
     },
     "custom": {
@@ -889,7 +889,7 @@
   "compromisingNotice": {
     "title": "This game includes compromising dilemmas",
     "text": "These are dilemmas whose honest answer could show you up before someone in the room, like your partner, your family or your friends.",
-    "anonymous": "That is why the room is anonymous: nobody will see what you vote, only how many choose each option. In small groups, the split may give a vote away.",
+    "anonymous": "That is why the room is anonymous. Nobody will see what you vote, only how many choose each option. In small groups, the split may give a vote away.",
     "understood": "Got it",
     "leave": "Leave the room"
   },
@@ -968,7 +968,7 @@
   "donations": {
     "card": {
       "title": "Having a good time?",
-      "text": "TheLever is free and run by one person. If you like, support it with a donation: it gives no advantage in the game.",
+      "text": "TheLever is free and run by one person. If you like, support it with a donation. It gives no advantage in the game.",
       "link": "Support TheLever",
       "close": "No, thanks"
     },
@@ -986,7 +986,7 @@
     "aboutNickname": "About the nickname “{{nickname}}”, which you reported on {{date}} as <strong>{{reason}}</strong>:",
     "withdrawnDilemma": "We have withdrawn it from the catalogue.",
     "withdrawnNickname": "We have withdrawn it.",
-    "kept": "We are keeping it: it breaks neither the terms of use nor the law.",
+    "kept": "We are keeping it because it breaks neither the terms of use nor the law.",
     "rule": "We applied section {{rule}} of the terms of use. A person on the team decided it.",
     "appeal": "If you disagree, you can appeal from Settings → Contact and reports.",
     "understood": "Got it",
@@ -1043,7 +1043,7 @@
     "send": "Send report",
     "sending": "Sending…",
     "note": "You will get an acknowledgement and, if you leave your email, the decision and how to appeal.",
-    "invalid": "Check what you wrote: the content and the reason are required and the email must be valid.",
+    "invalid": "Check what you wrote. The content and the reason are required, and the email must be valid.",
     "tooMany": "You have already sent many reports today. Come back tomorrow or write to privacidad@thelever.app.",
     "failed": "It could not be sent. Try again.",
     "receivedTitle": "We have received your report",
@@ -1060,10 +1060,10 @@
     "gameOn": "Needed to play. Your votes are shown in the reveal and kept up to 24 h, except your history.",
     "analytics": "Usage analytics",
     "analyticsOn": "We count games and visits, never your votes.",
-    "analyticsOff": "You objected: we count nothing of yours.",
+    "analyticsOff": "You objected, so we count nothing of yours.",
     "cookies": "Cookies and ads",
     "cookiesText": "Which cookies you allow and whether ads are personalised.",
-    "cookiesGpc": "Your browser sends Global Privacy Control: your ads are never personalised.",
+    "cookiesGpc": "Your browser sends Global Privacy Control, so your ads are never personalised.",
     "failed": "We couldn't save it. Try again.",
     "withdraw": {
       "title": "Withdraw the game permission?",

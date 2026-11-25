@@ -75,8 +75,8 @@
   },
   "aboutYou": {
     "title": "Parla di te",
-    "nominal": "Non voti: indovina cosa sceglierà ciascuno.",
-    "anonymous": "Non voti: indovina come si divideranno gli altri."
+    "nominal": "Non voti. Indovina cosa sceglierà ciascuno.",
+    "anonymous": "Non voti. Indovina come si divideranno gli altri."
   },
   "answerSteps": {
     "label": "Passi della tua risposta",
@@ -195,7 +195,7 @@
     "nobodyChose": "Nessuno l’ha scelta",
     "guessed": "· hai detto {{letter}}",
     "voterRight": "{{name}}, hai indovinato",
-    "voterMissed": "{{name}}, hai sbagliato: avevi detto {{letter}}",
+    "voterMissed": "{{name}}, hai sbagliato. Avevi detto {{letter}}",
     "optionCount": "{{count, number}} · {{percent}}",
     "optionCountPredicted": "{{count, number}} · {{percent}} · tu, {{predicted}}",
     "didNotVote_one": "Non ha votato · {{names}}",
@@ -223,10 +223,10 @@
     "introMascot": "La Palanca che festeggia",
     "aboutTitle": "Parlava di {{name}}",
     "aboutYouTitle": "Parlava di te",
-    "aboutNominal": "Non ha votato: ha indovinato cosa avrebbe fatto ciascuno",
-    "aboutYouNominal": "Non hai votato: hai indovinato cosa avrebbe fatto ciascuno.",
-    "aboutAnonymous": "Non ha votato: ha previsto la divisione.",
-    "aboutYouAnonymous": "Non hai votato: hai previsto la divisione. La vedi solo tu.",
+    "aboutNominal": "Non ha votato, ha indovinato cosa avrebbe fatto ciascuno",
+    "aboutYouNominal": "Non hai votato, hai indovinato cosa avrebbe fatto ciascuno.",
+    "aboutAnonymous": "Non ha votato, ha previsto la divisione.",
+    "aboutYouAnonymous": "Non hai votato, hai previsto la divisione. La vedi solo tu.",
     "aboutHits": "{{right, number}} su {{of, number}}",
     "aboutHitsLabel": "indovinati",
     "aboutYouHitsLabel": "indovinati",
@@ -261,7 +261,7 @@
     "note": "I pari merito condividono la posizione.",
     "next": "Continua",
     "nominalTitle": "Classifica",
-    "nominalText": "Punti per indovinare il voto degli altri: più la scelta è rara, più punti.",
+    "nominalText": "Punti per indovinare il voto degli altri. Più la scelta è rara, più punti.",
     "nominalNote": "I pari merito condividono la posizione."
   },
   "end": {
@@ -341,7 +341,7 @@
     "roomOf": "Stanza di {{host}} · {{code}}",
     "inTheRoom_one": "{{count}} nella stanza",
     "inTheRoom_other": "{{count}} nella stanza",
-    "adultsOnly": "Solo per maggiorenni: può contenere dilemmi per adulti.",
+    "adultsOnly": "Solo per maggiorenni. Può contenere dilemmi per adulti.",
     "nickname": "Il tuo nickname",
     "submit": "Entra nella stanza",
     "submitting": "Accesso…",
@@ -355,7 +355,7 @@
   "roomErrors": {
     "too-many-requests": "Troppi tentativi di seguito. Aspetta un minuto e riprova.",
     "nickname-missing": "Scrivi un nickname.",
-    "room-full": "La stanza è piena: ci sono già 50 giocatori.",
+    "room-full": "La stanza è piena. Ci sono già 50 giocatori.",
     "player-expelled": "L’host ti ha tolto da questa partita.",
     "room-code-not-found": "Non c’è nessuna stanza con questo codice.",
     "room-not-found": "Quella stanza non esiste più.",
@@ -373,7 +373,7 @@
     "create": "Crea stanza",
     "joinWithCode": "Entra con un codice",
     "back": "Indietro",
-    "createHint": "Solo una persona del gruppo: poi invita gli altri",
+    "createHint": "Solo una persona del gruppo, poi invita gli altri",
     "joinHint": "Se qualcuno ha già creato la stanza"
   },
   "joinCode": {
@@ -408,7 +408,7 @@
     "illustration": "La Palanca, dubbiosa, accanto a un binario morto",
     "room-code-not-found": {
       "title": "Questa stanza non esiste",
-      "text": "Controlla il codice: sono 5 caratteri. Richiedilo a chi ha creato la stanza.",
+      "text": "Controlla il codice, sono 5 caratteri. Richiedilo a chi ha creato la stanza.",
       "action": "Prova un altro codice"
     },
     "room-full": {
@@ -445,7 +445,7 @@
     "roundCount_other": "{{count}} turni",
     "configure": "Configura",
     "adultsOnly": "Solo per maggiorenni",
-    "remote": "A distanza: meglio in videochiamata.",
+    "remote": "A distanza, meglio in videochiamata.",
     "rounds": {
       "title": "Turni · {{count}}",
       "hint": "Si giocano in quest’ordine.",
@@ -486,7 +486,7 @@
     "missing_many": "Mancano {{count}} giocatori per iniziare",
     "gapWarningTitle": "Un dilemma parla di qualcuno del gruppo.",
     "noNewDilemmas": "Non restano dilemmi non giocati",
-    "noNewDilemmasNotice": "Il turno {{round, number}} non ha dilemmi non giocati: pescherà da tutte le categorie.",
+    "noNewDilemmasNotice": "Il turno {{round, number}} non ha dilemmi non giocati, quindi pescherà da tutte le categorie.",
     "changeCategories": "Cambia categorie",
     "gapWarning": "Servono almeno {{minimum, number}} giocatori; con meno, il turno sarà casuale.",
     "ambience": "Atmosfera",
@@ -532,7 +532,7 @@
     "rounds": {
       "title": "Turni · {{count}}",
       "range": "Da 1 a {{maximum}}",
-      "hint": "Ogni turno: un dilemma casuale, uno che scegli tu o uno che sceglie un giocatore.",
+      "hint": "Ogni turno gioca un dilemma casuale, uno che scegli tu o uno che sceglie un giocatore.",
       "origin": "Chi sceglie il dilemma del turno {{number}}",
       "origins": {
         "random": "Casuale",
@@ -552,9 +552,9 @@
       "choose": "Scegli un dilemma",
       "chooseLabel": "Scegli un dilemma per il turno {{number}}",
       "playersHint": "Lo sceglie un giocatore dalla lobby. Se nessuno lo sceglie, ne esce uno casuale.",
-      "playersChosen": "L’ha già scelto un giocatore: «{{title}}».",
+      "playersChosen": "Un giocatore ha già scelto «{{title}}».",
       "add": "Aggiungi un turno",
-      "full": "{{maximum}} turni: il massimo",
+      "full": "{{maximum}} turni, il massimo",
       "round": "Turno {{number}}:",
       "done": "Fatto",
       "summary": {
@@ -601,7 +601,7 @@
     "title": "Dilemma del turno {{number}}",
     "back": "Indietro",
     "search": "Cerca dilemmi",
-    "searchPlaceholder": "Cerca per testo o tag: famiglia, tram…",
+    "searchPlaceholder": "Cerca per testo o tag, come famiglia o tram",
     "all": "Tutte",
     "categories": "Categorie",
     "hint": "Compaiono solo dilemmi adatti a questa stanza. Un dilemma che è già in un altro turno non si può ripetere.",
@@ -677,10 +677,10 @@
     "loadingResult": "Ricerca del voto del mondo…",
     "sameAsYou": "{{percentage}}%",
     "thoughtLikeYou": "ha votato come te.",
-    "predictionOff_one": "Hai detto {{prediction}}%: scarto di {{count}} punto.",
-    "predictionOff_many": "Hai detto {{prediction}}%: scarto di {{count, number}} punti.",
-    "predictionOff_other": "Hai detto {{prediction}}%: scarto di {{count, number}} punti.",
-    "predictionRight": "Hai detto {{prediction}}%: giusto.",
+    "predictionOff_one": "Hai detto {{prediction}}% con uno scarto di {{count}} punto.",
+    "predictionOff_many": "Hai detto {{prediction}}% con uno scarto di {{count, number}} punti.",
+    "predictionOff_other": "Hai detto {{prediction}}% con uno scarto di {{count, number}} punti.",
+    "predictionRight": "Hai detto {{prediction}}% e hai indovinato.",
     "yours": "{{option}} · il tuo voto",
     "answers_one": "{{count, number}} risposta in tutto il mondo. Si aggiorna una volta al giorno.",
     "answers_many": "{{count, number}} risposte in tutto il mondo. Si aggiorna una volta al giorno.",
@@ -865,7 +865,7 @@
       },
       "donations": {
         "title": "Donazioni.",
-        "text": "Se ti piace, puoi aiutare a mantenerlo con una donazione. Donare non ti dà nessun vantaggio nel gioco: tutti giocate allo stesso modo.",
+        "text": "Se ti piace, puoi aiutare a mantenerlo con una donazione. Donare non ti dà nessun vantaggio nel gioco. Tutti giocate allo stesso modo.",
         "link": "Sostieni TheLever",
         "label": "Sostieni TheLever (si apre nel browser)"
       }
@@ -913,7 +913,7 @@
     },
     "no-filter": {
       "name": "Senza filtri",
-      "line": "Quello di Piccante, più domande compromettenti. Anonimo: nessuno vede cosa voti.",
+      "line": "Quello di Piccante, più domande compromettenti. Nessuno vede cosa voti.",
       "example": "Per esempio: «La domanda del tuo partner»"
     },
     "custom": {
@@ -925,7 +925,7 @@
   "compromisingNotice": {
     "title": "Questa partita include dilemmi compromettenti",
     "text": "Sono dilemmi la cui risposta sincera potrebbe metterti in imbarazzo davanti a qualcuno della stanza, come il tuo partner, la tua famiglia o i tuoi amici.",
-    "anonymous": "Per questo la stanza è anonima: nessuno vedrà cosa voti, solo quanti scelgono ogni opzione. Nei gruppi piccoli, la ripartizione può far indovinare qualche voto.",
+    "anonymous": "Per questo la stanza è anonima. Nessuno vedrà cosa voti, solo quanti scelgono ogni opzione. Nei gruppi piccoli, la ripartizione può far indovinare qualche voto.",
     "understood": "Ho capito",
     "leave": "Esci dalla stanza"
   },
@@ -1004,7 +1004,7 @@
   "donations": {
     "card": {
       "title": "Vi state divertendo?",
-      "text": "TheLever è gratis e lo porta avanti una sola persona. Se vuoi, sostienilo con una donazione: non dà nessun vantaggio nel gioco.",
+      "text": "TheLever è gratis e lo porta avanti una sola persona. Se vuoi, sostienilo con una donazione. Non dà nessun vantaggio nel gioco.",
       "link": "Sostieni TheLever",
       "close": "No, grazie"
     },
@@ -1022,7 +1022,7 @@
     "aboutNickname": "Sul nickname «{{nickname}}», che hai segnalato il {{date}} come <strong>{{reason}}</strong>:",
     "withdrawnDilemma": "L’abbiamo rimosso dal catalogo.",
     "withdrawnNickname": "L’abbiamo rimosso.",
-    "kept": "Lo manteniamo: non viola né le condizioni d’uso né la legge.",
+    "kept": "Lo manteniamo perché non viola né le condizioni d’uso né la legge.",
     "rule": "Abbiamo applicato la sezione {{rule}} delle condizioni d’uso. Ha deciso una persona del team.",
     "appeal": "Se non sei d’accordo, puoi presentare reclamo da Impostazioni → Contatti e segnalazioni.",
     "understood": "Capito",
@@ -1079,7 +1079,7 @@
     "send": "Invia segnalazione",
     "sending": "Invio…",
     "note": "Riceverai una conferma di ricezione e, se lasci la tua email, la decisione e come presentare reclamo.",
-    "invalid": "Controlla quello che hai scritto: il contenuto e il motivo sono obbligatori e l’email deve essere valida.",
+    "invalid": "Controlla quello che hai scritto. Il contenuto e il motivo sono obbligatori, e l’email deve essere valida.",
     "tooMany": "Oggi hai già inviato molte segnalazioni. Torna domani o scrivi a privacidad@thelever.app.",
     "failed": "Invio non riuscito. Riprova.",
     "receivedTitle": "Abbiamo ricevuto la tua segnalazione",
@@ -1096,10 +1096,10 @@
     "gameOn": "Necessario per giocare. I tuoi voti si vedono nella rivelazione e si conservano fino a 24 h, tranne la tua cronologia.",
     "analytics": "Analisi d’uso",
     "analyticsOn": "Contiamo partite e visite, mai i tuoi voti.",
-    "analyticsOff": "Ti sei opposto: non contiamo niente di tuo.",
+    "analyticsOff": "Ti sei opposto, quindi non contiamo niente di tuo.",
     "cookies": "Cookie e annunci",
     "cookiesText": "Quali cookie consenti e se gli annunci sono personalizzati.",
-    "cookiesGpc": "Il tuo browser invia Global Privacy Control: i tuoi annunci non sono mai personalizzati.",
+    "cookiesGpc": "Il tuo browser invia Global Privacy Control, quindi i tuoi annunci non sono mai personalizzati.",
     "failed": "Non siamo riusciti a salvarlo. Riprova.",
     "withdraw": {
       "title": "Ritirare il permesso del gioco?",
