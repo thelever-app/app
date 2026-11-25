@@ -103,6 +103,7 @@ import {
   Dilemma,
   FindCandidatesUseCase,
   DilemmaNotFoundError,
+  DilemmaOnlyForAdultsError,
   GetDilemmaPreviewUseCase,
   type GetDilemmaPreviewOutput,
   GetDilemmasUseCase,
@@ -591,6 +592,8 @@ export class AcceptanceDriver implements GameDriver {
   #dilemmaToVote: GetDilemmaPreviewOutput | undefined;
   /** Whether the app the visitor opened by a link said the dilemma to vote is not available. */
   #dilemmaToVoteUnavailable = false;
+  /** Whether whoever opened the link to play a dilemma was told it is only for adults. */
+  #toldOnlyForAdults = false;
   #visitorVote: string | undefined;
   #worldResultSeen: GetWorldResultOutput | undefined;
   #visitorRoomId: string | undefined;
@@ -2540,6 +2543,40 @@ export class AcceptanceDriver implements GameDriver {
     return this.#dilemmaToVoteUnavailable;
   }
 
+  /** As the preview a room starts with, for whoever opens it, with their seal. */
+  async openTheLinkToPlayWithTheGroup(name: string, player?: string): Promise<void> {
+    const identity = player === undefined ? VISITOR_IDENTITY : this.#playerCalled(player).identity;
+    const { underEighteen } = await this.#sealProvider.sealFor(identity);
+    this.#dilemmaToPlay = undefined;
+    this.#toldOnlyForAdults = false;
+    this.#dilemmaToVoteUnavailable = false;
+    try {
+      this.#dilemmaToPlay = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
+        publicId: await this.#publicIdOf(name),
+        toStartARoom: true,
+        underEighteen,
+      });
+    } catch (error) {
+      if (error instanceof DilemmaOnlyForAdultsError) this.#toldOnlyForAdults = true;
+      else if (error instanceof DilemmaNotFoundError) this.#dilemmaToVoteUnavailable = true;
+      else throw error;
+    }
+  }
+
+  async toldTheDilemmaIsOnlyForAdults(): Promise<boolean> {
+    return this.#toldOnlyForAdults;
+  }
+
+  ambienceChosenToPlayTheDilemma(): Promise<Ambience | undefined> {
+    throw new Error('Only the device chooses an ambience beforehand: the scenario must be @screen');
+  }
+
+  startingDilemmaLeftOut(): Promise<boolean> {
+    throw new Error(
+      'Only the device shows the card of the first dilemma: the scenario must be @screen',
+    );
+  }
+
   async visitorOnANewDevice(): Promise<void> {
     await this.newDevice(VISITOR, { country: 'ES' });
   }
@@ -2631,9 +2668,11 @@ export class AcceptanceDriver implements GameDriver {
     return dilemma.publicId;
   }
 
-  async createTheRoomOfTheDilemma(ambience: Ambience = 'classic'): Promise<void> {
+  async createTheRoomOfTheDilemma(chosen?: Ambience): Promise<void> {
     const preview = this.#dilemmaToPlay;
     if (!preview) throw new Error('The visitor chose no dilemma to play with the group');
+    // The screen comes with Spicy for a dilemma for adults, and with nothing chosen otherwise.
+    const ambience = chosen ?? (preview.minimumAge === 18 ? 'spicy' : 'classic');
     const catalog = new PublishedDilemmasCatalog(
       new GetDilemmasUseCase(this.#dilemmaRepository),
       new SearchCatalogUseCase(this.#dilemmaRepository),

@@ -636,6 +636,10 @@ export class E2eDriver implements GameDriver {
   #visitorRoomId: string | undefined;
   /** What the card of the first round said on the screen to create the room of the visitor. */
   #startingDilemmaShown: string | undefined;
+  /** Whether the card of the first dilemma showed it left out as the visitor created the room. */
+  #startingDilemmaLeftOut = false;
+  /** Who opened the last link to play a dilemma with the group. */
+  #linkOpener: string | undefined;
 
   constructor(stack: E2eStack) {
     this.#stack = stack;
@@ -3421,12 +3425,49 @@ export class E2eDriver implements GameDriver {
     await page.getByTestId('vote-alone').or(page.getByRole('alert')).first().waitFor();
   }
 
+  /** To vote it alone, or to play it with the group from its link. */
   async dilemmaToVoteIsUnavailable(): Promise<boolean> {
     const { page } = screenOf(this.#playerCalled(VISITOR));
     return page
       .getByRole('alert')
-      .filter({ hasText: textIn('es', 'voteAlone.notFound') })
+      .filter({
+        hasText: new RegExp(
+          `${escaped(textIn('es', 'voteAlone.notFound'))}|${escaped(textIn('es', 'playDilemma.notFound'))}`,
+        ),
+      })
       .isVisible();
+  }
+
+  /** The link the QR of a flyer carries: the app, to create a room that starts with the dilemma. */
+  async openTheLinkToPlayWithTheGroup(name: string, player?: string): Promise<void> {
+    const opener = player ?? VISITOR;
+    this.#linkOpener = opener;
+    const { page } = screenOf(await this.#withScreen(opener));
+    await page.goto(`${this.#stack.webUrl}/new/${await this.#publicIdOf(name)}?lang=es`);
+    const starting = page.getByTestId('first-dilemma');
+    await starting.or(page.getByRole('alert')).first().waitFor();
+    this.#startingDilemmaShown =
+      (await starting.count()) > 0 ? ((await starting.textContent()) ?? '') : undefined;
+  }
+
+  async toldTheDilemmaIsOnlyForAdults(): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(this.#linkOpener ?? VISITOR));
+    return page
+      .getByRole('heading', { name: spanish('joinRefusal.dilemma-only-for-adults.title') })
+      .isVisible();
+  }
+
+  async ambienceChosenToPlayTheDilemma(): Promise<Ambience | undefined> {
+    const { page } = screenOf(this.#playerCalled(VISITOR));
+    const group = page.getByRole('group', { name: spanish('createRoom.ambience') });
+    for (const radio of await group.locator('input[type="radio"]').all()) {
+      if (await radio.isChecked()) return (await radio.getAttribute('value')) as Ambience;
+    }
+    return undefined;
+  }
+
+  async startingDilemmaLeftOut(): Promise<boolean> {
+    return this.#startingDilemmaLeftOut;
   }
 
   async visitorOnANewDevice(): Promise<void> {
@@ -3513,11 +3554,15 @@ export class E2eDriver implements GameDriver {
     return shown !== null && args !== null && shown.y >= args.y + args.height;
   }
 
-  async createTheRoomOfTheDilemma(ambience: Ambience = 'classic'): Promise<void> {
+  async createTheRoomOfTheDilemma(ambience?: Ambience): Promise<void> {
     const { page } = screenOf(this.#playerCalled(VISITOR));
     await page.getByRole('textbox', { name: SCREEN.nickname }).fill(VISITOR);
     await chooseOption(page, SCREEN.places.together);
-    await chooseAmbience(page, textIn('es', `ambience.${ambience}.name`));
+    // Without an ambience, the one the screen comes with, or Classic if it comes with none.
+    const chosen = ambience ?? (await this.ambienceChosenToPlayTheDilemma()) ?? 'classic';
+    await chooseAmbience(page, textIn('es', `ambience.${chosen}.name`));
+    this.#startingDilemmaLeftOut =
+      (await page.getByTestId('first-dilemma').getAttribute('aria-disabled')) === 'true';
     await page.getByRole('button', { name: SCREEN.create }).click();
     await page.waitForURL(/\/rooms\//);
     const visitor = this.#playerCalled(VISITOR);

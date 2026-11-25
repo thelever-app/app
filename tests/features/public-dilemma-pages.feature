@@ -89,6 +89,40 @@ Feature: Public dilemma pages
     Then before creating it, the visitor sees that the game starts with "El tranvía"
     And a room is created whose round 1 is the specific dilemma "El tranvía"
 
+  @ui
+  Scenario: A link opens a room that starts with a dilemma for adults
+    Given the dilemma "La fiesta" is a dilemma for adults
+    When a visitor opens the link to play "La fiesta" with the group
+    And creates the room
+    Then a room is created whose round 1 is the specific dilemma "La fiesta"
+
+  @ui @screen
+  Scenario: Spicy comes chosen for a dilemma for adults
+    Given the dilemma "La fiesta" is a dilemma for adults
+    When a visitor opens the link to play "La fiesta" with the group
+    Then the ambience "Spicy" is chosen
+
+  @ui @screen
+  Scenario: Classic leaves a dilemma for adults out of the room
+    Given the dilemma "La fiesta" is a dilemma for adults
+    And a visitor opens the link to play "La fiesta" with the group
+    When the visitor chooses the ambience "Classic" and creates the room
+    Then the visitor saw that "La fiesta" does not fit a Classic room
+    And the room has 8 random rounds from every category
+
+  @ui
+  Scenario: A player under 18 does not see a dilemma for adults from its link
+    Given the dilemma "La fiesta" is a dilemma for adults
+    And a player who declared a birth year that makes them 17
+    When the player opens the link to play "La fiesta" with the group
+    Then the player is told the dilemma is only for people 18 or over
+    And does not see the text of "La fiesta"
+
+  Scenario: A compromising dilemma cannot be played from a link
+    Given the dilemma "Los mensajes" is a compromising dilemma
+    When a visitor opens the link to play "Los mensajes" with the group
+    Then the visitor sees that the dilemma is not available
+
   Scenario: A dilemma removed from the catalog loses its page
     Given "El tranvía" is removed from the catalog
     When the public pages are generated

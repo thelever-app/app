@@ -1126,8 +1126,19 @@ export interface GameDriver {
   dilemmaWithWorldAnswers(name: string, answers: number): Promise<void>;
   /** What the visitor sees of the world result after voting alone. */
   worldResultSeen(): Promise<WorldResultView>;
-  /** The visitor creates the room the screen offers to play the dilemma with the group. */
+  /**
+   * The visitor creates the room the screen offers to play the dilemma with the group, with that
+   * ambience or, without one, the ambience the screen comes with.
+   */
   createTheRoomOfTheDilemma(ambience?: Ambience): Promise<void>;
+  /** `player`, the visitor if none, opens the link to play the dilemma with the group, as a QR leads to it. */
+  openTheLinkToPlayWithTheGroup(name: string, player?: string): Promise<void>;
+  /** Whether whoever opened that link was told the dilemma is only for people 18 or over. */
+  toldTheDilemmaIsOnlyForAdults(): Promise<boolean>;
+  /** The ambience the screen to play the dilemma with the group comes with. Only on screen. */
+  ambienceChosenToPlayTheDilemma(): Promise<Ambience | undefined>;
+  /** Whether the card of the first dilemma showed it left out of the room as it was created. Only on screen. */
+  startingDilemmaLeftOut(): Promise<boolean>;
   /** The name of the dilemma the screen to create the room says the game starts with, before creating it. */
   startingDilemmaShownToTheVisitor(): Promise<string | undefined>;
   /** The name of the specific dilemma of round 1 of the room the visitor created; none if it is not specific. */
