@@ -430,6 +430,11 @@
       "title": "Aquesta sala té dilemes +18",
       "text": "Només hi poden entrar majors de 18 anys.",
       "action": "Torna a l’inici"
+    },
+    "dilemma-only-for-adults": {
+      "title": "Aquest dilema és només per a majors de 18 anys",
+      "text": "Pots crear una sala amb altres dilemes des de l’inici.",
+      "action": "Torna a l’inici"
     }
   },
   "lobby": {
@@ -662,7 +667,10 @@
     "about": "{{category}} · Les altres 7 rondes, segons l’ambient que trieu.",
     "loading": "Buscant el dilema…",
     "notFound": "Aquest dilema ja no és a TheLever. Pots crear una sala amb d’altres del catàleg.",
-    "home": "Anar a l’inici"
+    "home": "Anar a l’inici",
+    "leftOut": "No entra en aquesta sala",
+    "offInClassic": "Aquest dilema és +18 i no entra en una sala Clàssica. Tria Picant o Sense filtre per començar-hi.",
+    "aboutForAdults": "{{category}} · +18 · Les altres 7 rondes, segons l’ambient que trieu."
   },
   "voteAlone": {
     "loading": "Cercant el dilema…",

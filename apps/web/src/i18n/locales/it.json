@@ -430,6 +430,11 @@
       "title": "Questa stanza ha dilemmi +18",
       "text": "Possono entrare solo i maggiori di 18 anni.",
       "action": "Torna all’inizio"
+    },
+    "dilemma-only-for-adults": {
+      "title": "Questo dilemma è solo per maggiorenni",
+      "text": "Puoi creare una stanza con altri dilemmi dall’inizio.",
+      "action": "Torna all’inizio"
     }
   },
   "lobby": {
@@ -662,7 +667,10 @@
     "about": "{{category}} · Gli altri 7 round seguono l’atmosfera che sceglierete.",
     "loading": "Cerco il dilemma…",
     "notFound": "Questo dilemma non è più su TheLever. Puoi creare una stanza con altri del catalogo.",
-    "home": "Vai all’inizio"
+    "home": "Vai all’inizio",
+    "leftOut": "Non entra in questa stanza",
+    "offInClassic": "Questo dilemma è +18 e non entra in una stanza Classica. Scegli Piccante o Senza filtri per iniziare con questo.",
+    "aboutForAdults": "{{category}} · +18 · Gli altri 7 round seguono l’atmosfera che sceglierete."
   },
   "voteAlone": {
     "loading": "Ricerca del dilemma…",
