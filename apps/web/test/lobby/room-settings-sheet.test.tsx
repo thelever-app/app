@@ -656,7 +656,7 @@ describe('RoomSettingsSheet', () => {
     expect(folded[0]).toContain(t('settings.rounds.summary.players'));
     expect(folded[1]).toContain('Elegido: «La cartera encontrada»');
     expect(empty).toContain(t('settings.rounds.playersHint'));
-    expect(filled).toContain('Ya la ha elegido un jugador: «La cartera encontrada».');
+    expect(filled).toContain('Un jugador ya ha elegido «La cartera encontrada».');
     expect(changed).toContain(t('settings.rounds.playersHint'));
     expect(send).toHaveBeenCalledWith({
       type: 'change-settings',

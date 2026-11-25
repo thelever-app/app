@@ -66,8 +66,8 @@
   },
   "aboutYou": {
     "title": "Es geht um dich",
-    "nominal": "Du stimmst nicht ab: Rate, was jede Person wählt.",
-    "anonymous": "Du stimmst nicht ab: Rate, wie sich die anderen verteilen."
+    "nominal": "Du stimmst nicht ab. Rate, was jede Person wählt.",
+    "anonymous": "Du stimmst nicht ab. Rate, wie sich die anderen verteilen."
   },
   "answerSteps": {
     "label": "Schritte deiner Antwort",
@@ -184,7 +184,7 @@
     "nobodyChose": "Niemand hat sie gewählt",
     "guessed": "· dein Tipp: {{letter}}",
     "voterRight": "{{name}}, richtig getippt",
-    "voterMissed": "{{name}}, daneben: dein Tipp war {{letter}}",
+    "voterMissed": "{{name}}, daneben. Dein Tipp war {{letter}}",
     "optionCount": "{{count, number}} · {{percent}}",
     "optionCountPredicted": "{{count, number}} · {{percent}} · du: {{predicted}}",
     "didNotVote_one": "Nicht abgestimmt · {{names}}",
@@ -208,10 +208,10 @@
     "introMascot": "La Palanca jubelt",
     "aboutTitle": "Es ging um {{name}}",
     "aboutYouTitle": "Es ging um dich",
-    "aboutNominal": "Hat nicht abgestimmt: hat geraten, was jede Person tun würde",
-    "aboutYouNominal": "Du hast nicht abgestimmt: Du hast geraten, was jede Person tun würde.",
-    "aboutAnonymous": "Hat nicht abgestimmt: hat die Verteilung vorhergesagt.",
-    "aboutYouAnonymous": "Du hast nicht abgestimmt: Du hast die Verteilung vorhergesagt. Nur du siehst sie.",
+    "aboutNominal": "Hat nicht abgestimmt und geraten, was jede Person tun würde",
+    "aboutYouNominal": "Du hast nicht abgestimmt und geraten, was jede Person tun würde.",
+    "aboutAnonymous": "Hat nicht abgestimmt und die Verteilung vorhergesagt.",
+    "aboutYouAnonymous": "Du hast nicht abgestimmt und die Verteilung vorhergesagt. Nur du siehst sie.",
     "aboutHits": "{{right, number}} von {{of, number}}",
     "aboutHitsLabel": "richtig",
     "aboutYouHitsLabel": "richtig",
@@ -243,7 +243,7 @@
     "note": "Bei Gleichstand teilt man sich den Platz.",
     "next": "Weiter",
     "nominalTitle": "Rangliste",
-    "nominalText": "Punkte fürs Erraten der Stimmen der anderen: je weniger dasselbe gewählt haben, desto mehr.",
+    "nominalText": "Punkte fürs Erraten der Stimmen der anderen. Je weniger dasselbe gewählt haben, desto mehr.",
     "nominalNote": "Bei Gleichstand teilt man sich den Platz."
   },
   "end": {
@@ -320,7 +320,7 @@
     "roomOf": "Raum von {{host}} · {{code}}",
     "inTheRoom_one": "{{count}} im Raum",
     "inTheRoom_other": "{{count}} im Raum",
-    "adultsOnly": "Nur ab 18: kann Dilemmas für Erwachsene enthalten.",
+    "adultsOnly": "Nur ab 18. Kann Dilemmas für Erwachsene enthalten.",
     "nickname": "Dein Spitzname",
     "submit": "Raum betreten",
     "submitting": "Beitreten…",
@@ -333,7 +333,7 @@
   "roomErrors": {
     "too-many-requests": "Zu viele Versuche hintereinander. Warte eine Minute und versuch es noch einmal.",
     "nickname-missing": "Gib einen Spitznamen ein.",
-    "room-full": "Der Raum ist voll: Es sind schon 50 Spieler drin.",
+    "room-full": "Der Raum ist voll. Es sind schon 50 Spieler drin.",
     "player-expelled": "Der Gastgeber hat dich aus diesem Spiel entfernt.",
     "room-code-not-found": "Es gibt keinen Raum mit diesem Code.",
     "room-not-found": "Diesen Raum gibt es nicht mehr.",
@@ -351,7 +351,7 @@
     "create": "Raum erstellen",
     "joinWithCode": "Mit Code beitreten",
     "back": "Zurück",
-    "createHint": "Nur eine Person der Gruppe: dann lädst du die anderen ein",
+    "createHint": "Nur eine Person der Gruppe, dann lädst du die anderen ein",
     "joinHint": "Wenn schon jemand den Raum erstellt hat"
   },
   "joinCode": {
@@ -385,7 +385,7 @@
     "illustration": "La Palanca zögert neben einem Gleisende",
     "room-code-not-found": {
       "title": "Diesen Raum gibt es nicht",
-      "text": "Prüfe den Code: Er hat 5 Zeichen. Frag noch einmal, wer den Raum erstellt hat.",
+      "text": "Prüfe den Code, er hat 5 Zeichen. Frag noch einmal, wer den Raum erstellt hat.",
       "action": "Anderen Code probieren"
     },
     "room-full": {
@@ -421,7 +421,7 @@
     "roundCount_other": "{{count}} Runden",
     "configure": "Einstellen",
     "adultsOnly": "Nur ab 18",
-    "remote": "Aus der Ferne: am besten per Videoanruf.",
+    "remote": "Aus der Ferne, am besten per Videoanruf.",
     "rounds": {
       "title": "Runden · {{count}}",
       "hint": "Sie werden in dieser Reihenfolge gespielt.",
@@ -459,7 +459,7 @@
     "guestWait": "Warten, bis {{host}} startet.",
     "gapWarningTitle": "Ein Dilemma handelt von jemandem aus der Gruppe.",
     "noNewDilemmas": "Keine ungespielten Dilemmas mehr",
-    "noNewDilemmasNotice": "Runde {{round, number}} hat keine ungespielten Dilemmas mehr: Sie zieht aus allen Kategorien.",
+    "noNewDilemmasNotice": "Runde {{round, number}} hat keine ungespielten Dilemmas mehr und zieht deshalb aus allen Kategorien.",
     "changeCategories": "Kategorien ändern",
     "gapWarning": "Es braucht mindestens {{minimum, number}} Personen; mit weniger wird die Runde zufällig.",
     "ambience": "Stimmung",
@@ -505,7 +505,7 @@
     "rounds": {
       "title": "Runden · {{count}}",
       "range": "1 bis {{maximum}}",
-      "hint": "Jede Runde: ein zufälliges Dilemma, eines, das du wählst, oder eines, das jemand wählt.",
+      "hint": "Jede Runde spielt ein zufälliges Dilemma, eines, das du wählst, oder eines, das jemand wählt.",
       "origin": "Wer das Dilemma von Runde {{number}} wählt",
       "origins": {
         "random": "Zufällig",
@@ -525,9 +525,9 @@
       "choose": "Ein Dilemma wählen",
       "chooseLabel": "Ein Dilemma wählen für Runde {{number}}",
       "playersHint": "Ein Spieler wählt es in der Lobby. Wählt es niemand, kommt ein zufälliges.",
-      "playersChosen": "Ein Spieler hat es schon gewählt: „{{title}}“.",
+      "playersChosen": "Ein Spieler hat schon „{{title}}“ gewählt.",
       "add": "Runde hinzufügen",
-      "full": "{{maximum}} Runden: das Maximum",
+      "full": "{{maximum}} Runden, das Maximum",
       "round": "Runde {{number}}:",
       "done": "Fertig",
       "summary": {
@@ -574,7 +574,7 @@
     "title": "Dilemma von Runde {{number}}",
     "back": "Zurück",
     "search": "Dilemmas suchen",
-    "searchPlaceholder": "Suche nach Text oder Tag: Familie, Straßenbahn…",
+    "searchPlaceholder": "Suche nach Text oder Tag, etwa Familie oder Straßenbahn",
     "all": "Alle",
     "categories": "Kategorien",
     "hint": "Hier stehen nur Dilemmas, die zu diesem Raum passen. Ein Dilemma, das schon in einer anderen Runde ist, kann nicht wiederholt werden.",
@@ -649,9 +649,9 @@
     "loadingResult": "Das Weltergebnis wird geladen…",
     "sameAsYou": "{{percentage}} %",
     "thoughtLikeYou": "hat wie du abgestimmt.",
-    "predictionOff_one": "Du hast {{prediction}} % gesagt: {{count}} Punkt daneben.",
-    "predictionOff_other": "Du hast {{prediction}} % gesagt: {{count, number}} Punkte daneben.",
-    "predictionRight": "Du hast {{prediction}} % gesagt: richtig.",
+    "predictionOff_one": "Du hast {{prediction}} % gesagt und lagst {{count}} Punkt daneben.",
+    "predictionOff_other": "Du hast {{prediction}} % gesagt und lagst {{count, number}} Punkte daneben.",
+    "predictionRight": "Du hast {{prediction}} % gesagt und richtig gelegen.",
     "yours": "{{option}} · deine Stimme",
     "answers_one": "{{count, number}} Antwort weltweit. Wird einmal am Tag aktualisiert.",
     "answers_other": "{{count, number}} Antworten weltweit. Wird einmal am Tag aktualisiert.",
@@ -829,7 +829,7 @@
       },
       "donations": {
         "title": "Spenden.",
-        "text": "Wenn es dir gefällt, kannst du mit einer Spende helfen, es am Laufen zu halten. Eine Spende bringt dir im Spiel keinen Vorteil: Alle spielen gleich.",
+        "text": "Wenn es dir gefällt, kannst du mit einer Spende helfen, es am Laufen zu halten. Eine Spende bringt dir im Spiel keinen Vorteil. Alle spielen gleich.",
         "link": "TheLever unterstützen",
         "label": "TheLever unterstützen (öffnet sich im Browser)"
       }
@@ -877,7 +877,7 @@
     },
     "no-filter": {
       "name": "Ohne Filter",
-      "line": "Alles aus Pikant, dazu heikle Fragen. Anonym: Niemand sieht, was du wählst.",
+      "line": "Alles aus Pikant, dazu heikle Fragen. Niemand sieht, was du wählst.",
       "example": "Zum Beispiel: „Die Frage deines Partners“"
     },
     "custom": {
@@ -889,7 +889,7 @@
   "compromisingNotice": {
     "title": "Diese Partie enthält heikle Dilemmas",
     "text": "Das sind Dilemmas, deren ehrliche Antwort dich vor jemandem im Raum bloßstellen könnte, etwa vor deiner Partnerin oder deinem Partner, deiner Familie oder deinen Freunden.",
-    "anonymous": "Deshalb ist der Raum anonym: Niemand sieht, was du wählst, nur wie viele welche Option wählen. In kleinen Gruppen kann die Verteilung eine Stimme verraten.",
+    "anonymous": "Deshalb ist der Raum anonym. Niemand sieht, was du wählst, nur wie viele welche Option wählen. In kleinen Gruppen kann die Verteilung eine Stimme verraten.",
     "understood": "Verstanden",
     "leave": "Raum verlassen"
   },
@@ -968,7 +968,7 @@
   "donations": {
     "card": {
       "title": "Habt ihr Spaß?",
-      "text": "TheLever ist kostenlos und wird von einer einzigen Person betrieben. Wenn du willst, unterstütze es mit einer Spende: Sie bringt dir im Spiel keinen Vorteil.",
+      "text": "TheLever ist kostenlos und wird von einer einzigen Person betrieben. Wenn du willst, unterstütze es mit einer Spende. Sie bringt dir im Spiel keinen Vorteil.",
       "link": "TheLever unterstützen",
       "close": "Nein, danke"
     },
@@ -986,7 +986,7 @@
     "aboutNickname": "Zum Spitznamen „{{nickname}}“, den du am {{date}} als <strong>{{reason}}</strong> gemeldet hast:",
     "withdrawnDilemma": "Wir haben es aus dem Katalog entfernt.",
     "withdrawnNickname": "Wir haben ihn entfernt.",
-    "kept": "Wir behalten es: Es verstößt weder gegen die Nutzungsbedingungen noch gegen das Gesetz.",
+    "kept": "Wir behalten es, weil es weder gegen die Nutzungsbedingungen noch gegen das Gesetz verstößt.",
     "rule": "Wir haben Abschnitt {{rule}} der Nutzungsbedingungen angewendet. Eine Person aus dem Team hat entschieden.",
     "appeal": "Wenn du nicht einverstanden bist, kannst du unter Einstellungen → Kontakt und Meldungen widersprechen.",
     "understood": "Verstanden",
@@ -1043,7 +1043,7 @@
     "send": "Meldung senden",
     "sending": "Wird gesendet…",
     "note": "Du erhältst eine Eingangsbestätigung und, wenn du deine E-Mail angibst, die Entscheidung und wie du widersprechen kannst.",
-    "invalid": "Prüfe deine Angaben: Inhalt und Begründung sind Pflicht, und die E-Mail muss gültig sein.",
+    "invalid": "Prüfe deine Angaben. Inhalt und Begründung sind Pflicht, und die E-Mail muss gültig sein.",
     "tooMany": "Du hast heute schon viele Meldungen gesendet. Komm morgen wieder oder schreib an privacidad@thelever.app.",
     "failed": "Das Senden hat nicht geklappt. Versuch es noch einmal.",
     "receivedTitle": "Wir haben deine Meldung erhalten",
@@ -1060,10 +1060,10 @@
     "gameOn": "Nötig zum Spielen. Deine Stimmen werden bei der Auflösung gezeigt und bis zu 24 Std. gespeichert, außer deinem Verlauf.",
     "analytics": "Nutzungsanalyse",
     "analyticsOn": "Wir zählen Spiele und Besuche, nie deine Stimmen.",
-    "analyticsOff": "Du hast widersprochen: Wir zählen nichts von dir.",
+    "analyticsOff": "Du hast widersprochen, deshalb zählen wir nichts von dir.",
     "cookies": "Cookies und Werbung",
     "cookiesText": "Welche Cookies du erlaubst und ob Werbung personalisiert wird.",
-    "cookiesGpc": "Dein Browser sendet Global Privacy Control: Deine Werbung wird nie personalisiert.",
+    "cookiesGpc": "Dein Browser sendet Global Privacy Control, deshalb wird deine Werbung nie personalisiert.",
     "failed": "Wir konnten es nicht speichern. Versuch es noch einmal.",
     "withdraw": {
       "title": "Spielberechtigung zurückziehen?",

@@ -75,8 +75,8 @@
   },
   "aboutYou": {
     "title": "Va sobre tu",
-    "nominal": "No votes: endevina què triarà cadascú.",
-    "anonymous": "No votes: endevina com es repartiran els altres."
+    "nominal": "No votes. Endevina què triarà cadascú.",
+    "anonymous": "No votes. Endevina com es repartiran els altres."
   },
   "answerSteps": {
     "label": "Passos de la teva resposta",
@@ -195,7 +195,7 @@
     "nobodyChose": "Ningú no l’ha triada",
     "guessed": "· has dit {{letter}}",
     "voterRight": "{{name}}, has encertat",
-    "voterMissed": "{{name}}, has fallat: has dit {{letter}}",
+    "voterMissed": "{{name}}, has fallat. Has dit {{letter}}",
     "optionCount": "{{count, number}} · {{percent}}",
     "optionCountPredicted": "{{count, number}} · {{percent}} · tu, {{predicted}}",
     "didNotVote_one": "No ha votat · {{names}}",
@@ -223,10 +223,10 @@
     "introMascot": "La Palanca, celebrant-ho",
     "aboutTitle": "Anava sobre {{name}}",
     "aboutYouTitle": "Anava sobre tu",
-    "aboutNominal": "No ha votat: ha endevinat què faria cadascú",
-    "aboutYouNominal": "No has votat: has endevinat què faria cadascú.",
-    "aboutAnonymous": "No ha votat: ha predit el repartiment.",
-    "aboutYouAnonymous": "No has votat: has predit el repartiment. Només ho veus tu.",
+    "aboutNominal": "No ha votat, ha endevinat què faria cadascú",
+    "aboutYouNominal": "No has votat, has endevinat què faria cadascú.",
+    "aboutAnonymous": "No ha votat, ha predit el repartiment.",
+    "aboutYouAnonymous": "No has votat, has predit el repartiment. Només ho veus tu.",
     "aboutHits": "{{right, number}} de {{of, number}}",
     "aboutHitsLabel": "encerts",
     "aboutYouHitsLabel": "encerts",
@@ -261,7 +261,7 @@
     "note": "Els empats comparteixen posició.",
     "next": "Continuar",
     "nominalTitle": "Classificació",
-    "nominalText": "Punts per endevinar el vot dels altres: com menys gent hagi triat el mateix, més punts.",
+    "nominalText": "Punts per endevinar el vot dels altres. Com menys gent hagi triat el mateix, més punts.",
     "nominalNote": "Els empats comparteixen posició."
   },
   "end": {
@@ -341,7 +341,7 @@
     "roomOf": "Sala de {{host}} · {{code}}",
     "inTheRoom_one": "{{count}} a la sala",
     "inTheRoom_other": "{{count}} a la sala",
-    "adultsOnly": "Només per a majors de 18 anys: pot tenir dilemes per a adults.",
+    "adultsOnly": "Només per a majors de 18 anys. Pot tenir dilemes per a adults.",
     "nickname": "El teu sobrenom",
     "submit": "Entrar a la sala",
     "submitting": "Entrant…",
@@ -355,7 +355,7 @@
   "roomErrors": {
     "too-many-requests": "Massa intents seguits. Espera un minut i torna-ho a provar.",
     "nickname-missing": "Escriu un sobrenom.",
-    "room-full": "La sala és plena: ja hi ha 50 jugadors.",
+    "room-full": "La sala és plena. Ja hi ha 50 jugadors.",
     "player-expelled": "L’amfitrió t’ha tret d’aquesta partida.",
     "room-code-not-found": "No hi ha cap sala amb aquest codi.",
     "room-not-found": "Aquesta sala ja no existeix.",
@@ -373,7 +373,7 @@
     "create": "Crear una sala",
     "joinWithCode": "Unir-me amb un codi",
     "back": "Tornar",
-    "createHint": "Només una persona del grup: després convida els altres",
+    "createHint": "Només una persona del grup, després convida els altres",
     "joinHint": "Si algú ja ha creat la sala"
   },
   "joinCode": {
@@ -408,7 +408,7 @@
     "illustration": "La Palanca, dubtant, al costat d’un final de via",
     "room-code-not-found": {
       "title": "Aquesta sala no existeix",
-      "text": "Revisa el codi: són 5 caràcters. Torna’l a demanar a qui ha creat la sala.",
+      "text": "Revisa el codi, són 5 caràcters. Torna’l a demanar a qui ha creat la sala.",
       "action": "Provar un altre codi"
     },
     "room-full": {
@@ -445,7 +445,7 @@
     "roundCount_other": "{{count}} rondes",
     "configure": "Configurar",
     "adultsOnly": "Només per a majors de 18 anys",
-    "remote": "A distància: millor en videotrucada.",
+    "remote": "A distància, millor en videotrucada.",
     "rounds": {
       "title": "Rondes · {{count}}",
       "hint": "Es juguen en aquest ordre.",
@@ -486,7 +486,7 @@
     "missing_many": "Falten {{count}} jugadors per començar",
     "gapWarningTitle": "Un dilema va sobre algú del grup.",
     "noNewDilemmas": "Ja no queden dilemes per jugar",
-    "noNewDilemmasNotice": "La ronda {{round, number}} no té dilemes sense jugar: sortirà de totes les categories.",
+    "noNewDilemmasNotice": "La ronda {{round, number}} no té dilemes sense jugar, així que sortirà de totes les categories.",
     "changeCategories": "Canviar les categories",
     "gapWarning": "Necessita almenys {{minimum, number}} jugadors; amb menys, la ronda serà aleatòria.",
     "ambience": "Ambient",
@@ -532,7 +532,7 @@
     "rounds": {
       "title": "Rondes · {{count}}",
       "range": "D’1 a {{maximum}}",
-      "hint": "Cada ronda: un dilema aleatori, un que tries tu o un que tria un jugador.",
+      "hint": "Cada ronda juga un dilema aleatori, un que tries tu o un que tria un jugador.",
       "origin": "Qui tria el dilema de la ronda {{number}}",
       "origins": {
         "random": "Aleatori",
@@ -552,9 +552,9 @@
       "choose": "Triar un dilema",
       "chooseLabel": "Triar un dilema per a la ronda {{number}}",
       "playersHint": "La tria un jugador des de la sala d’espera. Si ningú no la tria, en surt una d’aleatòria.",
-      "playersChosen": "Ja l’ha triat un jugador: «{{title}}».",
+      "playersChosen": "Un jugador ja ha triat «{{title}}».",
       "add": "Afegir una ronda",
-      "full": "{{maximum}} rondes: el màxim",
+      "full": "{{maximum}} rondes, el màxim",
       "round": "Ronda {{number}}:",
       "done": "Fet",
       "summary": {
@@ -601,7 +601,7 @@
     "title": "Dilema de la ronda {{number}}",
     "back": "Tornar",
     "search": "Cercar dilemes",
-    "searchPlaceholder": "Cerca per text o etiqueta: família, tramvia…",
+    "searchPlaceholder": "Cerca per text o etiqueta, com família o tramvia",
     "all": "Totes",
     "categories": "Categories",
     "hint": "Només hi surten dilemes aptes per a aquesta sala. Un dilema que ja és en una altra ronda no es pot repetir.",
@@ -677,10 +677,10 @@
     "loadingResult": "Cercant com ha votat el món…",
     "sameAsYou": "{{percentage}} %",
     "thoughtLikeYou": "ha votat el mateix que tu.",
-    "predictionOff_one": "Has dit {{prediction}} %: t’has quedat a {{count}} punt.",
-    "predictionOff_many": "Has dit {{prediction}} %: t’has quedat a {{count, number}} punts.",
-    "predictionOff_other": "Has dit {{prediction}} %: t’has quedat a {{count, number}} punts.",
-    "predictionRight": "Vas dir el {{prediction}} %: l’has encertat.",
+    "predictionOff_one": "Has dit {{prediction}} % i t’has quedat a {{count}} punt.",
+    "predictionOff_many": "Has dit {{prediction}} % i t’has quedat a {{count, number}} punts.",
+    "predictionOff_other": "Has dit {{prediction}} % i t’has quedat a {{count, number}} punts.",
+    "predictionRight": "Vas dir el {{prediction}} % i l’has encertat.",
     "yours": "{{option}} · el teu vot",
     "answers_one": "{{count, number}} resposta a tot el món. S’actualitza un cop al dia.",
     "answers_many": "{{count, number}} respostes a tot el món. S’actualitza un cop al dia.",
@@ -865,7 +865,7 @@
       },
       "donations": {
         "title": "Donacions.",
-        "text": "Si t’agrada, pots ajudar a mantenir-lo amb una donació. Fer una donació no et dona cap avantatge en el joc: tothom hi juga igual.",
+        "text": "Si t’agrada, pots ajudar a mantenir-lo amb una donació. Fer una donació no et dona cap avantatge en el joc. Tothom hi juga igual.",
         "link": "Dona suport a TheLever",
         "label": "Dona suport a TheLever (s’obre al navegador)"
       }
@@ -913,7 +913,7 @@
     },
     "no-filter": {
       "name": "Sense filtre",
-      "line": "El de Picant, més preguntes compromeses. Anònim: ningú no veu què votes.",
+      "line": "El de Picant, més preguntes compromeses. Ningú no veu què votes.",
       "example": "Per exemple: «La pregunta de la teva parella»"
     },
     "custom": {
@@ -925,7 +925,7 @@
   "compromisingNotice": {
     "title": "Aquesta partida inclou dilemes compromesos",
     "text": "Són dilemes la resposta sincera dels quals et podria deixar en evidència davant d’algú de la sala, com la teva parella, la teva família o els teus amics.",
-    "anonymous": "Per això la sala és anònima: ningú no veurà què votes, només quants trien cada opció. En grups petits, el repartiment pot deixar endevinar algun vot.",
+    "anonymous": "Per això la sala és anònima. Ningú no veurà què votes, només quants trien cada opció. En grups petits, el repartiment pot deixar endevinar algun vot.",
     "understood": "Entesos",
     "leave": "Sortir de la sala"
   },
@@ -1004,7 +1004,7 @@
   "donations": {
     "card": {
       "title": "Us ho esteu passant bé?",
-      "text": "TheLever és gratis i el manté una sola persona. Si vols, dona-li suport amb una donació: no dona cap avantatge en el joc.",
+      "text": "TheLever és gratis i el manté una sola persona. Si vols, dona-li suport amb una donació. No dona cap avantatge en el joc.",
       "link": "Dona suport a TheLever",
       "close": "No, gràcies"
     },
@@ -1022,7 +1022,7 @@
     "aboutNickname": "Sobre el sobrenom «{{nickname}}», que vas reportar el {{date}} com a <strong>{{reason}}</strong>:",
     "withdrawnDilemma": "L’hem retirat del catàleg.",
     "withdrawnNickname": "L’hem retirat.",
-    "kept": "El mantenim: no incompleix les condicions d’ús ni la llei.",
+    "kept": "El mantenim perquè no incompleix les condicions d’ús ni la llei.",
     "rule": "Hem aplicat l’apartat {{rule}} de les condicions d’ús. Ho ha decidit una persona de l’equip.",
     "appeal": "Si no hi estàs d’acord, pots reclamar des d’Ajustos → Contacte i denúncies.",
     "understood": "Entesos",
@@ -1079,7 +1079,7 @@
     "send": "Enviar la denúncia",
     "sending": "Enviant…",
     "note": "Rebràs un justificant de recepció i, si deixes el teu correu, la decisió i com reclamar.",
-    "invalid": "Revisa el que has escrit: el contingut i el motiu són obligatoris i el correu ha de ser vàlid.",
+    "invalid": "Revisa el que has escrit. El contingut i el motiu són obligatoris, i el correu ha de ser vàlid.",
     "tooMany": "Avui ja has enviat moltes denúncies. Torna demà o escriu a privacidad@thelever.app.",
     "failed": "No s’ha pogut enviar. Torna-ho a provar.",
     "receivedTitle": "Hem rebut la teva denúncia",
@@ -1096,10 +1096,10 @@
     "gameOn": "Necessari per jugar. Els teus vots es veuen en la revelació i es guarden fins a 24 h, excepte el teu historial.",
     "analytics": "Anàlisi d’ús",
     "analyticsOn": "Comptem partides i visites, mai els teus vots.",
-    "analyticsOff": "T’hi has oposat: no comptem res teu.",
+    "analyticsOff": "T’hi has oposat, així que no comptem res teu.",
     "cookies": "Galetes i anuncis",
     "cookiesText": "Quines galetes permets i si els anuncis es personalitzen.",
-    "cookiesGpc": "El teu navegador envia Global Privacy Control: els teus anuncis no es personalitzen mai.",
+    "cookiesGpc": "El teu navegador envia Global Privacy Control, així que els teus anuncis no es personalitzen mai.",
     "failed": "No ho hem pogut desar. Torna-ho a provar.",
     "withdraw": {
       "title": "Retirar el permís del joc?",

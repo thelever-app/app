@@ -254,7 +254,7 @@ const SCREEN = {
   settingsTitle: 'Ajustes de la partida',
   someoneInTheGroup: 'alguien del grupo',
   predictionRight: /^(.+), acertaste$/,
-  predictionMissed: /^(.+), fallaste: dijiste [A-D]$/,
+  predictionMissed: /^(.+), fallaste\. Dijiste [A-D]$/,
   changeAvatar: 'Cambiar avatar',
   missingAvatar: 'Elige otro avatar',
   namesake: /^(.+) ya está en la sala; os distinguirá el avatar\.$/,
@@ -2087,9 +2087,12 @@ export class E2eDriver implements GameDriver {
   }
 
   /** On the screen to create a room, each one with the line that says what it adds. */
-  /** Spicy names Classic, and No filter names Spicy and that it is anonymous. */
+  /**
+   * Spicy names Classic, and No filter names Spicy and that nobody sees what you vote, with the
+   * badge of an anonymous room on its card.
+   */
   async ambiencesSayWhatTheyAdd(player: string): Promise<boolean> {
-    await this.ambiencesToCreateWith(player);
+    const offered = await this.ambiencesToCreateWith(player);
     const { page } = screenOf(this.#playerCalled(player));
     const lineOf = async (ambience: Ambience) =>
       (await page
@@ -2102,7 +2105,7 @@ export class E2eDriver implements GameDriver {
     return (
       spicy.includes(spanish('ambience.classic.name')) &&
       noFilter.includes(spanish('ambience.spicy.name')) &&
-      noFilter.includes(spanish('badges.anonymous'))
+      offered.some(({ ambience, markedAnonymous }) => ambience === 'no-filter' && markedAnonymous)
     );
   }
 
@@ -4073,7 +4076,7 @@ export class E2eDriver implements GameDriver {
    * Once the screen of `viewer` shows the reveal of a dilemma, what the room server sent it of that
    * reveal, by the names of the scenario; and whether the screen says anything about points.
    */
-  /** The chips of the reveal of `viewer`: «Luis, acertaste» or «Luis, fallaste: dijiste B». */
+  /** The chips of the reveal of `viewer`: «Luis, acertaste» or «Luis, fallaste. Dijiste B». */
   async ownPredictionsSeenBy(viewer: string): Promise<{ about: string; right: boolean }[]> {
     const { page } = screenOf(this.#playerCalled(viewer));
     const region = page.getByRole('main', { name: SCREEN.reveal });
