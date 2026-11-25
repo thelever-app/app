@@ -95,7 +95,7 @@ describe('GetDilemmaPreviewUseCase', () => {
       );
     });
 
-    it.each([
+    const UNOPENABLE = [
       ['withdrawn', (dilemma: Dilemma) => dilemma.withdraw()],
       [
         'in exploration',
@@ -110,14 +110,6 @@ describe('GetDilemmaPreviewUseCase', () => {
         (dilemma: Dilemma) => Dilemma.restore({ ...dilemma.toSnapshot(), visibility: 'private' }),
       ],
       [
-        'for adults',
-        (dilemma: Dilemma) =>
-          Dilemma.restore({
-            ...dilemma.toSnapshot(),
-            version: { ...dilemma.toSnapshot().version, minimumAge: 18 },
-          }),
-      ],
-      [
         'compromising',
         (dilemma: Dilemma) =>
           Dilemma.restore({
@@ -125,13 +117,14 @@ describe('GetDilemmaPreviewUseCase', () => {
             version: { ...dilemma.toSnapshot().version, compromising: true },
           }),
       ],
-    ] as const)(
-      'should throw DilemmaNotFoundError if the dilemma is %s: no new room may start with it',
+    ] as const;
+
+    it.each(UNOPENABLE)(
+      'should throw DilemmaNotFoundError if the dilemma is %s: nobody votes it alone',
       async (_case, change) => {
         // Arrange
         const dilemma = trolley();
-        const changed = change(dilemma) ?? dilemma;
-        const getDilemmaPreview = await previewOf(changed);
+        const getDilemmaPreview = await previewOf(change(dilemma) ?? dilemma);
 
         // Act & Assert
         await expect(getDilemmaPreview.execute({ publicId: 'TestPublicId' })).rejects.toThrow(
@@ -139,6 +132,34 @@ describe('GetDilemmaPreviewUseCase', () => {
         );
       },
     );
+
+    it.each(UNOPENABLE)(
+      'should throw DilemmaNotFoundError if the dilemma is %s: no new room may start with it',
+      async (_case, change) => {
+        // Arrange
+        const dilemma = trolley();
+        const getDilemmaPreview = await previewOf(change(dilemma) ?? dilemma);
+
+        // Act & Assert
+        await expect(
+          getDilemmaPreview.execute({
+            publicId: 'TestPublicId',
+            toStartARoom: true,
+            underEighteen: false,
+          }),
+        ).rejects.toThrow(DilemmaNotFoundError);
+      },
+    );
+
+    it('should throw DilemmaNotFoundError if the dilemma is for adults: nobody votes it alone', async () => {
+      // Arrange
+      const getDilemmaPreview = await previewOf(forAdults());
+
+      // Act & Assert
+      await expect(getDilemmaPreview.execute({ publicId: 'TestPublicId' })).rejects.toThrow(
+        DilemmaNotFoundError,
+      );
+    });
 
     it('should open a dilemma for adults to an adult who starts a room with it', async () => {
       // Arrange

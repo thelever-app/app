@@ -1,13 +1,11 @@
-import {
-  Dilemma,
-  DilemmaOnlyForAdultsError,
-  GetDilemmaPreviewUseCase,
-} from '@thelever-app/dilemmas';
+import { Dilemma, GetDilemmaPreviewUseCase } from '@thelever-app/dilemmas';
 import { InMemoryDilemmaRepository } from '@thelever-app/dilemmas/in-memory';
 import { InMemorySealProvider, SEAL_BEFORE_FIRST_ACCESS } from '@thelever-app/game/in-memory';
-import type { Request, Response } from 'express';
+import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
+import { httpErrorHandler } from '../../../http/error-handler.ts';
+import { errorCodeOf } from '../../../rooms/error-codes.ts';
 import { DilemmaPreviewEndpoint } from '../../../rooms/http/dilemma-preview.endpoint.ts';
 import { bearer, composedHttpServer } from '../../support/room-server.ts';
 
@@ -41,18 +39,19 @@ async function endpointWithADilemmaForAdults() {
   return new DilemmaPreviewEndpoint(new GetDilemmaPreviewUseCase(repository), seals);
 }
 
-/** Asks the endpoint for the dilemma for adults as `identity`, with that query. */
-async function askFor(identity: string, query: Record<string, string>) {
+/**
+ * Asks for the dilemma for adults as `identity`, with that query: the endpoint behind the handler of
+ * errors of the server, with whoever asks already authenticated.
+ */
+async function askFor(identity: string, query: string) {
   const endpoint = await endpointWithADilemmaForAdults();
-  const answered: unknown[] = [];
-  const req = { params: { publicId: 'TestAdultsPublicId' }, query } as unknown as Request;
-  const res = {
-    locals: { identity },
-    status: () => res,
-    json: (body: unknown) => answered.push(body),
-  } as unknown as Response;
-  await endpoint.handle(req, res);
-  return answered;
+  const app = express();
+  app.get(endpoint.path, (req, res, next) => {
+    res.locals.identity = identity;
+    endpoint.handle(req, res).catch(next);
+  });
+  app.use(httpErrorHandler(errorCodeOf));
+  return request(app).get(`/dilemmas/TestAdultsPublicId${query}`);
 }
 
 describe('GET /dilemmas/:publicId', () => {
@@ -111,14 +110,28 @@ describe('GET /dilemmas/:publicId', () => {
 
   it('should show a dilemma for adults to an adult who starts a room with it', async () => {
     // Act
-    const answered = await askFor('ana', { for: 'room' });
+    const response = await askFor('ana', '?for=room');
 
     // Assert
-    expect(answered).toEqual([expect.objectContaining({ dilemmaId: 'dlm-9', minimumAge: 18 })]);
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(expect.objectContaining({ dilemmaId: 'dlm-9', minimumAge: 18 }));
   });
 
-  it('should tell someone under 18 that a dilemma for adults is only for adults', async () => {
-    // Act & Assert
-    await expect(askFor('luis', { for: 'room' })).rejects.toThrow(DilemmaOnlyForAdultsError);
+  it('should tell someone under 18 that a dilemma for adults is only for adults, without it', async () => {
+    // Act
+    const response = await askFor('luis', '?for=room');
+
+    // Assert
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ code: 'dilemma-only-for-adults' });
+  });
+
+  it('should not show a dilemma for adults to vote it alone, not even to an adult', async () => {
+    // Act
+    const response = await askFor('ana', '');
+
+    // Assert
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ code: 'dilemma-not-found' });
   });
 });

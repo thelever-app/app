@@ -24,14 +24,17 @@ export class DilemmaPreviewEndpoint implements HttpEndpoint {
   }
 
   async handle(req: Request, res: Response): Promise<void> {
+    const publicId = String(req.params.publicId);
     const toStartARoom = parseBody(DilemmaPreviewQueryDto, req.query).for === 'room';
-    const underEighteen =
-      toStartARoom && (await this.#sealProvider.sealFor(identityOf(res))).underEighteen;
-    const preview = await this.#getDilemmaPreview.execute({
-      publicId: String(req.params.publicId),
-      toStartARoom,
-      underEighteen,
-    });
+    const preview = await this.#getDilemmaPreview.execute(
+      toStartARoom
+        ? {
+            publicId,
+            toStartARoom,
+            underEighteen: (await this.#sealProvider.sealFor(identityOf(res))).underEighteen,
+          }
+        : { publicId },
+    );
     res.status(200).json(DilemmaPreviewResponseDto.parse(preview));
   }
 }

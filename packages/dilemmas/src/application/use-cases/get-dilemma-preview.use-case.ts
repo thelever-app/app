@@ -3,13 +3,13 @@ import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
 import { openByLink, openToStartARoom } from '../open-by-link.ts';
 import type { DilemmaRepository } from '../ports/dilemma-repository.port.ts';
 
-export interface GetDilemmaPreviewInput {
-  readonly publicId: string;
-  /** To start a room with it, which may be one for adults; else, to vote it alone, as on the web. */
-  readonly toStartARoom?: boolean;
-  /** Whether who asks is under 18, who never sees a dilemma for adults. */
-  readonly underEighteen?: boolean;
-}
+/**
+ * To vote it alone, as the public web shows it; or to start a room with it, which may be one for
+ * adults, and then whether who asks is under 18, who never sees a dilemma for adults.
+ */
+export type GetDilemmaPreviewInput =
+  | { readonly publicId: string; readonly toStartARoom?: false }
+  | { readonly publicId: string; readonly toStartARoom: true; readonly underEighteen: boolean };
 
 export interface GetDilemmaPreviewOutput {
   /** The id a room is created with. */
@@ -45,14 +45,10 @@ export class GetDilemmaPreviewUseCase implements GetDilemmaPreview {
     this.#dilemmaRepository = dilemmaRepository;
   }
 
-  async execute({
-    publicId,
-    toStartARoom = false,
-    underEighteen = false,
-  }: GetDilemmaPreviewInput): Promise<GetDilemmaPreviewOutput> {
-    const dilemma = toStartARoom
-      ? await openToStartARoom(this.#dilemmaRepository, publicId, underEighteen)
-      : await openByLink(this.#dilemmaRepository, publicId);
+  async execute(input: GetDilemmaPreviewInput): Promise<GetDilemmaPreviewOutput> {
+    const dilemma = input.toStartARoom
+      ? await openToStartARoom(this.#dilemmaRepository, input.publicId, input.underEighteen)
+      : await openByLink(this.#dilemmaRepository, input.publicId);
     return {
       dilemmaId: dilemma.id,
       ...(dilemma.name !== undefined && { name: dilemma.name }),

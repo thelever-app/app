@@ -3446,8 +3446,11 @@ export class E2eDriver implements GameDriver {
     await page.goto(`${this.#stack.webUrl}/new/${await this.#publicIdOf(name)}?lang=es`);
     const starting = page.getByTestId('first-dilemma');
     await starting.or(page.getByRole('alert')).first().waitFor();
+    // Without the card, whatever else the page shows, so a dilemma it refuses shows nowhere.
     this.#startingDilemmaShown =
-      (await starting.count()) > 0 ? ((await starting.textContent()) ?? '') : undefined;
+      ((await starting.count()) > 0
+        ? await starting.textContent()
+        : await page.locator('body').textContent()) ?? '';
   }
 
   async toldTheDilemmaIsOnlyForAdults(): Promise<boolean> {
