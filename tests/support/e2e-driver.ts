@@ -2087,9 +2087,12 @@ export class E2eDriver implements GameDriver {
   }
 
   /** On the screen to create a room, each one with the line that says what it adds. */
-  /** Spicy names Classic, and No filter names Spicy and that it is anonymous. */
+  /**
+   * Spicy names Classic, and No filter names Spicy and that nobody sees what you vote, with the
+   * badge of an anonymous room on its card.
+   */
   async ambiencesSayWhatTheyAdd(player: string): Promise<boolean> {
-    await this.ambiencesToCreateWith(player);
+    const offered = await this.ambiencesToCreateWith(player);
     const { page } = screenOf(this.#playerCalled(player));
     const lineOf = async (ambience: Ambience) =>
       (await page
@@ -2102,7 +2105,7 @@ export class E2eDriver implements GameDriver {
     return (
       spicy.includes(spanish('ambience.classic.name')) &&
       noFilter.includes(spanish('ambience.spicy.name')) &&
-      noFilter.includes(spanish('badges.anonymous'))
+      offered.some(({ ambience, markedAnonymous }) => ambience === 'no-filter' && markedAnonymous)
     );
   }
 
