@@ -111,7 +111,9 @@ import type {
   TitleView,
   WorldResultView,
   Ambience,
+  AmbienceCardView,
   AmbienceOption,
+  SettingsRoundView,
   MarkedDilemma,
   OffReason,
   RoundContent,
@@ -1461,6 +1463,7 @@ export class E2eDriver implements GameDriver {
       await sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.add(), exact: true }).click();
     }
     for (let count = before.length; count > rounds.length; count -= 1) {
+      await this.#unfoldRoundOn(sheet, count);
       await sheet
         .getByRole('button', { name: ROUNDS_ON_SCREEN.remove(count), exact: true })
         .click();
@@ -1504,6 +1507,7 @@ export class E2eDriver implements GameDriver {
   async tryToRemoveRound(host: string, round: number): Promise<boolean> {
     const { length } = await this.roundsSeenBy(host);
     const sheet = await this.#openSettings(host);
+    await this.#unfoldRoundOn(sheet, round);
     const remove = sheet.getByRole('button', { name: ROUNDS_ON_SCREEN.remove(round), exact: true });
     return this.#changeTheNumberOfRounds(sheet, remove, length - 1);
   }
@@ -1667,6 +1671,7 @@ export class E2eDriver implements GameDriver {
     setting: RoundSetting,
     before: RoundView | undefined,
   ): Promise<boolean> {
+    await this.#unfoldRoundOn(sheet, round);
     const origins = sheet.getByRole('radiogroup', {
       name: ROUNDS_ON_SCREEN.origin(round),
       exact: true,
@@ -1692,11 +1697,15 @@ export class E2eDriver implements GameDriver {
   /** The card of that round on the open settings sheet. */
   #roundCardOn(sheet: Locator, round: number): Locator {
     // Inside each card: a locator of the page, so it is looked for within the card.
-    const origins = sheet.page().getByRole('radiogroup', {
-      name: ROUNDS_ON_SCREEN.origin(round),
-      exact: true,
-    });
-    return sheet.getByRole('listitem').filter({ has: origins });
+    const head = sheet.page().getByRole('button', { name: roundHeadName(round) });
+    return sheet.getByRole('listitem').filter({ has: head });
+  }
+
+  /** The round shows what the host sets in it, which folds the one that did before. */
+  async #unfoldRoundOn(sheet: Locator, round: number): Promise<void> {
+    const head = this.#roundHeadOn(sheet, round);
+    if ((await head.count()) === 0) return;
+    if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click();
   }
 
   /**
@@ -1811,6 +1820,7 @@ export class E2eDriver implements GameDriver {
     let sheet: Locator | undefined;
     if (player === this.#hostName()) {
       sheet = await this.#openSettings(player);
+      await this.#unfoldRoundOn(sheet, round);
       const specific = ROUNDS_ON_SCREEN.origins.specific();
       const origin = sheet
         .getByRole('radiogroup', { name: ROUNDS_ON_SCREEN.origin(round), exact: true })
@@ -1933,6 +1943,7 @@ export class E2eDriver implements GameDriver {
           text.includes(spanish(`ambience.${ambience}.line`)) &&
           (off || text.includes(spanish(`ambience.${ambience}.example`))),
         offBecause: off ? 'only-adults' : null,
+        ...(await badgesOn(card)),
       });
     }
     return offered;
@@ -2032,10 +2043,151 @@ export class E2eDriver implements GameDriver {
         ambience,
         described: true,
         offBecause: off && text.includes(spanish('ambience.minorInRoom')) ? 'minor-in-room' : null,
+        ...(await badgesOn(radio)),
       });
     }
     await this.#closeSettings(sheet);
     return offered;
+  }
+
+  /** Below the name of each variant, the fewest players it starts with. */
+  async minimumPlayersOfTheVariantsSeenBy(
+    host: string,
+  ): Promise<Readonly<Record<'nominal' | 'anonymous', number>>> {
+    const sheet = await this.#openSettings(host);
+    const minimumOf = async (variant: 'nominal' | 'anonymous') =>
+      minimumIn((await sheet.getByTestId(`minimum-players-${variant}`).textContent()) ?? '');
+    const minimums = {
+      nominal: await minimumOf('nominal'),
+      anonymous: await minimumOf('anonymous'),
+    };
+    await this.#closeSettings(sheet);
+    return minimums;
+  }
+
+  /** On the settings, which stay open without saving. */
+  async makeAnonymousInTheSettings(host: string): Promise<void> {
+    await chooseOption(await this.#openSettings(host), SCREEN.variants.anonymous);
+  }
+
+  async ambienceCardSeenBy(host: string): Promise<AmbienceCardView> {
+    const sheet = await this.#openSettings(host);
+    const card = sheet.getByRole('button', {
+      name: new RegExp(spanish('settings.ambience.change')),
+    });
+    return {
+      ambience: ambienceShownIn((await card.textContent()) ?? ''),
+      ...(await badgesOn(card)),
+    };
+  }
+
+  async minimumPlayersSeenBy(viewer: string): Promise<number> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    return (await badgesOn(page.getByTestId('room-ambience'))).minimumPlayers;
+  }
+
+  /** On the screen to create a room, each one with the line that says what it adds. */
+  async ambiencesSayWhatTheyAdd(player: string): Promise<boolean> {
+    const offered = await this.ambiencesToCreateWith(player);
+    return offered.every(({ described }) => described);
+  }
+
+  // Who creates the room
+
+  /** Under each button of the start, the line that says who presses it. */
+  async homeSaysWhoCreatesTheRoom(player: string): Promise<{ create: boolean; join: boolean }> {
+    const { page } = screenOf(await this.#withScreen(player));
+    await page.goto(`${this.#stack.webUrl}/app`);
+    const says = async (button: string, hint: string) =>
+      (await page
+        .getByRole('button', { name: spanish(button), exact: true })
+        .getAttribute('aria-describedby')) !== null &&
+      (await page
+        .getByRole('button', { name: spanish(button), exact: true })
+        .textContent())!.includes(spanish(hint));
+    return {
+      create: await says('home.create', 'home.createHint'),
+      join: await says('home.joinWithCode', 'home.joinHint'),
+    };
+  }
+
+  /** The host of the scenario stays its host: this room only its own host uses. */
+  async createRoomOfTheirOwn(host: string): Promise<string> {
+    const scenarioHost = this.#host;
+    await this.createRoom(host);
+    const code = await this.roomCodeSeenBy(host);
+    this.#host = scenarioHost;
+    return code;
+  }
+
+  async isAloneInTheirOwnRoom(player: string): Promise<boolean> {
+    const seen = this.#playerCalled(player);
+    const lobby = this.#lobbyOf(player);
+    return lobby.players.length === 1 && lobby.hostId === this.#playerIdOf(seen);
+  }
+
+  /** On the card of the lobby that offers another room, which takes to its join screen. */
+  async enterCodeFromTheLobby(player: string, code: string): Promise<void> {
+    const opener = this.#playerCalled(player);
+    const { page } = screenOf(opener);
+    const card = page.getByRole('region', { name: spanish('lobby.joinOther.title') });
+    await card.getByRole('textbox', { name: spanish('lobby.joinOther.code') }).fill(code);
+    await card.getByRole('button', { name: spanish('joinCode.enter') }).click();
+    await this.#readJoinScreen(opener);
+  }
+
+  async offerToJoinAnotherRoomSeenBy(viewer: string): Promise<boolean> {
+    const { page } = screenOf(this.#playerCalled(viewer));
+    const card = page.getByRole('region', { name: spanish('lobby.joinOther.title') });
+    return steady(async () => (await card.count()) > 0);
+  }
+
+  // The rounds of the settings, folded
+
+  async openTheSettings(host: string): Promise<void> {
+    await this.#openSettings(host);
+  }
+
+  async roundsOfTheOpenSettings(host: string): Promise<SettingsRoundView[]> {
+    const sheet = await this.#openSettings(host);
+    const rounds: SettingsRoundView[] = [];
+    for (const card of await this.#roundCardsOn(sheet)) {
+      const head = card.getByRole('button').first();
+      const number = Number(await card.getByTestId('round-number').textContent());
+      const origin = (await head.textContent()) ?? '';
+      const line = (await card.getByTestId('round-summary').textContent()) ?? '';
+      rounds.push({
+        number,
+        unfolded: (await head.getAttribute('aria-expanded')) === 'true',
+        summary: `${number} ${origin.replace(line, '').trim()} · ${line}`,
+      });
+    }
+    return rounds;
+  }
+
+  async toggleRoundInTheSettings(host: string, round: number): Promise<void> {
+    const sheet = await this.#openSettings(host);
+    await this.#roundHeadOn(sheet, round).click();
+  }
+
+  async pressDoneInRound(host: string, round: number): Promise<void> {
+    const sheet = await this.#openSettings(host);
+    const cards = await this.#roundCardsOn(sheet);
+    await cards[round - 1]!.getByRole('button', { name: spanish('settings.rounds.done') }).click();
+  }
+
+  async addRoundInTheOpenSettings(host: string): Promise<void> {
+    const sheet = await this.#openSettings(host);
+    await sheet.getByRole('button', { name: spanish('settings.rounds.add') }).click();
+  }
+
+  async #roundCardsOn(sheet: Locator): Promise<Locator[]> {
+    const section = sheet.getByRole('region', { name: /^Rondas · / });
+    return section.getByRole('listitem').all();
+  }
+
+  #roundHeadOn(sheet: Locator, round: number): Locator {
+    return sheet.getByRole('button', { name: roundHeadName(round) });
   }
 
   async #ambiencesOn(sheet: Locator): Promise<Locator> {
@@ -2078,6 +2230,7 @@ export class E2eDriver implements GameDriver {
 
   async contentChoicesFor(host: string, round: number): Promise<ContentChoices> {
     const sheet = await this.#openSettings(host);
+    await this.#unfoldRoundOn(sheet, round);
     const card = this.#roundCardOn(sheet, round);
     const offered = async (axis: 'age' | 'compromising') =>
       (await card
@@ -2095,6 +2248,7 @@ export class E2eDriver implements GameDriver {
   async searchWithMarks(player: string, round: number): Promise<MarkedDilemma[]> {
     const { page } = screenOf(this.#playerCalled(player));
     const sheet = await this.#openSettings(player);
+    await this.#unfoldRoundOn(sheet, round);
     const origin = sheet
       .getByRole('radiogroup', { name: ROUNDS_ON_SCREEN.origin(round), exact: true })
       .getByRole('radio', { name: ROUNDS_ON_SCREEN.origins.specific(), exact: true });
@@ -5269,6 +5423,7 @@ export class E2eDriver implements GameDriver {
       variant: variant.includes(SCREEN.anonymous) ? 'anonymous' : 'nominal',
       adultsOnly: (await page.getByTestId('room-adults-only').count()) > 0,
       compromisingDilemmas: (await page.getByTestId('room-compromising').count()) > 0,
+      minimumPlayers: (await badgesOn(page.getByTestId('room-ambience'))).minimumPlayers,
     };
   }
 
@@ -5756,12 +5911,15 @@ async function chooseAmbience(within: Page | Locator, name: string): Promise<voi
   }
 }
 
+/** The option of a radio group by the name of its radio, whose label may say more below it. */
 async function chooseOption(within: Page | Locator, label: string): Promise<void> {
+  // A locator of the page, so it is looked for within each label.
+  const page = 'page' in within ? within.page() : within;
   const option = within
     .locator('label')
-    .filter({ hasText: new RegExp(`^\\s*${escaped(label)}\\s*$`) });
+    .filter({ has: page.getByRole('radio', { name: label, exact: true }) });
   await option.click();
-  if (!(await option.locator('input').isChecked())) {
+  if (!(await option.getByRole('radio').isChecked())) {
     throw new Error(`Choosing "${label}" did not check it`);
   }
 }
@@ -5962,6 +6120,28 @@ async function steady<T>(read: () => Promise<T>): Promise<T> {
 
 /** A dilemma as the lists of the lobby show it: with «alguien del grupo» in its gap. */
 /** The ambience whose name a text of the screen says, or custom. */
+/** The summary line of a round of the settings, which starts by its number. */
+function roundHeadName(round: number): RegExp {
+  return new RegExp(`^${escaped(spanish('settings.rounds.round', { number: round }))}`);
+}
+
+/** The fewest players a badge such as «3+ jugadores» says. */
+function minimumIn(text: string): number {
+  const minimum = /(\d+)\+/.exec(text)?.[1];
+  if (!minimum) throw new Error(`The screen says no minimum of players in "${text}"`);
+  return Number(minimum);
+}
+
+/** The badges of a variant inside that part of the screen: the fewest players, and if anonymous. */
+async function badgesOn(
+  part: Locator,
+): Promise<{ readonly minimumPlayers: number; readonly markedAnonymous: boolean }> {
+  return {
+    minimumPlayers: minimumIn((await part.getByTestId('minimum-players').textContent()) ?? ''),
+    markedAnonymous: (await part.getByTestId('anonymous-badge').count()) > 0,
+  };
+}
+
 function ambienceShownIn(text: string): string {
   const ambience = (['classic', 'spicy', 'no-filter', 'custom'] as const).find((candidate) =>
     text.includes(spanish(`ambience.${candidate}.name`)),

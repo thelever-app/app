@@ -15,6 +15,8 @@ import {
   ConnectionChangedEvent,
   ConnectPlayerUseCase,
   AMBIENCES,
+  configurationOf,
+  MINIMUM_PLAYERS,
   Room,
   type RoomSettingsChanges,
   CreateRoomUseCase,
@@ -203,7 +205,9 @@ import { ClientMessageDto, type TitleDto } from '@thelever-app/protocol';
 import type {
   AnswerStepsView,
   Ambience,
+  AmbienceCardView,
   AmbienceOption,
+  SettingsRoundView,
   AnswerPlan,
   CardView,
   CatalogEntry,
@@ -357,6 +361,11 @@ interface Avatar {
   readonly color: string;
 }
 
+/** The badges of an ambience, which follow its variant: the fewest players and whether it is anonymous. */
+function badgesOf(variant: 'nominal' | 'anonymous') {
+  return { minimumPlayers: MINIMUM_PLAYERS[variant], markedAnonymous: variant === 'anonymous' };
+}
+
 function avatarText({ face, color }: Avatar): string {
   return `${face}/${color}`;
 }
@@ -457,6 +466,8 @@ interface AcceptancePlayer {
   screen: { readonly state: GetRoomStateOutput; readonly notices: number } | undefined;
   /** The dilemmas the device keeps as played, which it sends on entering a room. */
   played: readonly string[];
+  /** The room of their own the player leaves for the one they are entering, from its lobby. */
+  leavingRoomId: string | undefined;
 }
 
 /**
@@ -1133,6 +1144,7 @@ export class AcceptanceDriver implements GameDriver {
         compromisingDilemmas: preview.compromisingDilemmas,
         playerCount: preview.players.length,
         avatars: preview.players.map(({ avatar }) => avatarText(avatar)),
+        minimumPlayers: MINIMUM_PLAYERS[preview.variant],
       };
       opener.previewPlayers = preview.players;
       opener.avatar = preview.suggestedAvatar;
@@ -1166,7 +1178,9 @@ export class AcceptanceDriver implements GameDriver {
         identity: joiner.identity,
         avatar: this.#avatarOnScreen(player),
         playedDilemmaIds: joiner.played,
+        ...(joiner.leavingRoomId && { leavingRoomId: joiner.leavingRoomId }),
       });
+      joiner.leavingRoomId = undefined;
       joiner.playerId = playerId;
       joiner.refusal = undefined;
       joiner.askedForAnotherAvatar = false;
@@ -1470,6 +1484,7 @@ export class AcceptanceDriver implements GameDriver {
         offBecause: (await this.#createsARoomOf(player, ambience))
           ? null
           : ('only-adults' as const),
+        ...badgesOf(configurationOf(ambience).variant),
       })),
     );
   }
@@ -1513,6 +1528,100 @@ export class AcceptanceDriver implements GameDriver {
     return (await this.#screenOf(viewer)).ambience;
   }
 
+  /** The badges follow the variant, whose minimum the domain fixes. */
+  async minimumPlayersOfTheVariantsSeenBy(): Promise<
+    Readonly<Record<'nominal' | 'anonymous', number>>
+  > {
+    return MINIMUM_PLAYERS;
+  }
+
+  /** The application has no settings left open: the room takes the change at once. */
+  async makeAnonymousInTheSettings(host: string): Promise<void> {
+    await this.changeSettings(host, { variant: 'anonymous' });
+  }
+
+  async ambienceCardSeenBy(host: string): Promise<AmbienceCardView> {
+    const { ambience, settings, minimumPlayers } = await this.#screenOf(host);
+    return { ambience, minimumPlayers, markedAnonymous: settings.variant === 'anonymous' };
+  }
+
+  async minimumPlayersSeenBy(viewer: string): Promise<number> {
+    return (await this.#screenOf(viewer)).minimumPlayers;
+  }
+
+  ambiencesSayWhatTheyAdd(): Promise<boolean> {
+    throw new Error(
+      'Only the device shows the lines of the ambiences: the scenario must be @screen',
+    );
+  }
+
+  // Who creates the room
+
+  homeSaysWhoCreatesTheRoom(): Promise<{ create: boolean; join: boolean }> {
+    throw new Error('Only the device shows the home screen: the scenario must be @screen');
+  }
+
+  /** The room of the scenario stays the room the driver plays: this one only its host uses. */
+  async createRoomOfTheirOwn(host: string): Promise<string> {
+    const [roomId, scenarioHost] = [this.#roomId, this.#host];
+    await this.createRoom(host);
+    const { code } = await this.#ownRoomStateOf(host);
+    [this.#roomId, this.#host] = [roomId, scenarioHost];
+    return code;
+  }
+
+  async isAloneInTheirOwnRoom(player: string): Promise<boolean> {
+    const { players, hostId, playerId } = await this.#ownRoomStateOf(player);
+    return players.length === 1 && hostId === playerId;
+  }
+
+  /** As the join screen, which then knows the room it comes from. */
+  async enterCodeFromTheLobby(player: string, code: string): Promise<void> {
+    const device = this.#playerCalled(player);
+    const leavingRoomId = device.roomId;
+    await this.typeRoomCode(player, code);
+    await this.enterTypedCode(player);
+    device.leavingRoomId = leavingRoomId;
+    device.screen = undefined;
+  }
+
+  offerToJoinAnotherRoomSeenBy(): Promise<boolean> {
+    throw new Error('Only the device decides on the offer: the scenario must be @screen');
+  }
+
+  // The rounds of the settings, folded
+
+  openTheSettings(): Promise<void> {
+    throw new Error('Only the device has the settings open: the scenario must be @screen');
+  }
+
+  roundsOfTheOpenSettings(): Promise<SettingsRoundView[]> {
+    throw new Error('Only the device folds the rounds: the scenario must be @screen');
+  }
+
+  toggleRoundInTheSettings(): Promise<void> {
+    throw new Error('Only the device folds the rounds: the scenario must be @screen');
+  }
+
+  pressDoneInRound(): Promise<void> {
+    throw new Error('Only the device folds the rounds: the scenario must be @screen');
+  }
+
+  addRoundInTheOpenSettings(): Promise<void> {
+    throw new Error('Only the device has the settings open: the scenario must be @screen');
+  }
+
+  /** The lobby of the room `player` is in, which may not be the room of the scenario. */
+  async #ownRoomStateOf(player: string): Promise<GetRoomStateOutput> {
+    const { roomId } = this.#playerCalled(player);
+    if (!roomId) throw new Error(`${player} is in no room`);
+    return this.#getRoomState.execute({
+      roomId,
+      playerId: this.#playerIdOf(player),
+      language: this.#languageOf(player),
+    });
+  }
+
   markAnonymousOnTheOpenSettings(): Promise<void> {
     throw new Error('Only the device keeps settings unsaved: the scenario must be @screen');
   }
@@ -1546,6 +1655,7 @@ export class AcceptanceDriver implements GameDriver {
       AMBIENCES.map(async (ambience) => ({
         ambience,
         described: true,
+        ...badgesOf(configurationOf(ambience).variant),
         offBecause: (await this.#onACopyOfTheRoom(host, async (rooms, playerId) => {
           const { ambiences } = await this.#roomStateOf(host);
           return this.#changeSettingsOn(rooms, playerId, ambiences![ambience]);
@@ -3446,6 +3556,7 @@ export class AcceptanceDriver implements GameDriver {
       connectionId: undefined,
       screen: undefined,
       played: [],
+      leavingRoomId: undefined,
     };
     this.#players.set(player, introduced);
     return introduced;
