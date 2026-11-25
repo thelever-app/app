@@ -171,7 +171,7 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
                       <span className={styles.ambienceName}>{t(`ambience.${ambience}.name`)}</span>
                       <VariantBadges variant={variantOf(ambience)} withAnonymous off={locked} />
                     </span>
-                    <span>{t(`ambience.${ambience}.line`)}</span>
+                    <span data-testid="ambience-line">{t(`ambience.${ambience}.line`)}</span>
                     <span className={styles.ambienceNote}>
                       {locked ? t('ambience.onlyAdults') : t(`ambience.${ambience}.example`)}
                     </span>

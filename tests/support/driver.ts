@@ -73,10 +73,13 @@ export interface AmbienceCardView {
 
 /** A round of the settings: whether it is unfolded, and what its summary line says. */
 export interface SettingsRoundView {
+  /** The number the line shows. */
   readonly number: number;
   readonly unfolded: boolean;
-  /** Its number, where its dilemma comes from and its content, as the line reads. */
-  readonly summary: string;
+  /** Where its dilemma comes from, as the line names it; undefined if it names none. */
+  readonly origin: 'random' | 'specific' | 'players' | undefined;
+  /** What the line says of its dilemma: its categories and content, the dilemma or who chooses it. */
+  readonly content: string;
 }
 
 /** A switch of the settings: whether it is on, and whether it is off for the host and why. */

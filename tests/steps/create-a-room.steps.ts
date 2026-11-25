@@ -762,21 +762,20 @@ Then(
   async function (this: GameWorld) {
     const rounds = await this.driver.roundsOfTheOpenSettings(await this.host());
     assert.ok(rounds.length > 0, 'the settings show no round');
-    for (const { number, unfolded, summary } of rounds) {
+    for (const [index, { number, unfolded, origin, content }] of rounds.entries()) {
+      assert.equal(number, index + 1, `round ${index + 1} shows the number ${number}`);
       assert.equal(unfolded, false, `round ${number} is unfolded`);
-      assert.match(
-        summary,
-        new RegExp(`^${number}\\b`),
-        `round ${number} does not show its number`,
-      );
+      // An ambience makes every round random.
+      assert.equal(origin, 'random', `round ${number} does not say where its dilemma comes from`);
+      assert.notEqual(content.trim(), '', `round ${number} does not say its content`);
     }
   },
 );
 
 Then('round {int} says {string}', async function (this: GameWorld, round: number, text: string) {
   const rounds = await this.driver.roundsOfTheOpenSettings(await this.host());
-  const summary = rounds.find(({ number }) => number === round)?.summary ?? '';
-  assert.ok(summary.includes(text), `round ${round} says "${summary}"`);
+  const content = rounds.find(({ number }) => number === round)?.content ?? '';
+  assert.ok(content.includes(text), `round ${round} says "${content}"`);
 });
 
 Given(

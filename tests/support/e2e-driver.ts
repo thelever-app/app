@@ -2087,9 +2087,23 @@ export class E2eDriver implements GameDriver {
   }
 
   /** On the screen to create a room, each one with the line that says what it adds. */
+  /** Spicy names Classic, and No filter names Spicy and that it is anonymous. */
   async ambiencesSayWhatTheyAdd(player: string): Promise<boolean> {
-    const offered = await this.ambiencesToCreateWith(player);
-    return offered.every(({ described }) => described);
+    await this.ambiencesToCreateWith(player);
+    const { page } = screenOf(this.#playerCalled(player));
+    const lineOf = async (ambience: Ambience) =>
+      (await page
+        .locator('label')
+        .filter({ has: page.locator(`input[value="${ambience}"]`) })
+        .getByTestId('ambience-line')
+        .textContent()) ?? '';
+    const spicy = await lineOf('spicy');
+    const noFilter = await lineOf('no-filter');
+    return (
+      spicy.includes(spanish('ambience.classic.name')) &&
+      noFilter.includes(spanish('ambience.spicy.name')) &&
+      noFilter.includes(spanish('badges.anonymous'))
+    );
   }
 
   // Who creates the room
@@ -2153,13 +2167,14 @@ export class E2eDriver implements GameDriver {
     const rounds: SettingsRoundView[] = [];
     for (const card of await this.#roundCardsOn(sheet)) {
       const head = card.getByRole('button').first();
-      const number = Number(await card.getByTestId('round-number').textContent());
-      const origin = (await head.textContent()) ?? '';
-      const line = (await card.getByTestId('round-summary').textContent()) ?? '';
+      const named = (await head.textContent()) ?? '';
       rounds.push({
-        number,
+        number: Number(await card.getByTestId('round-number').textContent()),
         unfolded: (await head.getAttribute('aria-expanded')) === 'true',
-        summary: `${number} ${origin.replace(line, '').trim()} · ${line}`,
+        origin: (['random', 'specific', 'players'] as const).find((origin) =>
+          named.includes(spanish(`settings.rounds.origins.${origin}`)),
+        ),
+        content: (await card.getByTestId('round-summary').textContent()) ?? '',
       });
     }
     return rounds;
