@@ -325,3 +325,46 @@ Then(
     assert.equal(links.afterTheArguments, true);
   },
 );
+
+// The link a QR of a flyer carries, which may open a dilemma for adults
+
+When(
+  /^(a visitor|the player) opens the link to play "([^"]*)" with the group$/,
+  async function (this: GameWorld, who: string, name: string) {
+    await this.driver.openTheLinkToPlayWithTheGroup(
+      name,
+      who === 'the player' ? this.player : undefined,
+    );
+    this.dilemmaToPlayWithTheGroup = name;
+  },
+);
+
+Then(
+  'the player is told the dilemma is only for people 18 or over',
+  async function (this: GameWorld) {
+    assert.ok(await this.driver.toldTheDilemmaIsOnlyForAdults(), 'nobody told the player');
+  },
+);
+
+Then('does not see the text of {string}', async function (this: GameWorld, name: string) {
+  assert.notEqual(await this.driver.startingDilemmaShownToTheVisitor(), name);
+});
+
+Then(
+  'the visitor saw that {string} does not fit a Classic room',
+  async function (this: GameWorld, name: string) {
+    assert.equal(await this.driver.startingDilemmaShownToTheVisitor(), name);
+    assert.ok(await this.driver.startingDilemmaLeftOut(), `${name} was not shown left out`);
+  },
+);
+
+Then('the room has 8 random rounds from every category', async function (this: GameWorld) {
+  const rounds = await this.driver.roundsOfTheVisitorRoom();
+  assert.equal(rounds.length, 8);
+  for (const round of rounds) {
+    assert.deepEqual(
+      { origin: round.origin, categories: 'categories' in round ? round.categories : undefined },
+      { origin: 'random', categories: null },
+    );
+  }
+});

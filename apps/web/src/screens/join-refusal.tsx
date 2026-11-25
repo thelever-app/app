@@ -7,7 +7,12 @@ import styles from './join-refusal.module.css';
 
 /** Why the player cannot enter the room they tried. */
 export type JoinRefusalCode =
-  'room-code-not-found' | 'room-full' | 'player-expelled' | 'room-not-found' | 'adults-only-room';
+  | 'room-code-not-found'
+  | 'room-full'
+  | 'player-expelled'
+  | 'room-not-found'
+  | 'adults-only-room'
+  | 'dilemma-only-for-adults';
 
 const REFUSALS: readonly string[] = [
   'room-code-not-found',
@@ -15,6 +20,7 @@ const REFUSALS: readonly string[] = [
   'player-expelled',
   'room-not-found',
   'adults-only-room',
+  'dilemma-only-for-adults',
 ] satisfies readonly JoinRefusalCode[];
 
 /** Whether the code the room server answered with is one of the refusals this screen explains. */

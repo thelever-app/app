@@ -38,6 +38,22 @@ describe('FirstAccessGate', () => {
     expect(await screen.findByRole('heading', { name: 'The app' })).toBeDefined();
   });
 
+  it('should tell where the visit came from on opening the link to play a dilemma with the group', async () => {
+    // Arrange
+    const openApp = vi.fn(async () => FIRST_ACCESS_DONE);
+    const search = '?lang=es&utm_source=cartel&utm_campaign=bares-madrid&utm_content=medico';
+
+    // Act
+    await renderAtRoute(gate(), {
+      api: fakeRoomApi({ openApp }),
+      at: `/new/TestPublicId${search}`,
+    });
+
+    // Assert
+    await screen.findByRole('heading', { name: 'The app' });
+    expect(openApp).toHaveBeenCalledWith(search);
+  });
+
   it('should ask for the year of birth with no year chosen and no minimum age', async () => {
     // Arrange
     const api = fakeRoomApi({ openApp: vi.fn(async () => ASKS_FOR_THE_AGE) });

@@ -1,6 +1,6 @@
 import {
   type AmbienceDto,
-  type LanguageDto,
+  type DilemmaPreviewResponseDto,
   NICKNAME_MAX_LENGTH,
   withoutHiddenCharacters,
   PlaceDto,
@@ -16,6 +16,7 @@ import { AMBIENCE_ICONS, AMBIENCES, isForAdults, variantOf } from '../lobby/ambi
 import { AvatarPickerSheet } from '../lobby/avatar-picker-sheet.tsx';
 import { SubmitButton } from '../components/submit-button.tsx';
 import { VariantBadges } from '../components/variant-badges.tsx';
+import { FirstDilemmaCard } from './first-dilemma-card.tsx';
 import { playedDilemmas } from '../game/played-dilemmas.ts';
 import { lastNickname, rememberNickname } from '../identity/last-nickname.ts';
 import { deviceLanguage } from '../i18n/i18n.ts';
@@ -40,8 +41,8 @@ function missingOf({ nickname, place, ambience }: CreateRoomChoices) {
 }
 
 export interface CreateRoomFormProps {
-  /** The dilemma of the general catalog for the first round of the room, with its language. */
-  readonly firstDilemma?: { readonly dilemmaId: string; readonly language: LanguageDto };
+  /** The dilemma of the general catalog for the first round of the room, as its link opened it. */
+  readonly firstDilemma?: DilemmaPreviewResponseDto;
 }
 
 const PLACES: readonly (readonly [PlaceDto, IconName])[] = [
@@ -64,11 +65,14 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
   const { withAccess, accessCodeScreen } = useAccessGate();
   const underEighteen = useUnderEighteen();
 
+  // A dilemma for adults comes with Spicy chosen; with Classic, the room starts without it.
+  const forAdults = firstDilemma?.minimumAge === 18;
   const [choices, setChoices] = useState<CreateRoomChoices>(() => ({
     nickname: lastNickname(),
     place: undefined,
-    ambience: undefined,
+    ambience: forAdults ? 'spicy' : undefined,
   }));
+  const leftOut = forAdults && choices.ambience === 'classic';
   const [avatar, setAvatar] = useState(() => randomAvatar());
   const [pickingAvatar, setPickingAvatar] = useState(false);
   const missing = missingOf(choices);
@@ -89,7 +93,7 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
           avatar,
           place,
           dilemmaLanguage: firstDilemma?.language ?? deviceLanguage(i18n),
-          ...(firstDilemma && { firstRoundDilemmaId: firstDilemma.dilemmaId }),
+          ...(firstDilemma && !leftOut && { firstRoundDilemmaId: firstDilemma.dilemmaId }),
           playedDilemmaIds: playedDilemmas(),
         }),
       );
@@ -105,6 +109,7 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
 
   return (
     <>
+      {firstDilemma && <FirstDilemmaCard dilemma={firstDilemma} off={leftOut} />}
       <form action={formAction} className={styles.form}>
         <div className={styles.identity}>
           <AvatarButton avatar={avatar} onClick={() => setPickingAvatar(true)} />

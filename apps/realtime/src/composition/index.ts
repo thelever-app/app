@@ -190,6 +190,7 @@ export async function composeRealtimeServer(
             repositories.dilemmaRepository,
             repositories.worldResults,
             firstAccess.gate,
+            firstAccess.sealProvider,
           ),
           roomLock,
           runCommand,
@@ -335,9 +336,10 @@ function dilemmaEndpoints(
   dilemmaRepository: DilemmaRepository,
   worldResults: WorldResultRepository,
   gate: FirstAccessGate,
+  sealProvider: FirstAccessSealProvider,
 ): HttpEndpoint[] {
   return [
-    new DilemmaPreviewEndpoint(new GetDilemmaPreviewUseCase(dilemmaRepository)),
+    new DilemmaPreviewEndpoint(new GetDilemmaPreviewUseCase(dilemmaRepository), sealProvider),
     // Voting alone needs the game consent too: the vote counts for the world result.
     requiringFirstAccess(
       new VoteAloneEndpoint(new VoteAloneUseCase(dilemmaRepository, worldResults)),

@@ -407,6 +407,11 @@
       "title": "Dieser Raum hat Dilemmas ab 18",
       "text": "Nur Personen ab 18 können eintreten.",
       "action": "Zurück zum Start"
+    },
+    "dilemma-only-for-adults": {
+      "title": "Dieses Dilemma ist nur für Volljährige",
+      "text": "Du kannst vom Start aus einen Raum mit anderen Dilemmas erstellen.",
+      "action": "Zurück zum Start"
     }
   },
   "lobby": {
@@ -634,7 +639,10 @@
     "about": "{{category}} · Die anderen 7 Runden folgen der Stimmung, die ihr wählt.",
     "loading": "Dilemma wird gesucht…",
     "notFound": "Dieses Dilemma gibt es auf TheLever nicht mehr. Du kannst einen Raum mit anderen aus dem Katalog erstellen.",
-    "home": "Zur Startseite"
+    "home": "Zur Startseite",
+    "leftOut": "Nicht in diesem Raum",
+    "offInClassic": "Dieses Dilemma ist ab 18 und passt nicht in einen klassischen Raum. Wähl Pikant oder Ohne Filter, um damit zu starten.",
+    "aboutForAdults": "{{category}} · Ab 18 · Die anderen 7 Runden folgen der Stimmung, die ihr wählt."
   },
   "voteAlone": {
     "loading": "Dilemma wird gesucht…",

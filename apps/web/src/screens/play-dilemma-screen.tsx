@@ -3,10 +3,10 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { Icon } from '../components/icon.tsx';
-import { DilemmaText } from '../game/dilemma-text.tsx';
 import { RoomApiError } from '../room/room-api.ts';
 import { useRoomApi } from '../room/room-api-context.tsx';
 import { CreateRoomForm } from './create-room-form.tsx';
+import { JoinRefusal } from './join-refusal.tsx';
 import { useAccessGate } from './use-access-gate.tsx';
 import screen from './screen.module.css';
 import styles from './play-dilemma-screen.module.css';
@@ -16,6 +16,7 @@ type Preview =
   | { readonly status: 'loading' }
   | { readonly status: 'found'; readonly dilemma: DilemmaPreviewResponseDto }
   | { readonly status: 'not-found' }
+  | { readonly status: 'only-for-adults' }
   | { readonly status: 'failed' };
 
 /**
@@ -36,15 +37,21 @@ export function PlayDilemmaScreen() {
 
   useEffect(() => {
     let current = true;
-    withAccess(() => api.previewDilemma(publicId)).then(
+    withAccess(() => api.previewDilemma(publicId, { toStartARoom: true })).then(
       (dilemma) => {
         // Without a dilemma, the visitor went back from the access code, and leaves the screen.
         if (current && dilemma) setAnswer({ publicId, preview: { status: 'found', dilemma } });
       },
       (error: unknown) => {
         if (!current) return;
-        const notFound = error instanceof RoomApiError && error.code === 'dilemma-not-found';
-        setAnswer({ publicId, preview: { status: notFound ? 'not-found' : 'failed' } });
+        const code = error instanceof RoomApiError ? error.code : undefined;
+        const status =
+          code === 'dilemma-not-found'
+            ? 'not-found'
+            : code === 'dilemma-only-for-adults'
+              ? 'only-for-adults'
+              : 'failed';
+        setAnswer({ publicId, preview: { status } });
       },
     );
     return () => {
@@ -52,6 +59,11 @@ export function PlayDilemmaScreen() {
     };
   }, [api, publicId, withAccess]);
   const preview: Preview = answer?.publicId === publicId ? answer.preview : { status: 'loading' };
+
+  // Someone under 18 never sees a dilemma for adults: only that it is for adults.
+  if (preview.status === 'only-for-adults') {
+    return <JoinRefusal code="dilemma-only-for-adults" onAction={home} />;
+  }
 
   return (
     <div className={screen.screen}>
@@ -67,35 +79,7 @@ export function PlayDilemmaScreen() {
         {preview.status === 'failed' && <p role="alert">{t('roomErrors.unknown')}</p>}
         {preview.status === 'found' && (
           <>
-            <section
-              className={styles.first}
-              aria-label={t('pickDilemmas.title', { number: 1 })}
-              data-testid="first-dilemma"
-            >
-              <Icon name="pushPin" size={22} />
-              <span className={styles.firstText}>
-                <span className={styles.kicker}>{t('playDilemma.firstDilemma')}</span>
-                <span className={styles.name}>
-                  {preview.dilemma.name ?? (
-                    <DilemmaText
-                      text={preview.dilemma.text}
-                      personInTheGap={t('pickDilemmas.someone')}
-                    />
-                  )}
-                </span>
-                <span className={styles.about}>
-                  {t('playDilemma.about', {
-                    category: t(`categories.${preview.dilemma.category}`),
-                  })}
-                </span>
-              </span>
-            </section>
-            <CreateRoomForm
-              firstDilemma={{
-                dilemmaId: preview.dilemma.dilemmaId,
-                language: preview.dilemma.language,
-              }}
-            />
+            <CreateRoomForm firstDilemma={preview.dilemma} />
           </>
         )}
       </div>

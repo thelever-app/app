@@ -49,7 +49,11 @@ export interface RoomApi {
   /** The room of a code, as the player typed it or as the link carries it. */
   previewRoom(code: string): Promise<RoomPreviewResponseDto>;
   /** The dilemma a link of the public web leads to, to start a room with it or vote it alone. */
-  previewDilemma(publicId: string): Promise<DilemmaPreviewResponseDto>;
+  /** To vote it alone, as the public web shows them; or to start a room, also one for adults. */
+  previewDilemma(
+    publicId: string,
+    purpose?: { readonly toStartARoom: boolean },
+  ): Promise<DilemmaPreviewResponseDto>;
   /** Votes the option of the dilemma alone, for its world result: once, already-voted the second time. */
   voteAlone(publicId: string, optionId: string): Promise<void>;
   /** How the world voted the dilemma, for the vote and the prediction the device keeps. */
@@ -183,8 +187,12 @@ export function httpRoomApi({
     createRoom: (request) => call('POST', '/rooms', CreateRoomResponseDto, request),
     previewRoom: (code) =>
       call('GET', `/rooms/by-code/${encodeURIComponent(code)}`, RoomPreviewResponseDto),
-    previewDilemma: (publicId) =>
-      call('GET', `/dilemmas/${encodeURIComponent(publicId)}`, DilemmaPreviewResponseDto),
+    previewDilemma: (publicId, purpose) =>
+      call(
+        'GET',
+        `/dilemmas/${encodeURIComponent(publicId)}${purpose?.toStartARoom ? '?for=room' : ''}`,
+        DilemmaPreviewResponseDto,
+      ),
     voteAlone: (publicId, optionId) =>
       call('POST', `/dilemmas/${encodeURIComponent(publicId)}/vote`, NO_CONTENT, { optionId }),
     worldResult: (publicId, optionId, prediction) => {

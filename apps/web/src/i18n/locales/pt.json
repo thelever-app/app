@@ -430,6 +430,11 @@
       "title": "Esta sala tem dilemas +18",
       "text": "Só podem entrar maiores de 18 anos.",
       "action": "Voltar ao início"
+    },
+    "dilemma-only-for-adults": {
+      "title": "Este dilema é só para maiores de 18",
+      "text": "Podes criar uma sala com outros dilemas a partir do início.",
+      "action": "Voltar ao início"
     }
   },
   "lobby": {
@@ -662,7 +667,10 @@
     "about": "{{category}} · As outras 7 rondas seguem o ambiente que escolherem.",
     "loading": "À procura do dilema…",
     "notFound": "Este dilema já não está no TheLever. Podes criar uma sala com outros do catálogo.",
-    "home": "Ir para o início"
+    "home": "Ir para o início",
+    "leftOut": "Fica fora desta sala",
+    "offInClassic": "Este dilema é +18 e não entra numa sala Clássica. Escolhe Picante ou Sem filtro para começar por ele.",
+    "aboutForAdults": "{{category}} · +18 · As outras 7 rondas seguem o ambiente que escolherem."
   },
   "voteAlone": {
     "loading": "A procurar o dilema…",

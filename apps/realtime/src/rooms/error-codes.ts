@@ -57,6 +57,7 @@ import {
 import {
   AlreadyVotedError,
   DilemmaNotFoundError as NoSuchDilemmaError,
+  DilemmaOnlyForAdultsError,
   InvalidPredictionError,
   UnknownOptionError,
 } from '@thelever-app/dilemmas';
@@ -122,6 +123,7 @@ const CODES: readonly (readonly [new (...args: never[]) => Error, ErrorCodeDto])
   [DilemmaNotFoundError, 'dilemma-not-found'],
   // Dilemmas' own, from the preview of a dilemma by its public id.
   [NoSuchDilemmaError, 'dilemma-not-found'],
+  [DilemmaOnlyForAdultsError, 'dilemma-only-for-adults'],
   // Dilemmas' own, from voting a dilemma alone and reading its world result.
   [AlreadyVotedError, 'already-voted'],
   [UnknownOptionError, 'option-not-in-dilemma'],

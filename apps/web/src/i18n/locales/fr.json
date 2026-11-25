@@ -430,6 +430,11 @@
       "title": "Cette salle a des dilemmes +18",
       "text": "Seules les personnes de 18 ans ou plus peuvent entrer.",
       "action": "Retour à l’accueil"
+    },
+    "dilemma-only-for-adults": {
+      "title": "Ce dilemme est réservé aux plus de 18 ans",
+      "text": "Tu peux créer une salle avec d’autres dilemmes depuis l’accueil.",
+      "action": "Retour à l’accueil"
     }
   },
   "lobby": {
@@ -662,7 +667,10 @@
     "about": "{{category}} · Les 7 autres manches suivent l’ambiance que vous choisirez.",
     "loading": "Recherche du dilemme…",
     "notFound": "Ce dilemme n’est plus sur TheLever. Tu peux créer une salle avec d’autres dilemmes du catalogue.",
-    "home": "Aller à l’accueil"
+    "home": "Aller à l’accueil",
+    "leftOut": "Pas dans cette salle",
+    "offInClassic": "Ce dilemme est +18 et n’entre pas dans une salle Classique. Choisis Épicée ou Sans filtre pour commencer par lui.",
+    "aboutForAdults": "{{category}} · +18 · Les 7 autres manches suivent l’ambiance que vous choisirez."
   },
   "voteAlone": {
     "loading": "Recherche du dilemme…",

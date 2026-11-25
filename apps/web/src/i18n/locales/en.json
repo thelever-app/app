@@ -407,6 +407,11 @@
       "title": "This room has 18+ dilemmas",
       "text": "Only people 18 or over can join.",
       "action": "Back to the start"
+    },
+    "dilemma-only-for-adults": {
+      "title": "This dilemma is for over-18s only",
+      "text": "You can create a room with other dilemmas from the start.",
+      "action": "Back to the start"
     }
   },
   "lobby": {
@@ -634,7 +639,10 @@
     "about": "{{category}} · The other 7 rounds follow the ambience you choose.",
     "loading": "Finding the dilemma…",
     "notFound": "This dilemma is no longer on TheLever. You can create a room with others from the catalog.",
-    "home": "Go home"
+    "home": "Go home",
+    "leftOut": "Left out of this room",
+    "offInClassic": "This dilemma is 18+ and doesn’t fit a Classic room. Choose Spicy or No filter to start with it.",
+    "aboutForAdults": "{{category}} · 18+ · The other 7 rounds follow the ambience you choose."
   },
   "voteAlone": {
     "loading": "Finding the dilemma…",

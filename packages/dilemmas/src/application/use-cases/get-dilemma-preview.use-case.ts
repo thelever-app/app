@@ -1,11 +1,15 @@
 import type { Category } from '../../domain/vos/category.vo.ts';
 import type { MinimumAge } from '../../domain/vos/minimum-age.vo.ts';
-import { openByLink } from '../open-by-link.ts';
+import { openByLink, openToStartARoom } from '../open-by-link.ts';
 import type { DilemmaRepository } from '../ports/dilemma-repository.port.ts';
 
-export interface GetDilemmaPreviewInput {
-  readonly publicId: string;
-}
+/**
+ * To vote it alone, as the public web shows it; or to start a room with it, which may be one for
+ * adults, and then whether who asks is under 18, who never sees a dilemma for adults.
+ */
+export type GetDilemmaPreviewInput =
+  | { readonly publicId: string; readonly toStartARoom?: false }
+  | { readonly publicId: string; readonly toStartARoom: true; readonly underEighteen: boolean };
 
 export interface GetDilemmaPreviewOutput {
   /** The id a room is created with. */
@@ -24,10 +28,11 @@ export interface GetDilemmaPreviewOutput {
 }
 
 /**
- * What the screens to play a dilemma with the group and to vote it alone show of it, from the public id a link carries,
- * so nobody reaches a dilemma by guessing ids. Only a dilemma a new room may start with: public, in
- * the general catalog, suitable from 16 and not compromising, as the public web shows them. Any other is not found,
- * as one that does not exist: DilemmaNotFoundError.
+ * What the screens to play a dilemma with the group and to vote it alone show of it, from the
+ * public id a link carries, so nobody reaches a dilemma by guessing ids. To vote it alone, only one
+ * the public web shows: public, in the general catalog, suitable from 16 and not compromising. To
+ * start a room, also one for adults, which someone under 18 is told is only for adults. Any other is
+ * not found, as one that does not exist: DilemmaNotFoundError.
  */
 export interface GetDilemmaPreview {
   execute(input: GetDilemmaPreviewInput): Promise<GetDilemmaPreviewOutput>;
@@ -40,8 +45,10 @@ export class GetDilemmaPreviewUseCase implements GetDilemmaPreview {
     this.#dilemmaRepository = dilemmaRepository;
   }
 
-  async execute({ publicId }: GetDilemmaPreviewInput): Promise<GetDilemmaPreviewOutput> {
-    const dilemma = await openByLink(this.#dilemmaRepository, publicId);
+  async execute(input: GetDilemmaPreviewInput): Promise<GetDilemmaPreviewOutput> {
+    const dilemma = input.toStartARoom
+      ? await openToStartARoom(this.#dilemmaRepository, input.publicId, input.underEighteen)
+      : await openByLink(this.#dilemmaRepository, input.publicId);
     return {
       dilemmaId: dilemma.id,
       ...(dilemma.name !== undefined && { name: dilemma.name }),

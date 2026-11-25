@@ -2,6 +2,12 @@ import { z } from 'zod';
 import { CategoryDto, LanguageDto } from '../client-messages.ts';
 
 /**
+ * The query of GET /dilemmas/:publicId: `for=room` asks for it to start a room with, which may be a
+ * dilemma for adults; without it, to vote it alone, as the public web shows them.
+ */
+export const DilemmaPreviewQueryDto = z.strictObject({ for: z.literal('room').optional() });
+
+/**
  * GET /dilemmas/:publicId: what the screens to play a dilemma with the group and to vote it alone
  * show of it, from the
  * public id a link carries; with the id of the dilemma, which the room is created with.
@@ -24,4 +30,5 @@ export const DilemmaPreviewResponseDto = z.strictObject({
   version: z.number().int().min(1),
 });
 
+export type DilemmaPreviewQueryDto = z.infer<typeof DilemmaPreviewQueryDto>;
 export type DilemmaPreviewResponseDto = z.infer<typeof DilemmaPreviewResponseDto>;

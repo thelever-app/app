@@ -64,6 +64,7 @@ export {
   WORD_SIMILARITY,
 } from './application/ports/dilemma-queries.port.ts';
 export { DilemmaNotFoundError } from './application/errors/dilemma-not-found.error.ts';
+export { DilemmaOnlyForAdultsError } from './application/errors/dilemma-only-for-adults.error.ts';
 export { AlreadyVotedError } from './application/errors/already-voted.error.ts';
 export type {
   Ballot,

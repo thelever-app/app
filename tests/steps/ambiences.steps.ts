@@ -959,3 +959,14 @@ Given(
     await this.host();
   },
 );
+
+Then('the ambience {string} is chosen', async function (this: GameWorld, name: string) {
+  assert.equal(await this.driver.ambienceChosenToPlayTheDilemma(), ambienceCalled(name));
+});
+
+When(
+  'the visitor chooses the ambience {string} and creates the room',
+  async function (this: GameWorld, name: string) {
+    await this.driver.createTheRoomOfTheDilemma(ambienceCalled(name));
+  },
+);
