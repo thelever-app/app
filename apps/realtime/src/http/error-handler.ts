@@ -17,6 +17,7 @@ const STATUS: Partial<Record<ErrorCodeDto, number>> = {
   'room-not-found': 404,
   'room-code-not-found': 404,
   'dilemma-not-found': 404,
+  'dilemma-only-for-adults': 403,
   'option-not-in-dilemma': 400,
   'first-access-required': 403,
   'blocked-country': 403,

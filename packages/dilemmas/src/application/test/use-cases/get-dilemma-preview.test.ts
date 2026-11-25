@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DilemmaNotFoundError } from '../../errors/dilemma-not-found.error.ts';
+import { DilemmaOnlyForAdultsError } from '../../errors/dilemma-only-for-adults.error.ts';
 import { GetDilemmaPreviewUseCase } from '../../use-cases/get-dilemma-preview.use-case.ts';
 import { InMemoryDilemmaRepository } from '../../../adapters/in-memory/in-memory-dilemma-repository.ts';
 import { Dilemma } from '../../../domain/entities/dilemma.ts';
@@ -22,6 +23,15 @@ function trolley(): Dilemma {
     },
     new FixedIdGenerator('dlm-7', 'dlm-7-option-1', 'dlm-7-option-2', 'TestPublicId'),
   );
+}
+
+/** The trolley, for adults only, or also compromising. */
+function forAdults(compromising = false): Dilemma {
+  const snapshot = trolley().toSnapshot();
+  return Dilemma.restore({
+    ...snapshot,
+    version: { ...snapshot.version, minimumAge: 18, compromising },
+  });
 }
 
 async function previewOf(dilemma: Dilemma): Promise<GetDilemmaPreviewUseCase> {
@@ -129,5 +139,63 @@ describe('GetDilemmaPreviewUseCase', () => {
         );
       },
     );
+
+    it('should open a dilemma for adults to an adult who starts a room with it', async () => {
+      // Arrange
+      const getDilemmaPreview = await previewOf(forAdults());
+
+      // Act
+      const preview = await getDilemmaPreview.execute({
+        publicId: 'TestPublicId',
+        toStartARoom: true,
+        underEighteen: false,
+      });
+
+      // Assert
+      expect(preview).toEqual(expect.objectContaining({ dilemmaId: 'dlm-7', minimumAge: 18 }));
+    });
+
+    it('should tell someone under 18 that a dilemma for adults is only for adults, without it', async () => {
+      // Arrange
+      const getDilemmaPreview = await previewOf(forAdults());
+
+      // Act & Assert
+      await expect(
+        getDilemmaPreview.execute({
+          publicId: 'TestPublicId',
+          toStartARoom: true,
+          underEighteen: true,
+        }),
+      ).rejects.toThrow(DilemmaOnlyForAdultsError);
+    });
+
+    it('should not open a compromising dilemma to start a room, not even to an adult', async () => {
+      // Arrange
+      const getDilemmaPreview = await previewOf(forAdults(true));
+
+      // Act & Assert
+      await expect(
+        getDilemmaPreview.execute({
+          publicId: 'TestPublicId',
+          toStartARoom: true,
+          underEighteen: false,
+        }),
+      ).rejects.toThrow(DilemmaNotFoundError);
+    });
+
+    it('should open a dilemma suitable from 16 to start a room to someone under 18', async () => {
+      // Arrange
+      const getDilemmaPreview = await previewOf(trolley());
+
+      // Act
+      const preview = await getDilemmaPreview.execute({
+        publicId: 'TestPublicId',
+        toStartARoom: true,
+        underEighteen: true,
+      });
+
+      // Assert
+      expect(preview.minimumAge).toBe(16);
+    });
   });
 });

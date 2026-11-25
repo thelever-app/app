@@ -442,6 +442,7 @@ export const ErrorCodeDto = z.enum([
   'player-left',
   'option-not-in-dilemma',
   'dilemma-not-found',
+  'dilemma-only-for-adults',
   'invalid-page',
   'nickname-missing',
   'duplicate-dilemma',

@@ -75,7 +75,7 @@ export {
 export { CreateRoomRequestDto, CreateRoomResponseDto } from './http/create-room.ts';
 export { JoinRoomRequestDto, JoinRoomResponseDto } from './http/join-room.ts';
 export { RoomPreviewResponseDto } from './http/room-preview.ts';
-export { DilemmaPreviewResponseDto } from './http/dilemma-preview.ts';
+export { DilemmaPreviewQueryDto, DilemmaPreviewResponseDto } from './http/dilemma-preview.ts';
 export {
   VoteAloneRequestDto,
   WorldResultQueryDto,
