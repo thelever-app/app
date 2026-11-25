@@ -28,11 +28,19 @@ export class JoinRoomEndpoint implements HttpEndpoint {
   }
 
   async handle(req: Request, res: Response): Promise<void> {
-    const { nickname, avatar, playedDilemmaIds = [] } = parseBody(JoinRoomRequestDto, req.body);
+    const {
+      nickname,
+      avatar,
+      playedDilemmaIds = [],
+      leavingRoomId,
+    } = parseBody(JoinRoomRequestDto, req.body);
     const roomId = String(req.params.roomId);
-    const release = await this.#roomLock.acquire(roomId);
+    // Both rooms, always in the same order, so two hosts who swap rooms never wait for each other.
+    const keys = [...new Set([roomId, leavingRoomId ?? roomId])].sort();
+    const releases = [];
     let joined: JoinRoomOutput;
     try {
+      for (const key of keys) releases.push(await this.#roomLock.acquire(key));
       joined = await this.#runCommand(() =>
         this.#joinRoom.execute({
           roomId,
@@ -40,10 +48,11 @@ export class JoinRoomEndpoint implements HttpEndpoint {
           identity: identityOf(res),
           avatar,
           playedDilemmaIds,
+          ...(leavingRoomId && { leavingRoomId }),
         }),
       );
     } finally {
-      release();
+      for (const release of releases) release();
     }
     res.status(201).json(JoinRoomResponseDto.parse(joined));
   }

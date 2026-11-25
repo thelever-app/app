@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { Avatar } from '../avatar/avatar.tsx';
 import { Icon } from '../components/icon.tsx';
+import { VariantBadges } from '../components/variant-badges.tsx';
 import { AMBIENCE_ICONS } from '../lobby/ambiences.ts';
 import { RoomApiError } from '../room/room-api.ts';
 import { useRoomApi } from '../room/room-api-context.tsx';
@@ -13,6 +14,15 @@ import { useAccessGate } from './use-access-gate.tsx';
 import screen from './screen.module.css';
 import styles from './join-screen.module.css';
 import { HOME_PATH } from '../home-path.ts';
+
+/**
+ * How the player came: by the code they typed, which they go back to, and, from the lobby of a room
+ * of their own, that room, which they leave for this one.
+ */
+export interface JoinState {
+  readonly fromCode?: boolean;
+  readonly leavingRoomId?: string;
+}
 
 type Preview =
   | { readonly status: 'loading' }
@@ -38,7 +48,8 @@ export function JoinScreen() {
 
   // Whoever typed the code goes back to it, as they left it; whoever came by the link or the QR,
   // to the start. A room that does not exist sends everyone to type another code.
-  const fromCode = (useLocation().state as { fromCode?: boolean } | null)?.fromCode === true;
+  const state = useLocation().state as JoinState | null;
+  const fromCode = state?.fromCode === true;
   const back = () => void (fromCode ? navigate(-1) : navigate(HOME_PATH));
   // Whoever came by a link without the access code writes it before seeing the room.
   const { withAccess, accessCodeScreen } = useAccessGate(back);
@@ -108,6 +119,7 @@ export function JoinScreen() {
                 <span className={styles.ambienceName}>
                   {t(`ambience.${preview.room.ambience}.name`)}
                 </span>
+                <VariantBadges variant={preview.room.variant} />
                 <span className={styles.signage}>{t('lobby.ambience')}</span>
               </p>
               <p className={styles.line} data-testid="room-variant">
@@ -141,6 +153,7 @@ export function JoinScreen() {
               roomId={preview.room.roomId}
               players={preview.room.players}
               suggestedAvatar={preview.room.suggestedAvatar}
+              leavingRoomId={state?.leavingRoomId}
               onRefused={(refusal) =>
                 setAnswer({ code, preview: { status: 'refused', code: refusal } })
               }

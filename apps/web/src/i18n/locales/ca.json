@@ -372,7 +372,9 @@
     "title": "Juguem?",
     "create": "Crear una sala",
     "joinWithCode": "Unir-me amb un codi",
-    "back": "Tornar"
+    "back": "Tornar",
+    "createHint": "Només una persona del grup: després convida els altres",
+    "joinHint": "Si algú ja ha creat la sala"
   },
   "joinCode": {
     "title": "Escriu el codi de la sala",
@@ -495,6 +497,12 @@
     "adults": {
       "name": "Amb dilemes +18:",
       "text": "només hi poden entrar majors de 18."
+    },
+    "joinOther": {
+      "title": "Una altra persona del grup ja ha creat una sala?",
+      "hint": "Uneix-te a la seva. Aquesta sala es tanca sola.",
+      "code": "Codi de l’altra sala",
+      "placeholder": "Codi"
     }
   },
   "categories": {
@@ -546,7 +554,16 @@
       "playersHint": "La tria un jugador des de la sala d’espera. Si ningú no la tria, en surt una d’aleatòria.",
       "playersChosen": "Ja l’ha triat un jugador: «{{title}}».",
       "add": "Afegir una ronda",
-      "full": "{{maximum}} rondes: el màxim"
+      "full": "{{maximum}} rondes: el màxim",
+      "round": "Ronda {{number}}:",
+      "done": "Fet",
+      "summary": {
+        "notCompromising": "No compromès",
+        "missingDilemma": "Falta triar el dilema",
+        "players": "La tria un jugador des de la sala d’espera",
+        "playersChosen": "Triat: «{{title}}»",
+        "specific": "«{{title}}»"
+      }
     },
     "newDilemmas": {
       "label": "Incloure dilemes nous",
@@ -891,13 +908,13 @@
     },
     "spicy": {
       "name": "Picant",
-      "line": "Temes d’adults. Només +18.",
+      "line": "El de Clàssica, més temes d’adults. Només +18.",
       "example": "Per exemple: «Més anys o millor sexe»"
     },
     "no-filter": {
       "name": "Sense filtre",
-      "line": "Anònim, +18 i amb preguntes compromeses",
-      "example": "Per exemple: «La pregunta de la teva parella» · Des de 3 jugadors"
+      "line": "El de Picant, més preguntes compromeses. Anònim: ningú no veu què votes.",
+      "example": "Per exemple: «La pregunta de la teva parella»"
     },
     "custom": {
       "name": "Personalitzada"
@@ -1117,5 +1134,9 @@
     "title": "Hem rebut la teva petició",
     "text": "Aquest mòbil ja no guarda res teu i en un mes com a màxim haurem esborrat les teves dades dels nostres servidors. Les còpies de seguretat triguen una mica més a renovar-se i mentrestant no es fan servir. Si tornes a jugar, començaràs de zero.",
     "home": "Tornar a l’inici"
+  },
+  "badges": {
+    "players": "{{minimum}}+ jugadors",
+    "anonymous": "Anònim"
   }
 }

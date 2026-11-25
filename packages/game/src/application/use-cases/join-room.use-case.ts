@@ -8,6 +8,7 @@ import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import type { SealProvider } from '../ports/seal-provider.port.ts';
 import { findRoom } from './find-room.ts';
+import { leaveLobby } from './leave-lobby.ts';
 import { notifyGame } from './notify-game.ts';
 import { notifyRoom } from './notify-room.ts';
 import { recordUsage } from './record-usage.ts';
@@ -22,6 +23,11 @@ export interface JoinRoomInput {
   readonly avatar: { readonly face: string; readonly color: string };
   /** The dilemmas the device of the player says they played, for the room to put games together with. */
   readonly playedDilemmaIds?: readonly string[];
+  /**
+   * The room the player leaves for this one, as a host alone in its lobby does: once they are in,
+   * they are out of it, which closes it if nobody else is there.
+   */
+  readonly leavingRoomId?: string;
 }
 
 export interface JoinRoomOutput {
@@ -76,6 +82,7 @@ export class JoinRoomUseCase {
     identity,
     avatar,
     playedDilemmaIds = [],
+    leavingRoomId,
   }: JoinRoomInput): Promise<JoinRoomOutput> {
     const room = await findRoom(this.#roomRepository, roomId);
 
@@ -114,7 +121,24 @@ export class JoinRoomUseCase {
     } else {
       await notifyRoom(room, events, this.#notifier);
     }
+    if (leavingRoomId !== undefined && leavingRoomId !== room.id) {
+      await this.#leave(leavingRoomId, identity);
+    }
 
     return { playerId: player.id, joinedLate };
+  }
+
+  /**
+   * Out of the lobby of the room the player leaves, if they are in it; a room that no longer
+   * exists, or that started its game, stays as it is.
+   */
+  async #leave(roomId: string, identity: string): Promise<void> {
+    const room = await this.#roomRepository.findById(roomId);
+    const player = room?.playerWith(identity);
+    if (!room?.isInLobby || !player) return;
+    await leaveLobby(room, player.id, this.#clock.now(), {
+      roomRepository: this.#roomRepository,
+      notifier: this.#notifier,
+    });
   }
 }

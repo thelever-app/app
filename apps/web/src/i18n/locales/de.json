@@ -350,7 +350,9 @@
     "title": "Lust auf eine Runde?",
     "create": "Raum erstellen",
     "joinWithCode": "Mit Code beitreten",
-    "back": "Zurück"
+    "back": "Zurück",
+    "createHint": "Nur eine Person der Gruppe: dann lädst du die anderen ein",
+    "joinHint": "Wenn schon jemand den Raum erstellt hat"
   },
   "joinCode": {
     "title": "Gib den Raumcode ein",
@@ -468,6 +470,12 @@
     "adults": {
       "name": "Mit Dilemmas ab 18:",
       "text": "nur Personen ab 18 können beitreten."
+    },
+    "joinOther": {
+      "title": "Hat schon jemand anderes aus der Gruppe einen Raum erstellt?",
+      "hint": "Tritt diesem Raum bei. Dieser hier schließt sich von selbst.",
+      "code": "Code des anderen Raums",
+      "placeholder": "Code"
     }
   },
   "categories": {
@@ -519,7 +527,16 @@
       "playersHint": "Ein Spieler wählt es in der Lobby. Wählt es niemand, kommt ein zufälliges.",
       "playersChosen": "Ein Spieler hat es schon gewählt: „{{title}}“.",
       "add": "Runde hinzufügen",
-      "full": "{{maximum}} Runden: das Maximum"
+      "full": "{{maximum}} Runden: das Maximum",
+      "round": "Runde {{number}}:",
+      "done": "Fertig",
+      "summary": {
+        "notCompromising": "Nicht heikel",
+        "missingDilemma": "Dilemma noch nicht gewählt",
+        "players": "Ein Spieler wählt es in der Lobby",
+        "playersChosen": "Gewählt: „{{title}}“",
+        "specific": "„{{title}}“"
+      }
     },
     "newDilemmas": {
       "label": "Neue Dilemmas zulassen",
@@ -855,13 +872,13 @@
     },
     "spicy": {
       "name": "Pikant",
-      "line": "Themen für Erwachsene. Nur ab 18.",
+      "line": "Alles aus Klassisch, dazu Themen für Erwachsene. Nur ab 18.",
       "example": "Zum Beispiel: „Mehr Jahre oder besserer Sex“"
     },
     "no-filter": {
       "name": "Ohne Filter",
-      "line": "Anonym, ab 18 und mit heiklen Fragen",
-      "example": "Zum Beispiel: „Die Frage deines Partners“ · Ab 3 Spielenden"
+      "line": "Alles aus Pikant, dazu heikle Fragen. Anonym: Niemand sieht, was du wählst.",
+      "example": "Zum Beispiel: „Die Frage deines Partners“"
     },
     "custom": {
       "name": "Eigene"
@@ -1081,5 +1098,9 @@
     "title": "Wir haben deine Anfrage erhalten",
     "text": "Dieses Handy speichert nichts mehr von dir, und innerhalb von höchstens einem Monat haben wir deine Daten von unseren Servern gelöscht. Sicherungskopien brauchen etwas länger, bis sie erneuert sind, und werden in der Zwischenzeit nicht verwendet. Wenn du wieder spielst, fängst du bei null an.",
     "home": "Zurück zum Anfang"
+  },
+  "badges": {
+    "players": "{{minimum}}+ Spielende",
+    "anonymous": "Anonym"
   }
 }

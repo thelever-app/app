@@ -76,7 +76,7 @@
 }
 
 .create {
-  min-height: 64px;
+  min-height: 72px;
   font-size: 18px;
   line-height: 24px;
   font-weight: 600;
@@ -86,12 +86,27 @@
 }
 
 .join {
-  min-height: 56px;
+  min-height: 64px;
   font-size: 16px;
   line-height: 22px;
   font-weight: 500;
   background: transparent;
   box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+}
+
+/* The name of the button and, below it, who presses it. */
+.buttonText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-block: 10px;
+}
+
+.buttonHint {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--color-ink-muted);
 }
 
 .step {

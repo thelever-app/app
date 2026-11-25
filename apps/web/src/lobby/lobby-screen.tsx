@@ -6,6 +6,7 @@ import mascotWaiting from '../assets/brand/mascot-waiting.svg';
 import { Avatar } from '../avatar/avatar.tsx';
 import { namesakesOf } from '../avatar/namesakes.ts';
 import { Icon } from '../components/icon.tsx';
+import { VariantBadges } from '../components/variant-badges.tsx';
 import { useLobby } from '../room/room-provider.tsx';
 import { useMuted } from '../sound/sound-context.tsx';
 import { DilemmaText } from '../game/dilemma-text.tsx';
@@ -16,6 +17,7 @@ import { useLeavingPlayers } from './leaving-players.ts';
 import { AvatarPickerSheet } from './avatar-picker-sheet.tsx';
 import type { Category } from './categories.ts';
 import { ExpelSheet } from './expel-sheet.tsx';
+import { JoinAnotherRoomCard } from './join-another-room-card.tsx';
 import { shareInvitation, spelled } from './invitation.ts';
 import { PickRoundDilemmaSheet } from './pick-round-dilemma-sheet.tsx';
 import { QrScreen } from './qr-screen.tsx';
@@ -147,6 +149,7 @@ export function LobbyScreen() {
             <span className={styles.ambienceName} data-testid="room-ambience">
               <Icon name={AMBIENCE_ICONS[lobby.ambience]} size={22} />
               {t(`ambience.${lobby.ambience}.name`)}
+              <VariantBadges variant={settings.variant} />
             </span>
             {isHost ? (
               <button
@@ -333,6 +336,11 @@ export function LobbyScreen() {
             <img src={mascotWaiting} alt="" width={64} height={64} />
             {t('lobby.waiting')}
           </p>
+        )}
+
+        {/* Someone else of the group created a room too: the host alone goes to it. */}
+        {isHost && lobby.players.length === 1 && (
+          <JoinAnotherRoomCard leavingRoomId={lobby.roomId} />
         )}
       </main>
 

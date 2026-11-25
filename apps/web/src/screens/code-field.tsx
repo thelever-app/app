@@ -5,7 +5,7 @@ import styles from './code-field.module.css';
 export const CODE_LENGTH = 5;
 
 /** The code as the room server looks for it: capitals, letters and digits, five at most. */
-function normalized(typed: string): string {
+export function normalizedCode(typed: string): string {
   return typed
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
@@ -31,7 +31,9 @@ export function CodeField({ code, onChange }: CodeFieldProps) {
       aria-label={t('joinCode.label')}
       placeholder="·····"
       value={code}
-      onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(normalized(event.target.value))}
+      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+        onChange(normalizedCode(event.target.value))
+      }
       inputMode="text"
       autoCapitalize="characters"
       autoComplete="off"

@@ -33,7 +33,7 @@ async function renderForm(createRoom: (request: CreateRoomRequestDto) => Promise
     );
     fireEvent.click(
       screen.getByRole('radio', {
-        name: new RegExp(t(`ambience.${ambience as 'classic'}.name`)),
+        name: new RegExp(`^${t(`ambience.${ambience as 'classic'}.name`)}`),
       }),
     );
   };
@@ -154,7 +154,9 @@ describe('CreateRoomForm', () => {
     const disabledUntilTheEnd = button().hasAttribute('disabled');
     fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.remote') }));
     missing.push(button().textContent);
-    fireEvent.click(screen.getByRole('radio', { name: new RegExp(t('ambience.classic.name')) }));
+    fireEvent.click(
+      screen.getByRole('radio', { name: new RegExp(`^${t('ambience.classic.name')}`) }),
+    );
 
     // Assert
     expect(missing).toEqual([
@@ -208,5 +210,27 @@ describe('CreateRoomForm', () => {
 
     // Assert
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', t('roomErrors.unknown'));
+  });
+
+  it('should show the fewest players of each ambience, and that No filter is anonymous', async () => {
+    // Act
+    const { t } = await renderForm(async () => CREATED);
+
+    // Assert
+    const card = (ambience: 'classic' | 'spicy' | 'no-filter') =>
+      screen
+        .getByRole('radio', { name: new RegExp(`^${t(`ambience.${ambience}.name`)}`) })
+        .closest('label')!;
+    const badges = (ambience: 'classic' | 'spicy' | 'no-filter') =>
+      [...within(card(ambience)).queryAllByTestId(/^(minimum-players|anonymous-badge)$/)].map(
+        (badge) => badge.textContent,
+      );
+    expect(badges('classic')).toEqual([t('badges.players', { minimum: 2 })]);
+    expect(badges('spicy')).toEqual([t('badges.players', { minimum: 2 })]);
+    expect(badges('no-filter')).toEqual([
+      t('badges.players', { minimum: 3 }),
+      t('badges.anonymous'),
+    ]);
+    expect(card('no-filter').textContent).toContain(t('ambience.no-filter.line'));
   });
 });

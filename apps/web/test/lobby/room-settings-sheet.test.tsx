@@ -21,6 +21,24 @@ function roundCards(t: Translate, count: number): HTMLElement[] {
   return within(section).getAllByRole('listitem');
 }
 
+/** What the element says besides its name, as its description points to it. */
+function descriptionOf(element: HTMLElement): string | null | undefined {
+  const id = element.getAttribute('aria-describedby');
+  return id ? document.getElementById(id)?.textContent : undefined;
+}
+
+/** The summary line of a round, which unfolds it and folds it again. */
+function headOf(t: Translate, number: number): HTMLElement {
+  return screen.getByRole('button', {
+    name: (name) => name.startsWith(t('settings.rounds.round', { number })),
+  });
+}
+
+/** The host unfolds a round, to set it. */
+function unfold(t: Translate, ...numbers: number[]): void {
+  for (const number of numbers) fireEvent.click(headOf(t, number));
+}
+
 /** The origin of a round the host taps: Aleatorio, Concreto or Jugadores. */
 function originOf(t: Translate, number: number, origin: 'random' | 'specific' | 'players') {
   const origins = screen.getByRole('radiogroup', { name: t('settings.rounds.origin', { number }) });
@@ -110,6 +128,7 @@ describe('RoomSettingsSheet', () => {
     const { t } = await openSettings(
       aRoom({ settings: { ...aRoom().settings, adultsOnly: true } }),
     );
+    unfold(t, 1);
 
     // Assert
     const [card] = roundCards(t, 8);
@@ -136,6 +155,12 @@ describe('RoomSettingsSheet', () => {
     );
     const [first, second] = roundCards(t, 8);
     const pick = (card: HTMLElement, axis: 'age' | 'compromising', option: string) => {
+      if (
+        within(card).queryByRole('radiogroup', { name: t(`settings.content.${axis}.label`) }) ===
+        null
+      ) {
+        fireEvent.click(within(card).getAllByRole('button')[0]!);
+      }
       const options = within(card).getByRole('radiogroup', {
         name: t(`settings.content.${axis}.label`),
       });
@@ -181,7 +206,7 @@ describe('RoomSettingsSheet', () => {
 
     // Act
     fireEvent.click(
-      within(ambiences).getByRole('radio', { name: new RegExp(t('ambience.spicy.name')) }),
+      within(ambiences).getByRole('radio', { name: new RegExp(`^${t('ambience.spicy.name')}`) }),
     );
     const sentOnChoosing = send.mock.calls.length;
     const adultsOnly = switchCalled(t('settings.adultsOnly.label'));
@@ -206,7 +231,9 @@ describe('RoomSettingsSheet', () => {
     );
     const ambiences = screen.getByRole('radiogroup', { name: t('settings.ambience.label') });
     fireEvent.click(
-      within(ambiences).getByRole('radio', { name: new RegExp(t('ambience.no-filter.name')) }),
+      within(ambiences).getByRole('radio', {
+        name: new RegExp(`^${t('ambience.no-filter.name')}`),
+      }),
     );
 
     // Act
@@ -247,11 +274,11 @@ describe('RoomSettingsSheet', () => {
 
     // Act
     const spicy = within(ambiences).getByRole('radio', {
-      name: new RegExp(t('ambience.spicy.name')),
+      name: new RegExp(`^${t('ambience.spicy.name')}`),
     });
     const adultsOnly = switchCalled(t('settings.adultsOnly.label'));
     fireEvent.click(
-      within(ambiences).getByRole('radio', { name: new RegExp(t('ambience.classic.name')) }),
+      within(ambiences).getByRole('radio', { name: new RegExp(`^${t('ambience.classic.name')}`) }),
     );
 
     // Assert
@@ -289,12 +316,13 @@ describe('RoomSettingsSheet', () => {
   it('should show each round of the room as a card, random from every category', async () => {
     // Act
     const { t } = await openSettings();
+    unfold(t, 8);
 
     // Assert
     const cards = roundCards(t, 8);
     expect(cards).toHaveLength(8);
-    expect(originOf(t, 1, 'random').getAttribute('aria-checked')).toBe('true');
-    expect(originOf(t, 1, 'specific').getAttribute('aria-checked')).toBe('false');
+    expect(originOf(t, 8, 'random').getAttribute('aria-checked')).toBe('true');
+    expect(originOf(t, 8, 'specific').getAttribute('aria-checked')).toBe('false');
     expect(
       screen.getByRole('button', {
         name: t('settings.rounds.categoriesOf', { number: 8, summary: 'De todas las categorías' }),
@@ -342,11 +370,13 @@ describe('RoomSettingsSheet', () => {
     // Arrange
     const rounds: LobbyRoundDto[] = DEFAULT_ROUNDS.slice(0, 2);
     const { t, send } = await openSettings(aRoom({ rounds }));
+    unfold(t, 1);
 
     // Act
     fireEvent.click(
       screen.getByRole('button', { name: t('settings.rounds.remove', { number: 1 }) }),
     );
+    unfold(t, 1);
     const last = screen.getByRole('button', { name: t('settings.rounds.remove', { number: 1 }) });
     save(t);
 
@@ -370,6 +400,7 @@ describe('RoomSettingsSheet', () => {
   it('should mark the categories of a random round, every one with «Todas» or with none', async () => {
     // Arrange
     const { t, send } = await openSettings(aRoom({ rounds: DEFAULT_ROUNDS.slice(0, 1) }));
+    unfold(t, 1);
     const expander = () =>
       screen.getByRole('button', {
         name: new RegExp(`^${t('settings.rounds.categories', { number: 1 })}`),
@@ -444,8 +475,10 @@ describe('RoomSettingsSheet', () => {
       screen.queryByRole('group', { name: t('settings.rounds.categories', { number }) });
 
     // Act
+    unfold(t, 1);
     fireEvent.click(expander(1));
     const firstOpen = chipsOf(1) !== null;
+    unfold(t, 2);
     fireEvent.click(expander(2));
 
     // Assert
@@ -453,13 +486,13 @@ describe('RoomSettingsSheet', () => {
     expect(chipsOf(1)).toBeNull();
     expect(chipsOf(2)).not.toBeNull();
     expect(expander(2).getAttribute('aria-expanded')).toBe('true');
-    expect(expander(1).getAttribute('aria-expanded')).toBe('false');
   });
 
   it('should let the host scroll the dilemmas of the picker over the settings', async () => {
     // Arrange: the list of the picker has more dilemmas than fit.
     const searchDilemmas = vi.fn(async () => ({ dilemmas: [...FOUND] }));
     const { t } = await openSettings(aRoom(), fakeRoomApi({ searchDilemmas }));
+    unfold(t, 2);
     fireEvent.click(originOf(t, 2, 'specific'));
     fireEvent.click(
       screen.getByRole('button', { name: t('settings.rounds.chooseLabel', { number: 2 }) }),
@@ -496,6 +529,7 @@ describe('RoomSettingsSheet', () => {
     const saveButton = screen.getByRole('button', { name: t('settings.save') });
 
     // Act
+    unfold(t, 2);
     fireEvent.click(originOf(t, 2, 'specific'));
     const unfilled = (saveButton as HTMLButtonElement).disabled;
     fireEvent.click(
@@ -541,6 +575,7 @@ describe('RoomSettingsSheet', () => {
     const searchDilemmas = vi.fn(async () => ({ dilemmas: [...FOUND] }));
     const { t, send } = await openSettings(aRoom(), fakeRoomApi({ searchDilemmas }));
     fireEvent.click(screen.getByRole('radio', { name: t('settings.anonymous') }));
+    unfold(t, 1);
     fireEvent.click(originOf(t, 1, 'specific'));
     fireEvent.click(
       screen.getByRole('button', { name: t('settings.rounds.chooseLabel', { number: 1 }) }),
@@ -572,6 +607,8 @@ describe('RoomSettingsSheet', () => {
       ...DEFAULT_ROUNDS.slice(1, 2),
     ];
     const { t, send } = await openSettings(aRoom({ rounds }), fakeRoomApi({ searchDilemmas }));
+    const folded = roundCards(t, 2)[0]!.textContent;
+    unfold(t, 1);
     const shown = roundCards(t, 2)[0]!.textContent;
 
     // Act
@@ -584,6 +621,7 @@ describe('RoomSettingsSheet', () => {
     save(t);
 
     // Assert
+    expect(folded).toContain('«TestText1»');
     expect(shown).toContain('TestText1');
     expect(checked).toBe('true');
     expect(send).not.toHaveBeenCalled();
@@ -604,11 +642,19 @@ describe('RoomSettingsSheet', () => {
     const { t, send } = await openSettings(aRoom({ rounds }));
 
     // Act
+    const folded = roundCards(t, 3).map((card) => card.textContent);
+    unfold(t, 3);
     fireEvent.click(originOf(t, 3, 'players'));
-    const [empty, filled, changed] = roundCards(t, 3).map((card) => card.textContent);
+    const changed = roundCards(t, 3)[2]!.textContent;
+    unfold(t, 1);
+    const empty = roundCards(t, 3)[0]!.textContent;
+    unfold(t, 2);
+    const filled = roundCards(t, 3)[1]!.textContent;
     save(t);
 
     // Assert
+    expect(folded[0]).toContain(t('settings.rounds.summary.players'));
+    expect(folded[1]).toContain('Elegido: «La cartera encontrada»');
     expect(empty).toContain(t('settings.rounds.playersHint'));
     expect(filled).toContain('Ya la ha elegido un jugador: «La cartera encontrada».');
     expect(changed).toContain(t('settings.rounds.playersHint'));
@@ -622,5 +668,129 @@ describe('RoomSettingsSheet', () => {
         ],
       },
     });
+  });
+
+  it('should open every round folded into a line with its number, its origin and its content', async () => {
+    // Arrange: a Spicy room, whose even rounds are for adults only.
+    const rounds = DEFAULT_ROUNDS.map((round, index) => ({
+      ...round,
+      content: { age: index % 2 === 1 ? 'adults-only' : 'any', compromising: 'any' },
+    })) as LobbyRoundDto[];
+
+    // Act
+    const { t } = await openSettings(
+      aRoom({ ambience: 'spicy', settings: { ...aRoom().settings, adultsOnly: true }, rounds }),
+    );
+
+    // Assert
+    const heads = Array.from({ length: 8 }, (_, index) => headOf(t, index + 1));
+    expect(heads.map((head) => head.getAttribute('aria-expanded'))).toEqual(
+      Array.from({ length: 8 }, () => 'false'),
+    );
+    expect(
+      screen.queryByRole('radiogroup', { name: t('settings.rounds.origin', { number: 1 }) }),
+    ).toBeNull();
+    expect(heads[0]!.textContent).toContain(t('settings.rounds.origins.random'));
+    expect(within(heads[0]!).getByTestId('round-summary').textContent).toBe(
+      t('settings.rounds.fromAll'),
+    );
+    expect(within(heads[1]!).getByTestId('round-summary').textContent).toBe(
+      `${t('settings.rounds.fromAll')} · +18`,
+    );
+  });
+
+  it('should unfold one round at a time, and fold it with «Listo»', async () => {
+    // Arrange
+    const { t } = await openSettings();
+
+    // Act
+    unfold(t, 2);
+    const secondUnfolded = headOf(t, 2).getAttribute('aria-expanded');
+    unfold(t, 5);
+    const afterFifth = [headOf(t, 2), headOf(t, 5)].map((head) =>
+      head.getAttribute('aria-expanded'),
+    );
+    fireEvent.click(screen.getByRole('button', { name: t('settings.rounds.done') }));
+
+    // Assert
+    expect(secondUnfolded).toBe('true');
+    expect(afterFifth).toEqual(['false', 'true']);
+    expect(headOf(t, 5).getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('button', { name: t('settings.rounds.done') })).toBeNull();
+  });
+
+  it('should unfold a round the host adds, and offer to remove only the unfolded one', async () => {
+    // Arrange
+    const { t } = await openSettings();
+    const removable = () =>
+      screen.queryAllByRole('button', { name: (name) => name.startsWith('Quitar la ronda') });
+    const beforeAdding = removable().length;
+
+    // Act
+    fireEvent.click(screen.getByRole('button', { name: t('settings.rounds.add') }));
+
+    // Assert
+    expect(beforeAdding).toBe(0);
+    expect(headOf(t, 9).getAttribute('aria-expanded')).toBe('true');
+    expect(removable().map((button) => button.getAttribute('aria-label'))).toEqual([
+      t('settings.rounds.remove', { number: 9 }),
+    ]);
+  });
+
+  it('should show the fewest players of each variant, and the ambience card follows the variant', async () => {
+    // Arrange: a Spicy room.
+    const { t } = await openSettings(
+      aRoom({
+        ambience: 'spicy',
+        settings: { ...aRoom().settings, adultsOnly: true },
+        rounds: AMBIENCES.spicy.rounds.map((round, index) => ({
+          ...round,
+          roundId: index + 1,
+          withoutNewDilemmas: false,
+        })),
+      }),
+    );
+    const card = () =>
+      screen.getByRole('button', { name: new RegExp(t('settings.ambience.change')) });
+    const before = card().textContent;
+
+    // Act
+    fireEvent.click(screen.getByRole('radio', { name: t('settings.anonymous') }));
+
+    // Assert
+    expect(descriptionOf(screen.getByRole('radio', { name: t('settings.nominal') }))).toBe(
+      t('badges.players', { minimum: 2 }),
+    );
+    expect(descriptionOf(screen.getByRole('radio', { name: t('settings.anonymous') }))).toBe(
+      t('badges.players', { minimum: 3 }),
+    );
+    expect(before).toContain(t('ambience.spicy.name'));
+    expect(before).toContain(t('badges.players', { minimum: 2 }));
+    expect(before).not.toContain(t('badges.anonymous'));
+    expect(card().textContent).toContain(t('ambience.custom.name'));
+    expect(card().textContent).toContain(t('badges.players', { minimum: 3 }));
+    expect(card().textContent).toContain(t('badges.anonymous'));
+  });
+
+  it('should show the badges of each ambience the host can choose', async () => {
+    // Arrange
+    const { t } = await openSettings();
+
+    // Act
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(t('settings.ambience.change')) }),
+    );
+
+    // Assert
+    const ambiences = screen.getByRole('radiogroup', { name: t('settings.ambience.label') });
+    const option = (ambience: 'classic' | 'spicy' | 'no-filter') =>
+      within(ambiences).getByRole('radio', {
+        name: new RegExp(`^${t(`ambience.${ambience}.name`)}`),
+      }).textContent;
+    expect(option('classic')).toContain(t('badges.players', { minimum: 2 }));
+    expect(option('spicy')).toContain(t('badges.players', { minimum: 2 }));
+    expect(option('spicy')).not.toContain(t('badges.anonymous'));
+    expect(option('no-filter')).toContain(t('badges.players', { minimum: 3 }));
+    expect(option('no-filter')).toContain(t('badges.anonymous'));
   });
 });

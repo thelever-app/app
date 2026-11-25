@@ -58,6 +58,28 @@ export interface AmbienceOption {
   /** Whether it shows a line that describes it and an example dilemma. */
   readonly described: boolean;
   readonly offBecause: OffReason | null;
+  /** The fewest players to start its badge says. */
+  readonly minimumPlayers: number;
+  /** Whether it carries the badge of an anonymous room. */
+  readonly markedAnonymous: boolean;
+}
+
+/** The card «Ambiente» of the settings: the ambience it names, or custom, and its badges. */
+export interface AmbienceCardView {
+  readonly ambience: string;
+  readonly minimumPlayers: number;
+  readonly markedAnonymous: boolean;
+}
+
+/** A round of the settings: whether it is unfolded, and what its summary line says. */
+export interface SettingsRoundView {
+  /** The number the line shows. */
+  readonly number: number;
+  readonly unfolded: boolean;
+  /** Where its dilemma comes from, as the line names it; undefined if it names none. */
+  readonly origin: 'random' | 'specific' | 'players' | undefined;
+  /** What the line says of its dilemma: its categories and content, the dilemma or who chooses it. */
+  readonly content: string;
 }
 
 /** A switch of the settings: whether it is on, and whether it is off for the host and why. */
@@ -115,6 +137,8 @@ export interface RoomPreview {
   readonly playerCount: number;
   /** The avatars of who is inside, in the order they came in, as `PlayerView` writes them. */
   readonly avatars: readonly string[];
+  /** The fewest players to start the badge next to the ambience says. */
+  readonly minimumPlayers: number;
 }
 
 /** A player of the room as another one sees them in the lobby. */
@@ -673,6 +697,44 @@ export interface GameDriver {
   /** The ambience the lobby of the room of the visitor says, or custom. */
   ambienceOfTheVisitorRoom(): Promise<string>;
   settingsOfTheGame(): Promise<GameSettingsView>;
+  /** The fewest players to start the settings of `host` show for each variant. */
+  minimumPlayersOfTheVariantsSeenBy(
+    host: string,
+  ): Promise<Readonly<Record<'nominal' | 'anonymous', number>>>;
+  /** `host` makes the room anonymous in the settings. */
+  makeAnonymousInTheSettings(host: string): Promise<void>;
+  /** The card «Ambiente» of the settings of `host`. */
+  ambienceCardSeenBy(host: string): Promise<AmbienceCardView>;
+  /** The fewest players to start the lobby of `viewer` shows next to the ambience. */
+  minimumPlayersSeenBy(viewer: string): Promise<number>;
+  /** Whether the line of each ambience to create a room with says what it adds to the one before. Only on screen. */
+  ambiencesSayWhatTheyAdd(player: string): Promise<boolean>;
+
+  // Who creates the room
+
+  /** Whether each button of the home screen says who presses it. Only on screen. */
+  homeSaysWhoCreatesTheRoom(player: string): Promise<{ create: boolean; join: boolean }>;
+  /** `host` creates a room apart from the room of the scenario, and stays alone in it; its code. */
+  createRoomOfTheirOwn(host: string): Promise<string>;
+  /** Whether `player` is alone in the lobby of the room they created apart. */
+  isAloneInTheirOwnRoom(player: string): Promise<boolean>;
+  /** From the lobby of their own room, `player` enters the code of another room. */
+  enterCodeFromTheLobby(player: string, code: string): Promise<void>;
+  /** Whether the lobby of `viewer` offers to join another room. Only on screen. */
+  offerToJoinAnotherRoomSeenBy(viewer: string): Promise<boolean>;
+
+  // The rounds of the settings, folded
+
+  /** `host` opens the settings of the lobby. Only on screen. */
+  openTheSettings(host: string): Promise<void>;
+  /** The rounds of the settings `host` has open. Only on screen. */
+  roundsOfTheOpenSettings(host: string): Promise<SettingsRoundView[]>;
+  /** `host` taps the summary line of that round. Only on screen. */
+  toggleRoundInTheSettings(host: string, round: number): Promise<void>;
+  /** `host` presses «Listo» in that round, which is unfolded. Only on screen. */
+  pressDoneInRound(host: string, round: number): Promise<void>;
+  /** `host` adds a round in the settings they have open. Only on screen. */
+  addRoundInTheOpenSettings(host: string): Promise<void>;
 
   /** How many new dilemmas the room server is configured to reserve in a game with that many random rounds. */
   newDilemmasSetForRandomRounds(count: number): number;

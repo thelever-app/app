@@ -12,6 +12,26 @@ Feature: Create a room
     And the host is asked for a nickname and whether the group plays together or remotely on the same screen
     And the host is not asked for the nature of the group
 
+  @ui @screen
+  Scenario: The home screen says who should create the room
+    Given a player on the home screen
+    Then "Create room" says that only one person of the group creates it and invites the others
+    And "Join with a code" says it is for when someone has already created the room
+
+  @ui
+  Scenario: A host alone in the lobby can join another room
+    Given "Ana" and "Luis" have each created a room
+    And "Luis" is alone in the lobby of his room
+    When "Luis" enters the code of the room of "Ana" from his lobby
+    Then "Luis" goes to the join screen of the room of "Ana"
+    And the room of "Luis" is closed when he joins the room of "Ana"
+
+  @ui @screen
+  Scenario: The offer to join another room disappears when someone joins
+    Given a host alone in the lobby who sees the offer to join another room
+    When another player joins the room
+    Then the host no longer sees the offer
+
   @ui
   Scenario: The host changes the avatar before creating the room
     Given a player creating a room
@@ -39,6 +59,45 @@ Feature: Create a room
     And no ambience is selected
     And the player cannot create the room without choosing one
 
+  @ui
+  Scenario Outline: Each ambience shows the minimum number of players
+    Given a player creating a room
+    Then the ambience "<ambience>" shows the badge "<badge>"
+
+    Examples:
+      | ambience  | badge      |
+      | Classic   | 2+ players |
+      | Spicy     | 2+ players |
+      | No filter | 3+ players |
+
+  @ui
+  Scenario: No filter is marked as anonymous
+    Given a player creating a room
+    Then "No filter" shows the badge "Anonymous"
+    And "Classic" and "Spicy" do not
+
+  @ui @screen
+  Scenario: Each ambience says what it adds to the previous one
+    Given a player creating a room
+    Then "Spicy" says it has what "Classic" has, plus adult topics
+    And "No filter" says it has what "Spicy" has, plus compromising questions, and that it is anonymous
+
+  @ui
+  Scenario Outline: The settings show the minimum number of players of each variant
+    Given a host in the settings of the room
+    Then the variant "<variant>" shows "<badge>"
+
+    Examples:
+      | variant   | badge      |
+      | nominal   | 2+ players |
+      | anonymous | 3+ players |
+
+  @ui
+  Scenario: The ambience card of the settings follows the variant
+    Given a host who created a room with the ambience "Spicy"
+    When the host makes the room anonymous in the settings
+    Then the ambience card of the settings shows "Custom", "3+ players" and "Anonymous"
+
   Scenario Outline: Each ambience sets up the room
     When a player creates a room with the ambience "<ambience>"
     Then the room is <variant> and <age>, with compromising dilemmas <compromising>
@@ -55,6 +114,16 @@ Feature: Create a room
     Given a player who declared a birth year that makes them 17
     When the player creates a room
     Then "Spicy" and "No filter" are turned off with the reason "Only for people 18 or over"
+
+  @ui
+  Scenario Outline: The lobby shows the minimum number of players
+    Given a lobby of a <room> room
+    Then everyone in the lobby sees the badge "<badge>" next to the ambience
+
+    Examples:
+      | room      | badge      |
+      | nominal   | 2+ players |
+      | anonymous | 3+ players |
 
   @ui
   Scenario: The lobby shows the ambience while its configuration is unchanged
@@ -358,6 +427,31 @@ Feature: Create a room
     Given a host who created a room with the ambience "No filter"
     When the host sets round 2 to from 16 and not compromising content
     Then round 2 plays a dilemma suitable from 16 that is not compromising
+
+  @ui @screen
+  Scenario: The rounds of the settings are folded into a summary line
+    Given a host who opens the settings of a room created with the ambience "Spicy"
+    Then every round is folded and shows its number, where its dilemma comes from and its content
+    And round 2 says "+18"
+
+  @ui @screen
+  Scenario: Only one round is unfolded at a time
+    Given a host in the settings with round 2 unfolded
+    When the host unfolds round 5
+    Then round 5 is unfolded
+    And round 2 is folded
+
+  @ui @screen
+  Scenario: The host folds a round with "Done"
+    Given a host in the settings with round 2 unfolded
+    When the host presses "Done" in round 2
+    Then every round is folded
+
+  @ui @screen
+  Scenario: A new round is unfolded
+    Given a host in the settings of a room with 8 rounds
+    When the host adds a round
+    Then round 9 is unfolded
 
   @ui @screen
   Scenario: Choosing an ambience in the settings keeps them open with its configuration

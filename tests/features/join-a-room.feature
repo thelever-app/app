@@ -37,6 +37,17 @@ Feature: Join a room
     Then the player sees that the room is "No filter", anonymous, with adults-only dilemmas and with compromising dilemmas before entering
 
   @ui
+  Scenario Outline: The player sees the minimum number of players before joining
+    Given a <room> room
+    When a player opens its invitation link
+    Then the player sees the badge "<badge>" next to the ambience before entering
+
+    Examples:
+      | room      | badge      |
+      | nominal   | 2+ players |
+      | anonymous | 3+ players |
+
+  @ui
   Scenario: The player sees who is in an adults-only room before joining
     Given a room marked as adults only with 4 players
     When a player opens its invitation link

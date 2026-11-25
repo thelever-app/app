@@ -1,4 +1,9 @@
-import type { AmbienceDto, AmbienceOrCustomDto } from '@thelever-app/protocol';
+import {
+  type AmbienceDto,
+  type AmbienceOrCustomDto,
+  type RoomSettingsDto,
+  VARIANT_OF_AMBIENCE,
+} from '@thelever-app/protocol';
 import type { IconName } from '../components/icon.tsx';
 
 /** The ambiences in the order the screens offer them. */
@@ -15,4 +20,9 @@ export const AMBIENCE_ICONS: Readonly<Record<AmbienceOrCustomDto, IconName>> = {
 /** Whether the ambience is only for people 18 or over. */
 export function isForAdults(ambience: AmbienceDto): boolean {
   return ambience !== 'classic';
+}
+
+/** The variant the ambience sets, which its badges follow. */
+export function variantOf(ambience: AmbienceDto): RoomSettingsDto['variant'] {
+  return VARIANT_OF_AMBIENCE[ambience];
 }

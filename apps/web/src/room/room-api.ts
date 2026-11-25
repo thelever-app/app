@@ -64,6 +64,8 @@ export interface RoomApi {
     nickname: string,
     avatar: AvatarDto,
     playedDilemmaIds: readonly string[],
+    /** The room of their own the player leaves for this one, which then closes. */
+    leavingRoomId?: string,
   ): Promise<JoinRoomResponseDto>;
   /** A page of the search: the first one, or the one after the `next` of the page before. */
   searchDilemmas(
@@ -193,11 +195,12 @@ export function httpRoomApi({
         WorldResultResponseDto,
       );
     },
-    joinRoom: (roomId, nickname, avatar, playedDilemmaIds) =>
+    joinRoom: (roomId, nickname, avatar, playedDilemmaIds, leavingRoomId) =>
       call('POST', `/rooms/${encodeURIComponent(roomId)}/players`, JoinRoomResponseDto, {
         nickname,
         avatar,
         playedDilemmaIds,
+        ...(leavingRoomId && { leavingRoomId }),
       }),
     searchDilemmas: async (roomId, { category, q, after }) => {
       const query = new URLSearchParams();

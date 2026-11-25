@@ -53,6 +53,25 @@ legend.legend {
   pointer-events: none;
 }
 
+/* The variant, with its symbol, and below it the fewest players it starts with. */
+.variantSegment {
+  flex-direction: column;
+  padding: var(--space-1) 0;
+}
+
+.variantName {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.variantMinimum {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+}
+
 .segment:has(input:checked) {
   background: var(--color-surface-raised);
   box-shadow: inset 0 0 0 1.5px var(--color-ink);
@@ -167,18 +186,106 @@ legend.legend {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-4);
 }
 
-/* A round of the game, on its own card; what goes under its origin leaves 4px on the right. */
+/* A round of the game, on its own card: folded, its summary line; the one the host edits, ink. */
 .round {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-1) 10px var(--space-2);
   border-radius: 14px;
   background: var(--color-surface-raised);
   box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.round[data-unfolded] {
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
+/* The summary line, which unfolds the round and folds it again. */
+.roundHead {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) 10px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  font: inherit;
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.roundHead:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.roundNumber {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font-family: var(--font-display);
+  font-size: 19px;
+  line-height: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.round[data-unfolded] .roundNumber {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.roundSummary {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.roundOrigin {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.roundLine {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-ink-muted);
+}
+
+/* Read by a screen reader only. */
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* What the host sets in the round; what goes under its origin leaves 4px on the right. */
+.roundBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-1) 10px var(--space-2);
 }
 
 .roundTop {
@@ -187,15 +294,25 @@ legend.legend {
   gap: 6px;
 }
 
-.roundNumber {
-  width: 26px;
-  flex: none;
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 22px;
-  line-height: 26px;
+/* Folds the round once the host is done with it. */
+.done {
+  align-self: flex-end;
+  margin-right: var(--space-1);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1.5px var(--color-ink);
+  font: inherit;
+  font-size: var(--type-label-size);
+  line-height: 20px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+  cursor: pointer;
 }
 
 /* The three origins, as a segmented control with the icon above each name. */
@@ -373,6 +490,8 @@ legend.legend {
 }
 
 .addRound {
+  /* 16 px from the last round, as between the rounds. */
+  margin-top: var(--space-2);
   min-height: 52px;
   display: inline-flex;
   align-items: center;
@@ -423,6 +542,9 @@ legend.legend {
 .ambienceNow {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   font-size: var(--type-label-size);
   line-height: var(--type-label-line-height);
 }
@@ -507,6 +629,14 @@ legend.legend {
   min-width: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* The name of the ambience and, beside it, its badges. */
+.ambienceOptionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--space-2);
 }
 
 .ambienceOptionName {

@@ -26,6 +26,7 @@ import checkBoxBlank from '@material-symbols/svg-500/rounded/check_box_outline_b
 import chevronRight from '@material-symbols/svg-500/rounded/chevron_right.svg?url';
 import diversity from '@material-symbols/svg-500/rounded/diversity_3-fill.svg?url';
 import flag from '@material-symbols/svg-500/rounded/flag.svg?url';
+import group from '@material-symbols/svg-500/rounded/group-fill.svg?url';
 import groups from '@material-symbols/svg-500/rounded/groups-fill.svg?url';
 import groupsOutline from '@material-symbols/svg-500/rounded/groups.svg?url';
 import iosShare from '@material-symbols/svg-500/rounded/ios_share.svg?url';
@@ -148,6 +149,7 @@ const ICONS = {
   expandLess,
   expandMore,
   flag,
+  group,
   groups,
   groupsOutline,
   heartBroken,

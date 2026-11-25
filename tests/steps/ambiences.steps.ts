@@ -840,3 +840,122 @@ Then('{string} is told why', async function (this: GameWorld, player: string) {
   assert.equal(this.accepted, false);
   assert.equal(await this.driver.onlySuitableDilemmasExplainedTo(player), true);
 });
+
+// The badges of the minimum of players and of the anonymous room
+
+/** The fewest players a badge such as «2+ players» says. */
+function minimumOn(badge: string): number {
+  const minimum = /^(\d+)\+ players$/.exec(badge)?.[1];
+  if (!minimum) throw new Error(`The steps do not know the badge "${badge}"`);
+  return Number(minimum);
+}
+
+Then(
+  'the ambience {string} shows the badge {string}',
+  async function (this: GameWorld, name: string, badge: string) {
+    const offered = await this.driver.ambiencesToCreateWith(this.player);
+    const option = offered.find(({ ambience }) => ambience === ambienceCalled(name));
+    assert.ok(option, `${name} is not offered`);
+    assert.equal(option.minimumPlayers, minimumOn(badge));
+  },
+);
+
+Then(
+  '{string} shows the badge {string}',
+  async function (this: GameWorld, name: string, badge: string) {
+    assert.equal(badge, 'Anonymous');
+    const offered = await this.driver.ambiencesToCreateWith(this.player);
+    const option = offered.find(({ ambience }) => ambience === ambienceCalled(name));
+    assert.ok(option?.markedAnonymous, `${name} is not marked as anonymous`);
+  },
+);
+
+Then(
+  '{string} and {string} do not',
+  async function (this: GameWorld, first: string, second: string) {
+    const offered = await this.driver.ambiencesToCreateWith(this.player);
+    for (const name of [first, second]) {
+      const option = offered.find(({ ambience }) => ambience === ambienceCalled(name));
+      assert.equal(option?.markedAnonymous, false, `${name} is marked as anonymous`);
+    }
+  },
+);
+
+Then(
+  '{string} says it has what {string} has, plus adult topics',
+  async function (this: GameWorld, spicy: string, classic: string) {
+    assert.deepEqual([spicy, classic].map(ambienceCalled), ['spicy', 'classic']);
+    assert.ok(await this.driver.ambiencesSayWhatTheyAdd(this.player));
+  },
+);
+
+Then(
+  '{string} says it has what {string} has, plus compromising questions, and that it is anonymous',
+  async function (this: GameWorld, noFilter: string, spicy: string) {
+    assert.deepEqual([noFilter, spicy].map(ambienceCalled), ['no-filter', 'spicy']);
+    assert.ok(await this.driver.ambiencesSayWhatTheyAdd(this.player));
+  },
+);
+
+Given('a host in the settings of the room', async function (this: GameWorld) {
+  await this.host();
+});
+
+Then(
+  /^the variant "(nominal|anonymous)" shows "([^"]*)"$/,
+  async function (this: GameWorld, variant: 'nominal' | 'anonymous', badge: string) {
+    const minimums = await this.driver.minimumPlayersOfTheVariantsSeenBy(await this.host());
+    assert.equal(minimums[variant], minimumOn(badge));
+  },
+);
+
+When('the host makes the room anonymous in the settings', async function (this: GameWorld) {
+  await this.driver.makeAnonymousInTheSettings(await this.host());
+});
+
+Then(
+  'the ambience card of the settings shows {string}, {string} and {string}',
+  async function (this: GameWorld, name: string, badge: string, anonymous: string) {
+    assert.equal(anonymous, 'Anonymous');
+    const card = await this.driver.ambienceCardSeenBy(await this.host());
+    assert.deepEqual(card, {
+      ambience: SHOWN[name],
+      minimumPlayers: minimumOn(badge),
+      markedAnonymous: true,
+    });
+  },
+);
+
+Given(
+  /^a lobby of a (nominal|anonymous) room$/,
+  async function (this: GameWorld, variant: 'nominal' | 'anonymous') {
+    this.variant = variant;
+    await this.isInTheRoom('Luis');
+  },
+);
+
+Then(
+  'everyone in the lobby sees the badge {string} next to the ambience',
+  async function (this: GameWorld, badge: string) {
+    for (const viewer of this.inRoom) {
+      assert.equal(await this.driver.minimumPlayersSeenBy(viewer), minimumOn(badge), viewer);
+    }
+  },
+);
+
+Then(
+  'the player sees the badge {string} next to the ambience before entering',
+  async function (this: GameWorld, badge: string) {
+    const preview = await this.driver.roomPreviewSeenBy(this.player);
+    assert.ok(preview, `${this.player} sees no room`);
+    assert.equal(preview.minimumPlayers, minimumOn(badge));
+  },
+);
+
+Given(
+  /^an? (nominal|anonymous) room$/,
+  async function (this: GameWorld, variant: 'nominal' | 'anonymous') {
+    this.variant = variant;
+    await this.host();
+  },
+);

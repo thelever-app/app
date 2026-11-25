@@ -372,7 +372,9 @@
     "title": "Giochiamo?",
     "create": "Crea stanza",
     "joinWithCode": "Entra con un codice",
-    "back": "Indietro"
+    "back": "Indietro",
+    "createHint": "Solo una persona del gruppo: poi invita gli altri",
+    "joinHint": "Se qualcuno ha già creato la stanza"
   },
   "joinCode": {
     "title": "Scrivi il codice della stanza",
@@ -495,6 +497,12 @@
     "adults": {
       "name": "Con dilemmi +18:",
       "text": "possono entrare solo i maggiori di 18 anni."
+    },
+    "joinOther": {
+      "title": "Qualcun altro del gruppo ha già creato una stanza?",
+      "hint": "Unisciti alla sua. Questa stanza si chiude da sola.",
+      "code": "Codice dell’altra stanza",
+      "placeholder": "Codice"
     }
   },
   "categories": {
@@ -546,7 +554,16 @@
       "playersHint": "Lo sceglie un giocatore dalla lobby. Se nessuno lo sceglie, ne esce uno casuale.",
       "playersChosen": "L’ha già scelto un giocatore: «{{title}}».",
       "add": "Aggiungi un turno",
-      "full": "{{maximum}} turni: il massimo"
+      "full": "{{maximum}} turni: il massimo",
+      "round": "Turno {{number}}:",
+      "done": "Fatto",
+      "summary": {
+        "notCompromising": "Non compromettente",
+        "missingDilemma": "Manca da scegliere il dilemma",
+        "players": "Lo sceglie un giocatore dalla lobby",
+        "playersChosen": "Scelto: «{{title}}»",
+        "specific": "«{{title}}»"
+      }
     },
     "newDilemmas": {
       "label": "Includi dilemmi nuovi",
@@ -891,13 +908,13 @@
     },
     "spicy": {
       "name": "Piccante",
-      "line": "Temi per adulti. Solo +18.",
+      "line": "Quello di Classica, più temi per adulti. Solo +18.",
       "example": "Per esempio: «Più anni o sesso migliore»"
     },
     "no-filter": {
       "name": "Senza filtri",
-      "line": "Anonimo, +18 e con domande compromettenti",
-      "example": "Per esempio: «La domanda del tuo partner» · Da 3 giocatori"
+      "line": "Quello di Piccante, più domande compromettenti. Anonimo: nessuno vede cosa voti.",
+      "example": "Per esempio: «La domanda del tuo partner»"
     },
     "custom": {
       "name": "Personalizzata"
@@ -1117,5 +1134,9 @@
     "title": "Abbiamo ricevuto la tua richiesta",
     "text": "Questo telefono non conserva più niente di tuo ed entro un mese al massimo avremo eliminato i tuoi dati dai nostri server. Le copie di sicurezza impiegano un po’ di più a rinnovarsi e nel frattempo non vengono usate. Se giochi di nuovo, ripartirai da zero.",
     "home": "Torna all’inizio"
+  },
+  "badges": {
+    "players": "{{minimum}}+ giocatori",
+    "anonymous": "Anonimo"
   }
 }

@@ -53,6 +53,8 @@ export {
   ContentCompromisingDto,
   RoundIdDto,
   MAXIMUM_ROUNDS,
+  MINIMUM_PLAYERS,
+  VARIANT_OF_AMBIENCE,
   ChooseRoundDilemmaDto,
   ClearRoundDilemmaDto,
   StartGameDto,

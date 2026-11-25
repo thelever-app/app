@@ -134,6 +134,8 @@ export class GameWorld extends World {
 
   /** The variant a step said the room has; the room decides if unset. */
   variant: 'nominal' | 'anonymous' | undefined;
+  /** The code of the room a player created apart from the room of the scenario, by its host. */
+  readonly codesOfTheirOwnRooms = new Map<string, string>();
 
   /** The options of the dilemma of the round in the order the player saw them before voting. */
   optionsSeen: readonly string[] = [];

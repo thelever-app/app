@@ -668,3 +668,163 @@ Then(
     );
   },
 );
+
+// Who creates the room
+
+Then(
+  '{string} says that only one person of the group creates it and invites the others',
+  async function (this: GameWorld, button: string) {
+    assert.equal(button, 'Create room');
+    assert.ok((await this.driver.homeSaysWhoCreatesTheRoom(this.player)).create);
+  },
+);
+
+Then(
+  '{string} says it is for when someone has already created the room',
+  async function (this: GameWorld, button: string) {
+    assert.equal(button, 'Join with a code');
+    assert.ok((await this.driver.homeSaysWhoCreatesTheRoom(this.player)).join);
+  },
+);
+
+Given(
+  '{string} and {string} have each created a room',
+  async function (this: GameWorld, host: string, other: string) {
+    await this.hostIs(host);
+    this.codesOfTheirOwnRooms.set(other, await this.driver.createRoomOfTheirOwn(other));
+  },
+);
+
+Given(
+  '{string} is alone in the lobby of his room',
+  async function (this: GameWorld, player: string) {
+    assert.ok(
+      await this.driver.isAloneInTheirOwnRoom(player),
+      `${player} is not alone in his room`,
+    );
+  },
+);
+
+When(
+  '{string} enters the code of the room of {string} from his lobby',
+  async function (this: GameWorld, player: string, host: string) {
+    await this.driver.enterCodeFromTheLobby(player, await this.driver.roomCodeSeenBy(host));
+  },
+);
+
+Then(
+  '{string} goes to the join screen of the room of {string}',
+  async function (this: GameWorld, player: string, host: string) {
+    assert.equal((await this.driver.roomPreviewSeenBy(player))?.host, host);
+  },
+);
+
+Then(
+  'the room of {string} is closed when he joins the room of {string}',
+  async function (this: GameWorld, player: string, host: string) {
+    const code = this.codesOfTheirOwnRooms.get(player);
+    assert.ok(code, `${player} created no room of his own`);
+    await this.driver.confirmNickname(player, player);
+    this.inRoom.add(player);
+    assert.ok(await this.driver.isInTheRoom(player), `${player} is not in the room of ${host}`);
+
+    const someone = SOMEONE.anotherPlayer;
+    await this.driver.typeRoomCode(someone, code);
+    await this.driver.enterTypedCode(someone);
+    assert.equal(await this.driver.joinRefusalSeenBy(someone), 'room-does-not-exist');
+  },
+);
+
+Given(
+  'a host alone in the lobby who sees the offer to join another room',
+  async function (this: GameWorld) {
+    assert.ok(await this.driver.offerToJoinAnotherRoomSeenBy(await this.host()));
+  },
+);
+
+Then('the host no longer sees the offer', async function (this: GameWorld) {
+  assert.equal(await this.driver.offerToJoinAnotherRoomSeenBy(await this.host()), false);
+});
+
+// The rounds of the settings, folded
+
+Given(
+  'a host who opens the settings of a room created with the ambience {string}',
+  async function (this: GameWorld, name: string) {
+    assert.equal(name, 'Spicy');
+    this.beginRoomCreation(SOMEONE.host, { ambience: 'spicy' });
+    await this.driver.openTheSettings(await this.host());
+  },
+);
+
+Then(
+  'every round is folded and shows its number, where its dilemma comes from and its content',
+  async function (this: GameWorld) {
+    const rounds = await this.driver.roundsOfTheOpenSettings(await this.host());
+    assert.ok(rounds.length > 0, 'the settings show no round');
+    for (const [index, { number, unfolded, origin, content }] of rounds.entries()) {
+      assert.equal(number, index + 1, `round ${index + 1} shows the number ${number}`);
+      assert.equal(unfolded, false, `round ${number} is unfolded`);
+      // An ambience makes every round random.
+      assert.equal(origin, 'random', `round ${number} does not say where its dilemma comes from`);
+      assert.notEqual(content.trim(), '', `round ${number} does not say its content`);
+    }
+  },
+);
+
+Then('round {int} says {string}', async function (this: GameWorld, round: number, text: string) {
+  const rounds = await this.driver.roundsOfTheOpenSettings(await this.host());
+  const content = rounds.find(({ number }) => number === round)?.content ?? '';
+  assert.ok(content.includes(text), `round ${round} says "${content}"`);
+});
+
+Given(
+  'a host in the settings with round {int} unfolded',
+  async function (this: GameWorld, round: number) {
+    const host = await this.host();
+    await this.driver.openTheSettings(host);
+    await this.driver.toggleRoundInTheSettings(host, round);
+  },
+);
+
+When('the host unfolds round {int}', async function (this: GameWorld, round: number) {
+  await this.driver.toggleRoundInTheSettings(await this.host(), round);
+});
+
+Then(
+  /^round (\d+) is (unfolded|folded)$/,
+  async function (this: GameWorld, round: string, state: string) {
+    const rounds = await this.driver.roundsOfTheOpenSettings(await this.host());
+    const seen = rounds.find(({ number }) => number === Number(round));
+    assert.equal(seen?.unfolded, state === 'unfolded', `round ${round} is not ${state}`);
+  },
+);
+
+When(
+  'the host presses {string} in round {int}',
+  async function (this: GameWorld, button: string, round: number) {
+    assert.equal(button, 'Done');
+    await this.driver.pressDoneInRound(await this.host(), round);
+  },
+);
+
+Then('every round is folded', async function (this: GameWorld) {
+  const rounds = await this.driver.roundsOfTheOpenSettings(await this.host());
+  assert.deepEqual(
+    rounds.filter(({ unfolded }) => unfolded).map(({ number }) => number),
+    [],
+  );
+});
+
+Given(
+  'a host in the settings of a room with {int} rounds',
+  async function (this: GameWorld, count: number) {
+    const host = await this.host();
+    await this.driver.openTheSettings(host);
+    assert.equal((await this.driver.roundsOfTheOpenSettings(host)).length, count);
+  },
+);
+
+When('the host adds a round', async function (this: GameWorld) {
+  await this.driver.addRoundInTheOpenSettings(await this.host());
+});

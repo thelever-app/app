@@ -862,4 +862,43 @@ describe('reporting a nickname from the lobby', () => {
     ]);
     expect(screen.getByRole('link', { name: t('report.privacy') })).toBeDefined();
   });
+
+  describe('the minimum of players and the room of someone else', () => {
+    it('should show the fewest players of the room next to its ambience', async () => {
+      // Act
+      const { t } = await renderLobby(
+        aRoom({ ...AS_LUIS, settings: { ...aRoom().settings, variant: 'anonymous' } }),
+      );
+
+      // Assert
+      const ambience = screen.getByTestId('room-ambience');
+      expect(within(ambience).getByTestId('minimum-players').textContent).toBe(
+        t('badges.players', { minimum: 3 }),
+      );
+      expect(within(ambience).queryByTestId('anonymous-badge')).toBeNull();
+    });
+
+    it('should offer the host alone to join another room, until someone comes in', async () => {
+      // Arrange
+      const alone = aRoom({ players: aRoom().players.slice(0, 1) });
+      const { t, deliver } = await renderLobby(alone);
+      const offer = () => screen.queryByRole('region', { name: t('lobby.joinOther.title') });
+      const whileAlone = offer();
+
+      // Act
+      act(() => deliver(aRoom({ roomVersion: 4, players: aRoom().players.slice(0, 2) })));
+
+      // Assert
+      expect(whileAlone).not.toBeNull();
+      expect(offer()).toBeNull();
+    });
+
+    it('should not offer another room to a player who is not the host', async () => {
+      // Act
+      const { t } = await renderLobby(aRoom({ ...AS_LUIS }));
+
+      // Assert
+      expect(screen.queryByRole('region', { name: t('lobby.joinOther.title') })).toBeNull();
+    });
+  });
 });

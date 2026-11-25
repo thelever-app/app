@@ -7,6 +7,7 @@ import type { PlayerNotifier } from '../ports/player-notifier.port.ts';
 import type { RoomRepository } from '../ports/room-repository.port.ts';
 import { findCurrentGame } from './find-current-game.ts';
 import { findRoom } from './find-room.ts';
+import { leaveLobby } from './leave-lobby.ts';
 import { notifyGame } from './notify-game.ts';
 import { recordEndIfJustEnded } from './record-usage.ts';
 import type { Usage } from '../ports/usage.port.ts';
@@ -45,12 +46,10 @@ export class LeaveRoomUseCase {
   async execute({ roomId, playerId }: LeaveRoomInput): Promise<void> {
     const lobby = await findRoom(this.#roomRepository, roomId);
     if (lobby.isInLobby) {
-      // From the lobby, who leaves is out of the room: their connections close, the others hear it.
-      const playerIds = lobby.players.map(({ id }) => id);
-      lobby.leave(playerId, [], this.#clock.now());
-      const events = lobby.pullEvents();
-      await this.#roomRepository.save(lobby);
-      await Promise.allSettled(events.map((event) => this.#notifier.notify(playerIds, event)));
+      await leaveLobby(lobby, playerId, this.#clock.now(), {
+        roomRepository: this.#roomRepository,
+        notifier: this.#notifier,
+      });
       return;
     }
     const { room, game } = await findCurrentGame(

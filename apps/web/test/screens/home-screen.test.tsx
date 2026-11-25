@@ -50,4 +50,19 @@ describe('HomeScreen', () => {
     expect(logo.getAttribute('href')).toBe('/');
     expect(logo.querySelector('img')).not.toBeNull();
   });
+
+  it('should say under each button who presses it', async () => {
+    // Act
+    const { t } = await renderAtRoute(<HomeScreen />);
+
+    // Assert
+    const describedBy = (button: HTMLElement) =>
+      document.getElementById(button.getAttribute('aria-describedby') ?? '')?.textContent;
+    expect(describedBy(screen.getByRole('button', { name: t('home.create') }))).toBe(
+      t('home.createHint'),
+    );
+    expect(describedBy(screen.getByRole('button', { name: t('home.joinWithCode') }))).toBe(
+      t('home.joinHint'),
+    );
+  });
 });
