@@ -25,6 +25,8 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
+  /* Wider than the column, the region paints its background to both edges of the window. */
+  border-image: linear-gradient(var(--color-surface), var(--color-surface)) fill 0 / 0 / 0 100vmax;
 }
 
 .headerTop {
