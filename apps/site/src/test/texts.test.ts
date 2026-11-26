@@ -20,6 +20,7 @@ describe('the texts of the public web', () => {
         slug(texts.terms.title),
         slug(texts.appPrivacy.title),
         slug(texts.appCookies.title),
+        ...Object.values(texts.guides).map(({ title }) => slug(title)),
       ];
 
       // Assert

@@ -35,7 +35,15 @@ export interface SiteTexts {
   /** What "someone in the group" reads as in a dilemma on the web, where there is no group yet. */
   readonly someoneInYourGroup: string;
   readonly categories: Readonly<
-    Record<Category, { readonly name: string; readonly description: string }>
+    Record<
+      Category,
+      {
+        readonly name: string;
+        readonly description: string;
+        /** The paragraphs that open its page after the description: what its dilemmas are about. */
+        readonly about: readonly string[];
+      }
+    >
   >;
   readonly home: {
     readonly title: string;
@@ -73,13 +81,13 @@ export interface SiteTexts {
     /** The heading of the page of a category, from its name. */
     readonly heading: (name: string) => string;
     readonly description: (name: string) => string;
-    readonly options: (count: number) => string;
-    readonly withArguments: string;
   };
   readonly dilemma: {
     readonly vote: string;
     readonly play: string;
     readonly worldResultLater: string;
+    /** The heading of the context of the dilemma, before the arguments of its options. */
+    readonly atStake: string;
     readonly arguments: string;
     readonly for: string;
     readonly against: string;
@@ -109,6 +117,14 @@ export interface SiteTexts {
     readonly text: string;
     /** The line after the arguments of a dilemma, before its link. */
     readonly line: string;
+  };
+  /** The heading of the guides on the home, and the name of their links in the footer. */
+  readonly guidesHeading: string;
+  /** Pages of their own that search engines index, so they never name who is behind TheLever. */
+  readonly guides: {
+    readonly trolleyProblem: OwnPage;
+    readonly playingInAGroup: OwnPage;
+    readonly about: OwnPage;
   };
   readonly privacy: OwnPage;
   readonly cookies: OwnPage;

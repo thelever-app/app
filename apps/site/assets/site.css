@@ -547,6 +547,7 @@ h2 {
 
 .chips,
 .dilemmas,
+.guides,
 .options {
   margin: 0;
   padding: 0;
@@ -573,6 +574,7 @@ h2 {
 }
 
 .dilemmas,
+.guides,
 .options {
   flex-direction: column;
 }
@@ -595,10 +597,55 @@ h2 {
   font-weight: 600;
 }
 
-.card-meta {
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--muted);
+/* How the dilemma of a card starts, or what a guide tells. */
+.card-start {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-soft);
+}
+
+/* What the dilemmas of a category are about, after its description. */
+.category-about {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category-about p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 23px;
+  color: var(--ink-soft);
+}
+
+/* What is at stake in a dilemma, before the arguments of its options. */
+.at-stake {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.at-stake h2 {
+  margin: 0;
+}
+
+.at-stake p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 23px;
+}
+
+/* The guides, on every page just above the footer. */
+.guides-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 16px 20px 0;
+  background: var(--surface);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
 }
 
 .dilemma {
@@ -1040,6 +1087,11 @@ h2 {
     gap: 8px 24px;
     padding: 24px 80px;
     font-size: 14px;
+  }
+
+  .guides-links {
+    gap: 8px 24px;
+    padding: 24px 80px 0;
   }
 
   h1 {

@@ -2,6 +2,7 @@ import { appCookies, appPrivacy, terms } from './legal/ca.ts';
 import type { SiteTexts } from './site-texts.ts';
 
 const UPDATED = '23 de novembre de 2026';
+const GUIDES_UPDATED = '26 de novembre de 2026';
 
 export const ca: SiteTexts = {
   languageName: 'Català',
@@ -13,36 +14,71 @@ export const ca: SiteTexts = {
       name: 'Vida i mort',
       description:
         'Dilemes en què hi ha vides en joc: el tramvia, el bot salvavides i altres decisions sense una sortida bona.',
+      about: [
+        'Són els dilemes més antics de la filosofia moral. Un tramvia sense frens, un bot salvavides amb poques places, un metge amb cinc pacients que esperen un òrgan. Obliguen a triar entre vides i no deixen cap sortida neta.',
+        'Gairebé tots enfronten dues maneres de pensar. Una mira el resultat i busca salvar com més persones millor. L’altra mira el que fas amb les teves mans i sosté que hi ha coses que no es fan a ningú, encara que el balanç final surti a compte.',
+        'Jugats en grup, ensenyen una cosa que un test individual no mostra. Qui tira de la palanca sense dubtar descobreix que el seu millor amic no ho faria mai, i la conversa que ve després sol durar més que la partida.',
+      ],
     },
     honesty: {
       name: 'Honestedat',
       description:
         'Quan dir la veritat, quan callar i què estaries disposat a amagar, a qui i per què.',
+      about: [
+        'Mentir està malament, però gairebé ningú no diu sempre la veritat. Aquests dilemes exploren aquest terreny intermedi, el de la mentida piadosa, el silenci que protegeix algú i la veritat que fa mal sense necessitat.',
+        'Darrere de cadascun hi ha una pregunta de fons. Importa més el que sap l’altra persona o com se sent? Hi ha qui creu que la veritat és un deure que no admet excepcions i qui la veu com una eina que s’ha de fer servir amb compte.',
+        'Són ideals per descobrir en quin punt exacte posa la línia cadascun dels teus amics, i per adonar-te que aquesta línia canvia segons a qui calgui mentir.',
+      ],
     },
     loyalty: {
       name: 'Lleialtat',
       description:
         'Amics, família i companys: fins on arriba el que els deus quan xoca amb el que creus just.',
+      about: [
+        'La lleialtat és el que ens uneix a la família, als amics i a l’equip. El problema arriba quan el que deus a algú xoca amb el que creus just, amb el que deus a un desconegut o amb el que et deus a tu mateix.',
+        'Encobriries un amic que ha fet una cosa greu? Denunciaries el teu germà? Aquests dilemes posen a prova fins on arriben aquests lligams i què estaries disposat a sacrificar per ells.',
+        'En un grup d’amics tenen un efecte curiós. Votes en privat què faries per ells i després veus, amb ells al davant, què farien ells per tu.',
+      ],
     },
     justice: {
       name: 'Justícia',
       description:
         'Càstigs, premis i normes: què és just quan la llei, la intenció i el resultat no coincideixen.',
+      about: [
+        'La justícia sembla senzilla fins que la llei, la intenció i el resultat deixen de coincidir. Algú roba per donar menjar a la seva família, una norma justa produeix un càstig absurd, un culpable se’n surt per un tecnicisme.',
+        'Aquests dilemes enfronten idees diferents del que és just. Per a uns, complir les normes per igual; per a uns altres, donar a cadascú el que mereix; i per a uns altres, reparar el mal abans que castigar qui l’ha fet.',
+        'Són els que generen més debat a la revelació, perquè gairebé tothom creu tenir clar què és just fins que escolta la raó de qui ha votat el contrari.',
+      ],
     },
     'love-and-relationships': {
       name: 'Amor i relacions',
       description:
         'Parella, gelosia, secrets i ruptures: dilemes sobre el que faries per algú que estimes.',
+      about: [
+        'Parella, gelosia, secrets, ruptures i amistats que es compliquen. Són dilemes petits al costat d’un tramvia sense frens, però són els que de debò ens trobem a la vida.',
+        'Enfronten la sinceritat amb la cura, la llibertat de cadascú amb el compromís amb l’altre, i el que sents amb el que creus que hauries de sentir.',
+        'Jugar-los amb la teva gent té una mica de risc, i aquesta és la gràcia. Votes en privat, però tots intenteu endevinar què ha triat cadascú.',
+      ],
     },
     'work-and-money': {
       name: 'Feina i diners',
       description:
         'Ascensos, sous, favors i dreceres: què faries quan els diners o la teva carrera estan en joc.',
+      about: [
+        'Ascensos, sous, favors, errors de l’empresa a favor teu i companys que se n’aprofiten. Els diners i la carrera professional posen a prova principis que en abstracte semblen ferms.',
+        'Alguns d’aquests dilemes tenen una estructura coneguda en teoria de jocs. Si tothom coopera, tothom hi guanya, però qui se n’aprofita hi guanya encara més. Confies en els altres o et protegeixes?',
+        'Serveixen per descobrir qui del grup tornaria els diners de més, qui negociaria sense pietat i qui deixaria una empresa per una qüestió de principis.',
+      ],
     },
     'technology-and-the-future': {
       name: 'Tecnologia i futur',
       description:
         'Intel·ligència artificial, privacitat, robots i genètica: dilemes que fa poc eren ciència-ficció.',
+      about: [
+        'Intel·ligència artificial, privacitat, cotxes autònoms, edició genètica i vides cada vegada més llargues. Fins fa poc eren ciència-ficció i avui són decisions que algú està prenent.',
+        'Aquests dilemes plantegen preguntes noves amb eines velles. Un cotxe autònom ha de protegir el passatger o els vianants? Explicaries els teus secrets a una màquina que t’entén millor que ningú?',
+        'Molts encara no tenen una resposta acceptada per la majoria, així que el resultat del teu grup pot ser tan interessant com el de qualsevol enquesta.',
+      ],
     },
   },
   home: {
@@ -85,14 +121,13 @@ export const ca: SiteTexts = {
     heading: (name) => `Dilemes morals: ${name.toLowerCase()}`,
     description: (name) =>
       `Dilemes morals sobre ${name.toLowerCase()} per jugar amb el teu grup a TheLever.`,
-    options: (count) => `${count} opcions`,
-    withArguments: 'arguments de cadascuna',
   },
   dilemma: {
     vote: 'Votar i veure què va fer el món',
     play: 'Jugar-lo amb el meu grup',
     worldResultLater:
       'El resultat mundial es veu en votar, perquè no influeixi en la teva resposta.',
+    atStake: 'Què hi ha en joc',
     arguments: 'Arguments de cada opció',
     for: 'A favor:',
     against: 'En contra:',
@@ -117,6 +152,142 @@ export const ca: SiteTexts = {
     heading: 'TheLever és gratis',
     text: 'El manté una sola persona. Si t’agrada, pots donar-li suport amb una donació; no dóna cap avantatge en el joc.',
     line: 'T’ha fet pensar? TheLever és gratis i el manté una sola persona. Fer una donació no dona cap avantatge en el joc.',
+  },
+  guidesHeading: 'Per saber-ne més',
+  guides: {
+    trolleyProblem: {
+      title: 'Què és el dilema del tramvia',
+      description:
+        'El dilema del tramvia, d’on ve, les seves variants més conegudes i el que n’han après la filosofia i la psicologia.',
+      updated: GUIDES_UPDATED,
+      sections: [
+        {
+          heading: 'El dilema',
+          paragraphs: [
+            'Un tramvia sense frens avança cap a cinc persones lligades a la via. Tu ets al costat d’una palanca que el desvia cap a una altra via, on hi ha una sola persona. Si no fas res, en moren cinc. Si tires de la palanca, en mor una. Què fas?',
+            'Plantejat així, la majoria de la gent diu que tiraria de la palanca. Salvar-ne cinc a costa d’una sembla el més raonable. L’interès del dilema comença quan es canvien els detalls i aquesta mateixa gent canvia d’opinió.',
+          ],
+        },
+        {
+          heading: 'D’on ve',
+          paragraphs: [
+            'La filòsofa britànica Philippa Foot el va plantejar el 1967 en un article sobre la doctrina del doble efecte. En la seva versió, qui decideix és el conductor del tramvia, que pot girar cap a una via o cap a l’altra. Foot el feia servir per preguntar si hi ha diferència moral entre causar un mal i permetre que passi.',
+            'La filòsofa nord-americana Judith Jarvis Thomson li va donar el nom amb què es coneix, «the trolley problem», en un article del 1976. Va ser ella qui va posar la palanca a les mans d’un testimoni i qui va proposar la variant més famosa, la del pont.',
+          ],
+        },
+        {
+          heading: 'La variant del pont',
+          paragraphs: [
+            'Aquesta vegada no hi ha palanca. Ets en un pont sobre la via, al costat d’una persona molt corpulenta. Si l’empenys, el seu cos aturarà el tramvia i salvarà les cinc persones. Ella morirà.',
+            'Les xifres són les mateixes que abans, un per cinc. Tot i això, la majoria de la gent diu que no l’empenyeria. Explicar per què dos casos amb el mateix resultat ens semblen tan diferents és, des de fa dècades, un dels grans problemes de l’ètica.',
+          ],
+        },
+        {
+          heading: 'Les dues grans respostes',
+          paragraphs: [
+            '- El conseqüencialisme, i sobretot l’utilitarisme, jutja una acció pels seus resultats. Si moren menys persones, la decisió és millor, tant amb la palanca com al pont.',
+            '- L’ètica del deure, que té en Immanuel Kant el representant més conegut, sosté que hi ha coses que no es poden fer a una persona encara que el resultat sigui millor, com fer-la servir només com un mitjà. Desviar el tramvia pot ser acceptable, però empènyer algú per aturar-lo, no.',
+            'La doctrina del doble efecte, que es remunta a Tomàs d’Aquino, ofereix una via intermèdia. A la palanca, la mort de la persona de l’altra via és un efecte previst però no buscat. Al pont, la mort de la persona empesa és el mitjà per salvar les altres.',
+          ],
+        },
+        {
+          heading: 'El que diu la psicologia',
+          paragraphs: [
+            'El 2001, el psicòleg Joshua Greene i el seu equip van publicar a la revista Science un estudi amb ressonància magnètica. Els dilemes en què cal fer mal a algú amb les pròpies mans, com el del pont, activaven més les zones del cervell lligades a l’emoció que els dilemes impersonals, com el de la palanca.',
+            'El 2018, el projecte Moral Machine del MIT va publicar a Nature els resultats d’un experiment en línia sobre cotxes autònoms amb milions de decisions de persones de més de dos-cents països i territoris. Va trobar preferències compartides a gairebé tot el món, com salvar més persones, i diferències clares entre cultures en d’altres.',
+          ],
+        },
+        {
+          heading: 'Per què encara importa',
+          paragraphs: [
+            'El dilema del tramvia és un experiment mental. Ningú no espera trobar-se una palanca en una via, però les preguntes que planteja apareixen en decisions reals, com repartir recursos escassos en un hospital o programar com reacciona un cotxe autònom davant d’un accident inevitable.',
+            'A TheLever pots jugar versions del tramvia i centenars de dilemes més amb el teu grup, votar en privat i descobrir després qui pensa què. La categoria Vida i mort reuneix els més propers al dilema original.',
+          ],
+        },
+      ],
+    },
+    playingInAGroup: {
+      title: 'Com jugar a dilemes morals en grup',
+      description:
+        'Com funciona una partida de TheLever, quanta gent cal, quin ambient triar i com treure profit del debat.',
+      updated: GUIDES_UPDATED,
+      sections: [
+        {
+          heading: 'Què cal',
+          paragraphs: [
+            'Un mòbil per persona i res més. TheLever funciona al navegador, així que no cal instal·lar res ni crear cap compte. Només cal que algú creï la sala i comparteixi l’enllaç o el codi.',
+            'Es pot jugar des de dues persones fins a cinquanta. Amb quatre o cinc el debat és més íntim, i amb un grup gran el resultat de cada ronda sorprèn més.',
+          ],
+        },
+        {
+          heading: 'Com és una partida',
+          paragraphs: [
+            '- Qui crea la sala tria l’ambient i el nombre de rondes, d’una a dotze. Per defecte en són vuit.',
+            '- A cada ronda apareix el mateix dilema a tots els mòbils. Cadascú vota en privat.',
+            '- A més de votar, cadascú prediu què ha votat la resta del grup.',
+            '- Quan tothom ha votat, arriba la revelació. Es veu què ha triat el grup i qui ha encertat les seves prediccions, i comença el debat.',
+            '- Al final de la partida, cada jugador rep un títol segons com ha votat i com ha predit els altres.',
+          ],
+        },
+        {
+          heading: 'Quin ambient triar',
+          paragraphs: [
+            '- Clàssica, amb dilemes per a qualsevol grup. És la millor opció per començar o per jugar amb gent que no coneixes gaire.',
+            '- Picant, que afegeix temes d’adults. Només per a majors de 18 anys.',
+            '- Sense filtre, que hi suma preguntes compromeses. En aquesta sala ningú no veu què vota cadascú.',
+          ],
+        },
+        {
+          heading: 'Com treure profit del debat',
+          paragraphs: [
+            'El millor del joc no és el vot sinó el que ve després. Quan el grup es divideix, demana a algú de cada bàndol que expliqui la seva raó en una frase. Gairebé sempre surt un detall del dilema en què l’altre bàndol no s’havia fixat.',
+            'No hi ha respostes correctes. Cada dilema té a la seva pàgina els millors arguments a favor i en contra de cada opció, per si el debat s’encalla o voleu saber què en diu la filosofia.',
+            'Les prediccions hi afegeixen una segona capa. Encertar què votarà el teu millor amic és més difícil del que sembla, i fallar sol donar peu a la millor conversa de la nit.',
+          ],
+        },
+        {
+          heading: 'Per a qui és',
+          paragraphs: [
+            'TheLever és per a majors de 16 anys. Funciona en un sopar amb amics, en una classe de filosofia o d’ètica, en una activitat d’equip o en una videotrucada amb gent que viu lluny.',
+          ],
+        },
+      ],
+    },
+    about: {
+      title: 'Qui fa TheLever',
+      description:
+        'Qui hi ha darrere de TheLever, com s’escriuen els seus dilemes, com es finança i com escriure’ns.',
+      updated: GUIDES_UPDATED,
+      sections: [
+        {
+          heading: 'Una persona',
+          paragraphs: [
+            'TheLever el fa una sola persona, que el dissenya, el programa i en selecciona els dilemes. És un projecte independent, sense inversors ni empresa al darrere.',
+            'Va néixer d’una idea senzilla. Els dilemes morals són molt més interessants quan els discuteixes amb la teva gent que quan hi respons en solitari en un test.',
+          ],
+        },
+        {
+          heading: 'Com es fan els dilemes',
+          paragraphs: [
+            'Cada dilema del catàleg es revisa a mà abans de publicar-se. Alguns són versions de clàssics de la filosofia, com el tramvia o l’anell de Giges; la majoria són situacions quotidianes escrites per a TheLever.',
+            'Els arguments a favor i en contra de cada opció es redacten amb ajuda d’intel·ligència artificial i es revisen un per un en castellà. Les traduccions als altres idiomes es fan amb intel·ligència artificial.',
+            'Els arguments mai no diuen quina és l’opció correcta. El seu objectiu és que entenguis la millor raó de cada postura, també la de l’opció que no triaries.',
+          ],
+        },
+        {
+          heading: 'Com es finança',
+          paragraphs: [
+            'TheLever és gratis i ho continuarà sent. Es manté amb donacions voluntàries i, més endavant, també amb anuncis. Fer una donació no dona cap avantatge en el joc.',
+          ],
+        },
+        {
+          heading: 'Com escriure’ns',
+          paragraphs: [
+            'Per a qualsevol dubte sobre les teves dades, escriu a privacidad@thelever.app. A les pàgines de privacitat i d’avís legal, enllaçades al peu de cada pàgina, hi ha totes les dades del responsable.',
+          ],
+        },
+      ],
+    },
   },
   privacy: {
     title: 'Privacitat',

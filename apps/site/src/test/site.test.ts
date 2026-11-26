@@ -17,7 +17,10 @@ const CONFIG = {
 const ENGLISH = {
   ...es,
   languageName: 'English',
-  categories: { ...es.categories, 'life-and-death': { name: 'Life and death', description: '' } },
+  categories: {
+    ...es.categories,
+    'life-and-death': { name: 'Life and death', description: '', about: [] },
+  },
 };
 const LANGUAGES: Languages = new Map([
   ['es', es],
@@ -118,6 +121,36 @@ describe('the public web', () => {
     expect(body).toContain('TestFor1 de alguien de tu grupo');
     expect(body).not.toContain('{gap}');
     expect(body).toContain('href="/new/TestPublicId?lang=es"');
+  });
+
+  it('should say what is at stake in a dilemma in a block of its own, before the arguments of its options', async () => {
+    // Act
+    const { body } = await answer('/es/vida-y-muerte/el-tranvia-7', {
+      dilemmas: [trolley()],
+      withdrawn: [],
+    });
+
+    // Assert
+    const page = String(body);
+    const stake = /<section class="at-stake">[\s\S]*?<\/section>/.exec(page)?.[0] ?? '';
+    expect(stake).toContain(`<h2>${es.dilemma.atStake}</h2>`);
+    expect(stake).toContain('TestContext');
+    expect(page.indexOf('class="at-stake"')).toBeLessThan(page.indexOf('class="argument"'));
+    expect(/<p class="credit">[\s\S]*?<\/p>/.exec(page)?.[0]).not.toContain('TestContext');
+  });
+
+  it('should show no block of what is at stake in a dilemma whose arguments have no context', async () => {
+    // Arrange
+    const withoutContext = trolley({ arguments: { options: trolley().arguments.options } });
+
+    // Act
+    const { body } = await answer('/es/vida-y-muerte/el-tranvia-7', {
+      dilemmas: [withoutContext],
+      withdrawn: [],
+    });
+
+    // Assert
+    expect(body).not.toContain('class="at-stake"');
   });
 
   it('should keep the privacy policy, the cookie policy and the legal notice out of search engines and of the sitemap', async () => {
@@ -430,6 +463,61 @@ describe('the public web', () => {
     expect(home.body).toContain('href="/es/tecnologia-y-futuro/"');
     expect(home.body).toContain('href="/es/privacidad"');
     expect(home.body).toContain('href="/es/aviso-legal"');
+  });
+
+  it('should open each category with what its dilemmas are about, and show on each card how its dilemma starts', async () => {
+    // Arrange
+    const long = `${'Vas en un tren sin frenos por una vía de montaña. '.repeat(6)}¿Qué haces?`;
+    const catalog = {
+      dilemmas: [trolley(), trolley({ number: 8, name: 'El tren', text: long })],
+      withdrawn: [],
+    };
+
+    // Act
+    const { body } = await answer('/es/vida-y-muerte/', catalog);
+
+    // Assert
+    const page = String(body);
+    for (const paragraph of es.categories['life-and-death'].about) {
+      expect(page).toContain(`<p>${paragraph}</p>`);
+    }
+    expect(page).toContain('¿Desvías el tranvía hacia alguien de tu grupo?');
+    expect(page).toMatch(/<span class="card-start">Vas en un tren sin frenos[^<]*…<\/span>/);
+    expect(page).not.toContain('¿Qué haces?');
+  });
+
+  it('should publish the guides in each language for search engines, linked from the home and from the footer of every page', async () => {
+    // Arrange
+    const catalog = { dilemmas: [trolley()], withdrawn: [] };
+    const guides = [es.guides.trolleyProblem, es.guides.playingInAGroup, es.guides.about];
+
+    // Act
+    const home = String((await answer('/es/', catalog)).body);
+    const dilemma = String((await answer('/es/vida-y-muerte/el-tranvia-7', catalog)).body);
+    const sitemap = String((await answer('/sitemap.xml', catalog)).body);
+
+    // Assert
+    for (const guide of guides) {
+      const path = pagePath('es', guide.title);
+      const page = await answer(path, catalog);
+      expect(page.status, path).toBe(200);
+      expect(page.headers['X-Robots-Tag'], path).toBeUndefined();
+      expect(page.body, path).toContain(`<h1>${guide.title}</h1>`);
+      expect(sitemap).toContain(`<loc>https://thelever.test${path}</loc>`);
+      expect(home).toContain(`href="${path}"`);
+      expect(dilemma).toContain(`href="${path}"`);
+    }
+  });
+
+  it('should keep who is behind TheLever out of the guides, which search engines index', () => {
+    for (const [language, texts] of SITE_LANGUAGES) {
+      const guides = Object.values(texts.guides);
+      for (const text of guides.flatMap(({ sections }) =>
+        sections.flatMap(({ paragraphs }) => paragraphs),
+      )) {
+        expect(text, language).not.toMatch(/\{owner\}|\{taxId\}|\{address\}/);
+      }
+    }
   });
 
   it('should say where to report a vulnerability, in security.txt, before it lapses', async () => {

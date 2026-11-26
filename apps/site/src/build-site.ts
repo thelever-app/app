@@ -54,9 +54,9 @@ export const SITEMAP_FILE = 'sitemap.xml';
 
 /**
  * The whole public web from the public catalog: in each language, the home, a page for each
- * category and one for each dilemma, the privacy policy and the legal notice; the pages that
- * answer a withdrawn dilemma and an address that does not exist; and the sitemap, with only what
- * search engines may index.
+ * category and one for each dilemma, the guides, the privacy policy and the legal notice; the
+ * pages that answer a withdrawn dilemma and an address that does not exist; and the sitemap, with
+ * only what search engines may index.
  */
 export function buildSite(
   catalog: GetPublicCatalogOutput,
@@ -106,6 +106,20 @@ export function buildSite(
           ),
           texts,
         ),
+      });
+    }
+    for (const which of ['trolleyProblem', 'playingInAGroup', 'about'] as const) {
+      const guide = texts.guides[which];
+      pages.push({
+        path: pagePath(language, guide.title),
+        language,
+        title: `${guide.title} | TheLever`,
+        description: guide.description,
+        alternates: everywhere((other) =>
+          pagePath(other, languages.get(other)!.guides[which].title),
+        ),
+        indexable: true,
+        main: ownPageBody(guide, config.owner),
       });
     }
     for (const which of [
