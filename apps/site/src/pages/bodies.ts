@@ -1,6 +1,6 @@
 import type { Category, PublicDilemma } from '@thelever-app/dilemmas';
 import { GAP_MARKER } from '@thelever-app/dilemmas/published';
-import { categoryPath, homePath } from '../addresses.ts';
+import { categoryPath, homePath, pagePath } from '../addresses.ts';
 import { type Html, html } from '../html.ts';
 import type { OwnPage, SiteTexts } from '../texts/site-texts.ts';
 import { assetPath } from '../serve/assets.ts';
@@ -51,6 +51,20 @@ export function homeBody(
         ${Object.entries(texts.categories).map(
           ([, { name }]) =>
             html`<li><a class="chip" href="${categoryPath(language, name)}">${name}</a></li>`,
+        )}
+      </ul>
+    </section>
+    <section class="home-section">
+      <h2>${texts.guidesHeading}</h2>
+      <ul class="guides">
+        ${Object.values(texts.guides).map(
+          ({ title, description }) =>
+            html`<li>
+              <a class="card" href="${pagePath(language, title)}"
+                ><span class="card-title">${title}</span
+                ><span class="card-start">${description}</span></a
+              >
+            </li>`,
         )}
       </ul>
     </section>
@@ -156,26 +170,34 @@ export function categoryBody(
   dilemmas: readonly ShownDilemma[],
   texts: SiteTexts,
 ): Html {
-  const { name, description } = texts.categories[category];
+  const { name, description, about } = texts.categories[category];
   return html`<nav class="crumbs" aria-label="breadcrumb">
       <a href="${homePath(language)}">${texts.homeLink}</a> › ${name}
     </nav>
     <h1>${texts.category.heading(name)}</h1>
     <p class="intro">${description}</p>
+    <div class="category-about">${about.map((paragraph) => html`<p>${paragraph}</p>`)}</div>
     <ul class="dilemmas">
       ${dilemmas.map(
         ({ dilemma, path }) =>
           html`<li>
             <a class="card" href="${path}"
               ><span class="card-title">${readable(dilemma.name, texts)}</span
-              ><span class="card-meta"
-                >${texts.category.options(dilemma.options.length)} ·
-                ${texts.category.withArguments}</span
-              ></a
+              ><span class="card-start">${startOf(readable(dilemma.text, texts))}</span></a
             >
           </li>`,
       )}
     </ul>`;
+}
+
+/** How long the start of a dilemma on its card is, at most. */
+const START_LENGTH = 160;
+
+/** The start of the text of a dilemma: all of it if it is short, or up to a whole word and "…". */
+function startOf(text: string): string {
+  if (text.length <= START_LENGTH) return text;
+  const cut = text.slice(0, START_LENGTH + 1);
+  return `${cut.slice(0, cut.lastIndexOf(' ')).replace(/[\s,.;:]+$/u, '')}…`;
 }
 
 /** A space for an ad of AdSense, labelled as one: shown on phones or on wide screens only. */
@@ -231,6 +253,14 @@ export function dilemmaBody(
         <p class="world-later">${texts.dilemma.worldResultLater}</p>
       </section>
       ${html`<section class="dilemma-arguments">
+        ${
+          args.context
+            ? html`<section class="at-stake">
+                <h2>${texts.dilemma.atStake}</h2>
+                <p>${readable(args.context, texts)}</p>
+              </section>`
+            : ''
+        }
         <h2>${texts.dilemma.arguments}</h2>
         ${dilemma.options.map((option) => {
           const argument = argued(option.optionId);
@@ -243,9 +273,7 @@ export function dilemmaBody(
             </p>
           </article>`;
         })}
-        <p class="credit">
-          ${texts.dilemma.byTheTeam}${args.context ? html` ${readable(args.context, texts)}` : ''}
-        </p>
+        <p class="credit">${texts.dilemma.byTheTeam}</p>
         <p class="support-line">
           ${texts.support.line} <a href="${donationUrl}">${texts.support.link}</a>
         </p>

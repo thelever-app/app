@@ -2,6 +2,7 @@ import { appCookies, appPrivacy, terms } from './legal/de.ts';
 import type { SiteTexts } from './site-texts.ts';
 
 const UPDATED = '23. November 2026';
+const GUIDES_UPDATED = '26. November 2026';
 
 export const de: SiteTexts = {
   languageName: 'Deutsch',
@@ -13,36 +14,71 @@ export const de: SiteTexts = {
       name: 'Leben und Tod',
       description:
         'Dilemmas, bei denen Leben auf dem Spiel stehen: die Straßenbahn, das Rettungsboot und andere Entscheidungen ohne guten Ausweg.',
+      about: [
+        'Es sind die ältesten Dilemmas der Moralphilosophie. Eine Straßenbahn ohne Bremsen, ein Rettungsboot mit zu wenigen Plätzen, ein Arzt mit fünf Patienten, die auf ein Organ warten. Sie zwingen dazu, zwischen Leben zu wählen, und lassen keinen sauberen Ausweg.',
+        'Fast alle stellen zwei Denkweisen gegeneinander. Die eine schaut auf das Ergebnis und will so viele Menschen wie möglich retten. Die andere schaut darauf, was du mit deinen eigenen Händen tust, und hält daran fest, dass man manches niemandem antut, auch wenn die Bilanz am Ende aufgeht.',
+        'In der Gruppe gespielt, zeigen sie etwas, das kein Einzeltest zeigt. Wer ohne zu zögern den Hebel umlegt, merkt, dass der beste Freund oder die beste Freundin das niemals tun würde, und das Gespräch danach dauert oft länger als die Partie.',
+      ],
     },
     honesty: {
       name: 'Ehrlichkeit',
       description:
         'Wann man die Wahrheit sagt, wann man schweigt und was du verheimlichen würdest, vor wem und warum.',
+      about: [
+        'Lügen ist falsch, aber fast niemand sagt immer die Wahrheit. Diese Dilemmas erkunden die Grauzone dazwischen, die Notlüge, das Schweigen, das jemanden schützt, und die Wahrheit, die unnötig wehtut.',
+        'Hinter jedem steht eine Grundfrage. Zählt mehr, was die andere Person weiß, oder wie sie sich fühlt? Manche halten die Wahrheit für eine Pflicht, die keine Ausnahmen kennt, andere für ein Werkzeug, mit dem man vorsichtig umgeht.',
+        'Sie eignen sich perfekt, um herauszufinden, wo genau jede Person in deinem Freundeskreis die Grenze zieht, und um zu merken, dass sich diese Grenze verschiebt, je nachdem, wen man anlügen müsste.',
+      ],
     },
     loyalty: {
       name: 'Loyalität',
       description:
         'Freunde, Familie und Kollegen: wie weit du ihnen etwas schuldest, wenn es mit dem kollidiert, was du für richtig hältst.',
+      about: [
+        'Loyalität verbindet uns mit der Familie, mit Freunden und mit dem Team. Schwierig wird es, wenn das, was du jemandem schuldest, mit dem kollidiert, was du für gerecht hältst, mit dem, was du einem fremden Menschen schuldest, oder mit dem, was du dir selbst schuldest.',
+        'Würdest du einen Freund decken, der etwas Schlimmes getan hat? Würdest du deinen Bruder anzeigen? Diese Dilemmas testen, wie weit diese Bindungen reichen und was du für sie zu opfern bereit wärst.',
+        'In einem Freundeskreis haben sie eine eigenartige Wirkung. Du stimmst geheim ab, was du für sie tun würdest, und siehst danach, mit ihnen vor dir, was sie für dich tun würden.',
+      ],
     },
     justice: {
       name: 'Gerechtigkeit',
       description:
         'Strafen, Belohnungen und Regeln: was gerecht ist, wenn Gesetz, Absicht und Ergebnis nicht übereinstimmen.',
+      about: [
+        'Gerechtigkeit scheint einfach, bis Gesetz, Absicht und Ergebnis nicht mehr übereinstimmen. Jemand stiehlt, um die eigene Familie zu ernähren, eine gerechte Regel führt zu einer absurden Strafe, eine schuldige Person kommt wegen einer Formalität davon.',
+        'Diese Dilemmas stellen verschiedene Vorstellungen von Gerechtigkeit gegeneinander. Für die einen heißt das, die Regeln für alle gleich anzuwenden; für andere, allen zu geben, was sie verdienen; und für wieder andere, den Schaden wiedergutzumachen, statt die Person zu bestrafen, die ihn verursacht hat.',
+        'Sie sorgen bei der Auflösung für die meisten Diskussionen, denn fast alle glauben genau zu wissen, was gerecht ist, bis sie die Begründung von jemandem hören, der das Gegenteil gewählt hat.',
+      ],
     },
     'love-and-relationships': {
       name: 'Liebe und Beziehungen',
       description:
         'Partnerschaft, Eifersucht, Geheimnisse und Trennungen: Dilemmas darüber, was du für einen geliebten Menschen tun würdest.',
+      about: [
+        'Partnerschaft, Eifersucht, Geheimnisse, Trennungen und Freundschaften, die kompliziert werden. Neben einer Straßenbahn ohne Bremsen wirken diese Dilemmas klein, aber genau ihnen begegnen wir wirklich im Leben.',
+        'Sie stellen Ehrlichkeit gegen Rücksicht, die eigene Freiheit gegen die Verpflichtung gegenüber dem anderen Menschen und das, was du fühlst, gegen das, was du glaubst, fühlen zu müssen.',
+        'Sie mit deinen Leuten zu spielen, hat etwas Riskantes, und genau das macht den Reiz aus. Du stimmst geheim ab, aber ihr versucht alle zu erraten, wer was gewählt hat.',
+      ],
     },
     'work-and-money': {
       name: 'Arbeit und Geld',
       description:
         'Beförderungen, Gehälter, Gefallen und Abkürzungen: was du tun würdest, wenn Geld oder deine Karriere auf dem Spiel stehen.',
+      about: [
+        'Beförderungen, Gehälter, Gefallen, Fehler der Firma zu deinen Gunsten und Leute im Team, die sich auf Kosten anderer Vorteile verschaffen. Geld und Karriere stellen Prinzipien auf die Probe, die in der Theorie unerschütterlich wirken.',
+        'Einige dieser Dilemmas haben eine aus der Spieltheorie bekannte Struktur. Wenn alle kooperieren, gewinnen alle, aber wer die anderen ausnutzt, gewinnt noch mehr. Vertraust du den anderen oder schützt du dich?',
+        'Mit ihnen findest du heraus, wer in der Gruppe zu viel erhaltenes Geld zurückgeben würde, wer knallhart verhandeln würde und wer aus Prinzip eine Firma verlassen würde.',
+      ],
     },
     'technology-and-the-future': {
       name: 'Technologie und Zukunft',
       description:
         'Künstliche Intelligenz, Privatsphäre, Roboter und Genetik: Dilemmas, die vor kurzem noch Science-Fiction waren.',
+      about: [
+        'Künstliche Intelligenz, Privatsphäre, autonome Autos, Genom-Editierung und ein immer längeres Leben. Bis vor kurzem war das Science-Fiction, heute sind es Entscheidungen, die jemand gerade trifft.',
+        'Diese Dilemmas stellen neue Fragen mit alten Werkzeugen. Soll ein autonomes Auto die Menschen im Wagen schützen oder die auf der Straße? Würdest du deine Geheimnisse einer Maschine anvertrauen, die dich besser versteht als irgendwer sonst?',
+        'Auf viele gibt es noch keine Antwort, die die Mehrheit teilt, deshalb kann das Ergebnis deiner Gruppe so spannend sein wie das jeder Umfrage.',
+      ],
     },
   },
   home: {
@@ -87,14 +123,13 @@ export const de: SiteTexts = {
   category: {
     heading: (name) => `Moralische Dilemmas: ${name}`,
     description: (name) => `Moralische Dilemmas zum Thema ${name}, für deine Gruppe auf TheLever.`,
-    options: (count) => `${count} Optionen`,
-    withArguments: 'Argumente zu jeder',
   },
   dilemma: {
     vote: 'Abstimmen und sehen, was die Welt tat',
     play: 'Mit meiner Gruppe spielen',
     worldResultLater:
       'Das Weltergebnis siehst du nach der Abstimmung, damit es deine Antwort nicht beeinflusst.',
+    atStake: 'Was auf dem Spiel steht',
     arguments: 'Argumente zu jeder Option',
     for: 'Dafür:',
     against: 'Dagegen:',
@@ -119,6 +154,142 @@ export const de: SiteTexts = {
     heading: 'TheLever ist kostenlos',
     text: 'Eine einzige Person betreibt es. Wenn es dir gefällt, kannst du es mit einer Spende unterstützen; sie bringt dir im Spiel keinen Vorteil.',
     line: 'Hat es dich zum Nachdenken gebracht? TheLever ist kostenlos und wird von einer einzigen Person betrieben. Eine Spende bringt dir im Spiel keinen Vorteil.',
+  },
+  guidesHeading: 'Mehr erfahren',
+  guides: {
+    trolleyProblem: {
+      title: 'Was ist das Trolley-Problem',
+      description:
+        'Das Trolley-Problem, woher es kommt, seine bekanntesten Varianten und was Philosophie und Psychologie daraus gelernt haben.',
+      updated: GUIDES_UPDATED,
+      sections: [
+        {
+          heading: 'Das Dilemma',
+          paragraphs: [
+            'Eine Straßenbahn ohne Bremsen fährt auf fünf Menschen zu, die an die Gleise gefesselt sind. Du stehst neben einem Hebel, der sie auf ein anderes Gleis umleitet, wo sich nur eine Person befindet. Wenn du nichts tust, sterben fünf. Wenn du den Hebel ziehst, stirbt eine. Was tust du?',
+            'So gestellt, sagen die meisten Menschen, dass sie den Hebel ziehen würden. Fünf Menschen auf Kosten von einem zu retten, scheint das Vernünftigste zu sein. Spannend wird das Dilemma, wenn man die Details verändert und dieselben Menschen ihre Meinung ändern.',
+          ],
+        },
+        {
+          heading: 'Woher es kommt',
+          paragraphs: [
+            'Die britische Philosophin Philippa Foot stellte es 1967 in einem Aufsatz über die Lehre von der Doppelwirkung vor. In ihrer Version entscheidet der Fahrer der Straßenbahn, der auf das eine oder das andere Gleis lenken kann. Foot fragte damit, ob es moralisch einen Unterschied macht, einen Schaden zu verursachen oder ihn geschehen zu lassen.',
+            'Die US-amerikanische Philosophin Judith Jarvis Thomson gab ihm 1976 in einem Aufsatz den Namen, unter dem es bekannt ist, „the trolley problem“. Sie war es auch, die den Hebel einer unbeteiligten Person in die Hand gab und die berühmteste Variante vorschlug, die mit der Brücke.',
+          ],
+        },
+        {
+          heading: 'Die Variante mit der Brücke',
+          paragraphs: [
+            'Diesmal gibt es keinen Hebel. Du stehst auf einer Brücke über den Gleisen, neben einer sehr korpulenten Person. Wenn du sie hinunterstößt, hält ihr Körper die Straßenbahn auf und rettet die fünf Menschen. Diese Person stirbt.',
+            'Die Zahlen sind dieselben wie vorher, eins gegen fünf. Trotzdem sagen die meisten Menschen, dass sie nicht stoßen würden. Zu erklären, warum uns zwei Fälle mit demselben Ergebnis so verschieden vorkommen, ist seit Jahrzehnten eines der großen Probleme der Ethik.',
+          ],
+        },
+        {
+          heading: 'Die zwei großen Antworten',
+          paragraphs: [
+            '- Der Konsequentialismus, vor allem der Utilitarismus, beurteilt eine Handlung nach ihren Folgen. Wenn weniger Menschen sterben, ist die Entscheidung besser, beim Hebel genauso wie auf der Brücke.',
+            '- Die Pflichtethik, deren bekanntester Vertreter Immanuel Kant ist, hält daran fest, dass man einem Menschen manches nicht antun darf, auch wenn das Ergebnis besser wäre, etwa ihn bloß als Mittel zu benutzen. Die Straßenbahn umzulenken, kann vertretbar sein, jemanden hinunterzustoßen, um sie aufzuhalten, dagegen nicht.',
+            'Die Lehre von der Doppelwirkung, die auf Thomas von Aquin zurückgeht, bietet einen Mittelweg. Beim Hebel ist der Tod der Person auf dem anderen Gleis eine vorhergesehene, aber nicht beabsichtigte Folge. Auf der Brücke ist der Tod der gestoßenen Person das Mittel, um die anderen zu retten.',
+          ],
+        },
+        {
+          heading: 'Was die Psychologie sagt',
+          paragraphs: [
+            '2001 veröffentlichten der Psychologe Joshua Greene und sein Team in der Zeitschrift Science eine Studie mit Magnetresonanztomografie. Dilemmas, in denen man jemandem mit den eigenen Händen schaden muss, wie das mit der Brücke, aktivierten die mit Emotionen verbundenen Hirnregionen stärker als unpersönliche Dilemmas wie das mit dem Hebel.',
+            '2018 veröffentlichte das Projekt Moral Machine des MIT in Nature die Ergebnisse eines Online-Experiments über autonome Autos, mit Millionen von Entscheidungen von Menschen aus mehr als zweihundert Ländern und Gebieten. Es fand Vorlieben, die fast überall auf der Welt geteilt werden, etwa mehr Menschen zu retten, und bei anderen deutliche Unterschiede zwischen den Kulturen.',
+          ],
+        },
+        {
+          heading: 'Warum es immer noch wichtig ist',
+          paragraphs: [
+            'Das Trolley-Problem ist ein Gedankenexperiment. Niemand rechnet damit, je an einem Gleis vor einem Hebel zu stehen, aber die Fragen, die es stellt, tauchen in echten Entscheidungen auf, etwa wenn knappe Mittel in einem Krankenhaus verteilt werden oder wenn programmiert wird, wie ein autonomes Auto auf einen unvermeidlichen Unfall reagiert.',
+            'Auf TheLever kannst du Varianten des Trolley-Problems und Hunderte weitere Dilemmas mit deiner Gruppe spielen, geheim abstimmen und danach herausfinden, wer was denkt. Die Kategorie „Leben und Tod“ versammelt die, die dem ursprünglichen Dilemma am nächsten sind.',
+          ],
+        },
+      ],
+    },
+    playingInAGroup: {
+      title: 'Moralische Dilemmas in der Gruppe spielen',
+      description:
+        'Wie eine Partie TheLever abläuft, wie viele Leute ihr braucht, welche Stimmung ihr wählt und wie ihr das Beste aus der Diskussion herausholt.',
+      updated: GUIDES_UPDATED,
+      sections: [
+        {
+          heading: 'Was ihr braucht',
+          paragraphs: [
+            'Ein Handy pro Person, sonst nichts. TheLever läuft im Browser, du musst also nichts installieren und kein Konto anlegen. Es reicht, wenn eine Person den Raum erstellt und den Link oder den Code teilt.',
+            'Spielen können zwei bis fünfzig Personen. Zu viert oder zu fünft ist die Diskussion persönlicher, und in einer großen Gruppe überrascht das Ergebnis jeder Runde mehr.',
+          ],
+        },
+        {
+          heading: 'So läuft eine Partie ab',
+          paragraphs: [
+            '- Wer den Raum erstellt, wählt die Stimmung und die Zahl der Runden, von einer bis zwölf. Standardmäßig sind es acht.',
+            '- In jeder Runde erscheint auf allen Handys dasselbe Dilemma. Alle stimmen geheim ab.',
+            '- Außer abzustimmen, sagen alle voraus, wie der Rest der Gruppe abgestimmt hat.',
+            '- Wenn alle abgestimmt haben, kommt die Auflösung. Ihr seht, was die Gruppe gewählt hat und wer richtig vorausgesagt hat, und die Diskussion beginnt.',
+            '- Am Ende der Partie bekommt jede Person einen Titel, je nachdem, wie sie abgestimmt und wie sie die anderen vorausgesagt hat.',
+          ],
+        },
+        {
+          heading: 'Welche Stimmung ihr wählt',
+          paragraphs: [
+            '- Klassisch bietet Dilemmas für jede Gruppe. Das ist die beste Wahl für den Anfang oder wenn du mit Leuten spielst, die du nicht gut kennst.',
+            '- Pikant nimmt Themen für Erwachsene dazu. Nur ab 18 Jahren.',
+            '- Ohne Filter bringt zusätzlich heikle Fragen. In diesem Raum sieht niemand, wer was abstimmt.',
+          ],
+        },
+        {
+          heading: 'Das Beste aus der Diskussion herausholen',
+          paragraphs: [
+            'Das Beste am Spiel ist nicht die Abstimmung, sondern was danach kommt. Wenn sich die Gruppe teilt, bitte je eine Person von jeder Seite, ihre Begründung in einem Satz zu erklären. Fast immer taucht ein Detail des Dilemmas auf, das der anderen Seite nicht aufgefallen war.',
+            'Es gibt keine richtigen Antworten. Jedes Dilemma hat auf seiner Seite die besten Argumente für und gegen jede Option, falls die Diskussion ins Stocken gerät oder ihr wissen wollt, was die Philosophie dazu sagt.',
+            'Die Vorhersagen bringen eine zweite Ebene ins Spiel. Richtig zu erraten, was dein bester Freund oder deine beste Freundin abstimmt, ist schwieriger, als es scheint, und danebenzuliegen sorgt oft für das beste Gespräch des Abends.',
+          ],
+        },
+        {
+          heading: 'Für wen es gedacht ist',
+          paragraphs: [
+            'TheLever ist für Menschen ab 16 Jahren. Es funktioniert bei einem Abendessen mit Freunden, im Philosophie- oder Ethikunterricht, bei einem Teamevent oder in einem Videocall mit Leuten, die weit weg wohnen.',
+          ],
+        },
+      ],
+    },
+    about: {
+      title: 'Wer hinter TheLever steht',
+      description:
+        'Wer TheLever macht, wie seine Dilemmas entstehen, wie es finanziert wird und wie du uns schreiben kannst.',
+      updated: GUIDES_UPDATED,
+      sections: [
+        {
+          heading: 'Eine einzige Person',
+          paragraphs: [
+            'Hinter TheLever steht eine einzige Person, die es gestaltet, programmiert und seine Dilemmas auswählt. Es ist ein unabhängiges Projekt, ohne Investoren und ohne Firma dahinter.',
+            'Es entstand aus einer einfachen Idee. Moralische Dilemmas sind viel spannender, wenn du sie mit deinen Leuten diskutierst, als wenn du sie allein in einem Test beantwortest.',
+          ],
+        },
+        {
+          heading: 'Wie die Dilemmas entstehen',
+          paragraphs: [
+            'Jedes Dilemma im Katalog wird vor der Veröffentlichung von Hand geprüft. Einige sind Versionen von Klassikern der Philosophie, etwa die Straßenbahn oder der Ring des Gyges; die meisten sind Alltagssituationen, die für TheLever geschrieben wurden.',
+            'Die Argumente für und gegen jede Option werden mit Hilfe künstlicher Intelligenz verfasst und einzeln auf Spanisch geprüft. Die Übersetzungen in die anderen Sprachen entstehen mit künstlicher Intelligenz.',
+            'Die Argumente sagen nie, welche Option die richtige ist. Sie sollen dir helfen, den besten Grund für jede Position zu verstehen, auch für die Option, die du nicht wählen würdest.',
+          ],
+        },
+        {
+          heading: 'Wie es finanziert wird',
+          paragraphs: [
+            'TheLever ist kostenlos und bleibt es auch. Es finanziert sich durch freiwillige Spenden und später auch durch Werbung. Eine Spende bringt dir im Spiel keinen Vorteil.',
+          ],
+        },
+        {
+          heading: 'So erreichst du uns',
+          paragraphs: [
+            'Bei Fragen zu deinen Daten schreib an privacidad@thelever.app. Alle Angaben zum Verantwortlichen findest du auf den Seiten Datenschutz und Impressum, die in der Fußzeile jeder Seite verlinkt sind.',
+          ],
+        },
+      ],
+    },
   },
   privacy: {
     title: 'Datenschutz',

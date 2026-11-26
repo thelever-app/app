@@ -110,6 +110,11 @@ export function document(page: Page, languages: Languages, config: SiteConfig): 
         </header>
         <div class="stripe" aria-hidden="true"></div>
         <main class="main">${page.main}</main>
+        <nav class="guides-links" aria-label="${texts.guidesHeading}">
+          ${Object.values(texts.guides).map(
+            ({ title }) => html`<a href="${pagePath(page.language, title)}">${title}</a>`,
+          )}
+        </nav>
         <footer class="footer" aria-label="${texts.footer.label}">
           <a href="${pagePath(page.language, texts.privacy.title)}">${texts.privacy.title}</a>
           <a href="${pagePath(page.language, texts.cookies.title)}">${texts.cookies.title}</a>

@@ -2,6 +2,7 @@ import { appCookies, appPrivacy, terms } from './legal/pt.ts';
 import type { SiteTexts } from './site-texts.ts';
 
 const UPDATED = '23 de novembro de 2026';
+const GUIDES_UPDATED = '26 de novembro de 2026';
 
 export const pt: SiteTexts = {
   languageName: 'Português',
@@ -13,36 +14,71 @@ export const pt: SiteTexts = {
       name: 'Vida e morte',
       description:
         'Dilemas em que há vidas em jogo: o elétrico, o bote salva-vidas e outras decisões sem uma saída boa.',
+      about: [
+        'São os dilemas mais antigos da filosofia moral. Um elétrico sem travões, um bote salva-vidas com poucos lugares, um médico com cinco doentes à espera de um órgão. Obrigam a escolher entre vidas e não deixam nenhuma saída limpa.',
+        'Quase todos põem frente a frente duas formas de pensar. Uma olha para o resultado e procura salvar o maior número possível de pessoas. A outra olha para o que fazes com as tuas próprias mãos e defende que há coisas que não se fazem a ninguém, mesmo que as contas finais compensem.',
+        'Jogados em grupo, mostram algo que um teste individual não mostra. Quem puxa a alavanca sem hesitar descobre que o seu melhor amigo ou a sua melhor amiga nunca o faria, e a conversa que se segue costuma durar mais do que a partida.',
+      ],
     },
     honesty: {
       name: 'Honestidade',
       description:
         'Quando dizer a verdade, quando calar e o que estarias disposto a esconder, a quem e porquê.',
+      about: [
+        'Mentir está mal, mas quase ninguém diz sempre a verdade. Estes dilemas exploram esse terreno intermédio, o da mentira piedosa, do silêncio que protege alguém e da verdade que magoa sem necessidade.',
+        'Por trás de cada um há uma pergunta de fundo. Importa mais o que a outra pessoa sabe ou como se sente? Há quem ache que a verdade é um dever que não admite exceções e quem a veja como uma ferramenta que se usa com cuidado.',
+        'São ideais para descobrir em que ponto exato cada pessoa do teu grupo de amigos traça a linha, e para perceberes que essa linha muda consoante a pessoa a quem é preciso mentir.',
+      ],
     },
     loyalty: {
       name: 'Lealdade',
       description:
         'Amigos, família e colegas: até onde vai o que lhes deves quando chocam com o que achas justo.',
+      about: [
+        'A lealdade é o que nos une à família, aos amigos e à equipa. O problema surge quando o que deves a alguém choca com o que achas justo, com o que deves a alguém que não conheces ou com o que deves a ti.',
+        'Encobririas um amigo que fez algo grave? Denunciarias o teu irmão? Estes dilemas põem à prova até onde vão esses laços e o que serias capaz de sacrificar por eles.',
+        'Num grupo de amigos, têm um efeito curioso. Votas em privado o que farias por eles e depois vês, com eles à tua frente, o que fariam eles por ti.',
+      ],
     },
     justice: {
       name: 'Justiça',
       description:
         'Castigos, prémios e regras: o que é justo quando a lei, a intenção e o resultado não coincidem.',
+      about: [
+        'A justiça parece simples até a lei, a intenção e o resultado deixarem de coincidir. Alguém rouba para dar de comer à família, uma regra justa produz um castigo absurdo, quem tem culpa escapa por uma tecnicalidade.',
+        'Estes dilemas confrontam ideias diferentes do que é justo. Para uns, cumprir as regras por igual; para outros, dar a cada um o que merece; e para outros ainda, reparar o dano antes de castigar quem o causou.',
+        'São os que geram mais debate na revelação, porque quase toda a gente acha que sabe bem o que é justo até ouvir a razão de quem votou o contrário.',
+      ],
     },
     'love-and-relationships': {
       name: 'Amor e relações',
       description:
         'Casal, ciúmes, segredos e ruturas: dilemas sobre o que farias por alguém de quem gostas.',
+      about: [
+        'Casal, ciúmes, segredos, ruturas e amizades que se complicam. São dilemas pequenos comparados com um elétrico sem travões, mas são os que realmente encontramos na vida.',
+        'Põem frente a frente a sinceridade e o cuidado, a liberdade de cada pessoa e o compromisso com a outra, e o que sentes e o que achas que devias sentir.',
+        'Jogá-los com a tua malta tem algo de arriscado, e é aí que está a graça. Votas em privado, mas todos tentam adivinhar o que cada um escolheu.',
+      ],
     },
     'work-and-money': {
       name: 'Trabalho e dinheiro',
       description:
         'Promoções, salários, favores e atalhos: o que farias quando o dinheiro ou a tua carreira estão em jogo.',
+      about: [
+        'Promoções, salários, favores, erros da empresa a teu favor e colegas que se aproveitam. O dinheiro e a carreira põem à prova princípios que, em abstrato, parecem firmes.',
+        'Alguns destes dilemas têm uma estrutura conhecida da teoria dos jogos. Se todos cooperarem, todos ganham, mas quem se aproveita ganha ainda mais. Confias nos outros ou proteges-te?',
+        'Servem para descobrir quem do grupo devolveria o dinheiro a mais, quem negociaria sem piedade e quem sairia de uma empresa por uma questão de princípio.',
+      ],
     },
     'technology-and-the-future': {
       name: 'Tecnologia e futuro',
       description:
         'Inteligência artificial, privacidade, robôs e genética: dilemas que há pouco eram ficção científica.',
+      about: [
+        'Inteligência artificial, privacidade, carros autónomos, edição genética e vidas cada vez mais longas. Até há pouco eram ficção científica e hoje são decisões que alguém está a tomar.',
+        'Estes dilemas fazem perguntas novas com ferramentas velhas. Deve um carro autónomo proteger quem vai lá dentro ou os peões? Contarias os teus segredos a uma máquina que te entende melhor do que ninguém?',
+        'Muitos ainda não têm uma resposta aceite pela maioria, por isso o resultado do teu grupo pode ser tão interessante como o de qualquer sondagem.',
+      ],
     },
   },
   home: {
@@ -85,14 +121,13 @@ export const pt: SiteTexts = {
     heading: (name) => `Dilemas morais: ${name.toLowerCase()}`,
     description: (name) =>
       `Dilemas morais sobre ${name.toLowerCase()} para jogar com o teu grupo no TheLever.`,
-    options: (count) => `${count} opções`,
-    withArguments: 'argumentos de cada uma',
   },
   dilemma: {
     vote: 'Votar e ver o que fez o mundo',
     play: 'Jogá-lo com o meu grupo',
     worldResultLater:
       'O resultado mundial vê-se depois de votar, para não influenciar a tua resposta.',
+    atStake: 'O que está em jogo',
     arguments: 'Argumentos de cada opção',
     for: 'A favor:',
     against: 'Contra:',
@@ -117,6 +152,142 @@ export const pt: SiteTexts = {
     heading: 'O TheLever é grátis',
     text: 'É mantido por uma só pessoa. Se gostares, podes apoiá-lo com um donativo; não dá nenhuma vantagem no jogo.',
     line: 'Fez-te pensar? O TheLever é grátis e é mantido por uma só pessoa. Fazer um donativo não dá nenhuma vantagem no jogo.',
+  },
+  guidesHeading: 'Para saber mais',
+  guides: {
+    trolleyProblem: {
+      title: 'O que é o dilema do elétrico',
+      description:
+        'O dilema do elétrico, de onde vem, as suas variantes mais conhecidas e o que a filosofia e a psicologia aprenderam com ele.',
+      updated: GUIDES_UPDATED,
+      sections: [
+        {
+          heading: 'O dilema',
+          paragraphs: [
+            'Um elétrico sem travões avança em direção a cinco pessoas atadas à linha. Estás junto a uma alavanca que o desvia para outra linha, onde há uma só pessoa. Se não fizeres nada, morrem cinco. Se puxares a alavanca, morre uma. O que fazes?',
+            'Posto assim, a maioria das pessoas diz que puxaria a alavanca. Salvar cinco à custa de uma parece o mais razoável. O interesse do dilema começa quando se mudam os pormenores e essas mesmas pessoas mudam de opinião.',
+          ],
+        },
+        {
+          heading: 'De onde vem',
+          paragraphs: [
+            'A filósofa britânica Philippa Foot apresentou-o em 1967 num artigo sobre a doutrina do duplo efeito. Na sua versão, quem decide é o guarda-freio do elétrico, que pode virar para uma linha ou para a outra. Foot usava-o para perguntar se há diferença moral entre causar um dano e permitir que aconteça.',
+            'A filósofa norte-americana Judith Jarvis Thomson deu-lhe o nome pelo qual é conhecido, «the trolley problem», num artigo de 1976. Foi ela quem pôs a alavanca nas mãos de uma testemunha e quem propôs a variante mais famosa, a da ponte.',
+          ],
+        },
+        {
+          heading: 'A variante da ponte',
+          paragraphs: [
+            'Desta vez não há alavanca. Estás numa ponte sobre a linha, ao lado de uma pessoa muito corpulenta. Se a empurrares, o corpo dela vai travar o elétrico e salvar as cinco pessoas. Ela morrerá.',
+            'Os números são os mesmos de antes, uma por cinco. No entanto, a maioria das pessoas diz que não empurraria. Explicar porque é que dois casos com o mesmo resultado nos parecem tão diferentes é, há décadas, um dos grandes problemas da ética.',
+          ],
+        },
+        {
+          heading: 'As duas grandes respostas',
+          paragraphs: [
+            '- O consequencialismo, e em especial o utilitarismo, julga uma ação pelos seus resultados. Se morrerem menos pessoas, a decisão é melhor, tanto com a alavanca como na ponte.',
+            '- A ética do dever, cujo representante mais conhecido é Immanuel Kant, defende que há coisas que não se podem fazer a uma pessoa mesmo que o resultado seja melhor, como usá-la apenas como um meio. Desviar o elétrico pode ser aceitável, mas empurrar alguém para o travar não.',
+            'A doutrina do duplo efeito, que remonta a Tomás de Aquino, oferece uma via intermédia. Na alavanca, a morte da pessoa da outra linha é um efeito previsto, mas não procurado. Na ponte, a morte da pessoa empurrada é o meio para salvar as outras.',
+          ],
+        },
+        {
+          heading: 'O que diz a psicologia',
+          paragraphs: [
+            'Em 2001, o psicólogo Joshua Greene e a sua equipa publicaram na revista Science um estudo com ressonância magnética. Os dilemas em que é preciso fazer mal a alguém com as próprias mãos, como o da ponte, ativavam mais as zonas do cérebro ligadas à emoção do que os dilemas impessoais, como o da alavanca.',
+            'Em 2018, o projeto Moral Machine do MIT publicou na Nature os resultados de uma experiência online sobre carros autónomos, com milhões de decisões de pessoas de mais de duzentos países e territórios. Encontrou preferências partilhadas em quase todo o mundo, como salvar mais pessoas, e diferenças claras entre culturas noutras.',
+          ],
+        },
+        {
+          heading: 'Porque continua a importar',
+          paragraphs: [
+            'O dilema do elétrico é uma experiência mental. Ninguém espera encontrar uma alavanca junto a uma linha, mas as perguntas que levanta aparecem em decisões reais, como distribuir recursos escassos num hospital ou programar como um carro autónomo reage perante um acidente inevitável.',
+            'No TheLever podes jogar versões do dilema do elétrico e centenas de outros dilemas com o teu grupo, votar em privado e descobrir depois quem pensa o quê. A categoria Vida e morte reúne os mais próximos do dilema original.',
+          ],
+        },
+      ],
+    },
+    playingInAGroup: {
+      title: 'Como jogar dilemas morais em grupo',
+      description:
+        'Como funciona uma partida do TheLever, quantas pessoas são precisas, que ambiente escolher e como tirar partido do debate.',
+      updated: GUIDES_UPDATED,
+      sections: [
+        {
+          heading: 'O que é preciso',
+          paragraphs: [
+            'Um telemóvel por pessoa e mais nada. O TheLever funciona no navegador, por isso não é preciso instalar nada nem criar conta. Basta que alguém crie a sala e partilhe o link ou o código.',
+            'Podem jogar desde duas até cinquenta pessoas. Com quatro ou cinco, o debate é mais íntimo, e num grupo grande o resultado de cada ronda surpreende mais.',
+          ],
+        },
+        {
+          heading: 'Como é uma partida',
+          paragraphs: [
+            '- Quem cria a sala escolhe o ambiente e o número de rondas, de uma a doze. Por defeito, são oito.',
+            '- Em cada ronda aparece o mesmo dilema em todos os telemóveis. Cada pessoa vota em privado.',
+            '- Além de votar, cada pessoa prevê o que votou o resto do grupo.',
+            '- Quando todos tiverem votado, chega a revelação. Vê-se o que o grupo escolheu e quem acertou nas previsões, e começa o debate.',
+            '- No fim da partida, cada pessoa recebe um título consoante a forma como votou e como previu os outros.',
+          ],
+        },
+        {
+          heading: 'Que ambiente escolher',
+          paragraphs: [
+            '- Clássica, com dilemas para qualquer grupo. É a melhor opção para começar ou para jogar com pessoas que não conheces bem.',
+            '- Picante, que acrescenta temas para adultos. Só para maiores de 18 anos.',
+            '- Sem filtro, que junta perguntas comprometedoras. Nesta sala ninguém vê o que cada pessoa vota.',
+          ],
+        },
+        {
+          heading: 'Como tirar partido do debate',
+          paragraphs: [
+            'O melhor do jogo não é o voto, mas o que vem depois. Quando o grupo se divide, pede a uma pessoa de cada lado que explique a sua razão numa frase. Quase sempre aparece um pormenor do dilema em que o outro lado não tinha reparado.',
+            'Não há respostas certas. Cada dilema tem na sua página os melhores argumentos a favor e contra cada opção, caso o debate encalhe ou queiram saber o que diz a filosofia.',
+            'As previsões acrescentam uma segunda camada. Acertar no que vai votar o teu melhor amigo ou a tua melhor amiga é mais difícil do que parece, e falhar costuma dar origem à melhor conversa da noite.',
+          ],
+        },
+        {
+          heading: 'Para quem é',
+          paragraphs: [
+            'O TheLever é para maiores de 16 anos. Funciona num jantar com amigos, numa aula de filosofia ou de ética, numa atividade de equipa ou numa videochamada com pessoas que vivem longe.',
+          ],
+        },
+      ],
+    },
+    about: {
+      title: 'Quem faz o TheLever',
+      description:
+        'Quem está por trás do TheLever, como se escrevem os seus dilemas, como se financia e como nos podes escrever.',
+      updated: GUIDES_UPDATED,
+      sections: [
+        {
+          heading: 'Uma só pessoa',
+          paragraphs: [
+            'O TheLever é feito por uma só pessoa, que o desenha, o programa e seleciona os seus dilemas. É um projeto independente, sem investidores nem empresa por trás.',
+            'Nasceu de uma ideia simples. Os dilemas morais são muito mais interessantes quando os discutes com a tua malta do que quando lhes respondes a sós num teste.',
+          ],
+        },
+        {
+          heading: 'Como se fazem os dilemas',
+          paragraphs: [
+            'Cada dilema do catálogo é revisto à mão antes de ser publicado. Alguns são versões de clássicos da filosofia, como o elétrico ou o anel de Giges; a maioria são situações do dia a dia escritas para o TheLever.',
+            'Os argumentos a favor e contra cada opção são redigidos com a ajuda de inteligência artificial e revistos um a um em espanhol. As traduções para os outros idiomas são feitas com inteligência artificial.',
+            'Os argumentos nunca dizem qual é a opção certa. O objetivo é que percebas a melhor razão de cada posição, incluindo a da opção que não escolherias.',
+          ],
+        },
+        {
+          heading: 'Como se financia',
+          paragraphs: [
+            'O TheLever é grátis e vai continuar a sê-lo. Mantém-se com donativos voluntários e, mais tarde, também com publicidade. Fazer um donativo não dá nenhuma vantagem no jogo.',
+          ],
+        },
+        {
+          heading: 'Como nos escrever',
+          paragraphs: [
+            'Para qualquer dúvida sobre os teus dados, escreve para privacidad@thelever.app. Nas páginas de privacidade e de aviso legal, com ligação no rodapé de cada página, estão todos os dados do responsável.',
+          ],
+        },
+      ],
+    },
   },
   privacy: {
     title: 'Privacidade',
