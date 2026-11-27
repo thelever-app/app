@@ -7,7 +7,7 @@ import { CloudLoggingLogger } from '../telemetry/cloud-logging-logger.ts';
 import { erasePersonalData } from './erase-personal-data/erase.ts';
 import { privacyDependenciesIn } from './privacy-dependencies.ts';
 
-// What the job sync-moderation does every 5 minutes after the moderation, run on its own: every
+// What the job sync-moderation does on each run after the moderation, run on its own: every
 // pending deletion of the deletion log or, with `--again`, every deletion of the log, which is how
 // it is run by hand after a backup of the database is restored, so nothing deleted comes back:
 //
