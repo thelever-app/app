@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { type Category, isCategory } from '@thelever-app/game';
 import type { RoundSetting, RoundView, SettingsView } from '../support/driver.ts';
 import { catalogDilemmasSuiting, TEST_DILEMMAS, testTextIn } from '../support/test-catalog.ts';
+import { languageNamed } from '../support/scenario-words.ts';
 import { SOMEONE, type GameWorld } from '../support/world.ts';
 
 /** A category as a scenario writes it: its id. */
@@ -10,12 +11,6 @@ function categoryNamed(text: string): Category {
   assert.ok(isCategory(text), `${text} is not a category`);
   return text;
 }
-
-/** The words of the scenarios for where the group plays, and how the room keeps them. */
-const PLACES: Readonly<Record<string, string>> = { together: 'together', remotely: 'remote' };
-
-/** The languages the scenarios name, and their codes. */
-const LANGUAGES: Readonly<Record<string, string>> = { English: 'en', Spanish: 'es', French: 'fr' };
 
 /** Test data: a new value for each part of the configuration the host can change before starting. */
 const NEW_CONFIGURATION: Partial<SettingsView> = { timePerDilemmaSeconds: 30 };
@@ -55,12 +50,6 @@ async function roundSeenBy(world: GameWorld, viewer: string, round: number): Pro
 async function setRound(world: GameWorld, round: number, setting: RoundSetting): Promise<void> {
   const host = await world.host();
   assert.ok(await world.driver.tryToSetRound(host, round, setting), `round ${round} is not set`);
-}
-
-function codeOf(language: string): string {
-  const code = LANGUAGES[language];
-  if (!code) throw new Error(`The steps do not know the language "${language}"`);
-  return code;
 }
 
 /** The game of the room, which the host starts if no step has yet. */
@@ -121,42 +110,23 @@ When('creates the room', async function (this: GameWorld) {
   else await this.host();
 });
 
-Then(
-  'the host is asked for a nickname and whether the group plays together or remotely on the same screen',
-  async function (this: GameWorld) {
-    const asked = await this.driver.askedOnCreation(await this.host());
-    assert.ok(asked.includes('nickname') && asked.includes('place'), `asked ${asked.join(', ')}`);
-  },
-);
-
 Then('the host is not asked for the nature of the group', async function (this: GameWorld) {
   assert.ok(!(await this.driver.askedOnCreation(await this.host())).includes('nature'));
 });
+
+Then(
+  'the host is not asked whether the group plays together or remotely',
+  async function (this: GameWorld) {
+    assert.ok(!(await this.driver.askedOnCreation(await this.host())).includes('place'));
+  },
+);
 
 Given('a host who has just created a room', function (this: GameWorld) {
   this.beginRoomCreation(SOMEONE.host);
 });
 
-When('the host chooses {string}', function (this: GameWorld, place: string) {
-  const chosen = PLACES[place];
-  if (!chosen) throw new Error(`The steps do not know the place "${place}"`);
-  this.chooseOnCreation({ place: chosen });
-});
-
-Then('the game is recorded as played remotely', async function (this: GameWorld) {
-  await this.host();
-  assert.equal(await this.driver.placeRecorded(), 'remote');
-});
-
-Then('everyone in the lobby is advised to play on a video call', async function (this: GameWorld) {
-  await this.host();
-  for (const player of this.inRoom) {
-    assert.ok(await this.driver.videoCallAdviceSeenBy(player), `${player} is not advised`);
-  }
-});
-
 Given('a host whose device is in {word}', function (this: GameWorld, language: string) {
-  this.beginRoomCreation(SOMEONE.host, { deviceLanguage: codeOf(language) });
+  this.beginRoomCreation(SOMEONE.host, { deviceLanguage: languageNamed(language) });
 });
 
 When('the host creates a room', async function (this: GameWorld) {
@@ -179,7 +149,7 @@ Then(/^the room is (nominal|anonymous)$/, async function (this: GameWorld, varia
 });
 
 Then('the dilemmas of the room are in {word}', async function (this: GameWorld, language: string) {
-  assert.equal(await this.driver.languageOfTheRoom(), codeOf(language));
+  assert.equal(await this.driver.languageOfTheRoom(), languageNamed(language));
 });
 
 Then(
@@ -664,7 +634,7 @@ Then(
   async function (this: GameWorld, player: string, round: number, language: string) {
     assert.equal(
       await this.driver.roundTextSeenBy(player, round),
-      testTextIn(TRANSLATED_INTO_ENGLISH, codeOf(language)),
+      testTextIn(TRANSLATED_INTO_ENGLISH, languageNamed(language)),
     );
   },
 );

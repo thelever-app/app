@@ -1,15 +1,7 @@
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import { languageNamed } from '../support/scenario-words.ts';
 import type { GameWorld } from '../support/world.ts';
-
-/** The languages the scenarios of the settings name, and their codes. */
-const LANGUAGES: Readonly<Record<string, string>> = { English: 'en', Spanish: 'es' };
-
-function codeOf(language: string): string {
-  const code = LANGUAGES[language];
-  assert.ok(code, `The steps do not know the language "${language}"`);
-  return code;
-}
 
 Given('a player who has completed the first access', async function (this: GameWorld) {
   this.player = 'Luis';
@@ -18,19 +10,19 @@ Given('a player who has completed the first access', async function (this: GameW
 
 Given('the app is in {word}', async function (this: GameWorld, language: string) {
   // The device of the player is in Spanish, and the app starts in its language.
-  assert.equal(codeOf(language), 'es');
+  assert.equal(languageNamed(language), 'es');
 });
 
 When(
   'the player changes the language to {word} in the settings',
   async function (this: GameWorld, language: string) {
     await this.driver.openSettings(this.player);
-    await this.driver.chooseTheLanguageOfTheApp(this.player, codeOf(language));
+    await this.driver.chooseTheLanguageOfTheApp(this.player, languageNamed(language));
   },
 );
 
 Then('the app is shown in {word} immediately', async function (this: GameWorld, language: string) {
-  assert.equal(await this.driver.languageShownTo(this.player), codeOf(language));
+  assert.equal(await this.driver.languageShownTo(this.player), languageNamed(language));
 });
 
 When('the player opens the settings', async function (this: GameWorld) {

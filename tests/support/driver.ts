@@ -1,4 +1,29 @@
-import type { Category, DilemmaType, Scale } from '@thelever-app/game';
+import type { MinimumAge } from '@thelever-app/dilemmas';
+import type {
+  Ambience,
+  AmbienceOrCustom,
+  Category,
+  ContentAge,
+  ContentCompromising,
+  DilemmaLanguage,
+  DilemmaOrigin,
+  DilemmaType,
+  GameStage,
+  ReportReason,
+  RoomVariant,
+  RoundContent,
+  Scale,
+} from '@thelever-app/game';
+
+export type {
+  Ambience,
+  AmbienceOrCustom,
+  ContentAge,
+  ContentCompromising,
+  DilemmaLanguage,
+  ReportReason,
+  RoundContent,
+};
 
 /** What the host chooses on the screen to create a room; the driver picks test data for the rest. */
 /** The steps of an answer as the screen shows them: «Tu voto» and «Tu predicción». */
@@ -10,34 +35,18 @@ export interface AnswerStepsView {
 
 export interface RoomChoices {
   /** The ambience the room is created with; Classic unless the scenario says. */
-  readonly ambience?: 'classic' | 'spicy' | 'no-filter';
-  readonly place?: string;
+  readonly ambience?: Ambience;
   /** The language of the device, which the room takes for its dilemmas. */
-  readonly deviceLanguage?: string;
+  readonly deviceLanguage?: DilemmaLanguage;
 }
 
 /** What the open settings of the lobby show, before the host saves them. */
 export interface OpenSettingsView {
   /** The ambience the settings name, or custom. */
-  readonly ambience: string;
-  readonly variant: 'nominal' | 'anonymous';
+  readonly ambience: AmbienceOrCustom;
+  readonly variant: RoomVariant;
   readonly adultsOnly: boolean;
   readonly compromisingDilemmas: boolean;
-}
-
-/** The presets of a room. */
-export type Ambience = 'classic' | 'spicy' | 'no-filter';
-
-/** The minimum age a random round asks of its dilemma. */
-export type ContentAge = 'any' | 'from-16' | 'adults-only';
-
-/** Whether a random round asks for a compromising dilemma. */
-export type ContentCompromising = 'any' | 'no' | 'yes';
-
-/** What the dilemma of a random round must be besides its categories. */
-export interface RoundContent {
-  readonly age: ContentAge;
-  readonly compromising: ContentCompromising;
 }
 
 /** Which parts of the content of a random round the host can set. */
@@ -66,7 +75,7 @@ export interface AmbienceOption {
 
 /** The card «Ambiente» of the settings: the ambience it names, or custom, and its badges. */
 export interface AmbienceCardView {
-  readonly ambience: string;
+  readonly ambience: AmbienceOrCustom;
   readonly minimumPlayers: number;
   readonly markedAnonymous: boolean;
 }
@@ -77,7 +86,7 @@ export interface SettingsRoundView {
   readonly number: number;
   readonly unfolded: boolean;
   /** Where its dilemma comes from, as the line names it; undefined if it names none. */
-  readonly origin: 'random' | 'specific' | 'players' | undefined;
+  readonly origin: DilemmaOrigin | undefined;
   /** What the line says of its dilemma: its categories and content, the dilemma or who chooses it. */
   readonly content: string;
 }
@@ -97,7 +106,7 @@ export interface MarkedDilemma {
 
 /** The configuration of the room apart from its rounds, as a player of the lobby sees it. */
 export interface SettingsView {
-  readonly variant: string;
+  readonly variant: RoomVariant;
   readonly adultsOnly: boolean;
   readonly compromisingDilemmas: boolean;
   readonly timePerDilemmaSeconds: number;
@@ -130,8 +139,8 @@ export type RoundView =
 export interface RoomPreview {
   readonly host: string;
   /** The ambience whose configuration the room has, or custom. */
-  readonly ambience: string;
-  readonly variant: string;
+  readonly ambience: AmbienceOrCustom;
+  readonly variant: RoomVariant;
   readonly adultsOnly: boolean;
   readonly compromisingDilemmas: boolean;
   readonly playerCount: number;
@@ -151,17 +160,16 @@ export interface PlayerView {
 /** What the game copied from the room when it started. */
 export interface GameSettingsView {
   /** The ambience whose configuration the room had when the game started, or custom. */
-  readonly ambience: string;
-  readonly variant: string;
-  readonly place: string;
-  readonly dilemmaLanguage: string;
+  readonly ambience: AmbienceOrCustom;
+  readonly variant: RoomVariant;
+  readonly dilemmaLanguage: DilemmaLanguage;
   readonly timePerDilemmaSeconds: number;
 }
 
 /** Test data the driver loaded: what a dilemma is, to check what a game or a search returns. */
 export interface CatalogEntry {
   readonly text: string;
-  readonly minimumAge: number;
+  readonly minimumAge: MinimumAge;
   readonly category: Category;
   readonly status: 'in-catalog' | 'in-exploration';
   readonly type: DilemmaType;
@@ -199,9 +207,6 @@ export interface Declaration {
   readonly underEighteen: boolean;
   readonly researchConsent: boolean;
 }
-
-/** Why a player reports a dilemma, as the scenario says it. */
-export type ReportReason = 'offensive' | 'confusing' | 'badly translated' | 'other';
 
 /** An issue of the moderation repository, as the team sees it there. */
 export interface ModerationIssueView {
@@ -535,13 +540,13 @@ export interface GameDriver {
   /** `host` opens the screen to create a room, which shows them a random avatar. */
   openRoomCreation(host: string): Promise<void>;
   /**
-   * `host` creates a room from the home screen, with a nickname, the nature of the group and the
-   * place, and the avatar the screen shows them.
+   * `host` creates a room from the home screen, with a nickname and an ambience, and the avatar the
+   * screen shows them.
    */
   createRoom(host: string, choices?: RoomChoices): Promise<void>;
   /**
-   * What `host` was asked on the single screen that created the room: their nickname, the place
-   * where the group plays and, if it were still asked, the nature of the group.
+   * What `host` was asked on the single screen that created the room: their nickname and, if they
+   * were still asked, where the group plays and the nature of the group.
    */
   askedOnCreation(host: string): Promise<readonly ('nickname' | 'place' | 'nature')[]>;
   isHost(player: string): Promise<boolean>;
@@ -551,10 +556,6 @@ export interface GameDriver {
   canShareInvitationLink(player: string): Promise<boolean>;
   /** Whether `player` can show full screen a QR that takes whoever scans it to the room. */
   canShowQrFullScreen(player: string): Promise<boolean>;
-  /** Whether `player` sees the advice to play on a video call. */
-  videoCallAdviceSeenBy(player: string): Promise<boolean>;
-  /** Where the game is recorded as played, together or remote. */
-  placeRecorded(): Promise<string>;
 
   /** The device of `player` last played with that nickname. Only on the device (@screen). */
   lastPlayedAs(player: string, nickname: string): Promise<void>;
@@ -665,7 +666,7 @@ export interface GameDriver {
   /** Whether the room can be created with everything else filled in and no ambience. */
   canCreateRoomWithoutAmbience(player: string): Promise<boolean>;
   /** The ambience of the room the lobby says, or custom. */
-  ambienceSeenBy(viewer: string): Promise<string>;
+  ambienceSeenBy(viewer: string): Promise<AmbienceOrCustom>;
   /**
    * In the settings of the lobby, which stay open, filled in with its configuration: the room
    * does not take it until the host saves.
@@ -695,7 +696,7 @@ export interface GameDriver {
   /** The rounds of the room the visitor created from a public page, as its host sees them. */
   roundsOfTheVisitorRoom(): Promise<RoundView[]>;
   /** The ambience the lobby of the room of the visitor says, or custom. */
-  ambienceOfTheVisitorRoom(): Promise<string>;
+  ambienceOfTheVisitorRoom(): Promise<AmbienceOrCustom>;
   settingsOfTheGame(): Promise<GameSettingsView>;
   /** The fewest players to start the settings of `host` show for each variant. */
   minimumPlayersOfTheVariantsSeenBy(
@@ -764,7 +765,7 @@ export interface GameDriver {
   /** `player` votes the dilemma of the round, with the option given or the first one. */
   vote(player: string, option?: string): Promise<void>;
   /** The id of the category `viewer` sees the dilemma of the round is of. */
-  categorySeenBy(viewer: string): Promise<string>;
+  categorySeenBy(viewer: string): Promise<Category>;
   /** The steps of the answer `viewer` sees, the one they are on and those done. Only on screen. */
   answerStepsSeenBy(viewer: string): Promise<AnswerStepsView>;
   /** `player` changes the vote of the dilemma of the round to the option given or another one. */
@@ -772,15 +773,15 @@ export interface GameDriver {
   /** Every vote the driver cast for `player` in the dilemma in that position (from 1), in order. */
   votesCastFor(player: string, position: number): Promise<string[]>;
   /** `player` uses the app in that language from now on, and reads the dilemmas in it. */
-  usesTheAppIn(player: string, language: string): Promise<void>;
+  usesTheAppIn(player: string, language: DilemmaLanguage): Promise<void>;
   /** The language the room plays its dilemmas in, which nobody sees. */
-  languageOfTheRoom(): Promise<string>;
+  languageOfTheRoom(): Promise<DilemmaLanguage>;
   /** Whether the settings of the lobby offer `host` a language for the dilemmas. */
   settingsOfferALanguage(host: string): Promise<boolean>;
   /** The text of the dilemma of that round of the lobby as `viewer` sees it; none without one. */
   roundTextSeenBy(viewer: string, round: number): Promise<string | undefined>;
   /** The language the answer of `player` to the dilemma in that position says they read it in. */
-  languageReadBy(player: string, position: number): Promise<string | null>;
+  languageReadBy(player: string, position: number): Promise<DilemmaLanguage | null>;
   /** The option of the dilemma in that position (from 1), as the room plays it, with that text in any case. */
   optionOfTheRoomCalled(position: number, text: string): Promise<string>;
   /** The vote that counts for `player` in the dilemma in that position (from 1), as the game keeps it. */
@@ -947,7 +948,7 @@ export interface GameDriver {
   /** Whether `player` is offered to restart the game in progress. */
   canRestartGame(player: string): Promise<boolean>;
   /** The stage the room keeps for the game of the scenario: rounds, results, ended or stopped. */
-  stageOfTheGame(): Promise<string>;
+  stageOfTheGame(): Promise<GameStage>;
   /** The positions (from 1) of the dilemmas of the game the room counts as played. */
   playedInTheRoom(): Promise<number[]>;
   /** The rounds (from 1) the lobby of `viewer` says have no dilemmas left the room has not played. */
@@ -1064,23 +1065,23 @@ export interface GameDriver {
    */
   donationLinksOn(page: 'home' | 'category' | { readonly dilemma: string }): Promise<DonationLinks>;
   /** The public page of the dilemma in that language as a visitor opens it; none if it has none. */
-  publicPageOf(name: string, language: string): Promise<PublicPageView | undefined>;
+  publicPageOf(name: string, language: DilemmaLanguage): Promise<PublicPageView | undefined>;
   /** A visitor on the public page of the dilemma in Spanish chooses that language in its menu. */
-  switchLanguageOfThePublicPage(name: string, language: string): Promise<PublicPageView>;
+  switchLanguageOfThePublicPage(name: string, language: DilemmaLanguage): Promise<PublicPageView>;
   /** The status code the address of the public page of the dilemma answers with. */
   statusOfThePublicPageOf(name: string): Promise<number>;
   /** Whether the sitemap of the public web lists the page of the dilemma. */
   sitemapIncludes(name: string): Promise<boolean>;
   /** A visitor chooses to play the dilemma with the group on its public page, in Spanish unless said. */
-  playWithTheGroupFromThePublicPage(name: string, language?: string): Promise<void>;
+  playWithTheGroupFromThePublicPage(name: string, language?: DilemmaLanguage): Promise<void>;
   // Settings: only on the device (@screen).
 
   /** `user` opens the settings from the start of the app. */
   openSettings(user: string): Promise<void>;
   /** `user`, in the settings, chooses that language for the app. */
-  chooseTheLanguageOfTheApp(user: string, language: string): Promise<void>;
+  chooseTheLanguageOfTheApp(user: string, language: DilemmaLanguage): Promise<void>;
   /** The language the screen of `user` is in, if it changed without opening the app again. */
-  languageShownTo(user: string): Promise<string | undefined>;
+  languageShownTo(user: string): Promise<DilemmaLanguage | undefined>;
   /** Whether the settings `user` has open offer anything about the declared age. */
   settingsOfferTheAge(user: string): Promise<boolean>;
   /** `user` opens How TheLever is funded from the settings and reads it. */
@@ -1099,7 +1100,7 @@ export interface GameDriver {
   /** A visitor with a device in Spanish who never chose a language in the app. */
   visitorWithoutAChosenLanguage(): Promise<void>;
   /** The language the app the visitor opened from the public web is in. */
-  languageOfTheApp(): Promise<string | undefined>;
+  languageOfTheApp(): Promise<DilemmaLanguage | undefined>;
   /** Whether the public page the visitor has open shows an ad in the space below the arguments. */
   bannerAdBelowTheArguments(): Promise<boolean>;
   /** A visitor chooses to vote and see what the world did on the public page of the dilemma, in Spanish. */
@@ -1256,7 +1257,7 @@ export interface DonationLinks {
 }
 
 export interface PublicPageView {
-  readonly language: string;
+  readonly language: DilemmaLanguage;
   readonly text: string;
   readonly options: readonly string[];
   /** For and against each option, in the order of the options; none without reviewed arguments. */
@@ -1266,7 +1267,7 @@ export interface PublicPageView {
   /** How the world voted, if the page said it. */
   readonly worldResult?: string;
   /** The languages of the other versions it links to. */
-  readonly otherLanguages: readonly string[];
+  readonly otherLanguages: readonly DilemmaLanguage[];
   /** Whether search engines may index it. */
   readonly indexable: boolean;
 }

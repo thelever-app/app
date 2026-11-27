@@ -60,7 +60,7 @@ import {
   GAME_LIKE_WEIGHT,
   type PredictedShare,
 } from '@thelever-app/game';
-import type { Category } from '@thelever-app/game';
+import type { AmbienceOrCustom, Category, DilemmaLanguage, GameStage } from '@thelever-app/game';
 import type {
   BrowserContext,
   BrowserContextOptions,
@@ -152,7 +152,7 @@ async function publicPageSeenOn(page: Page, response: Response | null): Promise<
     .evaluateAll((links) => links.map((link) => link.getAttribute('hreflang') ?? ''));
   const argued = await page.locator('.argument').all();
   return {
-    language,
+    language: LanguageDto.parse(language),
     text: (await page.locator('.dilemma-text').textContent())?.trim() ?? '',
     options: (await page.locator('.options li').allTextContents()).map((text) => text.trim()),
     arguments: await Promise.all(
@@ -167,7 +167,9 @@ async function publicPageSeenOn(page: Page, response: Response | null): Promise<
     ...((await page.locator('[data-world-result]').count()) > 0 && {
       worldResult: (await page.locator('[data-world-result]').first().textContent()) ?? '',
     }),
-    otherLanguages: alternates.filter((other) => other !== language && other !== 'x-default'),
+    otherLanguages: alternates
+      .filter((other) => other !== language && other !== 'x-default')
+      .map((other) => LanguageDto.parse(other)),
     indexable: robots === 0 && header === undefined,
   };
 }
@@ -247,7 +249,6 @@ const SCREEN = {
   joinWithCode: 'Unirme con un código',
   nickname: 'Tu apodo',
   natureGroup: '¿Con quién vas a jugar?',
-  places: { together: 'En el mismo sitio', remote: 'A distancia' },
   code: 'Código de la sala',
   enter: 'Entrar en la sala',
   enterCode: 'Entrar',
@@ -267,7 +268,6 @@ const SCREEN = {
   enterTheRound: 'Entrar en la ronda',
   qr: (code: string) => `Código QR de la sala ${code}`,
   close: 'Cerrar',
-  videoCall: 'videollamada',
   configure: 'Configurar',
   save: 'Guardar',
   variants: { nominal: 'Nominal', anonymous: 'Anónimo' },
@@ -360,7 +360,8 @@ const SCREEN = {
   reasons: {
     offensive: 'Ofensivo',
     confusing: 'Confuso',
-    'badly translated': 'Mal traducido',
+    mistranslated: 'Mal traducido',
+    illegal: 'Puede ser ilegal',
     other: 'Otro',
   },
   sendReport: 'Enviar reporte',
@@ -1093,16 +1094,14 @@ export class E2eDriver implements GameDriver {
     // The screen to create it, in the language of the device of the host.
     const language = choices.deviceLanguage ?? 'es';
     const nickname = page.getByRole('textbox', { name: textIn(language, 'createRoom.nickname') });
-    const places = page.getByRole('group', { name: textIn(language, 'createRoom.place.label') });
     this.#askedOnCreation = [
       ...((await nickname.isVisible()) ? (['nickname'] as const) : []),
-      ...((await places.isVisible()) ? (['place'] as const) : []),
+      ...((await page.locator('input[name="place"]').count()) > 0 ? (['place'] as const) : []),
       ...((await page.locator('input[name="groupNature"]').count()) > 0
         ? (['nature'] as const)
         : []),
     ];
     await nickname.fill(host);
-    await chooseOption(page, textIn(language, `createRoom.place.${choices.place ?? 'together'}`));
     await chooseAmbience(page, textIn(language, `ambience.${choices.ambience ?? 'classic'}.name`));
     await page.getByRole('button', { name: textIn(language, 'createRoom.submit') }).click();
 
@@ -1154,17 +1153,6 @@ export class E2eDriver implements GameDriver {
   async canShowQrFullScreen(player: string): Promise<boolean> {
     const link = await this.#qrLinkOf(player);
     return this.#opensTheRoom(link, await this.roomCodeSeenBy(player));
-  }
-
-  async videoCallAdviceSeenBy(player: string): Promise<boolean> {
-    const { page } = screenOf(this.#playerCalled(player));
-    const advice = page.getByRole('note').filter({ hasText: SCREEN.videoCall });
-    return steady(async () => (await advice.count()) > 0);
-  }
-
-  /** As the room keeps it, and every game of the room copies when it starts. */
-  async placeRecorded(): Promise<string> {
-    return this.#lobbyOf(this.#hostName()).place;
   }
 
   /** Where the web keeps it on the device, as if the player had entered a room with it. */
@@ -1966,12 +1954,11 @@ export class E2eDriver implements GameDriver {
   async canCreateRoomWithoutAmbience(player: string): Promise<boolean> {
     const { page } = screenOf(this.#playerCalled(player));
     await page.getByRole('textbox', { name: SCREEN.nickname }).fill(player);
-    await chooseOption(page, SCREEN.places.together);
     const button = page.getByRole('button', { name: spanish('createRoom.missing.ambience') });
     return (await button.count()) === 0 || (await button.isEnabled());
   }
 
-  async ambienceSeenBy(viewer: string): Promise<string> {
+  async ambienceSeenBy(viewer: string): Promise<AmbienceOrCustom> {
     const { page } = screenOf(this.#playerCalled(viewer));
     return ambienceShownIn((await page.getByTestId('room-ambience').textContent()) ?? '');
   }
@@ -2013,11 +2000,7 @@ export class E2eDriver implements GameDriver {
     const card = sheet.getByRole('button', {
       name: new RegExp(spanish('settings.ambience.change')),
     });
-    const named = (await card.textContent()) ?? '';
-    const ambience =
-      (['custom', 'classic', 'spicy', 'no-filter'] as const).find((known) =>
-        named.includes(spanish(`ambience.${known}.name`)),
-      ) ?? named;
+    const ambience = ambienceShownIn((await card.textContent()) ?? '');
     const anonymous = sheet.getByRole('radio', { name: SCREEN.variants.anonymous, exact: true });
     return {
       ambience,
@@ -2331,7 +2314,7 @@ export class E2eDriver implements GameDriver {
     return this.roundsSeenBy(VISITOR);
   }
 
-  async ambienceOfTheVisitorRoom(): Promise<string> {
+  async ambienceOfTheVisitorRoom(): Promise<AmbienceOrCustom> {
     return this.ambienceSeenBy(VISITOR);
   }
 
@@ -2345,13 +2328,12 @@ export class E2eDriver implements GameDriver {
     try {
       const game = await db
         .selectFrom('games')
-        .select(['ambience', 'variant', 'place', 'dilemma_language', 'time_per_dilemma_seconds'])
+        .select(['ambience', 'variant', 'dilemma_language', 'time_per_dilemma_seconds'])
         .where('id', '=', gameId)
         .executeTakeFirstOrThrow();
       return {
         ambience: game.ambience,
         variant: game.variant,
-        place: game.place,
         dilemmaLanguage: game.dilemma_language,
         timePerDilemmaSeconds: game.time_per_dilemma_seconds,
       };
@@ -2454,7 +2436,7 @@ export class E2eDriver implements GameDriver {
   }
 
   /** The category on the dilemma of the round, by its name on screen. */
-  async categorySeenBy(viewer: string): Promise<string> {
+  async categorySeenBy(viewer: string): Promise<Category> {
     const { page } = screenOf(this.#playerCalled(viewer));
     const main = page.getByRole('main');
     await main.waitFor();
@@ -2765,7 +2747,7 @@ export class E2eDriver implements GameDriver {
     return offered;
   }
 
-  async stageOfTheGame(): Promise<string> {
+  async stageOfTheGame(): Promise<GameStage> {
     const { gameId } = this.#gameOf(this.#hostName());
     const { stage } = await this.#withDatabase((db) =>
       db.selectFrom('games').select('stage').where('id', '=', gameId).executeTakeFirstOrThrow(),
@@ -3294,7 +3276,7 @@ export class E2eDriver implements GameDriver {
     // The visitor opens a browser of their own, in Spanish, and the app keeps no language yet.
   }
 
-  async languageOfTheApp(): Promise<string | undefined> {
+  async languageOfTheApp(): Promise<DilemmaLanguage | undefined> {
     const { page } = screenOf(this.#playerCalled(VISITOR));
     return page.evaluate('document.documentElement.lang');
   }
@@ -3319,14 +3301,14 @@ export class E2eDriver implements GameDriver {
     await languages.waitFor({ state: 'hidden' });
   }
 
-  async languageShownTo(user: string): Promise<string | undefined> {
+  async languageShownTo(user: string): Promise<DilemmaLanguage | undefined> {
     const { page } = screenOf(this.#playerCalled(user));
     const language = await page.evaluate('document.documentElement.lang');
     // The screen itself says it, not only the page: the heading of the settings in that language.
     await page
       .getByRole('heading', { name: textIn(String(language), 'appSettings.title') })
       .waitFor();
-    return String(language);
+    return LanguageDto.parse(language);
   }
 
   async settingsOfferTheAge(user: string): Promise<boolean> {
@@ -3560,7 +3542,6 @@ export class E2eDriver implements GameDriver {
   async createTheRoomOfTheDilemma(ambience?: Ambience): Promise<void> {
     const { page } = screenOf(this.#playerCalled(VISITOR));
     await page.getByRole('textbox', { name: SCREEN.nickname }).fill(VISITOR);
-    await chooseOption(page, SCREEN.places.together);
     // Without an ambience, the one the screen comes with, or Classic if it comes with none.
     const chosen = ambience ?? (await this.ambienceChosenToPlayTheDilemma()) ?? 'classic';
     await chooseAmbience(page, textIn('es', `ambience.${chosen}.name`));
@@ -3621,7 +3602,7 @@ export class E2eDriver implements GameDriver {
    * so an open screen opens again, as the same device.
    */
   /** The room keeps it, and nobody sees it: read where the room server keeps it. */
-  async languageOfTheRoom(): Promise<string> {
+  async languageOfTheRoom(): Promise<DilemmaLanguage> {
     const { roomId } = this.#lobbyOf(this.#hostName());
     const { dilemma_language } = await this.#withDatabase((db) =>
       db
@@ -3653,7 +3634,7 @@ export class E2eDriver implements GameDriver {
     return undefined;
   }
 
-  async languageReadBy(player: string, position: number): Promise<string | null> {
+  async languageReadBy(player: string, position: number): Promise<DilemmaLanguage | null> {
     const playerId = this.#playerIdOf(this.#playerCalled(player));
     const { gameId } = this.#gameOf(this.#hostName());
     const dilemmaId = this.#dilemmaIdAt(position);
@@ -3666,7 +3647,7 @@ export class E2eDriver implements GameDriver {
         .where('dilemma_id', '=', dilemmaId)
         .executeTakeFirst(),
     );
-    return answer?.language ?? null;
+    return answer?.language ? LanguageDto.parse(answer.language) : null;
   }
 
   async usesTheAppIn(player: string, language: string): Promise<void> {
@@ -6208,7 +6189,7 @@ async function badgesOn(
   };
 }
 
-function ambienceShownIn(text: string): string {
+function ambienceShownIn(text: string): AmbienceOrCustom {
   const ambience = (['classic', 'spicy', 'no-filter', 'custom'] as const).find((candidate) =>
     text.includes(spanish(`ambience.${candidate}.name`)),
   );

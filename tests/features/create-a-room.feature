@@ -9,8 +9,8 @@ Feature: Create a room
     When the player creates a room
     Then the player becomes the host of that room
     And the host plays with the random avatar shown before creating the room
-    And the host is asked for a nickname and whether the group plays together or remotely on the same screen
     And the host is not asked for the nature of the group
+    And the host is not asked whether the group plays together or remotely
 
   @ui @screen
   Scenario: The home screen says who should create the room
@@ -38,13 +38,6 @@ Feature: Create a room
     When the player chooses another avatar
     And creates the room
     Then the host enters the lobby with that avatar
-
-  @ui
-  Scenario: The host says whether the group plays together or remotely
-    Given a host who has just created a room
-    When the host chooses "remotely"
-    Then the game is recorded as played remotely
-    And everyone in the lobby is advised to play on a video call
 
   @ui
   Scenario: The host leaves a round to the players
