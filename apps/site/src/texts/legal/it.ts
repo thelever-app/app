@@ -1,6 +1,7 @@
 import type { OwnPage } from '../site-texts.ts';
 
 const UPDATED = '23 novembre 2026';
+const PRIVACY_UPDATED = '27 novembre 2026';
 
 /** The terms of use of the app, version 1, which the first access asks to accept. */
 export const terms: OwnPage = {
@@ -94,7 +95,7 @@ export const appPrivacy: OwnPage = {
   title: 'Privacy dell’app',
   description:
     'Quali dati tratta l’app di TheLever per giocare, su quale base, per quanto tempo e quali sono i tuoi diritti.',
-  updated: UPDATED,
+  updated: PRIVACY_UPDATED,
   sections: [
     {
       heading: 'Chi è il titolare',
@@ -177,7 +178,7 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         'Puoi chiedere l’accesso ai tuoi dati, rettificarli, cancellarli, limitarne l’uso, portarli con te e opporti al loro trattamento. In Impostazioni → Privacy e dati puoi, da solo:',
         '- In «I tuoi permessi», revocare il consenso del gioco quando vuoi, senza effetto su ciò che è già stato trattato: non potrai creare stanze né entrarci finché non lo darai di nuovo, e cancelliamo ciò che hai risposto nelle partite non ancora cancellate; i tuoi «Bel dilemma» e i segni dei tuoi voti da solo restano. Puoi anche opporti all’analisi d’uso.',
-        '- In «Elimina i miei dati», cancellarli: il tuo telefono torna come nuovo subito e cancelliamo tutto ciò che è legato al tuo identificativo in pochi minuti, e al massimo entro un mese, tranne la traccia minima di ciò che hai accettato e quella della tua cancellazione.',
+        '- In «Elimina i miei dati», cancellarli: il tuo telefono torna come nuovo subito e cancelliamo tutto ciò che è legato al tuo identificativo entro un’ora, e al massimo entro un mese, tranne la traccia minima di ciò che hai accettato e quella della tua cancellazione.',
         'Se revochi il consenso o cancelli i tuoi dati, nelle stanze ancora conservate il tuo soprannome diventa «Giocatore».',
         'Per tutto il resto, come chiedere una copia dei tuoi dati o correggere la tua età, scrivi a privacidad@thelever.app con il codice che vedi in Impostazioni → Privacy e dati → I tuoi dati: poiché giochi senza account, è ciò che ci permette di sapere che la richiesta è tua, e senza di esso non possiamo gestirla. Se ci hai solo segnalato qualcosa dal sito, scrivici dall’email che ci hai dato. Rispondiamo entro un mese al massimo.',
         'Se pensi che non abbiamo trattato bene i tuoi dati, puoi presentare reclamo all’Agenzia spagnola per la protezione dei dati (aepd.es) o all’autorità del tuo paese.',

@@ -1,6 +1,7 @@
 import type { OwnPage } from '../site-texts.ts';
 
 const UPDATED = '23 novembre 2026';
+const PRIVACY_UPDATED = '27 novembre 2026';
 
 /** The terms of use of the app, version 1, which the first access asks to accept. */
 export const terms: OwnPage = {
@@ -94,7 +95,7 @@ export const appPrivacy: OwnPage = {
   title: 'Confidentialité de l’app',
   description:
     'Les données que l’app TheLever traite pour jouer, sur quelle base, pendant combien de temps et quels sont tes droits.',
-  updated: UPDATED,
+  updated: PRIVACY_UPDATED,
   sections: [
     {
       heading: 'Qui est responsable',
@@ -177,7 +178,7 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         'Tu peux demander l’accès à tes données, les rectifier, les supprimer, en limiter l’usage, les emporter et t’opposer à leur traitement. Dans Réglages → Confidentialité et données, tu peux toi-même :',
         '- Dans « Tes autorisations », retirer le consentement du jeu quand tu veux, sans effet sur ce qui a déjà été traité : tu ne pourras plus créer de salle ni entrer dans une salle jusqu’à ce que tu le redonnes, et nous supprimons ce que tu as répondu dans les parties qui n’ont pas encore été supprimées ; tes « Bon dilemme » et les marques de tes votes en solo restent. Tu peux aussi t’opposer à l’analyse d’usage.',
-        '- Dans « Supprimer mes données », les supprimer : ton téléphone redevient comme neuf tout de suite et nous supprimons tout ce qui est lié à ton identifiant en quelques minutes, et en un mois au maximum, sauf la trace minimale de ce que tu as accepté et celle de ta suppression.',
+        '- Dans « Supprimer mes données », les supprimer : ton téléphone redevient comme neuf tout de suite et nous supprimons tout ce qui est lié à ton identifiant en moins d’une heure, et en un mois au maximum, sauf la trace minimale de ce que tu as accepté et celle de ta suppression.',
         'Si tu retires le consentement ou supprimes tes données, ton pseudo devient « Joueur » dans les salles encore conservées.',
         'Pour tout le reste, comme demander une copie de tes données ou corriger ton âge, écris à privacidad@thelever.app avec le code que tu vois dans Réglages → Confidentialité et données → Tes données : comme tu joues sans compte, c’est ce qui nous permet de savoir que la demande vient de toi, et sans lui nous ne pouvons pas la traiter. Si tu nous as seulement signalé quelque chose depuis le site, écris-nous depuis l’e-mail que tu nous as donné. Nous répondons en un mois au maximum.',
         'Si tu penses que nous n’avons pas bien traité tes données, tu peux saisir l’Agence espagnole de protection des données (aepd.es) ou l’autorité de ton pays.',
