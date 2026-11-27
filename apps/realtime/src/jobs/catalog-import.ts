@@ -26,7 +26,7 @@ const CATALOG_DATA_SOURCE_ID = 'e38ec074-29b0-4733-a02c-dd03f945dbcc';
 /**
  * How many dilemmas it translates at once. The translator already asks for every language of a
  * dilemma at once, and the organization of the Anthropic API takes only a few requests at a time:
- * 48 at once got a 429, 8 did not.
+ * eight dilemmas, 48 requests at once, got a 429; the eight requests it sent before did not.
  */
 const CONCURRENCY = 1;
 
