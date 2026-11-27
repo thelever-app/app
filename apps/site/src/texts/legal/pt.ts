@@ -1,6 +1,7 @@
 import type { OwnPage } from '../site-texts.ts';
 
 const UPDATED = '23 de novembro de 2026';
+const PRIVACY_UPDATED = '27 de novembro de 2026';
 
 /** The terms of use of the app, version 1, which the first access asks to accept. */
 export const terms: OwnPage = {
@@ -94,7 +95,7 @@ export const appPrivacy: OwnPage = {
   title: 'Privacidade da app',
   description:
     'Que dados a app do TheLever trata para jogar, com que base, durante quanto tempo e quais são os teus direitos.',
-  updated: UPDATED,
+  updated: PRIVACY_UPDATED,
   sections: [
     {
       heading: 'Quem é o responsável',
@@ -177,7 +178,7 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         'Podes pedir acesso aos teus dados, retificá-los, apagá-los, limitar o seu uso, levá-los contigo e opor-te ao seu tratamento. Em Definições → Privacidade e dados podes, tu mesmo:',
         '- Em «As tuas permissões», retirar o consentimento do jogo quando quiseres, sem afetar o que já foi tratado: não poderás criar salas nem entrar nelas até o dares de novo, e apagamos o que respondeste nos jogos que ainda não foram apagados; os teus «Bom dilema» e as marcas dos teus votos sozinho ficam. Também te podes opor à análise de utilização.',
-        '- Em «Apagar os meus dados», apagá-los: o teu telemóvel fica como novo no momento e apagamos tudo o que está ligado ao teu identificador em poucos minutos, e no máximo num mês, exceto o registo mínimo do que aceitaste e o do teu apagamento.',
+        '- Em «Apagar os meus dados», apagá-los: o teu telemóvel fica como novo no momento e apagamos tudo o que está ligado ao teu identificador em poucas horas, e no máximo num mês, exceto o registo mínimo do que aceitaste e o do teu apagamento.',
         'Se retirares o consentimento ou apagares os teus dados, nas salas que ainda se conservam a tua alcunha passa a «Jogador».',
         'Para tudo o resto, como pedir uma cópia dos teus dados ou corrigir a tua idade, escreve para privacidad@thelever.app com o código que vês em Definições → Privacidade e dados → Os teus dados: como jogas sem conta, é o que nos permite saber que o pedido é teu, e sem ele não o podemos tratar. Se só nos denunciaste algo a partir do site, escreve-nos a partir do email que nos deste. Respondemos no máximo num mês.',
         'Se achares que não tratámos bem os teus dados, podes reclamar junto da Agência Espanhola de Proteção de Dados (aepd.es) ou da autoridade do teu país.',

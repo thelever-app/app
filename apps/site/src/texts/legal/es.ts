@@ -1,6 +1,7 @@
 import type { OwnPage } from '../site-texts.ts';
 
 const UPDATED = '23 de noviembre de 2026';
+const PRIVACY_UPDATED = '27 de noviembre de 2026';
 
 /** The terms of use of the app, version 1, which the first access asks to accept. */
 export const terms: OwnPage = {
@@ -94,7 +95,7 @@ export const appPrivacy: OwnPage = {
   title: 'Privacidad de la app',
   description:
     'Qué datos trata la app de TheLever para jugar, con qué base, cuánto tiempo y cuáles son tus derechos.',
-  updated: UPDATED,
+  updated: PRIVACY_UPDATED,
   sections: [
     {
       heading: 'Quién es el responsable',
@@ -177,7 +178,7 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         'Puedes pedir acceso a tus datos, rectificarlos, borrarlos, limitar su uso, llevártelos y oponerte a su tratamiento. En Ajustes → Privacidad y datos puedes, tú mismo:',
         '- En «Tus permisos», retirar el consentimiento del juego cuando quieras, sin que afecte a lo que ya se trató: no podrás crear ni entrar en salas hasta darlo de nuevo, y borramos lo que respondiste en las partidas que aún no se han borrado; tus «Buen dilema» y las marcas del voto a solas se quedan. También oponerte a la analítica.',
-        '- En «Borrar mis datos», borrarlos: tu móvil queda como nuevo al momento y borramos todo lo ligado a tu identificador en unos minutos, y como mucho en un mes, salvo el registro mínimo de lo que aceptaste y el de tu borrado.',
+        '- En «Borrar mis datos», borrarlos: tu móvil queda como nuevo al momento y borramos todo lo ligado a tu identificador en unas horas, y como mucho en un mes, salvo el registro mínimo de lo que aceptaste y el de tu borrado.',
         'Si retiras el consentimiento o borras tus datos, en las salas que aún se conservan tu apodo pasa a «Jugador».',
         'Para todo lo demás, como pedir una copia de tus datos o corregir tu edad, escribe a privacidad@thelever.app con el código que ves en Ajustes → Privacidad y datos → Tus datos: como juegas sin cuenta, es lo que nos permite saber que la petición es tuya, y sin él no podemos atenderla. Si solo nos denunciaste algo desde la web, escríbenos desde el email que nos diste. Respondemos en un mes como máximo.',
         'Si crees que no hemos tratado bien tus datos, puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es) o ante la autoridad de tu país.',

@@ -1,6 +1,7 @@
 import type { OwnPage } from '../site-texts.ts';
 
 const UPDATED = '23. November 2026';
+const PRIVACY_UPDATED = '27. November 2026';
 
 /** The terms of use of the app, version 1, which the first access asks to accept. */
 export const terms: OwnPage = {
@@ -94,7 +95,7 @@ export const appPrivacy: OwnPage = {
   title: 'Datenschutz der App',
   description:
     'Welche Daten die App von TheLever zum Spielen verarbeitet, auf welcher Grundlage, wie lange und welche Rechte du hast.',
-  updated: UPDATED,
+  updated: PRIVACY_UPDATED,
   sections: [
     {
       heading: 'Wer verantwortlich ist',
@@ -177,7 +178,7 @@ export const appPrivacy: OwnPage = {
       paragraphs: [
         'Du kannst Auskunft über deine Daten verlangen, sie berichtigen, löschen, ihre Nutzung einschränken, sie mitnehmen und ihrer Verarbeitung widersprechen. Unter Einstellungen → Datenschutz und Daten kannst du selbst:',
         '- Unter „Deine Berechtigungen“ die Einwilligung zum Spiel jederzeit widerrufen, ohne dass das die bisherige Verarbeitung berührt: Du kannst dann keine Räume erstellen oder betreten, bis du sie erneut gibst, und wir löschen, was du in den noch nicht gelöschten Spielen geantwortet hast; deine „Gutes Dilemma“ und die Vermerke deiner Einzelabstimmungen bleiben. Außerdem der Nutzungsanalyse widersprechen.',
-        '- Unter „Meine Daten löschen“ deine Daten löschen: Dein Handy ist sofort wie neu, und wir löschen alles, was mit deiner Kennung verbunden ist, innerhalb weniger Minuten und spätestens innerhalb eines Monats, außer dem minimalen Nachweis dessen, was du akzeptiert hast, und dem deiner Löschung.',
+        '- Unter „Meine Daten löschen“ deine Daten löschen: Dein Handy ist sofort wie neu, und wir löschen alles, was mit deiner Kennung verbunden ist, innerhalb weniger Stunden und spätestens innerhalb eines Monats, außer dem minimalen Nachweis dessen, was du akzeptiert hast, und dem deiner Löschung.',
         'Wenn du die Einwilligung widerrufst oder deine Daten löschst, wird dein Spitzname in den Räumen, die noch gespeichert sind, zu „Spieler“.',
         'Für alles andere, etwa eine Kopie deiner Daten oder die Berichtigung deines Alters, schreib an privacidad@thelever.app mit dem Code, den du unter Einstellungen → Datenschutz und Daten → Deine Daten siehst: Da du ohne Konto spielst, wissen wir nur so, dass die Anfrage von dir stammt, und ohne ihn können wir sie nicht bearbeiten. Wenn du uns nur über die Website etwas gemeldet hast, schreib uns von der E-Mail-Adresse, die du uns gegeben hast. Wir antworten innerhalb von höchstens einem Monat.',
         'Wenn du meinst, dass wir deine Daten nicht richtig behandelt haben, kannst du dich bei der spanischen Datenschutzbehörde (aepd.es) oder bei der Behörde deines Landes beschweren.',

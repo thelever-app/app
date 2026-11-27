@@ -269,33 +269,29 @@ jobs:
             gcloud scheduler jobs create http publish-world-results "${schedule[@]}"
           fi
 
-      # Cloud Scheduler runs the job that takes the issues of the reports and of the notices to the
-      # private moderation repository, reads the decisions of the team there and sends the emails of
-      # the notices; then it deletes the data the players asked to delete. In prod every 10 minutes,
-      # which keeps the deletion within minutes that the privacy policy promises. In dev every hour:
-      # it has no real players, and a run by hand (gcloud run jobs execute sync-moderation) skips the
-      # wait. Each run lasts some seconds but is billed for about a minute, so every 5 minutes in
-      # both cost almost as much as the two databases. Same image as the room server, but an account
-      # of its own: only it reads the token of GitHub, the password of the mailbox and the key of
-      # Anthropic, and deletes users of Firebase Auth, which the public room server never can; its
-      # database user has the rows the room server has. Its connection takes the one of close-rooms
-      # and publish-world-results: it runs at minute 4 (in prod also 14, 24…), never on the hour,
-      # when close-rooms runs, and a run that meets publish-world-results at night fails and the
-      # next one does the work. A run that failed is not tried again: the next one takes what is
-      # left. Each environment has a repository of its own, with a token that only reaches it: the
-      # decisions of prod can only come from its own. In dev, the issues also say so in their title
-      # and their label.
+      # Every hour, Cloud Scheduler runs the job that takes the issues of the reports and of the
+      # notices to the private moderation repository, reads the decisions of the team there and
+      # sends the emails of the notices; then it deletes the data the players asked to delete, within
+      # the hours the privacy policy promises. Each run lasts some seconds but is billed for about a
+      # minute, so every 5 minutes in both environments cost almost as much as the two databases. A
+      # run by hand (gcloud run jobs execute sync-moderation) skips the wait. Same image as the room
+      # server, but an account of its own: only it reads the token of GitHub, the password of the
+      # mailbox and the key of Anthropic, and deletes users of Firebase Auth, which the public room
+      # server never can; its database user has the rows the room server has. Its connection takes
+      # the one of close-rooms and publish-world-results: at minute 4 it never meets close-rooms, on
+      # the hour, nor publish-world-results, at 03:30. A run that failed is not tried again: the next
+      # one takes what is left. Each environment has a repository of its own, with a token that only
+      # reaches it: the decisions of prod can only come from its own. In dev, the issues also say so
+      # in their title and their label.
       - name: Deploy the job of moderation, and its schedule
         env:
           ENVIRONMENT: ${{ inputs.environment }}
         run: |
           moderation_environment=""
           moderation_repository="thelever-app/moderation"
-          moderation_schedule="4-59/10 * * * *"
           if [ "$ENVIRONMENT" != prod ]; then
             moderation_environment="$ENVIRONMENT"
             moderation_repository="thelever-app/moderation-$ENVIRONMENT"
-            moderation_schedule="4 * * * *"
           fi
           gcloud run jobs deploy sync-moderation --project "$PROJECT" --region europe-southwest1 \
             --image "$(cat image.txt)" \
@@ -307,7 +303,7 @@ jobs:
             --quiet
           schedule=(
             --project "$PROJECT" --location europe-west1
-            --schedule "$moderation_schedule" --time-zone Etc/UTC
+            --schedule "4 * * * *" --time-zone Etc/UTC
             --uri "https://run.googleapis.com/v2/projects/$PROJECT/locations/europe-southwest1/jobs/sync-moderation:run"
             --http-method POST
             --oauth-service-account-email "scheduler@$PROJECT.iam.gserviceaccount.com"
@@ -322,7 +318,7 @@ jobs:
       # The job the team runs by hand for each request a player sends by email, and after a backup is
       # restored to do every deletion of the log again (apps/realtime/src/jobs/data-request.ts and
       # erase-personal-data.ts). No schedule: it costs only while it runs. Same image and account as
-      # sync-moderation, which does the daily deletions: the account of moderation may delete users
+      # sync-moderation, which does the deletions: the account of moderation may delete users
       # of Firebase Auth and reads the password of the mailbox. Its connection takes the one of
       # close-rooms; a run that meets another fails, and is run again.
       - name: Deploy the job of the requests by email
