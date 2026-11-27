@@ -272,7 +272,7 @@ jobs:
       # Every hour, Cloud Scheduler runs the job that takes the issues of the reports and of the
       # notices to the private moderation repository, reads the decisions of the team there and
       # sends the emails of the notices; then it deletes the data the players asked to delete, within
-      # the hour the privacy policy promises. Each run lasts some seconds but is billed for about a
+      # the hours the privacy policy promises. Each run lasts some seconds but is billed for about a
       # minute, so every 5 minutes in both environments cost almost as much as the two databases. A
       # run by hand (gcloud run jobs execute sync-moderation) skips the wait. Same image as the room
       # server, but an account of its own: only it reads the token of GitHub, the password of the
@@ -318,7 +318,7 @@ jobs:
       # The job the team runs by hand for each request a player sends by email, and after a backup is
       # restored to do every deletion of the log again (apps/realtime/src/jobs/data-request.ts and
       # erase-personal-data.ts). No schedule: it costs only while it runs. Same image and account as
-      # sync-moderation, which does the daily deletions: the account of moderation may delete users
+      # sync-moderation, which does the deletions: the account of moderation may delete users
       # of Firebase Auth and reads the password of the mailbox. Its connection takes the one of
       # close-rooms; a run that meets another fails, and is run again.
       - name: Deploy the job of the requests by email
