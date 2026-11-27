@@ -323,7 +323,6 @@ describe('Closing the room', () => {
         hostNickname: 'Pedro',
         hostIdentity: 'TestPedroIdentity',
         hostAvatar: { face: 'face-04', color: 'teal' },
-        place: 'together',
         dilemmaLanguage: 'es',
       });
       arranged.clock.advance(15 * MINUTE_MS);

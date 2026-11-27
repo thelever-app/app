@@ -323,16 +323,10 @@
     "title": "Nueva sala",
     "nickname": "Tu apodo",
     "nicknamePlaceholder": "Cómo te verá el grupo",
-    "place": {
-      "label": "¿Dónde estáis?",
-      "together": "En el mismo sitio",
-      "remote": "A distancia"
-    },
     "submit": "Crear sala",
     "submitting": "Creando la sala…",
     "missing": {
       "nickname": "Escribe tu apodo",
-      "place": "Elige dónde estáis",
       "ambience": "Elige un ambiente"
     },
     "ambience": "¿Qué ambiente queréis?"
@@ -450,7 +444,6 @@
     "roundCount_many": "{{count}} rondas",
     "configure": "Configurar",
     "adultsOnly": "Solo para mayores de 18",
-    "remote": "A distancia, mejor en videollamada.",
     "rounds": {
       "title": "Rondas · {{count}}",
       "hint": "Se juegan en este orden.",

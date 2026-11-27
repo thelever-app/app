@@ -4,7 +4,6 @@ import {
   AvatarDto,
   LanguageDto,
   NicknameDto,
-  PlaceDto,
   PlayedDilemmaIdsDto,
 } from '../client-messages.ts';
 
@@ -15,7 +14,6 @@ export const CreateRoomRequestDto = z.strictObject({
   ambience: AmbienceDto,
   /** The avatar the host chose before creating the room. */
   avatar: AvatarDto,
-  place: PlaceDto,
   /** The language of the device, or of the dilemma of its first round, which the room takes. */
   dilemmaLanguage: LanguageDto,
   /** A dilemma of the general catalog in that language, for the first round, specific. */

@@ -77,6 +77,10 @@ import {
   EraseGameDataUseCase,
   ExportLikesUseCase,
   ForgetLikesUseCase,
+  type AmbienceOrCustom,
+  type Category,
+  type DilemmaLanguage,
+  type GameStage,
 } from '@thelever-app/game';
 import {
   InMemoryDilemmaCatalog,
@@ -202,7 +206,7 @@ import {
   LanguageTagTranslator,
   SequentialIdGenerator as SequentialDilemmaIds,
 } from '@thelever-app/dilemmas/in-memory';
-import { ClientMessageDto, type TitleDto } from '@thelever-app/protocol';
+import { ClientMessageDto, LanguageDto, type TitleDto } from '@thelever-app/protocol';
 import type {
   AnswerStepsView,
   Ambience,
@@ -263,14 +267,6 @@ import {
   TEST_DILEMMAS,
 } from './test-catalog.ts';
 
-/** Each reason of the scenarios, as Game names it. */
-const REPORT_REASONS = {
-  offensive: 'offensive',
-  confusing: 'confusing',
-  'badly translated': 'mistranslated',
-  other: 'other',
-} as const satisfies Record<ReportReason, string>;
-
 /** Test data: the vote the driver casts when a step does not say which one; the first option. */
 const VOTE = 'option-1';
 
@@ -290,7 +286,6 @@ const OTHER_VOTE = 'option-2';
 /** Test data: what the creation screen gets when a step does not choose. */
 const DEFAULT_CHOICES = {
   ambience: 'classic',
-  place: 'together',
   deviceLanguage: 'es',
 } as const;
 
@@ -305,7 +300,7 @@ function publicPageViewOf(page: Page): PublicPageView {
   const texts = SITE_LANGUAGES.get(page.language)!;
   const args = dilemma.arguments;
   return {
-    language: page.language,
+    language: LanguageDto.parse(page.language),
     text: readable(dilemma.text, texts),
     options: dilemma.options.map(({ text }) => readable(text, texts)),
     arguments: args
@@ -314,7 +309,9 @@ function publicPageViewOf(page: Page): PublicPageView {
           return { for: readable(argued.for, texts), against: readable(argued.against, texts) };
         })
       : [],
-    otherLanguages: Object.keys(page.alternates).filter((language) => language !== page.language),
+    otherLanguages: Object.keys(page.alternates)
+      .filter((language) => language !== page.language)
+      .map((language) => LanguageDto.parse(language)),
     indexable: page.indexable,
   };
 }
@@ -584,7 +581,7 @@ export class AcceptanceDriver implements GameDriver {
   /** What the screen to play a dilemma with the group shows of the one the visitor chose. */
   #dilemmaToPlay: GetDilemmaPreviewOutput | undefined;
   /** The language the link from the public web opens the app in. */
-  #appLanguage: string | undefined;
+  #appLanguage: DilemmaLanguage | undefined;
   /** The world results, and what the visitor chose to vote alone, voted and saw of it. */
   readonly #worldResults = new InMemoryWorldResultRepository(
     async (id) => (await this.#dilemmaRepository.findById(id))?.version,
@@ -1045,7 +1042,7 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   async createRoom(host: string, choices: RoomChoices = {}): Promise<void> {
-    const { ambience, place, deviceLanguage } = { ...DEFAULT_CHOICES, ...choices };
+    const { ambience, deviceLanguage } = { ...DEFAULT_CHOICES, ...choices };
     await this.openRoomCreation(host);
     const player = this.#playerCalled(host);
     const { roomId, hostId } = await this.#createRoom.execute({
@@ -1053,7 +1050,6 @@ export class AcceptanceDriver implements GameDriver {
       hostNickname: host,
       hostIdentity: player.identity,
       hostAvatar: this.#avatarOnScreen(host),
-      place,
       dilemmaLanguage: deviceLanguage,
       hostPlayedDilemmaIds: player.played,
     });
@@ -1068,10 +1064,7 @@ export class AcceptanceDriver implements GameDriver {
   async askedOnCreation(host: string): Promise<readonly ('nickname' | 'place' | 'nature')[]> {
     const state = await this.#roomStateOf(host);
     const nickname = state.players.find(({ playerId }) => playerId === state.playerId)?.nickname;
-    return [
-      ...(nickname === host ? (['nickname'] as const) : []),
-      ...(state.place ? (['place'] as const) : []),
-    ];
+    return nickname === host ? ['nickname'] : [];
   }
 
   async isHost(player: string): Promise<boolean> {
@@ -1091,16 +1084,6 @@ export class AcceptanceDriver implements GameDriver {
   /** The QR carries the invitation link, so it works if the code leads to the room. */
   async canShowQrFullScreen(player: string): Promise<boolean> {
     return this.#codeLeadsToTheRoom(player);
-  }
-
-  /** The lobby advises the video call to a group that plays remotely. */
-  async videoCallAdviceSeenBy(player: string): Promise<boolean> {
-    return (await this.#roomStateOf(player)).place === 'remote';
-  }
-
-  /** The room keeps it and every game of the room copies it when it starts. */
-  async placeRecorded(): Promise<string> {
-    return (await this.#roomStateOf(this.#hostName())).place;
   }
 
   /** The application never knows what a device remembers: the scenarios tagged @screen. */
@@ -1519,7 +1502,6 @@ export class AcceptanceDriver implements GameDriver {
           hostNickname: player,
           hostIdentity: identity,
           hostAvatar: { face: 'face-01', color: 'khaki' },
-          place: DEFAULT_CHOICES.place,
           dilemmaLanguage: DEFAULT_CHOICES.deviceLanguage,
         }),
       MinorInRoomError,
@@ -1527,7 +1509,7 @@ export class AcceptanceDriver implements GameDriver {
     );
   }
 
-  async ambienceSeenBy(viewer: string): Promise<string> {
+  async ambienceSeenBy(viewer: string): Promise<AmbienceOrCustom> {
     return (await this.#screenOf(viewer)).ambience;
   }
 
@@ -2000,7 +1982,7 @@ export class AcceptanceDriver implements GameDriver {
     return stage.kind === 'rounds' && hostId === this.#playerIdOf(player);
   }
 
-  async stageOfTheGame(): Promise<string> {
+  async stageOfTheGame(): Promise<GameStage> {
     return (await this.#currentGame()).stage.kind;
   }
 
@@ -2221,7 +2203,7 @@ export class AcceptanceDriver implements GameDriver {
   }
 
   /** As the room server sends the dilemma of the round to `viewer`. */
-  async categorySeenBy(viewer: string): Promise<string> {
+  async categorySeenBy(viewer: string): Promise<Category> {
     const { round, dilemmas } = await this.#gameStateOf(viewer);
     return dilemmas[round.position]!.category;
   }
@@ -2443,13 +2425,17 @@ export class AcceptanceDriver implements GameDriver {
     return sitemap.body?.includes(`${SITE_ORIGIN}${this.#publicPathOf(name)}<`) ?? false;
   }
 
-  async playWithTheGroupFromThePublicPage(name: string, language = 'es'): Promise<void> {
+  async playWithTheGroupFromThePublicPage(
+    name: string,
+    language: DilemmaLanguage = 'es',
+  ): Promise<void> {
     // The visitor follows the link of the page, as it is written: to the dilemma, in its language.
     const page = this.#publicPageIn(name, language);
     const href = page?.main.value.match(/href="([^"]*\/new\/[^"]*)"/)?.[1];
     if (!href) throw new Error(`"${name}" has no public page in ${language} to play it from`);
     const link = new URL(href, SITE_ORIGIN);
-    this.#appLanguage = link.searchParams.get('lang') ?? undefined;
+    const appLanguage = link.searchParams.get('lang');
+    this.#appLanguage = appLanguage ? LanguageDto.parse(appLanguage) : undefined;
     this.#dilemmaToPlay = await new GetDilemmaPreviewUseCase(this.#dilemmaRepository).execute({
       publicId: link.pathname.split('/').at(-1)!,
     });
@@ -2467,7 +2453,7 @@ export class AcceptanceDriver implements GameDriver {
     throw new Error('Only the device shows the settings: the scenario must be @screen');
   }
 
-  async languageShownTo(): Promise<string | undefined> {
+  async languageShownTo(): Promise<DilemmaLanguage | undefined> {
     throw new Error('Only the device shows the settings: the scenario must be @screen');
   }
 
@@ -2495,7 +2481,7 @@ export class AcceptanceDriver implements GameDriver {
     return DONATION_URL;
   }
 
-  async languageOfTheApp(): Promise<string | undefined> {
+  async languageOfTheApp(): Promise<DilemmaLanguage | undefined> {
     return this.#appLanguage;
   }
 
@@ -2691,7 +2677,6 @@ export class AcceptanceDriver implements GameDriver {
       hostNickname: VISITOR,
       hostIdentity: VISITOR_IDENTITY,
       hostAvatar: { face: 'face-01', color: 'khaki' },
-      place: DEFAULT_CHOICES.place,
       dilemmaLanguage: preview.language,
       firstRoundDilemmaId: preview.dilemmaId,
     });
@@ -2703,7 +2688,7 @@ export class AcceptanceDriver implements GameDriver {
     return (await this.#stateOfTheVisitorRoom()).rounds.map(roundViewOf);
   }
 
-  async ambienceOfTheVisitorRoom(): Promise<string> {
+  async ambienceOfTheVisitorRoom(): Promise<AmbienceOrCustom> {
     return (await this.#stateOfTheVisitorRoom()).ambience;
   }
 
@@ -2755,7 +2740,7 @@ export class AcceptanceDriver implements GameDriver {
     });
   }
 
-  async languageOfTheRoom(): Promise<string> {
+  async languageOfTheRoom(): Promise<DilemmaLanguage> {
     const room = await this.#roomRepository.findById(this.#currentRoomId());
     if (!room) throw new Error('The room of the scenario is not saved');
     return room.settings.dilemmaLanguage;
@@ -2776,12 +2761,12 @@ export class AcceptanceDriver implements GameDriver {
     return undefined;
   }
 
-  async languageReadBy(player: string, position: number): Promise<string | null> {
+  async languageReadBy(player: string, position: number): Promise<DilemmaLanguage | null> {
     const dilemmaId = await this.#dilemmaIdAt(position);
     const answer = (await this.#currentGame())
       .answersOf(this.#playerIdOf(player))
       .find((candidate) => candidate.dilemmaId === dilemmaId);
-    return answer?.language ?? null;
+    return answer?.language ? LanguageDto.parse(answer.language) : null;
   }
 
   usesTheAppIn(player: string, language: string): Promise<void> {
@@ -3199,7 +3184,7 @@ export class AcceptanceDriver implements GameDriver {
       roomId: this.#currentRoomId(),
       playerId: this.#playerIdOf(player),
       dilemmaId,
-      reason: REPORT_REASONS[reason],
+      reason,
       language: this.#languageOf(player),
       ...(comment !== undefined && { comment }),
     });

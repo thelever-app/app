@@ -302,16 +302,10 @@
     "title": "New room",
     "nickname": "Your nickname",
     "nicknamePlaceholder": "How the group will see you",
-    "place": {
-      "label": "Where are you?",
-      "together": "In the same place",
-      "remote": "Remotely"
-    },
     "submit": "Create room",
     "submitting": "Creating the room…",
     "missing": {
       "nickname": "Type your nickname",
-      "place": "Choose where you are",
       "ambience": "Choose an ambience"
     },
     "ambience": "What ambience do you want?"
@@ -426,7 +420,6 @@
     "roundCount_other": "{{count}} rounds",
     "configure": "Set up",
     "adultsOnly": "Over-18s only",
-    "remote": "Remote, a video call works best.",
     "rounds": {
       "title": "Rounds · {{count}}",
       "hint": "They play in this order.",

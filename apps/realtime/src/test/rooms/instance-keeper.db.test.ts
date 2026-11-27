@@ -46,7 +46,6 @@ describe('InstanceKeeper', () => {
           hostNickname: 'Ana',
           hostIdentity: 'TestAna',
           hostAvatar: new AvatarVO('face-01', 'khaki'),
-          place: 'together',
           dilemmaLanguage: 'es',
           code: 'K7M2Q',
           createdAt: new Date(),

@@ -50,7 +50,6 @@ import {
   DistributionPredictionVO,
   type PredictedShare,
 } from '../vos/distribution-prediction.vo.ts';
-import type { Place } from '../vos/group.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { VoteVO } from '../vos/vote.vo.ts';
 import { MINIMUM_VOTES_TO_SHOW } from '../vos/votes-to-show.ts';
@@ -85,7 +84,6 @@ export interface GameSettings {
   /** The ambience whose configuration the room had when the game started, or custom. */
   readonly ambience: AmbienceOrCustom;
   readonly variant: RoomVariant;
-  readonly place: Place;
   readonly dilemmaLanguage: DilemmaLanguage;
   readonly timePerDilemmaSeconds: TimePerDilemmaSeconds;
 }

@@ -187,12 +187,6 @@ export class GameWorld extends World {
     this.#choices = { ...this.#choices, ...choices };
   }
 
-  /** What the host chooses on the screen to create the room, before it exists. */
-  chooseOnCreation(choices: RoomChoices): void {
-    if (this.#roomCreated) throw new Error('The room already exists');
-    this.#choices = { ...this.#choices, ...choices };
-  }
-
   /** The host of the room of the scenario, who creates it if no step has yet. */
   async host(): Promise<string> {
     if (!this.#roomCreated) {

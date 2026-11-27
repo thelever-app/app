@@ -17,7 +17,6 @@ function room(id = 'TestRoomId', hostId = 'TestAnaId', code = 'K7M2Q'): Room {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: new AvatarVO('face-01', 'khaki'),
-      place: 'together',
       dilemmaLanguage: 'es',
       code,
       createdAt: NOW,

@@ -3,14 +3,13 @@ import {
   type DilemmaPreviewResponseDto,
   NICKNAME_MAX_LENGTH,
   withoutHiddenCharacters,
-  PlaceDto,
 } from '@thelever-app/protocol';
 import { useActionState, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { AvatarButton } from '../avatar/avatar-button.tsx';
 import { randomAvatar } from '../avatar/random-avatar.ts';
-import { Icon, type IconName } from '../components/icon.tsx';
+import { Icon } from '../components/icon.tsx';
 import { useUnderEighteen } from '../first-access/device-age.tsx';
 import { AMBIENCE_ICONS, AMBIENCES, isForAdults, variantOf } from '../lobby/ambiences.ts';
 import { AvatarPickerSheet } from '../lobby/avatar-picker-sheet.tsx';
@@ -28,14 +27,12 @@ import styles from './form.module.css';
 /** What the room is created with, as the player fills it in. */
 interface CreateRoomChoices {
   readonly nickname: string;
-  readonly place: PlaceDto | undefined;
   readonly ambience: AmbienceDto | undefined;
 }
 
 /** The first thing still to fill in, which the button asks for instead of creating the room. */
-function missingOf({ nickname, place, ambience }: CreateRoomChoices) {
+function missingOf({ nickname, ambience }: CreateRoomChoices) {
   if (nickname.trim() === '') return 'nickname';
-  if (place === undefined) return 'place';
   if (ambience === undefined) return 'ambience';
   return undefined;
 }
@@ -45,14 +42,8 @@ export interface CreateRoomFormProps {
   readonly firstDilemma?: DilemmaPreviewResponseDto;
 }
 
-const PLACES: readonly (readonly [PlaceDto, IconName])[] = [
-  ['together', 'groups'],
-  ['remote', 'videocam'],
-];
-
 /**
- * Creating a room: the avatar, the nickname, the place and the ambience, each one a single choice,
- * on the same screen; who declared they are under 18 cannot choose an
+ * Creating a room: the avatar, the nickname and the ambience, a single choice, on the same screen; who declared they are under 18 cannot choose an
  * ambience for adults. The avatar starts at random and may be any: nobody is in the
  * room yet. The dilemmas take the language of the device, or that of the dilemma of its first
  * round; the host changes it in the lobby. The button says what is still missing, and creates the
@@ -69,7 +60,6 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
   const forAdults = firstDilemma?.minimumAge === 18;
   const [choices, setChoices] = useState<CreateRoomChoices>(() => ({
     nickname: lastNickname(),
-    place: undefined,
     ambience: forAdults ? 'spicy' : undefined,
   }));
   const leftOut = forAdults && choices.ambience === 'classic';
@@ -81,8 +71,8 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
 
   // Why the last attempt failed; what the player chose stays in the fields.
   const [error, formAction, isPending] = useActionState(async (): Promise<string | undefined> => {
-    const { nickname, place, ambience } = choices;
-    if (place === undefined || ambience === undefined) {
+    const { nickname, ambience } = choices;
+    if (ambience === undefined) {
       return undefined;
     }
     try {
@@ -91,7 +81,6 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
           nickname,
           ambience,
           avatar,
-          place,
           dilemmaLanguage: firstDilemma?.language ?? deviceLanguage(i18n),
           ...(firstDilemma && !leftOut && { firstRoundDilemmaId: firstDilemma.dilemmaId }),
           playedDilemmaIds: playedDilemmas(),
@@ -129,27 +118,6 @@ export function CreateRoomForm({ firstDilemma }: CreateRoomFormProps = {}) {
             />
           </label>
         </div>
-
-        <fieldset className={styles.choice}>
-          <legend className={styles.legend}>{t('createRoom.place.label')}</legend>
-          <div className={styles.places}>
-            {PLACES.map(([place, icon]) => (
-              <label key={place} className={styles.place}>
-                <input
-                  className={styles.radio}
-                  type="radio"
-                  name="place"
-                  value={place}
-                  required
-                  defaultChecked={choices.place === place}
-                  onChange={() => setChoices({ ...choices, place })}
-                />
-                <Icon name={icon} size={20} />
-                {t(`createRoom.place.${place}`)}
-              </label>
-            ))}
-          </div>
-        </fieldset>
 
         <fieldset className={styles.choice}>
           <legend className={styles.legend}>{t('createRoom.ambience')}</legend>

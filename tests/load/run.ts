@@ -153,7 +153,6 @@ async function setUpRoom(target: Target, players: readonly LoadPlayer[]): Promis
     {
       nickname: 'Host',
       avatar: LOAD_AVATAR,
-      place: 'together',
       dilemmaLanguage: 'es',
     },
     (value) => CreateRoomResponseDto.parse(value),

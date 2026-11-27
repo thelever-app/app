@@ -24,13 +24,10 @@ async function renderForm(createRoom: (request: CreateRoomRequestDto) => Promise
   const api = fakeRoomApi({ createRoom: vi.fn(createRoom) });
   const rendered = await renderAtRoute(<CreateRoomForm />, { api });
   const { t } = rendered;
-  const fill = ({ nickname = 'Ana', place = 'remote', ambience = 'classic' } = {}) => {
+  const fill = ({ nickname = 'Ana', ambience = 'classic' } = {}) => {
     fireEvent.change(screen.getByRole('textbox', { name: t('createRoom.nickname') }), {
       target: { value: nickname },
     });
-    fireEvent.click(
-      screen.getByRole('radio', { name: t(`createRoom.place.${place as 'remote'}`) }),
-    );
     fireEvent.click(
       screen.getByRole('radio', {
         name: new RegExp(`^${t(`ambience.${ambience as 'classic'}.name`)}`),
@@ -74,7 +71,7 @@ describe('CreateRoomForm', () => {
     );
   });
 
-  it('should ask for the nickname and the place, with one choice, and not for the nature of the group', async () => {
+  it('should ask for the nickname, and neither for the nature of the group nor for where it plays', async () => {
     // Act
     const { t } = await renderForm(async () => CREATED);
 
@@ -83,12 +80,8 @@ describe('CreateRoomForm', () => {
       'required',
       true,
     );
-    const places = screen.getByRole('group', { name: t('createRoom.place.label') });
-    const radios = [...places.querySelectorAll('input[type="radio"]')] as HTMLInputElement[];
-    expect(new Set(radios.map(({ name }) => name)).size).toBe(1);
-    expect(radios.some(({ required }) => required)).toBe(true);
-    expect(radios.some(({ checked }) => checked)).toBe(false);
     expect(document.querySelector('input[name="groupNature"]')).toBeNull();
+    expect(document.querySelector('input[name="place"]')).toBeNull();
   });
 
   it('should create the room in the language of the device, remember the nickname and enter it', async () => {
@@ -105,7 +98,6 @@ describe('CreateRoomForm', () => {
       nickname: ' Ana ',
       ambience: 'classic',
       avatar: shownAvatar(),
-      place: 'remote',
       dilemmaLanguage: 'es',
       playedDilemmaIds: [],
     });
@@ -152,18 +144,12 @@ describe('CreateRoomForm', () => {
     });
     missing.push(button().textContent);
     const disabledUntilTheEnd = button().hasAttribute('disabled');
-    fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.remote') }));
-    missing.push(button().textContent);
     fireEvent.click(
       screen.getByRole('radio', { name: new RegExp(`^${t('ambience.classic.name')}`) }),
     );
 
     // Assert
-    expect(missing).toEqual([
-      t('createRoom.missing.nickname'),
-      t('createRoom.missing.place'),
-      t('createRoom.missing.ambience'),
-    ]);
+    expect(missing).toEqual([t('createRoom.missing.nickname'), t('createRoom.missing.ambience')]);
     expect(disabledUntilTheEnd).toBe(true);
     expect(screen.getByRole('button', { name: t('createRoom.submit') })).toHaveProperty(
       'disabled',
@@ -176,7 +162,7 @@ describe('CreateRoomForm', () => {
     const { fill, submit, t, location } = await renderForm(async () => {
       throw new RoomApiError('dilemmas-missing');
     });
-    fill({ nickname: 'Ana', place: 'together' });
+    fill({ nickname: 'Ana' });
 
     // Act
     submit();
@@ -190,10 +176,9 @@ describe('CreateRoomForm', () => {
       'value',
       'Ana',
     );
-    expect(screen.getByRole('radio', { name: t('createRoom.place.together') })).toHaveProperty(
-      'checked',
-      true,
-    );
+    expect(
+      screen.getByRole('radio', { name: new RegExp(`^${t('ambience.classic.name')}`) }),
+    ).toHaveProperty('checked', true);
     expect(location()).toBe('/');
     expect(lastNickname()).toBe('');
   });

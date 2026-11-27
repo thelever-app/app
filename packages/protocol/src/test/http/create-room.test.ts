@@ -6,11 +6,10 @@ describe('CreateRoomRequestDto', () => {
     nickname: 'Ana',
     ambience: 'classic',
     avatar: { face: 'face-01', color: 'khaki' },
-    place: 'remote',
     dilemmaLanguage: 'es',
   };
 
-  it('should accept the nickname and the avatar of the host, the nature of the group, the place and the language', () => {
+  it('should accept the nickname and the avatar of the host, and the language', () => {
     // Act & Assert
     expect(CreateRoomRequestDto.parse(request)).toEqual(request);
   });
@@ -37,9 +36,9 @@ describe('CreateRoomRequestDto', () => {
     expect(CreateRoomRequestDto.safeParse(withoutAvatar).success).toBe(false);
   });
 
-  it('should reject a place or a language it does not know', () => {
+  it('should reject a language it does not know or a place, which the game no longer asks', () => {
     // Act & Assert
-    expect(CreateRoomRequestDto.safeParse({ ...request, place: 'remotely' }).success).toBe(false);
+    expect(CreateRoomRequestDto.safeParse({ ...request, place: 'remote' }).success).toBe(false);
     expect(CreateRoomRequestDto.safeParse({ ...request, dilemmaLanguage: 'ja' }).success).toBe(
       false,
     );

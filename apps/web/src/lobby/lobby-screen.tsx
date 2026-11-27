@@ -204,13 +204,6 @@ export function LobbyScreen() {
           </div>
         </section>
 
-        {lobby.place === 'remote' && (
-          <div className={styles.advice} role="note">
-            <Icon name="videocam" size={22} />
-            <span>{t('lobby.remote')}</span>
-          </div>
-        )}
-
         <section className={styles.rounds} aria-labelledby="lobby-rounds">
           <h2 id="lobby-rounds" className={styles.signage}>
             {t('lobby.rounds.title', { count: lobby.rounds.length })}

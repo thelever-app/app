@@ -323,16 +323,10 @@
     "title": "Nouvelle salle",
     "nickname": "Ton pseudo",
     "nicknamePlaceholder": "Le nom que verra le groupe",
-    "place": {
-      "label": "Où êtes-vous ?",
-      "together": "Au même endroit",
-      "remote": "À distance"
-    },
     "submit": "Créer la salle",
     "submitting": "Création de la salle…",
     "missing": {
       "nickname": "Écris ton pseudo",
-      "place": "Choisis où vous êtes",
       "ambience": "Choisis une ambiance"
     },
     "ambience": "Quelle ambiance voulez-vous ?"
@@ -450,7 +444,6 @@
     "roundCount_other": "{{count}} manches",
     "configure": "Configurer",
     "adultsOnly": "Réservé aux plus de 18 ans",
-    "remote": "À distance, mieux en visio.",
     "rounds": {
       "title": "Manches · {{count}}",
       "hint": "Elles se jouent dans cet ordre.",

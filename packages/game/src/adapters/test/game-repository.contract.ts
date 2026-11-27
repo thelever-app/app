@@ -35,7 +35,6 @@ const MINUTE = 60 * SECOND;
 const ANONYMOUS: GameSettings = {
   ambience: 'no-filter',
   variant: 'anonymous',
-  place: 'remote',
   dilemmaLanguage: 'ca',
   timePerDilemmaSeconds: 60,
 };
@@ -64,7 +63,6 @@ export function describeGameRepositoryContract(
         hostNickname: 'Ana',
         hostIdentity: 'TestAnaIdentity',
         hostAvatar: new AvatarVO('face-01', 'khaki'),
-        place: 'remote',
         dilemmaLanguage: 'es',
         code: 'K7M2Q',
         createdAt: NOW,
@@ -220,7 +218,6 @@ export function describeGameRepositoryContract(
             hostNickname: 'Eva',
             hostIdentity: 'TestEvaIdentity',
             hostAvatar: new AvatarVO('face-02', 'teal'),
-            place: 'together',
             dilemmaLanguage: 'es',
             code: 'P3X8W',
             createdAt: NOW,

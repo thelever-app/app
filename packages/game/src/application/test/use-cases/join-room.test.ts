@@ -401,7 +401,6 @@ async function arrangeTwoRooms() {
     hostNickname: PABLO.nickname,
     hostIdentity: PABLO.identity,
     hostAvatar: PABLO.avatar,
-    place: 'together',
     dilemmaLanguage: 'es',
   });
   return { ...arranged, pabloRoomId, pabloId };

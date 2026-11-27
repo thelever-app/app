@@ -1,19 +1,15 @@
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { LanguageDto } from '@thelever-app/protocol';
-import type { PublicPageView } from '../support/driver.ts';
+import type { DilemmaLanguage, PublicPageView } from '../support/driver.ts';
+import { languageNamed } from '../support/scenario-words.ts';
 import type { GameWorld } from '../support/world.ts';
 
-/** The languages the scenarios name, and their codes. */
-const LANGUAGES: Readonly<Record<string, string>> = { English: 'en', Spanish: 'es' };
-
-function codeOf(language: string): string {
-  const code = LANGUAGES[language];
-  assert.ok(code, `The steps do not know the language "${language}"`);
-  return code;
-}
-
-async function pageOf(world: GameWorld, name: string, language = 'es'): Promise<PublicPageView> {
+async function pageOf(
+  world: GameWorld,
+  name: string,
+  language: DilemmaLanguage = 'es',
+): Promise<PublicPageView> {
   const page = await world.driver.publicPageOf(name, language);
   assert.ok(page, `"${name}" has no public page in ${language}`);
   return page;
@@ -101,7 +97,10 @@ When(
   'a visitor chooses {word} in the language menu of the public page of {string}',
   async function (this: GameWorld, language: string, name: string) {
     await this.driver.generatePublicPages();
-    this.publicPage = await this.driver.switchLanguageOfThePublicPage(name, codeOf(language));
+    this.publicPage = await this.driver.switchLanguageOfThePublicPage(
+      name,
+      languageNamed(language),
+    );
   },
 );
 
@@ -122,13 +121,13 @@ When(
   'a visitor chooses to play {string} with the group from its public page in {word}',
   async function (this: GameWorld, name: string, language: string) {
     await this.driver.generatePublicPages();
-    await this.driver.playWithTheGroupFromThePublicPage(name, codeOf(language));
+    await this.driver.playWithTheGroupFromThePublicPage(name, languageNamed(language));
     this.dilemmaToPlayWithTheGroup = name;
   },
 );
 
 Then('the app opens in {word}', async function (this: GameWorld, language: string) {
-  assert.equal(await this.driver.languageOfTheApp(), codeOf(language));
+  assert.equal(await this.driver.languageOfTheApp(), languageNamed(language));
 });
 
 Then(
@@ -176,7 +175,7 @@ Then('the visitor does not see how the world voted', function (this: GameWorld) 
 Then(
   'the visitor sees the public page of {string} in {word}',
   async function (this: GameWorld, name: string, language: string) {
-    const code = codeOf(language);
+    const code = languageNamed(language);
     assert.equal(this.publicPage!.language, code);
     assert.equal(this.publicPage!.text, (await pageOf(this, name, code)).text);
   },

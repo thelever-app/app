@@ -6,7 +6,10 @@ import { z } from 'zod';
 
 /** The cheapest model that keeps a dilemma intact, chosen by Mario on 15 November. */
 const MODEL = 'claude-haiku-5-5';
-/** Six languages of one dilemma, with its arguments, fit well below it. */
+/**
+ * One language of a dilemma with four options and long arguments, with what the model thinks
+ * first, took up to 4,400 tokens.
+ */
 const MAX_TOKENS = 16_000;
 
 /** How the prompt names each language; Portuguese is that of Portugal, since Brazil is a blocked country. */
@@ -22,7 +25,7 @@ const LANGUAGE_NAMES: Readonly<Record<string, string>> = {
 
 const SYSTEM = `You translate moral dilemmas for TheLever, a party game where a group of friends votes in private on each dilemma and then discusses the result.
 
-Translate the dilemma you are given into each language asked for, so that a native speaker reads it as if it had been written in their language:
+Translate the dilemma you are given into the language asked for, so that a native speaker reads it as if it had been written in their language:
 - Keep the moral conflict exactly as it is: the same facts, the same stakes, the same people involved. Do not soften, sharpen, explain or add anything.
 - Keep the options as many and in the same order. Option n of the translation translates option n of the original, and each option stays as short as it is.
 - The text ${GAP_MARKER} stands for the nickname of a player of the room. Keep it, as it is, in each field where the original has it, write the sentence so it reads well with any name in its place, and never add it to a dilemma that does not have it.
@@ -40,26 +43,18 @@ function argumentsLike(original: NonNullable<TranslatableContent['arguments']>) 
   });
 }
 
-/**
- * What the model gives: one translation per language asked for, named by its code, with arguments
- * exactly when the original has them, so the model cannot leave them out.
- */
-function outputIn(languages: readonly string[], original: TranslatableContent) {
+/** What the model gives: the translation, with arguments exactly when the original has them, so the model cannot leave them out. */
+function outputLike(original: TranslatableContent) {
   return z.object({
-    translations: z.array(
-      z.object({
-        language: z.enum(languages as [string, ...string[]]),
-        name: z.string(),
-        text: z.string(),
-        options: z.array(z.string()),
-        tags: z.array(z.string()),
-        arguments: original.arguments ? argumentsLike(original.arguments) : z.null(),
-      }),
-    ),
+    name: z.string(),
+    text: z.string(),
+    options: z.array(z.string()),
+    tags: z.array(z.string()),
+    arguments: original.arguments ? argumentsLike(original.arguments) : z.null(),
   });
 }
 
-type Translated = z.infer<ReturnType<typeof outputIn>>['translations'][number];
+type Translated = z.infer<ReturnType<typeof outputLike>>;
 
 /** What the translator sends to the Messages API. */
 export type TranslationRequest = Parameters<Anthropic['messages']['parse']>[0];
@@ -76,10 +71,11 @@ function hasTheGap(text: string): boolean {
 }
 
 /**
- * Translates with Claude through the Messages API, in a single request for every language, so the
- * prompt is paid once and the languages agree with each other. Only the texts of the dilemma are
- * sent: no ids, no nicknames. It throws an error if the model refuses, runs out of tokens or gives
- * something that does not keep the dilemma: a language missing, other options or a gap lost.
+ * Translates with Claude through the Messages API, one request per language, all at once: a
+ * single request for every language did not fit in its tokens with the longest dilemmas. Only the
+ * texts of the dilemma are sent: no ids, no nicknames. It throws an error if the model refuses,
+ * runs out of tokens or gives something that does not keep the dilemma: other options or a gap
+ * lost.
  */
 export class AnthropicTranslator implements Translator {
   readonly #messages: MessagesParser;
@@ -93,7 +89,20 @@ export class AnthropicTranslator implements Translator {
     from: string,
     to: readonly string[],
   ): Promise<ReadonlyMap<string, TranslatableContent>> {
-    const output = outputIn(to, content);
+    const translations = await Promise.all(
+      to.map(
+        async (language) => [language, await this.#translateInto(content, from, language)] as const,
+      ),
+    );
+    return new Map(translations);
+  }
+
+  async #translateInto(
+    content: TranslatableContent,
+    from: string,
+    language: string,
+  ): Promise<TranslatableContent> {
+    const output = outputLike(content);
     const response = await this.#messages.parse({
       model: MODEL,
       max_tokens: MAX_TOKENS,
@@ -104,7 +113,7 @@ export class AnthropicTranslator implements Translator {
           role: 'user',
           content: JSON.stringify({
             from: { code: from, language: LANGUAGE_NAMES[from] ?? from },
-            to: to.map((code) => ({ code, language: LANGUAGE_NAMES[code] ?? code })),
+            to: { code: language, language: LANGUAGE_NAMES[language] ?? language },
             dilemma: {
               name: content.name,
               text: content.text,
@@ -117,19 +126,9 @@ export class AnthropicTranslator implements Translator {
       ],
     });
     if (response.stop_reason !== 'end_turn') {
-      throw new Error(`the translator stopped with ${response.stop_reason}`);
+      throw new Error(`the translator stopped with ${response.stop_reason} in ${language}`);
     }
-    const { translations } = output.parse(response.parsed_output);
-
-    const translated = new Map<string, TranslatableContent>();
-    for (const language of to) {
-      const found = translations.filter((translation) => translation.language === language);
-      if (found.length !== 1) {
-        throw new Error(`the translator gave ${found.length} translations into ${language}`);
-      }
-      translated.set(language, this.#checked(content, found[0]!, language));
-    }
-    return translated;
+    return this.#checked(content, output.parse(response.parsed_output), language);
   }
 
   /** The translation into one language, if it keeps the options, the gap and the arguments of the original. */

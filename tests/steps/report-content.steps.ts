@@ -2,6 +2,7 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import type { ReportedDilemma, ReportReason } from '../support/driver.ts';
 import { TEAM_RULE } from '../support/moderation-of-the-tests.ts';
+import { reportReasonNamed } from '../support/scenario-words.ts';
 import type { GameWorld } from '../support/world.ts';
 
 /** What the scenario keeps of what was reported, to look for it in the moderation repository. */
@@ -24,24 +25,17 @@ function reported(world: GameWorld): Reported {
   return kept;
 }
 
-/** Each reason of the scenarios, as the issue says it to the team. */
-const REASON_NAMES: Readonly<Record<ReportReason | 'illegal', string>> = {
+/** Each reason, as the issue says it to the team. */
+const REASON_NAMES: Readonly<Record<ReportReason, string>> = {
   offensive: 'Ofensivo',
   confusing: 'Confuso',
-  'badly translated': 'Mal traducido',
+  mistranslated: 'Mal traducido',
   other: 'Otro',
   illegal: 'Puede ser ilegal',
 };
 
 /** Test data: the email a person leaves in the web form. */
 const EMAIL = 'person@example.test';
-
-function reasonOf(text: string): ReportReason {
-  if (!(text in REASON_NAMES) || text === 'illegal') {
-    throw new Error(`The steps do not know the reason "${text}"`);
-  }
-  return text as ReportReason;
-}
 
 /** Everyone in the room of the scenario, by the nickname the host sees them by. */
 async function playersOf(world: GameWorld): Promise<string[]> {
@@ -77,7 +71,7 @@ Given('the room is in the reveal', async function (this: GameWorld) {
 When(
   '{string} reports the current dilemma as {string}',
   async function (this: GameWorld, player: string, reason: string) {
-    await report(this, player, reasonOf(reason));
+    await report(this, player, reportReasonNamed(reason));
   },
 );
 
