@@ -40,7 +40,6 @@ import radioUnchecked from '@material-symbols/svg-500/rounded/radio_button_unche
 import search from '@material-symbols/svg-500/rounded/search.svg?url';
 import shuffle from '@material-symbols/svg-500/rounded/shuffle.svg?url';
 import sync from '@material-symbols/svg-500/rounded/sync.svg?url';
-import videocam from '@material-symbols/svg-500/rounded/videocam.svg?url';
 import visibility from '@material-symbols/svg-500/rounded/visibility-fill.svg?url';
 import visibilityOff from '@material-symbols/svg-500/rounded/visibility_off-fill.svg?url';
 import adultsOnly from '@material-symbols/svg-500/rounded/18_up_rating-fill.svg?url';
@@ -175,7 +174,6 @@ const ICONS = {
   sync,
   target,
   timer,
-  videocam,
   visibility,
   visibilityOff,
   visibilityOutline,

@@ -197,17 +197,6 @@
   cursor: pointer;
 }
 
-.advice {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: var(--space-3) 14px;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-}
-
 .rounds {
   flex-shrink: 0;
   display: flex;

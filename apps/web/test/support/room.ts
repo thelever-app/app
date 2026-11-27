@@ -56,7 +56,6 @@ export function aRoom(overrides: Partial<RoomStateDto> = {}): RoomStateDto {
     code: 'K7M2Q',
     playerId: 'test-ana-id',
     hostId: 'test-ana-id',
-    place: 'together',
     settings: {
       variant: 'nominal',
       adultsOnly: false,

@@ -413,7 +413,6 @@ export class SimulatedRoomConnection implements RoomConnection {
       hostNickname: this.#options.nickname,
       hostIdentity: SELF_IDENTITY,
       hostAvatar: avatarNumber(0),
-      place: 'together',
       dilemmaLanguage: this.#options.language,
     });
     this.#roomId = roomId;

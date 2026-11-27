@@ -302,16 +302,10 @@
     "title": "Neuer Raum",
     "nickname": "Dein Spitzname",
     "nicknamePlaceholder": "So sieht dich die Gruppe",
-    "place": {
-      "label": "Wo seid ihr?",
-      "together": "Am selben Ort",
-      "remote": "Aus der Ferne"
-    },
     "submit": "Raum erstellen",
     "submitting": "Raum wird erstellt…",
     "missing": {
       "nickname": "Gib deinen Spitznamen ein",
-      "place": "Wähle, wo ihr seid",
       "ambience": "Wähle eine Stimmung"
     },
     "ambience": "Welche Stimmung wollt ihr?"
@@ -426,7 +420,6 @@
     "roundCount_other": "{{count}} Runden",
     "configure": "Einstellen",
     "adultsOnly": "Nur ab 18",
-    "remote": "Aus der Ferne, am besten per Videoanruf.",
     "rounds": {
       "title": "Runden · {{count}}",
       "hint": "Sie werden in dieser Reihenfolge gespielt.",

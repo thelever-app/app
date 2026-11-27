@@ -323,16 +323,10 @@
     "title": "Sala nova",
     "nickname": "El teu sobrenom",
     "nicknamePlaceholder": "Com et veurà el grup",
-    "place": {
-      "label": "On sou?",
-      "together": "Al mateix lloc",
-      "remote": "A distància"
-    },
     "submit": "Crear una sala",
     "submitting": "Creant la sala…",
     "missing": {
       "nickname": "Escriu el teu sobrenom",
-      "place": "Tria on sou",
       "ambience": "Tria un ambient"
     },
     "ambience": "Quin ambient voleu?"
@@ -450,7 +444,6 @@
     "roundCount_other": "{{count}} rondes",
     "configure": "Configurar",
     "adultsOnly": "Només per a majors de 18 anys",
-    "remote": "A distància, millor en videotrucada.",
     "rounds": {
       "title": "Rondes · {{count}}",
       "hint": "Es juguen en aquest ordre.",

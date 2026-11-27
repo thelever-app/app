@@ -399,14 +399,6 @@ describe('LobbyScreen', () => {
       expect(send).toHaveBeenCalledWith({ type: 'clear-round-dilemma', roundId: 3 });
     });
 
-    it('should advise a video call to a group that plays remotely', async () => {
-      // Act
-      const { t } = await renderLobby(aRoom({ place: 'remote' }));
-
-      // Assert
-      expect(screen.getByRole('note').textContent).toBe(t('lobby.remote'));
-    });
-
     it('should copy the invitation link where the device cannot share it', async () => {
       // Arrange
       const writeText = vi.fn(async () => {});

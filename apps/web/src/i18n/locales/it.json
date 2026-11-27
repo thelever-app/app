@@ -323,16 +323,10 @@
     "title": "Nuova stanza",
     "nickname": "Il tuo nickname",
     "nicknamePlaceholder": "Come ti vedrà il gruppo",
-    "place": {
-      "label": "Dove siete?",
-      "together": "Nello stesso posto",
-      "remote": "A distanza"
-    },
     "submit": "Crea stanza",
     "submitting": "Creazione della stanza…",
     "missing": {
       "nickname": "Scrivi il tuo nickname",
-      "place": "Scegli dove siete",
       "ambience": "Scegli un’atmosfera"
     },
     "ambience": "Che atmosfera volete?"
@@ -450,7 +444,6 @@
     "roundCount_other": "{{count}} turni",
     "configure": "Configura",
     "adultsOnly": "Solo per maggiorenni",
-    "remote": "A distanza, meglio in videochiamata.",
     "rounds": {
       "title": "Turni · {{count}}",
       "hint": "Si giocano in quest’ordine.",

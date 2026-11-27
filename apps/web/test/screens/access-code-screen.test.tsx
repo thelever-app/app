@@ -57,7 +57,6 @@ async function renderCreateRoom() {
   fireEvent.change(screen.getByRole('textbox', { name: t('createRoom.nickname') }), {
     target: { value: 'Ana' },
   });
-  fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.remote') }));
   fireEvent.click(
     screen.getByRole('radio', { name: new RegExp(`^${t('ambience.classic.name')}`) }),
   );
@@ -149,7 +148,6 @@ describe('AccessCodeScreen', () => {
     fireEvent.change(screen.getByRole('textbox', { name: t('createRoom.nickname') }), {
       target: { value: 'Ana' },
     });
-    fireEvent.click(screen.getByRole('radio', { name: t('createRoom.place.remote') }));
     fireEvent.click(
       screen.getByRole('radio', { name: new RegExp(`^${t('ambience.classic.name')}`) }),
     );
