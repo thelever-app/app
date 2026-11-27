@@ -110,6 +110,10 @@ When('creates the room', async function (this: GameWorld) {
   else await this.host();
 });
 
+Then('the host is asked for a nickname', async function (this: GameWorld) {
+  assert.ok((await this.driver.askedOnCreation(await this.host())).includes('nickname'));
+});
+
 Then('the host is not asked for the nature of the group', async function (this: GameWorld) {
   assert.ok(!(await this.driver.askedOnCreation(await this.host())).includes('nature'));
 });

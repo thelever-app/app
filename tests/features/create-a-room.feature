@@ -9,6 +9,7 @@ Feature: Create a room
     When the player creates a room
     Then the player becomes the host of that room
     And the host plays with the random avatar shown before creating the room
+    And the host is asked for a nickname
     And the host is not asked for the nature of the group
     And the host is not asked whether the group plays together or remotely
 
