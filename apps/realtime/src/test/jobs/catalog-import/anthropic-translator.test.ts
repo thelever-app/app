@@ -14,7 +14,6 @@ const CONTENT = {
 /** What the model gives for one language, unless a test changes it. */
 function translationIn(language: string, overrides: Record<string, unknown> = {}) {
   return {
-    language,
     name: `${language} name`,
     text: `${language}: if {gap} smells, what do you do?`,
     options: [`${language} tell`, `${language} stay out`],
@@ -24,13 +23,19 @@ function translationIn(language: string, overrides: Record<string, unknown> = {}
   };
 }
 
-/** Answers every request with that output and that stop reason, and keeps the requests. */
-function modelGiving(output: unknown, stopReason = 'end_turn') {
+/** The language a request asks for. */
+function languageOf(request: TranslationRequest): string {
+  const [message] = request.messages;
+  return JSON.parse(String(message?.content)).to.code;
+}
+
+/** Answers each request with the output of its language and that stop reason, and keeps the requests. */
+function modelGiving(outputs: Readonly<Record<string, unknown>>, stopReason = 'end_turn') {
   const requests: TranslationRequest[] = [];
   const messages = {
     parse: async (request: TranslationRequest) => {
       requests.push(request);
-      return { stop_reason: stopReason, parsed_output: output };
+      return { stop_reason: stopReason, parsed_output: outputs[languageOf(request)] ?? null };
     },
   };
   return { requests, translator: new AnthropicTranslator(messages) };
@@ -40,9 +45,7 @@ describe('AnthropicTranslator', () => {
   describe('translate', () => {
     it('should give the content in each language asked for', async () => {
       // Arrange
-      const { translator } = modelGiving({
-        translations: [translationIn('en'), translationIn('fr')],
-      });
+      const { translator } = modelGiving({ en: translationIn('en'), fr: translationIn('fr') });
 
       // Act
       const translated = await translator.translate(CONTENT, 'es', ['en', 'fr']);
@@ -57,22 +60,26 @@ describe('AnthropicTranslator', () => {
       expect(translated.get('fr')?.text).toContain('fr:');
     });
 
-    it('should ask Claude Haiku 5.5 once for every language, sending only the texts', async () => {
+    it('should ask Claude Haiku 5.5 once for each language, sending only the texts', async () => {
       // Arrange
       const { requests, translator } = modelGiving({
-        translations: [translationIn('en'), translationIn('fr')],
+        en: translationIn('en'),
+        fr: translationIn('fr'),
       });
 
       // Act
       await translator.translate(CONTENT, 'es', ['en', 'fr']);
 
       // Assert
-      expect(requests).toHaveLength(1);
-      expect(requests[0]?.model).toBe('claude-haiku-5-5');
-      const [message] = requests[0]?.messages ?? [];
-      const sent = JSON.parse(String(message?.content));
-      expect(sent.dilemma).toEqual({ ...CONTENT, arguments: null });
-      expect(sent.to.map(({ code }: { code: string }) => code)).toEqual(['en', 'fr']);
+      expect(requests.map(languageOf)).toEqual(['en', 'fr']);
+      for (const request of requests) {
+        expect(request.model).toBe('claude-haiku-5-5');
+        const [message] = request.messages;
+        expect(JSON.parse(String(message?.content)).dilemma).toEqual({
+          ...CONTENT,
+          arguments: null,
+        });
+      }
     });
 
     it('should give the arguments when the content has them', async () => {
@@ -85,7 +92,7 @@ describe('AnthropicTranslator', () => {
         ],
       };
       const { translator } = modelGiving({
-        translations: [translationIn('en', { arguments: args })],
+        en: translationIn('en', { arguments: args }),
       });
 
       // Act
@@ -118,7 +125,7 @@ describe('AnthropicTranslator', () => {
         ],
       };
       const { translator } = modelGiving({
-        translations: [translationIn('en', { arguments: args })],
+        en: translationIn('en', { arguments: args }),
       });
 
       // Act
@@ -141,20 +148,14 @@ describe('AnthropicTranslator', () => {
     });
 
     it.each([
-      ['a language is missing', { translations: [translationIn('en')] }, 'fr'],
-      [
-        'a language comes twice',
-        { translations: [translationIn('en'), translationIn('en'), translationIn('fr')] },
-        'en',
-      ],
       [
         'the options are not as many',
-        { translations: [translationIn('en', { options: ['one'] }), translationIn('fr')] },
+        { en: translationIn('en', { options: ['one'] }), fr: translationIn('fr') },
         'options',
       ],
       [
         'the gap is lost',
-        { translations: [translationIn('en', { text: 'if someone smells' }), translationIn('fr')] },
+        { en: translationIn('en', { text: 'if someone smells' }), fr: translationIn('fr') },
         '{gap}',
       ],
     ])('should throw an error if %s', async (_case, output, named) => {
@@ -168,12 +169,10 @@ describe('AnthropicTranslator', () => {
     it('should keep the gap repeated or in another field, instead of a pronoun with a gender', async () => {
       // Arrange
       const { translator } = modelGiving({
-        translations: [
-          translationIn('en', {
-            text: 'If {gap} smells, do you tell {gap}?',
-            options: ['I tell {gap}', 'I stay out'],
-          }),
-        ],
+        en: translationIn('en', {
+          text: 'If {gap} smells, do you tell {gap}?',
+          options: ['I tell {gap}', 'I stay out'],
+        }),
       });
 
       // Act
@@ -189,7 +188,7 @@ describe('AnthropicTranslator', () => {
     it('should throw an error if the gap appears in a dilemma that has none', async () => {
       // Arrange
       const { translator } = modelGiving({
-        translations: [translationIn('en', { text: 'If someone smells', name: 'name {gap}' })],
+        en: translationIn('en', { text: 'If someone smells', name: 'name {gap}' }),
       });
 
       // Act & Assert
@@ -203,7 +202,7 @@ describe('AnthropicTranslator', () => {
     it('should throw an error if the name gets the gap, which the public pages show without a room', async () => {
       // Arrange
       const { translator } = modelGiving({
-        translations: [translationIn('en', { name: 'The smell of {gap}' })],
+        en: translationIn('en', { name: 'The smell of {gap}' }),
       });
 
       // Act & Assert
@@ -213,18 +212,16 @@ describe('AnthropicTranslator', () => {
     it('should throw an error if the gap reaches the text of a dilemma that has it only in its arguments', async () => {
       // Arrange: the game tells a dilemma with the gap by its text and its options.
       const { translator } = modelGiving({
-        translations: [
-          translationIn('en', {
-            text: 'If {gap} smells, what do you do?',
-            arguments: {
-              context: 'if {gap} knows',
-              options: [
-                { for: 'f1', against: 'a1' },
-                { for: 'f2', against: 'a2' },
-              ],
-            },
-          }),
-        ],
+        en: translationIn('en', {
+          text: 'If {gap} smells, what do you do?',
+          arguments: {
+            context: 'if {gap} knows',
+            options: [
+              { for: 'f1', against: 'a1' },
+              { for: 'f2', against: 'a2' },
+            ],
+          },
+        }),
       });
 
       // Act & Assert
@@ -251,7 +248,7 @@ describe('AnthropicTranslator', () => {
       // Arrange
       const args = { context: null, options: [{ for: 'f1', against: 'a1' }] };
       const { translator } = modelGiving({
-        translations: [translationIn('en', { arguments: args })],
+        en: translationIn('en', { arguments: args }),
       });
 
       // Act & Assert
@@ -287,7 +284,7 @@ describe('AnthropicTranslator', () => {
         { for: 'f2', against: 'a2' },
       ];
       const { translator } = modelGiving({
-        translations: [translationIn('en', { arguments: { options, ...given } })],
+        en: translationIn('en', { arguments: { options, ...given } }),
       });
 
       // Act & Assert
@@ -312,10 +309,10 @@ describe('AnthropicTranslator', () => {
     it('should throw an error if the model refuses or runs out of tokens', async () => {
       // Act & Assert
       await expect(
-        modelGiving(null, 'refusal').translator.translate(CONTENT, 'es', ['en']),
+        modelGiving({}, 'refusal').translator.translate(CONTENT, 'es', ['en']),
       ).rejects.toThrow('refusal');
       await expect(
-        modelGiving(null, 'max_tokens').translator.translate(CONTENT, 'es', ['en']),
+        modelGiving({}, 'max_tokens').translator.translate(CONTENT, 'es', ['en']),
       ).rejects.toThrow('max_tokens');
     });
   });
