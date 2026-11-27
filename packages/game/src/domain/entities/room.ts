@@ -29,7 +29,6 @@ import type { Randomness } from '../ports/randomness.port.ts';
 import { pickOne } from '../services/random-choice.ts';
 import { AMBIENCES, type Ambience, keptForANewRoom, settingsOf } from '../vos/ambience.vo.ts';
 import { AvatarVO } from '../vos/avatar.vo.ts';
-import { toPlace, type Place } from '../vos/group.vo.ts';
 import { IdVO } from '../vos/id.vo.ts';
 import { genericNickname, NicknameVO } from '../vos/nickname.vo.ts';
 import { RoomCodeVO } from '../vos/room-code.vo.ts';
@@ -107,7 +106,6 @@ export interface RoomSnapshot {
   readonly id: string;
   readonly code: string;
   readonly hostId: string;
-  readonly place: Place;
   readonly settings: RoomSettingsSnapshot;
   readonly players: readonly PlayerSnapshot[];
   readonly version: number;
@@ -136,7 +134,6 @@ export interface CreateRoomProps {
   readonly hostNickname: string;
   readonly hostIdentity: string;
   readonly hostAvatar: AvatarVO;
-  readonly place: string;
   /** The language of the device of the host, which the dilemmas use until the host changes it. */
   readonly dilemmaLanguage: string;
   /** Unique among the rooms, closed ones too until they are deleted, which the room cannot know. */
@@ -156,7 +153,6 @@ export class Room {
   readonly #code: RoomCodeVO;
   #hostId: string;
   #absentHostId: string | null = null;
-  readonly #place: Place;
   #settings: RoomSettingsVO;
   /** In the order they joined, which decides who takes over as host. */
   readonly #players: Player[];
@@ -177,7 +173,6 @@ export class Room {
     snapshot: {
       readonly id: string;
       readonly code: string;
-      readonly place: string;
       readonly settings: RoomSettingsSnapshot;
       readonly lastConnectedAt: Date;
     },
@@ -186,7 +181,6 @@ export class Room {
   ) {
     this.#id = new IdVO(snapshot.id);
     this.#code = new RoomCodeVO(snapshot.code);
-    this.#place = toPlace(snapshot.place);
     this.#settings = new RoomSettingsVO(snapshot.settings);
     this.#hostId = host.id;
     this.#players = [...players];
@@ -213,9 +207,9 @@ export class Room {
       },
       idGenerator,
     );
-    const { code, place, createdAt } = props;
+    const { code, createdAt } = props;
     const lastConnectedAt = createdAt;
-    const room = new Room({ id, code, place, settings, lastConnectedAt }, host, [host]);
+    const room = new Room({ id, code, settings, lastConnectedAt }, host, [host]);
     if (props.firstRoundDilemma) {
       const dilemma = lobbyDilemmaOf(props.firstRoundDilemma);
       if (!room.#suits(dilemma)) throw new DilemmaNotSuitableError(dilemma.dilemmaId);
@@ -237,10 +231,6 @@ export class Room {
 
   get host(): Player {
     return this.#player(this.#hostId);
-  }
-
-  get place(): Place {
-    return this.#place;
   }
 
   get settings(): RoomSettingsVO {
@@ -764,7 +754,6 @@ export class Room {
       id: this.id,
       code: this.code,
       hostId: this.#hostId,
-      place: this.#place,
       settings: this.#settings.toSnapshot(),
       players: this.#players.map((player) => player.toSnapshot()),
       version: this.#version,

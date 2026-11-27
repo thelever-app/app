@@ -20,7 +20,6 @@ const AT = new Date('2026-11-18T10:00:00Z');
 const NOMINAL: GameSettings = {
   ambience: 'classic',
   variant: 'nominal',
-  place: 'together',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
 };

@@ -149,7 +149,6 @@ export class PostgresGameRepository implements GameRepository {
         ...changing,
         ambience: settings.ambience,
         variant: settings.variant,
-        place: settings.place,
         dilemma_language: settings.dilemmaLanguage,
         time_per_dilemma_seconds: settings.timePerDilemmaSeconds,
       })
@@ -400,7 +399,6 @@ function snapshotOf(row: GameRow): GameSnapshot {
     settings: {
       ambience: row.ambience,
       variant: row.variant,
-      place: row.place,
       dilemmaLanguage: row.dilemma_language,
       timePerDilemmaSeconds: row.time_per_dilemma_seconds,
     },

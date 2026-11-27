@@ -7,7 +7,6 @@ import { HostCannotBeExpelledError } from '../../errors/host-cannot-be-expelled.
 import { HostMissingError } from '../../errors/host-missing.error.ts';
 import { IdMissingError } from '../../errors/id-missing.error.ts';
 import { InvalidRoomCodeError } from '../../errors/invalid-room-code.error.ts';
-import { InvalidRoomSettingError } from '../../errors/invalid-room-setting.error.ts';
 import { NicknameAndAvatarTakenError } from '../../errors/nickname-and-avatar-taken.error.ts';
 import { NicknameMissingError } from '../../errors/nickname-missing.error.ts';
 import { NotEnoughPlayersError } from '../../errors/not-enough-players.error.ts';
@@ -40,7 +39,6 @@ function roomHostedByAna(): Room {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: ANA_AVATAR,
-      place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
       createdAt: NOW,
@@ -145,7 +143,6 @@ function roomStartingWith(firstRoundDilemma: {
       hostNickname: 'Ana',
       hostIdentity: 'TestAnaIdentity',
       hostAvatar: ANA_AVATAR,
-      place: 'together',
       dilemmaLanguage: 'es',
       code: 'K7M2Q',
       createdAt: NOW,
@@ -176,14 +173,6 @@ describe('Room', () => {
       expect(room.host.avatar).toEqual(ANA_AVATAR);
     });
 
-    it('should keep where the group plays', () => {
-      // Act
-      const room = roomHostedByAna();
-
-      // Assert
-      expect(room.place).toBe('together');
-    });
-
     it('should start in the lobby with the default settings in the language of the host', () => {
       // Act
       const room = roomHostedByAna();
@@ -196,7 +185,6 @@ describe('Room', () => {
     });
 
     it.each([
-      [{ place: 'moon' }, InvalidRoomSettingError],
       [{ code: 'K7M20' }, InvalidRoomCodeError],
       [{ hostNickname: '' }, NicknameMissingError],
     ])('should throw an error for %o', (change, error) => {
@@ -209,7 +197,6 @@ describe('Room', () => {
             hostNickname: 'Ana',
             hostIdentity: 'TestAnaIdentity',
             hostAvatar: ANA_AVATAR,
-            place: 'together',
             dilemmaLanguage: 'es',
             code: 'K7M2Q',
             createdAt: NOW,
@@ -230,7 +217,6 @@ describe('Room', () => {
             hostNickname: 'Ana',
             hostIdentity: 'TestAnaIdentity',
             hostAvatar: ANA_AVATAR,
-            place: 'together',
             dilemmaLanguage: 'es',
             code: 'K7M2Q',
             createdAt: NOW,
@@ -418,7 +404,6 @@ describe('Room', () => {
           hostNickname: 'Ana',
           hostIdentity: 'TestAnaIdentity',
           hostAvatar: AvatarVO.all()[0] as AvatarVO,
-          place: 'together',
           dilemmaLanguage: 'es',
           code: 'K7M2Q',
           createdAt: NOW,
@@ -1283,7 +1268,6 @@ describe('Room', () => {
         id: 'TestId',
         code: 'K7M2Q',
         hostId: 'TestHostId',
-        place: 'together',
         settings: room.settings.toSnapshot(),
         players: room.players.map((player) => player.toSnapshot()),
         version: 3,

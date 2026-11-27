@@ -241,7 +241,6 @@ function roomColumnsOf(snapshot: RoomSnapshot) {
     code: snapshot.code,
     host_player_id: snapshot.hostId,
     version: snapshot.version,
-    place: snapshot.place,
     variant: settings.variant,
     adults_only: settings.adultsOnly,
     compromising_dilemmas: settings.compromisingDilemmas,
@@ -332,7 +331,6 @@ function snapshotOf(row: RoomRow): RoomSnapshot {
     id: row.id,
     code: row.code,
     hostId: row.host_player_id,
-    place: row.place,
     settings: {
       variant: row.variant,
       adultsOnly: row.adults_only,

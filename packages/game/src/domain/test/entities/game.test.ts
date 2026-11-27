@@ -38,7 +38,6 @@ const DILEMMAS = ['TestDilemma1', 'TestDilemma2', 'TestDilemma3'].map((dilemmaId
 const SETTINGS = {
   ambience: 'classic',
   variant: 'anonymous',
-  place: 'remote',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
 } as const;

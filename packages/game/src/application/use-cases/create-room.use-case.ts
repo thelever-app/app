@@ -23,7 +23,6 @@ export interface CreateRoomInput {
   readonly ambience: string;
   /** The avatar the host chose before creating the room. */
   readonly hostAvatar: { readonly face: string; readonly color: string };
-  readonly place: string;
   /** The language of the device of the host or, with a first dilemma, the language of that dilemma. */
   readonly dilemmaLanguage: string;
   /** A dilemma of the general catalog in that language, for the first round, specific. */

@@ -31,7 +31,6 @@ function roomOf(code: string, createdAt: Date): Room {
       hostNickname: 'Ana',
       hostIdentity: `TestAna${code}Identity`,
       hostAvatar: new AvatarVO('face-01', 'khaki'),
-      place: 'together',
       dilemmaLanguage: 'es',
       code,
       createdAt,

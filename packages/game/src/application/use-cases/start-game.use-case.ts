@@ -183,7 +183,6 @@ export class StartGameUseCase {
         settings: {
           ambience: ambienceOf(settings),
           variant: settings.variant,
-          place: room.place,
           dilemmaLanguage: settings.dilemmaLanguage,
           timePerDilemmaSeconds: settings.timePerDilemmaSeconds,
         },

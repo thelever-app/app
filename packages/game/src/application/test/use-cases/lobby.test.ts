@@ -647,7 +647,6 @@ describe('GetRoomStateUseCase', () => {
       code: room.code,
       playerId: anaId,
       hostId: anaId,
-      place: 'together',
       settings,
       ambience: 'custom',
       hasPlayerUnderEighteen: false,

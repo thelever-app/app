@@ -24,7 +24,6 @@ const SECOND = 1000;
 const NOMINAL: GameSettings = {
   ambience: 'classic',
   variant: 'nominal',
-  place: 'together',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
 };

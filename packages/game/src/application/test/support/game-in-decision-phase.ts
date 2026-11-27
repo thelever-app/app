@@ -22,7 +22,6 @@ import { CANDIDATES_PER_ROUND, EXPLORATION_SLOTS, testCatalog } from './test-cat
 export const TEST_GAME_SETTINGS = {
   ambience: 'classic',
   variant: 'nominal',
-  place: 'together',
   dilemmaLanguage: 'es',
   timePerDilemmaSeconds: 60,
 } as const;
@@ -79,7 +78,6 @@ export async function lobbyOfThree(
     hostNickname: 'Ana',
     hostIdentity: 'TestAnaIdentity',
     hostAvatar: { face: 'face-01', color: 'khaki' },
-    place: 'together',
     dilemmaLanguage: 'es',
   });
   const { playerId: luisId } = await joinRoom.execute({

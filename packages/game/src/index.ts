@@ -107,7 +107,6 @@ export {
   type Scale,
   type CandidateDilemma,
 } from './domain/vos/classification.vo.ts';
-export { PLACES, type Place } from './domain/vos/group.vo.ts';
 export {
   composeGame,
   drawKey,

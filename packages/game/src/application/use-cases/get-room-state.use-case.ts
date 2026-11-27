@@ -8,7 +8,6 @@ import {
   configurationOf,
 } from '../../domain/vos/ambience.vo.ts';
 import { ANY_CONTENT, type RoundContent } from '../../domain/vos/round.vo.ts';
-import type { Place } from '../../domain/vos/group.vo.ts';
 import type { Category } from '../../domain/vos/category.vo.ts';
 import type { RoomSettingsSnapshot } from '../../domain/vos/room-settings.vo.ts';
 import type { LobbyDilemma } from '../../domain/vos/round.vo.ts';
@@ -76,7 +75,6 @@ export interface GetRoomStateOutput {
   readonly code: string;
   readonly playerId: string;
   readonly hostId: string;
-  readonly place: Place;
   /** Without the language, which is the room's own and nobody sees. */
   readonly settings: Omit<RoomSettingsSnapshot, 'rounds' | 'dilemmaLanguage'>;
   /** The ambience whose configuration the room has, or custom. */
@@ -163,7 +161,6 @@ export class GetRoomStateUseCase {
       code: room.code,
       playerId,
       hostId: room.host.id,
-      place: room.place,
       settings,
       ambience: ambienceOf(room.settings),
       hasPlayerUnderEighteen: playerId === room.host.id && room.hasPlayerUnderEighteen,

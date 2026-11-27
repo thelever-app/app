@@ -173,7 +173,6 @@ describe('StartGameUseCase', () => {
       expect((await gameRepository.findById(gameId))?.settings).toEqual({
         ambience: 'custom',
         variant: 'anonymous',
-        place: 'together',
         dilemmaLanguage: 'es',
         timePerDilemmaSeconds: 60,
       });

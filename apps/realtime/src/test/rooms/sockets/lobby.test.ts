@@ -11,7 +11,6 @@ import {
 } from '../../support/room-server.ts';
 
 /** What the room shows of the choices it was created with. */
-const ROOM_CHOICES_SEEN = { place: ROOM_CHOICES.place };
 
 let server: Awaited<ReturnType<typeof startRoomServer>> | undefined;
 
@@ -57,7 +56,7 @@ describe('the lobby over the room sockets', () => {
     const state = await stateSeenBy(server.url, 'luis', roomId);
 
     // Assert
-    expect(state).toMatchObject({ roomId, code, currentGameId: null, ...ROOM_CHOICES_SEEN });
+    expect(state).toMatchObject({ roomId, code, currentGameId: null });
     expect(state.players.map(({ nickname }) => nickname)).toEqual(['Ana', 'Luis', 'Marta']);
     expect(state.players.find(({ playerId }) => playerId === state.playerId)?.nickname).toBe(
       'Luis',

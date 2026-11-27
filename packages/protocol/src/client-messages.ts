@@ -109,9 +109,6 @@ export const NicknameDto = z
 /** A face and a colour: no two players of a room share both. */
 export const AvatarDto = z.strictObject({ face: AvatarFaceDto, color: PlayerColorDto });
 
-/** Whether the group plays in the same place or remotely. */
-export const PlaceDto = z.enum(['together', 'remote']);
-
 /** The presets of a room: Classic, Spicy and No filter. */
 export const AmbienceDto = z.enum(['classic', 'spicy', 'no-filter']);
 
@@ -469,7 +466,6 @@ export type CategoryDto = z.infer<typeof CategoryDto>;
 export type AvatarFaceDto = z.infer<typeof AvatarFaceDto>;
 export type PlayerColorDto = z.infer<typeof PlayerColorDto>;
 export type AvatarDto = z.infer<typeof AvatarDto>;
-export type PlaceDto = z.infer<typeof PlaceDto>;
 export type RoomSettingsDto = z.infer<typeof RoomSettingsDto>;
 export type AmbienceDto = z.infer<typeof AmbienceDto>;
 export type AmbienceOrCustomDto = z.infer<typeof AmbienceOrCustomDto>;

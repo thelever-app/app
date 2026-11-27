@@ -23,7 +23,6 @@ export const WEB_ORIGIN = 'http://localhost:5173';
 export const ROOM_CHOICES = {
   ambience: 'classic',
   avatar: { face: 'face-01', color: 'khaki' },
-  place: 'together',
   dilemmaLanguage: 'es',
 };
 

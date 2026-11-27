@@ -43,7 +43,6 @@ export {
   ConnectDto,
   ExpelPlayerDto,
   LanguageDto,
-  PlaceDto,
   PlayerColorDto,
   RoomSettingsDto,
   RoundSettingsDto,

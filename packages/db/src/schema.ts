@@ -14,7 +14,6 @@ import type {
   AvatarFace,
   DilemmaLanguage,
   DilemmaOrigin,
-  Place,
   PlayerColor,
   RoomVariant,
   TimePerDilemmaSeconds,
@@ -117,7 +116,6 @@ export interface Database {
     code: string;
     host_player_id: string;
     version: number;
-    place: Place;
     variant: RoomVariant;
     adults_only: boolean;
     /** Only in an anonymous room. */
@@ -214,7 +212,6 @@ export interface Database {
     /** The ambience whose configuration the room had when the game started, or custom. */
     ambience: AmbienceOrCustom;
     variant: RoomVariant;
-    place: Place;
     dilemma_language: DilemmaLanguage;
     time_per_dilemma_seconds: TimePerDilemmaSeconds;
   };

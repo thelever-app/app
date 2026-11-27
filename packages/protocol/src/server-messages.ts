@@ -4,7 +4,6 @@ import {
   CategoryDto,
   ClientMessageTypeDto,
   MAXIMUM_ROUNDS,
-  PlaceDto,
   RoomSettingsDto,
   RoundCategoriesDto,
   RoundContentDto,
@@ -340,7 +339,6 @@ export const RoomStateDto = z.strictObject({
   /** The player who receives the message. */
   playerId: z.string().min(1),
   hostId: z.string().min(1),
-  place: PlaceDto,
   settings: RoomSettingsDto,
   /** The ambience whose configuration the room has, or custom. */
   ambience: AmbienceOrCustomDto,

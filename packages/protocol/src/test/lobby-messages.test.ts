@@ -54,7 +54,6 @@ const roomState = {
   code: 'K7M2Q',
   playerId: 'player-2',
   hostId: 'player-1',
-  place: 'together',
   settings,
   ambience: 'custom',
   hasPlayerUnderEighteen: false,
