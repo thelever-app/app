@@ -36,15 +36,15 @@ import { erasePersonalData } from './erase-personal-data/erase.ts';
 import { privacyDependenciesIn } from './privacy-dependencies.ts';
 import { syncModeration } from './sync-moderation/sync.ts';
 
-// The Cloud Run job sync-moderation, which Cloud Scheduler runs every 5 minutes: it takes the
-// issues of the reports and notices to the private moderation repository, reads the decisions of
-// the team there and applies them, and sends the emails of the notices. Then it deletes what the
-// pending deletions of the deletion log ask for, in every personal data store and in Firebase Auth,
-// within minutes of the request and well inside the month the law gives: one job and one schedule
-// for both, so no other runs every day. It runs with an account of its own: only it reads the token
-// of GitHub, the password of the mailbox and the key of Anthropic, and may delete users of Firebase
-// Auth, which the public room server never can. It ends with an error if anything failed; the next
-// run tries it again.
+// The Cloud Run job sync-moderation, which Cloud Scheduler runs every 10 minutes in prod and every
+// hour in dev: it takes the issues of the reports and notices to the private moderation repository,
+// reads the decisions of the team there and applies them, and sends the emails of the notices.
+// Then it deletes what the pending deletions of the deletion log ask for, in every personal data
+// store and in Firebase Auth, within minutes of the request in prod and well inside the month the
+// law gives: one job and one schedule for both, so no other runs every day. It runs with an account
+// of its own: only it reads the token of GitHub, the password of the mailbox and the key of
+// Anthropic, and may delete users of Firebase Auth, which the public room server never can. It ends
+// with an error if anything failed; the next run tries it again.
 
 function required(name: string): string {
   const value = process.env[name]?.trim();

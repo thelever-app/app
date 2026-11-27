@@ -2,17 +2,17 @@
   "displayName": "Job sync-moderation: failed or not run",
   "documentation": {
     "mimeType": "text/markdown",
-    "content": "The job of moderation failed, or has not finished well for half an hour, so reports and notices may not be reaching the moderation repository, the decisions of the team may not be applied, the emails of the notices may not be sent and the data the players asked to delete may be waiting (the law gives a month, so there is time, but not to forget it). Open Cloud Run, Jobs, `sync-moderation`, and its last execution's logs, which name the id of each deletion that failed, never the player; if there is none, open Cloud Scheduler, `sync-moderation`, and its last attempt (a 403 means the scheduler account may not run the job). A 401 of GitHub means its token expired: create a new one and add it as a new version of the secret `moderation-github-token`. Run it again with `gcloud run jobs execute sync-moderation --region europe-southwest1`."
+    "content": "The job of moderation failed, or has not finished well for three hours (it runs every 10 minutes in prod and every hour in dev), so reports and notices may not be reaching the moderation repository, the decisions of the team may not be applied, the emails of the notices may not be sent and the data the players asked to delete may be waiting (the law gives a month, so there is time, but not to forget it). Open Cloud Run, Jobs, `sync-moderation`, and its last execution's logs, which name the id of each deletion that failed, never the player; if there is none, open Cloud Scheduler, `sync-moderation`, and its last attempt (a 403 means the scheduler account may not run the job). A 401 of GitHub means its token expired: create a new one and add it as a new version of the secret `moderation-github-token`. Run it again with `gcloud run jobs execute sync-moderation --region europe-southwest1`."
   },
   "combiner": "OR",
   "conditions": [
     {
-      "displayName": "Two executions failed in an hour",
+      "displayName": "Two executions failed in two hours",
       "conditionThreshold": {
         "filter": "metric.type=\"run.googleapis.com/job/completed_execution_count\" AND resource.type=\"cloud_run_job\" AND resource.label.job_name=\"sync-moderation\" AND metric.label.result=\"failed\"",
         "aggregations": [
           {
-            "alignmentPeriod": "3600s",
+            "alignmentPeriod": "7200s",
             "perSeriesAligner": "ALIGN_DELTA",
             "crossSeriesReducer": "REDUCE_SUM"
           }
@@ -26,17 +26,17 @@
       }
     },
     {
-      "displayName": "No execution finished well in 30 minutes",
+      "displayName": "No execution finished well in 3 hours",
       "conditionAbsent": {
         "filter": "metric.type=\"run.googleapis.com/job/completed_execution_count\" AND resource.type=\"cloud_run_job\" AND resource.label.job_name=\"sync-moderation\" AND metric.label.result=\"succeeded\"",
         "aggregations": [
           {
-            "alignmentPeriod": "600s",
+            "alignmentPeriod": "3600s",
             "perSeriesAligner": "ALIGN_DELTA",
             "crossSeriesReducer": "REDUCE_SUM"
           }
         ],
-        "duration": "1800s",
+        "duration": "10800s",
         "trigger": {
           "count": 1
         }
@@ -44,6 +44,6 @@
     }
   ],
   "alertStrategy": {
-    "autoClose": "3600s"
+    "autoClose": "10800s"
   }
 }
